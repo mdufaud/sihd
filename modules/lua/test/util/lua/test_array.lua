@@ -44,9 +44,9 @@ assert(arr_int:at(4) == 50)
 -- end
 
 local dt = arr_int:data_type()
-assert(sihd.util.types.type_size(dt), 4)
-assert(sihd.util.types.type_str(dt), "int")
-assert(sihd.util.types.from_str("int"), dt)
+assert(sihd.util.types.type_size(dt) == 4)
+assert(sihd.util.types.type_str(dt) == "int")
+assert(sihd.util.types.from_str("int") == dt)
 
 local arr_int2 = sihd.util.ArrInt.new({1, 2, 3})
 assert(arr_int2:str(",") == "1,2,3")

@@ -1,14 +1,14 @@
 #ifndef __SIHD_LUA_LUASYSAPI_HPP__
 #define __SIHD_LUA_LUASYSAPI_HPP__
 
-#include <sihd/lua/Vm.hpp>
-#include <sihd/lua/util/LuaUtilApi.hpp>
-
-#include <sihd/sys/Process.hpp>
-
-#include <memory>
 #include <mutex>
 #include <queue>
+
+// clang-format off
+#include <sihd/lua/Vm.hpp>
+// clang-format on
+#include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/sys/Process.hpp>
 
 namespace sihd::lua
 {

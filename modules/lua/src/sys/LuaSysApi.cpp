@@ -1,16 +1,19 @@
 #include <unistd.h>
 
-#include <sihd/lua/sys/LuaSysApi.hpp>
+#include <chrono>
+#include <future>
 
+#include <sihd/lua/LuaGil.hpp>
+#include <sihd/lua/sys/LuaSysApi.hpp>
 #include <sihd/sys/File.hpp>
+#include <sihd/sys/proc.hpp>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/sys/signal.hpp>
-
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/signal.hpp>
 #include <sihd/util/build.hpp>
 
 namespace
@@ -92,12 +95,34 @@ class LuaProcess: public Process
         std::shared_ptr<LuaSysApi::LuaProcessCallback> _stderr_callback;
 };
 
+/**
+ * LuaProcFuture - copyable wrapper over the std::future<int> returned by proc::execute.
+ * get()/wait_for() block, so the caller releases the Lua GIL around them.
+ */
+class LuaProcFuture
+{
+    public:
+        explicit LuaProcFuture(std::future<int> fut):
+            _future(std::make_shared<std::future<int>>(std::move(fut)))
+        {
+        }
+
+        int get() { return _future->get(); }
+
+        bool wait_for(Duration duration)
+        {
+            return _future->wait_for(std::chrono::nanoseconds(duration.get())) == std::future_status::ready;
+        }
+
+        bool valid() const { return _future && _future->valid(); }
+
+    private:
+        std::shared_ptr<std::future<int>> _future;
+};
+
 void LuaSysApi::load_base(Vm & vm)
 {
-    luabridge::getGlobalNamespace(vm.lua_state())
-        .beginNamespace("sihd")
-        .addVariable("dir", &g_exe_dir)
-        .endNamespace();
+    luabridge::getGlobalNamespace(vm.lua_state()).beginNamespace("sihd").addVariable("dir", &g_exe_dir).endNamespace();
 }
 
 void LuaSysApi::load_process(Vm & vm)
@@ -185,12 +210,37 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("stop", &LuaProcess::stop)
         .addFunction("is_running", &LuaProcess::is_running)
         // wait
-        .addFunction("wait", &LuaProcess::wait)
+        .addFunction(
+            "wait",
+            +[](LuaProcess *self, int options, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait(options);
+            })
 #if !defined(__SIHD_WINDOWS__)
-        .addFunction("wait_exit", &LuaProcess::wait_exit)
-        .addFunction("wait_stop", &LuaProcess::wait_stop)
-        .addFunction("wait_continue", &LuaProcess::wait_continue)
-        .addFunction("wait_any", &LuaProcess::wait_any)
+        .addFunction(
+            "wait_exit",
+            +[](LuaProcess *self, int options, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait_exit(options);
+            })
+        .addFunction(
+            "wait_stop",
+            +[](LuaProcess *self, int options, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait_stop(options);
+            })
+        .addFunction(
+            "wait_continue",
+            +[](LuaProcess *self, int options, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait_continue(options);
+            })
+        .addFunction(
+            "wait_any",
+            +[](LuaProcess *self, int options, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait_any(options);
+            })
 #endif
         // manual pipe process
         .addFunction("read_pipes", &LuaProcess::read_pipes)
@@ -212,6 +262,38 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("pid", &LuaProcess::pid)
         .addFunction("argv", &LuaProcess::argv)
         .endClass()
+        /**
+         * ProcFuture - result of proc.execute; blocking calls release the GIL
+         */
+        .beginClass<LuaProcFuture>("ProcFuture")
+        .addFunction(
+            "get",
+            +[](LuaProcFuture *self, lua_State *state) {
+                sihd::lua::LuaGilRelease release(state);
+                return self->get();
+            })
+        .addFunction(
+            "wait_for",
+            +[](LuaProcFuture *self, luabridge::LuaRef duration, lua_State *state) {
+                Duration dur = sihd::lua::to_duration(duration);
+                sihd::lua::LuaGilRelease release(state);
+                return self->wait_for(dur);
+            })
+        .addFunction("valid", &LuaProcFuture::valid)
+        .endClass()
+        /**
+         * proc - free-function process launcher returning a future
+         */
+        .beginNamespace("proc")
+        .addFunction(
+            "execute",
+            +[](luabridge::LuaRef args, lua_State *state) {
+                if (args.isTable() == false)
+                    luaL_error(state, "proc.execute argument must be a string table");
+                std::vector<std::string> argv(args);
+                return LuaProcFuture(proc::execute(std::span<const std::string>(argv)));
+            })
+        .endNamespace()
         .endNamespace()
         .endNamespace();
 }
@@ -234,8 +316,7 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction("recursive_children", &fs::recursive_children)
         .addFunction("is_absolute", &fs::is_absolute)
         .addFunction("normalize", &fs::normalize)
-        .addFunction("trim_path",
-                     static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::trim_path))
+        .addFunction("trim_path", static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::trim_path))
         .addFunction("parent", &fs::parent)
         .addFunction("filename", &fs::filename)
         .addFunction("extension", &fs::extension)
@@ -256,6 +337,8 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction("home_path", &fs::home_path)
         .addFunction("executable_path", &fs::executable_path)
         .addFunction("cwd", &fs::cwd)
+        .addFunction("tmp_path", &fs::tmp_path)
+        .addFunction("make_tmp_directory", &fs::make_tmp_directory)
         .endNamespace()
         /**
          * File

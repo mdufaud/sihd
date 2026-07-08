@@ -1,39 +1,53 @@
 #ifndef __SIHD_LUA_LUAUTILAPI_HPP__
 #define __SIHD_LUA_LUAUTILAPI_HPP__
 
+// clang-format off
+// Vm.hpp pulls the lua headers, which luabridge requires included first
 #include <sihd/lua/Vm.hpp>
-
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/ServiceController.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
-
-#include <sihd/util/Array.hpp>
-#include <sihd/util/Configurable.hpp>
-
-#include <sihd/util/Scheduler.hpp>
-#include <sihd/util/StepWorker.hpp>
-#include <sihd/util/Task.hpp>
-#include <sihd/util/Waitable.hpp>
-#include <sihd/util/Worker.hpp>
-
-#include <sihd/util/IHandler.hpp>
-#include <sihd/util/IReader.hpp>
-#include <sihd/util/IWriter.hpp>
-
-#include <sihd/util/endian.hpp>
-
-#include <mutex>
-#include <queue>
-#include <sihd/util/version.hpp>
 
 #include <luabridge3/LuaBridge/Map.h>
 #include <luabridge3/LuaBridge/UnorderedMap.h>
 #include <luabridge3/LuaBridge/Vector.h>
+// clang-format on
 
-#include <memory>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Duration.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IReader.hpp>
+#include <sihd/util/IWriter.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Scheduler.hpp>
+#include <sihd/util/ServiceController.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
+#include <sihd/util/StepWorker.hpp>
+#include <sihd/util/Task.hpp>
+#include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/Worker.hpp>
+#include <sihd/util/endian.hpp>
+#include <sihd/util/version.hpp>
 
 namespace sihd::lua
 {
+
+// A raw Lua number is taken as a nanosecond count (the sihd.util.time.* helpers
+// return nanoseconds); anything else is cast from a Duration userdata.
+inline sihd::util::Duration to_duration(const luabridge::LuaRef & ref)
+{
+    if (ref.isNumber())
+        return sihd::util::Duration(ref.cast<int64_t>().value());
+    return ref.cast<sihd::util::Duration>().value();
+}
+
+// A raw Lua number is taken as a nanosecond count (the sihd.util.time.* helpers
+// return nanoseconds); anything else is cast from a Timestamp userdata.
+inline sihd::util::Timestamp to_timestamp(const luabridge::LuaRef & ref)
+{
+    if (ref.isNumber())
+        return sihd::util::Timestamp(ref.cast<int64_t>().value());
+    return ref.cast<sihd::util::Timestamp>().value();
+}
 
 template <typename T>
 struct EnumWrapper
@@ -163,22 +177,46 @@ class LuaUtilApi
                 virtual ~LuaThreadRunner();
 
                 void new_lua_state(lua_State *state);
+                void reset_lua_state();
 
                 template <typename... T>
                 void call_lua_method_noret(T... args)
                 {
-                    _fun(args...);
+                    LuaGilGuard guard(this->_guard_state());
+                    this->_exec_fun()(args...);
                 }
 
                 template <typename R, typename... T>
                 R call_lua_method(T... args)
                 {
-                    return R(_fun(args...));
+                    LuaGilGuard guard(this->_guard_state());
+                    return R(this->_exec_fun()(args...));
                 }
 
             private:
-                luabridge::LuaRef _original_fun;
+                luabridge::LuaRef _exec_fun();
+                lua_State *_guard_state() { return _exec_state != nullptr ? _exec_state : _fun.state(); }
+
                 luabridge::LuaRef _fun;
+                lua_State *_exec_state = nullptr;
+        };
+
+        class LuaCoroutine
+        {
+            public:
+                LuaCoroutine() = default;
+
+                void set_state(lua_State *parent) { _parent = parent; }
+                lua_State *parent() const { return _parent; }
+
+                // false if no parent or on failure
+                bool create();
+                lua_State *state() const { return _vm.lua_state(); }
+                void destroy() { _vm.close_state(); }
+
+            private:
+                lua_State *_parent = nullptr;
+                Vm _vm {nullptr};
         };
 
         class LuaTask: public sihd::util::Task,
@@ -231,8 +269,7 @@ class LuaUtilApi
             protected:
 
             private:
-                lua_State *_state_ptr;
-                Vm _vm_thread;
+                LuaCoroutine _lua_coroutine;
         };
 
         class LuaWorker: public sihd::util::Worker
@@ -242,10 +279,11 @@ class LuaUtilApi
                 ~LuaWorker();
 
                 void set_state(lua_State *state);
-                bool start_worker(std::string_view name);
+                bool start_worker(std::string_view name) override;
+                bool stop_worker() override;
 
             private:
-                lua_State *_state_ptr;
+                LuaCoroutine _lua_coroutine;
                 LuaRunnable _lua_runnable;
         };
 
@@ -256,10 +294,11 @@ class LuaUtilApi
                 ~LuaStepWorker();
 
                 void set_state(lua_State *state);
-                bool start_worker(std::string_view name);
+                bool start_worker(std::string_view name) override;
+                bool stop_worker() override;
 
             private:
-                lua_State *_state_ptr;
+                LuaCoroutine _lua_coroutine;
                 LuaRunnable _lua_runnable;
         };
 
@@ -339,9 +378,7 @@ class LuaUtilApi
         }
 
         template <typename T>
-        static bool _array_lua_copy_table(sihd::util::Array<T> *self,
-                                          luabridge::LuaRef ref,
-                                          luabridge::LuaRef from_ref)
+        static bool _array_lua_copy_table(sihd::util::Array<T> *self, luabridge::LuaRef ref, luabridge::LuaRef from_ref)
         {
             size_t from_idx = 0;
             if (from_ref.isNil() == false)
@@ -391,9 +428,8 @@ class LuaUtilApi
         }
 
         // Configurable's recursive setting
-        static bool _configurable_recursive_set(sihd::util::Configurable *obj,
-                                                const std::string & key,
-                                                luabridge::LuaRef ref);
+        static bool
+            _configurable_recursive_set(sihd::util::Configurable *obj, const std::string & key, luabridge::LuaRef ref);
 };
 
 } // namespace sihd::lua

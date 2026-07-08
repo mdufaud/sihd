@@ -22,7 +22,7 @@ test_dir = Dir("test")
 
 modules = env.modules_to_build()
 
-srcs = [src_dir.File("Vm.cpp")]
+srcs = [src_dir.File("Vm.cpp"), src_dir.File("LuaGil.cpp")]
 tests = [test_dir.File("main.cpp")]
 for module in modules:
     if module == "lua":

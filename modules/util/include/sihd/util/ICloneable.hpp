@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_ICLONABLE_HPP__
-#define __SIHD_UTIL_ICLONABLE_HPP__
+#ifndef __SIHD_UTIL_ICLONEABLE_HPP__
+#define __SIHD_UTIL_ICLONEABLE_HPP__
 
 namespace sihd::util
 {
@@ -9,7 +9,6 @@ class ICloneable
 {
     public:
         virtual ~ICloneable() = default;
-        ;
 
         virtual T *clone() const = 0;
 };

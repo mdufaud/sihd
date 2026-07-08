@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_THREADEDSERVICE_HPP__
-#define __SIHD_UTIL_THREADEDSERVICE_HPP__
+#ifndef __SIHD_UTIL_ATHREADEDSERVICE_HPP__
+#define __SIHD_UTIL_ATHREADEDSERVICE_HPP__
 
 #include <sihd/util/AService.hpp>
 #include <sihd/util/Synchronizer.hpp>

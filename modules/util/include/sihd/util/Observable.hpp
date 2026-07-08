@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <list>
 #include <mutex>
-#include <vector>
 
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/IObservable.hpp>
@@ -42,7 +41,9 @@ class Observable: public IObservable<T>
                 _remove_current_observer = true;
                 return;
             }
-            _observers.erase(std::find(_observers.begin(), _observers.end(), obs));
+            auto it = std::find(_observers.begin(), _observers.end(), obs);
+            if (it != _observers.end())
+                _observers.erase(it);
         }
 
         bool is_observer(IHandler<T *> *obs) const

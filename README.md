@@ -8,9 +8,11 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 
 | Module | Description | Dependencies |
 |--------|-------------|--------------|
-| `util` | Base: threading, logging, filesystem, types, named objects | — |
+| `json` | JSON parsing/serialization (simdjson) | — |
+| `util` | Base: threading, logging, filesystem, types, named objects | json |
+| `sys` | OS abstraction: filesystem, process spawning, IPC, signals, dynamic loading | util |
+| `crypto` | Cryptography (OpenSSL: hashing, AES, HMAC) | util, openssl |
 | `core` | Devices, Channels, data flow, service lifecycle | util |
-| `ipc` | Inter-process communication (shared memory, message queues) | util |
 | `net` | Networking with SSL/TLS | util, openssl |
 | `http` | HTTP server, WebSocket, curl client | net, libwebsockets, curl |
 | `csv` | CSV reading/writing | util |
@@ -22,6 +24,7 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 | `pcap` | Packet capture | net, libpcap |
 | `imgui` | Dear ImGui (OpenGL3 + GLFW/SDL3, DirectX11) | util, imgui |
 | `lua` | Lua bindings (conditional: `lua=1`) | util, core |
+| `luabin` | Standalone Lua interpreter binary (conditional: `lua=1`) | lua |
 | `py` | Python bindings via pybind11 (conditional: `py=1`) | util, core |
 
 ---
@@ -287,25 +290,25 @@ make asantest
 To create pacman distribution PKGBUILD file
 
 ```shell
-make dist_pacman
+make dist pacman
 # for a single/multiple module.s
-make dist_pacman mod COMMA_SEPARATED_MODULES
+make dist mod COMMA_SEPARATED_MODULES pacman
 ```
 
 To create apt distribution .deb file
 
 ```shell
-make dist_apt
+make dist apt
 # for a single/multiple module.s
-make dist_apt mod COMMA_SEPARATED_MODULES
+make dist mod COMMA_SEPARATED_MODULES apt
 ```
 
 To create a tar.gz with current build
 
 ```shell
-make dist_tar
+make dist tar
 # for a single/multiple module.s
-make dist_tar mod COMMA_SEPARATED_MODULES
+make dist mod COMMA_SEPARATED_MODULES tar
 ```
 
 ---

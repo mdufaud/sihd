@@ -6,6 +6,9 @@ end
 
 -- signal
 -- sys.os.kill(sys.os.pid(), 2)
+local signame = sys.signal.name(2)
+assert(type(signame) == "string")
+assert(signame ~= "")
 
 -- backtrace
 assert(sys.os.backtrace(sys.os.stdout, 10) == 10)

@@ -113,18 +113,24 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addProperty(
             "overrun_at",
             +[](const LuaScheduler *self) { return self->overrun_at; },
-            +[](LuaScheduler *self, Duration val) { self->overrun_at = val; })
+            +[](LuaScheduler *self, luabridge::LuaRef val) { self->overrun_at = sihd::lua::to_duration(val); })
         .addProperty(
             "acceptable_task_preplay_ns_time",
             +[](const LuaScheduler *self) { return self->acceptable_task_preplay_ns_time; },
-            +[](LuaScheduler *self, Duration val) { self->acceptable_task_preplay_ns_time = val; })
+            +[](LuaScheduler *self, luabridge::LuaRef val) {
+                self->acceptable_task_preplay_ns_time = sihd::lua::to_duration(val);
+            })
         // LuaScheduler
         .addFunction("start",
                      std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {
                          self->set_state(state);
                          return self->start();
                      }))
-        .addFunction("stop", static_cast<bool (LuaScheduler::*)()>(&Scheduler::stop))
+        .addFunction("stop",
+                     std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {
+                         LuaGilRelease release(state);
+                         return self->stop();
+                     }))
         .addFunction(
             "add_task",
             +[](LuaScheduler *self, luabridge::LuaRef tbl, lua_State *state) {
@@ -137,18 +143,18 @@ void LuaUtilApi::load_threading(Vm & vm)
 
                 Timestamp timestamp_to_run_at = 0;
                 luabridge::LuaRef run_at = tbl["run_at"];
-                if (run_at.isNumber())
-                    timestamp_to_run_at = Timestamp(static_cast<time::UnixTime>(run_at));
+                if (run_at.isNil() == false)
+                    timestamp_to_run_at = sihd::lua::to_timestamp(run_at);
 
                 Duration timestamp_to_run_in = 0;
                 luabridge::LuaRef run_in = tbl["run_in"];
-                if (run_in.isNumber())
-                    timestamp_to_run_in = Duration(static_cast<time::UnixTime>(run_in));
+                if (run_in.isNil() == false)
+                    timestamp_to_run_in = sihd::lua::to_duration(run_in);
 
                 Duration reschedule_time = 0;
                 luabridge::LuaRef reschedule = tbl["reschedule_time"];
-                if (reschedule.isNumber())
-                    reschedule_time = Duration(static_cast<time::UnixTime>(reschedule));
+                if (reschedule.isNil() == false)
+                    reschedule_time = sihd::lua::to_duration(reschedule);
 
                 LuaTask *task_ptr = new LuaTask(lua_fun,
                                                 util::TaskOptions {.run_at = timestamp_to_run_at,
@@ -167,13 +173,46 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addConstructor<void (*)()>()
         .addFunction("notify", &Waitable::notify)
         .addFunction("notify_all", &Waitable::notify_all)
-        .addFunction("wait", static_cast<void (Waitable::*)()>(&Waitable::wait))
-        .addFunction("wait_until", static_cast<bool (Waitable::*)(Timestamp)>(&Waitable::wait_until))
-        .addFunction("wait_for", static_cast<bool (Waitable::*)(Duration)>(&Waitable::wait_for))
-        .addFunction("wait_elapsed", static_cast<Duration (Waitable::*)()>(&Waitable::wait_elapsed))
-        .addFunction("wait_until_elapsed",
-                     static_cast<Duration (Waitable::*)(Timestamp)>(&Waitable::wait_until_elapsed))
-        .addFunction("wait_for_elapsed", static_cast<Duration (Waitable::*)(Duration)>(&Waitable::wait_for_elapsed))
+        .addFunction(
+            "wait",
+            +[](Waitable *self, lua_State *state) {
+                LuaGilRelease release(state);
+                self->wait();
+            })
+        .addFunction(
+            "wait_until",
+            +[](Waitable *self, luabridge::LuaRef t, lua_State *state) {
+                Timestamp timestamp = sihd::lua::to_timestamp(t);
+                LuaGilRelease release(state);
+                return self->wait_until(timestamp);
+            })
+        .addFunction(
+            "wait_for",
+            +[](Waitable *self, luabridge::LuaRef d, lua_State *state) {
+                Duration duration = sihd::lua::to_duration(d);
+                LuaGilRelease release(state);
+                return self->wait_for(duration);
+            })
+        .addFunction(
+            "wait_elapsed",
+            +[](Waitable *self, lua_State *state) {
+                LuaGilRelease release(state);
+                return self->wait_elapsed();
+            })
+        .addFunction(
+            "wait_until_elapsed",
+            +[](Waitable *self, luabridge::LuaRef t, lua_State *state) {
+                Timestamp timestamp = sihd::lua::to_timestamp(t);
+                LuaGilRelease release(state);
+                return self->wait_until_elapsed(timestamp);
+            })
+        .addFunction(
+            "wait_for_elapsed",
+            +[](Waitable *self, luabridge::LuaRef d, lua_State *state) {
+                Duration duration = sihd::lua::to_duration(d);
+                LuaGilRelease release(state);
+                return self->wait_for_elapsed(duration);
+            })
         .endClass()
         /**
          * Waitable
@@ -190,9 +229,15 @@ void LuaUtilApi::load_threading(Vm & vm)
                      std::function<bool(LuaWorker *, const std::string &, lua_State *)>(
                          [](LuaWorker *self, const std::string & name, lua_State *state) {
                              self->set_state(state);
+                             LuaGilRelease release(state);
                              return self->start_sync_worker(name);
                          }))
-        .addFunction("stop_worker", static_cast<bool (LuaWorker::*)()>(&Worker::stop_worker))
+        .addFunction(
+            "stop_worker",
+            +[](LuaWorker *self, lua_State *state) {
+                LuaGilRelease release(state);
+                return self->stop_worker();
+            })
         .addFunction("is_worker_running", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_running))
         .addFunction("is_worker_started", static_cast<bool (LuaWorker::*)() const>(&Worker::is_worker_started))
         .endClass()
@@ -209,13 +254,29 @@ void LuaUtilApi::load_threading(Vm & vm)
                      std::function<bool(LuaStepWorker *, const std::string &, lua_State *)>(
                          [](LuaStepWorker *self, const std::string & name, lua_State *state) {
                              self->set_state(state);
+                             LuaGilRelease release(state);
                              return self->start_sync_worker(name);
                          }))
-        .addFunction("stop_worker", static_cast<bool (LuaStepWorker::*)()>(&Worker::stop_worker))
+        .addFunction(
+            "stop_worker",
+            +[](LuaStepWorker *self, lua_State *state) {
+                LuaGilRelease release(state);
+                return self->stop_worker();
+            })
         .addFunction("is_worker_running", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_running))
         .addFunction("is_worker_started", static_cast<bool (LuaStepWorker::*)() const>(&Worker::is_worker_started))
-        .addFunction("pause_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::pause_worker))
-        .addFunction("resume_worker", static_cast<void (LuaStepWorker::*)()>(&StepWorker::resume_worker))
+        .addFunction(
+            "pause_worker",
+            +[](LuaStepWorker *self, lua_State *state) {
+                LuaGilRelease release(state);
+                self->pause_worker();
+            })
+        .addFunction(
+            "resume_worker",
+            +[](LuaStepWorker *self, lua_State *state) {
+                LuaGilRelease release(state);
+                self->resume_worker();
+            })
         .addFunction("nano_sleep_time", static_cast<Duration (LuaStepWorker::*)() const>(&StepWorker::nano_sleep_time))
         .addFunction("frequency", static_cast<double (LuaStepWorker::*)() const>(&StepWorker::frequency))
         .endClass()
@@ -339,10 +400,30 @@ void LuaUtilApi::load_tools(Vm & vm)
          */
         .beginNamespace("time")
         // sleep
-        .addFunction("nsleep", &time::nsleep)
-        .addFunction("usleep", &time::usleep)
-        .addFunction("msleep", &time::msleep)
-        .addFunction("sleep", &time::sleep)
+        .addFunction(
+            "nsleep",
+            +[](time::UnixTime t, lua_State *state) {
+                LuaGilRelease release(state);
+                return time::nsleep(t);
+            })
+        .addFunction(
+            "usleep",
+            +[](time::UnixTime t, lua_State *state) {
+                LuaGilRelease release(state);
+                return time::usleep(t);
+            })
+        .addFunction(
+            "msleep",
+            +[](time::UnixTime t, lua_State *state) {
+                LuaGilRelease release(state);
+                return time::msleep(t);
+            })
+        .addFunction(
+            "sleep",
+            +[](time::UnixTime t, lua_State *state) {
+                LuaGilRelease release(state);
+                return time::sleep(t);
+            })
         // convert from nano
         .addFunction("to_us", &time::to_micro)
         .addFunction("to_ms", &time::to_milli)
@@ -600,7 +681,13 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction("set_service_wait_stop", &ABlockingService::set_service_wait_stop)
         .addFunction("is_running", &ABlockingService::is_running)
         .addFunction("is_ready", &ABlockingService::is_ready)
-        .addFunction("wait_ready", &ABlockingService::wait_ready)
+        .addFunction(
+            "wait_ready",
+            +[](ABlockingService *self, luabridge::LuaRef timeout, lua_State *state) {
+                Duration duration = sihd::lua::to_duration(timeout);
+                LuaGilRelease release(state);
+                return self->wait_ready(duration);
+            })
         .endClass()
         .deriveClass<AThreadedService, AService>("AThreadedService")
         .addFunction("set_start_synchronised", &AThreadedService::set_start_synchronised)
@@ -617,43 +704,53 @@ void LuaUtilApi::load_all(Vm & vm)
 }
 
 /* ************************************************************************* */
+/* LuaCoroutine */
+/* ************************************************************************* */
+
+bool LuaUtilApi::LuaCoroutine::create()
+{
+    if (_parent == nullptr)
+        return false;
+    // make non owning Vm from the parent state, derive the coroutine into _vm
+    Vm parent(_parent);
+    return parent.new_thread(_vm);
+}
+
+/* ************************************************************************* */
 /* LuaScheduler */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent):
-    Scheduler(name, parent),
-    _state_ptr(nullptr),
-    _vm_thread(nullptr)
-{
-}
+LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent): Scheduler(name, parent) {}
 
 LuaUtilApi::LuaScheduler::~LuaScheduler() = default;
 
 bool LuaUtilApi::LuaScheduler::start()
 {
-    if (_state_ptr == nullptr)
+    if (_lua_coroutine.parent() == nullptr)
         return false;
     if (this->is_running())
         return true;
 
     // create new lua stack for thread
-
-    // make non owning LuaVm from lua_State
-    Vm vm(_state_ptr);
-    if (vm.new_thread(_vm_thread) == false)
+    if (_lua_coroutine.create() == false)
         return false;
 
-    lua_State *state_ptr = _vm_thread.lua_state();
+    lua_State *state_ptr = _lua_coroutine.state();
 
     {
         auto l = _waitable_task.guard();
-        for (const auto & task : _tasks_to_add)
-        {
-            // if lua tasks has been added before thread is created, set new lua state
+        // point every lua task at the freshly created worker coroutine; tasks that
+        // survived a previous stop() (rescheduling ones) live in _task_map and would
+        // otherwise keep a dangling _exec_state to the already closed coroutine
+        const auto set_state = [state_ptr](sihd::util::Task *task) {
             LuaTask *lua_task = dynamic_cast<LuaTask *>(task);
             if (lua_task != nullptr)
                 lua_task->new_lua_state(state_ptr);
-        }
+        };
+        for (const auto & task : _tasks_to_add)
+            set_state(task);
+        for (const auto & [_, task] : _task_map)
+            set_state(task);
     }
 
     // Enable synchronized start so that the scheduler thread is fully ready before returning
@@ -661,7 +758,7 @@ bool LuaUtilApi::LuaScheduler::start()
 
     const bool started = Scheduler::start();
     if (started == false)
-        _vm_thread.close_state();
+        _lua_coroutine.destroy();
     return started;
 }
 
@@ -670,7 +767,21 @@ bool LuaUtilApi::LuaScheduler::stop()
     const bool success = Scheduler::stop();
     if (success)
     {
-        _vm_thread.close_state();
+        {
+            // drop the coroutine pointer from every surviving task before the coroutine
+            // is closed, so no task keeps a dangling _exec_state across a restart
+            auto l = _waitable_task.guard();
+            const auto reset_state = [](sihd::util::Task *task) {
+                LuaTask *lua_task = dynamic_cast<LuaTask *>(task);
+                if (lua_task != nullptr)
+                    lua_task->reset_lua_state();
+            };
+            for (const auto & task : _tasks_to_add)
+                reset_state(task);
+            for (const auto & [_, task] : _task_map)
+                reset_state(task);
+        }
+        _lua_coroutine.destroy();
     }
     return success;
 }
@@ -678,37 +789,53 @@ bool LuaUtilApi::LuaScheduler::stop()
 void LuaUtilApi::LuaScheduler::add_lua_task(LuaTask *task_ptr)
 {
     // if thread is running and new task is added, change lua state to thread state
-    if (this->is_running() && _vm_thread.lua_state() != nullptr)
+    if (this->is_running() && _lua_coroutine.state() != nullptr)
     {
-        task_ptr->new_lua_state(_vm_thread.lua_state());
+        task_ptr->new_lua_state(_lua_coroutine.state());
     }
     this->add_task(task_ptr);
 }
 
 void LuaUtilApi::LuaScheduler::set_state(lua_State *state)
 {
-    _state_ptr = state;
+    _lua_coroutine.set_state(state);
 }
 
 /* ************************************************************************* */
 /* LuaThreadRunner */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _original_fun(lua_ref), _fun(lua_ref) {}
+LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _fun(lua_ref) {}
 
-LuaUtilApi::LuaThreadRunner::~LuaThreadRunner() = default;
+LuaUtilApi::LuaThreadRunner::~LuaThreadRunner()
+{
+    // the shared function is anchored in the parent universe registry; releasing it is a
+    // luaL_unref on the parent state. A run-once task/runnable can be deleted on its
+    // scheduler/worker thread, so serialize the unref through the universe GIL. Reset to a
+    // nil ref under the GIL; the trailing member dtor then unrefs LUA_REFNIL (no-op).
+    LuaGilGuard guard(_fun.state());
+    _fun = luabridge::LuaRef(_fun.state());
+}
+
+void LuaUtilApi::LuaThreadRunner::reset_lua_state()
+{
+    _exec_state = nullptr;
+}
 
 void LuaUtilApi::LuaThreadRunner::new_lua_state(lua_State *new_state)
 {
-    if (_fun.state() != new_state)
-    {
-        // push original function on top of stack
-        _original_fun.push();
-        // transfer top of stack to top of thread state stack
-        lua_xmove(_original_fun.state(), new_state, 1);
-        // create function ref from last stack element (without index it pops the value)
-        _fun = luabridge::LuaRef::fromStack(new_state, -1);
-    }
+    _exec_state = new_state != _fun.state() ? new_state : nullptr;
+}
+
+luabridge::LuaRef LuaUtilApi::LuaThreadRunner::_exec_fun()
+{
+    if (_exec_state == nullptr)
+        return _fun;
+    // caller holds the GIL: move the shared function onto the exec thread stack and ref it there;
+    // the returned temp unrefs into the live exec thread, never into a closed coroutine at GC
+    _fun.push();
+    lua_xmove(_fun.state(), _exec_state, 1);
+    return luabridge::LuaRef::fromStack(_exec_state);
 }
 
 /* ************************************************************************* */
@@ -765,60 +892,80 @@ bool LuaUtilApi::LuaTask::run()
 /* LuaWorker */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _state_ptr(nullptr), _lua_runnable(lua_ref)
+LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _lua_runnable(lua_ref)
 {
     this->set_runnable(&_lua_runnable);
 }
 
-LuaUtilApi::LuaWorker::~LuaWorker() = default;
+LuaUtilApi::LuaWorker::~LuaWorker()
+{
+    // join before the coroutine anchor is destroyed
+    this->stop_worker();
+}
 
 void LuaUtilApi::LuaWorker::set_state(lua_State *state)
 {
-    _state_ptr = state;
+    _lua_coroutine.set_state(state);
 }
 
 bool LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {
-        // make non owning LuaVm from lua_State
-        Vm current_vm(_state_ptr);
-        lua_State *state = current_vm.new_luathread();
-        if (state == nullptr)
+        if (_lua_coroutine.create() == false)
             return false;
-        _lua_runnable.new_lua_state(state);
+        _lua_runnable.new_lua_state(_lua_coroutine.state());
     }
     return Worker::start_worker(name);
+}
+
+bool LuaUtilApi::LuaWorker::stop_worker()
+{
+    // join first, the coroutine is then idle to close
+    const bool ret = Worker::stop_worker();
+    _lua_runnable.reset_lua_state();
+    _lua_coroutine.destroy();
+    return ret;
 }
 
 /* ************************************************************************* */
 /* LuaStepWorker */
 /* ************************************************************************* */
 
-LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _state_ptr(nullptr), _lua_runnable(lua_ref)
+LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _lua_runnable(lua_ref)
 {
     this->set_runnable(&_lua_runnable);
 }
 
-LuaUtilApi::LuaStepWorker::~LuaStepWorker() = default;
+LuaUtilApi::LuaStepWorker::~LuaStepWorker()
+{
+    // join before the coroutine anchor is destroyed
+    this->stop_worker();
+}
 
 void LuaUtilApi::LuaStepWorker::set_state(lua_State *state)
 {
-    _state_ptr = state;
+    _lua_coroutine.set_state(state);
 }
 
 bool LuaUtilApi::LuaStepWorker::start_worker(const std::string_view name)
 {
     if (this->is_worker_started() == false)
     {
-        // make non owning LuaVm from lua_State
-        Vm current_vm(_state_ptr);
-        lua_State *state = current_vm.new_luathread();
-        if (state == nullptr)
+        if (_lua_coroutine.create() == false)
             return false;
-        _lua_runnable.new_lua_state(state);
+        _lua_runnable.new_lua_state(_lua_coroutine.state());
     }
     return StepWorker::start_worker(name);
+}
+
+bool LuaUtilApi::LuaStepWorker::stop_worker()
+{
+    // join first, the coroutine is then idle to close
+    const bool ret = StepWorker::stop_worker();
+    _lua_runnable.reset_lua_state();
+    _lua_coroutine.destroy();
+    return ret;
 }
 
 } // namespace sihd::lua

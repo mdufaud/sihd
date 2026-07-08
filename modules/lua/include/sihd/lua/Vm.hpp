@@ -18,10 +18,13 @@ extern "C"
 #endif
 
 #include <cstdint> // need this for LuaBridge
+#include <memory>
 #include <string>
 #include <string_view>
 
 #include <luabridge3/LuaBridge/LuaBridge.h>
+
+#include <sihd/lua/LuaGil.hpp>
 
 namespace sihd::lua
 {
@@ -70,14 +73,23 @@ class Vm: public ILuaThreadStateHandler
         void print_stack(int max = -1, FILE *output = stdout);
 
         lua_State *lua_state() const { return _state_ptr; }
+        LuaGil *gil() const { return _gil; }
 
         static Vm *get_vm(lua_State *state);
+        // GIL of the state's universe, nullptr if none
+        static LuaGil *get_gil(lua_State *state);
 
     protected:
 
     private:
         bool _state_ownership;
         lua_State *_state_ptr;
+        // owned only by the state-creating Vm; borrowed by coroutine/non-owning Vm
+        std::unique_ptr<LuaGil> _gil_storage;
+        LuaGil *_gil = nullptr;
+        // registry anchor of this Vm's coroutine state
+        int _coroutine_ref = LUA_NOREF;
+        lua_State *_coroutine_parent = nullptr;
 };
 
 } // namespace sihd::lua

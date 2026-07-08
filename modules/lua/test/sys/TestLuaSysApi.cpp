@@ -1,10 +1,12 @@
-#include <gtest/gtest.h>
 #include <iostream>
+
+#include <gtest/gtest.h>
+
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/sys/LuaSysApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -55,12 +57,29 @@ TEST_F(TestLuaSysApi, test_luasys_process)
     EXPECT_TRUE(this->do_script("test/sys/lua/test_process.lua"));
 }
 
+TEST_F(TestLuaSysApi, test_luasys_process_errors)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaSysApi::load_base(_vm);
+    LuaSysApi::load_process(_vm);
+    EXPECT_TRUE(this->do_script("test/sys/lua/test_process_errors.lua"));
+}
+
 TEST_F(TestLuaSysApi, test_luasys_files)
 {
     LuaUtilApi::load_base(_vm);
     LuaSysApi::load_base(_vm);
     LuaSysApi::load_files(_vm);
     EXPECT_TRUE(this->do_script("test/sys/lua/test_files.lua"));
+}
+
+TEST_F(TestLuaSysApi, test_luasys_proc)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaUtilApi::load_tools(_vm);
+    LuaSysApi::load_base(_vm);
+    LuaSysApi::load_process(_vm);
+    EXPECT_TRUE(this->do_script("test/sys/lua/test_proc.lua"));
 }
 
 } // namespace test

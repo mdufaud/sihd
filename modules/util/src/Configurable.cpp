@@ -1,5 +1,4 @@
 #include <sihd/json/Json.hpp>
-
 #include <sihd/util/Configurable.hpp>
 
 namespace sihd::util
@@ -10,8 +9,6 @@ bool Configurable::set_conf_str(const std::string & name, const char *param)
     std::string_view str_view(param);
     return this->set_conf_str(name, str_view);
 }
-
-// ─── Json-based configuration ───
 
 bool Configurable::set_conf(const sihd::json::Json & json)
 {
@@ -30,8 +27,6 @@ bool Configurable::set_conf(const std::string & key, const sihd::json::Json & va
 {
     return this->_set_conf_from_json(key, val);
 }
-
-// ─── Private Json dispatch ───
 
 bool Configurable::_set_conf_from_json(const std::string & key, const sihd::json::Json & val)
 {
@@ -66,23 +61,23 @@ bool Configurable::_set_conf_json(const std::string & name, const sihd::json::Js
 {
     try
     {
-        return _callbackManager.call<bool, const sihd::json::Json &>(name, val);
+        return _callback_manager.call<bool, const sihd::json::Json &>(name, val);
     }
     catch (const std::invalid_argument & e)
     {
     }
-    return _callbackManager.call<bool, const sihd::json::Json>(name, val);
+    return _callback_manager.call<bool, const sihd::json::Json>(name, val);
 }
 
 bool Configurable::set_conf_float(const std::string & name, double param)
 {
     try
     {
-        return _callbackManager.call<bool, double>(name, param);
+        return _callback_manager.call<bool, double>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
-        return _callbackManager.call<bool, float>(name, (float)param);
+        return _callback_manager.call<bool, float>(name, (float)param);
     }
 }
 
@@ -90,88 +85,88 @@ bool Configurable::set_conf_int(const std::string & name, int64_t param)
 {
     try
     {
-        return _callbackManager.call<bool, int64_t>(name, param);
+        return _callback_manager.call<bool, int64_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, uint64_t>(name, param);
+        return _callback_manager.call<bool, uint64_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, int32_t>(name, param);
+        return _callback_manager.call<bool, int32_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, uint32_t>(name, param);
+        return _callback_manager.call<bool, uint32_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, int16_t>(name, param);
+        return _callback_manager.call<bool, int16_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, uint16_t>(name, param);
+        return _callback_manager.call<bool, uint16_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, int8_t>(name, param);
+        return _callback_manager.call<bool, int8_t>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
 
-    return _callbackManager.call<bool, uint8_t>(name, param);
+    return _callback_manager.call<bool, uint8_t>(name, param);
 }
 
 bool Configurable::set_conf_str(const std::string & name, const std::string & param)
 {
     try
     {
-        return _callbackManager.call<bool, const std::string &>(name, param);
+        return _callback_manager.call<bool, const std::string &>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, std::string_view>(name, param);
+        return _callback_manager.call<bool, std::string_view>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
-    return _callbackManager.call<bool, const char *>(name, param.c_str());
+    return _callback_manager.call<bool, const char *>(name, param.c_str());
 }
 
 bool Configurable::set_conf_str(const std::string & name, std::string_view param)
 {
     try
     {
-        return _callbackManager.call<bool, std::string_view>(name, param);
+        return _callback_manager.call<bool, std::string_view>(name, param);
     }
     catch (const std::invalid_argument & e)
     {
     }
     try
     {
-        return _callbackManager.call<bool, const char *>(name, param.data());
+        return _callback_manager.call<bool, const char *>(name, param.data());
     }
     catch (const std::invalid_argument & e)
     {

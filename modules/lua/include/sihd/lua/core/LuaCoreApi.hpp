@@ -1,15 +1,14 @@
 #ifndef __SIHD_LUA_LUACOREAPI_HPP__
 #define __SIHD_LUA_LUACOREAPI_HPP__
 
-#include <sihd/lua/Vm.hpp>
-#include <sihd/lua/util/LuaUtilApi.hpp>
-
-#include <sihd/util/Runnable.hpp>
-
-#include <sihd/core/Channel.hpp>
-
 #include <memory>
-#include <queue>
+
+// clang-format off
+#include <sihd/lua/Vm.hpp>
+// clang-format on
+#include <sihd/core/Channel.hpp>
+#include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/util/Runnable.hpp>
 
 namespace sihd::lua
 {

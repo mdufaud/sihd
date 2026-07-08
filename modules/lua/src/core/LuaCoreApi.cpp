@@ -213,8 +213,17 @@ void LuaCoreApi::load(Vm & vm)
         .addConstructor<void (*)(Channel *)>()
         .addFunction("observe", &sihd::util::ObserverWaiter<Channel>::observe)
         .addFunction("clear", &sihd::util::ObserverWaiter<Channel>::clear)
-        .addFunction("wait", &sihd::util::ObserverWaiter<Channel>::wait)
-        .addFunction("wait_for", &sihd::util::ObserverWaiter<Channel>::wait_for)
+        .addFunction("wait",
+                     +[](ChannelWaiter *self, uint32_t notifications, lua_State *state) {
+                         LuaGilRelease release(state);
+                         self->wait(notifications);
+                     })
+        .addFunction("wait_for",
+                     +[](ChannelWaiter *self, luabridge::LuaRef duration, uint32_t notifications, lua_State *state) {
+                         Duration dur = sihd::lua::to_duration(duration);
+                         LuaGilRelease release(state);
+                         return self->wait_for(dur, notifications);
+                     })
         .addFunction("observing", &sihd::util::ObserverWaiter<Channel>::observing)
         .addFunction("notifications", &sihd::util::ObserverWaiter<Channel>::notifications)
         .endClass()

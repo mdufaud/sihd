@@ -20,49 +20,49 @@ class Configurable
         template <class C, typename T>
         void add_conf(const std::string & name, bool (C::*method)(T))
         {
-            _callbackManager.set<C, bool, T>(name, dynamic_cast<C *>(this), method);
+            _callback_manager.set<C, bool, T>(name, dynamic_cast<C *>(this), method);
         };
 
         template <class C, typename T1, typename T2>
         void add_conf(const std::string & name, bool (C::*method)(T1, T2))
         {
-            _callbackManager.set<C, bool, T1, T2>(name, dynamic_cast<C *>(this), method);
+            _callback_manager.set<C, bool, T1, T2>(name, dynamic_cast<C *>(this), method);
         };
 
         template <class C, typename T1, typename T2, typename T3>
         void add_conf(const std::string & name, bool (C::*method)(T1, T2, T3))
         {
-            _callbackManager.set<C, bool, T1, T2, T3>(name, dynamic_cast<C *>(this), method);
+            _callback_manager.set<C, bool, T1, T2, T3>(name, dynamic_cast<C *>(this), method);
         };
 
         template <typename T>
         void add_conf(const std::string & name, std::function<bool(T)> fun)
         {
-            _callbackManager.set<bool, T>(name, fun);
+            _callback_manager.set<bool, T>(name, fun);
         };
 
         template <typename T1, typename T2>
         void add_conf(const std::string & name, std::function<bool(T1, T2)> fun)
         {
-            _callbackManager.set<bool, T1, T2>(name, fun);
+            _callback_manager.set<bool, T1, T2>(name, fun);
         };
 
         template <typename T1, typename T2, typename T3>
         void add_conf(const std::string & name, std::function<bool(T1, T2, T3)> fun)
         {
-            _callbackManager.set<bool, T1, T2, T3>(name, fun);
+            _callback_manager.set<bool, T1, T2, T3>(name, fun);
         };
 
         template <typename T>
         bool set_conf(const std::string & name)
         {
-            return _callbackManager.call<bool, T>(name);
+            return _callback_manager.call<bool, T>(name);
         }
 
         template <typename... T>
         bool set_conf(const std::string & name, T... params)
         {
-            return _callbackManager.call<bool, T...>(name, params...);
+            return _callback_manager.call<bool, T...>(name, params...);
         }
 
         bool set_conf_float(const std::string & name, double param);
@@ -80,7 +80,7 @@ class Configurable
         bool set_conf(const std::string & key, const sihd::json::Json & val);
 
     private:
-        CallbackManager _callbackManager;
+        CallbackManager _callback_manager;
 
         bool _set_conf_from_json(const std::string & name, const sihd::json::Json & val);
         bool _set_conf_json(const std::string & name, const sihd::json::Json & val);
