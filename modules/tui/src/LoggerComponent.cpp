@@ -11,6 +11,9 @@
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerManager.hpp>
+#include <sihd/util/str.hpp>
+
+#include "InputLine.hpp"
 
 namespace sihd::tui
 {
@@ -29,15 +32,15 @@ class LoggerBase: public ComponentBase,
             sihd::util::LoggerManager::get()->add_logger(this);
             if (_options.add_bar)
             {
-                InputOption filter_opts;
-                filter_opts.multiline = false;
-                filter_opts.on_enter = [this] {
-                    _str_filter = _str_tmp_filter;
+                // the prompt space is the cell the caret falls back on when the filter is empty
+                auto input_line = Make<InputLine>(" ", "Filter");
+                _filter = input_line.get();
+                _filter->on_enter = [this] {
+                    _str_filter = _filter->content();
+                    _str_filter_lower = _str_filter;
+                    sihd::util::str::to_lower(_str_filter_lower);
                 };
-                filter_opts.transform = [](InputState state) {
-                    return state.element;
-                };
-                _filter_input = Input(&_str_tmp_filter, "Filter", filter_opts);
+                _filter_input = std::move(input_line);
                 Add(_filter_input);
             }
         }
@@ -48,6 +51,8 @@ class LoggerBase: public ComponentBase,
         {
                 sihd::util::LogInfo info;
                 std::string msg;
+                // message + source + thread name, lowercased once for case insensitive search
+                std::string search_str;
         };
 
         bool check_filter(const SavedLog & log)
@@ -59,11 +64,9 @@ class LoggerBase: public ComponentBase,
 
         bool check_search(const SavedLog & log)
         {
-            if (_options.add_bar == false || _str_filter.empty())
+            if (_options.add_bar == false || _str_filter_lower.empty())
                 return true;
-            return log.msg.find(_str_filter) != std::string::npos
-                   || log.info.source.find(_str_filter) != std::string::npos
-                   || log.info.thread_name.find(_str_filter) != std::string::npos;
+            return log.search_str.find(_str_filter_lower) != std::string::npos;
         }
 
         Element OnRender() override
@@ -276,17 +279,55 @@ class LoggerBase: public ComponentBase,
                                                     log.info.source.data(),
                                                     log.msg.data());
 
-            return paragraph(log_str) | color;
+            return make_searched_paragraph(log_str) | color;
+        }
+
+        // paragraph() with the searched substrings highlighted - words still wrap
+        Element make_searched_paragraph(const std::string & str)
+        {
+            if (_str_filter_lower.empty())
+                return paragraph(str);
+
+            Elements words;
+            for (const auto & word : sihd::util::str::split(str, ' '))
+                words.push_back(make_searched_word(word));
+            return flexbox(std::move(words), FlexboxConfig().SetGap(1, 0));
+        }
+
+        Element make_searched_word(const std::string & word)
+        {
+            std::string lowered = word;
+            sihd::util::str::to_lower(lowered);
+
+            Elements parts;
+            size_t pos = 0;
+            size_t found;
+            while ((found = lowered.find(_str_filter_lower, pos)) != std::string::npos)
+            {
+                if (found > pos)
+                    parts.push_back(text(word.substr(pos, found - pos)));
+                parts.push_back(text(word.substr(found, _str_filter_lower.size())) | inverted);
+                pos = found + _str_filter_lower.size();
+            }
+            if (parts.empty())
+                return text(word);
+            if (pos < word.size())
+                parts.push_back(text(word.substr(pos)));
+            return hbox(std::move(parts));
         }
 
         void log(const sihd::util::LogInfo & info, std::string_view msg) override
         {
+            std::string search_str = fmt::format("{} {} {}", msg, info.source, info.thread_name);
+            sihd::util::str::to_lower(search_str);
+
             std::lock_guard<std::mutex> lock(_log_mutex);
             if (_pending_logs.size() >= _options.max_logs)
                 _pending_logs.pop_front();
             _pending_logs.emplace_back(SavedLog {
                 .info = info,
                 .msg = std::string(msg),
+                .search_str = std::move(search_str),
             });
         }
 
@@ -295,8 +336,8 @@ class LoggerBase: public ComponentBase,
         bool _show_level_menu = false;
         int _selected_level_filter = 0;
 
-        std::string _str_tmp_filter;
         std::string _str_filter;
+        std::string _str_filter_lower;
         std::vector<std::string> _level_entries =
             {"all", "emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"};
         std::vector<Decorator> _level_colors = {
@@ -317,6 +358,7 @@ class LoggerBase: public ComponentBase,
         Box _scroll_btn_box;
         Box _menu_box;
         Component _filter_input;
+        InputLine *_filter = nullptr;
         std::mutex _log_mutex;
         std::list<SavedLog> _pending_logs;
         std::list<SavedLog> _saved_logs;

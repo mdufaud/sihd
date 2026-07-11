@@ -44,18 +44,25 @@ TEST_F(TestCli, test_tui_cli)
     ftxui::Component cli;
 
     auto cli_callback = [](Cli *cli, std::string_view input) {
+        if (input.empty())
+            return;
         if (input == "help")
         {
-            cli->add_output("Available commands: help, quit, get, set, show, start, stop");
-            cli->add_output("Use Tab to autocomplete");
+            cli->add_output("Available commands: help, quit, get, set, show, start, stop", OutputStyle::info);
+            cli->add_output("Tab completes, Up searches history, Ctrl+L clears", OutputStyle::info);
         }
         else if (input == "quit")
         {
-            cli->add_output("Bye!");
+            cli->add_output("Bye!", OutputStyle::success);
+        }
+        else if (input.starts_with("get") || input.starts_with("set") || input.starts_with("show")
+                 || input.starts_with("start") || input.starts_with("stop"))
+        {
+            cli->add_output(std::string("executed: ") + std::string(input), OutputStyle::success);
         }
         else
         {
-            cli->add_output(std::string("executed: ") + std::string(input));
+            cli->add_output(std::string("unknown command: ") + std::string(input), OutputStyle::error);
         }
     };
 
