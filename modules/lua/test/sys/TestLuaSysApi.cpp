@@ -41,6 +41,21 @@ class TestLuaSysApi: public ::testing::Test
         Vm _vm;
 };
 
+TEST_F(TestLuaSysApi, test_luasys_uuid_procinfo)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaSysApi::load_base(_vm);
+    LuaSysApi::load_tools(_vm);
+    EXPECT_TRUE(this->do_script("test/sys/lua/test_uuid_procinfo.lua"));
+}
+
+TEST_F(TestLuaSysApi, test_luasys_bitmap)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaSysApi::load_base(_vm);
+    EXPECT_TRUE(this->do_script("test/sys/lua/test_bitmap.lua"));
+}
+
 TEST_F(TestLuaSysApi, test_luasys_tools)
 {
     LuaUtilApi::load_base(_vm);

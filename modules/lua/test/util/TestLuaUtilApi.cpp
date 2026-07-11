@@ -51,6 +51,12 @@ TEST_F(TestLuaUtilApi, test_luautil_array)
     EXPECT_TRUE(this->do_script("test/util/lua/test_array.lua"));
 }
 
+TEST_F(TestLuaUtilApi, test_luautil_log)
+{
+    LuaUtilApi::load_base(_vm);
+    EXPECT_TRUE(this->do_script("test/util/lua/test_log.lua"));
+}
+
 TEST_F(TestLuaUtilApi, test_luautil_tools)
 {
     LuaUtilApi::load_base(_vm);

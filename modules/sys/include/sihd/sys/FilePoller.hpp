@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>

@@ -49,6 +49,7 @@ class Channel: public sihd::util::Named,
         size_t capacity() const { return _array_ptr->capacity(); }
         size_t byte_capacity() const { return _array_ptr->byte_capacity(); }
         bool reserve(size_t capacity) { return _array_ptr->reserve(capacity); }
+        bool resize(size_t size) { return _array_ptr->resize(size); }
 
         size_t data_size() const { return _array_ptr->data_size(); }
         sihd::util::Type data_type() const { return _array_ptr->data_type(); }

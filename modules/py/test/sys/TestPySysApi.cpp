@@ -63,4 +63,12 @@ TEST_F(TestPySysApi, test_pysys_process_info)
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_process_info.py"));
 }
+
+TEST_F(TestPySysApi, test_pysys_bitmap)
+{
+    DirectorySwitcher d(getenv("LIB_PATH"));
+    pybind11::scoped_interpreter guard {};
+    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_bitmap.py"));
+}
+
 } // namespace test

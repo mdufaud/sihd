@@ -1,16 +1,18 @@
+#include <map>
 #include <memory>
 #include <regex>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/endian.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -45,6 +47,32 @@ namespace
 {
 // logger used by lua code
 Logger g_lua_logger("sihd::lua");
+
+// Bridges an Observable<ServiceController> notification to a Lua callback.
+// The notify may fire on a service thread, so run the Lua call through a
+// LuaThreadRunner (own coroutine + universe GIL), exactly like a channel observer.
+class LuaServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
+{
+    public:
+        LuaServiceObserver(lua_State *state, luabridge::LuaRef fun): _runner(fun)
+        {
+            Vm vm(state);
+            lua_State *thread = vm.new_luathread();
+            if (thread != nullptr)
+                _runner.new_lua_state(thread);
+        }
+
+        void handle(sihd::util::ServiceController *ctrl) override
+        {
+            _runner.call_lua_method_noret<sihd::util::ServiceController *>(ctrl);
+        }
+
+    private:
+        LuaUtilApi::LuaThreadRunner _runner;
+};
+
+std::mutex g_service_obs_mutex;
+std::multimap<sihd::util::ServiceController *, std::unique_ptr<LuaServiceObserver>> g_service_observers;
 } // namespace
 
 bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::string & key, luabridge::LuaRef ref)
@@ -526,6 +554,10 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction(
             "debug",
             +[](const std::string & log) { g_lua_logger.log(LogLevel::debug, log); })
+        // sink configuration - wire SIHD's logger output from a config script
+        .addFunction("console", +[]() { sihd::util::LoggerManager::console(); })
+        .addFunction("stream", +[]() { sihd::util::LoggerManager::stream(); })
+        .addFunction("clear", +[]() { sihd::util::LoggerManager::clear_loggers(); })
         .endNamespace()
         /**
          * Nodes
@@ -666,10 +698,39 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction("stop", &AService::stop)
         .addFunction("reset", &AService::reset)
         .addFunction("is_running", &AService::is_running)
-        .addFunction("service_ctrl", &AService::service_ctrl)
+        .addFunction("service_ctrl",
+                     +[](AService *self) -> ServiceController * {
+                         return dynamic_cast<ServiceController *>(self->service_ctrl());
+                     })
         .endClass()
         .beginClass<ServiceController>("ServiceController")
         .addFunction("state", &ServiceController::state)
+        .addFunction("state_str", +[](ServiceController *self) -> std::string {
+            return ServiceController::state_str(self->state());
+        })
+        // observe service state transitions from a config script
+        .addFunction("add_observer",
+                     +[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) {
+                         if (fun.isFunction() == false)
+                         {
+                             luaL_error(state, "add_observer: expected a function");
+                             return;
+                         }
+                         auto obs = std::make_unique<LuaServiceObserver>(state, fun);
+                         LuaServiceObserver *ptr = obs.get();
+                         {
+                             std::lock_guard l(g_service_obs_mutex);
+                             g_service_observers.emplace(self, std::move(obs));
+                         }
+                         self->add_observer(ptr);
+                     })
+        .addFunction("remove_observers", +[](ServiceController *self) {
+            std::lock_guard l(g_service_obs_mutex);
+            auto range = g_service_observers.equal_range(self);
+            for (auto it = range.first; it != range.second; ++it)
+                self->remove_observer(it->second.get());
+            g_service_observers.erase(self);
+        })
         .endClass()
         /**
          * Runnable

@@ -50,6 +50,14 @@ TEST_F(TestLuaCoreApi, test_luacoreapi_channel)
     EXPECT_TRUE(this->do_script("test/core/lua/test_channel.lua"));
 }
 
+TEST_F(TestLuaCoreApi, test_luacoreapi_observer)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaUtilApi::load_tools(_vm);
+    LuaCoreApi::load(_vm);
+    EXPECT_TRUE(this->do_script("test/core/lua/test_observer.lua"));
+}
+
 TEST_F(TestLuaCoreApi, test_luacoreapi_errors)
 {
     LuaUtilApi::load_base(_vm);

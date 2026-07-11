@@ -13,6 +13,7 @@
 #include <sihd/core/Device.hpp>
 
 #include <sihd/core/DevFilter.hpp>
+#include <sihd/core/DevMessage.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevPulsation.hpp>
 #include <sihd/core/DevRecorder.hpp>
@@ -74,6 +75,12 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("is_running", static_cast<bool (Device::*)() const>(&ACoreService::is_running))
         .addFunction("device_state", &Device::device_state)
         .addFunction("device_state_str", &Device::device_state_str)
+        .addFunction("service_ctrl",
+                     +[](Device *self) -> sihd::util::ServiceController * {
+                         // service_ctrl() is public on AService (protected override on Device)
+                         return dynamic_cast<sihd::util::ServiceController *>(
+                             static_cast<sihd::util::AService *>(self)->service_ctrl());
+                     })
         .endClass()
         .deriveClass<Core, Device>("Core")
         .addConstructorFrom<SmartNodePtr<Core>, void(const std::string &, Node *)>()
@@ -84,6 +91,10 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("set_write_on_change", &Channel::set_write_on_change)
         .addFunction("notify", &Channel::notify)
         .addFunction("timestamp", &Channel::timestamp)
+        .addFunction("size", &Channel::size)
+        .addFunction("capacity", &Channel::capacity)
+        .addFunction("reserve", &Channel::reserve)
+        .addFunction("resize", &Channel::resize)
         .addFunction("array", static_cast<const sihd::util::IArray *(Channel::*)() const>(&Channel::array))
         .addFunction(
             "set_observer",
@@ -224,6 +235,20 @@ void LuaCoreApi::load(Vm & vm)
                          LuaGilRelease release(state);
                          return self->wait_for(dur, notifications);
                      })
+        // prev_* count notifications from the last wait instead of from this call:
+        // use them when the same thread writes then waits, otherwise a notification
+        // that lands before the wait is missed and the wait times out
+        .addFunction("prev_wait",
+                     +[](ChannelWaiter *self, uint32_t notifications, lua_State *state) {
+                         LuaGilRelease release(state);
+                         self->prev_wait(notifications);
+                     })
+        .addFunction("prev_wait_for",
+                     +[](ChannelWaiter *self, luabridge::LuaRef duration, uint32_t notifications, lua_State *state) {
+                         Duration dur = sihd::lua::to_duration(duration);
+                         LuaGilRelease release(state);
+                         return self->prev_wait_for(dur, notifications);
+                     })
         .addFunction("observing", &sihd::util::ObserverWaiter<Channel>::observing)
         .addFunction("notifications", &sihd::util::ObserverWaiter<Channel>::notifications)
         .endClass()
@@ -241,6 +266,14 @@ void LuaCoreApi::load(Vm & vm)
         .endClass()
         .deriveClass<DevRecorder, Device>("DevRecorder")
         .addConstructorFrom<SmartNodePtr<DevRecorder>, void(const std::string &, Node *)>()
+        .endClass()
+        .deriveClass<DevMessage, Device>("DevMessage")
+        .addConstructorFrom<SmartNodePtr<DevMessage>, void(const std::string &, Node *)>()
+        .addFunction("set_message_path",
+                     +[](DevMessage *self, const std::string & path) -> bool {
+                         return self->set_message_path(path);
+                     })
+        .addFunction("set_trigger_mode", &DevMessage::set_trigger_mode)
         .endClass()
         .endNamespace()
         .endNamespace();

@@ -35,6 +35,13 @@ TEST_F(TestPyUtilApi, test_pyutil_node)
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_node.py"));
 }
 
+TEST_F(TestPyUtilApi, test_pyutil_log)
+{
+    DirectorySwitcher d(getenv("LIB_PATH"));
+    pybind11::scoped_interpreter guard {};
+    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_log.py"));
+}
+
 TEST_F(TestPyUtilApi, test_pyutil_thread)
 {
     DirectorySwitcher d(getenv("LIB_PATH"));

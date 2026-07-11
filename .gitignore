@@ -57,6 +57,7 @@ build/*
 
 .github
 .claude
+.reasonix
 
 # internal dev tools
 .internal/*

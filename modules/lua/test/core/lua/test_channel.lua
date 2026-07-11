@@ -69,3 +69,11 @@ assert(dyn:name() == "dyn")
 assert(core:find_channel("dyn"):name() == "dyn")
 assert(core:get_channel("dyn"):name() == "dyn")
 assert(core:find_channel("does_not_exist") == nil)
+
+-- resize a channel's element count
+local rz = sihd.core.Channel("rz", "int", 2, nil)
+assert(rz:size() == 2)
+assert(rz:resize(5))
+assert(rz:size() == 5)
+assert(rz:reserve(16))
+assert(rz:capacity() >= 16)

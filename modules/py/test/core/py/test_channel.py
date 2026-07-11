@@ -52,3 +52,11 @@ ch_bool.set_observer(None)
 
 assert(observed_channel == ch_bool)
 assert(nobs == 1)
+
+# resize a channel's element count
+ch_resize = sihd.core.Channel("ch_resize", "int", 2)
+assert(ch_resize.size() == 2)
+assert(ch_resize.resize(5))
+assert(ch_resize.size() == 5)
+assert(ch_resize.reserve(16))
+assert(ch_resize.capacity() >= 16)

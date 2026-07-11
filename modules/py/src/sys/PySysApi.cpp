@@ -1,10 +1,12 @@
 #include <pybind11/stl.h>
 
 #include <sihd/py/sys/PySysApi.hpp>
+#include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -111,6 +113,59 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
             "creation_time",
             +[](const ProcessInfo & self) -> int64_t { return self.creation_time(); })
         .def_static("get_all_process_from_name", &ProcessInfo::get_all_process_from_name);
+    // NOTE: no Process binding for Python on purpose - the stdlib `subprocess`
+    // module already launches and manages processes. Bindings only cover what the
+    // host language lacks (see the Lua Process binding for the no-stdlib case).
+
+    pybind11::class_<Pixel>(m_sys, "Pixel")
+        .def(pybind11::init<>())
+        .def(pybind11::init<uint32_t>())
+        .def_static("rgb", &Pixel::rgb)
+        .def_property_readonly("value", [](const Pixel & self) { return self.value; })
+        .def_property_readonly("red", [](const Pixel & self) { return self.red; })
+        .def_property_readonly("green", [](const Pixel & self) { return self.green; })
+        .def_property_readonly("blue", [](const Pixel & self) { return self.blue; })
+        .def_property_readonly("alpha", [](const Pixel & self) { return self.alpha; });
+
+    pybind11::class_<Bitmap>(m_sys, "Bitmap")
+        .def(pybind11::init<>())
+        .def(pybind11::init<size_t, size_t, uint8_t>(),
+             pybind11::arg("width"),
+             pybind11::arg("height"),
+             pybind11::arg("bit_per_pixel") = 32)
+        .def("create",
+             &Bitmap::create,
+             pybind11::arg("width"),
+             pybind11::arg("height"),
+             pybind11::arg("bit_per_pixel") = 32)
+        .def("fill", &Bitmap::fill)
+        .def("clear", &Bitmap::clear)
+        .def("set", static_cast<void (Bitmap::*)(size_t, size_t, Pixel)>(&Bitmap::set))
+        .def("get", &Bitmap::get)
+        .def("is_accessible", &Bitmap::is_accessible)
+        .def("save_bmp", &Bitmap::save_bmp)
+        .def("read_bmp", &Bitmap::read_bmp)
+        .def("to_bmp_data",
+             [](const Bitmap & self) {
+                 auto data = self.to_bmp_data();
+                 return pybind11::bytes(reinterpret_cast<const char *>(data.data()), data.size());
+             })
+        .def("read_bmp_data",
+             [](Bitmap & self, pybind11::bytes data) {
+                 std::string bytes = data;
+                 return self.read_bmp_data(Bitmap::Pixels(bytes.begin(), bytes.end()));
+             })
+        .def("empty", &Bitmap::empty)
+        .def("width", &Bitmap::width)
+        .def("height", &Bitmap::height)
+        .def("byte_per_pixel", &Bitmap::byte_per_pixel);
+
+    pybind11::module m_screenshot = m_sys.def_submodule("screenshot", "sihd::sys::screenshot");
+    m_screenshot.attr("supported") = screenshot::supported;
+    m_screenshot.def("take_screen", &screenshot::take_screen);
+    m_screenshot.def("take_under_cursor", &screenshot::take_under_cursor);
+    m_screenshot.def("take_focused", &screenshot::take_focused);
+    m_screenshot.def("take_window_name", &screenshot::take_window_name);
 }
 
 static void __attribute__((constructor)) premain()

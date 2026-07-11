@@ -2,7 +2,13 @@
 
 #include <chrono>
 
-#include <sys/socket.h>
+#include <sihd/sys/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/socket.h>
+#else
+# include <winsock2.h>
+#endif
 
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>

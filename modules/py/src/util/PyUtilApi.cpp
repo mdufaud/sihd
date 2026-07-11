@@ -1,12 +1,17 @@
 #include <sihd/py/util/PyUtilApi.hpp>
 
+#include <map>
+#include <memory>
+#include <mutex>
 
+#include <sihd/util/IHandler.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Waitable.hpp>
 
 #include <sihd/util/AService.hpp>
 #include <sihd/util/Duration.hpp>
+#include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/thread.hpp>
@@ -47,6 +52,34 @@ namespace
 {
 // logger used by python code
 Logger g_py_logger("sihd::py");
+
+// Bridges an Observable<ServiceController> notification to a python callback.
+// The notify may fire on a service thread, so acquire the GIL and hold the
+// callable through a shared_ptr (GIL-safe copies/teardown), like http routes.
+class PyServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
+{
+    public:
+        explicit PyServiceObserver(pybind11::function fun):
+            _fun(std::shared_ptr<pybind11::function>(new pybind11::function(std::move(fun)),
+                                                     [](pybind11::function *p) {
+                                                         pybind11::gil_scoped_acquire acquire;
+                                                         delete p;
+                                                     }))
+        {
+        }
+
+        void handle(sihd::util::ServiceController *ctrl) override
+        {
+            pybind11::gil_scoped_acquire acquire;
+            (*_fun)(pybind11::cast(ctrl, pybind11::return_value_policy::reference));
+        }
+
+    private:
+        std::shared_ptr<pybind11::function> _fun;
+};
+
+std::mutex g_service_obs_mutex;
+std::multimap<sihd::util::ServiceController *, std::unique_ptr<PyServiceObserver>> g_service_observers;
 } // namespace
 
 void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
@@ -93,7 +126,11 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(
             "debug",
             +[](std::string_view log) { g_py_logger.log(LogLevel::debug, log); },
-            pybind11::call_guard<pybind11::gil_scoped_release>());
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        // sink configuration - wire SIHD's C++ logger output from python
+        .def("console", +[]() { sihd::util::LoggerManager::console(); })
+        .def("stream", +[]() { sihd::util::LoggerManager::stream(); })
+        .def("clear", +[]() { sihd::util::LoggerManager::clear_loggers(); });
 
     m_util.def_submodule("types", "sihd::util::Types")
         .def("type_size", &type::size)
@@ -136,7 +173,14 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Timestamp>(m_util, "Timestamp").def(pybind11::init<int64_t>());
 
-    pybind11::class_<Duration>(m_util, "Duration").def(pybind11::init<int64_t>());
+    pybind11::class_<Duration>(m_util, "Duration")
+        .def(pybind11::init<int64_t>())
+        .def("str", &Duration::str, pybind11::arg("total_parenthesis") = false, pybind11::arg("nano") = false)
+        .def("__int__", [](const Duration & self) { return static_cast<int64_t>(self); })
+        .def("__str__", [](const Duration & self) { return self.str(); });
+    // nanoseconds -> Duration, so any api taking a Duration accepts a plain int:
+    // waiter.wait_for(sihd.util.time.ms(500), 1)  instead of Duration(time.ms(500))
+    pybind11::implicitly_convertible<int64_t, Duration>();
 
     pybind11::class_<Splitter>(m_util, "Splitter")
         .def(pybind11::init<>())
@@ -213,7 +257,38 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("children", &Node::children, pybind11::return_value_policy::reference_internal)
         .def("children_keys", &Node::children_keys, pybind11::return_value_policy::reference_internal);
 
-    pybind11::class_<ServiceController>(m_util, "ServiceController").def("state", &ServiceController::state);
+    pybind11::enum_<ServiceController::State>(m_util, "ServiceState")
+        .value("NoState", ServiceController::State::None)
+        .value("Configuring", ServiceController::State::Configuring)
+        .value("Configured", ServiceController::State::Configured)
+        .value("Initializing", ServiceController::State::Initializing)
+        .value("Starting", ServiceController::State::Starting)
+        .value("Running", ServiceController::State::Running)
+        .value("Stopping", ServiceController::State::Stopping)
+        .value("Stopped", ServiceController::State::Stopped)
+        .value("Resetting", ServiceController::State::Resetting)
+        .value("Error", ServiceController::State::Error);
+
+    pybind11::class_<ServiceController>(m_util, "ServiceController")
+        .def("state", &ServiceController::state)
+        .def("state_str", [](const ServiceController & self) { return ServiceController::state_str(self.state()); })
+        .def("add_observer",
+             [](ServiceController & self, pybind11::function fun) {
+                 auto obs = std::make_unique<PyServiceObserver>(std::move(fun));
+                 PyServiceObserver *ptr = obs.get();
+                 {
+                     std::lock_guard l(g_service_obs_mutex);
+                     g_service_observers.emplace(&self, std::move(obs));
+                 }
+                 self.add_observer(ptr);
+             })
+        .def("remove_observers", [](ServiceController & self) {
+            std::lock_guard l(g_service_obs_mutex);
+            auto range = g_service_observers.equal_range(&self);
+            for (auto it = range.first; it != range.second; ++it)
+                self.remove_observer(it->second.get());
+            g_service_observers.erase(&self);
+        });
 
     pybind11::class_<AService>(m_util, "AService")
         .def("setup", &AService::setup, pybind11::call_guard<pybind11::gil_scoped_release>())

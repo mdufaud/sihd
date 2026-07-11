@@ -11,3 +11,7 @@ check_device(sihd.core.DevFilter("filter", core))
 check_device(sihd.core.DevSampler("sampler", core))
 check_device(sihd.core.DevPlayer("player", core))
 check_device(sihd.core.DevRecorder("recorder", core))
+
+local msg = sihd.core.DevMessage("message", core)
+check_device(msg)
+assert(msg:set_trigger_mode(true))

@@ -42,4 +42,11 @@ TEST_F(TestPyCoreApi, test_pycore_devpulsation)
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_devpulsation.py"));
 }
+
+TEST_F(TestPyCoreApi, test_pycore_observer)
+{
+    DirectorySwitcher d(getenv("LIB_PATH"));
+    pybind11::scoped_interpreter guard {};
+    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer.py"));
+}
 } // namespace test

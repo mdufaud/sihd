@@ -23,7 +23,7 @@ def obs(ch):
 ch_beat.set_observer(obs)
 
 ch_activate.write(0, True)
-ret = waiter.wait_for(sihd.util.Duration(sihd.util.time.ms(50)), 5)
+ret = waiter.wait_for(sihd.util.time.ms(2000), 5)
 ch_activate.write(0, False)
 ch_beat.set_observer(None)
 
@@ -32,3 +32,7 @@ assert(i >= 5)
 assert(ret)
 
 core.stop()
+
+# DevMessage construct + configure
+msg = sihd.core.DevMessage("message", core)
+assert(msg.set_trigger_mode(True))

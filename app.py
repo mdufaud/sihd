@@ -93,6 +93,8 @@ modules = {
         "export-windows-libs": ['iphlpapi'],
     },
     "http": {
+        # depends net (web-excluded) + curl/libwebsockets have no emscripten port
+        "exclude-platforms": ["web"],
         "depends": ['net'],
         "extlibs": [
             'libwebsockets',
@@ -277,8 +279,8 @@ conditional_modules = {
     "lua": {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
-        "depends": ['util', 'sys'],
-        "conditional-depends": ['core'],
+        "depends": ['util'],
+        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
@@ -293,8 +295,8 @@ conditional_modules = {
         "conditional-env": "py",
         "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
-        "depends": ['util', 'sys'],
-        "conditional-depends": ['core'],
+        "depends": [],
+        "conditional-depends": ['util', 'sys', 'core', 'net', 'http'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],

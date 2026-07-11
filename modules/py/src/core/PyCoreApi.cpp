@@ -7,6 +7,7 @@
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevFilter.hpp>
+#include <sihd/core/DevMessage.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevPulsation.hpp>
 #include <sihd/core/DevRecorder.hpp>
@@ -59,19 +60,18 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
              pybind11::return_value_policy::reference_internal)
         .def("notify", &Channel::notify, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("size", &Channel::size)
+        .def("capacity", &Channel::capacity)
+        .def("reserve", &Channel::reserve)
+        .def("resize", &Channel::resize)
         .def("data_size", &Channel::data_size)
         .def("data_type", &Channel::data_type)
         .def("is_same_type", static_cast<bool (Channel::*)(const Channel *) const>(&Channel::is_same_type))
-        .def(
-            "set_observer",
-            +[](Channel *self, [[maybe_unused]] pybind11::none none) {
-                g_channel_handler.remove_channel_obs(self);
-            },
-            pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def(
-            "set_observer",
-            +[](Channel *self, pybind11::function fun) { g_channel_handler.add_channel_obs(self, fun); },
-            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("set_observer",
+             +[](Channel *self, [[maybe_unused]] pybind11::none none) {
+                 g_channel_handler.remove_channel_obs(self);
+             })
+        .def("set_observer",
+             +[](Channel *self, pybind11::function fun) { g_channel_handler.add_channel_obs(self, fun); })
         .def(
             "copy_to",
             +[](Channel *self, IArray *array_ptr) { return self->copy_to(*array_ptr); },
@@ -208,7 +208,15 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def("device_state", &Device::device_state, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("device_state_str",
              &Device::device_state_str,
-             pybind11::call_guard<pybind11::gil_scoped_release>());
+             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def(
+            "service_ctrl",
+            // service_ctrl() is public on AService (protected override on Device)
+            [](Device & self) {
+                return dynamic_cast<sihd::util::ServiceController *>(
+                    static_cast<sihd::util::AService &>(self).service_ctrl());
+            },
+            pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<Core, Device, SmartNodePtr<Core>>(m_core, "Core")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
@@ -242,6 +250,15 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def("wait_for",
              &sihd::util::ObserverWaiter<Channel>::wait_for,
              pybind11::call_guard<pybind11::gil_scoped_release>())
+        // prev_* count notifications from the last wait instead of from this call:
+        // use them when the same thread writes then waits, otherwise a notification
+        // that lands before the wait is missed and the wait times out
+        .def("prev_wait",
+             &sihd::util::ObserverWaiter<Channel>::prev_wait,
+             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("prev_wait_for",
+             &sihd::util::ObserverWaiter<Channel>::prev_wait_for,
+             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("observing", &sihd::util::ObserverWaiter<Channel>::observing)
         .def("notifications",
              &sihd::util::ObserverWaiter<Channel>::notifications,
@@ -266,6 +283,12 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
     pybind11::class_<DevRecorder, Device, SmartNodePtr<DevRecorder>>(m_core, "DevRecorder")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>());
+
+    pybind11::class_<DevMessage, Device, SmartNodePtr<DevMessage>>(m_core, "DevMessage")
+        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init<const std::string &>())
+        .def("set_message_path", &DevMessage::set_message_path)
+        .def("set_trigger_mode", &DevMessage::set_trigger_mode);
 }
 
 static void __attribute__((constructor)) premain()
@@ -283,6 +306,9 @@ PyCoreApi::PyChannelHandler::~PyChannelHandler() = default;
 
 void PyCoreApi::PyChannelHandler::handle(Channel *channel)
 {
+    // GIL must be held for the whole lifetime of the python function object
+    // (copy out of the map, invocation and destruction all touch its refcount).
+    pybind11::gil_scoped_acquire acquire;
     pybind11::function fun;
     {
         std::lock_guard l(g_mutex_channel_handler_map);
@@ -294,7 +320,6 @@ void PyCoreApi::PyChannelHandler::handle(Channel *channel)
         }
         fun = it->second.fun;
     }
-    pybind11::gil_scoped_acquire acquire;
     fun(channel);
 }
 
