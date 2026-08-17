@@ -321,7 +321,8 @@ bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
             {
                 break;
             }
-            *((uint8_t **)&event) += event->NextEntryOffset;
+            event = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(
+                reinterpret_cast<uint8_t *>(event) + event->NextEntryOffset);
         }
 
         constexpr bool watch_subtree = FALSE;
