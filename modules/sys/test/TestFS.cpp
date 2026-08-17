@@ -210,6 +210,13 @@ TEST_F(TestFS, test_fs_creation)
     EXPECT_TRUE(fs::remove_directory(dirname));
     EXPECT_FALSE(fs::is_dir(dirname));
 
+#if !defined(__SIHD_WINDOWS__)
+    const std::string link_target = fs::combine({sandbox_path, "path", "file1.txt"});
+    const std::string link_path = fs::combine({sandbox_path, "path", "file_link"});
+    EXPECT_TRUE(fs::make_file_link(link_target, link_path));
+    EXPECT_TRUE(fs::is_symlink(link_path));
+#endif
+
     EXPECT_TRUE(fs::remove_directories(sandbox_path));
     EXPECT_FALSE(fs::is_dir(path_to_test));
     EXPECT_TRUE(fs::is_dir(sandbox_path));

@@ -278,7 +278,8 @@ bool is_dir(std::string_view path)
 
 bool is_symlink(std::string_view path)
 {
-    return is_file_type(path, std::filesystem::file_type::symlink);
+    std::error_code ec;
+    return std::filesystem::symlink_status(path, ec).type() == std::filesystem::file_type::symlink;
 }
 
 bool is_socket(std::string_view path)
