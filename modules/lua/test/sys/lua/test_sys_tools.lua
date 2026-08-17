@@ -16,3 +16,7 @@ assert(sys.os.backtrace(sys.os.stdout, 10) == 10)
 -- resources
 assert(sys.os.peak_rss() > 0)
 assert(sys.os.current_rss() > 0)
+
+-- user
+assert(type(sys.user.is_root()) == "boolean")
+assert(#sys.user.name() > 0)

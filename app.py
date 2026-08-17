@@ -55,10 +55,11 @@ modules = {
             "wayland": 0, # wayland=1 to compile with Wayland
         },
         # === Linux specific ===
-        "linux-extlibs": ['libuuid'],
+        "linux-extlibs": ['libuuid', 'libcap'],
         "linux-libs": [
             'dl', # dlopen
             'uuid', # libuuid
+            'cap', # libcap (Capabilities)
         ],
         # === Android specific ===
         "android-extlibs": ['libuuid'],
@@ -71,6 +72,7 @@ modules = {
             'ws2_32', # windows socket api (Poll)
             'gdi32', # wingdi (screenshot/clipboard)
             'imagehlp', # backtrace / SymFromAddr
+            'advapi32', # token privileges (Capabilities) / GetUserName
             # ! never add libucrt with mingw
         ],
         # === Export every libs for convenience ===
@@ -94,7 +96,7 @@ modules = {
     },
     "http": {
         # depends net (web-excluded) + curl/libwebsockets have no emscripten port
-        "exclude-platforms": ["web"],
+        "exclude-platforms": ["web", "android"],
         "depends": ['net'],
         "extlibs": [
             'libwebsockets',
@@ -135,6 +137,7 @@ modules = {
         ],
     },
     "pcap": {
+        "exclude-platforms": ["android"],
         "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
@@ -163,11 +166,13 @@ modules = {
         ],
     },
     "tui": {
+        "exclude-platforms": ["android"],
         "depends": ['util', 'sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
+        "exclude-platforms": ["android"],
         "depends": ['util', 'sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
@@ -186,6 +191,7 @@ modules = {
         ],
     },
     "usb": {
+        "exclude-platforms": ["android"],
         "depends": ['util', 'sys'],
         "extlibs": ['libusb'],
         # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags
@@ -197,6 +203,7 @@ modules = {
         ],
     },
     "bt": {
+        "exclude-platforms": ["android"],
         "allow-platforms": ["linux"],
         "depends": ['util', 'sys'],
         "extlibs": ['simpleble'],

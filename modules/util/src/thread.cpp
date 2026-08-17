@@ -46,7 +46,11 @@ pthread_t id()
 
 std::string id_str(pthread_t id)
 {
-    return "0x" + str::to_hex(id);
+    // pthread_t is opaque: an integer on glibc/musl/mingw, a pointer under Fil-C.
+    static_assert(sizeof(pthread_t) <= sizeof(uint64_t));
+    uint64_t value = 0;
+    memcpy(&value, &id, sizeof(id));
+    return "0x" + str::to_hex(value);
 }
 
 void set_name(const std::string & name)

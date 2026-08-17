@@ -1,4 +1,5 @@
 #include <atomic>
+#include <cerrno>
 
 #include <gtest/gtest.h>
 
@@ -100,19 +101,57 @@ class TestIcmp: public ::testing::Test
 
         bool send(IcmpSender & sender, const IpAddr & host)
         {
-            sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
-            sender.set_data({&now, sizeof(now)});
+            // retry while the network is unreachable: the host IPv6 default route can be
+            // reconfigured for a few seconds (RA churn) making sendto fail transiently
+            static constexpr int max_retries = 15;
 
-            sender.set_seq(_seq);
-            if (!sender.send_to(host))
+            for (int attempt = 0; attempt <= max_retries; ++attempt)
             {
-                SIHD_LOG(error, "Failed to send ICMP packet to {}", host.str());
-                return false;
-            }
+                sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
+                sender.set_data({&now, sizeof(now)});
 
-            SIHD_LOG(info, "Sent ICMP echo request to {} (seq={})", host.str(), _seq);
-            ++_seq;
-            return true;
+                sender.set_seq(_seq);
+                if (sender.send_to(host))
+                {
+                    SIHD_LOG(info, "Sent ICMP echo request to {} (seq={})", host.str(), _seq);
+                    ++_seq;
+                    return true;
+                }
+
+                // capture error before logging - logging may overwrite errno
+                const int err = _last_send_error();
+                if (_is_transient_send_error(err) == false || attempt == max_retries)
+                {
+                    SIHD_LOG(error, "Failed to send ICMP packet to {}: {}", host.str(), os::error_str(err));
+                    return false;
+                }
+                SIHD_LOG(warning,
+                         "Failed to send ICMP packet to {}: {} - retrying {}/{}",
+                         host.str(),
+                         os::error_str(err),
+                         attempt + 1,
+                         max_retries);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            return false;
+        }
+
+        static int _last_send_error()
+        {
+#if defined(__SIHD_WINDOWS__)
+            return WSAGetLastError();
+#else
+            return errno;
+#endif
+        }
+
+        static bool _is_transient_send_error(int err)
+        {
+#if defined(__SIHD_WINDOWS__)
+            return err == WSAENETUNREACH || err == WSAEHOSTUNREACH || err == WSAEADDRNOTAVAIL;
+#else
+            return err == ENETUNREACH || err == EHOSTUNREACH || err == EADDRNOTAVAIL;
+#endif
         }
 
         size_t _seq;

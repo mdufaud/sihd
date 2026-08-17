@@ -17,10 +17,6 @@ current = os_mod.current_rss()
 assert(isinstance(current, int))
 assert(current > 0)
 
-# test is_root
-is_root = os_mod.is_root()
-assert(isinstance(is_root, bool))
-
 # test max_fds
 max_fds = os_mod.max_fds()
 assert(isinstance(max_fds, int))

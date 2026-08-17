@@ -12,6 +12,7 @@
 typedef int socklen_t;
 typedef unsigned long rlim_t;
 typedef unsigned int uid_t;
+typedef unsigned int gid_t;
 #endif
 
 #endif

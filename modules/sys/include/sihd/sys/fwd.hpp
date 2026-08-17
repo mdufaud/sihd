@@ -7,6 +7,8 @@ namespace sihd::sys
 {
 
 class Bitmap;
+enum class Cap;
+class CapabilitySet;
 class Daemon;
 class DynLib;
 class File;
@@ -14,6 +16,7 @@ class FileCache;
 class FileMutex;
 class FilePoller;
 class FileWatcher;
+class Impersonation;
 class LineReader;
 class LoggerFile;
 class LoggerSystem;

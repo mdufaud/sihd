@@ -15,7 +15,15 @@ if compile_wayland:
 
 sihd_sys_libname = env.module_format_name()
 
-lib = env.build_lib(Glob('src/*.cpp'))
+sources = Glob('src/*.cpp')
+# platform folders hold the implementations with no common shape (the cap:: platform
+# functions and CapabilitySet); the linux ones self-guard and compile as no-ops on android/web
+if builder.build_platform == "windows":
+    sources += Glob('src/windows/*.cpp')
+else:
+    sources += Glob('src/linux/*.cpp')
+
+lib = env.build_lib(sources)
 
 env.build_demo("demo/sys_demo.cpp", name = "sys_demo", libs = [sihd_sys_libname])
 

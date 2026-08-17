@@ -8,6 +8,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::py
@@ -57,7 +58,6 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
     m_sys.def_submodule("os", "sihd::sys::os")
         .def("peak_rss", &os::peak_rss)
         .def("current_rss", &os::current_rss)
-        .def("is_root", &os::is_root)
         .def("pid", &os::pid)
         .def("max_fds", &os::max_fds)
         .def(
@@ -67,6 +67,12 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("last_error_str", &os::last_error_str)
         .def("is_run_by_valgrind", &os::is_run_by_valgrind)
         .def("is_run_by_debugger", &os::is_run_by_debugger);
+
+    m_sys.def_submodule("user", "sihd::sys::user")
+        .def("is_root", &user::is_root)
+        .def(
+            "name",
+            +[]() -> std::string { return user::name().value_or(""); });
 
     auto m_signal = m_sys.def_submodule("signal", "sihd::sys::signal");
     m_signal.def("handle", &signal::handle)

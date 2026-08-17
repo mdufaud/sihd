@@ -52,9 +52,9 @@ gcc_link = [
     "-Wl,-z,relro",
 ]
 
-# Position Independent Executable for security hardening - only for binaries
+# Position Independent Executable for security hardening - only for binaries.
 gcc_shared_bin_link = [
-    "-Wl,-pie",
+    "-pie",
 ]
 
 if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
@@ -79,6 +79,17 @@ clang_defines = [
 
 mode_size_clang_link = ['-s']
 mode_release_clang_link = ['-s']
+
+## fil-c specifics
+
+# Fil-C is a clang 20 fork carrying its own musl sysroot and libc++, so neither
+# the clang_* keys (different selector token) nor clang_libs = ['stdc++'] apply:
+# its clang++ driver links libc++ by itself.
+# -Werror is deliberately left off until the modules are warning-clean under it.
+filc_flags = [
+    "-Wno-unused-command-line-argument",
+    "-Wno-unknown-pragmas",
+]
 
 ## mingw specifics
 

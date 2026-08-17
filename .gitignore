@@ -71,3 +71,5 @@ gcm.cache
 
 # core dumps
 *.core
+
+tmp/

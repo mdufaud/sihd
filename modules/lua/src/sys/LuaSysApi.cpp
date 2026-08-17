@@ -22,6 +22,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/build.hpp>
 
 namespace
@@ -576,7 +577,6 @@ void LuaSysApi::load_tools(Vm & vm)
         .addFunction("backtrace", &sihd::sys::os::backtrace)
         .addFunction("pid", &sihd::sys::os::pid)
         .addFunction("max_fds", &sihd::sys::os::max_fds)
-        .addFunction("is_root", &sihd::sys::os::is_root)
         .addFunction("is_run_by_debugger", &sihd::sys::os::is_run_by_debugger)
         .addFunction("is_run_by_valgrind", &sihd::sys::os::is_run_by_valgrind)
         .addProperty(
@@ -584,7 +584,13 @@ void LuaSysApi::load_tools(Vm & vm)
             +[] { return sihd::util::build::is_run_with_asan; })
         .addFunction("peak_rss", &sihd::sys::os::peak_rss)
         .addFunction("current_rss", &sihd::sys::os::current_rss)
-        .endNamespace()  // os
+        .endNamespace() // os
+        .beginNamespace("user")
+        .addFunction("is_root", &sihd::sys::user::is_root)
+        .addFunction(
+            "name",
+            +[]() -> std::string { return sihd::sys::user::name().value_or(""); })
+        .endNamespace()  // user
         .endNamespace()  // sys
         .endNamespace(); // sihd
 }

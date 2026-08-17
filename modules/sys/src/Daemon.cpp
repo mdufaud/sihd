@@ -26,14 +26,14 @@ SIHD_LOGGER;
 Daemon::Daemon(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
 {
     _signals_handled = false;
-    _uid = 0;
 #if !defined(__SIHD_WINDOWS__)
     _working_dir_path = "/";
     _pid_file_path = fmt::format("/var/lock/{}_daemon.lock", this->name());
 #else
     _working_dir_path = fs::home_path();
 #endif
-    this->add_conf("uid", &Daemon::set_uid);
+    this->add_conf("user", static_cast<bool (Daemon::*)(std::string_view)>(&Daemon::set_user));
+    this->add_conf("group", static_cast<bool (Daemon::*)(std::string_view)>(&Daemon::set_group));
     this->add_conf("pid_file", &Daemon::set_pid_file_path);
     this->add_conf("working_dir", &Daemon::set_working_dir_path);
 }
@@ -43,9 +43,91 @@ Daemon::~Daemon()
     this->_remove_pid_file();
 }
 
-bool Daemon::set_uid(uid_t uid)
+bool Daemon::set_user(std::string_view user_name)
 {
-    _uid = uid;
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
+    (void)user_name;
+    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
+    return false;
+#else
+    const auto user_id = user::user_id_of(user_name);
+    if (!user_id.has_value())
+    {
+        SIHD_LOG(error, "Daemon: cannot resolve user '{}'", user_name);
+        return false;
+    }
+    return this->_set_drop_target(*user_id);
+#endif
+}
+
+bool Daemon::set_user(const user::UserId & user_id)
+{
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
+    (void)user_id;
+    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
+    return false;
+#else
+    return this->_set_drop_target(user_id);
+#endif
+}
+
+bool Daemon::set_group(std::string_view group_name)
+{
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
+    (void)group_name;
+    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
+    return false;
+#else
+    const auto group_id = user::group_id_of(group_name);
+    if (!group_id.has_value())
+    {
+        SIHD_LOG(error, "Daemon: cannot resolve group '{}'", group_name);
+        return false;
+    }
+    return this->_set_group(*group_id);
+#endif
+}
+
+bool Daemon::set_group(const user::GroupId & group_id)
+{
+#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
+    (void)group_id;
+    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
+    return false;
+#else
+    return this->_set_group(group_id);
+#endif
+}
+
+bool Daemon::_set_drop_target(const user::UserId & user_id)
+{
+    if (!user_id.valid())
+    {
+        SIHD_LOG(error, "Daemon: cannot drop to an invalid user");
+        return false;
+    }
+    _user = user_id;
+    if (_group_explicit)
+        return true;
+    const auto group_id = user::primary_group_of(user_id);
+    if (!group_id.has_value())
+    {
+        SIHD_LOG(error, "Daemon: no primary group for user {}", user_id.to_string());
+        return false;
+    }
+    _group = *group_id;
+    return true;
+}
+
+bool Daemon::_set_group(const user::GroupId & group_id)
+{
+    if (!group_id.valid())
+    {
+        SIHD_LOG(error, "Daemon: cannot drop to an invalid group");
+        return false;
+    }
+    _group = group_id;
+    _group_explicit = true;
     return true;
 }
 
@@ -168,17 +250,19 @@ bool Daemon::run()
         SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
         _exit(3);
     }
-    // change uid
-    if (_uid)
+    // drop to the requested account
+    if (_user.valid())
     {
         // set right ownership to pid file
-        if (chown(_pid_file_path.c_str(), _uid, 0) != 0)
+        if (chown(_pid_file_path.c_str(), _user.native(), _group.native()) != 0)
         {
-            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _uid);
+            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _user.to_string());
         }
-        if (setuid(_uid) != 0)
+        // a daemon that keeps running as root after a requested drop is a privilege escalation
+        if (user::drop_privileges(_user, _group) == false)
         {
-            SIHD_LOG(warning, "Daemon: can't set process ownership to uid: {}", _uid);
+            SIHD_LOG(error, "Daemon: cannot drop privileges to uid {}", _user.to_string());
+            _exit(4);
         }
     }
     // redirect standard file descriptors to /dev/null

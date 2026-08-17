@@ -261,31 +261,6 @@ Timestamp boot_time()
     return boot_timestamp;
 }
 
-bool is_root()
-{
-#if defined(__SIHD_WINDOWS__)
-    HANDLE hToken = NULL;
-    // Open the process token.
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
-    {
-        return false;
-    }
-
-    // Retrieve the token elevation information.
-    TOKEN_ELEVATION elevation;
-    DWORD dwSize;
-    if (!GetTokenInformation(hToken, TokenElevation, &elevation, sizeof(elevation), &dwSize))
-    {
-        CloseHandle(hToken);
-        return false;
-    }
-
-    return elevation.TokenIsElevated;
-#else
-    return getuid() == 0;
-#endif
-}
-
 // backtrace not available in windows / android
 
 #ifndef SIHD_MAX_BACKTRACE_SIZE

@@ -486,7 +486,7 @@ std::unique_ptr<Pty> Pty::create()
 namespace sihd::sys
 {
 
-SIHD_NEW_LOGGER("sihd::sys::pty");
+SIHD_LOGGER;
 
 /**
  * @brief Windows ConPTY implementation.

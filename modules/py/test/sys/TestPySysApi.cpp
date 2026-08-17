@@ -43,6 +43,13 @@ TEST_F(TestPySysApi, test_pysys_os)
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_os.py"));
 }
 
+TEST_F(TestPySysApi, test_pysys_user)
+{
+    DirectorySwitcher d(getenv("LIB_PATH"));
+    pybind11::scoped_interpreter guard {};
+    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_user.py"));
+}
+
 TEST_F(TestPySysApi, test_pysys_signal)
 {
     DirectorySwitcher d(getenv("LIB_PATH"));

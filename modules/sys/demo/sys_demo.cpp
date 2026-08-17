@@ -16,6 +16,7 @@
 #include <sihd/sys/proc.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
@@ -41,7 +42,7 @@ SIHD_NEW_LOGGER("demo");
 void os()
 {
     SIHD_LOG(info, "pid: {}", sihd::sys::os::pid());
-    SIHD_LOG(info, "is_root: {}", sihd::sys::os::is_root());
+    SIHD_LOG(info, "is_root: {}", sihd::sys::user::is_root());
     SIHD_LOG(info, "max_fds: {}", sihd::sys::os::max_fds());
     SIHD_LOG(info, "debugger: {}", sihd::sys::os::is_run_by_debugger());
     SIHD_LOG(info, "valgrind: {}", sihd::sys::os::is_run_by_valgrind());

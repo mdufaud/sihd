@@ -7,10 +7,7 @@ using namespace sihd::lua;
 
 #define PROMPT "$> "
 
-// Register every binding this build actually compiled. lua only compiles the
-// binding of a module that is in the build, so each api is guarded by its define
-// from the generated config header. Order matters: a derived class needs its base
-// registered first (net/http derive core's Device and util's Node).
+// Order matters: a derived class needs its base registered first.
 static void load_available_apis(Vm & vm)
 {
 #if SIHD_LUA_WITH_UTIL

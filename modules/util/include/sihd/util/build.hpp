@@ -119,6 +119,13 @@ constexpr bool is_windows = false;
 constexpr bool is_unix = true;
 #endif
 
+// linux kernel api: also true for android (bionic) and emscripten
+#if defined(__SIHD_LINUX__)
+constexpr bool is_linux = true;
+#else
+constexpr bool is_linux = false;
+#endif
+
 #if defined(__SIHD_ANDROID__)
 constexpr bool is_android = true;
 #else

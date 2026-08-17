@@ -26,7 +26,6 @@ sihd::util::Timestamp filetime_to_timestamp(uint64_t filetime_ticks);
 sihd::util::Timestamp filetime_now();
 #endif
 
-bool is_root();
 rlim_t max_fds();
 pid_t pid();
 
