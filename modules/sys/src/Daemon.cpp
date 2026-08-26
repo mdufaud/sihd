@@ -1,18 +1,11 @@
-#include <fcntl.h>    // open, O_RDWR
-#include <sys/stat.h> //umask
-#include <unistd.h>
-
 #include <sihd/sys/Daemon.hpp>
-#include <sihd/sys/LoggerFile.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 
-#if defined(__SIHD_WINDOWS__)
-# include <windows.h>
-#endif
+// run(), set_user()/set_group() account resolution live in src/linux|windows/Daemon.cpp
 
 namespace sihd::sys
 {
@@ -41,62 +34,6 @@ Daemon::Daemon(const std::string & name, sihd::util::Node *parent): sihd::util::
 Daemon::~Daemon()
 {
     this->_remove_pid_file();
-}
-
-bool Daemon::set_user(std::string_view user_name)
-{
-#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
-    (void)user_name;
-    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
-    return false;
-#else
-    const auto user_id = user::user_id_of(user_name);
-    if (!user_id.has_value())
-    {
-        SIHD_LOG(error, "Daemon: cannot resolve user '{}'", user_name);
-        return false;
-    }
-    return this->_set_drop_target(*user_id);
-#endif
-}
-
-bool Daemon::set_user(const user::UserId & user_id)
-{
-#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
-    (void)user_id;
-    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
-    return false;
-#else
-    return this->_set_drop_target(user_id);
-#endif
-}
-
-bool Daemon::set_group(std::string_view group_name)
-{
-#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
-    (void)group_name;
-    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
-    return false;
-#else
-    const auto group_id = user::group_id_of(group_name);
-    if (!group_id.has_value())
-    {
-        SIHD_LOG(error, "Daemon: cannot resolve group '{}'", group_name);
-        return false;
-    }
-    return this->_set_group(*group_id);
-#endif
-}
-
-bool Daemon::set_group(const user::GroupId & group_id)
-{
-#if defined(__SIHD_WINDOWS__) || defined(__SIHD_EMSCRIPTEN__)
-    (void)group_id;
-    SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
-    return false;
-#else
-    return this->_set_group(group_id);
-#endif
 }
 
 bool Daemon::_set_drop_target(const user::UserId & user_id)
@@ -199,158 +136,12 @@ bool Daemon::_write_pid_file()
     if (file.is_open() == false)
         return false;
 
-    std::string towrite = str::to_dec(getpid()) + "\n";
+    std::string towrite = str::to_dec(os::pid()) + "\n";
     bool ret = file.write(towrite) == (ssize_t)towrite.size();
     if (ret == false)
         SIHD_LOG(error, "Daemon: failed to write pid file");
 
     return ret;
 }
-
-#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
-
-bool Daemon::run()
-{
-    // lock file
-    if (_lock_pid_file() == false)
-        return false;
-    // first fork (run in background)
-    pid_t pid = fork();
-    if (pid < 0)
-    {
-        SIHD_LOG(error, "Daemon: fork failed: {}", os::last_error_str());
-        return false;
-    }
-    else if (pid > 0)
-        _exit(EXIT_SUCCESS);
-    // install signal handlers
-    this->_handle_signals();
-    // process not killed once shell is exited
-    pid_t sid = setsid();
-    if (sid < 0)
-    {
-        SIHD_LOG(error, "Daemon: setsid failed: {}", os::last_error_str());
-        _exit(1);
-    }
-    // second fork (cannot take a controlling terminal)
-    if ((pid = fork()) < 0)
-    {
-        SIHD_LOG(error, "Daemon: second fork failed: {}", os::last_error_str());
-        _exit(2);
-    }
-    if (pid > 0)
-        _exit(EXIT_SUCCESS);
-    // write pid file
-    _write_pid_file();
-    // change file creation mask
-    umask(0);
-    // change directory
-    if (chdir(_working_dir_path.c_str()) < 0)
-    {
-        SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
-        _exit(3);
-    }
-    // drop to the requested account
-    if (_user.valid())
-    {
-        // set right ownership to pid file
-        if (chown(_pid_file_path.c_str(), _user.native(), _group.native()) != 0)
-        {
-            SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _user.to_string());
-        }
-        // a daemon that keeps running as root after a requested drop is a privilege escalation
-        if (user::drop_privileges(_user, _group) == false)
-        {
-            SIHD_LOG(error, "Daemon: cannot drop privileges to uid {}", _user.to_string());
-            _exit(4);
-        }
-    }
-    // redirect standard file descriptors to /dev/null
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-    if (open("/dev/null", O_RDWR) == STDIN_FILENO)
-    {
-        if (dup2(STDIN_FILENO, STDOUT_FILENO) != STDOUT_FILENO)
-            SIHD_LOG(warning, "Daemon: could not redirect stdout to /dev/null");
-        if (dup2(STDIN_FILENO, STDERR_FILENO) != STDERR_FILENO)
-            SIHD_LOG(warning, "Daemon: could not redirect stderr to /dev/null");
-    }
-    else
-    {
-        SIHD_LOG(warning, "Daemon: could not redirect stdin to /dev/null");
-    }
-    SIHD_LOG(info, "Daemon: started with pid: {}", getpid());
-    return true;
-}
-
-#elif defined(__SIHD_WINDOWS__)
-
-bool Daemon::run()
-{
-    // Note: Windows doesn't have fork/setsid like Unix.
-    // For a true Windows daemon, use Windows Services (SC API).
-    // This implementation provides a simple "detached console" mode.
-
-    // Lock file
-    if (_lock_pid_file() == false)
-        return false;
-
-    // Install signal handlers
-    this->_handle_signals();
-
-    // Detach from console
-    if (!FreeConsole())
-    {
-        // Not an error if there's no console attached
-        DWORD err = GetLastError();
-        if (err != ERROR_INVALID_PARAMETER) // ERROR_INVALID_PARAMETER = no console
-        {
-            SIHD_LOG(warning, "Daemon: FreeConsole failed: {}", os::last_error_str());
-        }
-    }
-
-    // Change directory
-    if (!SetCurrentDirectoryA(_working_dir_path.c_str()))
-    {
-        SIHD_LOG(error, "Daemon: SetCurrentDirectory failed: {}", os::last_error_str());
-        return false;
-    }
-
-    // Write pid file
-    _write_pid_file();
-
-    // Redirect standard handles to NUL
-    HANDLE nul_handle = CreateFileA("NUL",
-                                    GENERIC_READ | GENERIC_WRITE,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                    nullptr,
-                                    OPEN_EXISTING,
-                                    FILE_ATTRIBUTE_NORMAL,
-                                    nullptr);
-    if (nul_handle != INVALID_HANDLE_VALUE)
-    {
-        SetStdHandle(STD_INPUT_HANDLE, nul_handle);
-        SetStdHandle(STD_OUTPUT_HANDLE, nul_handle);
-        SetStdHandle(STD_ERROR_HANDLE, nul_handle);
-    }
-    else
-    {
-        SIHD_LOG(warning, "Daemon: could not redirect standard handles to NUL");
-    }
-
-    SIHD_LOG(info, "Daemon: started with pid: {}", GetCurrentProcessId());
-    return true;
-}
-
-#else
-
-bool Daemon::run()
-{
-    SIHD_LOG(error, "Daemon: not supported on this platform");
-    return false;
-}
-
-#endif
 
 } // namespace sihd::sys

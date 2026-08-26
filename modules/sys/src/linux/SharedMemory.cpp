@@ -1,0 +1,195 @@
+#include <fcntl.h>     // O_*
+#include <string.h>    // strerror
+#include <sys/mman.h>  // shm_open, mmap, munmap
+#include <unistd.h>    // ftruncate, close
+
+#include <sihd/sys/SharedMemory.hpp>
+#include <sihd/sys/os.hpp>
+#include <sihd/util/Logger.hpp>
+
+using namespace sihd::util;
+
+namespace sihd::sys
+{
+
+SIHD_LOGGER;
+
+#if defined(__SIHD_UNIX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+
+namespace
+{
+
+struct Shm
+{
+        int fd;
+        void *addr;
+};
+
+bool __open(int *fd, std::string_view id, mode_t mode, int shm_flags)
+{
+    *fd = shm_open(id.data(), shm_flags, mode);
+    if (*fd == -1)
+        SIHD_LOG(error, "SharedMemory: shm_open: {}", os::last_error_str());
+    return *fd >= 0;
+}
+
+bool __mmap(void **addr, size_t size, int fd, int mmap_flags)
+{
+    *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, fd, 0);
+    if (*addr == MAP_FAILED)
+        SIHD_LOG(error, "SharedMemory: mmap: {}", os::last_error_str());
+    return *addr != MAP_FAILED;
+}
+
+std::optional<Shm> create_shm(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+{
+    int fd;
+    void *addr;
+
+    if (!__open(&fd, id, mode, shm_flags))
+        return std::nullopt;
+
+    // ftruncate
+    if (ftruncate(fd, size) == -1)
+    {
+        SIHD_LOG(error, "SharedMemory: ftruncate: {}", os::last_error_str());
+        close(fd);
+        return std::nullopt;
+    }
+
+    if (!__mmap(&addr, size, fd, mmap_flags))
+    {
+        close(fd);
+        return std::nullopt;
+    }
+
+    return Shm {fd, addr};
+}
+
+std::optional<Shm> shm_attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+{
+    int fd;
+    void *addr;
+
+    if (!__open(&fd, id, mode, shm_flags))
+        return std::nullopt;
+
+    if (!__mmap(&addr, size, fd, mmap_flags))
+    {
+        close(fd);
+        return std::nullopt;
+    }
+
+    return Shm {fd, addr};
+}
+
+} // namespace
+
+bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+{
+    this->clear();
+    auto opt = create_shm(id, size, mode, O_RDWR | O_CREAT | O_EXCL, PROT_READ | PROT_WRITE);
+    if (opt)
+    {
+        _fd = opt->fd;
+        _addr = opt->addr;
+
+        _created = true;
+        _id = id;
+        _size = size;
+    }
+    return opt.has_value();
+}
+
+bool SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+{
+    this->clear();
+
+    auto opt = shm_attach(id, size, mode, O_RDWR, PROT_READ | PROT_WRITE);
+    if (opt)
+    {
+        _fd = opt->fd;
+        _addr = opt->addr;
+
+        _created = false;
+        _id = id;
+        _size = size;
+    }
+    return opt.has_value();
+}
+
+bool SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+{
+    this->clear();
+
+    auto opt = shm_attach(id, size, mode, O_RDONLY, PROT_READ);
+    if (opt)
+    {
+        _fd = opt->fd;
+        _addr = opt->addr;
+
+        _created = false;
+        _id = id;
+        _size = size;
+    }
+    return opt.has_value();
+}
+
+bool SharedMemory::clear()
+{
+    bool ret = true;
+    if (_addr != nullptr && _addr != MAP_FAILED)
+    {
+        if (munmap(_addr, _size) == -1)
+        {
+            SIHD_LOG(error, "SharedMemory: munmap: {}", os::last_error_str());
+            ret = false;
+        }
+    }
+    if (_fd >= 0)
+    {
+        if (_created && shm_unlink(_id.c_str()) == -1)
+        {
+            SIHD_LOG(error, "SharedMemory: shm_unlink: {}", os::last_error_str());
+            ret = false;
+        }
+        close(_fd);
+        _fd = -1;
+        _id.clear();
+    }
+    _size = 0;
+    _addr = nullptr;
+    _created = false;
+    return ret;
+}
+
+#else
+
+// no POSIX shared memory (android bionic, emscripten)
+
+bool SharedMemory::create(std::string_view, size_t, mode_t)
+{
+    SIHD_LOG(error, "SharedMemory: not supported on this platform");
+    return false;
+}
+
+bool SharedMemory::attach(std::string_view, size_t, mode_t)
+{
+    SIHD_LOG(error, "SharedMemory: not supported on this platform");
+    return false;
+}
+
+bool SharedMemory::attach_read_only(std::string_view, size_t, mode_t)
+{
+    SIHD_LOG(error, "SharedMemory: not supported on this platform");
+    return false;
+}
+
+bool SharedMemory::clear()
+{
+    return true;
+}
+
+#endif
+
+} // namespace sihd::sys
