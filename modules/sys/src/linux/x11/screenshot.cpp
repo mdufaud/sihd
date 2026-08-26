@@ -8,7 +8,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include "../backends.hpp"
+#include "../x11_wayland_backends.hpp"
 
 // X11 screenshot backend - XGetImage based captures of root, focused,
 // pointed-at or named windows.

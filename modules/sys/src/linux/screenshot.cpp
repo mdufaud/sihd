@@ -10,7 +10,7 @@
 // display open falls through to false without trying Wayland; the Wayland
 // backends are only dispatched when X11 is not part of this build.
 
-#include "backends.hpp"
+#include "x11_wayland_backends.hpp"
 
 namespace sihd::sys::screenshot
 {

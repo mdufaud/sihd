@@ -7,7 +7,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include "../backends.hpp"
+#include "../x11_wayland_backends.hpp"
 
 // X11 clipboard backend - selection ownership with an event loop serving
 // TARGETS / TEXT / UTF8_STRING (text) and image/bmp requests.
