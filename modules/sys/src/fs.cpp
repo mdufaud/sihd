@@ -1,8 +1,7 @@
-#include <dirent.h> // DIR...
-#include <sys/stat.h>
+#include <unistd.h> // getcwd
 
-#include <cstdio>  // remove
-#include <cstring> // strcmp
+#include <cstdio> // remove
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -14,24 +13,10 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/build.hpp>
 
-#if defined(__SIHD_WINDOWS__)
-# include <windows.h> // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
-# include <direct.h>  // _mkdir _stat
-# include <fcntl.h>   // _O_WRONLY
-# include <fileapi.h>
-# include <io.h> // _open _close _chsize_s
-# include <libloaderapi.h>
-# include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
-#else
-# include <unistd.h>
-#endif
-
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <linux/magic.h>   // *_SUPER_MAGIC
-# include <sys/statfs.h>     // statfs
-# include <sys/sysmacros.h> // major / minor
-#endif
+// home/executable paths, children iteration, truncation, mount and storage queries,
+// chdir and tmp directories live in src/linux|windows/fs.cpp
 
 using namespace sihd::util;
 namespace sihd::sys::fs
@@ -42,11 +27,7 @@ SIHD_NEW_LOGGER("sihd::sys::fs");
 namespace
 {
 
-#if defined(__SIHD_WINDOWS__)
-char g_separator_char = '\\';
-#else
-char g_separator_char = '/';
-#endif
+char g_separator_char = sihd::util::build::is_windows ? '\\' : '/';
 
 bool is_file_type(std::string_view path, std::filesystem::file_type expected_type)
 {
@@ -66,41 +47,6 @@ std::string combine_impl(std::string_view path1, std::string_view path2)
     return fmt::format("{0}{1}{2}", path1, g_separator_char, path2);
 }
 
-#if !defined(__SIHD_WINDOWS__)
-
-void get_recursive_children(std::string_view path,
-                            std::vector<std::string> & children,
-                            uint32_t current_depth,
-                            uint32_t max_depth)
-{
-    if (max_depth > 0 && current_depth >= max_depth)
-        return;
-
-    DIR *dir_ptr;
-    struct dirent *dirent;
-    if ((dir_ptr = opendir(path.data())) != NULL)
-    {
-        while ((dirent = readdir(dir_ptr)) != NULL)
-        {
-            if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
-                continue;
-            std::string childpath = combine_impl(path, dirent->d_name);
-            if (dirent->d_type & DT_DIR)
-            {
-                children.push_back(childpath + g_separator_char);
-                get_recursive_children(childpath, children, current_depth + 1, max_depth);
-            }
-            else
-            {
-                children.push_back(childpath);
-            }
-        }
-        closedir(dir_ptr);
-    }
-}
-
-#endif
-
 bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
 {
     std::error_code ec;
@@ -108,15 +54,6 @@ bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem
     if (ec)
         SIHD_LOG(debug, "permissions: {}: {}", ec.message(), path);
     return !ec;
-}
-
-bool do_stat(std::string_view path, struct stat *s)
-{
-#if defined(__SIHD_WINDOWS__)
-    return ::_stat(path.data(), reinterpret_cast<struct _stat *>(s)) == 0;
-#else
-    return ::stat(path.data(), s) == 0;
-#endif
 }
 
 template <typename T>
@@ -131,31 +68,6 @@ std::string combine_lst_impl(const T & list)
 
     return ret;
 }
-
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
-
-StorageMedium read_rotational(const std::string & sysfs_dir)
-{
-    std::ifstream file(sysfs_dir + "/queue/rotational");
-    char c;
-    if (file.is_open() && file.get(c))
-        return c == '1' ? StorageMedium::hdd : StorageMedium::ssd;
-    return StorageMedium::unknown;
-}
-
-StorageMedium storage_medium_from_devnum(dev_t st_dev)
-{
-    // /sys/dev/block/<major>:<minor> symlinks to the block device's sysfs dir.
-    // A whole disk exposes queue/rotational directly; a partition does not, but
-    // its parent disk (..) does (best-effort for dm/LVM via the same parent walk).
-    const std::string base = fmt::format("/sys/dev/block/{}:{}", major(st_dev), minor(st_dev));
-    StorageMedium ret = read_rotational(base);
-    if (ret == StorageMedium::unknown)
-        ret = read_rotational(base + "/..");
-    return ret;
-}
-
-#endif
 
 } // namespace
 
@@ -176,15 +88,6 @@ std::string sep_str()
     return std::string(1, g_separator_char);
 };
 
-std::string home_path()
-{
-#if defined(__SIHD_WINDOWS__)
-    return combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
-#else
-    return getenv("HOME");
-#endif
-}
-
 std::string cwd()
 {
     char cwd[PATH_MAX];
@@ -194,77 +97,7 @@ std::string cwd()
     return "";
 }
 
-std::string executable_path()
-{
-#if defined(__SIHD_EMSCRIPTEN__)
-    return "";
-#elif defined(__SIHD_WINDOWS__)
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
-        return path;
-#else
-    std::string path;
-    try
-    {
-        path = std::filesystem::canonical("/proc/self/exe");
-        if (path.empty() == false)
-            return path;
-    }
-    catch ([[maybe_unused]] const std::filesystem::filesystem_error & e)
-    {
-    }
-    std::ifstream mapf("/proc/self/maps");
-    std::string line;
-    if (std::getline(mapf, line))
-    {
-        size_t idx = line.find("/");
-        if (idx != std::string::npos)
-        {
-            path = line.substr(idx);
-            return path;
-        }
-    }
-#endif
-    return ".";
-}
-
 // stat
-
-bool exists(std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    return _access(path.data(), 0) == 0;
-#else
-    return access(path.data(), F_OK) == 0;
-#endif
-}
-
-bool is_readable(std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    return _access(path.data(), 04) == 0;
-#else
-    return access(path.data(), R_OK) == 0;
-#endif
-}
-
-bool is_writable(std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    return _access(path.data(), 02) == 0;
-#else
-    return access(path.data(), W_OK) == 0;
-#endif
-}
-
-bool is_executable(std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    return _access(path.data(), 04) == 0;
-#else
-    return access(path.data(), X_OK) == 0;
-#endif
-}
 
 bool is_file(std::string_view path)
 {
@@ -300,18 +133,6 @@ bool is_character(std::string_view path)
 bool is_fifo(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::fifo);
-}
-
-Timestamp last_write(std::string_view path)
-{
-    struct stat s;
-    return do_stat(path.data(), &s) ? Timestamp(time::seconds(s.st_mtime)) : Timestamp {};
-}
-
-std::optional<size_t> file_size(std::string_view path)
-{
-    struct stat s;
-    return do_stat(path.data(), &s) ? s.st_size : std::optional<size_t> {};
 }
 
 std::string permission_to_str(unsigned int mode)
@@ -384,60 +205,6 @@ unsigned int permission_get(std::string_view path)
 
 // directories
 
-std::string tmp_path()
-{
-#if defined(__SIHD_WINDOWS__)
-    try
-    {
-        return std::filesystem::temp_directory_path().string();
-    }
-    catch ([[maybe_unused]] const std::filesystem::filesystem_error & e)
-    {
-    }
-    const char *tmp_path = getenv("Temp");
-    return tmp_path != nullptr ? tmp_path : "C:\\Windows\\TEMP\\";
-#else
-    const char *tmp_path;
-
-    (tmp_path = getenv("TMPDIR")) || (tmp_path = getenv("TMP")) || (tmp_path = getenv("TEMP"))
-        || (tmp_path = getenv("TMPDIR"));
-    return tmp_path != nullptr ? tmp_path : "/tmp";
-#endif
-}
-
-std::string make_tmp_directory(std::string_view prefix)
-{
-#if defined(__SIHD_WINDOWS__)
-    (void)prefix;
-    std::error_code ec;
-    auto tmp_path = std::filesystem::temp_directory_path(ec);
-    if (!ec)
-    {
-        char name[L_tmpnam];
-        if (std::tmpnam(name))
-        {
-            std::string_view tmp_name = name;
-            tmp_name.remove_prefix(1);
-            tmp_path /= tmp_name;
-            std::string path = tmp_path.string();
-            if (make_directory(path))
-                return path;
-        }
-    }
-#else
-    if (prefix.size() + 6 > PATH_MAX)
-        throw std::runtime_error(fmt::format("make_tmp_directory: path too long: {}", prefix));
-
-    std::string path;
-    path.reserve(prefix.size() + 6 + 1);
-    path += prefix;
-    path += "XXXXXX";
-    if (mkdtemp(path.data()) != nullptr)
-        return path;
-#endif
-    return "";
-}
-
 bool remove_directory(std::string_view path)
 {
     return rmdir(path.data()) == 0;
@@ -467,19 +234,7 @@ bool remove_directories(std::string_view path)
     return ret;
 }
 
-bool make_directory(std::string_view path, unsigned int mode)
-{
-    if (is_dir(path))
-        return true;
-    if (path.empty())
-        return false;
-#if defined(__SIHD_WINDOWS__)
-    (void)mode;
-    return _mkdir(path.data()) == 0;
-#else
-    return mkdir(path.data(), mode) == 0;
-#endif
-}
+bool make_directory(std::string_view path, unsigned int mode);
 
 bool make_directories(std::string_view path, unsigned int mode)
 {
@@ -491,17 +246,23 @@ bool make_directories(std::string_view path, unsigned int mode)
         std::vector<std::string> dirnames = splitter.split(path);
         std::string current_path;
         size_t start = 0;
-#if defined(__SIHD_WINDOWS__)
-        // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
-        if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
+        if constexpr (sihd::util::build::is_windows)
         {
-            current_path = dirnames[0] + separator;
-            start = 1;
+            // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
+            if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
+            {
+                current_path = dirnames[0] + separator;
+                start = 1;
+            }
+            else if (path[0] == g_separator_char)
+            {
+                current_path = separator;
+            }
         }
-        else
-#endif
-            if (path[0] == g_separator_char)
+        else if (path[0] == g_separator_char)
+        {
             current_path = separator;
+        }
         for (size_t i = start; i < dirnames.size(); ++i)
         {
             current_path = combine(current_path, dirnames[i]);
@@ -514,84 +275,6 @@ bool make_directories(std::string_view path, unsigned int mode)
     }
     return ret;
 }
-
-#if defined(__SIHD_WINDOWS__)
-
-std::vector<std::string> children(std::string_view path)
-{
-    std::vector<std::string> ret;
-
-    std::error_code ec;
-    const auto options = std::filesystem::directory_options::skip_permission_denied;
-    std::filesystem::directory_iterator it {path, options, ec};
-    std::filesystem::directory_iterator end;
-
-    while (it != end)
-    {
-        // match the posix contract: basename only, trailing separator for directories
-        std::string name = it->path().filename().string();
-        if (it->is_directory(ec))
-            name += g_separator_char;
-        ret.push_back(name);
-        it = it.increment(ec);
-    }
-
-    return ret;
-}
-
-std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth)
-{
-    std::vector<std::string> ret;
-
-    std::error_code ec;
-    const auto options = std::filesystem::directory_options::skip_permission_denied;
-    std::filesystem::recursive_directory_iterator it {path, options, ec};
-    std::filesystem::recursive_directory_iterator end;
-
-    while (it != end)
-    {
-        if (max_depth == 0 || (uint32_t)it.depth() < max_depth)
-        {
-            ret.push_back(it->path().string());
-        }
-        it = it.increment(ec);
-    }
-
-    return ret;
-}
-
-#else
-
-std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth)
-{
-    std::vector<std::string> ret;
-    uint32_t current_depth = 0;
-    get_recursive_children(path, ret, current_depth, max_depth);
-    return ret;
-}
-
-std::vector<std::string> children(std::string_view path)
-{
-    std::vector<std::string> ret;
-    DIR *dir_ptr;
-    struct dirent *dirent;
-    if ((dir_ptr = opendir(path.data())) != NULL)
-    {
-        while ((dirent = readdir(dir_ptr)) != NULL)
-        {
-            if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
-                continue;
-            if (dirent->d_type & DT_DIR)
-                ret.push_back(std::string(dirent->d_name) + g_separator_char);
-            else
-                ret.push_back(dirent->d_name);
-        }
-        closedir(dir_ptr);
-    }
-    return ret;
-}
-
-#endif
 
 // path manipulation
 
@@ -708,12 +391,15 @@ std::string ensure_separation(std::string_view path)
 
 bool is_absolute(std::string_view path)
 {
-#if defined(__SIHD_WINDOWS__)
-    return (path.length() > 1 && path[0] == g_separator_char && path[1] == g_separator_char)
-           || (path.length() > 2 && path[1] == ':' && path[2] == g_separator_char);
-#else
-    return path.length() > 0 && path[0] == g_separator_char;
-#endif
+    if constexpr (sihd::util::build::is_windows)
+    {
+        return (path.length() > 1 && path[0] == g_separator_char && path[1] == g_separator_char)
+               || (path.length() > 2 && path[1] == ':' && path[2] == g_separator_char);
+    }
+    else
+    {
+        return path.length() > 0 && path[0] == g_separator_char;
+    }
 }
 
 // files
@@ -792,41 +478,6 @@ bool remove_file(std::string_view path)
 bool rename(std::string_view from, std::string_view to)
 {
     return ::rename(from.data(), to.data()) == 0;
-}
-
-bool truncate(std::string_view path, int64_t size)
-{
-#if !defined(__SIHD_WINDOWS__)
-    return ::truncate(path.data(), static_cast<off_t>(size)) == 0;
-#else
-    int fd = _open(path.data(), _O_WRONLY);
-    if (fd < 0)
-        return false;
-    errno_t rc = _chsize_s(fd, size);
-    _close(fd);
-    return rc == 0;
-#endif
-}
-
-std::string realpath(std::string_view path)
-{
-#if !defined(__SIHD_WINDOWS__)
-    char *real = ::realpath(path.data(), nullptr);
-    if (!real)
-        return "";
-    std::string result(real);
-    free(real);
-    return result;
-#else
-    // POSIX realpath requires every path component to exist; _fullpath is purely
-    // lexical and succeeds for nonexistent paths -> guard to keep the same contract
-    if (!fs::exists(path))
-        return "";
-    char resolved[PATH_MAX];
-    if (_fullpath(resolved, path.data(), PATH_MAX) == nullptr)
-        return "";
-    return std::string(resolved);
-#endif
 }
 
 std::string jail(std::string_view root_view, std::string_view path_view)
@@ -951,149 +602,6 @@ ssize_t read_binary(std::string_view path, char *buf, size_t size)
     if (file.is_open())
         return file.read(buf, size);
     return ret;
-}
-
-bool chdir(std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    return ::_chdir(path.data()) == 0;
-#else
-    return ::chdir(path.data()) == 0;
-#endif
-}
-
-MountType mount_type([[maybe_unused]] std::string_view path)
-{
-#if defined(__SIHD_WINDOWS__)
-    // UNC path (\\server\share) is always a network mount
-    if (path.size() >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
-        return MountType::network;
-
-    // GetVolumePathNameA resolves a nonexistent path to its drive root (local);
-    // match the POSIX statfs-fails behavior so unresolvable paths are unknown
-    if (!exists(path))
-        return MountType::unknown;
-
-    char root[MAX_PATH];
-    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
-        return MountType::unknown;
-
-    switch (GetDriveTypeA(root))
-    {
-        case DRIVE_REMOTE:
-            return MountType::network;
-        case DRIVE_RAMDISK:
-            return MountType::ram;
-        case DRIVE_CDROM:
-            return MountType::readonly;
-        case DRIVE_FIXED:
-        case DRIVE_REMOVABLE:
-            return MountType::local;
-        default:
-            return MountType::unknown;
-    }
-#elif defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-    struct statfs buf;
-    if (::statfs(path.data(), &buf) != 0)
-        return MountType::unknown;
-
-    switch (static_cast<unsigned long>(buf.f_type))
-    {
-        case NFS_SUPER_MAGIC:
-        case SMB_SUPER_MAGIC:
-        case 0xFF534D42UL: // CIFS_MAGIC_NUMBER
-        case 0xFE534D42UL: // SMB2_MAGIC_NUMBER
-        case V9FS_MAGIC:
-            return MountType::network;
-        case TMPFS_MAGIC:
-            return MountType::ram;
-        case SQUASHFS_MAGIC:
-            return MountType::readonly;
-        default:
-            // FUSE-based remotes (sshfs) report FUSE_SUPER_MAGIC and fall here as
-            // local: telling them apart needs parsing the mount source.
-            return MountType::local;
-    }
-#else
-    return MountType::unknown;
-#endif
-}
-
-StorageMedium storage_medium([[maybe_unused]] std::string_view path)
-{
-    // no rotational backing for these (or backing is a loop file)
-    const MountType type = mount_type(path);
-    if (type == MountType::network || type == MountType::ram || type == MountType::readonly)
-        return StorageMedium::unknown;
-
-#if defined(__SIHD_WINDOWS__)
-    char root[MAX_PATH];
-    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
-        return StorageMedium::unknown;
-
-    // \\.\X: addressing the volume by its drive letter
-    std::string volume_path = fmt::format("\\\\.\\{}:", root[0]);
-    HANDLE volume = CreateFileA(volume_path.c_str(),
-                                0,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                nullptr,
-                                OPEN_EXISTING,
-                                0,
-                                nullptr);
-    if (volume == INVALID_HANDLE_VALUE)
-        return StorageMedium::unknown;
-
-    StorageMedium ret = StorageMedium::unknown;
-    VOLUME_DISK_EXTENTS extents;
-    DWORD bytes = 0;
-    if (DeviceIoControl(volume,
-                        IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
-                        nullptr,
-                        0,
-                        &extents,
-                        sizeof(extents),
-                        &bytes,
-                        nullptr)
-        && extents.NumberOfDiskExtents > 0)
-    {
-        std::string disk_path = fmt::format("\\\\.\\PhysicalDrive{}", extents.Extents[0].DiskNumber);
-        HANDLE disk = CreateFileA(disk_path.c_str(),
-                                  0,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                  nullptr,
-                                  OPEN_EXISTING,
-                                  0,
-                                  nullptr);
-        if (disk != INVALID_HANDLE_VALUE)
-        {
-            STORAGE_PROPERTY_QUERY query {};
-            query.PropertyId = StorageDeviceSeekPenaltyProperty;
-            query.QueryType = PropertyStandardQuery;
-            DEVICE_SEEK_PENALTY_DESCRIPTOR desc {};
-            if (DeviceIoControl(disk,
-                                IOCTL_STORAGE_QUERY_PROPERTY,
-                                &query,
-                                sizeof(query),
-                                &desc,
-                                sizeof(desc),
-                                &bytes,
-                                nullptr))
-            {
-                ret = desc.IncursSeekPenalty ? StorageMedium::hdd : StorageMedium::ssd;
-            }
-            CloseHandle(disk);
-        }
-    }
-    CloseHandle(volume);
-    return ret;
-#elif defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
-    struct stat s;
-    if (!do_stat(path, &s))
-        return StorageMedium::unknown;
-    return storage_medium_from_devnum(s.st_dev);
-#else
-    return StorageMedium::unknown;
-#endif
 }
 
 } // namespace sihd::sys::fs

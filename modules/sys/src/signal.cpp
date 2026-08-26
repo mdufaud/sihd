@@ -365,69 +365,8 @@ void reset_all_received()
     }
 }
 
-#if !defined(__SIHD_WINDOWS__)
-bool block_thread(int sig)
-{
-    const int sigs[] = {sig};
-    return block_thread(sigs);
-}
-
-bool block_thread(std::span<const int> sigs)
-{
-    sigset_t set;
-    sigemptyset(&set);
-    for (int sig : sigs)
-        sigaddset(&set, sig);
-    return pthread_sigmask(SIG_BLOCK, &set, nullptr) == 0;
-}
-
-bool unblock_thread(int sig)
-{
-    const int sigs[] = {sig};
-    return unblock_thread(sigs);
-}
-
-bool unblock_thread(std::span<const int> sigs)
-{
-    sigset_t set;
-    sigemptyset(&set);
-    for (int sig : sigs)
-        sigaddset(&set, sig);
-
-    // drain any pending instances so unblocking does not deliver them
-    struct timespec ts = {0, 0};
-    while (sigtimedwait(&set, nullptr, &ts) > 0)
-        ;
-
-    return pthread_sigmask(SIG_UNBLOCK, &set, nullptr) == 0;
-}
-#endif
-
-// utilities
-
-bool kill(pid_t pid, int sig)
-{
-#if !defined(__SIHD_WINDOWS__)
-    return ::kill(pid, sig) == 0;
-#else
-    HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
-    if (handle == nullptr)
-        return false;
-    const bool success = TerminateProcess(handle, sig);
-    CloseHandle(handle);
-    return success;
-#endif
-}
-
-std::string name(int sig)
-{
-#if !defined(__SIHD_WINDOWS__)
-    char *signame = strsignal(sig);
-    if (signame != nullptr)
-        return std::string(signame);
-#endif
-    return std::to_string(sig);
-}
+// block_thread()/unblock_thread() live in src/linux/signal.cpp;
+// kill() and name() live in src/linux|windows/signal.cpp
 
 std::string status_str()
 {
