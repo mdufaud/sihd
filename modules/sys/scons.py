@@ -22,6 +22,11 @@ if builder.build_platform == "windows":
     sources += Glob('src/windows/*.cpp')
 else:
     sources += Glob('src/linux/*.cpp')
+    # x11 / wayland backends only compile when their opt is enabled
+    if compile_x11:
+        sources += Glob('src/linux/x11/*.cpp')
+    if compile_wayland:
+        sources += Glob('src/linux/wayland/*.cpp')
 
 lib = env.build_lib(sources)
 
