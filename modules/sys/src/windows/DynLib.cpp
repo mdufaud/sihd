@@ -16,8 +16,14 @@ namespace
 
 std::string get_error()
 {
+#if !defined(SIHD_STATIC)
     return os::last_error_str();
+#else
+    return "";
+#endif
 }
+
+#if !defined(SIHD_STATIC)
 
 bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 {
@@ -27,12 +33,15 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
     return *handle != nullptr;
 }
 
+#endif
+
 } // namespace
 
 SIHD_LOGGER;
 
 bool DynLib::open(std::string_view lib_name)
 {
+#if !defined(SIHD_STATIC)
     this->close();
     std::string test_lib_name;
 
@@ -42,6 +51,10 @@ bool DynLib::open(std::string_view lib_name)
     if (_handle == nullptr)
         SIHD_LOG(error, "DynLib: {}", get_error());
     return _handle != nullptr;
+#else
+    (void)lib_name;
+    return false;
+#endif
 }
 
 void *DynLib::load(std::string_view symbol_name)
