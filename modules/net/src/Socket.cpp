@@ -10,17 +10,12 @@
 #include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <fcntl.h>       // fcntl
-# include <net/if.h>      // IFNAMSIZ
+# include <net/if.h>      // if_nametoindex
 # include <netinet/tcp.h> // tcp nodelay
 # include <sys/un.h>      // unix sockets
 #else
 # include <afunix.h>   // AF_UNIX
 # include <ws2tcpip.h> // IP_TTL SUN_LEN
-// missing mingw getsockopt action
-# ifndef SO_BSP_STATE
-#  define SO_BSP_STATE 0x1009
-# endif
 
 /* Evaluate to actual length of the `sockaddr_un' structure.  */
 # define SUN_LEN(ptr) (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
@@ -170,25 +165,6 @@ bool Socket::is_socket_broadcast(int socket)
     return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
 }
 
-bool Socket::bind_socket_to_device(int socket, std::string_view name)
-{
-#if !defined(__SIHD_WINDOWS__)
-    char device_name[IFNAMSIZ];
-
-    strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
-    return sihd::sys::os::setsockopt(socket,
-                                     SOL_SOCKET,
-                                     SO_BINDTODEVICE,
-                                     device_name,
-                                     sizeof(device_name),
-                                     true);
-#else
-    (void)socket;
-    (void)name;
-    return false;
-#endif
-}
-
 bool Socket::set_socket_keepalive(int socket, bool active)
 {
     int opt = active ? 1 : 0;
@@ -246,39 +222,6 @@ int Socket::get_socket_sndbuf(int socket)
     socklen_t len = sizeof(val);
     sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_SNDBUF, &val, &len, true);
     return val;
-}
-
-bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
-{
-#if !defined(__SIHD_WINDOWS__)
-    socklen_t length = sizeof(int);
-    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
-    length = sizeof(int);
-    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
-    length = sizeof(int);
-    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
-    return found;
-#else
-    // SO_BSP_STATE returns a CSADDR_INFO whose LocalAddr/RemoteAddr point into the
-    // same buffer right after the struct; the buffer must be large enough for both
-    // appended sockaddrs or getsockopt fails with WSAEFAULT.
-    char buffer[sizeof(CSADDR_INFO) + 2 * sizeof(SOCKADDR_STORAGE)];
-    CSADDR_INFO *addrinfo = reinterpret_cast<CSADDR_INFO *>(buffer);
-    socklen_t length = sizeof(buffer);
-    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, addrinfo, &length);
-    if (found)
-    {
-        *protocol = addrinfo->iProtocol;
-        *type = addrinfo->iSocketType;
-        if (addrinfo->LocalAddr.lpSockaddr != nullptr)
-            *domain = addrinfo->LocalAddr.lpSockaddr->sa_family;
-        else if (addrinfo->RemoteAddr.lpSockaddr != nullptr)
-            *domain = addrinfo->RemoteAddr.lpSockaddr->sa_family;
-        else
-            *domain = AF_INET;
-    }
-    return found;
-#endif
 }
 
 bool Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
@@ -979,81 +922,7 @@ std::string Socket::unix_socket_peername(int socket)
 }
 
 /* ************************************************************************* */
-/* Socket (unix) utilities operations */
+/* Socket utilities operations */
 /* ************************************************************************* */
-
-#if !defined(__SIHD_WINDOWS__)
-
-bool Socket::set_socket_blocking(int socket, bool active)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: cannot set blocking on a closed socket");
-    int opts = ::fcntl(socket, F_GETFL);
-    if (opts < 0)
-    {
-        SIHD_LOG(error, "Socket: could not get fcntl: {}", sihd::sys::os::last_error_str());
-        return false;
-    }
-    if (active)
-        opts &= ~O_NONBLOCK;
-    else
-        opts |= O_NONBLOCK;
-    opts = ::fcntl(socket, F_SETFL, opts);
-    if (opts < 0)
-        SIHD_LOG(error, "Socket: could not set fcntl options: {}", sihd::sys::os::last_error_str());
-    return opts >= 0;
-}
-
-bool Socket::is_socket_blocking(int socket)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: cannot check blocking on a closed socket");
-    int opts = ::fcntl(socket, F_GETFL);
-    if (opts < 0)
-    {
-        SIHD_LOG(error, "Socket: could not get fcntl: {}", sihd::sys::os::last_error_str());
-        return false;
-    }
-    return !(opts & O_NONBLOCK);
-}
-
-#else
-
-/* ************************************************************************* */
-/* Socket windows operations */
-/* ************************************************************************* */
-
-bool Socket::is_socket_blocking(int socket)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: check blocking on a closed socket");
-    /// @note windows sockets are created in blocking mode by default
-    // currently on windows, there is no easy way to obtain the socket's current blocking mode since
-    // WSAIsBlocking was deprecated
-    unsigned long mode = 1;
-    bool set_blocking = sihd::sys::os::ioctl(socket, FIONBIO, &mode);
-    if (set_blocking)
-    {
-        // put back non blocking
-        mode = 0;
-        return sihd::sys::os::ioctl(socket, FIONBIO, &mode, true);
-    }
-    return set_blocking == false;
-}
-
-bool Socket::set_socket_blocking(int socket, bool active)
-{
-    if (socket < 0)
-        throw std::runtime_error("Socket: cannot set blocking on a closed socket");
-    unsigned long mode = active ? 0 : 1;
-    if (!sihd::sys::os::ioctl(socket, FIONBIO, &mode))
-    {
-        SIHD_LOG(error, "Socket: could not set ioctl: {}", sihd::sys::os::last_error_str());
-        return false;
-    }
-    return true;
-}
-
-#endif
 
 } // namespace sihd::net
