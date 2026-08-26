@@ -5,11 +5,10 @@
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
-#if defined(__SIHD_WINDOWS__)
 # include <windows.h>
 
 # include <psapi.h>
@@ -68,12 +67,6 @@ struct WindowsUserProcessInfos
         ULONG EnvironmentSize;
 };
 
-#else
-
-# include <unistd.h>
-
-#endif
-
 namespace sihd::sys
 {
 
@@ -83,8 +76,6 @@ SIHD_LOGGER;
 
 namespace
 {
-
-#if defined(__SIHD_WINDOWS__)
 
 bool read_process_memory(HANDLE & handle, WindowsUserProcessInfos & procParams)
 {
@@ -127,31 +118,8 @@ std::wstring get_memory_info(HANDLE & handle, PVOID addr, ULONG length)
     return std::wstring {};
 }
 
-#else
-
-bool proc_exists(int pid)
-{
-    return fs::is_dir(fmt::format("/proc/{}", pid));
-}
-
-std::string get_process_name_from_pid(int pid)
-{
-    auto line_opt = fs::read_all(fmt::format("/proc/{}/stat", pid));
-    if (line_opt.has_value())
-    {
-        // The process name is the second field in the stat file, enclosed in parentheses
-        const size_t start = line_opt->find_first_of('(') + 1;
-        const size_t end = line_opt->find_last_of(')');
-        return line_opt->substr(start, end - start);
-    }
-    return "";
-}
-
-#endif
-
 void list_processes(std::function<bool(std::string_view, int)> predicate)
 {
-#if defined(__SIHD_WINDOWS__)
     HANDLE process_snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (process_snap == INVALID_HANDLE_VALUE)
     {
@@ -177,23 +145,6 @@ void list_processes(std::function<bool(std::string_view, int)> predicate)
     while (Process32Next(process_snap, &pe32));
 
     CloseHandle(process_snap);
-#else
-    for (const std::string & child : fs::children("/proc"))
-    {
-        if (str::regex_match(child, "\\d+/"))
-        {
-            int pid = std::stoi(child);
-            if (proc_exists(pid))
-            {
-                std::string found_process_name = get_process_name_from_pid(pid);
-                if (predicate(found_process_name, pid))
-                {
-                    return;
-                }
-            }
-        }
-    }
-#endif
 }
 
 } // namespace
@@ -204,10 +155,8 @@ struct ProcessInfo::Impl
         Impl(std::string_view name) { this->load(this->find_from_pid(name)); };
         ~Impl()
         {
-#if defined(__SIHD_WINDOWS__)
             if (this->process_handle != INVALID_HANDLE_VALUE)
                 CloseHandle(this->process_handle);
-#endif
         }
 
         int find_from_pid(std::string_view name);
@@ -223,9 +172,7 @@ struct ProcessInfo::Impl
 
         bool write_into_stdin(ArrCharView view) const;
 
-#if defined(__SIHD_WINDOWS__)
         HANDLE process_handle = INVALID_HANDLE_VALUE;
-#endif
         int pid = -1;
         std::string process_name;
         std::string exe_path;
@@ -237,14 +184,10 @@ struct ProcessInfo::Impl
 
 bool ProcessInfo::Impl::still_exists()
 {
-#if defined(__SIHD_WINDOWS__)
     if (this->process_handle != INVALID_HANDLE_VALUE)
         CloseHandle(this->process_handle);
     this->process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, this->pid);
     return this->process_handle != INVALID_HANDLE_VALUE;
-#else
-    return proc_exists(this->pid);
-#endif
 }
 
 int ProcessInfo::Impl::find_from_pid(std::string_view name)
@@ -263,7 +206,6 @@ int ProcessInfo::Impl::find_from_pid(std::string_view name)
 
 void ProcessInfo::Impl::load_time()
 {
-#if defined(__SIHD_WINDOWS__)
     FILETIME creation_time, exit_time, kernel_time, user_time;
     if (GetProcessTimes(this->process_handle, &creation_time, &exit_time, &kernel_time, &user_time))
     {
@@ -272,29 +214,10 @@ void ProcessInfo::Impl::load_time()
         li.HighPart = creation_time.dwHighDateTime;
         this->creation_time = os::filetime_to_timestamp(li.QuadPart);
     }
-#else
-    Timestamp boot_time = os::boot_time();
-    auto line_opt = fs::read_all(fmt::format("/proc/{}/stat", this->pid));
-    auto status = line_opt.has_value() ? str::split(*line_opt, ' ') : std::vector<std::string> {};
-    /**
-     * From man stat:
-     *           (22) starttime  %llu
-                    The time the process started after system boot.  In
-                    kernels before Linux 2.6, this value was expressed
-                    in jiffies.  Since Linux 2.6, the value is expressed
-                    in clock ticks (divide by sysconf(_SC_CLK_TCK)).
-     */
-    if (status.size() > 21)
-    {
-        this->creation_time
-            = Duration(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
-    }
-#endif
 }
 
 void ProcessInfo::Impl::load_specific_process_infos()
 {
-#if defined(__SIHD_WINDOWS__)
     WindowsUserProcessInfos procParams;
     if (read_process_memory(this->process_handle, procParams))
     {
@@ -316,55 +239,29 @@ void ProcessInfo::Impl::load_specific_process_infos()
         str = str::to_str(wstr);
         this->cmd_line = str::split(str, ' ');
     }
-
-#else
-    auto cwd_opt = fs::read_link(fmt::format("/proc/{}/cwd", this->pid));
-    this->cwd = cwd_opt.has_value() ? cwd_opt.value() : "";
-
-    auto cmdline_opt = fs::read_all(fmt::format("/proc/{}/cmdline", this->pid));
-    this->cmd_line = cmdline_opt.has_value() ? str::split(*cmdline_opt, '\0') : std::vector<std::string> {};
-
-    auto env_opt = fs::read_all(fmt::format("/proc/{}/environ", this->pid));
-    this->env = env_opt.has_value() ? str::split(*env_opt, '\0') : std::vector<std::string> {};
-#endif
 }
 
 void ProcessInfo::Impl::load_exe()
 {
-#if defined(__SIHD_WINDOWS__)
     CHAR buffer[MAX_PATH];
     if (GetModuleFileNameExA(this->process_handle, NULL, buffer, MAX_PATH))
         this->exe_path = buffer;
-#else
-    auto path_opt = fs::read_link(fmt::format("/proc/{}/exe", this->pid));
-    this->exe_path = path_opt.has_value() ? path_opt.value() : "";
-#endif
 }
 
 void ProcessInfo::Impl::load_process_name()
 {
-#if defined(__SIHD_WINDOWS__)
     CHAR buffer[MAX_PATH];
     if (GetModuleBaseNameA(this->process_handle, NULL, buffer, MAX_PATH))
         this->process_name = buffer;
-#else
-    if (this->process_name.empty())
-        this->process_name = get_process_name_from_pid(this->pid);
-#endif
 }
 
 bool ProcessInfo::Impl::load(int pid)
 {
     if (pid < 0)
         return false;
-#if defined(__SIHD_WINDOWS__)
     this->process_handle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, pid);
     if (this->process_handle == INVALID_HANDLE_VALUE)
         return false;
-#else
-    if (!proc_exists(pid))
-        return false;
-#endif
     this->pid = pid;
     this->load_process_name();
     this->load_exe();
@@ -375,7 +272,6 @@ bool ProcessInfo::Impl::load(int pid)
 
 bool ProcessInfo::Impl::write_into_stdin(ArrCharView view) const
 {
-#if defined(__SIHD_WINDOWS__)
     HANDLE handle_stdin;
     if (!DuplicateHandle(GetCurrentProcess(),
                          GetStdHandle(STD_INPUT_HANDLE),
@@ -392,9 +288,6 @@ bool ProcessInfo::Impl::write_into_stdin(ArrCharView view) const
     auto success = WriteFile(handle_stdin, view.data(), view.size(), &written, NULL);
     CloseHandle(handle_stdin);
     return success;
-#else
-    return fs::write(fmt::format("/proc/{}/fd/0", this->pid), view) == view.size();
-#endif
 }
 
 std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::string & regex)
