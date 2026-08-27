@@ -59,6 +59,7 @@ build/*
 .claude
 .codex
 .reasonix
+.zcode
 
 # internal dev tools
 .internal/*

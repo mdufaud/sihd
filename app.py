@@ -216,8 +216,9 @@ modules = {
     },
     "imgui": {
         "depends": ['util', 'sys'],
-        # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static
+        # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android.
         "allow-link-shared": True,
+        "android-allow-link-shared": False,
         "extlibs": ['imgui', 'opengl'],
         # libxcrypt only supports linux|osx (autotools, no Windows/web port)
         "linux-extlibs": ['ncurses', 'libxcrypt'],

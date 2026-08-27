@@ -7,7 +7,7 @@ import sys
 ## general compilation parameters
 
 flags = ['-Wall', '-Wextra', '-pipe', '-fPIC']
-cxx_flags = ['-std=c++20']
+cxx_flags = ['-std=c++23']
 static_defines = ['SIHD_STATIC']
 
 # out-of-line atomics: 64-bit atomics on armv7, sub-word on riscv
@@ -27,6 +27,10 @@ mode_debug_flags = _default_flags + ["-g", "-Og"]
 mode_fast_flags = ["-O0"]
 mode_size_flags = _default_flags + ["-Os"]
 mode_release_flags = _default_flags + ["-O3"]
+
+android_release_modes = ["release"]
+
+# android_sign_config = "keystore.properties"
 
 ## gcc specifics
 
