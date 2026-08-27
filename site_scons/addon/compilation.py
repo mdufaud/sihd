@@ -29,8 +29,7 @@ mode_size_flags = _default_flags + ["-Os"]
 mode_release_flags = _default_flags + ["-O3"]
 
 android_release_modes = ["release"]
-
-# android_sign_config = "keystore.properties"
+android_sign_config = "keystore.properties"
 
 ## gcc specifics
 
