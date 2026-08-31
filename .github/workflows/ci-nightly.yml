@@ -29,12 +29,12 @@ jobs:
           - id: x64-linux
             dep-args: test=1 demo=1
             make-args: test=1 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
             itest: true
           - id: x64-linux-clang
             dep-args: ''
             make-args: compiler=clang
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
           - id: x64-linux-musl
             dep-args: ''
             make-args: libc=musl mode=size
