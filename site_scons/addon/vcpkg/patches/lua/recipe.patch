@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 70a3c64..fd04503 100644
+index 44e0ec6..fd04503 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -1,142 +1,118 @@
+@@ -1,144 +1,118 @@
  # Lua can be compiled as either C or C++.
 -# The vcpkg port always builds the lua C library.
 -# Option COMPILE_AS_CPP enables building a lua-c++ library.
@@ -35,7 +35,9 @@ index 70a3c64..fd04503 100644
 -    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 -endif()
 -
--if(UNIX)
+-if(CMAKE_SYSTEM_NAME STREQUAL "iOS")
+-    add_compile_definitions(LUA_USE_IOS)
+-elseif(UNIX)
 -    add_compile_definitions(LUA_USE_POSIX LUA_USE_DLOPEN)
 -    find_library(HAVE_LIBM NAMES m)
 -endif()
@@ -248,50 +250,15 @@ index 70a3c64..fd04503 100644
 +        INSTALL(FILES src/lua.hpp DESTINATION include)
 +    ENDIF ()
 +ENDIF ()
-diff --git a/fix-ios-system.patch b/fix-ios-system.patch
-deleted file mode 100644
-index f51c944..0000000
---- a/fix-ios-system.patch
-+++ /dev/null
-@@ -1,29 +0,0 @@
--diff --git a/src/loslib.c b/src/loslib.c
--index ad5a927..7812011 100644
----- a/src/loslib.c
--+++ b/src/loslib.c
--@@ -4,6 +4,10 @@
-- ** See Copyright Notice in lua.h
-- */
-- 
--+#if defined(__APPLE__)
--+#include <TargetConditionals.h>
--+#endif
--+
-- #define loslib_c
-- #define LUA_LIB
-- 
--@@ -143,7 +147,12 @@ static int os_execute (lua_State *L) {
--   const char *cmd = luaL_optstring(L, 1, NULL);
--   int stat;
--   errno = 0;
---  stat = l_system(cmd);
--+#if defined(__APPLE__) && !TARGET_OS_OSX
--+   // system() is __IOS_PROHIBITED, __WATCHOS_PROHIBITED, and __TVOS_PROHIBITED.
--+   stat = 127; // error: shell execution failed
--+#else
--+   stat = system(cmd);
--+#endif
--   if (cmd != NULL)
--     return luaL_execresult(L, stat);
--   else {
 diff --git a/portfile.cmake b/portfile.cmake
-index 08f951f..60b5aa6 100644
+index c5f5493..60b5aa6 100644
 --- a/portfile.cmake
 +++ b/portfile.cmake
-@@ -1,57 +1,62 @@
+@@ -1,56 +1,62 @@
  vcpkg_download_distfile(ARCHIVE
 -    URLS "https://www.lua.org/ftp/lua-${VERSION}.tar.gz"
 -    FILENAME "lua-${VERSION}.tar.gz"
--    SHA512 3253d2cdc929da6438095a30d66ef16a1abdbb0ada8fee238705b3b38492f14be9553640fdca6b25661e01155ba5582032e0a2ef064e4c283e85efc0a128cabe
+-    SHA512 1c8cb3d7194732d7685f80a30e0804cb24dc6aee1f8d1383bb9fd5d0699b84c70b823e686555dfa8fd61a32f32c0c687a8419ff4aa285f39d4f3bf3d5cd635c0
 +    URLS "https://www.lua.org/ftp/lua-5.3.5.tar.gz"
 +    FILENAME "lua-5.3.5.tar.gz"
 +    SHA512 4f9516acc4659dfd0a9e911bfa00c0788f0ad9348e5724fe8fb17aac59e9c0060a64378f82be86f8534e49c6c013e7488ad17321bafcc787831d3d67406bd0f4
@@ -301,7 +268,6 @@ index 08f951f..60b5aa6 100644
 -    ARCHIVE "${ARCHIVE}"
 -    PATCHES
 -        vs2015-impl-c99.patch
--        fix-ios-system.patch
 -        uwp-no-popen.diff
 +vcpkg_extract_source_archive_ex(
 +    OUT_SOURCE_PATH SOURCE_PATH
@@ -393,25 +359,27 @@ index 08f951f..60b5aa6 100644
 +# Handle copyright
 +file(INSTALL ${CMAKE_CURRENT_LIST_DIR}/COPYRIGHT DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
 diff --git a/usage b/usage
-index 47caa5b..8a11e20 100644
+index ee894e8..8a11e20 100644
 --- a/usage
 +++ b/usage
 @@ -1,10 +1,9 @@
 -lua provides CMake integration for the C library:
-+Use this package via the module FindLua that comes with CMake. To use in your CMakeLists.txt:
- 
+-
 -  find_package(Lua REQUIRED)
 -  target_include_directories(main PRIVATE ${LUA_INCLUDE_DIR})
 -  target_link_libraries(main PRIVATE ${LUA_LIBRARIES})
-+    include(FindLua)
-+    find_package(lua REQUIRED)
-+    target_link_libraries(main PRIVATE ${LUA_LIBRARIES})
-+    target_include_directories(main PRIVATE ${LUA_INCLUDE_DIR})
- 
+-
 -lua[cpp] provides a C++ library with exception handling:
 -
 -  find_package(unofficial-lua)
 -  target_link_libraries(main PRIVATE unofficial::lua::lua-cpp)
++Use this package via the module FindLua that comes with CMake. To use in your CMakeLists.txt:
++
++    include(FindLua)
++    find_package(lua REQUIRED)
++    target_link_libraries(main PRIVATE ${LUA_LIBRARIES})
++    target_include_directories(main PRIVATE ${LUA_INCLUDE_DIR})
++
 +For more information about the variables set by this module, please see:
 +    https://cmake.org/cmake/help/latest/module/FindLua.html
 \ No newline at end of file
@@ -447,7 +415,7 @@ index ad6b17b..0000000
 - #define l_pclose(L,file)	(_pclose(file))
 diff --git a/vcpkg-cmake-wrapper.cmake b/vcpkg-cmake-wrapper.cmake
 deleted file mode 100644
-index 5f1470d..0000000
+index 53b7d77..0000000
 --- a/vcpkg-cmake-wrapper.cmake
 +++ /dev/null
 @@ -1,15 +0,0 @@
@@ -468,14 +436,13 @@ index 5f1470d..0000000
 -endif()
 diff --git a/vcpkg.json b/vcpkg.json
 deleted file mode 100644
-index 30a88e0..0000000
+index f606080..0000000
 --- a/vcpkg.json
 +++ /dev/null
-@@ -1,33 +0,0 @@
+@@ -1,32 +0,0 @@
 -{
 -  "name": "lua",
--  "version": "5.5.0",
--  "port-version": 1,
+-  "version": "5.5.1",
 -  "description": "A powerful, fast, lightweight, embeddable scripting language",
 -  "homepage": "https://www.lua.org",
 -  "license": "MIT",
