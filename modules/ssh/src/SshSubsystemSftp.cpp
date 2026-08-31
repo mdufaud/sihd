@@ -60,6 +60,7 @@ struct SshSubsystemSftp::Impl
         sftp_session_struct *sftp = nullptr;
         bool running = false;
         bool initialized = false;
+        bool closed = false;
         std::string root_path;
         uint64_t next_handle_id = 1;
         std::map<std::string, std::string> handle_to_path;
@@ -241,7 +242,8 @@ SshSubsystemSftp::SshSubsystemSftp(): _impl_ptr(new Impl())
 
 SshSubsystemSftp::~SshSubsystemSftp()
 {
-    if (_impl_ptr->running)
+    // Close if the poll loop never did (e.g. server stopped before channel EOF)
+    if (!_impl_ptr->closed)
         on_close();
     utils::finalize();
 }
@@ -446,6 +448,11 @@ void SshSubsystemSftp::on_eof()
 
 int SshSubsystemSftp::on_close()
 {
+    if (_impl_ptr->closed)
+        return 0;
+    _impl_ptr->closed = true;
+    _impl_ptr->running = false;
+
     SIHD_LOG(debug, "SshSubsystemSftp: closing");
 
     // Close any open file handles
@@ -467,8 +474,6 @@ int SshSubsystemSftp::on_close()
         sftp_free(_impl_ptr->sftp);
         _impl_ptr->sftp = nullptr;
     }
-
-    _impl_ptr->running = false;
     return 0;
 }
 

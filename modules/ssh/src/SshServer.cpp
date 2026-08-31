@@ -405,6 +405,14 @@ struct SshServer::Impl
                 }
                 if (data)
                 {
+                    // Destroy subsystem handlers before their channel wrappers:
+                    // mirrors cleanup_closed_sessions ordering. Without this,
+                    // handlers surviving until the server handler destruction
+                    // dereference already-deleted SshChannel wrappers.
+                    if (data->server && data->session && data->server->server_handler())
+                    {
+                        data->server->server_handler()->on_session_closed(data->server, data->session);
+                    }
                     for (auto & ch_data : data->channels)
                     {
                         if (ch_data && ch_data->wrapper)

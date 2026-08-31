@@ -32,8 +32,9 @@ inline constexpr const char *CLIENT_PUBKEY_PATH = "test/resources/test_client_ke
 // RAII wrapper for a test SSH server
 struct SshServerHelper
 {
-        SshServer server;
+        // declared before the server so it is destroyed after it
         BasicSshServerHandler handler;
+        SshServer server;
         util::Worker worker;
         int port = 0;
 
