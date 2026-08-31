@@ -63,7 +63,7 @@ jobs:
       - name: Install X11/GL/libudev dev packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev autoconf autoconf-archive automake libtool
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
 
       - name: Install dependencies
         run: make dep test=1
