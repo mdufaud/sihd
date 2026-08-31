@@ -2,6 +2,9 @@ name = 'sihd'
 version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
+# vcpkg builtin-baseline: pins dependency versions; the vcpkg clone itself just stays up to date
+vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
+
 # modules live under modules/ instead of the project root
 modules_path = "modules"
 

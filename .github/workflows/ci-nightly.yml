@@ -14,14 +14,6 @@ concurrency:
   group: ${{ github.workflow }}
   cancel-in-progress: true
 
-env:
-  # vcpkg working-tree pin: sbt overlay ports (vcpkg_ports in site_scons/addon/extlibs.py,
-  # e.g. dbus remove_patches) are authored against THIS checkout — NOT the baseline.
-  # Keep in sync with the local clone: git -C ~/workspace/vcpkg rev-parse HEAD
-  # Dependency versions resolve separately via the manifest builtin-baseline
-  # (site_scons/sbt/vcpkg/manifest.py: 3a3285c4878c7f5a957202201ba41e6fdeba8db4).
-  VCPKG_CHECKOUT: 9e53836916341b64a14162a78ba9802488034a5f
-
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -74,13 +66,15 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Checkout vcpkg at pinned overlay commit
+      # full history: the builtin-baseline declared in app.py sits months behind main
+      # and a shallow clone cannot resolve it (vcpkg on-demand fetch fails when shallow)
+      - name: Checkout vcpkg (upstream main)
         uses: actions/checkout@v4
         with:
           repository: microsoft/vcpkg
-          ref: ${{ env.VCPKG_CHECKOUT }}
+          ref: main
           path: .vcpkg
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Bootstrap vcpkg
         run: |
