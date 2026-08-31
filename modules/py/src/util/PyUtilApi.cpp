@@ -324,11 +324,27 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     // .def("wait_for_elapsed", &Waitable::wait_for_elapsed,
     // pybind11::call_guard<pybind11::gil_scoped_release>());
 
+    pybind11::enum_<LatenessPolicy>(m_util, "LatenessPolicy")
+        .value("replay_missed", LatenessPolicy::replay_missed)
+        .value("push_back", LatenessPolicy::push_back)
+        .value("skip_missed", LatenessPolicy::skip_missed);
+
+    pybind11::enum_<IdlePolicy>(m_util, "IdlePolicy")
+        .value("sleep", IdlePolicy::sleep)
+        .value("sleep_then_spin", IdlePolicy::sleep_then_spin);
+
     pybind11::class_<Scheduler, Named, Configurable, SmartNodePtr<Scheduler>>(m_util, "Scheduler")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
         .def("clock", &Scheduler::clock, pybind11::return_value_policy::reference_internal)
         .def("set_clock", &Scheduler::set_clock)
+        .def("set_no_delay", &Scheduler::set_no_delay, pybind11::arg("active"))
+        .def("set_idle_policy", &Scheduler::set_idle_policy, pybind11::arg("policy"))
+        .def("idle_policy", &Scheduler::idle_policy)
+        .def("set_spin_window", &Scheduler::set_spin_window, pybind11::arg("window"))
+        .def("spin_window", &Scheduler::spin_window)
+        .def("set_skip_missed_on_start", &Scheduler::set_skip_missed_on_start, pybind11::arg("active"))
+        .def("skip_missed_on_start", &Scheduler::skip_missed_on_start)
         .def("start",
              [](Scheduler & self) -> bool {
                  self.set_start_synchronised(true);
@@ -345,20 +361,23 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
                 const pybind11::function & task,
                 int64_t run_at,
                 int64_t run_in,
-                int64_t reschedule_time) {
+                int64_t reschedule_time,
+                LatenessPolicy late_policy) {
                 self.add_task(new PyUtilApi::PyTask(task,
                                                     util::TaskOptions {
                                                         .run_at = run_at,
                                                         .run_in = run_in,
                                                         .reschedule_time = reschedule_time,
+                                                        .late_policy = late_policy,
                                                     }));
             },
             pybind11::arg("task"),
             pybind11::arg("run_at") = 0,
             pybind11::arg("run_in") = 0,
-            pybind11::arg("reschedule_time") = 0)
+            pybind11::arg("reschedule_time") = 0,
+            pybind11::arg("late_policy") = LatenessPolicy::replay_missed)
         .def("clear_tasks", &Scheduler::clear_tasks)
-        .def_readonly("overruns", &Scheduler::overruns)
+        .def_property_readonly("overruns", +[](const Scheduler & self) { return self.overruns.load(); })
         .def_readwrite("overrun_at", &Scheduler::overrun_at)
         .def_readwrite("acceptable_task_preplay_ns_time", &Scheduler::acceptable_task_preplay_ns_time);
 

@@ -10,6 +10,21 @@
 namespace sihd::util
 {
 
+// what a periodic task does when it is played late - now is past one or more of its scheduled
+// reschedule_time slots:
+enum class LatenessPolicy
+{
+    // replays every missed slot in a burst (default) - one run per missed period, for counting
+    // or sampling work
+    replay_missed,
+    // drops the grid - the next run is scheduled reschedule_time after the current run started,
+    // keeping at least reschedule_time between runs
+    push_back,
+    // drops missed slots - runs once now, then jumps to the next future grid slot, for refresh
+    // or heartbeat work where bursting is pointless
+    skip_missed,
+};
+
 struct TaskOptions
 {
         static TaskOptions none() { return TaskOptions {}; }
@@ -21,6 +36,7 @@ struct TaskOptions
         Duration run_in = 0;
         // reschedule task based on previous time
         Duration reschedule_time = 0;
+        LatenessPolicy late_policy = LatenessPolicy::replay_missed;
 };
 
 class Task: public IRunnable
@@ -38,6 +54,7 @@ class Task: public IRunnable
         Timestamp run_at;
         Duration run_in;
         Duration reschedule_time;
+        LatenessPolicy late_policy;
 
     private:
         IRunnable *_runnable_ptr;

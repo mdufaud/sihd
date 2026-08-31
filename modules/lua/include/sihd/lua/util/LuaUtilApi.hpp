@@ -117,6 +117,23 @@ struct luabridge::Stack<sihd::util::ServiceController::State>
 {
 };
 
+template <>
+struct luabridge::Stack<sihd::util::LatenessPolicy>
+    : luabridge::Enum<sihd::util::LatenessPolicy,
+                      sihd::util::LatenessPolicy::replay_missed,
+                      sihd::util::LatenessPolicy::push_back,
+                      sihd::util::LatenessPolicy::skip_missed>
+{
+};
+
+template <>
+struct luabridge::Stack<sihd::util::IdlePolicy>
+    : luabridge::Enum<sihd::util::IdlePolicy,
+                      sihd::util::IdlePolicy::sleep,
+                      sihd::util::IdlePolicy::sleep_then_spin>
+{
+};
+
 namespace sihd::lua
 {
 

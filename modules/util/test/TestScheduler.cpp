@@ -150,7 +150,7 @@ TEST_F(TestScheduler, test_sched_perf)
 
     SIHD_LOG_LVL(level,
                  "Scheduler overruns: total={} test_calculated={} (expected less than {})",
-                 sched.overruns,
+                 sched.overruns.load(),
                  overruns,
                  (expected_run / this->ran) * 100,
                  expected_overruns);
@@ -347,6 +347,350 @@ TEST_F(TestScheduler, test_sched_burst)
     t2.join();
     t3.join();
     SIHD_LOG(debug, "Total executions: {}", lambda_ran.load());
+}
+
+// clock wrapper counting every query - exposes scheduling loop health as a plain counter
+class CountingSteadyClock: public sihd::util::IClock
+{
+    public:
+        Timestamp now() const override
+        {
+            calls.fetch_add(1, std::memory_order_relaxed);
+            return _clock.now();
+        }
+        bool is_steady() const override { return true; }
+        bool start() override { return true; }
+        bool stop() override { return true; }
+
+        mutable std::atomic<int> calls = 0;
+
+    private:
+        std::chrono::steady_clock _clock;
+};
+
+// clock the test controls: frozen until advanced - deadlines become exact arithmetic instead of
+// wall measurements
+class ManualClock: public sihd::util::IClock
+{
+    public:
+        ManualClock(Timestamp now): _now(now.get()) {}
+
+        Timestamp now() const override
+        {
+            calls.fetch_add(1, std::memory_order_relaxed);
+            return Timestamp(_now.load());
+        }
+        bool is_steady() const override { return true; }
+        bool start() override { return true; }
+        bool stop() override { return true; }
+
+        void advance(Timestamp now) { _now.store(now.get()); }
+
+        mutable std::atomic<int> calls = 0;
+
+    private:
+        std::atomic<int64_t> _now;
+};
+
+// Classifies scheduler wakeups with a decade-wide chasm instead of latency tolerances:
+// a queue change while sleeping must wake the worker (urgent plays at ~400ms), a scheduler
+// sleeping until the stale far deadline cannot play it before ~900ms - cpu load moves both
+// sides by milliseconds, not by the 250ms+ that separate the two classes.
+TEST_F(TestScheduler, test_sched_wakeups_qualifying)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Timing classification unstable under valgrind";
+    Scheduler sched("sched-wakeups");
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::atomic<int> seq = 0;
+    std::atomic<int> bulk_ran = 0;
+    int urgent_seq = -1;
+    int bulk_seq = -1;
+    int far_seq = -1;
+    bool urgent_ran = false;
+    bool far_ran = false;
+
+    // the far deadline the worker sleeps on at start
+    sched.add_task(new Task(
+        [&] {
+            std::lock_guard lock(mutex);
+            far_seq = seq.fetch_add(1);
+            far_ran = true;
+            cv.notify_all();
+            return true;
+        },
+        {.run_in = time::sec(1)}));
+
+    // a bulk of nearer one shots - only the first may wake the worker
+    for (int i = 0; i < 200; ++i)
+    {
+        sched.add_task(new Task(
+            [&] {
+                ++bulk_ran;
+                std::lock_guard lock(mutex);
+                if (bulk_seq < 0)
+                    bulk_seq = seq.fetch_add(1);
+                return true;
+            },
+            {.run_in = time::milli(800)}));
+    }
+
+    sched.set_start_synchronised(true);
+    sched.start();
+
+    // let the worker fall asleep toward the far deadline
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    const auto insert_tp = steady_clock::now();
+
+    sched.add_task(new Task(
+        [&] {
+            std::lock_guard lock(mutex);
+            urgent_seq = seq.fetch_add(1);
+            urgent_ran = true;
+            cv.notify_all();
+            return true;
+        },
+        {.run_in = time::milli(400)}));
+
+    {
+        std::unique_lock lock(mutex);
+        // healthy: satisfied at ~500ms - 3s ceiling for slow machines
+        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return urgent_ran; }));
+    }
+    const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - insert_tp);
+
+    {
+        std::unique_lock lock(mutex);
+        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return bulk_ran == 200 && far_ran; }));
+    }
+
+    EXPECT_LT(elapsed.count(), 650);
+    // ordering sanity: urgent before bulk before far
+    EXPECT_GE(urgent_seq, 0);
+    EXPECT_GE(bulk_seq, 0);
+    EXPECT_GE(far_seq, 0);
+    EXPECT_LT(urgent_seq, bulk_seq);
+    EXPECT_LT(bulk_seq, far_seq);
+
+    sched.stop();
+}
+
+// Idle gap plus emptied queue: the worker must sleep (a handful of clock queries) and survive a
+// map emptied under it - a stale-deadline spin would count millions of queries and crash.
+TEST_F(TestScheduler, test_sched_idle_gap_classifying)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Timing classification unstable under valgrind";
+    Scheduler sched("sched-idle");
+    CountingSteadyClock clock;
+    sched.set_clock(&clock);
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool first_ran = false;
+
+    sched.add_task(new Task(
+        [&] {
+            std::lock_guard lock(mutex);
+            first_ran = true;
+            cv.notify_all();
+            return true;
+        },
+        {.run_in = time::milli(50)}));
+
+    // far behind the first: an idle gap the worker must sleep through
+    Task *second = new Task([] { return true; }, {.run_in = time::milli(300)});
+    sched.add_task(second);
+
+    sched.set_start_synchronised(true);
+    sched.start();
+
+    {
+        std::unique_lock lock(mutex);
+        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return first_ran; }));
+    }
+
+    // empty the queue while the worker sleeps toward the second deadline
+    EXPECT_TRUE(sched.remove_task(second));
+    delete second;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+    sched.stop();
+
+    EXPECT_LT(clock.calls.load(), 10000);
+}
+
+// A task that throws must not take the process down: the poison is swallowed, the periodic
+// cadence keeps ticking and later tasks still play. Pure predicate assertions.
+TEST_F(TestScheduler, test_sched_exception_survives)
+{
+    Scheduler sched("sched-exc");
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    std::atomic<int> ticks = 0;
+    bool after_poison_ran = false;
+
+    sched.add_task(new Task(
+        [&] {
+            ++ticks;
+            cv.notify_all();
+            return true;
+        },
+        {.reschedule_time = time::milli(15)}));
+    sched.add_task(new Task(
+        [&]() -> bool { throw std::runtime_error("poison"); },
+        {.run_in = time::milli(1)}));
+    sched.add_task(new Task(
+        [&] {
+            std::lock_guard lock(mutex);
+            after_poison_ran = true;
+            cv.notify_all();
+            return true;
+        },
+        {.run_in = time::milli(30)}));
+
+    sched.set_start_synchronised(true);
+    sched.start();
+
+    {
+        std::unique_lock lock(mutex);
+        EXPECT_TRUE(cv.wait_for(lock,
+                                std::chrono::seconds(5),
+                                [&] { return ticks.load() >= 3 && after_poison_ran; }));
+    }
+    EXPECT_GE(ticks.load(), 3);
+
+    sched.stop();
+}
+
+// Lateness policies verified by exact grid arithmetic on a frozen clock - no wall measurement.
+TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
+{
+    const Timestamp frozen_now = time::sec(100);
+    const Duration grid = time::milli(5);
+
+    // default policy (replay_missed): the grid stays where it was put - missed runs replay in a burst
+    {
+        Scheduler sched("sched-grid-catchup");
+        ManualClock clock(frozen_now);
+        sched.set_clock(&clock);
+
+        std::mutex mutex;
+        std::condition_variable cv;
+        std::vector<Timestamp> played;
+        Task *task = nullptr;
+        task = new Task(
+            [&] {
+                std::lock_guard lock(mutex);
+                if (played.size() < 8)
+                    played.push_back(task->run_at);
+                cv.notify_all();
+                return true;
+            },
+            {.run_at = frozen_now - grid * 3, .reschedule_time = grid});
+        sched.add_task(task);
+
+        sched.set_start_synchronised(true);
+        sched.start();
+        {
+            std::unique_lock lock(mutex);
+            ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return played.size() >= 4; }));
+        }
+        sched.stop();
+
+        // overdue slots replayed as-is, then the future grid
+        EXPECT_EQ(played[0].get(), (frozen_now - grid * 3).get());
+        EXPECT_EQ(played[1].get(), (frozen_now - grid * 2).get());
+        EXPECT_EQ(played[2].get(), (frozen_now - grid * 1).get());
+        EXPECT_EQ(played[3].get(), frozen_now.get());
+    }
+
+    // skip_missed policy + skip_missed_on_start: jump to the next future slot, drop missed runs
+    {
+        Scheduler sched("sched-grid-skip");
+        ManualClock clock(frozen_now);
+        sched.set_clock(&clock);
+        ASSERT_TRUE(sched.set_skip_missed_on_start(true));
+
+        std::mutex mutex;
+        std::condition_variable cv;
+        std::vector<Timestamp> played;
+        Task *task = nullptr;
+        task = new Task(
+            [&] {
+                std::lock_guard lock(mutex);
+                if (played.size() < 8)
+                    played.push_back(task->run_at);
+                cv.notify_all();
+                return true;
+            },
+            {.run_at = frozen_now - grid * 3,
+             .reschedule_time = grid,
+             .late_policy = LatenessPolicy::skip_missed});
+        sched.add_task(task);
+
+        sched.set_start_synchronised(true);
+        sched.start();
+        // start_synchronised only syncs at thread entry: the worker's first clock read captures
+        // _begin_run (T), the second is the post-prepare deadline check - wait for both instead of
+        // sleeping a guessed duration, so the skip jump below uses T whatever the machine load
+        for (int i = 0; i < 10000 && clock.calls.load() < 2; ++i)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        ASSERT_GE(clock.calls.load(), 2);
+        clock.advance(frozen_now + grid);
+        {
+            std::unique_lock lock(mutex);
+            ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return played.size() >= 1; }));
+        }
+        sched.stop();
+
+        // first slot is the next grid multiple strictly after now: (T - 3g) + 4g == T + g
+        EXPECT_EQ(played[0].get(), (frozen_now + grid).get());
+    }
+}
+
+// sleep_then_spin must sleep most of the wait on the condition variable, then poll the clock over
+// the last spin_window: a 10ms poll costs hundreds of thousands of clock reads against the handful
+// a pure cv sleep spends on the whole 50ms wait - the old short-waits-only behavior would spin
+// nothing at all here.
+TEST_F(TestScheduler, test_sched_spin_sleep_classification)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Timing classification unstable under valgrind";
+    Scheduler sched("sched-spin");
+    CountingSteadyClock clock;
+    sched.set_clock(&clock);
+    ASSERT_TRUE(sched.set_idle_policy(IdlePolicy::sleep_then_spin));
+    ASSERT_TRUE(sched.set_spin_window(time::milli(10)));
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool ran = false;
+
+    sched.add_task(new Task(
+        [&] {
+            std::lock_guard lock(mutex);
+            ran = true;
+            cv.notify_all();
+            return true;
+        },
+        {.run_in = time::milli(50)}));
+
+    sched.set_start_synchronised(true);
+    sched.start();
+
+    {
+        std::unique_lock lock(mutex);
+        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return ran; }));
+    }
+    sched.stop();
+
+    // the last 10ms of the 50ms wait were polled
+    EXPECT_GT(clock.calls.load(), 1000);
 }
 
 } // namespace test

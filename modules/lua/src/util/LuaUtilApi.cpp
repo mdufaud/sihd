@@ -120,6 +120,18 @@ void LuaUtilApi::load_threading(Vm & vm)
         .beginNamespace("sihd")
         .beginNamespace("util")
         /**
+         * Task policies
+         */
+        .beginNamespace("LatenessPolicy")
+            .addVariable("replay_missed", LatenessPolicy::replay_missed)
+            .addVariable("push_back", LatenessPolicy::push_back)
+            .addVariable("skip_missed", LatenessPolicy::skip_missed)
+        .endNamespace()
+        .beginNamespace("IdlePolicy")
+            .addVariable("sleep", IdlePolicy::sleep)
+            .addVariable("sleep_then_spin", IdlePolicy::sleep_then_spin)
+        .endNamespace()
+        /**
          * Scheduler
          */
         .deriveClass<LuaScheduler, Named>("Scheduler")
@@ -134,10 +146,18 @@ void LuaUtilApi::load_threading(Vm & vm)
         .addFunction("clock", static_cast<IClock *(LuaScheduler::*)() const>(&Scheduler::clock))
         .addFunction("set_clock", static_cast<void (LuaScheduler::*)(IClock *)>(&Scheduler::set_clock))
         .addFunction("set_no_delay", static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_no_delay))
+        .addFunction("set_idle_policy", static_cast<bool (LuaScheduler::*)(IdlePolicy)>(&Scheduler::set_idle_policy))
+        .addFunction("idle_policy", static_cast<IdlePolicy (LuaScheduler::*)() const>(&Scheduler::idle_policy))
+        .addFunction("set_spin_window", static_cast<bool (LuaScheduler::*)(Duration)>(&Scheduler::set_spin_window))
+        .addFunction("spin_window", static_cast<Duration (LuaScheduler::*)() const>(&Scheduler::spin_window))
+        .addFunction("set_skip_missed_on_start",
+                     static_cast<bool (LuaScheduler::*)(bool)>(&Scheduler::set_skip_missed_on_start))
+        .addFunction("skip_missed_on_start",
+                     static_cast<bool (LuaScheduler::*)() const>(&Scheduler::skip_missed_on_start))
         .addFunction("clear_tasks", static_cast<void (LuaScheduler::*)()>(&Scheduler::clear_tasks))
         .addProperty(
             "overruns",
-            +[](const LuaScheduler *self) { return self->overruns; })
+            +[](const LuaScheduler *self) -> size_t { return self->overruns.load(); })
         .addProperty(
             "overrun_at",
             +[](const LuaScheduler *self) { return self->overrun_at; },
@@ -184,10 +204,21 @@ void LuaUtilApi::load_threading(Vm & vm)
                 if (reschedule.isNil() == false)
                     reschedule_time = sihd::lua::to_duration(reschedule);
 
+                LatenessPolicy late_policy = LatenessPolicy::replay_missed;
+                luabridge::LuaRef late_policy_ref = tbl["late_policy"];
+                if (late_policy_ref.isNil() == false)
+                {
+                    luabridge::TypeResult<LatenessPolicy> policy_res = late_policy_ref.cast<LatenessPolicy>();
+                    if (static_cast<bool>(policy_res) == false)
+                        luaL_error(state, "add_task table at 'late_policy' is not a valid LatenessPolicy");
+                    late_policy = policy_res.value();
+                }
+
                 LuaTask *task_ptr = new LuaTask(lua_fun,
                                                 util::TaskOptions {.run_at = timestamp_to_run_at,
                                                                    .run_in = timestamp_to_run_in,
-                                                                   .reschedule_time = reschedule_time});
+                                                                   .reschedule_time = reschedule_time,
+                                                                   .late_policy = late_policy});
                 if (task_ptr != nullptr)
                 {
                     self->add_lua_task(task_ptr);

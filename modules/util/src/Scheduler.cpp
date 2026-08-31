@@ -22,8 +22,15 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
     _paused = false;
     _no_delay = false;
     _tasks_prepared = false;
+    _task_map_seq = 0;
+
+    _idle_policy = IdlePolicy::sleep;
+    _spin_window = time::micro(100);
+    _skip_missed_on_start = false;
 
     this->add_conf("no_delay", &Scheduler::set_no_delay);
+    this->add_conf("spin_window", &Scheduler::set_spin_window);
+    this->add_conf("skip_missed_on_start", &Scheduler::set_skip_missed_on_start);
 }
 
 Scheduler::~Scheduler()
@@ -58,23 +65,134 @@ bool Scheduler::set_no_delay(bool active)
     return true;
 }
 
+bool Scheduler::set_idle_policy(IdlePolicy policy)
+{
+    if (this->is_running())
+        throw std::logic_error("Cannot set idle policy while the scheduler is running");
+    _idle_policy = policy;
+    return true;
+}
+
+IdlePolicy Scheduler::idle_policy() const
+{
+    return _idle_policy;
+}
+
+bool Scheduler::set_spin_window(Duration window)
+{
+    if (this->is_running())
+        throw std::logic_error("Cannot set spin window while the scheduler is running");
+    if (window < 0)
+        return false;
+    _spin_window = window;
+    return true;
+}
+
+Duration Scheduler::spin_window() const
+{
+    return _spin_window;
+}
+
+bool Scheduler::set_skip_missed_on_start(bool active)
+{
+    if (this->is_running())
+        throw std::logic_error("Cannot set 'fast forward missed periods' while the scheduler is running");
+    _skip_missed_on_start = active;
+    return true;
+}
+
+bool Scheduler::skip_missed_on_start() const
+{
+    return _skip_missed_on_start;
+}
+
+void Scheduler::_wait_until_deadline(Duration delay, uint64_t seq)
+{
+    _waitable_task.wait_for(delay, [this, seq] {
+        return this->stop_requested || _paused || _task_map.empty() || _task_map_seq.load() != seq;
+    });
+}
+
 void Scheduler::_wait_for_next_task()
 {
     // wait for resume if paused
     _waitable_pause.wait([this] { return this->stop_requested || _paused == false; });
+
+    uint64_t seq = 0;
+    Timestamp next_run_at = 0;
     // wait for new task if empty
     _waitable_task.wait([this] { return this->stop_requested || _task_map.empty() == false; });
+    {
+        // a generation change since this snapshot makes the timed wait below return early
+        auto l = _waitable_task.guard();
+        seq = _task_map_seq.load();
+        next_run_at = _next_run;
+    }
 
-    if (_no_delay)
+    if (_no_delay || next_run_at == 0)
         return;
 
-    // wait until most recent task to play
-    _waitable_task.wait_for(_next_run - _clock_ptr->now(), [this] { return this->stop_requested.load(); });
+    Duration delay = next_run_at - _clock_ptr->now();
+    if (delay <= 0)
+        return;
+
+    if (_idle_policy == IdlePolicy::sleep_then_spin)
+    {
+        // sleep most of the wait on the condition variable, then poll the clock over the last
+        // spin_window to cut wakeup latency
+        Duration sleep_delay = delay - _spin_window;
+        if (sleep_delay > 0)
+            this->_wait_until_deadline(sleep_delay, seq);
+        this->_spin_until(next_run_at, seq);
+        return;
+    }
+
+    // sleep until the deadline - an earlier task, a pause or an emptied queue wakes us up
+    this->_wait_until_deadline(delay, seq);
+}
+
+void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
+{
+    // poll the clock to cut wakeup latency - a non advancing (virtual) clock falls back to sleep
+    Timestamp previous = 0;
+    int frozen_polls = 0;
+    int polls = 0;
+    while (this->stop_requested == false && _paused == false)
+    {
+        Timestamp now = _clock_ptr->now();
+        if (now >= deadline)
+            return;
+        if (now == previous)
+        {
+            if (++frozen_polls >= 128)
+            {
+                Duration delay = deadline - now;
+                if (delay > 0)
+                    this->_wait_until_deadline(delay, seq);
+                return;
+            }
+        }
+        else
+        {
+            frozen_polls = 0;
+            previous = now;
+        }
+        // periodically recheck the queue state while spinning
+        if (++polls % 64 == 0)
+        {
+            auto l = _waitable_task.guard();
+            if (_task_map.empty() || _task_map_seq.load() != seq)
+                return;
+        }
+    }
 }
 
 Task *Scheduler::_get_playable_task(Timestamp now)
 {
     auto l = _waitable_task.guard();
+    if (_task_map.empty())
+        return nullptr;
+
     Task *task = _task_map.begin()->second;
 
     Duration diff = task->run_at - now;
@@ -83,7 +201,11 @@ Task *Scheduler::_get_playable_task(Timestamp now)
 
     // play task if near the time to be played or if in no delay mode
     if (_no_delay || (diff - this->acceptable_task_preplay_ns_time) <= 0)
+    {
         _task_map.erase(_task_map.begin());
+        // or the loop spins on a stale deadline
+        _next_run = _task_map.empty() ? Timestamp(0) : _task_map.begin()->first;
+    }
     else
         task = nullptr;
     return task;
@@ -91,20 +213,47 @@ Task *Scheduler::_get_playable_task(Timestamp now)
 
 void Scheduler::_play_task(Task *task, Timestamp now)
 {
-    task->run();
+    try
+    {
+        task->run();
+    }
+    catch (const std::exception & err)
+    {
+        SIHD_LOG_ERROR("Scheduler '{}': task raised exception: {}", this->name(), err.what());
+    }
+    catch (...)
+    {
+        SIHD_LOG_ERROR("Scheduler '{}': task raised unknown exception", this->name());
+    }
+
+    // reschedule or trash in one critical section
+    auto l = _waitable_task.guard();
     if (task->reschedule_time > 0)
     {
         if (task->run_at == 0)
             task->run_at = now;
-        task->run_at += task->reschedule_time;
-
+        switch (task->late_policy)
         {
-            auto l = _waitable_task.guard();
-            this->_unprotected_add_task_to_map(task);
+            case LatenessPolicy::push_back:
+                task->run_at = now + task->reschedule_time;
+                break;
+            case LatenessPolicy::skip_missed:
+                if (task->run_at <= now)
+                    task->run_at += (((now - task->run_at) / task->reschedule_time) + 1) * task->reschedule_time;
+                else
+                    task->run_at += task->reschedule_time;
+                break;
+            case LatenessPolicy::replay_missed:
+            default:
+                task->run_at += task->reschedule_time;
+                break;
         }
+        this->_unprotected_add_task_to_map(task);
     }
     else
-        this->_add_task_to_trash(task);
+    {
+        _trash_task_list.push_back(task);
+    }
 }
 
 void Scheduler::_prepare_tasks()
@@ -116,13 +265,19 @@ void Scheduler::_prepare_tasks()
         {
             task->run_at = _begin_run + task->run_in;
         }
+        else if (_skip_missed_on_start && task->reschedule_time > 0 && task->run_at != 0
+                 && task->run_at < _begin_run)
+        {
+            // jump to the next future slot instead of replaying missed runs
+            task->run_at += (((_begin_run - task->run_at) / task->reschedule_time) + 1) * task->reschedule_time;
+        }
         _task_map.emplace(task->run_at, task);
     }
 
-    if (_task_map.empty() == false)
-        _next_run = _task_map.begin()->first;
+    _next_run = _task_map.empty() ? Timestamp(0) : _task_map.begin()->first;
 
     _tasks_to_add.clear();
+    _task_map_seq.fetch_add(1, std::memory_order_release);
     _tasks_prepared = true;
 }
 
@@ -161,11 +316,15 @@ bool Scheduler::on_work_start()
 
 void Scheduler::pause()
 {
-    auto l = _waitable_pause.guard();
-    if (_paused)
-        return;
-    _paused = true;
-    _paused_time_at = this->now();
+    {
+        auto l = _waitable_pause.guard();
+        if (_paused)
+            return;
+        _paused = true;
+        _paused_time_at = this->now();
+    }
+    // wake a worker sleeping toward a far deadline so it joins the pause wait promptly
+    _waitable_task.notify();
 }
 
 void Scheduler::_resume_tasks()
@@ -191,8 +350,8 @@ void Scheduler::_resume_tasks()
         new_task_map.emplace(task->run_at, task);
     }
     _task_map = std::move(new_task_map);
-    if (_task_map.empty() == false)
-        _next_run = _task_map.begin()->first;
+    _next_run = _task_map.empty() ? Timestamp(0) : _task_map.begin()->first;
+    _task_map_seq.fetch_add(1, std::memory_order_release);
 }
 
 void Scheduler::resume()
@@ -229,23 +388,30 @@ void Scheduler::_unprotected_add_task_to_map(Task *task)
 {
     _task_map.emplace(task->run_at, task);
     _next_run = _task_map.begin()->first;
+    _task_map_seq.fetch_add(1, std::memory_order_release);
 }
 
 void Scheduler::add_task(Task *task)
 {
-    auto l = _waitable_task.guard();
+    bool wake_worker = false;
+    {
+        auto l = _waitable_task.guard();
 
-    if (_tasks_prepared)
-    {
-        if (task->run_in > 0)
-            task->run_at = this->now() + task->run_in;
-        this->_unprotected_add_task_to_map(task);
+        if (_tasks_prepared)
+        {
+            if (task->run_in > 0)
+                task->run_at = this->now() + task->run_in;
+            // wake the worker only if the new task becomes the nearest deadline
+            wake_worker = _task_map.empty() || task->run_at < _next_run;
+            this->_unprotected_add_task_to_map(task);
+        }
+        else
+        {
+            _tasks_to_add.push_back(task);
+        }
+    }
+    if (wake_worker)
         _waitable_task.notify();
-    }
-    else
-    {
-        _tasks_to_add.push_back(task);
-    }
 }
 
 bool Scheduler::remove_task(Task *task)
@@ -265,9 +431,9 @@ bool Scheduler::remove_task(Task *task)
     if (map_it != _task_map.end())
     {
         _task_map.erase(map_it);
+        _next_run = _task_map.empty() ? Timestamp(0) : _task_map.begin()->first;
+        _task_map_seq.fetch_add(1, std::memory_order_release);
         found = true;
-        if (!_task_map.empty())
-            _next_run = _task_map.begin()->first;
     }
 
     _waitable_task.notify();
@@ -293,14 +459,10 @@ void Scheduler::clear_tasks()
             delete task;
     }
     _task_map.clear();
+    _next_run = 0;
+    _task_map_seq.fetch_add(1, std::memory_order_release);
 
     _waitable_task.notify();
-}
-
-void Scheduler::_add_task_to_trash(Task *task)
-{
-    auto l = _waitable_task.guard();
-    _trash_task_list.push_back(task);
 }
 
 void Scheduler::_delete_trashed_tasks()

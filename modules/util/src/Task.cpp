@@ -9,6 +9,7 @@ Task::Task(const TaskOptions & options):
     run_at(options.run_at),
     run_in(options.run_in),
     reschedule_time(options.reschedule_time),
+    late_policy(options.late_policy),
     _runnable_ptr(nullptr)
 {
     if (run_at > 0 && run_in > 0)
