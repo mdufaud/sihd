@@ -58,6 +58,12 @@ jobs:
           make setup
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
+      # native linux build with imgui/glfw3 needs X11 + GL dev headers (absent from runner images)
+      - name: Install X11/GL dev packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev
+
       - name: Install dependencies
         run: make dep test=1
 
