@@ -47,7 +47,7 @@ jobs:
           mkdir -p .vcpkg/archives
 
       - name: Cache vcpkg binary archives (x64-linux)
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: .vcpkg/archives
           key: vcpkg-x64-linux-${{ hashFiles('app.py', 'site_scons/addon/vcpkg/**', 'site_scons/sbt/vcpkg/**') }}
@@ -58,11 +58,12 @@ jobs:
           make setup
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
-      # native linux build with imgui/glfw3 needs X11 + GL dev headers (absent from runner images)
-      - name: Install X11/GL dev packages
+      # native linux build with imgui/glfw3 needs X11 + GL dev headers, libusb udev
+      # feature needs libudev (no vcpkg port) — all absent from runner images
+      - name: Install X11/GL/libudev dev packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev
 
       - name: Install dependencies
         run: make dep test=1
@@ -76,3 +77,11 @@ jobs:
       - name: Report binary cache size
         if: always()
         run: du -sh .vcpkg/archives 2>/dev/null || true
+
+      # save even on failure: cold-cache iterations keep their partial progress
+      - name: Save vcpkg binary archives
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .vcpkg/archives
+          key: vcpkg-x64-linux-${{ hashFiles('app.py', 'site_scons/addon/vcpkg/**', 'site_scons/sbt/vcpkg/**') }}
