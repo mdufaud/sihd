@@ -15,9 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # keep in sync with site_scons/sbt/vcpkg/manifest.py (_DEFAULT_VCPKG_BASELINE
-  # or the `vcpkg_baseline` override in app.py)
-  VCPKG_BASELINE: 3a3285c4878c7f5a957202201ba41e6fdeba8db4
+  # vcpkg working-tree pin: sbt overlay ports (vcpkg_ports in site_scons/addon/extlibs.py,
+  # e.g. dbus remove_patches) are authored against THIS checkout — NOT the baseline.
+  # Keep in sync with the local clone: git -C ~/workspace/vcpkg rev-parse HEAD
+  # Dependency versions resolve separately via the manifest builtin-baseline
+  # (site_scons/sbt/vcpkg/manifest.py: 3a3285c4878c7f5a957202201ba41e6fdeba8db4).
+  VCPKG_CHECKOUT: 9e53836916341b64a14162a78ba9802488034a5f
 
 jobs:
   build:
@@ -71,11 +74,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Checkout vcpkg at pinned baseline
+      - name: Checkout vcpkg at pinned overlay commit
         uses: actions/checkout@v4
         with:
           repository: microsoft/vcpkg
-          ref: ${{ env.VCPKG_BASELINE }}
+          ref: ${{ env.VCPKG_CHECKOUT }}
           path: .vcpkg
           fetch-depth: 1
 
