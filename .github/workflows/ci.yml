@@ -73,6 +73,9 @@ jobs:
 
       - name: Run tests
         run: make itest
+        # ICMPv6 echo to external hosts: runners have no outbound IPv6
+        env:
+          TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*
 
       - name: Report binary cache size
         if: always()
