@@ -1,0 +1,75 @@
+name: ci
+
+# Fast lane: one Ubuntu job on every push/PR — build + tests with warm vcpkg cache.
+# Everything else (cross builds, web, android) lives in ci-nightly.yml.
+
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - '**.md'
+      - '.internal/**'
+      - 'tmp/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - '.internal/**'
+      - 'tmp/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # keep in sync with site_scons/sbt/vcpkg/manifest.py (_DEFAULT_VCPKG_BASELINE
+  # or the `vcpkg_baseline` override in app.py)
+  VCPKG_BASELINE: 3a3285c4878c7f5a957202201ba41e6fdeba8db4
+
+jobs:
+  linux-gcc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/.vcpkg
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout vcpkg at pinned baseline
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ env.VCPKG_BASELINE }}
+          path: .vcpkg
+          fetch-depth: 1
+
+      - name: Bootstrap vcpkg
+        run: |
+          .vcpkg/bootstrap-vcpkg.sh
+          mkdir -p .vcpkg/archives
+
+      - name: Cache vcpkg binary archives (x64-linux)
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg/archives
+          key: vcpkg-x64-linux-${{ hashFiles('app.py', 'site_scons/addon/vcpkg/**', 'site_scons/sbt/vcpkg/**') }}
+          restore-keys: vcpkg-x64-linux-
+
+      - name: Install scons
+        run: |
+          make setup
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: make dep test=1
+
+      - name: Build (libs, tests, demos)
+        run: make test=1 demo=1
+
+      - name: Run tests
+        run: make itest
+
+      - name: Report binary cache size
+        if: always()
+        run: du -sh .vcpkg/archives 2>/dev/null || true

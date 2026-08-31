@@ -60,7 +60,9 @@ build/*
 # env
 .env.d
 
-.github
+# github: only workflows are versioned (copilot instructions/skills stay local)
+.github/*
+!.github/workflows/
 .claude
 .codex
 .reasonix

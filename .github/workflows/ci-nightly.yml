@@ -1,0 +1,128 @@
+name: ci-nightly
+
+# Full matrix, all cross-compiled from Ubuntu runners (no Windows/macOS runners:
+# free minutes are identical but this keeps costs at 1x if the repo ever goes private).
+# Each matrix entry has its own vcpkg binary-cache entry, keyed by triplet:
+# a dependency bump only rewrites that triplet's cache, not the whole blob.
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily, UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  # keep in sync with site_scons/sbt/vcpkg/manifest.py (_DEFAULT_VCPKG_BASELINE
+  # or the `vcpkg_baseline` override in app.py)
+  VCPKG_BASELINE: 3a3285c4878c7f5a957202201ba41e6fdeba8db4
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    continue-on-error: ${{ matrix.experimental }}
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/.vcpkg
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # mirrors .internal/compile.sh default_matrix
+          - id: x64-linux
+            dep-args: test=1
+            make-args: test=1 demo=1
+            itest: true
+          - id: x64-linux-clang
+            dep-args: ''
+            make-args: compiler=clang
+          - id: x64-linux-musl
+            dep-args: ''
+            make-args: libc=musl mode=size
+            apt: musl-tools
+          - id: arm64-linux
+            dep-args: ''
+            make-args: machine=aarch64
+            apt: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          - id: riscv64-linux
+            dep-args: ''
+            make-args: machine=riscv64
+            apt: gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+          - id: x64-mingw-dynamic
+            dep-args: ''
+            make-args: platform=windows
+            apt: gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+            env: 'py=0'
+          - id: wasm32-emscripten
+            dep-args: ''
+            make-args: compiler=em m=util,sys,core,csv,zip,net
+            env: 'lua=0 py=0'
+            emsdk: true
+          - id: arm64-android
+            dep-args: ''
+            make-args: platform=android machine=arm64
+            android: true
+            experimental: true # first runs tell if the hosted NDK/gradle setup is enough
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Checkout vcpkg at pinned baseline
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          ref: ${{ env.VCPKG_BASELINE }}
+          path: .vcpkg
+          fetch-depth: 1
+
+      - name: Bootstrap vcpkg
+        run: |
+          .vcpkg/bootstrap-vcpkg.sh
+          mkdir -p .vcpkg/archives
+
+      - name: Cache vcpkg binary archives (${{ matrix.id }})
+        uses: actions/cache@v4
+        with:
+          path: .vcpkg/archives
+          key: vcpkg-${{ matrix.id }}-${{ hashFiles('app.py', 'site_scons/addon/vcpkg/**', 'site_scons/sbt/vcpkg/**') }}
+          restore-keys: vcpkg-${{ matrix.id }}-
+
+      - name: Install system packages
+        if: matrix.apt != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.apt }}
+
+      - name: Setup emsdk
+        if: matrix.emsdk
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: emsdk-cache
+
+      - name: Resolve Android NDK
+        if: matrix.android
+        run: echo "ANDROID_NDK_PATH=$(ls -d /usr/local/lib/android/sdk/ndk/* | sort -V | tail -1)" >> "$GITHUB_ENV"
+
+      - name: Install scons
+        run: |
+          make setup
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: make dep ${{ matrix.dep-args }}
+
+      - name: Build
+        run: make ${{ matrix.make-args }} ${{ matrix.env }}
+
+      - name: Run tests
+        if: matrix.itest
+        run: make itest
+
+      - name: Report binary cache size
+        if: always()
+        run: du -sh .vcpkg/archives 2>/dev/null || true
