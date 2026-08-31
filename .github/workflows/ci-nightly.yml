@@ -27,7 +27,7 @@ jobs:
         include:
           # mirrors .internal/compile.sh default_matrix
           - id: x64-linux
-            dep-args: test=1
+            dep-args: test=1 demo=1
             make-args: test=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libudev-dev autoconf autoconf-archive automake libtool libltdl-dev
             itest: true
