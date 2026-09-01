@@ -5,6 +5,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <sys/types.h>
 
 #include <sihd/util/Timestamp.hpp>
 
