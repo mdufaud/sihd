@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 180
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.experimental || false }}
     env:
       VCPKG_ROOT: ${{ github.workspace }}/.vcpkg
     strategy:
