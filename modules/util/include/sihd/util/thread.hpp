@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_THREAD_HPP__
 
 #include <thread>
+#include <pthread.h>
 
 namespace sihd::util::thread
 {

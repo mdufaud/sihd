@@ -40,11 +40,14 @@ jobs:
             make-args: compiler=clang demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
           # musl.cc is unreachable from runners; zig carries its own musl sysroot
-          # (sbt: MUSL_ONLY_COMPILERS) so it keeps libc=musl coverage in CI
+          # (sbt: MUSL_ONLY_COMPILERS) so it keeps libc=musl coverage in CI.
+          # experimental: autotools ports probe gnu-ld specifics that lld rejects
+          # (ncurses -Wl,-stats...), fixed port by port via overlays
           - id: x64-linux-zig-musl
             dep-args: compiler=zig demo=1
             make-args: compiler=zig mode=size demo=1
             zig: true
+            experimental: true
           - id: arm64-linux
             dep-args: machine=aarch64 demo=1
             make-args: machine=aarch64 demo=1
