@@ -25,45 +25,47 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # mirrors .internal/compile.sh default_matrix
+          # mirrors .internal/dependencies.sh + .internal/compile.sh: the dep step
+          # takes the SAME config selectors as the build (otherwise it runs in the
+          # default gcc config and stages extlib where the build never looks), and
+          # demo=1 goes on both because bare make builds demos (cli11/ftxui are
+          # dep-gated on it)
           - id: x64-linux
             dep-args: test=1 demo=1
             make-args: test=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             itest: true
           - id: x64-linux-clang
-            dep-args: ''
-            make-args: compiler=clang
+            dep-args: compiler=clang demo=1
+            make-args: compiler=clang demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
           - id: x64-linux-musl
-            dep-args: ''
-            make-args: libc=musl mode=size
-            # every job installs the host-foundation packages: make dep builds the
-            # native x64-linux-dynamic vcpkg tree first (glfw3 needs X11, libusb
-            # needs udev, libxcrypt needs autotools) before the cross triplet
+            dep-args: libc=musl mode=size demo=1
+            make-args: libc=musl mode=size demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev musl-tools
+            musl: true # apt musl-tools has no x86_64-linux-musl-g++: needs the musl.cc cross
           - id: arm64-linux
-            dep-args: ''
-            make-args: machine=aarch64
+            dep-args: machine=aarch64 demo=1
+            make-args: machine=aarch64 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           - id: riscv64-linux
-            dep-args: ''
-            make-args: machine=riscv64
+            dep-args: machine=riscv64 demo=1
+            make-args: machine=riscv64 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
           - id: x64-mingw-dynamic
-            dep-args: ''
-            make-args: platform=windows
+            dep-args: platform=windows demo=1
+            make-args: platform=windows demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
             env: 'py=0'
           - id: wasm32-emscripten
-            dep-args: ''
-            make-args: compiler=em m=util,sys,core,csv,zip,net
+            dep-args: compiler=em m=util,sys,core,csv,zip,net demo=1
+            make-args: compiler=em m=util,sys,core,csv,zip,net demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'lua=0 py=0'
             emsdk: true
           - id: arm64-android
-            dep-args: ''
-            make-args: platform=android machine=arm64
+            dep-args: platform=android machine=aarch64 static=1 m=util,imgui demo=1
+            make-args: platform=android machine=aarch64 static=1 m=util,imgui demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             android: true
             experimental: true # first runs tell if the hosted NDK/gradle setup is enough
@@ -101,6 +103,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.apt }}
 
+      - name: Install musl cross toolchain
+        if: matrix.musl
+        run: |
+          curl -fsSL https://musl.cc/x86_64-linux-musl-cross.tgz -o /tmp/musl-cross.tgz
+          sudo tar -xzf /tmp/musl-cross.tgz -C /usr/local
+          echo "/usr/local/x86_64-linux-musl-cross/bin" >> "$GITHUB_PATH"
+
       - name: Setup emsdk
         if: matrix.emsdk
         uses: mymindstorm/setup-emsdk@v14
@@ -118,7 +127,7 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
-        run: make dep ${{ matrix.dep-args }}
+        run: make dep ${{ matrix.dep-args }} ${{ matrix.env }}
 
       - name: Build
         run: make ${{ matrix.make-args }} ${{ matrix.env }}
