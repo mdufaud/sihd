@@ -17,6 +17,12 @@
 #endif
 #include <windows.h>
 
+// MinGW SDKs may lack the ConPTY types entirely (old _WIN32_WINNT): the API is
+// loaded dynamically, only the handle type is needed here
+#ifndef HPCON
+typedef void *HPCON;
+#endif
+
 namespace sihd::sys
 {
 
