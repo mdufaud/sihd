@@ -1,18 +1,5 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1234567..abcdefg 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -577,7 +577,8 @@ set(LWS_LIBMOUNT_LIBRARIES CACHE PATH "Path to the libmount library")
- set(LWS_EXT_PTHREAD_INCLUDE_DIR CACHE PATH "Path to an external pthreads include directory")
- set(LWS_EXT_PTHREAD_LIBRARIES CACHE PATH "Path to an external pthreads library")
- 
--if(WIN32)
-+# MinGW has built-in pthreads support; pthreads_windows (PThreads4W) is only needed for MSVC.
-+if(WIN32 AND NOT MINGW)
-     find_package(pthreads_windows REQUIRED)
-     set(LWS_EXT_PTHREAD_INCLUDE_DIR ${PThreads4W_INCLUDE_DIR})
-     set(LWS_EXT_PTHREAD_LIBRARIES ${PThreads4W_LIBRARY})
 diff --git a/CMakeLists-implied-options.txt b/CMakeLists-implied-options.txt
+index b0e3934..cecc5ee 100644
 --- a/CMakeLists-implied-options.txt
 +++ b/CMakeLists-implied-options.txt
 @@ -443,7 +443,8 @@ if (LWS_WITH_PLUGINS OR (LWS_WITH_EVLIB_PLUGINS AND LWS_WITH_EVENT_LIBS))
@@ -25,3 +12,23 @@ diff --git a/CMakeLists-implied-options.txt b/CMakeLists-implied-options.txt
          set(LWS_MAX_SMP 1)
          message("SMD requires pthreads")
          set(LWS_WITH_SYS_SMD 0)
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c2e33e0..19c4a28 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -576,10 +576,14 @@ set(LWS_LIBMOUNT_LIBRARIES CACHE PATH "Path to the libmount library")
+ set(LWS_EXT_PTHREAD_INCLUDE_DIR CACHE PATH "Path to an external pthreads include directory")
+ set(LWS_EXT_PTHREAD_LIBRARIES CACHE PATH "Path to an external pthreads library")
+ 
+-if(WIN32)
++# MinGW has built-in pthreads support; pthreads_windows (PThreads4W) is only needed for MSVC.
++if(WIN32 AND NOT MINGW)
+     find_package(pthreads_windows REQUIRED)
+     set(LWS_EXT_PTHREAD_INCLUDE_DIR ${PThreads4W_INCLUDE_DIR})
+     set(LWS_EXT_PTHREAD_LIBRARIES ${PThreads4W_LIBRARY})
++elseif(MINGW)
++    # without an explicit lib the shared dll link misses winpthread symbols
++    set(LWS_EXT_PTHREAD_LIBRARIES pthread)
+ endif()
+ 
+ if (LWS_WITH_HTTP_STREAM_COMPRESSION)
