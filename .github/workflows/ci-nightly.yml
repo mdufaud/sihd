@@ -38,28 +38,33 @@ jobs:
           - id: x64-linux-musl
             dep-args: ''
             make-args: libc=musl mode=size
-            apt: musl-tools
+            # every job installs the host-foundation packages: make dep builds the
+            # native x64-linux-dynamic vcpkg tree first (glfw3 needs X11, libusb
+            # needs udev, libxcrypt needs autotools) before the cross triplet
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev musl-tools
           - id: arm64-linux
             dep-args: ''
             make-args: machine=aarch64
-            apt: gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           - id: riscv64-linux
             dep-args: ''
             make-args: machine=riscv64
-            apt: gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
           - id: x64-mingw-dynamic
             dep-args: ''
             make-args: platform=windows
-            apt: gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
             env: 'py=0'
           - id: wasm32-emscripten
             dep-args: ''
             make-args: compiler=em m=util,sys,core,csv,zip,net
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'lua=0 py=0'
             emsdk: true
           - id: arm64-android
             dep-args: ''
             make-args: platform=android machine=arm64
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             android: true
             experimental: true # first runs tell if the hosted NDK/gradle setup is enough
 

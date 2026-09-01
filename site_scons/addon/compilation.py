@@ -69,6 +69,8 @@ clang_flags = [
     "-Werror",
     "-Wno-unused-command-line-argument",
     "-Wno-unknown-pragmas",
+    # tolerate gcc-only -Wno-* on older clangs (clang-18 errors with -Werror)
+    "-Wno-unknown-warning-option",
     # clang-22+ flags char8_t->char32_t inside vendored gtest headers
     "-Wno-character-conversion",
 ]
