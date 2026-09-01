@@ -1,0 +1,12 @@
+diff --git a/portfile.cmake b/portfile.cmake
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -33,6 +33,8 @@
+     OPTIONS
+         ${FEATURE_OPTIONS}
+         -DLIBXSLT_WITH_TESTS:BOOL=OFF
++        # lld (zig) errors on version-script symbols the config compiles out
++        -DCMAKE_SHARED_LINKER_FLAGS=-Wl,--undefined-version
+     OPTIONS_RELEASE
+         ${FEATURE_OPTIONS_RELEASE}
+         -DLIBXSLT_WITH_XSLT_DEBUG:BOOL=OFF

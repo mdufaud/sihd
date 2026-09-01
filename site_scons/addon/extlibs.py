@@ -140,4 +140,9 @@ vcpkg_ports = {
         },
         "recipe_patches": ["patches/lua/recipe.patch"],
     },
+    "libxslt": {
+        # pulled target-side by libx11; lld (zig triplets) errors on the
+        # version-script symbols LIBXSLT_WITH_DEBUGGER=OFF compiles out
+        "recipe_patches": ["patches/libxslt/recipe.patch"],
+    },
 }
