@@ -1,4 +1,3 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -13,6 +12,7 @@
 #include <sihd/sys/clipboard.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
@@ -22,10 +22,11 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
+
+#include <CLI/CLI.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # include "emscripten.h"
@@ -145,36 +146,39 @@ void file_mem_read()
 
 void clipboard()
 {
-    auto opt_content = clipboard::get_any();
-    if (opt_content)
+    for (const auto & raw : clipboard::get_raw())
     {
-        if (std::holds_alternative<std::string>(*opt_content))
-        {
-            const auto & text = std::get<std::string>(*opt_content);
-            SIHD_LOG_INFO("You have text in your clipboard: '{}'", text);
-        }
-        else if (std::holds_alternative<Bitmap>(*opt_content))
-        {
-            const auto & bitmap = std::get<Bitmap>(*opt_content);
-            SIHD_LOG_INFO("You have an image in your clipboard: {}x{} ({}bpp)",
-                          bitmap.width(),
-                          bitmap.height(),
-                          bitmap.byte_per_pixel() * 8);
-
-            std::string path = fs::combine(fs::tmp_path(), "clipboard_image.bmp");
-            if (bitmap.save_bmp(path))
-                SIHD_LOG(notice, "Saved clipboard image to: {}", path);
-
-            // for the fun of it all
-            clipboard::set_image(bitmap);
-        }
-    }
-    else
-    {
-        SIHD_LOG_ERROR("Could not get clipboard data");
+        SIHD_LOG_INFO("Clipboard offers '{}' ({} bytes)", raw.mime, raw.data.size());
     }
 
-    if (clipboard::set_text("love you"))
+    for (const auto & raw : clipboard::get_raw({sihd::util::mime::bmp_image}))
+    {
+        auto bitmap = clipboard::to_image(raw);
+        if (!bitmap.has_value())
+            continue;
+
+        SIHD_LOG_INFO("You have an image in your clipboard: {}x{} ({}bpp)",
+                      bitmap->width(),
+                      bitmap->height(),
+                      bitmap->byte_per_pixel() * 8);
+        std::string path = fs::combine(fs::tmp_path(), "clipboard_image.bmp");
+        if (bitmap->save_bmp(path))
+            SIHD_LOG(notice, "Saved clipboard image to: {}", path);
+
+        // for the fun of it all
+        clipboard::set(*bitmap);
+        break;
+    }
+
+    for (const auto & raw : clipboard::get_raw({sihd::util::mime::utf8_text}))
+    {
+        auto text = clipboard::to_text(raw);
+        if (text.has_value())
+            SIHD_LOG_INFO("You have text in your clipboard: '{}'", *text);
+        break;
+    }
+
+    if (clipboard::set("love you"))
     {
         SIHD_LOG_INFO("Set 'love you' in your clipboard");
     }
@@ -195,7 +199,7 @@ void bitmap()
 
     Bitmap bm(width, height);
 
-    Pixel p;
+    Color p;
 
     p.alpha = 0;
     p.red = 200;

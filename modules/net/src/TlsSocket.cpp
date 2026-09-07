@@ -1,7 +1,4 @@
-#include <csignal>
-
 #include <sihd/net/TlsSocket.hpp>
-#include <sihd/sys/SigThreadBlocker.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
@@ -104,9 +101,6 @@ bool TlsSocket::close()
 {
     if (_tls_conn)
     {
-#if !defined(__SIHD_WINDOWS__)
-        sihd::sys::SigThreadBlocker sigpipe_guard(SIGPIPE);
-#endif
         _tls_conn.shutdown();
         _tls_conn.clear();
     }

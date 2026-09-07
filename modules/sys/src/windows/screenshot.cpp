@@ -1,10 +1,10 @@
-#include <sihd/sys/screenshot.hpp>
-#include <sihd/util/Defer.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <windows.h>
 #include <wingdi.h>
 #include <winuser.h>
+
+#include <sihd/sys/screenshot.hpp>
+#include <sihd/util/Defer.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::sys::screenshot
 {
@@ -91,7 +91,7 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
     if (lines != height)
         return false;
 
-    // Windows returns BGRA, our Pixel struct in little-endian is {blue, green, red, alpha}
+    // Windows returns BGRA, our Color struct in little-endian is {blue, green, red, alpha}
     // So the byte order matches - we can copy directly
     bm.create(width, height, 32);
     bm.set(pixels.data(), pixels.size());
@@ -105,7 +105,9 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
 bool take_window_name(Bitmap & bm, std::string_view name)
 {
     bm.clear();
-    HWND active_window = FindWindowA(nullptr, name.data());
+    // FindWindowA needs a null-terminated string; string_view is not.
+    const std::string window_name(name);
+    HWND active_window = FindWindowA(nullptr, window_name.c_str());
     return take_screen_from_window(bm, active_window);
 }
 
@@ -120,16 +122,16 @@ bool take_under_cursor(Bitmap & bm)
 {
     bm.clear();
     POINT pt;
-    HWND window;
-    GetCursorPos(&pt);
-    window = WindowFromPoint(pt);
+    if (!GetCursorPos(&pt))
+        return false;
+    HWND window = WindowFromPoint(pt);
     return take_screen_from_window(bm, window);
 }
 
 bool take_screen(Bitmap & bm)
 {
     bm.clear();
-    // Use NULL to get DC for the entire virtual screen (all monitors)
+    // NULL gets the DC of the primary screen
     HDC hdcScreen = GetDC(NULL);
     if (hdcScreen == nullptr)
         return false;

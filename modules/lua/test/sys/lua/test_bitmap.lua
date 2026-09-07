@@ -6,8 +6,8 @@ assert(bmp:height() == 4)
 assert(bmp:byte_per_pixel() == 4)
 assert(not bmp:empty())
 
--- Pixel value type
-local red = sys.Pixel.rgb(255, 0, 0)
+-- Color value type
+local red = sys.Color.rgb(255, 0, 0)
 assert(red:red() == 255)
 assert(red:green() == 0)
 assert(red:blue() == 0)
@@ -19,7 +19,7 @@ assert(px:green() == 0)
 assert(px:blue() == 0)
 
 -- set a single pixel then read it back
-bmp:set(1, 1, sys.Pixel.rgb(0, 0, 255))
+bmp:set(1, 1, sys.Color.rgb(0, 0, 255))
 assert(bmp:get(1, 1):blue() == 255)
 assert(bmp:is_accessible(1, 1))
 assert(not bmp:is_accessible(10, 10))

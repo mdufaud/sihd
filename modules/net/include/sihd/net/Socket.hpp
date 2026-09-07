@@ -3,11 +3,10 @@
 
 #include <optional>
 
-#include <sihd/util/ArrayView.hpp>
-#include <sihd/sys/platform.hpp>
-
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/ip.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/ArrayView.hpp>
 
 namespace sihd::net
 {
@@ -102,6 +101,9 @@ class Socket
         bool shutdown();
         bool is_open() const { return _socket >= 0; }
 
+        // A dead peer raises SIGPIPE: the process must ignore or handle it,
+        // or pass MSG_NOSIGNAL through set_send_flags - the library never
+        // touches signal dispositions.
         virtual ssize_t send(sihd::util::ArrCharView view);
         bool send_all(sihd::util::ArrCharView view);
 

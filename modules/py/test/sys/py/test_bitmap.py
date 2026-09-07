@@ -6,8 +6,8 @@ assert bmp.height() == 4
 assert bmp.byte_per_pixel() == 4
 assert not bmp.empty()
 
-# Pixel value type
-red = sihd.sys.Pixel.rgb(255, 0, 0)
+# Color value type
+red = sihd.sys.Color.rgb(255, 0, 0)
 assert red.red == 255
 assert red.green == 0
 assert red.blue == 0
@@ -15,7 +15,7 @@ assert red.blue == 0
 bmp.fill(red)
 assert bmp.get(0, 0).red == 255
 
-bmp.set(1, 1, sihd.sys.Pixel.rgb(0, 0, 255))
+bmp.set(1, 1, sihd.sys.Color.rgb(0, 0, 255))
 assert bmp.get(1, 1).blue == 255
 assert bmp.is_accessible(1, 1)
 assert not bmp.is_accessible(10, 10)

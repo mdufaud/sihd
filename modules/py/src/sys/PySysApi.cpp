@@ -70,9 +70,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
 
     m_sys.def_submodule("user", "sihd::sys::user")
         .def("is_root", &user::is_root)
-        .def(
-            "name",
-            +[]() -> std::string { return user::name().value_or(""); });
+        .def("name", +[]() -> std::string { return user::name().value_or(""); });
 
     auto m_signal = m_sys.def_submodule("signal", "sihd::sys::signal");
     m_signal.def("handle", &signal::handle)
@@ -123,15 +121,15 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
     // module already launches and manages processes. Bindings only cover what the
     // host language lacks (see the Lua Process binding for the no-stdlib case).
 
-    pybind11::class_<Pixel>(m_sys, "Pixel")
+    pybind11::class_<Color>(m_sys, "Color")
         .def(pybind11::init<>())
         .def(pybind11::init<uint32_t>())
-        .def_static("rgb", &Pixel::rgb)
-        .def_property_readonly("value", [](const Pixel & self) { return self.value; })
-        .def_property_readonly("red", [](const Pixel & self) { return self.red; })
-        .def_property_readonly("green", [](const Pixel & self) { return self.green; })
-        .def_property_readonly("blue", [](const Pixel & self) { return self.blue; })
-        .def_property_readonly("alpha", [](const Pixel & self) { return self.alpha; });
+        .def_static("rgb", &Color::rgb)
+        .def_property_readonly("value", [](const Color & self) { return self.value; })
+        .def_property_readonly("red", [](const Color & self) { return self.red; })
+        .def_property_readonly("green", [](const Color & self) { return self.green; })
+        .def_property_readonly("blue", [](const Color & self) { return self.blue; })
+        .def_property_readonly("alpha", [](const Color & self) { return self.alpha; });
 
     pybind11::class_<Bitmap>(m_sys, "Bitmap")
         .def(pybind11::init<>())
@@ -146,7 +144,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
              pybind11::arg("bit_per_pixel") = 32)
         .def("fill", &Bitmap::fill)
         .def("clear", &Bitmap::clear)
-        .def("set", static_cast<void (Bitmap::*)(size_t, size_t, Pixel)>(&Bitmap::set))
+        .def("set", static_cast<void (Bitmap::*)(size_t, size_t, Color)>(&Bitmap::set))
         .def("get", &Bitmap::get)
         .def("is_accessible", &Bitmap::is_accessible)
         .def("save_bmp", &Bitmap::save_bmp)
@@ -159,7 +157,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("read_bmp_data",
              [](Bitmap & self, pybind11::bytes data) {
                  std::string bytes = data;
-                 return self.read_bmp_data(Bitmap::Pixels(bytes.begin(), bytes.end()));
+                 return self.read_bmp_data(sihd::util::ArrByteView(bytes));
              })
         .def("empty", &Bitmap::empty)
         .def("width", &Bitmap::width)

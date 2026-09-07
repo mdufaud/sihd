@@ -72,7 +72,8 @@ class Poll: public sihd::util::Observable<Poll>,
         bool on_start() override;
         bool on_stop() override;
 
-        void process_poll_results(int poll_return);
+        // errno as captured right after the poll syscall: EINTR is not an error
+        void process_poll_results(int poll_return, int saved_errno);
 
     private:
         std::atomic<bool> _stop;

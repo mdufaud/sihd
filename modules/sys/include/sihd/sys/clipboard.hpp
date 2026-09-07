@@ -4,10 +4,13 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <variant>
+#include <vector>
 
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/mime.hpp>
 
 namespace sihd::sys::clipboard
 {
@@ -18,19 +21,29 @@ constexpr bool supported = true;
 constexpr bool supported = false;
 #endif
 
-using Content = std::variant<std::string, Bitmap>;
+struct RawContent
+{
+        std::string mime;
+        sihd::util::ArrByte data;
+};
 
-// Set text to clipboard
-bool set_text(std::string_view str);
-// Set image to clipboard
-bool set_image(const Bitmap & bitmap);
+struct RawContentView
+{
+        std::string_view mime;
+        sihd::util::ArrByteView data;
+};
 
-// Get text from clipboard (alias)
-std::optional<std::string> get_text();
-// Get image from clipboard
-std::optional<Bitmap> get_image();
-// Get either text or image from clipboard (prefers image if both available)
-std::optional<Content> get_any();
+std::vector<RawContent> get_raw();
+std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mimes);
+
+std::optional<std::string> to_text(const RawContent & raw);
+std::optional<Bitmap> to_image(const RawContent & raw);
+
+// can SIGPIPE
+bool set(std::string_view text);
+bool set(const Bitmap & bitmap);
+bool set(std::string_view mime, sihd::util::ArrByteView data);
+bool set_raw(const std::vector<RawContentView> & contents);
 
 } // namespace sihd::sys::clipboard
 

@@ -11,16 +11,16 @@
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/FileMutex.hpp>
-#include <sihd/sys/proc.hpp>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/Uuid.hpp>
-#include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/proc.hpp>
+#include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/sys/user.hpp>
 #include <sihd/util/build.hpp>
@@ -111,10 +111,7 @@ class LuaProcess: public Process
 class LuaProcFuture
 {
     public:
-        explicit LuaProcFuture(std::future<int> fut):
-            _future(std::make_shared<std::future<int>>(std::move(fut)))
-        {
-        }
+        explicit LuaProcFuture(std::future<int> fut): _future(std::make_shared<std::future<int>>(std::move(fut))) {}
 
         int get() { return _future->get(); }
 
@@ -137,7 +134,9 @@ void LuaSysApi::load_base(Vm & vm)
         .beginNamespace("sihd")
         .beginNamespace("sys")
         .beginClass<sihd::sys::Uuid>("Uuid")
-        .addConstructor<void (*)(), void (*)(const std::string &), void (*)(const sihd::sys::Uuid &, std::string_view)>()
+        .addConstructor<void (*)(),
+                        void (*)(const std::string &),
+                        void (*)(const sihd::sys::Uuid &, std::string_view)>()
         .addFunction("is_null", &sihd::sys::Uuid::is_null)
         .addFunction("clear", &sihd::sys::Uuid::clear)
         .addFunction("str", &sihd::sys::Uuid::str)
@@ -152,77 +151,111 @@ void LuaSysApi::load_base(Vm & vm)
         .addConstructor<void (*)(int), void (*)(std::string_view)>()
         .addFunction("is_alive", &sihd::sys::ProcessInfo::is_alive)
         .addFunction("pid", &sihd::sys::ProcessInfo::pid)
-        .addFunction("name", +[](sihd::sys::ProcessInfo *self) -> std::string { return self->name(); })
-        .addFunction("cwd", +[](sihd::sys::ProcessInfo *self) -> std::string { return self->cwd(); })
-        .addFunction("exe_path", +[](sihd::sys::ProcessInfo *self) -> std::string { return self->exe_path(); })
-        .addFunction("cmd_line",
-                     +[](sihd::sys::ProcessInfo *self) -> std::vector<std::string> { return self->cmd_line(); })
-        .addFunction("env", +[](sihd::sys::ProcessInfo *self) -> std::vector<std::string> { return self->env(); })
-        .addFunction("creation_time",
-                     +[](sihd::sys::ProcessInfo *self) -> int64_t { return self->creation_time(); })
+        .addFunction(
+            "name",
+            +[](sihd::sys::ProcessInfo *self) -> std::string { return self->name(); })
+        .addFunction(
+            "cwd",
+            +[](sihd::sys::ProcessInfo *self) -> std::string { return self->cwd(); })
+        .addFunction(
+            "exe_path",
+            +[](sihd::sys::ProcessInfo *self) -> std::string { return self->exe_path(); })
+        .addFunction(
+            "cmd_line",
+            +[](sihd::sys::ProcessInfo *self) -> std::vector<std::string> { return self->cmd_line(); })
+        .addFunction(
+            "env",
+            +[](sihd::sys::ProcessInfo *self) -> std::vector<std::string> { return self->env(); })
+        .addFunction(
+            "creation_time",
+            +[](sihd::sys::ProcessInfo *self) -> int64_t { return self->creation_time(); })
         .addStaticFunction("get_all_process_from_name", &sihd::sys::ProcessInfo::get_all_process_from_name)
         .endClass()
-        .beginClass<sihd::sys::Pixel>("Pixel")
+        .beginClass<sihd::sys::Color>("Color")
         .addConstructor<void (*)(), void (*)(uint32_t)>()
-        .addStaticFunction("rgb", &sihd::sys::Pixel::rgb)
-        .addFunction("value", +[](sihd::sys::Pixel *self) -> uint32_t { return self->value; })
-        .addFunction("red", +[](sihd::sys::Pixel *self) -> int { return self->red; })
-        .addFunction("green", +[](sihd::sys::Pixel *self) -> int { return self->green; })
-        .addFunction("blue", +[](sihd::sys::Pixel *self) -> int { return self->blue; })
-        .addFunction("alpha", +[](sihd::sys::Pixel *self) -> int { return self->alpha; })
+        .addStaticFunction("rgb", &sihd::sys::Color::rgb)
+        .addFunction(
+            "value",
+            +[](sihd::sys::Color *self) -> uint32_t { return self->value; })
+        .addFunction(
+            "red",
+            +[](sihd::sys::Color *self) -> int { return self->red; })
+        .addFunction(
+            "green",
+            +[](sihd::sys::Color *self) -> int { return self->green; })
+        .addFunction(
+            "blue",
+            +[](sihd::sys::Color *self) -> int { return self->blue; })
+        .addFunction(
+            "alpha",
+            +[](sihd::sys::Color *self) -> int { return self->alpha; })
         .endClass()
         .beginClass<sihd::sys::Bitmap>("Bitmap")
         .addConstructor<void (*)(), void (*)(size_t, size_t, uint8_t)>()
-        .addFunction("create",
-                     +[](sihd::sys::Bitmap *self, int w, int h, luabridge::LuaRef bpp) {
-                         self->create(static_cast<size_t>(w),
-                                      static_cast<size_t>(h),
-                                      bpp.isNumber() ? static_cast<uint8_t>(static_cast<int>(bpp)) : uint8_t(32));
-                     })
+        .addFunction(
+            "create",
+            +[](sihd::sys::Bitmap *self, int w, int h, luabridge::LuaRef bpp) {
+                self->create(static_cast<size_t>(w),
+                             static_cast<size_t>(h),
+                             bpp.isNumber() ? static_cast<uint8_t>(static_cast<int>(bpp)) : uint8_t(32));
+            })
         .addFunction("fill", &sihd::sys::Bitmap::fill)
         .addFunction("clear", &sihd::sys::Bitmap::clear)
-        .addFunction("set",
-                     +[](sihd::sys::Bitmap *self, int row, int line, sihd::sys::Pixel pixel) {
-                         self->set(static_cast<size_t>(row), static_cast<size_t>(line), pixel);
-                     })
-        .addFunction("get",
-                     +[](sihd::sys::Bitmap *self, int row, int line) -> sihd::sys::Pixel {
-                         return self->get(static_cast<size_t>(row), static_cast<size_t>(line));
-                     })
-        .addFunction("is_accessible",
-                     +[](sihd::sys::Bitmap *self, int row, int line) -> bool {
-                         return self->is_accessible(static_cast<size_t>(row), static_cast<size_t>(line));
-                     })
-        .addFunction("save_bmp", +[](sihd::sys::Bitmap *self, const std::string & path) -> bool {
-            return self->save_bmp(path);
-        })
-        .addFunction("read_bmp", +[](sihd::sys::Bitmap *self, const std::string & path) -> bool {
-            return self->read_bmp(path);
-        })
-        .addFunction("to_bmp_data",
-                     +[](sihd::sys::Bitmap *self) -> std::string {
-                         auto data = self->to_bmp_data();
-                         return std::string(data.begin(), data.end());
-                     })
-        .addFunction("read_bmp_data",
-                     +[](sihd::sys::Bitmap *self, const std::string & data) -> bool {
-                         return self->read_bmp_data(sihd::sys::Bitmap::Pixels(data.begin(), data.end()));
-                     })
+        .addFunction(
+            "set",
+            +[](sihd::sys::Bitmap *self, int row, int line, sihd::sys::Color pixel) {
+                self->set(static_cast<size_t>(row), static_cast<size_t>(line), pixel);
+            })
+        .addFunction(
+            "get",
+            +[](sihd::sys::Bitmap *self, int row, int line) -> sihd::sys::Color {
+                return self->get(static_cast<size_t>(row), static_cast<size_t>(line));
+            })
+        .addFunction(
+            "is_accessible",
+            +[](sihd::sys::Bitmap *self, int row, int line) -> bool {
+                return self->is_accessible(static_cast<size_t>(row), static_cast<size_t>(line));
+            })
+        .addFunction(
+            "save_bmp",
+            +[](sihd::sys::Bitmap *self, const std::string & path) -> bool { return self->save_bmp(path); })
+        .addFunction(
+            "read_bmp",
+            +[](sihd::sys::Bitmap *self, const std::string & path) -> bool { return self->read_bmp(path); })
+        .addFunction(
+            "to_bmp_data",
+            +[](sihd::sys::Bitmap *self) -> std::string {
+                auto data = self->to_bmp_data();
+                return std::string(data.begin(), data.end());
+            })
+        .addFunction(
+            "read_bmp_data",
+            +[](sihd::sys::Bitmap *self, const std::string & data) -> bool {
+                return self->read_bmp_data(sihd::util::ArrByteView(data));
+            })
         .addFunction("empty", &sihd::sys::Bitmap::empty)
-        .addFunction("width", +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->width()); })
-        .addFunction("height", +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->height()); })
-        .addFunction("byte_per_pixel",
-                     +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->byte_per_pixel()); })
+        .addFunction(
+            "width",
+            +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->width()); })
+        .addFunction(
+            "height",
+            +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->height()); })
+        .addFunction(
+            "byte_per_pixel",
+            +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->byte_per_pixel()); })
         .endClass()
         .beginNamespace("screenshot")
-        .addFunction("supported", +[]() -> bool { return sihd::sys::screenshot::supported; })
+        .addFunction(
+            "supported",
+            +[]() -> bool { return sihd::sys::screenshot::supported; })
         .addFunction("take_screen", &sihd::sys::screenshot::take_screen)
         .addFunction("take_under_cursor", &sihd::sys::screenshot::take_under_cursor)
         .addFunction("take_focused", &sihd::sys::screenshot::take_focused)
-        .addFunction("take_window_name",
-                     +[](sihd::sys::Bitmap & bm, const std::string & name) -> bool {
-                         return sihd::sys::screenshot::take_window_name(bm, name);
-                     })
+        .addFunction(
+            "take_window_name",
+            +[](sihd::sys::Bitmap & bm, const std::string & name) -> bool {
+                return sihd::sys::screenshot::take_window_name(bm, name);
+            })
         .endNamespace()
         // FileMutex: advisory inter-process file lock (no Lua stdlib equivalent)
         .beginClass<sihd::sys::FileMutex>("FileMutex")
@@ -233,14 +266,16 @@ void LuaSysApi::load_base(Vm & vm)
         .addFunction("lock_shared", &sihd::sys::FileMutex::lock_shared)
         .addFunction("try_lock_shared", &sihd::sys::FileMutex::try_lock_shared)
         .addFunction("unlock_shared", &sihd::sys::FileMutex::unlock_shared)
-        .addFunction("try_lock_for",
-                     +[](sihd::sys::FileMutex *self, int ms) -> bool {
-                         return self->try_lock_for(std::chrono::milliseconds(ms));
-                     })
-        .addFunction("try_lock_shared_for",
-                     +[](sihd::sys::FileMutex *self, int ms) -> bool {
-                         return self->try_lock_shared_for(std::chrono::milliseconds(ms));
-                     })
+        .addFunction(
+            "try_lock_for",
+            +[](sihd::sys::FileMutex *self, int ms) -> bool {
+                return self->try_lock_for(std::chrono::milliseconds(ms));
+            })
+        .addFunction(
+            "try_lock_shared_for",
+            +[](sihd::sys::FileMutex *self, int ms) -> bool {
+                return self->try_lock_shared_for(std::chrono::milliseconds(ms));
+            })
         .endClass()
         .endNamespace()
         .endNamespace();

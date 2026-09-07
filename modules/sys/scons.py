@@ -22,11 +22,15 @@ if builder.build_platform == "windows":
     sources += Glob('src/windows/*.cpp')
 else:
     sources += Glob('src/linux/*.cpp')
+    # shared plumbing for the clipboard / screenshot backends
+    sources += Glob('src/linux/internal/*.cpp')
     # x11 / wayland backends only compile when their opt is enabled
     if compile_x11:
         sources += Glob('src/linux/x11/*.cpp')
     if compile_wayland:
         sources += Glob('src/linux/wayland/*.cpp')
+        # vendored wayland protocol definitions (wayland-scanner private-code)
+        sources += Glob('src/linux/wayland/protocols/*.c')
 
 lib = env.build_lib(sources)
 

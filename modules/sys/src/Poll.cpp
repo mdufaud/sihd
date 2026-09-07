@@ -239,15 +239,20 @@ bool Poll::on_start()
 
     _stop = false;
     int ret = 0;
-    while (ret >= 0 && _stop == false)
+    bool interrupted = false;
+    while (_stop == false && (ret >= 0 || interrupted))
+    {
         ret = this->poll(_timeout_milliseconds);
-    return ret >= 0;
+        interrupted = ret < 0 && this->polling_error() == false;
+    }
+    return interrupted || ret >= 0;
 }
 
 int Poll::poll(int milliseconds_timeout)
 {
     Timestamp before = _clock.now();
     int ret;
+    int saved_errno;
     {
         std::lock_guard lock(_fds_mutex);
 #if !defined(__SIHD_WINDOWS__)
@@ -255,19 +260,21 @@ int Poll::poll(int milliseconds_timeout)
 #else
         ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #endif
+        saved_errno = errno;
         _last_poll_time = _clock.now() - before;
-        this->process_poll_results(ret);
+        this->process_poll_results(ret, saved_errno);
     }
     this->notify_observers(this);
     return ret;
 }
 
-void Poll::process_poll_results(int poll_return)
+void Poll::process_poll_results(int poll_return, int saved_errno)
 {
     _lst_events.clear();
     _timedout = poll_return == 0;
-    _error = poll_return < 0;
-    if (poll_return < 0)
+    // A signal interrupt is not a polling error: callers may just retry.
+    _error = poll_return < 0 && saved_errno != EINTR;
+    if (_error)
         SIHD_LOG(error, "Poll: {}", os::last_error_str());
     if (poll_return > 0)
     {

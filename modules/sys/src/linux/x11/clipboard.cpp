@@ -1,511 +1,481 @@
-#include <unistd.h> // unlink
+#include <unistd.h>
 
-#include <cstring>
+#include <algorithm>
+#include <limits>
+#include <optional>
+#include <string>
+#include <vector>
 
+// sihd headers first: Xlib poisons common identifiers (None, Status, True,
+// False, ...) with its macros.
 #include <sihd/sys/Bitmap.hpp>
-#include <sihd/sys/clipboard.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include "../x11_wayland_backends.hpp"
+#include "../internal/deadline.hpp"
+#include "clipboard.hpp"
+#include "x11_display.hpp"
+#include <X11/Xatom.h>
+#include <X11/Xlib.h>
 
-// X11 clipboard backend - selection ownership with an event loop serving
-// TARGETS / TEXT / UTF8_STRING (text) and image/bmp requests.
+// X11 clipboard backend: selection ownership, serving TARGETS and owned
+// targets. One-shot set. INCR transfers unsupported (selections ~16 MB max).
 
-namespace sihd::sys::clipboard
+namespace sihd::sys::clipboard::x11
 {
 
 using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::clipboard");
 
-bool x11_set_clipboard(std::string_view str)
+namespace
 {
-    Display *display;
-    int screen;
-    Window window;
-    Atom targets_atom, text_atom, UTF8, XA_ATOM = 4, XA_STRING = 31;
 
-    display = XOpenDisplay(nullptr);
-    if (!display)
-    {
-        SIHD_LOG(error, "could not open X display");
-        return false;
-    }
-    Defer defer_display([&display] { XCloseDisplay(display); });
+// One data payload served for one selection target.
+struct TargetData
+{
+        Atom target;
+        const unsigned char *data = nullptr;
+        unsigned long size = 0;
+};
 
-    screen = DefaultScreen(display);
-    window = XCreateSimpleWindow(display,
-                                 RootWindow(display, screen),
-                                 0,
-                                 0,
-                                 1,
-                                 1,
-                                 0,
-                                 BlackPixel(display, screen),
-                                 WhitePixel(display, screen));
+// Display connection, requestor/owner window and poller used by one clipboard
+// operation.
+struct ClipboardSession;
 
-    Defer defer_window([&display, &window] { XDestroyWindow(display, window); });
+// The server's current time: selection requests want a real timestamp, not
+// CurrentTime (ICCCM). Changing a property on our own window hands it back
+// through its PropertyNotify.
+Time server_timestamp(ClipboardSession & session);
 
-    targets_atom = XInternAtom(display, "TARGETS", False);
-    text_atom = XInternAtom(display, "TEXT", False);
-    UTF8 = XInternAtom(display, "UTF8_STRING", True);
-    if (UTF8 == None)
-        UTF8 = XA_STRING;
-    Atom selection = XInternAtom(display, "CLIPBOARD", False);
+struct ClipboardSession
+{
+        sihd::sys::x11::DisplayConnection conn;
+        Window window = 0;
+        Atom property = 0;
+        Atom selection = 0;
+        Time timestamp = CurrentTime;
+        Poll poll {1};
 
-    XEvent event;
-    //   Window owner;
-    XSetSelectionOwner(display, selection, window, 0);
-    if (XGetSelectionOwner(display, selection) != window)
-        return false;
-    // Event loop
-    for (;;)
-    {
-        XNextEvent(display, &event);
-        switch (event.type)
+        bool open()
         {
-            case ClientMessage:
+            if (conn.display == nullptr)
             {
-                return true;
-            }
-            case SelectionRequest:
-            {
-                if (event.xselectionrequest.selection != selection)
-                    break;
-                XSelectionRequestEvent *xsr = &event.xselectionrequest;
-
-                XSelectionEvent ev;
-                memset(&ev, 0, sizeof(XSelectionEvent));
-                ev.type = SelectionNotify;
-                ev.display = xsr->display;
-                ev.requestor = xsr->requestor;
-                ev.selection = xsr->selection;
-                ev.time = xsr->time;
-                ev.target = xsr->target;
-                ev.property = xsr->property;
-
-                bool send_fake_event = false;
-
-                int ret = 0;
-                if (ev.target == targets_atom)
-                {
-                    ret = XChangeProperty(ev.display,
-                                          ev.requestor,
-                                          ev.property,
-                                          XA_ATOM,
-                                          32,
-                                          PropModeReplace,
-                                          (unsigned char *)&UTF8,
-                                          1);
-                }
-                else if (ev.target == XA_STRING || ev.target == text_atom)
-                {
-                    ret = XChangeProperty(ev.display,
-                                          ev.requestor,
-                                          ev.property,
-                                          XA_STRING,
-                                          8,
-                                          PropModeReplace,
-                                          (unsigned char *)str.data(),
-                                          str.size());
-                    send_fake_event = true;
-                }
-                else if (ev.target == UTF8)
-                {
-                    ret = XChangeProperty(ev.display,
-                                          ev.requestor,
-                                          ev.property,
-                                          UTF8,
-                                          8,
-                                          PropModeReplace,
-                                          (unsigned char *)str.data(),
-                                          str.size());
-                    send_fake_event = true;
-                }
-                else
-                {
-                    ev.property = None;
-                }
-
-                if ((ret & 2) == 0)
-                {
-                    XSendEvent(display, ev.requestor, 0, 0, (XEvent *)&ev);
-                }
-
-                if (send_fake_event)
-                {
-                    // permits quitting event loop
-                    XClientMessageEvent dummyEvent;
-                    memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
-                    Window dummyWindow
-                        = XCreateSimpleWindow(display, DefaultRootWindow(display), 10, 10, 10, 10, 0, 0, 0);
-                    dummyEvent.type = ClientMessage;
-                    dummyEvent.window = dummyWindow;
-                    dummyEvent.format = 32;
-                    XSendEvent(display, dummyWindow, False, 0, (XEvent *)&dummyEvent);
-                    XFlush(display);
-                    XDestroyWindow(display, dummyWindow);
-                }
-
-                break;
-            }
-            case SelectionClear:
+                SIHD_LOG(error, "x11: could not open the display");
                 return false;
+            }
+
+            window = XCreateSimpleWindow(conn.display,
+                                         DefaultRootWindow(conn.display),
+                                         -10,
+                                         -10,
+                                         1,
+                                         1,
+                                         0,
+                                         BlackPixel(conn.display, DefaultScreen(conn.display)),
+                                         WhitePixel(conn.display, DefaultScreen(conn.display)));
+            property = XInternAtom(conn.display, "SIHD_CLIPBOARD", False);
+            selection = XInternAtom(conn.display, "CLIPBOARD", False);
+            poll.set_read_fd(ConnectionNumber(conn.display));
+            timestamp = server_timestamp(*this);
+            return true;
         }
-    }
-}
 
-std::optional<std::string> x11_get_clipboard()
-{
-    Display *display;
-    Window owner, target_window, root;
-    int screen;
-    Atom sel, target_property, utf8;
-    XEvent ev;
-    XSelectionEvent *sev;
-
-    display = XOpenDisplay(nullptr);
-    if (!display)
-    {
-        SIHD_LOG(error, "could not open X display");
-        return std::nullopt;
-    }
-    Defer defer_display([&display] { XCloseDisplay(display); });
-
-    screen = DefaultScreen(display);
-    root = RootWindow(display, screen);
-
-    sel = XInternAtom(display, "CLIPBOARD", False);
-    utf8 = XInternAtom(display, "UTF8_STRING", False);
-
-    owner = XGetSelectionOwner(display, sel);
-    if (owner == None)
-    {
-        SIHD_LOG(error, "x11 clipboard has no owner");
-        return std::nullopt;
-    }
-
-    /* The selection owner will store the data in a property on this
-     * window: */
-    target_window = XCreateSimpleWindow(display, root, -10, -10, 1, 1, 0, 0, 0);
-    Defer defer_window([&display, &target_window] { XDestroyWindow(display, target_window); });
-
-    /* That's the property used by the owner. Note that it's completely
-     * arbitrary. */
-    target_property = XInternAtom(display, "PENGUIN", False);
-
-    /* Request conversion to UTF-8. Not all owners will be able to
-     * fulfill that request. */
-    XConvertSelection(display, sel, utf8, target_property, target_window, CurrentTime);
-
-    // Event loop
-    for (;;)
-    {
-        XNextEvent(display, &ev);
-        switch (ev.type)
+        void close_window()
         {
-            case SelectionNotify:
-                sev = (XSelectionEvent *)&ev.xselection;
-                if (sev->property == None)
-                {
-                    SIHD_LOG(error, "x11 clipboard conversion could not be performed");
-                    return std::nullopt;
-                }
-                else
-                {
-                    Atom da, incr, type;
-                    int di;
-                    unsigned long size, dul;
-                    unsigned char *prop_ret = NULL;
-
-                    /* Dummy call to get type and size. */
-                    XGetWindowProperty(display,
-                                       target_window,
-                                       target_property,
-                                       0,
-                                       0,
-                                       False,
-                                       AnyPropertyType,
-                                       &type,
-                                       &di,
-                                       &dul,
-                                       &size,
-                                       &prop_ret);
-                    XFree(prop_ret);
-
-                    incr = XInternAtom(display, "INCR", False);
-                    if (type == incr)
-                    {
-                        SIHD_LOG(error, "x11 clipboard Data too large and INCR mechanism not implemented");
-                        return std::nullopt;
-                    }
-
-                    XGetWindowProperty(display,
-                                       target_window,
-                                       target_property,
-                                       0,
-                                       size,
-                                       False,
-                                       AnyPropertyType,
-                                       &da,
-                                       &di,
-                                       &dul,
-                                       &dul,
-                                       &prop_ret);
-
-                    std::string ret((const char *)prop_ret, size);
-
-                    XFree(prop_ret);
-
-                    /* Signal the selection owner that we have successfully read the
-                     * data. */
-                    // XDeleteProperty(display, target_window, target_property);
-
-                    return ret;
-                }
-                break;
+            if (window == 0)
+                return;
+            if (conn.display != nullptr)
+                XDestroyWindow(conn.display, window);
+            window = 0;
         }
+};
+
+// Polls the X connection until an event is queued, the deadline expires or the
+// connection drops.
+bool wait_for_x_event(ClipboardSession & session, Timestamp deadline)
+{
+    while (XPending(session.conn.display) == 0)
+    {
+        session.poll.poll(internal::poll_timeout_ms(deadline));
+        if (session.poll.polling_error() || internal::steady_now() >= deadline)
+            return false;
     }
+    return true;
 }
 
-bool x11_set_clipboard_image(const Bitmap & bitmap)
+Time server_timestamp(ClipboardSession & session)
 {
-    if (bitmap.empty())
-        return false;
+    Display *display = session.conn.display;
+    const Atom atom = XInternAtom(display, "SIHD_TIMESTAMP", False);
+    XSelectInput(display, session.window, PropertyChangeMask);
+    unsigned char dummy = 0;
+    XChangeProperty(display, session.window, atom, XA_INTEGER, 8, PropModeAppend, &dummy, 1);
+    XFlush(display);
 
-    // Serialize bitmap to BMP format using Bitmap's method
-    std::vector<uint8_t> bmp_data = bitmap.to_bmp_data();
-    if (bmp_data.empty())
-        return false;
-
-    Display *display = XOpenDisplay(nullptr);
-    if (!display)
-    {
-        SIHD_LOG(error, "could not open X display");
-        return false;
-    }
-    Defer defer_display([&display] { XCloseDisplay(display); });
-
-    int screen = DefaultScreen(display);
-    Window window = XCreateSimpleWindow(display,
-                                        RootWindow(display, screen),
-                                        0,
-                                        0,
-                                        1,
-                                        1,
-                                        0,
-                                        BlackPixel(display, screen),
-                                        WhitePixel(display, screen));
-
-    Defer defer_window([&display, &window] { XDestroyWindow(display, window); });
-
-    Atom targets_atom = XInternAtom(display, "TARGETS", False);
-    Atom image_bmp = XInternAtom(display, "image/bmp", False);
-    Atom image_xbmp = XInternAtom(display, "image/x-bmp", False);
-    Atom selection = XInternAtom(display, "CLIPBOARD", False);
-    constexpr Atom XA_ATOM = 4;
-
-    XSetSelectionOwner(display, selection, window, CurrentTime);
-    if (XGetSelectionOwner(display, selection) != window)
-    {
-        SIHD_LOG(error, "failed to become clipboard owner");
-        return false;
-    }
-
-    XEvent event;
+    const Timestamp deadline = internal::deadline_from_now(get_timeout);
     for (;;)
     {
+        if (!wait_for_x_event(session, deadline))
+            return CurrentTime;
+        XEvent event;
         XNextEvent(display, &event);
-        switch (event.type)
-        {
-            case ClientMessage:
-            {
-                return true;
-            }
-            case SelectionRequest:
-            {
-                if (event.xselectionrequest.selection != selection)
-                    break;
-
-                XSelectionRequestEvent *xsr = &event.xselectionrequest;
-
-                XSelectionEvent ev;
-                memset(&ev, 0, sizeof(XSelectionEvent));
-                ev.type = SelectionNotify;
-                ev.display = xsr->display;
-                ev.requestor = xsr->requestor;
-                ev.selection = xsr->selection;
-                ev.time = xsr->time;
-                ev.target = xsr->target;
-                ev.property = xsr->property;
-
-                bool send_fake_event = false;
-
-                if (ev.target == targets_atom)
-                {
-                    // Respond with available targets
-                    Atom targets[] = {targets_atom, image_bmp, image_xbmp};
-                    XChangeProperty(ev.display,
-                                    ev.requestor,
-                                    ev.property,
-                                    XA_ATOM,
-                                    32,
-                                    PropModeReplace,
-                                    reinterpret_cast<unsigned char *>(targets),
-                                    3);
-                }
-                else if (ev.target == image_bmp || ev.target == image_xbmp)
-                {
-                    // Respond with BMP data
-                    XChangeProperty(ev.display,
-                                    ev.requestor,
-                                    ev.property,
-                                    ev.target,
-                                    8,
-                                    PropModeReplace,
-                                    bmp_data.data(),
-                                    bmp_data.size());
-                    send_fake_event = true;
-                }
-                else
-                {
-                    ev.property = None;
-                }
-
-                XSendEvent(display, ev.requestor, False, 0, reinterpret_cast<XEvent *>(&ev));
-
-                if (send_fake_event)
-                {
-                    // Exit event loop after serving one request
-                    XClientMessageEvent dummyEvent;
-                    memset(&dummyEvent, 0, sizeof(XClientMessageEvent));
-                    Window dummyWindow
-                        = XCreateSimpleWindow(display, DefaultRootWindow(display), 10, 10, 10, 10, 0, 0, 0);
-                    dummyEvent.type = ClientMessage;
-                    dummyEvent.window = dummyWindow;
-                    dummyEvent.format = 32;
-                    XSendEvent(display, dummyWindow, False, 0, reinterpret_cast<XEvent *>(&dummyEvent));
-                    XFlush(display);
-                    XDestroyWindow(display, dummyWindow);
-                }
-                break;
-            }
-            case SelectionClear:
-                return false;
-        }
+        if (event.type == PropertyNotify && event.xproperty.atom == atom)
+            return event.xproperty.time;
     }
 }
 
-std::optional<Bitmap> x11_get_clipboard_image()
+// Reads the property the owner wrote for us, chunk by chunk, into `out`.
+bool read_selection_property(ClipboardSession & session, ArrByte & out)
 {
-    Display *display = XOpenDisplay(nullptr);
-    if (!display)
+    Display *display = session.conn.display;
+
+    Atom type = None;
+    int format = 0;
+    unsigned long nitems = 0;
+    unsigned long bytes_after = 0;
+    unsigned char *data = nullptr;
+
+    // 4-byte units per round; INCR is unsupported.
+    const long chunk_units = 0xFFFFFF;
+
+    // XGetWindowProperty offsets and lengths are 4-byte units, not elements.
+    for (long offset = 0;; offset += chunk_units)
     {
-        SIHD_LOG(error, "could not open X display");
-        return std::nullopt;
-    }
-    Defer defer_display([&display] { XCloseDisplay(display); });
-
-    int screen = DefaultScreen(display);
-    Window root = RootWindow(display, screen);
-
-    Atom clipboard = XInternAtom(display, "CLIPBOARD", False);
-    Atom target_property = XInternAtom(display, "SIHD_CLIPBOARD", False);
-
-    // Try different image formats
-    const char *image_formats[] = {"image/bmp", "image/png", "image/x-bmp", nullptr};
-
-    Window owner = XGetSelectionOwner(display, clipboard);
-    if (owner == None)
-        return std::nullopt;
-
-    Window target_window = XCreateSimpleWindow(display, root, -10, -10, 1, 1, 0, 0, 0);
-    Defer defer_window([&display, &target_window] { XDestroyWindow(display, target_window); });
-
-    for (int i = 0; image_formats[i] != nullptr; ++i)
-    {
-        Atom format = XInternAtom(display, image_formats[i], False);
-        XConvertSelection(display, clipboard, format, target_property, target_window, CurrentTime);
-        XFlush(display);
-
-        // Wait for SelectionNotify with timeout
-        XEvent ev;
-        bool got_event = false;
-
-        // Simple polling with timeout
-        for (int attempt = 0; attempt < 50; ++attempt)
-        {
-            if (XPending(display) > 0)
-            {
-                XNextEvent(display, &ev);
-                if (ev.type == SelectionNotify)
-                {
-                    got_event = true;
-                    break;
-                }
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        if (!got_event)
-            continue;
-
-        XSelectionEvent *sev = &ev.xselection;
-        if (sev->property == None)
-            continue;
-
-        // Get the data
-        Atom type;
-        int format_ret;
-        unsigned long nitems, bytes_after;
-        unsigned char *data = nullptr;
-
         if (XGetWindowProperty(display,
-                               target_window,
-                               target_property,
-                               0,
-                               LONG_MAX,
+                               session.window,
+                               session.property,
+                               offset,
+                               0xFFFFFF, // plenty for one round; INCR is unsupported anyway
                                False,
                                AnyPropertyType,
                                &type,
-                               &format_ret,
+                               &format,
                                &nitems,
                                &bytes_after,
                                &data)
-            == Success)
+            != Success)
         {
-            if (data && nitems > 0)
-            {
-                // Try to parse as BMP
-                Bitmap bm;
-                // For now, we'd need to save to temp file and read back
-                // or implement in-memory BMP parsing
-                // This is a simplified version - just check if it's BMP format
-                if (nitems >= 2 && data[0] == 'B' && data[1] == 'M')
-                {
-                    std::string tmp_path = "/tmp/sihd_x11_clipboard.bmp";
-                    FILE *f = fopen(tmp_path.c_str(), "wb");
-                    if (f)
-                    {
-                        fwrite(data, 1, nitems, f);
-                        fclose(f);
-                        if (bm.read_bmp(tmp_path))
-                        {
-                            unlink(tmp_path.c_str());
-                            XFree(data);
-                            return bm;
-                        }
-                        unlink(tmp_path.c_str());
-                    }
-                }
-                XFree(data);
-            }
+            return false;
         }
 
-        XDeleteProperty(display, target_window, target_property);
+        if (data != nullptr)
+        {
+            // First round only: an INCR type means the owner chunks, unsupported.
+            if (offset == 0 && type == XInternAtom(display, "INCR", False))
+            {
+                SIHD_LOG(error, "x11: clipboard data too large, INCR transfers are not supported");
+                XFree(data);
+                return false;
+            }
+            // Xlib hands format-32 properties back as long arrays.
+            const size_t item_size = format == 32 ? sizeof(long) : static_cast<size_t>(format) / 8;
+            out.push_back(reinterpret_cast<const int8_t *>(data), static_cast<size_t>(nitems) * item_size);
+            XFree(data);
+        }
+
+        if (bytes_after == 0)
+            return true;
     }
-    return std::nullopt;
 }
 
-} // namespace sihd::sys::clipboard
+// Requests `target` from `selection` and waits for the SelectionNotify before
+// reading the converted data into `out`.
+bool convert_selection(ClipboardSession & session, Atom target, ArrByte & out, Timestamp deadline)
+{
+    Display *display = session.conn.display;
+
+    out.clear();
+    XConvertSelection(display, session.selection, target, session.property, session.window, session.timestamp);
+    XFlush(display);
+
+    for (;;)
+    {
+        if (!wait_for_x_event(session, deadline))
+            return false;
+
+        XEvent event;
+        XNextEvent(display, &event);
+        if (event.type != SelectionNotify)
+            continue;
+
+        if (event.xselection.property == None)
+            return false; // the owner refused the conversion
+
+        return read_selection_property(session, out);
+    }
+}
+
+// The X selection target serving a mime type: text mimes map to the standard
+// text targets, any other mime type is the target name itself (image/png, ...).
+Atom target_atom(Display *display, std::string_view mime_str)
+{
+    if (mime_str == mime::utf8_text)
+        return XInternAtom(display, "UTF8_STRING", False);
+    if (mime_str == mime::plain_text)
+        return XA_STRING;
+    return XInternAtom(display, std::string(mime_str).c_str(), False);
+}
+
+// The canonical mime type of an X selection target: the text targets map to
+// mime types, any other target is its own mime type.
+std::optional<std::string> target_mime(Display *display, Atom target)
+{
+    if (target == XA_STRING)
+        return std::string(mime::plain_text);
+
+    char *name = XGetAtomName(display, target);
+    if (name == nullptr)
+        return std::nullopt;
+    std::string owned(name);
+    XFree(name);
+
+    // TEXT is latin-1 per the ICCCM: under text/plain, not utf-8.
+    if (owned == "UTF8_STRING")
+        return std::string(mime::utf8_text);
+    if (owned == "TEXT")
+        return std::string(mime::plain_text);
+    return owned;
+}
+
+// Selection bookkeeping targets: part of the selection protocol, not content.
+bool is_protocol_target(std::string_view target)
+{
+    for (std::string_view protocol_target : {"TARGETS", "MULTIPLE", "TIMESTAMP", "SAVE_TARGETS"})
+    {
+        if (target == protocol_target)
+            return true;
+    }
+    return false;
+}
+
+// Reads the TARGETS property: the mime types the current selection owner
+// supports, in canonical form.
+std::optional<std::vector<std::string>> read_targets(ClipboardSession & session, Timestamp deadline)
+{
+    Display *display = session.conn.display;
+
+    ArrByte data;
+    if (!convert_selection(session, XInternAtom(display, "TARGETS", False), data, deadline) || data.empty())
+        return std::nullopt;
+
+    // TARGETS is a format-32 property: Xlib hands it back as a long array.
+    std::vector<std::string> targets;
+    const unsigned long *atoms = reinterpret_cast<const unsigned long *>(data.data());
+    for (size_t i = 0; i < data.size() / sizeof(unsigned long); ++i)
+    {
+        auto mime_str = target_mime(display, static_cast<Atom>(atoms[i]));
+        // Several targets (TEXT, UTF8_STRING) canonicalize to the same mime.
+        if (mime_str.has_value() && !is_protocol_target(*mime_str)
+            && std::find(targets.begin(), targets.end(), *mime_str) == targets.end())
+            targets.push_back(std::move(*mime_str));
+    }
+    return targets;
+}
+
+// Owns the selection and serves requests until the first data target is
+// fulfilled, within the deadline set by the platform dispatcher; false when
+// another client takes it or nothing requests in time.
+bool serve_selection_once(ClipboardSession & session,
+                          const std::vector<Atom> & offered_targets,
+                          const std::vector<TargetData> & data_targets,
+                          Timestamp deadline)
+{
+    Display *display = session.conn.display;
+
+    XSetSelectionOwner(display, session.selection, session.window, session.timestamp);
+    if (XGetSelectionOwner(display, session.selection) != session.window)
+    {
+        SIHD_LOG(error, "x11: failed to become clipboard owner");
+        return false;
+    }
+    XFlush(display);
+
+    const Atom targets_atom = XInternAtom(display, "TARGETS", False);
+
+    for (;;)
+    {
+        if (!wait_for_x_event(session, deadline))
+        {
+            SIHD_LOG(warning, "x11: no application requested the clipboard content in time, it will be lost");
+            return false;
+        }
+
+        XEvent event;
+        XNextEvent(display, &event);
+        switch (event.type)
+        {
+            case SelectionRequest:
+            {
+                const XSelectionRequestEvent & request = event.xselectionrequest;
+                if (request.selection != session.selection)
+                    break;
+
+                XSelectionEvent notify = {};
+                notify.type = SelectionNotify;
+                notify.display = request.display;
+                notify.requestor = request.requestor;
+                notify.selection = request.selection;
+                notify.time = request.time;
+                notify.target = request.target;
+                notify.property = request.property;
+
+                bool served = false;
+                if (request.target == targets_atom)
+                {
+                    // XChangeProperty's count is an int.
+                    if (offered_targets.size() <= static_cast<size_t>(std::numeric_limits<int>::max()))
+                    {
+                        XChangeProperty(display,
+                                        request.requestor,
+                                        request.property,
+                                        XA_ATOM,
+                                        32,
+                                        PropModeReplace,
+                                        reinterpret_cast<const unsigned char *>(offered_targets.data()),
+                                        static_cast<int>(offered_targets.size()));
+                    }
+                    else
+                    {
+                        notify.property = None;
+                    }
+                }
+                else
+                {
+                    const TargetData *data = nullptr;
+                    for (const TargetData & target_data : data_targets)
+                    {
+                        if (target_data.target == request.target)
+                        {
+                            data = &target_data;
+                            break;
+                        }
+                    }
+
+                    if (data == nullptr || data->size > static_cast<unsigned long>(std::numeric_limits<int>::max()))
+                    {
+                        notify.property = None;
+                    }
+                    else
+                    {
+                        XChangeProperty(display,
+                                        request.requestor,
+                                        request.property,
+                                        request.target,
+                                        8,
+                                        PropModeReplace,
+                                        data->data,
+                                        static_cast<int>(data->size));
+                        served = true;
+                    }
+                }
+
+                XSendEvent(display, request.requestor, False, 0, reinterpret_cast<XEvent *>(&notify));
+                XFlush(display);
+
+                if (served)
+                    return true;
+                break;
+            }
+            case SelectionClear:
+                // Another client took the selection.
+                return false;
+            default:
+                break;
+        }
+    }
+}
+
+} // namespace
+
+bool set_raw(const std::vector<RawContentView> & contents, Timestamp deadline)
+{
+    if (contents.empty())
+        return false;
+
+    ClipboardSession session;
+    if (!session.open())
+        return false;
+    Defer defer_close([&] { session.close_window(); });
+
+    Display *display = session.conn.display;
+
+    const Atom targets_atom = XInternAtom(display, "TARGETS", False);
+
+    std::vector<Atom> offered_targets = {targets_atom};
+    std::vector<TargetData> data_targets;
+    for (const RawContentView & content : contents)
+    {
+        const Atom target = target_atom(display, content.mime);
+        offered_targets.push_back(target);
+        data_targets.push_back(
+            {target, reinterpret_cast<const unsigned char *>(content.data.data()), content.data.size()});
+    }
+
+    return serve_selection_once(session, offered_targets, data_targets, deadline);
+}
+
+// Fetches the wanted mime types - every offered one when the wanted list is
+// empty - in `wanted_mimes` order (offered order when empty), in one session.
+std::vector<RawContent> get_wanted(const std::vector<std::string_view> & wanted_mimes)
+{
+    ClipboardSession session;
+    if (!session.open())
+        return {};
+    Defer defer_close([&] { session.close_window(); });
+
+    Display *display = session.conn.display;
+
+    if (XGetSelectionOwner(display, session.selection) == None)
+    {
+        SIHD_LOG(debug, "x11: clipboard has no owner");
+        return {};
+    }
+
+    // One budget for the whole read: targets listing and every mime fetch.
+    const Timestamp deadline = internal::deadline_from_now(get_timeout);
+
+    auto targets = read_targets(session, deadline);
+    if (!targets.has_value())
+        return {};
+
+    // Mime types to fetch, in fetch order.
+    std::vector<std::string> fetch_list;
+    if (wanted_mimes.empty())
+        fetch_list = *targets;
+    else
+    {
+        for (std::string_view mime_str : wanted_mimes)
+        {
+            // Request only mimes the owner advertises.
+            if (auto offered_mime = mime::match_offered(*targets, mime_str); offered_mime.has_value())
+            {
+                if (std::find(fetch_list.begin(), fetch_list.end(), *offered_mime) == fetch_list.end())
+                    fetch_list.emplace_back(*offered_mime);
+            }
+        }
+    }
+
+    std::vector<RawContent> contents;
+    for (const std::string & mime_str : fetch_list)
+    {
+        ArrByte out;
+        if (!convert_selection(session, target_atom(display, mime_str), out, deadline) || out.empty())
+            continue;
+        contents.push_back(RawContent {mime_str, std::move(out)});
+    }
+    return contents;
+}
+
+std::vector<RawContent> get_raw()
+{
+    return get_wanted({});
+}
+
+std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mimes)
+{
+    return get_wanted(wanted_mimes);
+}
+
+} // namespace sihd::sys::clipboard::x11

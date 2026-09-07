@@ -1,12 +1,16 @@
 #include <sihd/sys/clipboard.hpp>
 #include <sihd/util/Logger.hpp>
 
-// X11 and Wayland backends. They are compile-time options of this unix build
-// (x11 / wayland scons opts); the backend implementations live in src/linux/x11/
-// and src/linux/wayland/. Without either option every operation is a no-op
-// returning false/null.
+// The x11 and wayland backends live under src/linux/{x11,wayland}/ as compile-time
+// opts (inline no-ops when off); the session-matching backend dispatches first.
 
-#include "x11_wayland_backends.hpp"
+#include "internal/deadline.hpp"
+#include "internal/desktop_env.hpp"
+#include "wayland/clipboard.hpp"
+#include "x11/clipboard.hpp"
+
+#pragma message(                                                                                                       \
+    "clipboard: image formats are exposed as raw bytes only - pixel decoding comes later in a dedicated image module")
 
 namespace sihd::sys::clipboard
 {
@@ -15,49 +19,39 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::clipboard");
 
-bool set_text(std::string_view str)
+namespace
 {
-    return x11_set_clipboard(str) || wayland_set_clipboard(str);
+
+constexpr Duration serve_timeout = time::sec(10);
+
+} // namespace
+
+std::vector<RawContent> get_raw()
+{
+    return get_raw({});
 }
 
-bool set_image(const Bitmap & bitmap)
+std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mimes)
 {
-    return x11_set_clipboard_image(bitmap) || wayland_set_clipboard_image(bitmap);
+    if (internal::wayland_session())
+    {
+        auto res = wayland::get_raw(wanted_mimes);
+        if (!res.empty())
+            return res;
+        return x11::get_raw(wanted_mimes);
+    }
+    auto res = x11::get_raw(wanted_mimes);
+    if (!res.empty())
+        return res;
+    return wayland::get_raw(wanted_mimes);
 }
 
-std::optional<std::string> get_text()
+bool set_raw(const std::vector<RawContentView> & contents)
 {
-    std::optional<std::string> ret;
-
-    ret = x11_get_clipboard();
-    if (!ret.has_value())
-        ret = wayland_get_clipboard();
-
-    return ret;
-}
-
-std::optional<Bitmap> get_image()
-{
-    std::optional<Bitmap> ret;
-
-    ret = x11_get_clipboard_image();
-    if (!ret.has_value())
-        ret = wayland_get_clipboard_image();
-
-    return ret;
-}
-
-std::optional<Content> get_any()
-{
-    // Try image first
-    if (auto img = get_image(); img.has_value())
-        return Content {std::move(*img)};
-
-    // Fall back to text
-    if (auto txt = get_text(); txt.has_value())
-        return Content {std::move(*txt)};
-
-    return std::nullopt;
+    const Timestamp deadline = internal::deadline_from_now(serve_timeout);
+    if (internal::wayland_session())
+        return wayland::set_raw(contents, deadline) || x11::set_raw(contents, deadline);
+    return x11::set_raw(contents, deadline) || wayland::set_raw(contents, deadline);
 }
 
 } // namespace sihd::sys::clipboard

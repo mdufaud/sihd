@@ -39,10 +39,10 @@ TEST_F(TestBitmap, test_bitmap_pixel_set_get)
 {
     Bitmap bmp(10, 10, 32);
 
-    Pixel red = Pixel::rgb(255, 0, 0);
+    Color red = Color::rgb(255, 0, 0);
     bmp.set(5, 5, red);
 
-    Pixel got = bmp.get(5, 5);
+    Color got = bmp.get(5, 5);
     EXPECT_EQ(got.red, 255);
     EXPECT_EQ(got.green, 0);
     EXPECT_EQ(got.blue, 0);
@@ -52,14 +52,14 @@ TEST_F(TestBitmap, test_bitmap_fill)
 {
     Bitmap bmp(3, 3, 32);
 
-    Pixel green = Pixel::rgb(0, 255, 0);
+    Color green = Color::rgb(0, 255, 0);
     bmp.fill(green);
 
     for (size_t y = 0; y < 3; ++y)
     {
         for (size_t x = 0; x < 3; ++x)
         {
-            Pixel p = bmp.get(x, y);
+            Color p = bmp.get(x, y);
             EXPECT_EQ(p.green, 255);
             EXPECT_EQ(p.red, 0);
             EXPECT_EQ(p.blue, 0);
@@ -79,7 +79,7 @@ TEST_F(TestBitmap, test_bitmap_is_accessible)
 TEST_F(TestBitmap, test_bitmap_bmp_roundtrip)
 {
     Bitmap bmp(4, 4, 32);
-    Pixel blue = Pixel::rgb(0, 0, 255);
+    Color blue = Color::rgb(0, 0, 255);
     bmp.fill(blue);
 
     auto data = bmp.to_bmp_data();
@@ -90,7 +90,7 @@ TEST_F(TestBitmap, test_bitmap_bmp_roundtrip)
     EXPECT_EQ(bmp2.width(), 4u);
     EXPECT_EQ(bmp2.height(), 4u);
 
-    Pixel p = bmp2.get(0, 0);
+    Color p = bmp2.get(0, 0);
     EXPECT_EQ(p.blue, 255);
     EXPECT_EQ(p.red, 0);
 }

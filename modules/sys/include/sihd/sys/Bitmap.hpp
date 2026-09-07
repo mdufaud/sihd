@@ -6,10 +6,12 @@
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/ArrayView.hpp>
+
 namespace sihd::sys
 {
 
-union Pixel
+union Color
 {
         uint32_t value;
 
@@ -24,17 +26,17 @@ union Pixel
                 uint8_t blue, green, red, alpha;
         };
 #else
-# error Cannot use the Pixel structure
+# error Cannot use the Color structure
 #endif
 
-        constexpr Pixel(): value(0) {}
-        constexpr Pixel(uint32_t val): value(val) {}
+        constexpr Color(): value(0) {}
+        constexpr Color(uint32_t val): value(val) {}
 
         constexpr operator uint32_t() const { return value; }
 
-        static Pixel rgb(uint8_t red, uint8_t green, uint8_t blue)
+        static Color rgb(uint8_t red, uint8_t green, uint8_t blue)
         {
-            Pixel p;
+            Color p;
             p.red = red;
             p.green = green;
             p.blue = blue;
@@ -45,7 +47,7 @@ union Pixel
 class Bitmap
 {
     public:
-        using Pixels = std::vector<uint8_t>;
+        using PixelBuffer = std::vector<uint8_t>;
 
         Bitmap();
         // only implemented with 32 and 24 bit per pixel
@@ -54,34 +56,34 @@ class Bitmap
 
         // only implemented with 32 and 24 bit per pixel
         void create(size_t width, size_t height, uint8_t bit_per_pixel = 32);
-        void fill(Pixel pixel);
+        void fill(Color pixel);
         void clear();
 
         void set(uint8_t *data, size_t size);
-        void set(size_t row, size_t line, Pixel pixel);
-        Pixel get(size_t row, size_t line) const;
+        void set(size_t row, size_t line, Color pixel);
+        Color get(size_t row, size_t line) const;
         bool is_accessible(size_t row, size_t line) const;
 
         bool save_bmp(std::string_view path) const;
         bool read_bmp(std::string_view path);
 
         // Serialize bitmap to BMP format in memory
-        Pixels to_bmp_data() const;
+        PixelBuffer to_bmp_data() const;
         // Read BMP from memory buffer
-        bool read_bmp_data(const Pixels & data);
+        bool read_bmp_data(sihd::util::ArrByteView data);
 
         bool empty() const { return _data.empty(); };
         size_t height() const { return _height; }
         size_t width() const { return _width; }
         uint8_t byte_per_pixel() const { return _bit_per_pixel / 8; }
-        const Pixels & data() const { return _data; }
+        const PixelBuffer & data() const { return _data; }
         const uint8_t *c_data() const;
 
     protected:
         size_t coordinate_to_pixel(size_t row, size_t line) const;
 
     private:
-        Pixels _data;
+        PixelBuffer _data;
         size_t _width;
         size_t _height;
         uint8_t _bit_per_pixel;
