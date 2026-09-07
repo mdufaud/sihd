@@ -16,8 +16,8 @@
 #endif
 
 #define SIHD_VERSION_STRING                                                                                            \
- __SIHD_STRINGIFY__(SIHD_VERSION_MAJOR)                                                                                \
- "." __SIHD_STRINGIFY__(SIHD_VERSION_MINOR) "." __SIHD_STRINGIFY__(SIHD_VERSION_PATCH)
+    __SIHD_STRINGIFY__(SIHD_VERSION_MAJOR)                                                                             \
+    "." __SIHD_STRINGIFY__(SIHD_VERSION_MINOR) "." __SIHD_STRINGIFY__(SIHD_VERSION_PATCH)
 // 2.34.76 -> 203476
 #define SIHD_VERSION_NUM ((SIHD_VERSION_MAJOR * 100000) + (SIHD_VERSION_MINOR * 100) + (SIHD_VERSION_PATCH))
 

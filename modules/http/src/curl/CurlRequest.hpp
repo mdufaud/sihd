@@ -10,11 +10,12 @@
 
 #include <fmt/core.h>
 
-#include "utils.hpp"
 #include <sihd/http/CurlOptions.hpp>
 #include <sihd/http/HttpHeader.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/util/Url.hpp>
+
+#include "utils.hpp"
 
 namespace sihd::http::curl
 {
@@ -65,8 +66,7 @@ struct CurlRequest
         {
             CURLcode code = curl_easy_getinfo(handle, opt, data);
             if (code != CURLE_OK)
-                throw std::runtime_error(
-                    fmt::format("could not get curl option: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(fmt::format("could not get curl option: {}", curl_easy_strerror(code)));
         }
 
         template <typename T>
@@ -74,16 +74,14 @@ struct CurlRequest
         {
             CURLcode code = curl_easy_setopt(handle, opt, data);
             if (code != CURLE_OK)
-                throw std::runtime_error(
-                    fmt::format("could not set curl option: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(fmt::format("could not set curl option: {}", curl_easy_strerror(code)));
         }
 
         void perform_request()
         {
             CURLcode code = curl_easy_perform(handle);
             if (code != CURLE_OK)
-                throw std::runtime_error(
-                    fmt::format("could not perform request: {}", curl_easy_strerror(code)));
+                throw std::runtime_error(fmt::format("could not perform request: {}", curl_easy_strerror(code)));
         }
 
         void append_header(std::string_view str)

@@ -43,19 +43,19 @@ class RobotsTxt
     private:
         struct Rule
         {
-            bool allow;
-            std::string path;
+                bool allow;
+                std::string path;
         };
 
         struct AgentRules
         {
-            std::vector<Rule> rules;
-            std::optional<long> crawl_delay_s;
+                std::vector<Rule> rules;
+                std::optional<long> crawl_delay_s;
         };
 
         std::unordered_map<std::string, AgentRules> _agents;
-        std::chrono::seconds _ttl{3600};
-        std::chrono::steady_clock::time_point _fetched_at{};
+        std::chrono::seconds _ttl {3600};
+        std::chrono::steady_clock::time_point _fetched_at {};
         bool _fetched = false;
 
         const AgentRules *find_rules(std::string_view user_agent) const;

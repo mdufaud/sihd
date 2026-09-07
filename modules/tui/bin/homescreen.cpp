@@ -1,13 +1,14 @@
 // Copyright 2020 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
+#include <stddef.h> // for size_t
+
 #include <array>      // for array
 #include <atomic>     // for atomic
 #include <chrono>     // for operator""s, chrono_literals
 #include <cmath>      // for sin
 #include <functional> // for ref, reference_wrapper, function
 #include <memory>     // for allocator, shared_ptr, __shared_ptr_access
-#include <stddef.h>   // for size_t
 #include <string>     // for string, basic_string, char_traits, operator+, to_string
 #include <thread>     // for sleep_for, thread
 #include <utility>    // for move
@@ -465,14 +466,15 @@ int main()
                | vscroll_indicator | yframe | flex;
     });
 
-    auto paragraph_renderer_right
-        = Renderer([] { return paragraph("<--- This vertical bar is resizable using the  mouse") | center; });
+    auto paragraph_renderer_right = Renderer(
+        [] { return paragraph("<--- This vertical bar is resizable using the  mouse") | center; });
 
     int paragraph_renderer_split_position = Terminal::Size().dimx / 2;
-    auto paragraph_renderer_group
-        = ResizableSplitLeft(paragraph_renderer_left, paragraph_renderer_right, &paragraph_renderer_split_position);
-    auto paragraph_renderer_group_renderer
-        = Renderer(paragraph_renderer_group, [&] { return paragraph_renderer_group->Render(); });
+    auto paragraph_renderer_group = ResizableSplitLeft(paragraph_renderer_left,
+                                                       paragraph_renderer_right,
+                                                       &paragraph_renderer_split_position);
+    auto paragraph_renderer_group_renderer = Renderer(paragraph_renderer_group,
+                                                      [&] { return paragraph_renderer_group->Render(); });
 
     // ---------------------------------------------------------------------------
     // Tabs

@@ -1,5 +1,5 @@
-#include <sihd/sys/services.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/services.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netdb.h>      // getservbyname, getservbyport

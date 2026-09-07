@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
+
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshShell.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test

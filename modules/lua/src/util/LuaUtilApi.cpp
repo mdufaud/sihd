@@ -555,9 +555,15 @@ void LuaUtilApi::load_base(Vm & vm)
             "debug",
             +[](const std::string & log) { g_lua_logger.log(LogLevel::debug, log); })
         // sink configuration - wire SIHD's logger output from a config script
-        .addFunction("console", +[]() { sihd::util::LoggerManager::console(); })
-        .addFunction("stream", +[]() { sihd::util::LoggerManager::stream(); })
-        .addFunction("clear", +[]() { sihd::util::LoggerManager::clear_loggers(); })
+        .addFunction(
+            "console",
+            +[]() { sihd::util::LoggerManager::console(); })
+        .addFunction(
+            "stream",
+            +[]() { sihd::util::LoggerManager::stream(); })
+        .addFunction(
+            "clear",
+            +[]() { sihd::util::LoggerManager::clear_loggers(); })
         .endNamespace()
         /**
          * Nodes
@@ -698,39 +704,43 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction("stop", &AService::stop)
         .addFunction("reset", &AService::reset)
         .addFunction("is_running", &AService::is_running)
-        .addFunction("service_ctrl",
-                     +[](AService *self) -> ServiceController * {
-                         return dynamic_cast<ServiceController *>(self->service_ctrl());
-                     })
+        .addFunction(
+            "service_ctrl",
+            +[](AService *self) -> ServiceController * {
+                return dynamic_cast<ServiceController *>(self->service_ctrl());
+            })
         .endClass()
         .beginClass<ServiceController>("ServiceController")
         .addFunction("state", &ServiceController::state)
-        .addFunction("state_str", +[](ServiceController *self) -> std::string {
-            return ServiceController::state_str(self->state());
-        })
+        .addFunction(
+            "state_str",
+            +[](ServiceController *self) -> std::string { return ServiceController::state_str(self->state()); })
         // observe service state transitions from a config script
-        .addFunction("add_observer",
-                     +[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) {
-                         if (fun.isFunction() == false)
-                         {
-                             luaL_error(state, "add_observer: expected a function");
-                             return;
-                         }
-                         auto obs = std::make_unique<LuaServiceObserver>(state, fun);
-                         LuaServiceObserver *ptr = obs.get();
-                         {
-                             std::lock_guard l(g_service_obs_mutex);
-                             g_service_observers.emplace(self, std::move(obs));
-                         }
-                         self->add_observer(ptr);
-                     })
-        .addFunction("remove_observers", +[](ServiceController *self) {
-            std::lock_guard l(g_service_obs_mutex);
-            auto range = g_service_observers.equal_range(self);
-            for (auto it = range.first; it != range.second; ++it)
-                self->remove_observer(it->second.get());
-            g_service_observers.erase(self);
-        })
+        .addFunction(
+            "add_observer",
+            +[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) {
+                if (fun.isFunction() == false)
+                {
+                    luaL_error(state, "add_observer: expected a function");
+                    return;
+                }
+                auto obs = std::make_unique<LuaServiceObserver>(state, fun);
+                LuaServiceObserver *ptr = obs.get();
+                {
+                    std::lock_guard l(g_service_obs_mutex);
+                    g_service_observers.emplace(self, std::move(obs));
+                }
+                self->add_observer(ptr);
+            })
+        .addFunction(
+            "remove_observers",
+            +[](ServiceController *self) {
+                std::lock_guard l(g_service_obs_mutex);
+                auto range = g_service_observers.equal_range(self);
+                for (auto it = range.first; it != range.second; ++it)
+                    self->remove_observer(it->second.get());
+                g_service_observers.erase(self);
+            })
         .endClass()
         /**
          * Runnable

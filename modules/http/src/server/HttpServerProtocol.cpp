@@ -55,14 +55,13 @@ HttpServer::Impl::~Impl()
 }
 
 bool HttpServer::Impl::add_protocol(const char *name,
-                                     lws_callback_function *callback,
-                                     size_t struct_size,
-                                     size_t tx_packet_size)
+                                    lws_callback_function *callback,
+                                    size_t struct_size,
+                                    size_t tx_packet_size)
 {
     ++protocols_count;
     lws_protocols *old_ptr = lws_protocols_ptr;
-    lws_protocols_ptr
-        = (lws_protocols *)realloc(lws_protocols_ptr, sizeof(lws_protocols) * (protocols_count + 1));
+    lws_protocols_ptr = (lws_protocols *)realloc(lws_protocols_ptr, sizeof(lws_protocols) * (protocols_count + 1));
     if (lws_protocols_ptr != nullptr)
     {
         lws_protocols *proto = &lws_protocols_ptr[protocols_count - 1];

@@ -1,15 +1,16 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 
-#include <sihd/util/build.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/LoadingBar.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
+
+#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 
@@ -62,9 +63,7 @@ void time()
 
     // Locale examples - uses C locale by default for deterministic behavior
     SIHD_LOG(info, "format with C locale (default): {}", today.format("%Y-%m-%d %H:%M:%S"));
-    SIHD_LOG(info,
-             "format with explicit C locale: {}",
-             today.format("%Y-%m-%d %H:%M:%S", std::locale::classic()));
+    SIHD_LOG(info, "format with explicit C locale: {}", today.format("%Y-%m-%d %H:%M:%S", std::locale::classic()));
 
     SIHD_LOG(info, "timezone name: {}", time::get_timezone_name());
     SIHD_LOG(info, "timezone offset: {}", time::get_timezone());

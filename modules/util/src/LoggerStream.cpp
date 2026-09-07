@@ -5,11 +5,7 @@
 namespace sihd::util
 {
 
-LoggerStream::LoggerStream(FILE *output, bool print_thread_id):
-    print_thread_id(print_thread_id),
-    _output(output)
-{
-}
+LoggerStream::LoggerStream(FILE *output, bool print_thread_id): print_thread_id(print_thread_id), _output(output) {}
 
 LoggerStream::~LoggerStream() = default;
 

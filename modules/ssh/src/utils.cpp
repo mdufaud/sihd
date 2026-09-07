@@ -2,9 +2,8 @@
 
 #include <libssh/libssh.h>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh::utils
 {

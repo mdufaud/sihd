@@ -1,6 +1,6 @@
 #include <sihd/core/Core.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::core
 {

@@ -1,8 +1,8 @@
-#include <sihd/sys/platform.hpp>
-
 #include <cerrno>
 #include <cstdio>
 #include <stdexcept>
+
+#include <sihd/sys/platform.hpp>
 
 #ifndef SIHD_PROCESS_READ_BUFFER_SIZE
 # define SIHD_PROCESS_READ_BUFFER_SIZE 2048
@@ -248,7 +248,7 @@ void StdFdWrapper::redirect_to(Process::FileDescType fd)
 
 bool StdFdWrapper::redirect_to_file(std::string_view path, bool append, mode_t open_mode)
 {
-# pragma message("TODO CreateFile permissions in windows")
+#pragma message("TODO CreateFile permissions in windows")
     (void)open_mode;
     this->fun = nullptr;
     SECURITY_ATTRIBUTES sec_attr;
@@ -642,11 +642,11 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     const DWORD creation_flags = 0;
 
     success = CreateProcess(NULL,
-                            cmd_line.data(), // command line
-                            NULL,            // process security attributes
-                            NULL,            // primary thread security attributes
-                            TRUE,            // handles are inherited
-                            creation_flags,  // creation flags
+                            cmd_line.data(),                                 // command line
+                            NULL,                                            // process security attributes
+                            NULL,                                            // primary thread security attributes
+                            TRUE,                                            // handles are inherited
+                            creation_flags,                                  // creation flags
                             env_str.empty() ? NULL : (LPVOID)env_str.data(), // environment
                             _chdir.empty() ? NULL : _chdir.data(),           // current directory
                             &start_info,                                     // STARTUPINFO pointer

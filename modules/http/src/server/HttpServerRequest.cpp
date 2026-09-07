@@ -34,20 +34,20 @@ void HttpServer::Impl::session_cleanup(HttpSession *session)
 }
 
 int HttpServer::Impl::_global_http_lws_callback(struct lws *wsi,
-                                                 enum lws_callback_reasons reason,
-                                                 void *user,
-                                                 void *in,
-                                                 size_t len)
+                                                enum lws_callback_reasons reason,
+                                                void *user,
+                                                void *in,
+                                                size_t len)
 {
     HttpServer *srv = (HttpServer *)lws_context_user(lws_get_context(wsi));
     return srv->_impl->_lws_http_callback(wsi, reason, user, in, len);
 }
 
 int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
-                                          enum lws_callback_reasons reason,
-                                          void *user,
-                                          void *in,
-                                          size_t len)
+                                         enum lws_callback_reasons reason,
+                                         void *user,
+                                         void *in,
+                                         size_t len)
 {
     int rc = 0;
     HttpSession *session = (HttpSession *)user;
@@ -291,7 +291,8 @@ int HttpServer::Impl::on_http_request(HttpSession *session, std::string_view pat
         response.set_status(HttpStatus::NoContent);
         response.http_header().set_server(default_server_name);
         response.http_header().set_header("access-control-allow-origin:", default_cors_origin);
-        response.http_header().set_header("access-control-allow-methods:", "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS");
+        response.http_header().set_header("access-control-allow-methods:",
+                                          "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS");
         response.http_header().set_header("access-control-allow-headers:", "content-type, authorization");
         response.http_header().set_header("access-control-max-age:", "86400");
         response.http_header().set_content_length(0);
@@ -408,8 +409,9 @@ bool HttpServer::Impl::check_webservices(HttpSession *session, std::string_view 
         {
             session->content_size = 0;
             session->content = std::make_unique<ArrUByte>();
-            session->request
-                = std::make_unique<HttpRequest>(path, this->get_uri_args(session->wsi), session->request_type);
+            session->request = std::make_unique<HttpRequest>(path,
+                                                             this->get_uri_args(session->wsi),
+                                                             session->request_type);
             session->content->resize(content_length_header_size);
             session->should_complete_transaction = false;
         }
@@ -488,8 +490,7 @@ bool HttpServer::Impl::send_response(HttpSession *session, HttpResponse & respon
     this->send_http_headers(session->wsi, response);
     if (data.size() > 0)
     {
-        if (lws_write(session->wsi, (unsigned char *)data.buf(), data.size(), LWS_WRITE_HTTP_FINAL)
-            < (int)data.size())
+        if (lws_write(session->wsi, (unsigned char *)data.buf(), data.size(), LWS_WRITE_HTTP_FINAL) < (int)data.size())
             session->rc = -1;
     }
     return false;
@@ -516,8 +517,8 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
         {
             for (auto & part : sihd::util::str::split(*cookie_hdr, ';'))
             {
-                auto [name, value]
-                    = sihd::util::str::split_pair_view(sihd::util::str::trim(std::string_view(part)), "=");
+                auto [name, value] = sihd::util::str::split_pair_view(sihd::util::str::trim(std::string_view(part)),
+                                                                      "=");
                 if (!name.empty())
                     request.set_cookie(std::string(name), std::string(value));
             }
@@ -535,8 +536,8 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
     return true;
 }
 
-HttpServer::Impl::AuthResult
-    HttpServer::Impl::parse_authorization(std::string_view auth_header_value, IHttpAuthenticator *authenticator)
+HttpServer::Impl::AuthResult HttpServer::Impl::parse_authorization(std::string_view auth_header_value,
+                                                                   IHttpAuthenticator *authenticator)
 {
     AuthResult result;
     if (authenticator == nullptr || auth_header_value.empty())
@@ -646,8 +647,7 @@ bool HttpServer::Impl::send_http_redirect(struct lws *wsi, std::string_view redi
     response.http_header().set_accept_charset(encoding);
     response.http_header().set_content_type(mime.get("html"), encoding);
     response.http_header().set_content_length(0);
-    response.http_header().set_header((const char *)lws_token_to_string(WSI_TOKEN_HTTP_LOCATION),
-                                      redirect_path);
+    response.http_header().set_header((const char *)lws_token_to_string(WSI_TOKEN_HTTP_LOCATION), redirect_path);
     return this->send_http_headers(wsi, response);
 }
 
@@ -669,12 +669,7 @@ bool HttpServer::Impl::send_http_headers(struct lws *wsi, HttpResponse & respons
     }
     for (const auto & [name, value] : headers.headers())
     {
-        rc = lws_add_http_header_by_name(wsi,
-                                         (u_char *)name.c_str(),
-                                         (u_char *)value.c_str(),
-                                         value.size(),
-                                         &ptr,
-                                         end);
+        rc = lws_add_http_header_by_name(wsi, (u_char *)name.c_str(), (u_char *)value.c_str(), value.size(), &ptr, end);
         if (rc)
         {
             SIHD_LOG(error, "HttpHeader: cannot set header '{}'", name);
@@ -683,12 +678,7 @@ bool HttpServer::Impl::send_http_headers(struct lws *wsi, HttpResponse & respons
     }
     for (const auto & ck : response.set_cookie_headers())
     {
-        rc = lws_add_http_header_by_name(wsi,
-                                         (u_char *)"set-cookie:",
-                                         (u_char *)ck.c_str(),
-                                         ck.size(),
-                                         &ptr,
-                                         end);
+        rc = lws_add_http_header_by_name(wsi, (u_char *)"set-cookie:", (u_char *)ck.c_str(), ck.size(), &ptr, end);
         if (rc)
         {
             SIHD_LOG(error, "HttpHeader: cannot set cookie header");

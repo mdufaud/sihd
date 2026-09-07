@@ -1,9 +1,10 @@
 #include <stdexcept>
 
-#include "curl/CurlRequest.hpp"
 #include <sihd/http/request.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include "curl/CurlRequest.hpp"
 
 namespace sihd::http
 {
@@ -30,8 +31,7 @@ std::optional<HttpResponse> get(std::string_view url, const CurlOptions & option
     return std::nullopt;
 }
 
-std::optional<HttpResponse>
-    post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
+std::optional<HttpResponse> post(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
 {
     CurlRequest curl;
 
@@ -51,9 +51,7 @@ std::optional<HttpResponse>
             if (options.file->data.empty() == false)
                 curl.add_file_to_form(options.file->form_name, options.file->file_name, options.file->data);
             else if (options.file->file_path.empty() == false)
-                curl.add_filestream_to_form(options.file->form_name,
-                                            options.file->file_name,
-                                            options.file->file_path);
+                curl.add_filestream_to_form(options.file->form_name, options.file->file_name, options.file->file_path);
         }
 
         return curl.send_request(url, options);
@@ -131,8 +129,7 @@ std::optional<HttpResponse> options(std::string_view url, const CurlOptions & op
     return std::nullopt;
 }
 
-std::optional<HttpResponse>
-    patch(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
+std::optional<HttpResponse> patch(std::string_view url, sihd::util::ArrCharView data_view, const CurlOptions & options)
 {
     CurlRequest curl;
 

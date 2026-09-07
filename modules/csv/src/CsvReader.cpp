@@ -1,8 +1,7 @@
+#include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
-
-#include <sihd/csv/CsvReader.hpp>
 
 namespace sihd::csv
 {
@@ -134,8 +133,7 @@ bool CsvReader::read_next()
         _line.append(view.data(), view.size());
 
         const bool number_of_quotes_are_odd = count_unescaped_quotes(view) % 2;
-        const bool quotes_are_even
-            = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
+        const bool quotes_are_even = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
 
         if (quotes_are_even)
         {

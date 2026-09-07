@@ -1,3 +1,10 @@
+#include <processthreadsapi.h>
+#include <psapi.h>
+#include <tchar.h>
+#include <tlhelp32.h>
+#include <windows.h>
+#include <winternl.h>
+
 #include <functional>
 
 #include <fmt/core.h>
@@ -8,16 +15,6 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
-
-# include <windows.h>
-
-# include <psapi.h>
-
-# include <processthreadsapi.h>
-# include <tlhelp32.h>
-# include <winternl.h>
-
-# include <tchar.h>
 
 using _NtQueryInformationProcess = NTSTATUS(WINAPI *)(HANDLE ProcessHandle,
                                                       PROCESSINFOCLASS SystemInformationClass,
@@ -233,9 +230,7 @@ void ProcessInfo::Impl::load_specific_process_infos()
         str = str::to_str(wstr);
         this->env = str::split(str, '\0');
 
-        wstr = get_memory_info(this->process_handle,
-                               procParams.CommandLine.Buffer,
-                               procParams.CommandLine.Length);
+        wstr = get_memory_info(this->process_handle, procParams.CommandLine.Buffer, procParams.CommandLine.Length);
         str = str::to_str(wstr);
         this->cmd_line = str::split(str, ' ');
     }

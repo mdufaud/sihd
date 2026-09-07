@@ -1,8 +1,7 @@
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSubsystemFunction.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {
@@ -52,8 +51,7 @@ bool SshSubsystemFunction::on_start(SshChannel *channel,
         }
         if (!result.error_output.empty())
         {
-            _channel->write_stderr(
-                sihd::util::ArrCharView(result.error_output.data(), result.error_output.size()));
+            _channel->write_stderr(sihd::util::ArrCharView(result.error_output.data(), result.error_output.size()));
         }
         // exit_status + eof + close are handled by BasicSshServerHandler::on_poll()
         // via on_close() return value, since manages_channel_io() is false.

@@ -1,13 +1,13 @@
-#include <stdexcept>
 #include <strings.h>
 
 #include <functional>
+#include <stdexcept>
 
 #include <sihd/net/dns.hpp>
 #include <sihd/net/ip.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/sys/platform.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netdb.h>      // getnameinfo
@@ -87,23 +87,21 @@ IpAddr find(std::string_view host, bool ipv6, int socktype, int protocol)
 
     if (protocol == IPPROTO_ICMP || protocol == IPPROTO_ICMPV6)
     {
-        throw std::invalid_argument(
-            fmt::format("dns::find: invalid protocol {}", ip::protocol_str(protocol)));
+        throw std::invalid_argument(fmt::format("dns::find: invalid protocol {}", ip::protocol_str(protocol)));
     }
 
-    ask_dns(host,
-            [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
-                const bool good_socktype = socktype < 0 || socktype == addr_socktype;
-                const bool good_protocol = protocol < 0 || protocol == addr_protocol;
-                const bool good_iptype = ipv6 == addr.is_ipv6();
+    ask_dns(host, [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
+        const bool good_socktype = socktype < 0 || socktype == addr_socktype;
+        const bool good_protocol = protocol < 0 || protocol == addr_protocol;
+        const bool good_iptype = ipv6 == addr.is_ipv6();
 
-                const bool found = good_iptype && good_protocol && good_socktype;
+        const bool found = good_iptype && good_protocol && good_socktype;
 
-                if (found)
-                    ret = addr;
+        if (found)
+            ret = addr;
 
-                return found;
-            });
+        return found;
+    });
 
     return ret;
 }

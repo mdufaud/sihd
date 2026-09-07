@@ -75,38 +75,46 @@ void LuaHttpApi::load_base(Vm & vm)
         .beginClass<Navigator>("Navigator")
         .addConstructor<void (*)()>()
         // HTTP methods (return a response table or nil)
-        .addFunction("get",
-                     +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                         return response_to_lua(state, self->get(url));
-                     })
-        .addFunction("post",
-                     +[](Navigator *self, const std::string & url, luabridge::LuaRef data, lua_State *state)
-                         -> luabridge::LuaRef {
-                         const std::string body = data.isNil() ? std::string() : data.tostring();
-                         return response_to_lua(state, self->post(url, body));
-                     })
-        .addFunction("put",
-                     +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
-                         -> luabridge::LuaRef { return response_to_lua(state, self->put(url, data)); })
-        .addFunction("patch",
-                     +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
-                         -> luabridge::LuaRef { return response_to_lua(state, self->patch(url, data)); })
-        .addFunction("del",
-                     +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                         return response_to_lua(state, self->del(url));
-                     })
-        .addFunction("head",
-                     +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                         return response_to_lua(state, self->head(url));
-                     })
-        .addFunction("options",
-                     +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                         return response_to_lua(state, self->options(url));
-                     })
-        .addFunction("download",
-                     +[](Navigator *self, const std::string & url, const std::string & path) -> bool {
-                         return self->download(url, path).has_value();
-                     })
+        .addFunction(
+            "get",
+            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
+                return response_to_lua(state, self->get(url));
+            })
+        .addFunction(
+            "post",
+            +[](Navigator *self, const std::string & url, luabridge::LuaRef data, lua_State *state)
+                -> luabridge::LuaRef {
+                const std::string body = data.isNil() ? std::string() : data.tostring();
+                return response_to_lua(state, self->post(url, body));
+            })
+        .addFunction(
+            "put",
+            +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
+                -> luabridge::LuaRef { return response_to_lua(state, self->put(url, data)); })
+        .addFunction(
+            "patch",
+            +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
+                -> luabridge::LuaRef { return response_to_lua(state, self->patch(url, data)); })
+        .addFunction(
+            "del",
+            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
+                return response_to_lua(state, self->del(url));
+            })
+        .addFunction(
+            "head",
+            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
+                return response_to_lua(state, self->head(url));
+            })
+        .addFunction(
+            "options",
+            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
+                return response_to_lua(state, self->options(url));
+            })
+        .addFunction(
+            "download",
+            +[](Navigator *self, const std::string & url, const std::string & path) -> bool {
+                return self->download(url, path).has_value();
+            })
         // configuration
         .addFunction("set_verbose", &Navigator::set_verbose)
         .addFunction("set_follow_redirects", &Navigator::set_follow_redirects)
@@ -116,97 +124,129 @@ void LuaHttpApi::load_base(Vm & vm)
         .addFunction("set_accept_encoding", &Navigator::set_accept_encoding)
         .addFunction("set_http2", &Navigator::set_http2)
         .addFunction("set_ssl_verify", &Navigator::set_ssl_verify)
-        .addFunction("set_user_agent",
-                     +[](Navigator *self, const std::string & agent) { self->set_user_agent(agent); })
-        .addFunction("set_max_response_size",
-                     +[](Navigator *self, int bytes) { self->set_max_response_size(static_cast<size_t>(bytes)); })
+        .addFunction(
+            "set_user_agent",
+            +[](Navigator *self, const std::string & agent) { self->set_user_agent(agent); })
+        .addFunction(
+            "set_max_response_size",
+            +[](Navigator *self, int bytes) { self->set_max_response_size(static_cast<size_t>(bytes)); })
         .addFunction("set_ssrf_guard", &Navigator::set_ssrf_guard)
         // authentication
-        .addFunction("set_basic_auth",
-                     +[](Navigator *self, const std::string & user, const std::string & password) {
-                         self->set_basic_auth(user, password);
-                     })
-        .addFunction("set_digest_auth",
-                     +[](Navigator *self, const std::string & user, const std::string & password) {
-                         self->set_digest_auth(user, password);
-                     })
-        .addFunction("set_token_auth",
-                     +[](Navigator *self, const std::string & token) { self->set_token_auth(token); })
+        .addFunction(
+            "set_basic_auth",
+            +[](Navigator *self, const std::string & user, const std::string & password) {
+                self->set_basic_auth(user, password);
+            })
+        .addFunction(
+            "set_digest_auth",
+            +[](Navigator *self, const std::string & user, const std::string & password) {
+                self->set_digest_auth(user, password);
+            })
+        .addFunction(
+            "set_token_auth",
+            +[](Navigator *self, const std::string & token) { self->set_token_auth(token); })
         .addFunction("clear_auth", &Navigator::clear_auth)
         // persistent headers
-        .addFunction("set_header",
-                     +[](Navigator *self, const std::string & name, const std::string & value) {
-                         self->set_header(name, value);
-                     })
-        .addFunction("remove_header",
-                     +[](Navigator *self, const std::string & name) { self->remove_header(name); })
+        .addFunction(
+            "set_header",
+            +[](Navigator *self, const std::string & name, const std::string & value) {
+                self->set_header(name, value);
+            })
+        .addFunction(
+            "remove_header",
+            +[](Navigator *self, const std::string & name) { self->remove_header(name); })
         .addFunction("clear_headers", &Navigator::clear_headers)
         // cookies
-        .addFunction("cookies",
-                     +[](Navigator *self, lua_State *state) -> luabridge::LuaRef {
-                         luabridge::LuaRef table = luabridge::newTable(state);
-                         for (const auto & [name, value] : self->cookies())
-                             table[name] = value;
-                         return table;
-                     })
-        .addFunction("set_cookie",
-                     +[](Navigator *self, const std::string & name, const std::string & value, luabridge::LuaRef domain) {
-                         self->set_cookie(name, value, domain.isNil() ? "" : domain.tostring());
-                     })
+        .addFunction(
+            "cookies",
+            +[](Navigator *self, lua_State *state) -> luabridge::LuaRef {
+                luabridge::LuaRef table = luabridge::newTable(state);
+                for (const auto & [name, value] : self->cookies())
+                    table[name] = value;
+                return table;
+            })
+        .addFunction(
+            "set_cookie",
+            +[](Navigator *self, const std::string & name, const std::string & value, luabridge::LuaRef domain) {
+                self->set_cookie(name, value, domain.isNil() ? "" : domain.tostring());
+            })
         .addFunction("clear_cookies", &Navigator::clear_cookies)
-        .addFunction("save_cookies", +[](Navigator *self, const std::string & path) { self->save_cookies(path); })
-        .addFunction("load_cookies", +[](Navigator *self, const std::string & path) { self->load_cookies(path); })
+        .addFunction(
+            "save_cookies",
+            +[](Navigator *self, const std::string & path) { self->save_cookies(path); })
+        .addFunction(
+            "load_cookies",
+            +[](Navigator *self, const std::string & path) { self->load_cookies(path); })
         // proxy
-        .addFunction("set_proxy", +[](Navigator *self, const std::string & url) { self->set_proxy(url); })
-        .addFunction("set_proxy_auth",
-                     +[](Navigator *self, const std::string & user, const std::string & password) {
-                         self->set_proxy_auth(user, password);
-                     })
+        .addFunction(
+            "set_proxy",
+            +[](Navigator *self, const std::string & url) { self->set_proxy(url); })
+        .addFunction(
+            "set_proxy_auth",
+            +[](Navigator *self, const std::string & user, const std::string & password) {
+                self->set_proxy_auth(user, password);
+            })
         .addFunction("clear_proxy", &Navigator::clear_proxy)
         .endClass()
         // --- server side ---
         .beginClass<HttpRequest>("HttpRequest")
-        .addFunction("type_str", +[](HttpRequest *self) -> std::string { return self->type_str(); })
-        .addFunction("url", +[](HttpRequest *self) -> std::string { return self->url(); })
-        .addFunction("client_ip", +[](HttpRequest *self) -> std::string { return self->client_ip(); })
+        .addFunction(
+            "type_str",
+            +[](HttpRequest *self) -> std::string { return self->type_str(); })
+        .addFunction(
+            "url",
+            +[](HttpRequest *self) -> std::string { return self->url(); })
+        .addFunction(
+            "client_ip",
+            +[](HttpRequest *self) -> std::string { return self->client_ip(); })
         .addFunction("has_content", &HttpRequest::has_content)
-        .addFunction("text", +[](HttpRequest *self) -> std::string { return self->content().cpp_str(); })
+        .addFunction(
+            "text",
+            +[](HttpRequest *self) -> std::string { return self->content().cpp_str(); })
         .addFunction("is_authenticated", &HttpRequest::is_authenticated)
-        .addFunction("auth_user", +[](HttpRequest *self) -> std::string { return self->auth_user(); })
-        .addFunction("path_param",
-                     +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                         auto v = self->path_param(name);
-                         if (v.has_value())
-                             return luabridge::LuaRef(state, std::string(*v));
-                         return luabridge::LuaRef(state, luabridge::LuaNil());
-                     })
-        .addFunction("query_param",
-                     +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                         auto v = self->query_param(name);
-                         if (v.has_value())
-                             return luabridge::LuaRef(state, std::string(*v));
-                         return luabridge::LuaRef(state, luabridge::LuaNil());
-                     })
-        .addFunction("cookie",
-                     +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                         auto v = self->cookie(name);
-                         if (v.has_value())
-                             return luabridge::LuaRef(state, std::string(*v));
-                         return luabridge::LuaRef(state, luabridge::LuaNil());
-                     })
+        .addFunction(
+            "auth_user",
+            +[](HttpRequest *self) -> std::string { return self->auth_user(); })
+        .addFunction(
+            "path_param",
+            +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
+                auto v = self->path_param(name);
+                if (v.has_value())
+                    return luabridge::LuaRef(state, std::string(*v));
+                return luabridge::LuaRef(state, luabridge::LuaNil());
+            })
+        .addFunction(
+            "query_param",
+            +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
+                auto v = self->query_param(name);
+                if (v.has_value())
+                    return luabridge::LuaRef(state, std::string(*v));
+                return luabridge::LuaRef(state, luabridge::LuaNil());
+            })
+        .addFunction(
+            "cookie",
+            +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
+                auto v = self->cookie(name);
+                if (v.has_value())
+                    return luabridge::LuaRef(state, std::string(*v));
+                return luabridge::LuaRef(state, luabridge::LuaNil());
+            })
         .endClass()
         .beginClass<HttpResponse>("HttpResponse")
-        .addFunction("set_status", +[](HttpResponse *self, int status) { self->set_status(status); })
-        .addFunction("set_plain_content",
-                     +[](HttpResponse *self, const std::string & content) -> bool {
-                         return self->set_plain_content(content);
-                     })
-        .addFunction("set_content_type",
-                     +[](HttpResponse *self, const std::string & mime) { self->set_content_type(mime); })
-        .addFunction("set_cookie",
-                     +[](HttpResponse *self, const std::string & name, const std::string & value, luabridge::LuaRef opts) {
-                         self->set_cookie(name, value, opts.isNil() ? "" : opts.tostring());
-                     })
+        .addFunction(
+            "set_status",
+            +[](HttpResponse *self, int status) { self->set_status(status); })
+        .addFunction(
+            "set_plain_content",
+            +[](HttpResponse *self, const std::string & content) -> bool { return self->set_plain_content(content); })
+        .addFunction(
+            "set_content_type",
+            +[](HttpResponse *self, const std::string & mime) { self->set_content_type(mime); })
+        .addFunction(
+            "set_cookie",
+            +[](HttpResponse *self, const std::string & name, const std::string & value, luabridge::LuaRef opts) {
+                self->set_cookie(name, value, opts.isNil() ? "" : opts.tostring());
+            })
         .endClass()
         .beginClass<WebService>("WebService")
         .addFunction(
@@ -247,34 +287,46 @@ void LuaHttpApi::load_base(Vm & vm)
         .deriveClass<HttpServer, Node>("HttpServer")
         .addConstructorFrom<SmartNodePtr<HttpServer>, void(const std::string &, Node *)>()
         .addFunction("set_port", &HttpServer::set_port)
-        .addFunction("set_root_dir",
-                     +[](HttpServer *self, const std::string & dir) -> bool { return self->set_root_dir(dir); })
-        .addFunction("set_server_name",
-                     +[](HttpServer *self, const std::string & name) -> bool { return self->set_server_name(name); })
-        .addFunction("set_cors_origin",
-                     +[](HttpServer *self, const std::string & origin) -> bool { return self->set_cors_origin(origin); })
-        .addFunction("set_404_path",
-                     +[](HttpServer *self, const std::string & path) -> bool { return self->set_404_path(path); })
-        .addFunction("add_web_service",
-                     +[](HttpServer *self, const std::string & name) -> WebService * {
-                         return self->add_child<WebService>(name);
-                     })
-        .addFunction("start", +[](HttpServer *self, lua_State *state) -> bool {
-            LuaGilRelease release(state);
-            return self->start();
-        })
-        .addFunction("stop", +[](HttpServer *self, lua_State *state) -> bool {
-            LuaGilRelease release(state);
-            return self->stop();
-        })
+        .addFunction(
+            "set_root_dir",
+            +[](HttpServer *self, const std::string & dir) -> bool { return self->set_root_dir(dir); })
+        .addFunction(
+            "set_server_name",
+            +[](HttpServer *self, const std::string & name) -> bool { return self->set_server_name(name); })
+        .addFunction(
+            "set_cors_origin",
+            +[](HttpServer *self, const std::string & origin) -> bool { return self->set_cors_origin(origin); })
+        .addFunction(
+            "set_404_path",
+            +[](HttpServer *self, const std::string & path) -> bool { return self->set_404_path(path); })
+        .addFunction(
+            "add_web_service",
+            +[](HttpServer *self, const std::string & name) -> WebService * {
+                return self->add_child<WebService>(name);
+            })
+        .addFunction(
+            "start",
+            +[](HttpServer *self, lua_State *state) -> bool {
+                LuaGilRelease release(state);
+                return self->start();
+            })
+        .addFunction(
+            "stop",
+            +[](HttpServer *self, lua_State *state) -> bool {
+                LuaGilRelease release(state);
+                return self->stop();
+            })
         .addFunction("request_stop", &HttpServer::request_stop)
         .addFunction("set_service_wait_stop", &HttpServer::set_service_wait_stop)
-        .addFunction("is_running", +[](HttpServer *self) -> bool { return self->is_running(); })
-        .addFunction("wait_ready",
-                     +[](HttpServer *self, int ms, lua_State *state) -> bool {
-                         LuaGilRelease release(state);
-                         return self->wait_ready(std::chrono::milliseconds(ms));
-                     })
+        .addFunction(
+            "is_running",
+            +[](HttpServer *self) -> bool { return self->is_running(); })
+        .addFunction(
+            "wait_ready",
+            +[](HttpServer *self, int ms, lua_State *state) -> bool {
+                LuaGilRelease release(state);
+                return self->wait_ready(std::chrono::milliseconds(ms));
+            })
         .endClass()
         .endNamespace()
         .endNamespace();

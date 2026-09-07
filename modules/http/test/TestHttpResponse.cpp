@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
-#include <sihd/json/Json.hpp>
 
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpStatus.hpp>
+#include <sihd/json/Json.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace test

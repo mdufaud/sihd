@@ -13,8 +13,7 @@ class DynLib
 {
     public:
         // dynamic loading (dlopen/LoadLibrary): unavailable in static builds and on emscripten
-        static constexpr bool supported
-            = !sihd::util::build::is_statically_linked && !sihd::util::build::is_emscripten;
+        static constexpr bool supported = !sihd::util::build::is_statically_linked && !sihd::util::build::is_emscripten;
 
         DynLib();
         DynLib(std::string_view lib_name);

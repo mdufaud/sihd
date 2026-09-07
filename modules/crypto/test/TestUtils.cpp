@@ -1,11 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <sihd/crypto/Certificate.hpp>
+#include <sihd/crypto/PrivateKey.hpp>
+#include <sihd/crypto/utils.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <sihd/crypto/PrivateKey.hpp>
-#include <sihd/crypto/Certificate.hpp>
-#include <sihd/crypto/utils.hpp>
 
 namespace test
 {

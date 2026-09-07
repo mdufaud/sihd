@@ -63,9 +63,7 @@ class RouteTable
         RouteTable() = default;
         ~RouteTable() = default;
 
-        void add(std::string_view pattern,
-                 Route::Handler handler,
-                 HttpRequest::RequestType method = HttpRequest::Get);
+        void add(std::string_view pattern, Route::Handler handler, HttpRequest::RequestType method = HttpRequest::Get);
 
         struct FindResult
         {

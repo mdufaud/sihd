@@ -1,7 +1,8 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 
 #include <sihd/sys/fs.hpp>
+
+#include <CLI/CLI.hpp>
 
 using namespace sihd::sys;
 

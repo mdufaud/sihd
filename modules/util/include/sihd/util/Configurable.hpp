@@ -5,7 +5,6 @@
 #include <functional>
 
 #include <sihd/json/fwd.hpp>
-
 #include <sihd/util/Callback.hpp>
 
 namespace sihd::util

@@ -2,7 +2,6 @@
 #define __SIHD_SYS_FILE_HPP__
 
 #include <cstdio> // FILE
-
 #include <optional>
 #include <string>
 #include <string_view>

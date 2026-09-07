@@ -1,4 +1,3 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 
 #include <sihd/sys/FileWatcher.hpp>
@@ -11,6 +10,8 @@
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
+
+#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -47,9 +48,7 @@ int main(int argc, char **argv)
             }
             else if (event.type == FileWatcherEventType::terminated)
             {
-                SIHD_LOG(warning,
-                         "Event: watch is terminated ({} has probably been deleted)",
-                         event.watch_path);
+                SIHD_LOG(warning, "Event: watch is terminated ({} has probably been deleted)", event.watch_path);
                 stop = true;
             }
             else

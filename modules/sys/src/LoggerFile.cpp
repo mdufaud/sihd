@@ -1,7 +1,7 @@
 #include <fmt/printf.h>
 
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/LoggerFile.hpp>
+#include <sihd/util/Logger.hpp>
 
 using namespace sihd::util;
 namespace sihd::sys

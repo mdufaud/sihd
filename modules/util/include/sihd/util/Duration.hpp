@@ -10,7 +10,7 @@ namespace sihd::util
 
 // A relative interval of time (nanosecond resolution). Subset of Timestamp's interface:
 // arithmetic, chrono conversions and numeric accessors, without any calendar/wall-clock notion.
-class Duration : public TimeBase<Duration>
+class Duration: public TimeBase<Duration>
 {
     public:
         using TimeBase<Duration>::TimeBase;

@@ -1,8 +1,3 @@
-#include <sihd/py/core/PyCoreApi.hpp>
-
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
-
 #include <sihd/core/ACoreObject.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
@@ -13,6 +8,9 @@
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevSampler.hpp>
 #include <sihd/core/Device.hpp>
+#include <sihd/py/core/PyCoreApi.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::py
 {
@@ -48,8 +46,7 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
     pybind11::module m_core = m_sihd.def_submodule("core", "sihd::core");
 
     pybind11::class_<Channel, Named, SmartNodePtr<Channel>>(m_core, "Channel")
-        .def(pybind11::init<const std::string &, const std::string &, size_t, Node *>(),
-             pybind11::keep_alive<1, 5>())
+        .def(pybind11::init<const std::string &, const std::string &, size_t, Node *>(), pybind11::keep_alive<1, 5>())
         .def(pybind11::init<const std::string &, const std::string &, size_t>())
         .def(pybind11::init<const std::string &, const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &, const std::string &>())
@@ -66,12 +63,12 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def("data_size", &Channel::data_size)
         .def("data_type", &Channel::data_type)
         .def("is_same_type", static_cast<bool (Channel::*)(const Channel *) const>(&Channel::is_same_type))
-        .def("set_observer",
-             +[](Channel *self, [[maybe_unused]] pybind11::none none) {
-                 g_channel_handler.remove_channel_obs(self);
-             })
-        .def("set_observer",
-             +[](Channel *self, pybind11::function fun) { g_channel_handler.add_channel_obs(self, fun); })
+        .def(
+            "set_observer",
+            +[](Channel *self, [[maybe_unused]] pybind11::none none) { g_channel_handler.remove_channel_obs(self); })
+        .def(
+            "set_observer",
+            +[](Channel *self, pybind11::function fun) { g_channel_handler.add_channel_obs(self, fun); })
         .def(
             "copy_to",
             +[](Channel *self, IArray *array_ptr) { return self->copy_to(*array_ptr); },
@@ -98,21 +95,15 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
                     case TYPE_SHORT:
                         return PyCoreApi::_unlock_gil_write_channel<int16_t>(self, idx, arg.cast<int64_t>());
                     case TYPE_USHORT:
-                        return PyCoreApi::_unlock_gil_write_channel<uint16_t>(self,
-                                                                              idx,
-                                                                              arg.cast<uint64_t>());
+                        return PyCoreApi::_unlock_gil_write_channel<uint16_t>(self, idx, arg.cast<uint64_t>());
                     case TYPE_INT:
                         return PyCoreApi::_unlock_gil_write_channel<int32_t>(self, idx, arg.cast<int64_t>());
                     case TYPE_UINT:
-                        return PyCoreApi::_unlock_gil_write_channel<uint32_t>(self,
-                                                                              idx,
-                                                                              arg.cast<uint64_t>());
+                        return PyCoreApi::_unlock_gil_write_channel<uint32_t>(self, idx, arg.cast<uint64_t>());
                     case TYPE_LONG:
                         return PyCoreApi::_unlock_gil_write_channel<int64_t>(self, idx, arg.cast<int64_t>());
                     case TYPE_ULONG:
-                        return PyCoreApi::_unlock_gil_write_channel<uint64_t>(self,
-                                                                              idx,
-                                                                              arg.cast<uint64_t>());
+                        return PyCoreApi::_unlock_gil_write_channel<uint64_t>(self, idx, arg.cast<uint64_t>());
                     case TYPE_FLOAT:
                         return PyCoreApi::_unlock_gil_write_channel<float>(self, idx, arg.cast<double>());
                     case TYPE_DOUBLE:
@@ -186,8 +177,7 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
              pybind11::call_guard<pybind11::gil_scoped_release>(),
              pybind11::return_value_policy::reference_internal)
         .def("add_channel",
-             static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(
-                 &Device::add_channel),
+             static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel),
              pybind11::return_value_policy::reference_internal)
         .def("setup",
              static_cast<bool (Device::*)()>(&ACoreService::setup),
@@ -206,9 +196,7 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
              pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("is_running", static_cast<bool (Device::*)() const>(&ACoreService::is_running))
         .def("device_state", &Device::device_state, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("device_state_str",
-             &Device::device_state_str,
-             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("device_state_str", &Device::device_state_str, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "service_ctrl",
             // service_ctrl() is public on AService (protected override on Device)
@@ -244,9 +232,7 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<Channel *>(), pybind11::keep_alive<1, 2>())
         .def("observe", &sihd::util::ObserverWaiter<Channel>::observe)
         .def("clear", &sihd::util::ObserverWaiter<Channel>::clear)
-        .def("wait",
-             &sihd::util::ObserverWaiter<Channel>::wait,
-             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("wait", &sihd::util::ObserverWaiter<Channel>::wait, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("wait_for",
              &sihd::util::ObserverWaiter<Channel>::wait_for,
              pybind11::call_guard<pybind11::gil_scoped_release>())

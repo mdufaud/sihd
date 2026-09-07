@@ -1,12 +1,11 @@
 #include <cerrno>
 #include <cstring>
 
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Splitter.hpp>
-
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Splitter.hpp>
 
 namespace sihd::ssh
 {

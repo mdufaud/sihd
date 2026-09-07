@@ -199,21 +199,23 @@ TEST_F(TestJson, test_json_dump_parsed_indent)
 
     EXPECT_EQ(j.dump(), R"({"a":1,"b":[2,3]})");
 
-    EXPECT_EQ(j.dump(2), "{\n"
-                          "  \"a\": 1,\n"
-                          "  \"b\": [\n"
-                          "    2,\n"
-                          "    3\n"
-                          "  ]\n"
-                          "}");
+    EXPECT_EQ(j.dump(2),
+              "{\n"
+              "  \"a\": 1,\n"
+              "  \"b\": [\n"
+              "    2,\n"
+              "    3\n"
+              "  ]\n"
+              "}");
 
-    EXPECT_EQ(j.dump(4), "{\n"
-                          "    \"a\": 1,\n"
-                          "    \"b\": [\n"
-                          "        2,\n"
-                          "        3\n"
-                          "    ]\n"
-                          "}");
+    EXPECT_EQ(j.dump(4),
+              "{\n"
+              "    \"a\": 1,\n"
+              "    \"b\": [\n"
+              "        2,\n"
+              "        3\n"
+              "    ]\n"
+              "}");
 }
 
 TEST_F(TestJson, test_json_contains)

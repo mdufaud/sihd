@@ -4,9 +4,7 @@
 namespace sihd::util
 {
 
-AWorkerService::AWorkerService(std::string_view thread_name):
-    AThreadedService(thread_name),
-    stop_requested(false)
+AWorkerService::AWorkerService(std::string_view thread_name): AThreadedService(thread_name), stop_requested(false)
 {
     this->set_service_nb_thread(1);
     _worker.set_runnable(this);

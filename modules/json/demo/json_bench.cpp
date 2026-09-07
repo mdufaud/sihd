@@ -339,8 +339,7 @@ void bench_file(const char *path)
         if (!key_view.empty())
         {
             first_key_str = std::string(key_view);
-            std::printf("\n  === Partial access: extract \"%s\" from each object ===\n",
-                        first_key_str.c_str());
+            std::printf("\n  === Partial access: extract \"%s\" from each object ===\n", first_key_str.c_str());
 
             // DOM partial
             {
@@ -411,8 +410,7 @@ void bench_file(const char *path)
                 }
             }
 
-            std::printf("\n  === Early exit: extract \"%s\" from first object only ===\n",
-                        first_key_str.c_str());
+            std::printf("\n  === Early exit: extract \"%s\" from first object only ===\n", first_key_str.c_str());
 
             // DOM first object only
             {

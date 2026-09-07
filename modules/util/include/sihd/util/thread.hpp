@@ -1,8 +1,9 @@
 #ifndef __SIHD_UTIL_THREAD_HPP__
 #define __SIHD_UTIL_THREAD_HPP__
 
-#include <thread>
 #include <pthread.h>
+
+#include <thread>
 
 namespace sihd::util::thread
 {

@@ -1,7 +1,7 @@
-#include <fcntl.h>     // O_*
-#include <string.h>    // strerror
-#include <sys/mman.h>  // shm_open, mmap, munmap
-#include <unistd.h>    // ftruncate, close
+#include <fcntl.h>    // O_*
+#include <string.h>   // strerror
+#include <sys/mman.h> // shm_open, mmap, munmap
+#include <unistd.h>   // ftruncate, close
 
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/os.hpp>

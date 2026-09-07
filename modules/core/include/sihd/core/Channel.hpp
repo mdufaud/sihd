@@ -73,8 +73,12 @@ class Channel: public sihd::util::Named,
 
         // copy internal array into arr
         bool copy_to(sihd::util::IArray & arr, sihd::util::Timestamp *timestamp = nullptr) const;
-        bool copy_to(sihd::util::IArray & arr, sihd::util::Slice slice, sihd::util::Timestamp *timestamp = nullptr) const;
-        bool copy_to_bytes(sihd::util::IArray & arr, sihd::util::Slice byte_slice, sihd::util::Timestamp *timestamp = nullptr) const;
+        bool copy_to(sihd::util::IArray & arr,
+                     sihd::util::Slice slice,
+                     sihd::util::Timestamp *timestamp = nullptr) const;
+        bool copy_to_bytes(sihd::util::IArray & arr,
+                           sihd::util::Slice byte_slice,
+                           sihd::util::Timestamp *timestamp = nullptr) const;
 
         // utility for reading
 

@@ -3,12 +3,12 @@
 
 // pybind11 (which includes Python.h) must come before standard headers
 // to avoid macro redefinition warnings with Python 3.14+ and glibc 2.42+
-#include <pybind11/pybind11.h>
-
 #include <functional>
 #include <map>
 #include <string_view>
 #include <vector>
+
+#include <pybind11/pybind11.h>
 
 namespace sihd::py
 {

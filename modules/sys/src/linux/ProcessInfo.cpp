@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include <functional>
 
 #include <fmt/core.h>
@@ -8,8 +10,6 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
-
-# include <unistd.h>
 
 namespace sihd::sys
 {
@@ -121,8 +121,7 @@ void ProcessInfo::Impl::load_time()
      */
     if (status.size() > 21)
     {
-        this->creation_time
-            = Duration(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
+        this->creation_time = Duration(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
     }
 }
 

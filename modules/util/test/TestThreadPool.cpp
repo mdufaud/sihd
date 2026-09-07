@@ -3,10 +3,9 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/ThreadPool.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/term.hpp>
-
-#include <sihd/util/ThreadPool.hpp>
 
 namespace test
 {
@@ -71,8 +70,7 @@ TEST_F(TestThreadPool, test_threadpool_future)
 
     pool.complete_all_jobs(total_jobs, [&to_fill](size_t thread_n) { to_fill[thread_n] = thread_n; });
 
-    std::vector<size_t> results
-        = pool.complete_all_jobs(total_jobs, [](size_t thread_n) { return thread_n * 2; });
+    std::vector<size_t> results = pool.complete_all_jobs(total_jobs, [](size_t thread_n) { return thread_n * 2; });
 
     ASSERT_EQ(to_fill.size(), results.size());
 

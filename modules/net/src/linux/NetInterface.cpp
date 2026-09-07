@@ -1,14 +1,15 @@
+#include <ifaddrs.h>   // getifaddrs
+#include <sys/types.h> // getifaddrs
+
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include <ifaddrs.h> // getifaddrs
 #include <linux/if_link.h>
 #include <linux/if_packet.h>
-#include <net/if.h>    // macros
-#include <sys/types.h> // getifaddrs
+#include <net/if.h> // macros
 
 namespace sihd::net
 {

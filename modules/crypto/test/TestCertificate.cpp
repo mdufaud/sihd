@@ -1,11 +1,10 @@
-#include <gtest/gtest.h>
-
 #include <cstdio>
 
-#include <sihd/util/Logger.hpp>
+#include <gtest/gtest.h>
 
-#include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/Certificate.hpp>
+#include <sihd/crypto/PrivateKey.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace test
 {
@@ -18,10 +17,7 @@ class TestCertificate: public ::testing::Test
         TestCertificate() { sihd::util::LoggerManager::stream(); }
         ~TestCertificate() { sihd::util::LoggerManager::clear_loggers(); }
 
-        void SetUp() override
-        {
-            ASSERT_TRUE(_key.generate_rsa(2048));
-        }
+        void SetUp() override { ASSERT_TRUE(_key.generate_rsa(2048)); }
 
         PrivateKey _key;
 };

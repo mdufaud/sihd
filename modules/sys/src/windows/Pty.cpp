@@ -13,7 +13,7 @@
 #include <sihd/util/build.hpp>
 
 #ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
+# define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 
@@ -305,9 +305,9 @@ bool ConPty::spawn()
         return false;
     }
 
-# ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
-#  define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x00020016
-# endif
+#ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
+# define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x00020016
+#endif
     // Associate the pseudo console with the process
     if (!UpdateProcThreadAttribute(_attr_list,
                                    0,

@@ -13,46 +13,46 @@ const SM & default_statemachine()
         SM m(St::None);
         m.set_transitions_map({
             // none -> setup -> configured
-            {SM::pack_key(St::None,         Op::Setup),   St::Configuring},
-            {SM::pack_key(St::Configuring,  Op::Error),   St::Error},
-            {SM::pack_key(St::Configuring,  Op::Success), St::Configured},
+            {SM::pack_key(St::None, Op::Setup), St::Configuring},
+            {SM::pack_key(St::Configuring, Op::Error), St::Error},
+            {SM::pack_key(St::Configuring, Op::Success), St::Configured},
             // configured -> init -> stopped
-            {SM::pack_key(St::Configured,   Op::Init),    St::Initializing},
-            {SM::pack_key(St::Initializing, Op::Error),   St::Error},
+            {SM::pack_key(St::Configured, Op::Init), St::Initializing},
+            {SM::pack_key(St::Initializing, Op::Error), St::Error},
             {SM::pack_key(St::Initializing, Op::Success), St::Stopped},
             // stopped -> start -> running
-            {SM::pack_key(St::Stopped,      Op::Start),   St::Starting},
-            {SM::pack_key(St::Starting,     Op::Error),   St::Error},
-            {SM::pack_key(St::Starting,     Op::Success), St::Running},
+            {SM::pack_key(St::Stopped, Op::Start), St::Starting},
+            {SM::pack_key(St::Starting, Op::Error), St::Error},
+            {SM::pack_key(St::Starting, Op::Success), St::Running},
             // running -> stop -> stopped
-            {SM::pack_key(St::Running,      Op::Stop),    St::Stopping},
-            {SM::pack_key(St::Stopping,     Op::Error),   St::Error},
-            {SM::pack_key(St::Stopping,     Op::Success), St::Stopped},
+            {SM::pack_key(St::Running, Op::Stop), St::Stopping},
+            {SM::pack_key(St::Stopping, Op::Error), St::Error},
+            {SM::pack_key(St::Stopping, Op::Success), St::Stopped},
             // configured/stopped -> reset -> none
-            {SM::pack_key(St::Configured,   Op::Reset),   St::Resetting},
-            {SM::pack_key(St::Stopped,      Op::Reset),   St::Resetting},
-            {SM::pack_key(St::Resetting,    Op::Error),   St::Error},
-            {SM::pack_key(St::Resetting,    Op::Success), St::None},
+            {SM::pack_key(St::Configured, Op::Reset), St::Resetting},
+            {SM::pack_key(St::Stopped, Op::Reset), St::Resetting},
+            {SM::pack_key(St::Resetting, Op::Error), St::Error},
+            {SM::pack_key(St::Resetting, Op::Success), St::None},
         });
         m.set_states_names_map({
-            {St::None,         "none"},
-            {St::Configuring,  "configuring"},
-            {St::Configured,   "configured"},
+            {St::None, "none"},
+            {St::Configuring, "configuring"},
+            {St::Configured, "configured"},
             {St::Initializing, "initializing"},
-            {St::Starting,     "starting"},
-            {St::Running,      "running"},
-            {St::Stopping,     "stopping"},
-            {St::Stopped,      "stopped"},
-            {St::Resetting,    "resetting"},
+            {St::Starting, "starting"},
+            {St::Running, "running"},
+            {St::Stopping, "stopping"},
+            {St::Stopped, "stopped"},
+            {St::Resetting, "resetting"},
         });
         m.set_events_names_map({
-            {Op::Setup,   "setup"},
-            {Op::Init,    "init"},
-            {Op::Start,   "start"},
-            {Op::Stop,    "stop"},
-            {Op::Reset,   "reset"},
+            {Op::Setup, "setup"},
+            {Op::Init, "init"},
+            {Op::Start, "start"},
+            {Op::Stop, "stop"},
+            {Op::Reset, "reset"},
             {Op::Success, "success"},
-            {Op::Error,   "error"},
+            {Op::Error, "error"},
         });
         return m;
     }();
@@ -69,9 +69,7 @@ ServiceController::ServiceController(const StateMachine<State, AService::Operati
 {
 }
 
-ServiceController::ServiceController(): statemachine(default_statemachine())
-{
-}
+ServiceController::ServiceController(): statemachine(default_statemachine()) {}
 
 void ServiceController::optional_setup()
 {

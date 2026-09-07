@@ -5,8 +5,8 @@
 #include <map>
 
 #include <sihd/net/ip.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -182,18 +182,18 @@ std::string to_str(const in6_addr *addr_in)
 
 bool is_private_ipv4(uint32_t addr)
 {
-    return (addr >> 24) == 0            // 0.0.0.0/8 ("this network")
-        || (addr >> 24) == 127          // 127.0.0.0/8 (loopback)
-        || (addr >> 24) == 10           // 10.0.0.0/8 (class A)
-        || ((addr >> 16) & 0xFFFF) == 0xA9FE // 169.254.0.0/16 (link-local)
-        || (addr >> 20) == 0xAC1        // 172.16.0.0/12 (class B)
-        || (addr >> 16) == 0xC0A8;      // 192.168.0.0/16 (class C)
+    return (addr >> 24) == 0                    // 0.0.0.0/8 ("this network")
+           || (addr >> 24) == 127               // 127.0.0.0/8 (loopback)
+           || (addr >> 24) == 10                // 10.0.0.0/8 (class A)
+           || ((addr >> 16) & 0xFFFF) == 0xA9FE // 169.254.0.0/16 (link-local)
+           || (addr >> 20) == 0xAC1             // 172.16.0.0/12 (class B)
+           || (addr >> 16) == 0xC0A8;           // 192.168.0.0/16 (class C)
 }
 
 bool is_private_host(std::string_view host)
 {
     struct addrinfo hints {};
-    hints.ai_family   = AF_UNSPEC;
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     struct addrinfo *res = nullptr;
     if (getaddrinfo(std::string(host).c_str(), nullptr, &hints, &res) != 0)
@@ -210,9 +210,8 @@ bool is_private_host(std::string_view host)
         else if (r->ai_family == AF_INET6)
         {
             auto *s6 = reinterpret_cast<sockaddr_in6 *>(r->ai_addr);
-            found = IN6_IS_ADDR_LOOPBACK(&s6->sin6_addr)
-                 || IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr)
-                 || IN6_IS_ADDR_SITELOCAL(&s6->sin6_addr);
+            found = IN6_IS_ADDR_LOOPBACK(&s6->sin6_addr) || IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr)
+                    || IN6_IS_ADDR_SITELOCAL(&s6->sin6_addr);
         }
     }
     freeaddrinfo(res);

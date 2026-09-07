@@ -20,8 +20,7 @@ class Daemon: public sihd::util::Named,
 {
     public:
         // daemonize (fork/setsid) only on unix; no-op on windows and emscripten
-        static constexpr bool supported
-            = !sihd::util::build::is_windows && !sihd::util::build::is_emscripten;
+        static constexpr bool supported = !sihd::util::build::is_windows && !sihd::util::build::is_emscripten;
 
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
         ~Daemon();

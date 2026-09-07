@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/ssh/utils.hpp>
 
 // Global test environment to verify SSH utils are properly finalized
@@ -21,8 +22,7 @@ class SshTestEnvironment: public ::testing::Environment
             // Verify all SSH init/finalize calls are balanced
             if (sihd::ssh::utils::is_initialized())
             {
-                ADD_FAILURE()
-                    << "SSH utils still initialized after all tests - init/finalize calls not balanced";
+                ADD_FAILURE() << "SSH utils still initialized after all tests - init/finalize calls not balanced";
                 // Cleanup for next run
                 while (sihd::ssh::utils::is_initialized())
                 {

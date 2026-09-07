@@ -2,7 +2,6 @@
 #define __SIHD_UTIL_LOGINFO_HPP__
 
 #include <ctime>
-
 #include <string>
 #include <string_view>
 

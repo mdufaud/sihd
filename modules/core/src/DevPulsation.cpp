@@ -1,6 +1,6 @@
 #include <sihd/core/DevPulsation.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Task.hpp>
 
 #define CHANNEL_HEART "heartbeat"

@@ -131,8 +131,7 @@ int Splitter::count_tokens(std::string_view view) const
             ++count;
         while (i < (int)size)
         {
-            int closed_at
-                = str::stopping_enclose_index(s, i, _authorized_open_escape_sequences.c_str(), _escape_char);
+            int closed_at = str::stopping_enclose_index(s, i, _authorized_open_escape_sequences.c_str(), _escape_char);
             // matched closure
             if (closed_at > 0)
                 i = closed_at;
@@ -174,8 +173,7 @@ std::string_view Splitter::next_token(std::string_view view, int *idx) const
     int y = x;
     while (y < (int)size)
     {
-        int closed_at
-            = str::stopping_enclose_index(s, y, _authorized_open_escape_sequences.c_str(), _escape_char);
+        int closed_at = str::stopping_enclose_index(s, y, _authorized_open_escape_sequences.c_str(), _escape_char);
         // matched closure
         if (closed_at > 0)
             y = closed_at;

@@ -15,20 +15,20 @@ using namespace sihd::util;
 int write_protocol_to_lws(WriteProtocol protocol);
 
 int HttpServer::Impl::_global_websocket_lws_callback(struct lws *wsi,
-                                                      enum lws_callback_reasons reason,
-                                                      void *user,
-                                                      void *in,
-                                                      size_t len)
+                                                     enum lws_callback_reasons reason,
+                                                     void *user,
+                                                     void *in,
+                                                     size_t len)
 {
     HttpServer *srv = (HttpServer *)lws_context_user(lws_get_context(wsi));
     return srv->_impl->_lws_websocket_callback(wsi, reason, user, in, len);
 }
 
 int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
-                                                enum lws_callback_reasons reason,
-                                                void *user,
-                                                void *in,
-                                                size_t len)
+                                              enum lws_callback_reasons reason,
+                                              void *user,
+                                              void *in,
+                                              size_t len)
 {
     int rc = 0;
     IWebsocketHandler *handler = nullptr;

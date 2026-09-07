@@ -1,9 +1,8 @@
 #include <libssh/libssh.h>
 
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {
@@ -71,15 +70,13 @@ bool SshKey::generate(KeyType type, int parameter)
 bool SshKey::import_privkey_file(std::string_view path, const char *passphrase)
 {
     this->clear_key();
-    return ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
-           == SSH_OK;
+    return ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) == SSH_OK;
 }
 
 bool SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
 {
     this->clear_key();
-    return ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr)
-           == SSH_OK;
+    return ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) == SSH_OK;
 }
 
 bool SshKey::import_pubkey_file(std::string_view path)
@@ -146,8 +143,7 @@ bool SshKey::export_privkey_file(std::string_view path, const char *passphrase) 
         return false;
     }
 
-    return ssh_pki_export_privkey_file(_impl_ptr->ssh_key_ptr, passphrase, nullptr, nullptr, path.data())
-           == SSH_OK;
+    return ssh_pki_export_privkey_file(_impl_ptr->ssh_key_ptr, passphrase, nullptr, nullptr, path.data()) == SSH_OK;
 }
 
 KeyType SshKey::type_from_name(std::string_view name)

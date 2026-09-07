@@ -2,10 +2,10 @@
 #define __SIHD_NET_TCPCLIENT_HPP__
 
 #include <atomic>
+
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
 #include <sihd/net/TlsSocket.hpp>
-
 #include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>

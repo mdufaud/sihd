@@ -24,16 +24,13 @@ class LineReader: public sihd::util::IReader
         LineReader(const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(std::string_view path, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(int fd, const LineReaderOptions & options = LineReaderOptions::none());
-        LineReader(FILE *stream,
-                   bool ownership,
-                   const LineReaderOptions & options = LineReaderOptions::none());
+        LineReader(FILE *stream, bool ownership, const LineReaderOptions & options = LineReaderOptions::none());
 
         static bool fast_read_line(std::string & line,
                                    FILE *stream = stdin,
                                    const LineReaderOptions & options = LineReaderOptions::none());
 
-        static bool fast_read_stdin(std::string & line,
-                                    LineReaderOptions options = LineReaderOptions::none());
+        static bool fast_read_stdin(std::string & line, LineReaderOptions options = LineReaderOptions::none());
 
         bool set_read_buffsize(size_t buffsize);
         bool set_line_buffsize(size_t buffsize);

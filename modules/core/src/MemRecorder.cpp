@@ -1,7 +1,6 @@
-#include <sihd/util/Logger.hpp>
-#include <sihd/sys/NamedFactory.hpp>
-
 #include <sihd/core/MemRecorder.hpp>
+#include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::core
 {
@@ -33,8 +32,7 @@ void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp tim
 {
     sihd::util::IArrayShared arr(array->clone_array());
     std::lock_guard l(_mutex);
-    _map_sorted_records.insert(
-        std::pair<sihd::util::Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
+    _map_sorted_records.insert(std::pair<sihd::util::Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
 }
 
 void MemRecorder::add_record(const PlayableRecord & record)

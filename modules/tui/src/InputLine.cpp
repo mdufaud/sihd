@@ -1,6 +1,6 @@
-#include <ftxui/component/component_options.hpp>
-
 #include "InputLine.hpp"
+
+#include <ftxui/component/component_options.hpp>
 
 namespace sihd::tui
 {

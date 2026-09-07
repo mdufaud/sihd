@@ -1,10 +1,9 @@
-#include <gtest/gtest.h>
-
 #include <cstdio>
 
-#include <sihd/util/Logger.hpp>
+#include <gtest/gtest.h>
 
 #include <sihd/crypto/PrivateKey.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace test
 {

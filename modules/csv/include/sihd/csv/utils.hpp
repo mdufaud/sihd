@@ -21,10 +21,7 @@ using CsvData = std::vector<CsvLine>;
 std::string escape_str(std::string_view view);
 
 // get rows/columns from a CSV string
-CsvData csv_from_string(std::string_view content,
-                        bool remove_header,
-                        int delimiter = ',',
-                        char comment_char = '#');
+CsvData csv_from_string(std::string_view content, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // get rows/columns from CSV file
 std::optional<CsvData>
@@ -32,8 +29,7 @@ std::optional<CsvData>
 
 // check if tuple size and header size is the same
 template <typename... Args>
-bool same_number_of_columns(const std::vector<std::string> & columns_tags,
-                            const std::vector<std::tuple<Args...>> &)
+bool same_number_of_columns(const std::vector<std::string> & columns_tags, const std::vector<std::tuple<Args...>> &)
 {
     return columns_tags.size() == sizeof...(Args);
 }

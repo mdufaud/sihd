@@ -1,17 +1,16 @@
 #ifndef __SIHD_PY_PYUTILAPI_HPP__
 #define __SIHD_PY_PYUTILAPI_HPP__
 
-#include <sihd/py/PyApi.hpp>
+#include <pybind11/chrono.h>
+#include <pybind11/stl.h>
 
+#include <sihd/py/PyApi.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 #include <sihd/util/Task.hpp>
-
-#include <pybind11/chrono.h>
-#include <pybind11/stl.h>
 
 PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
 

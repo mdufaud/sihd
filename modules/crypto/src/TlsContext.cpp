@@ -1,10 +1,10 @@
-#include <sihd/crypto/TlsContext.hpp>
-#include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/Certificate.hpp>
+#include <sihd/crypto/PrivateKey.hpp>
+#include <sihd/crypto/TlsContext.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include <openssl/ssl.h>
 #include <openssl/evp.h>
+#include <openssl/ssl.h>
 #include <openssl/x509.h>
 
 namespace sihd::crypto
@@ -15,13 +15,19 @@ SIHD_LOGGER;
 namespace
 {
 
-SSL_CTX *as_ctx(void *h) { return static_cast<SSL_CTX *>(h); }
+SSL_CTX *as_ctx(void *h)
+{
+    return static_cast<SSL_CTX *>(h);
+}
 
 } // namespace
 
 TlsContext::TlsContext(): _handle(nullptr) {}
 
-TlsContext::~TlsContext() { this->clear(); }
+TlsContext::~TlsContext()
+{
+    this->clear();
+}
 
 TlsContext::TlsContext(const TlsContext & other): _handle(nullptr)
 {

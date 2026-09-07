@@ -1,16 +1,13 @@
-#include <sihd/py/net/PyNetApi.hpp>
-
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Node.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
-
 #include <sihd/core/Device.hpp>
-
 #include <sihd/net/DeviceTcpClient.hpp>
 #include <sihd/net/DeviceTcpServer.hpp>
 #include <sihd/net/DeviceUdpReceiver.hpp>
 #include <sihd/net/DeviceUdpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/py/net/PyNetApi.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::py
 {

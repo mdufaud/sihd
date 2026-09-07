@@ -4,9 +4,8 @@
 #include <string>
 #include <string_view>
 
-#include <sihd/util/Array.hpp>
-
 #include <sihd/http/WriteProtocol.hpp>
+#include <sihd/util/Array.hpp>
 
 namespace sihd::http
 {

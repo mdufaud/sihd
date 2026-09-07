@@ -40,8 +40,7 @@ class Cli
         virtual void clear_output() = 0;
 };
 
-ftxui::Component CliComponent(std::function<void(Cli *, std::string_view)> && on_input,
-                              CliOptions && options);
+ftxui::Component CliComponent(std::function<void(Cli *, std::string_view)> && on_input, CliOptions && options);
 
 } // namespace sihd::tui
 

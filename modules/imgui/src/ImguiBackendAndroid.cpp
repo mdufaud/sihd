@@ -1,7 +1,7 @@
+#include <imgui.h>
+
 #include <sihd/imgui/ImguiBackendAndroid.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <imgui.h>
 
 namespace sihd::imgui
 {

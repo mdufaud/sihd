@@ -7,33 +7,33 @@
 #include <sihd/util/time.hpp>
 #include <sihd/util/traits.hpp>
 
-#define __TMP_TIMEBASE_DURATION_COMPARISION_OPERATION__(OP)                                                  \
-    template <traits::Duration Duration>                                                                     \
-    constexpr bool operator OP(Duration duration) const                                                      \
-    {                                                                                                        \
-        return _nano OP time::duration<Duration>(duration);                                                  \
+#define __TMP_TIMEBASE_DURATION_COMPARISION_OPERATION__(OP)                                                            \
+    template <traits::Duration Duration>                                                                               \
+    constexpr bool operator OP(Duration duration) const                                                                \
+    {                                                                                                                  \
+        return _nano OP time::duration<Duration>(duration);                                                            \
     }
 
-#define __TMP_TIMEBASE_DURATION_ARITHMETIC_OPERATION__(OP)                                                   \
-    template <traits::Duration Duration>                                                                     \
-    constexpr Derived operator OP(Duration duration) const                                                   \
-    {                                                                                                        \
-        return Derived(_nano OP time::duration<Duration>(duration));                                         \
+#define __TMP_TIMEBASE_DURATION_ARITHMETIC_OPERATION__(OP)                                                             \
+    template <traits::Duration Duration>                                                                               \
+    constexpr Derived operator OP(Duration duration) const                                                             \
+    {                                                                                                                  \
+        return Derived(_nano OP time::duration<Duration>(duration));                                                   \
     }
 
-#define __TMP_TIMEBASE_DURATION_ASSIGN_OPERATION__(OP)                                                       \
-    template <traits::Duration Duration>                                                                     \
-    constexpr Derived & operator OP(Duration duration)                                                       \
-    {                                                                                                        \
-        _nano OP time::duration<Duration>(duration);                                                         \
-        return static_cast<Derived &>(*this);                                                                \
+#define __TMP_TIMEBASE_DURATION_ASSIGN_OPERATION__(OP)                                                                 \
+    template <traits::Duration Duration>                                                                               \
+    constexpr Derived & operator OP(Duration duration)                                                                 \
+    {                                                                                                                  \
+        _nano OP time::duration<Duration>(duration);                                                                   \
+        return static_cast<Derived &>(*this);                                                                          \
     }
 
-#define __TMP_TIMEBASE_ASSIGN_OPERATION__(OP)                                                                \
-    constexpr Derived & operator OP(time::UnixTime t)                                                        \
-    {                                                                                                        \
-        _nano OP t;                                                                                          \
-        return static_cast<Derived &>(*this);                                                                \
+#define __TMP_TIMEBASE_ASSIGN_OPERATION__(OP)                                                                          \
+    constexpr Derived & operator OP(time::UnixTime t)                                                                  \
+    {                                                                                                                  \
+        _nano OP t;                                                                                                    \
+        return static_cast<Derived &>(*this);                                                                          \
     }
 
 namespace sihd::util
@@ -49,7 +49,8 @@ class TimeBase
         constexpr TimeBase(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
 
         template <typename T>
-        constexpr TimeBase(std::chrono::time_point<T> timepoint): _nano(time::duration(timepoint.time_since_epoch())) {};
+        constexpr TimeBase(std::chrono::time_point<T> timepoint):
+            _nano(time::duration(timepoint.time_since_epoch())) {};
 
         template <traits::Duration Duration>
         constexpr TimeBase(Duration duration): _nano(time::duration(duration)) {};

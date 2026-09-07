@@ -1,11 +1,11 @@
 #include <cstdint>
-#include <sihd/sys/NamedFactory.hpp>
-#include <sihd/util/Array.hpp>
-#include <sihd/util/Logger.hpp>
+#include <stdexcept>
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/utils.hpp>
-#include <stdexcept>
+#include <sihd/sys/NamedFactory.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>     // inet_ntop
@@ -439,12 +439,10 @@ void IcmpSender::_process_ipv6()
         if (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT)
         {
             // get original packet from the error message
-            icmp6hdr
-                = (struct icmp6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr) + sizeof(struct ip6_hdr));
+            icmp6hdr = (struct icmp6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr) + sizeof(struct ip6_hdr));
         }
         _icmp_response.data = (char *)(icmp6hdr + 1);
-        _icmp_response.size
-            = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
+        _icmp_response.size = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
         _icmp_response.type = icmp6hdr->icmp6_type;
         _icmp_response.code = icmp6hdr->icmp6_code;
         _icmp_response.ttl = ttl;
@@ -475,8 +473,8 @@ void IcmpSender::_process_ipv4()
             }
             // id is the same as original packet and it is our type
             _icmp_response.data = icmphdr->icmp_data;
-            _icmp_response.size
-                = _array_rcv_ptr->byte_size() - ((char *)icmphdr->icmp_data - (char *)_array_rcv_ptr->buf());
+            _icmp_response.size = _array_rcv_ptr->byte_size()
+                                  - ((char *)icmphdr->icmp_data - (char *)_array_rcv_ptr->buf());
             _icmp_response.type = icmphdr->icmp_type;
             _icmp_response.code = icmphdr->icmp_code;
             _icmp_response.ttl = iphdr->ip_ttl;

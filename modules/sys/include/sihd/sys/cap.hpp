@@ -68,8 +68,8 @@ namespace cap
 {
 
 constexpr bool supported = sihd::util::build::is_windows
-    || (sihd::util::build::is_linux && !sihd::util::build::is_android
-        && !sihd::util::build::is_emscripten);
+                           || (sihd::util::build::is_linux && !sihd::util::build::is_android
+                               && !sihd::util::build::is_emscripten);
 
 // every value of Cap, in declaration order
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)

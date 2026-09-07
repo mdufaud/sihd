@@ -10,9 +10,10 @@
 #include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <net/if.h>      // if_nametoindex
 # include <netinet/tcp.h> // tcp nodelay
 # include <sys/un.h>      // unix sockets
+
+# include <net/if.h> // if_nametoindex
 #else
 # include <afunix.h>   // AF_UNIX
 # include <ws2tcpip.h> // IP_TTL SUN_LEN
@@ -75,8 +76,7 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
     _protocol = protocol;
 }
 
-Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol):
-    Socket()
+Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
     _socket = socket;
     _domain = ip::domain(domain);
@@ -129,8 +129,11 @@ void Socket::_clear_socket_info()
 
 bool Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
 {
-    return sihd::sys::os::setsockopt(
-        socket, ipv6 ? IPPROTO_IPV6 : IPPROTO_IP, ipv6 ? IPV6_UNICAST_HOPS : IP_TTL, &ttl, sizeof(int));
+    return sihd::sys::os::setsockopt(socket,
+                                     ipv6 ? IPPROTO_IPV6 : IPPROTO_IP,
+                                     ipv6 ? IPV6_UNICAST_HOPS : IP_TTL,
+                                     &ttl,
+                                     sizeof(int));
 }
 
 bool Socket::set_socket_reuseaddr(int socket, bool active)

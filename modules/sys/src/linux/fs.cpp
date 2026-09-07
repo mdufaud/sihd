@@ -15,9 +15,10 @@
 #include <sihd/util/Timestamp.hpp>
 
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <linux/magic.h>   // *_SUPER_MAGIC
 # include <sys/statfs.h>    // statfs
 # include <sys/sysmacros.h> // major / minor
+
+# include <linux/magic.h> // *_SUPER_MAGIC
 #endif
 
 namespace sihd::sys::fs

@@ -2,8 +2,9 @@
 #include <sihd/util/Logger.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-# include <SDL3/SDL_properties.h>
 # include <windows.h>
+
+# include <SDL3/SDL_properties.h>
 #endif
 
 namespace sihd::imgui
@@ -11,10 +12,7 @@ namespace sihd::imgui
 
 SIHD_LOGGER;
 
-ImguiBackendSDL::ImguiBackendSDL():
-    _sdl_window_ptr(nullptr),
-    _sdl_context_ptr(nullptr),
-    _imgui_renderer_ptr(nullptr)
+ImguiBackendSDL::ImguiBackendSDL(): _sdl_window_ptr(nullptr), _sdl_context_ptr(nullptr), _imgui_renderer_ptr(nullptr)
 {
     _is_init = false;
     _close = false;
@@ -95,8 +93,8 @@ bool ImguiBackendSDL::init_window(const std::string & name, size_t width, size_t
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_WindowFlags window_flags
-        = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+                                                     | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     _sdl_window_ptr = SDL_CreateWindow(name.c_str(), width, height, window_flags);
     if (_sdl_window_ptr == nullptr)
     {
@@ -166,11 +164,9 @@ void ImguiBackendSDL::poll()
         ImGui_ImplSDL3_ProcessEvent(&event);
         if (event.type == SDL_EVENT_QUIT)
             _close = true;
-        if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED
-            && event.window.windowID == SDL_GetWindowID(_sdl_window_ptr))
+        if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(_sdl_window_ptr))
             _close = true;
-        if (event.type == SDL_EVENT_WINDOW_RESIZED
-            && event.window.windowID == SDL_GetWindowID(_sdl_window_ptr))
+        if (event.type == SDL_EVENT_WINDOW_RESIZED && event.window.windowID == SDL_GetWindowID(_sdl_window_ptr))
         {
             if (_imgui_renderer_ptr != nullptr)
                 _imgui_renderer_ptr->resize();

@@ -48,32 +48,58 @@ constexpr std::string_view to_string(uint32_t code)
 {
     switch (code)
     {
-        case Continue: return "Continue";
-        case SwitchingProtocols: return "Switching Protocols";
-        case Ok: return "OK";
-        case Created: return "Created";
-        case Accepted: return "Accepted";
-        case NoContent: return "No Content";
-        case MovedPermanently: return "Moved Permanently";
-        case Found: return "Found";
-        case SeeOther: return "See Other";
-        case NotModified: return "Not Modified";
-        case TemporaryRedirect: return "Temporary Redirect";
-        case PermanentRedirect: return "Permanent Redirect";
-        case BadRequest: return "Bad Request";
-        case Unauthorized: return "Unauthorized";
-        case Forbidden: return "Forbidden";
-        case NotFound: return "Not Found";
-        case MethodNotAllowed: return "Method Not Allowed";
-        case RequestTimeout: return "Request Timeout";
-        case Conflict: return "Conflict";
-        case Gone: return "Gone";
-        case TooManyRequests: return "Too Many Requests";
-        case InternalServerError: return "Internal Server Error";
-        case NotImplemented: return "Not Implemented";
-        case BadGateway: return "Bad Gateway";
-        case ServiceUnavailable: return "Service Unavailable";
-        default: return "Unknown";
+        case Continue:
+            return "Continue";
+        case SwitchingProtocols:
+            return "Switching Protocols";
+        case Ok:
+            return "OK";
+        case Created:
+            return "Created";
+        case Accepted:
+            return "Accepted";
+        case NoContent:
+            return "No Content";
+        case MovedPermanently:
+            return "Moved Permanently";
+        case Found:
+            return "Found";
+        case SeeOther:
+            return "See Other";
+        case NotModified:
+            return "Not Modified";
+        case TemporaryRedirect:
+            return "Temporary Redirect";
+        case PermanentRedirect:
+            return "Permanent Redirect";
+        case BadRequest:
+            return "Bad Request";
+        case Unauthorized:
+            return "Unauthorized";
+        case Forbidden:
+            return "Forbidden";
+        case NotFound:
+            return "Not Found";
+        case MethodNotAllowed:
+            return "Method Not Allowed";
+        case RequestTimeout:
+            return "Request Timeout";
+        case Conflict:
+            return "Conflict";
+        case Gone:
+            return "Gone";
+        case TooManyRequests:
+            return "Too Many Requests";
+        case InternalServerError:
+            return "Internal Server Error";
+        case NotImplemented:
+            return "Not Implemented";
+        case BadGateway:
+            return "Bad Gateway";
+        case ServiceUnavailable:
+            return "Service Unavailable";
+        default:
+            return "Unknown";
     }
 }
 

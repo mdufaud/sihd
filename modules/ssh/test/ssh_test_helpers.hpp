@@ -1,8 +1,11 @@
 #ifndef __SIHD_SSH_TEST_HELPERS_HPP__
 #define __SIHD_SSH_TEST_HELPERS_HPP__
 
-#include "sihd/util/macro.hpp"
 #include <chrono>
+#include <functional>
+#include <memory>
+#include <thread>
+
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -11,10 +14,8 @@
 #include <sihd/ssh/WinSize.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
-#include <thread>
 
-#include <functional>
-#include <memory>
+#include "sihd/util/macro.hpp"
 
 namespace test
 {
@@ -71,16 +72,15 @@ struct SshServerHelper
             handler.add_allowed_user(user, password);
 
             // Set default exec handler that uses shell to run commands
-            handler.set_exec_handler_callback(
-                []([[maybe_unused]] SshSession *session,
-                   [[maybe_unused]] SshChannel *channel,
-                   std::string_view command,
-                   [[maybe_unused]] bool has_pty,
-                   [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
-                    auto *exec = new SshSubsystemExec(command);
-                    // Default: use shell mode (ParseMode::Shell is default)
-                    return exec;
-                });
+            handler.set_exec_handler_callback([]([[maybe_unused]] SshSession *session,
+                                                 [[maybe_unused]] SshChannel *channel,
+                                                 std::string_view command,
+                                                 [[maybe_unused]] bool has_pty,
+                                                 [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+                auto *exec = new SshSubsystemExec(command);
+                // Default: use shell mode (ParseMode::Shell is default)
+                return exec;
+            });
 
             // Use port 0 for dynamic allocation
             if (!server.set_port(0))
@@ -111,9 +111,7 @@ struct SshServerHelper
         }
 
         // Connect a client session with password authentication
-        bool connect_client(SshSession & session,
-                            const char *user = "testuser",
-                            const char *password = "testpass")
+        bool connect_client(SshSession & session, const char *user = "testuser", const char *password = "testpass")
         {
             // process_config=false: ignore ~/.ssh/config (proxy) for localhost tests
             if (!session.fast_connect({.user = user, .host = "127.0.0.1", .port = port, .process_config = false}))

@@ -4,11 +4,6 @@
 #include <memory>
 #include <set>
 
-#include <sihd/util/ABlockingService.hpp>
-#include <sihd/util/Configurable.hpp>
-#include <sihd/util/Node.hpp>
-#include <sihd/sys/platform.hpp>
-
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
@@ -16,6 +11,10 @@
 #include <sihd/http/IWebsocketHandler.hpp>
 #include <sihd/http/Mime.hpp>
 #include <sihd/http/WebService.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/ABlockingService.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace sihd::http
 {

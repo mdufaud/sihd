@@ -3,8 +3,8 @@
 
 #include <optional>
 
-#include <sihd/util/Timestamp.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Timestamp.hpp>
 
 namespace sihd::sys
 {

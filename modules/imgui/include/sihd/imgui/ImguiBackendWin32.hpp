@@ -1,11 +1,10 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDWIN32_HPP__
 
+#include <imgui_impl_win32.h>
 #include <tchar.h>
 
 #include <string>
-
-#include <imgui_impl_win32.h>
 
 #include <sihd/imgui/IImguiBackend.hpp>
 #include <sihd/imgui/IImguiRenderer.hpp>

@@ -1,7 +1,7 @@
-#include <stdexcept>
-
 #include <ctype.h>
+
 #include <cstring>
+#include <stdexcept>
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>

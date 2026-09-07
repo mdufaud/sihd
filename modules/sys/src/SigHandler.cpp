@@ -1,9 +1,9 @@
 #include <csignal>
 
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 typedef void (*sighandler_t)(int);

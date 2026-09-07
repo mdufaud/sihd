@@ -47,14 +47,14 @@ bool SigWaiter::_do_wait(int sig, Duration timeout)
 
     // Get initial received count
     const auto initial_status = signal::status(sig);
-    const size_t initial_received
-        = initial_status.has_value() ? initial_status->received.load(std::memory_order_relaxed) : 0;
+    const size_t initial_received = initial_status.has_value()
+                                        ? initial_status->received.load(std::memory_order_relaxed)
+                                        : 0;
 
     while (true)
     {
         const auto status = signal::status(sig);
-        const size_t current_received
-            = status.has_value() ? status->received.load(std::memory_order_relaxed) : 0;
+        const size_t current_received = status.has_value() ? status->received.load(std::memory_order_relaxed) : 0;
 
         if (current_received > initial_received)
         {

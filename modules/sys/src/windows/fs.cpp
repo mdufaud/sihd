@@ -1,10 +1,9 @@
-#include <windows.h> // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
-#include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
-
 #include <direct.h> // _mkdir _rmdir
 #include <fcntl.h>  // _O_WRONLY
 #include <io.h>     // _access _open _close _chsize_s
 #include <sys/stat.h>
+#include <windows.h>  // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
+#include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
 
 #include <cstdio>
 #include <filesystem>

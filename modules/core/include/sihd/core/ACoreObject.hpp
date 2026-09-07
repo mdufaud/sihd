@@ -1,11 +1,10 @@
 #ifndef __SIHD_CORE_ACOREOBJECT_HPP__
 #define __SIHD_CORE_ACOREOBJECT_HPP__
 
-#include <sihd/util/Configurable.hpp>
-#include <sihd/util/Node.hpp>
-
 #include <sihd/core/ACoreService.hpp>
 #include <sihd/core/Channel.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace sihd::core
 {
@@ -23,10 +22,7 @@ class ACoreObject: public sihd::util::Named,
         using ACoreService::start;
         using ACoreService::stop;
 
-        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr):
-            sihd::util::Named(name, parent)
-        {
-        }
+        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
         virtual ~ACoreObject() = default;
 
         bool is_running() const override { return false; }

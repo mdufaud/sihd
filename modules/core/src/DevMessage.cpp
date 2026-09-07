@@ -144,12 +144,8 @@ bool DevMessage::on_init()
             if (field_child != nullptr)
             {
                 _msg_fields.emplace(name, field_child);
-                this->add_unlinked_channel(name + IN_SUFFIX,
-                                           field_child->field_type(),
-                                           field_child->field_size());
-                this->add_unlinked_channel(name + OUT_SUFFIX,
-                                           field_child->field_type(),
-                                           field_child->field_size());
+                this->add_unlinked_channel(name + IN_SUFFIX, field_child->field_type(), field_child->field_size());
+                this->add_unlinked_channel(name + OUT_SUFFIX, field_child->field_type(), field_child->field_size());
             }
         }
     }

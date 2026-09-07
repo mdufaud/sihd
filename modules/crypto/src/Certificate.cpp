@@ -27,8 +27,14 @@ SIHD_LOGGER;
 namespace
 {
 
-X509 *as_cert(void *h) { return static_cast<X509 *>(h); }
-EVP_PKEY *as_key(void *h) { return static_cast<EVP_PKEY *>(h); }
+X509 *as_cert(void *h)
+{
+    return static_cast<X509 *>(h);
+}
+EVP_PKEY *as_key(void *h)
+{
+    return static_cast<EVP_PKEY *>(h);
+}
 
 void add_name_entry(X509_NAME *name, const char *field, const std::string & value)
 {
@@ -77,7 +83,10 @@ sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 
 Certificate::Certificate(): _handle(nullptr) {}
 
-Certificate::~Certificate() { this->clear(); }
+Certificate::~Certificate()
+{
+    this->clear();
+}
 
 Certificate::Certificate(const Certificate & other): _handle(nullptr)
 {
@@ -172,8 +181,10 @@ bool Certificate::generate_self_signed(const PrivateKey & key, const CertOptions
     if (!opts.subject_alt_names.empty())
     {
         std::string san = sihd::util::str::join(opts.subject_alt_names, ",");
-        X509_EXTENSION *ext
-            = X509V3_EXT_conf_nid(nullptr, nullptr, NID_subject_alt_name, const_cast<char *>(san.c_str()));
+        X509_EXTENSION *ext = X509V3_EXT_conf_nid(nullptr,
+                                                  nullptr,
+                                                  NID_subject_alt_name,
+                                                  const_cast<char *>(san.c_str()));
         if (ext)
         {
             X509_add_ext(cert, ext, -1);
@@ -187,8 +198,10 @@ bool Certificate::generate_self_signed(const PrivateKey & key, const CertOptions
 
     if (opts.is_ca)
     {
-        X509_EXTENSION *ext
-            = X509V3_EXT_conf_nid(nullptr, nullptr, NID_basic_constraints, const_cast<char *>("critical,CA:TRUE"));
+        X509_EXTENSION *ext = X509V3_EXT_conf_nid(nullptr,
+                                                  nullptr,
+                                                  NID_basic_constraints,
+                                                  const_cast<char *>("critical,CA:TRUE"));
         if (ext)
         {
             X509_add_ext(cert, ext, -1);

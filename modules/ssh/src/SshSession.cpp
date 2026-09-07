@@ -3,9 +3,9 @@
 #include <libssh/libssh.h>
 
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__)
@@ -36,10 +36,7 @@ struct SshKeyHashDeleter
 
 using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
 
-bool anon_ssh_options_set(ssh_session_struct *session,
-                          const char *from,
-                          ssh_options_e option,
-                          const void *value)
+bool anon_ssh_options_set(ssh_session_struct *session, const char *from, ssh_options_e option, const void *value)
 {
     int r = ssh_options_set(session, option, value);
     if (r != SSH_OK)
@@ -126,9 +123,7 @@ bool SshSession::check_hostkey()
     int ret = ssh_get_server_publickey(_impl_ptr->ssh_session_ptr, &pubkey_ptr);
     if (ret == SSH_ERROR)
     {
-        SIHD_LOG(error,
-                 "SshSession: failed to get public key: {}",
-                 ssh_get_error(_impl_ptr->ssh_session_ptr));
+        SIHD_LOG(error, "SshSession: failed to get public key: {}", ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     SshKey pubkey(pubkey_ptr);
@@ -159,10 +154,7 @@ bool SshSession::check_hostkey()
             return true;
         default:
             hexa = ssh_get_hexa(hash_ptr, hash_len);
-            SIHD_LOG(error,
-                     "SshSession: host key verification failed: {} (code = {})",
-                     hexa,
-                     static_cast<int>(state));
+            SIHD_LOG(error, "SshSession: host key verification failed: {} (code = {})", hexa, static_cast<int>(state));
             break;
     }
 #else
@@ -254,9 +246,8 @@ SshSession::AuthState SshSession::auth_key(const SshKey & private_key)
 
 SshSession::AuthState SshSession::auth_key_try(const SshKey & public_key)
 {
-    return AuthState(ssh_userauth_try_publickey(_impl_ptr->ssh_session_ptr,
-                                                nullptr,
-                                                static_cast<ssh_key>(public_key.key())));
+    return AuthState(
+        ssh_userauth_try_publickey(_impl_ptr->ssh_session_ptr, nullptr, static_cast<ssh_key>(public_key.key())));
 }
 
 SshSession::AuthState SshSession::auth_interactive_keyboard()
@@ -288,8 +279,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             {
 #if !defined(__SIHD_WINDOWS__)
                 char *ptr = getpass(prompt);
-                bool error
-                    = ptr == nullptr || ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, ptr) < 0;
+                bool error = ptr == nullptr || ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, ptr) < 0;
                 if (ptr != nullptr)
                     free(ptr);
                 if (error)
@@ -334,18 +324,12 @@ bool SshSession::set_port(int port)
 
 bool SshSession::set_verbosity(int verbosity)
 {
-    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr,
-                                "verbosity",
-                                SSH_OPTIONS_LOG_VERBOSITY,
-                                &verbosity);
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 }
 
 bool SshSession::set_process_config(bool enable)
 {
-    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr,
-                                "process_config",
-                                SSH_OPTIONS_PROCESS_CONFIG,
-                                &enable);
+    return anon_ssh_options_set(_impl_ptr->ssh_session_ptr, "process_config", SSH_OPTIONS_PROCESS_CONFIG, &enable);
 }
 
 bool SshSession::set_ssh_dir(std::string_view path)

@@ -10,8 +10,8 @@ namespace sihd::http
 
 struct CsrfResult
 {
-    std::string field_name;
-    std::string value;
+        std::string field_name;
+        std::string value;
 };
 
 // Scan an HTML body for a CSRF hidden input field.

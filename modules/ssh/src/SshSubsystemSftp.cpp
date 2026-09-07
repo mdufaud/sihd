@@ -3,12 +3,12 @@
  * @brief SFTP subsystem handler implementation using libssh's SFTP server API.
  */
 
-#include "sihd/ssh/utils.hpp"
-
 #include <dirent.h>
 #include <sys/stat.h>
 
 #include <sihd/sys/platform.hpp>
+
+#include "sihd/ssh/utils.hpp"
 
 #if !defined(__SIHD_WINDOWS__)
 # include <unistd.h>
@@ -19,11 +19,11 @@
 // Define WITH_SERVER before including sftp.h to get sftp_server_* functions
 #define WITH_SERVER 1
 
+#include <map>
+
 #include <libssh/libssh.h>
 #include <libssh/server.h>
 #include <libssh/sftp.h>
-
-#include <map>
 
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -160,8 +160,7 @@ SshSubsystemSftp::StatResult SshSubsystemSftp::StatResult::error(uint32_t code)
     return {false, code, {}};
 }
 
-SshSubsystemSftp::ReaddirResult SshSubsystemSftp::ReaddirResult::ok(std::vector<SftpAttributes> entries,
-                                                                    bool eof)
+SshSubsystemSftp::ReaddirResult SshSubsystemSftp::ReaddirResult::ok(std::vector<SftpAttributes> entries, bool eof)
 {
     return {true, eof, SSH_FX_OK, std::move(entries)};
 }
@@ -526,8 +525,7 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
     }
 
     // Create attributes for the resolved path
-    sftp_attributes attrs
-        = create_sftp_attributes({resolved, resolved, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_REGULAR});
+    sftp_attributes attrs = create_sftp_attributes({resolved, resolved, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_REGULAR});
     if (attrs)
     {
         sftp_reply_name(msg, resolved.c_str(), attrs);
@@ -1035,8 +1033,7 @@ void SshSubsystemSftp::Impl::handle_readlink(sftp_client_message_struct *msg)
     buf[len] = '\0';
     std::string target(buf);
 
-    sftp_attributes attrs
-        = create_sftp_attributes({target, target, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_SYMLINK});
+    sftp_attributes attrs = create_sftp_attributes({target, target, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_SYMLINK});
     if (attrs)
     {
         sftp_reply_name(msg, target.c_str(), attrs);
@@ -1089,9 +1086,7 @@ std::string SshSubsystemSftp::Impl::generate_handle()
     return fmt::format("sftp_handle_{}", next_handle_id++);
 }
 
-void SshSubsystemSftp::Impl::reply_status(sftp_client_message_struct *msg,
-                                          uint32_t status,
-                                          const std::string & message)
+void SshSubsystemSftp::Impl::reply_status(sftp_client_message_struct *msg, uint32_t status, const std::string & message)
 {
     const char *msg_str = message.empty() ? nullptr : message.c_str();
     sftp_reply_status(msg, status, msg_str);

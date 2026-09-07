@@ -4,7 +4,6 @@
 #include <sihd/net/INetServer.hpp>
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/Socket.hpp>
-
 #include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>

@@ -28,8 +28,7 @@ std::vector<uint8_t> compute(std::string_view algorithm, const uint8_t *data, si
     unsigned int digest_len = 0;
     std::vector<uint8_t> result(static_cast<size_t>(EVP_MD_get_size(md)));
 
-    bool ok = EVP_DigestInit_ex(ctx, md, nullptr) == 1
-              && EVP_DigestUpdate(ctx, data, len) == 1
+    bool ok = EVP_DigestInit_ex(ctx, md, nullptr) == 1 && EVP_DigestUpdate(ctx, data, len) == 1
               && EVP_DigestFinal_ex(ctx, result.data(), &digest_len) == 1;
 
     EVP_MD_CTX_free(ctx);

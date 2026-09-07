@@ -4,13 +4,13 @@
 // the C++ standard headers / imgui types included below
 #undef bool
 
+#include <imgui_internal.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
-
-#include <imgui_internal.h>
 
 #include <sihd/imgui/ImguiRendererNcurses.hpp>
 #include <sihd/util/Logger.hpp>
@@ -23,9 +23,9 @@ SIHD_LOGGER;
 namespace
 {
 
-constexpr float kSubCellThreshold  = 0.5f;
-constexpr float kCrossMaxSpan      = 3.0f;
-constexpr float kVertexEpsilon     = 0.01f;
+constexpr float kSubCellThreshold = 0.5f;
+constexpr float kCrossMaxSpan = 3.0f;
+constexpr float kVertexEpsilon = 0.01f;
 constexpr uint8_t kMinVisibleAlpha = 8;
 
 // ── Small helper utilities ──────────────────────────────────────────────────
@@ -82,7 +82,6 @@ static void scanline_extend(int x1, int y1, int x2, int y2, int ymax, std::vecto
     }
 }
 
-
 // ── Public static helpers (testable without ncurses) ────────────────────────
 
 bool ImguiRendererNcurses::is_glyph_triangle(const ImDrawVert & v0, const ImDrawVert & v1, const ImDrawVert & v2)
@@ -130,8 +129,8 @@ uint8_t ImguiRendererNcurses::col_to_ansi256_premul(ImU32 col)
     const uint8_t a = (col >> 24) & 0xFF;
     const float scale = (float)a / 255.0f;
     return rgb_to_ansi256((uint8_t)std::roundf(r * scale),
-                           (uint8_t)std::roundf(g * scale),
-                           (uint8_t)std::roundf(b * scale));
+                          (uint8_t)std::roundf(g * scale),
+                          (uint8_t)std::roundf(b * scale));
 }
 
 // Core formula: grayscale ramp (232–255) for r==g==b, 6×6×6 cube otherwise.
@@ -410,7 +409,9 @@ void ImguiRendererNcurses::_inject_resize_grips()
         ImGuiWindow *w = ctx->Windows[i];
         if (w == nullptr || !w->WasActive || w->Hidden)
             continue;
-        if (w->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+        if (w->Flags
+            & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_Tooltip
+               | ImGuiWindowFlags_Popup))
             continue;
         const int gx = (int)std::floor(w->Pos.x + w->Size.x);
         const int gy = (int)std::floor(w->Pos.y + w->Size.y);
@@ -438,7 +439,7 @@ void ImguiRendererNcurses::_inject_resize_grips()
         auto clear_block = [&](int cx, int cy) {
             if (cx < 0 || cx >= _screen_w || cy < 0 || cy >= _screen_h)
                 return;
-            TCell &dst = _screen[(size_t)(cy * _screen_w + cx)];
+            TCell & dst = _screen[(size_t)(cy * _screen_w + cx)];
             // Skip if another widget/window already painted text here (occluded window).
             if (dst.ch != 0 && dst.ch != (uint32_t)' ')
                 return;
@@ -449,7 +450,7 @@ void ImguiRendererNcurses::_inject_resize_grips()
             if (inside)
             {
                 const int nx = (cx >= 3) ? (cx - 3) : 0;
-                const TCell &src = _screen[(size_t)(cy * _screen_w + nx)];
+                const TCell & src = _screen[(size_t)(cy * _screen_w + nx)];
                 dst.fg = src.fg;
                 dst.bg = src.bg;
             }
@@ -468,7 +469,7 @@ void ImguiRendererNcurses::_inject_resize_grips()
         // Place '+' at actual hit-test cell (one beyond visible window edge).
         if (gx < 0 || gx >= _screen_w || gy < 0 || gy >= _screen_h)
             continue;
-        TCell &cell = _screen[(size_t)(gy * _screen_w + gx)];
+        TCell & cell = _screen[(size_t)(gy * _screen_w + gx)];
         // Skip if another window/widget already painted text at the grip cell (occluded window).
         if (cell.ch != 0 && cell.ch != (uint32_t)' ' && cell.ch != (uint32_t)'+')
             continue;
@@ -584,13 +585,14 @@ uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
     return (uint32_t)((yg_hi > yg_lo) ? 'v' : '^');
 }
 
-
 // ── _draw_glyph_quad() ────────────────────────────────────────────────────────
 // Renders one imgui text character. v0 is the top-left vertex of the quad
 // (PrimRectUV vertex a) — contains the glyph position and atlas UV.
 
-void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0, const ImDrawVert & v1,
-                                            [[maybe_unused]] const ImDrawVert & v2, const ImVec4 & clip)
+void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0,
+                                            const ImDrawVert & v1,
+                                            [[maybe_unused]] const ImDrawVert & v2,
+                                            const ImVec4 & clip)
 {
     // Use horizontal quad midpoint (TL.x + TR.x) / 2 to map glyph to its cell.
     // Variable-width glyphs (e.g. 'L') have a quad whose top-left is offset by
@@ -651,8 +653,7 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
     // is handle-shaped (not a wide-flat button bar). Real grabs are ~w/h<=4; a
     // full-width button is ~w/h>=29.
     const bool is_grab_active = (col == _slider_grab_col_active);
-    const bool is_slider_grab =
-        (col == _slider_grab_col) || (is_grab_active && width <= height * 8.0f);
+    const bool is_slider_grab = (col == _slider_grab_col) || (is_grab_active && width <= height * 8.0f);
     if (is_slider_grab && height >= 1.0f)
     {
         const int cx = (int)std::floor((xmin + xmax) / 2.0f);
@@ -832,8 +833,10 @@ bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
         cx1 += pts[vi].x;
         cy1 += pts[vi].y;
     }
-    cx0 /= 6.0f; cy0 /= 6.0f;
-    cx1 /= 6.0f; cy1 /= 6.0f;
+    cx0 /= 6.0f;
+    cy0 /= 6.0f;
+    cx1 /= 6.0f;
+    cy1 /= 6.0f;
     const float cdist = std::max(std::abs(cx0 - cx1), std::abs(cy0 - cy1));
     if (cdist > std::max(bw, bh) * 0.4f)
         return false;
@@ -945,11 +948,15 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
         ImVec2 c0 {0, 0}, c1 {0, 0};
         for (int k = 0; k < 6; ++k)
         {
-            c0.x += pts[k].x; c0.y += pts[k].y;
-            c1.x += pts[k + 6].x; c1.y += pts[k + 6].y;
+            c0.x += pts[k].x;
+            c0.y += pts[k].y;
+            c1.x += pts[k + 6].x;
+            c1.y += pts[k + 6].y;
         }
-        c0.x /= 6.0f; c0.y /= 6.0f;
-        c1.x /= 6.0f; c1.y /= 6.0f;
+        c0.x /= 6.0f;
+        c0.y /= 6.0f;
+        c1.x /= 6.0f;
+        c1.y /= 6.0f;
         const float cdx = c0.x - c1.x, cdy = c0.y - c1.y;
         if (cdx * cdx + cdy * cdy > 0.25f)
             return 0;

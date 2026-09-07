@@ -1,10 +1,10 @@
-#include <sihd/sys/DynLib.hpp>
-#include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <errhandlingapi.h>
 #include <libloaderapi.h>
 #include <windows.h>
+
+#include <sihd/sys/DynLib.hpp>
+#include <sihd/sys/os.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::sys
 {

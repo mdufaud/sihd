@@ -1,7 +1,7 @@
-#include <gtest/gtest.h>
-
 #include <cstdlib>
 #include <iostream>
+
+#include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
@@ -95,11 +95,9 @@ TEST_F(TestTerm, test_term_colors)
               << std::endl // making room
               << term::move_cursor_up(1) << "hello" << term::move_cursor_right(1) << term::move_cursor_down(1)
               << "world" << std::endl
-              << "i hate you" << term::attr::CLEAR_LINE << term::move_cursor_left(1000) << "i love you"
-              << std::endl
-              << "garbage xoxo garbage" << term::move_cursor_left(strlen(" garbage"))
-              << term::attr::CLEAR_LINE_END << term::move_cursor_left(strlen("xoxo") + 1)
-              << term::attr::CLEAR_LINE_BEG << std::endl
+              << "i hate you" << term::attr::CLEAR_LINE << term::move_cursor_left(1000) << "i love you" << std::endl
+              << "garbage xoxo garbage" << term::move_cursor_left(strlen(" garbage")) << term::attr::CLEAR_LINE_END
+              << term::move_cursor_left(strlen("xoxo") + 1) << term::attr::CLEAR_LINE_BEG << std::endl
               << "======================================================" << std::endl;
 }
 } // namespace test

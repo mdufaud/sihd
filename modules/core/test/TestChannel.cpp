@@ -1,9 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <sihd/core/Channel.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <sihd/core/Channel.hpp>
 
 namespace test
 {
@@ -30,8 +29,7 @@ class TestChannel: public ::testing::Test,
                 const ArrInt *arr_int = dynamic_cast<const ArrInt *>(c->array());
                 ASSERT_NE(arr_int, nullptr);
                 const int *c_arr_int = arr_int->data();
-                EXPECT_NO_THROW(_at_val = arr_int->at(0); _c_arr_val = c_arr_int[0];
-                                _read_val = c->read<int>(0););
+                EXPECT_NO_THROW(_at_val = arr_int->at(0); _c_arr_val = c_arr_int[0]; _read_val = c->read<int>(0););
             }
             _notified[c] += 1;
         }

@@ -1,9 +1,10 @@
 #ifndef __SIHD_PY_DIRECTORYSWITCHER_HPP__
 #define __SIHD_PY_DIRECTORYSWITCHER_HPP__
 
+#include <unistd.h>
+
 #include <string>
 #include <string_view>
-#include <unistd.h>
 
 namespace test
 {

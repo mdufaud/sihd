@@ -39,7 +39,7 @@ struct Calendar
         std::string str() const;
 };
 
-class Timestamp : public TimeBase<Timestamp>
+class Timestamp: public TimeBase<Timestamp>
 {
     public:
         static constexpr const char *default_format = "%Y/%m/%d %H:%M:%S";

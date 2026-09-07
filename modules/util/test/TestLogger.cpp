@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerFilter.hpp>
@@ -71,8 +72,8 @@ class TestLogger: public ::testing::Test
 
         bool has_logged_every_levels()
         {
-            return log_counter->debug > 0 && log_counter->info > 0 && log_counter->warning > 0
-                   && log_counter->error > 0 && log_counter->critical > 0;
+            return log_counter->debug > 0 && log_counter->info > 0 && log_counter->warning > 0 && log_counter->error > 0
+                   && log_counter->critical > 0;
         }
 
         std::string _old_thread_name;

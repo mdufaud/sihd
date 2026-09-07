@@ -1,12 +1,13 @@
 #include <gtest/gtest.h>
+
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevMessage.hpp>
-#include <sihd/util/Handler.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Message.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Message.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -63,16 +64,15 @@ TEST_F(TestDevMessage, test_devmessage)
           ch_str_out,
           ch_buffer_in,
           ch_buffer_out,
-          ch_trigger]
-        = dev->get_all_child<Channel>("active_in",
-                                      "size_in",
-                                      "str_in",
-                                      "active_out",
-                                      "size_out",
-                                      "str_out",
-                                      "buffer_in",
-                                      "buffer_out",
-                                      "trigger");
+          ch_trigger] = dev->get_all_child<Channel>("active_in",
+                                                    "size_in",
+                                                    "str_in",
+                                                    "active_out",
+                                                    "size_out",
+                                                    "str_out",
+                                                    "buffer_in",
+                                                    "buffer_out",
+                                                    "trigger");
 
     ASSERT_EQ(ch_active_in->size(), 1u);
     ASSERT_EQ(ch_size_in->size(), 1u);

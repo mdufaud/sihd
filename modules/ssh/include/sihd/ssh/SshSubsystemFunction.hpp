@@ -1,10 +1,10 @@
 #ifndef __SIHD_SSH_SSHSUBSYSTEMFUNCTION_HPP__
 #define __SIHD_SSH_SSHSUBSYSTEMFUNCTION_HPP__
 
-#include <sihd/ssh/ISshSubsystemHandler.hpp>
-
 #include <functional>
 #include <string>
+
+#include <sihd/ssh/ISshSubsystemHandler.hpp>
 
 namespace sihd::ssh
 {

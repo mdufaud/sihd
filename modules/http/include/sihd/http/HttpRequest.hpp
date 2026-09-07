@@ -5,8 +5,8 @@
 #include <string>
 #include <unordered_map>
 
-#include <sihd/json/fwd.hpp>
 #include <sihd/http/HttpHeader.hpp>
+#include <sihd/json/fwd.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 
@@ -29,9 +29,7 @@ class HttpRequest
         };
 
         HttpRequest(std::string_view url, RequestType request_type = Get);
-        HttpRequest(std::string_view url,
-                    const std::vector<std::string> & uri_args,
-                    RequestType request_type = Get);
+        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
         HttpRequest(HttpRequest &&) = default;
         HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();

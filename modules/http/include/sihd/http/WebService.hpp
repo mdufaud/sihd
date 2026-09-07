@@ -1,12 +1,11 @@
 #ifndef __SIHD_HTTP_WEBSERVICE_HPP__
 #define __SIHD_HTTP_WEBSERVICE_HPP__
 
-#include <sihd/util/Node.hpp>
-
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/Route.hpp>
+#include <sihd/util/Node.hpp>
 
 namespace sihd::http
 {

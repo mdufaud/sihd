@@ -71,7 +71,7 @@ void safe_close(int & fd)
     }
 }
 
-# if defined(ENABLE_SPAWN)
+#if defined(ENABLE_SPAWN)
 
 void add_dup_action(posix_spawn_file_actions_t *actions, int dup_from, int dup_to)
 {
@@ -89,9 +89,9 @@ void add_close_action(posix_spawn_file_actions_t *actions, int fd)
         posix_spawn_file_actions_addclose(actions, fd);
 }
 
-# endif // ENABLE_SPAWN
+#endif // ENABLE_SPAWN
 
-# if defined(ENABLE_FORK)
+#if defined(ENABLE_FORK)
 
 void setup_environ_in_child_process(const std::vector<const char *> & env)
 {
@@ -119,7 +119,7 @@ void dup_close(int fd_from, int fd_to)
         safe_close(fd_from);
 }
 
-# endif // ENABLE_FORK
+#endif // ENABLE_FORK
 
 std::pair<int, int> make_pipe()
 {
@@ -610,9 +610,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const std::vector
             status = _fun_to_execute();
         }
         else
-            status = execvpe(argv[0],
-                             const_cast<char *const *>(&(argv[0])),
-                             const_cast<char *const *>(&(env[0])));
+            status = execvpe(argv[0], const_cast<char *const *>(&(argv[0])), const_cast<char *const *>(&(env[0])));
         _exit(status);
     }
     _impl->process_watcher.pid = pid;

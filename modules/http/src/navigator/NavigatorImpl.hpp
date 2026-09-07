@@ -15,8 +15,8 @@
 
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/Navigator.hpp>
-#include <sihd/util/Url.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
+#include <sihd/util/Url.hpp>
 #include <sihd/util/Worker.hpp>
 
 #include "../curl/utils.hpp"
@@ -146,7 +146,7 @@ struct Navigator::Impl
         std::optional<SingleResponse> try_perform(const std::string & url, FILE *download_fp = nullptr);
         std::optional<NavigatorResponse> perform_request(const std::string & start_url,
                                                          std::string_view method,
-                                                         RequestOptions opts = RequestOptions{});
+                                                         RequestOptions opts = RequestOptions {});
         std::optional<NavigatorResponse> perform_multipart(const std::string & url,
                                                            const std::vector<MultipartField> & fields);
         std::optional<NavigatorResponse> perform_download(const std::string & url, const std::string & path);

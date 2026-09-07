@@ -1,5 +1,13 @@
-#include <gtest/gtest.h>
 #include <iostream>
+
+#include <gtest/gtest.h>
+
+#include <sihd/sys/os.hpp>
+#include <sihd/tui/LoggerComponent.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/num.hpp>
+#include <sihd/util/str.hpp>
+#include <sihd/util/term.hpp>
 
 #include "ftxui/component/captured_mouse.hpp" // for ftxui
 #include "ftxui/component/component.hpp"      // for CatchEvent, Renderer
@@ -7,13 +15,6 @@
 #include "ftxui/component/mouse.hpp" // for Mouse, Mouse::Left, Mouse::Middle, Mouse::None, Mouse::Pressed, Mouse::Released, Mouse::Right, Mouse::WheelDown, Mouse::WheelUp
 #include "ftxui/component/screen_interactive.hpp" // for ScreenInteractive
 #include "ftxui/dom/elements.hpp"                 // for text, vbox, window, Element, Elements
-
-#include <sihd/tui/LoggerComponent.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/num.hpp>
-#include <sihd/sys/os.hpp>
-#include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 
 namespace test
 {

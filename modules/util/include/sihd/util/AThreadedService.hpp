@@ -18,10 +18,7 @@ class AThreadedService: public sihd::util::AService
         // only if service started a thread
         void set_start_synchronised(bool active);
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override
-        {
-            return &_service_controller;
-        }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
 
     protected:
         virtual bool on_start() = 0;

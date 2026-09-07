@@ -196,11 +196,9 @@ TEST_F(TestRequest, test_routing)
     scope.server._webservice->set_entry_point("items/special", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("literal");
     });
-    scope.server._webservice->set_entry_point("fs/{path...}",
-                                              [](const HttpRequest & req, HttpResponse & resp) {
-                                                  resp.set_plain_content(
-                                                      std::string(req.path_param("path").value_or("")));
-                                              });
+    scope.server._webservice->set_entry_point("fs/{path...}", [](const HttpRequest & req, HttpResponse & resp) {
+        resp.set_plain_content(std::string(req.path_param("path").value_or("")));
+    });
     scope.start(3004);
 
     // parameterized route

@@ -164,8 +164,7 @@ TEST_F(TestObservable, test_obs_decorator)
 
     Decorator<SomeObservable> decorator;
 
-    Handler<SomeObservable *> handler(
-        [&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
+    Handler<SomeObservable *> handler([&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
     observable.add_observer(&handler);
 
     decorator.decorate(&observable);

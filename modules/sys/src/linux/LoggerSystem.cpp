@@ -1,7 +1,7 @@
+#include <syslog.h>
+
 #include <sihd/sys/LoggerSystem.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <syslog.h>
 
 namespace sihd::sys
 {
@@ -11,7 +11,8 @@ using namespace sihd::util;
 SIHD_LOGGER;
 
 struct LoggerSystem::Impl
-{};
+{
+};
 
 LoggerSystem::LoggerSystem(std::string_view progname, int facility, int options): _impl(std::make_unique<Impl>())
 {

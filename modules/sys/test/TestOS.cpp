@@ -2,9 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/sys/os.hpp>
 
 namespace test
 {

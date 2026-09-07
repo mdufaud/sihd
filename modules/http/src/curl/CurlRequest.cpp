@@ -20,11 +20,7 @@ size_t curl_header_callback(char *ptr, size_t size, size_t nmemb, void *userdata
     return size * nmemb;
 }
 
-int curl_progress_callback(void *userdata,
-                           curl_off_t dltotal,
-                           curl_off_t dlnow,
-                           curl_off_t ultotal,
-                           curl_off_t ulnow)
+int curl_progress_callback(void *userdata, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow)
 {
     ProgressCallbackWrapper *wrapper = static_cast<ProgressCallbackWrapper *>(userdata);
     if (wrapper->method(dltotal, dlnow, ultotal, ulnow))

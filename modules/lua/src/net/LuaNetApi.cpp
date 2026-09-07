@@ -5,16 +5,14 @@
 #include <sihd/lua/util/LuaUtilApi.hpp>
 // clang-format on
 
-#include <sihd/util/Node.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
-
 #include <sihd/core/Device.hpp>
-
 #include <sihd/net/DeviceTcpClient.hpp>
 #include <sihd/net/DeviceTcpServer.hpp>
 #include <sihd/net/DeviceUdpReceiver.hpp>
 #include <sihd/net/DeviceUdpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::lua
 {
@@ -37,31 +35,37 @@ void LuaNetApi::load_base(Vm & vm)
         // address value type
         .beginClass<IpAddr>("IpAddr")
         .addConstructor<void (*)()>()
-        .addFunction("set_hostname",
-                     +[](IpAddr *self, const std::string & hostname) { self->set_hostname(hostname); })
+        .addFunction(
+            "set_hostname",
+            +[](IpAddr *self, const std::string & hostname) { self->set_hostname(hostname); })
         .addFunction("empty", &IpAddr::empty)
         .addFunction("has_ip", &IpAddr::has_ip)
         .addFunction("is_ipv4", &IpAddr::is_ipv4)
         .addFunction("is_ipv6", &IpAddr::is_ipv6)
         .addFunction("port", &IpAddr::port)
         .addFunction("fetch_hostname", &IpAddr::fetch_hostname)
-        .addFunction("hostname", +[](IpAddr *self) -> std::string { return self->hostname(); })
+        .addFunction(
+            "hostname",
+            +[](IpAddr *self) -> std::string { return self->hostname(); })
         .addFunction("str", &IpAddr::str)
-        .addFunction("set_subnet_mask",
-                     +[](IpAddr *self, const std::string & mask) -> bool { return self->set_subnet_mask(mask); })
+        .addFunction(
+            "set_subnet_mask",
+            +[](IpAddr *self, const std::string & mask) -> bool { return self->set_subnet_mask(mask); })
         .addFunction("has_subnet", &IpAddr::has_subnet)
         .addFunction("subnet_value", &IpAddr::subnet_value)
         .addFunction("dump_subnet", &IpAddr::dump_subnet)
-        .addFunction("is_same_subnet",
-                     +[](IpAddr *self, const IpAddr & other) -> bool { return self->is_same_subnet(other); })
+        .addFunction(
+            "is_same_subnet",
+            +[](IpAddr *self, const IpAddr & other) -> bool { return self->is_same_subnet(other); })
         .endClass()
         // factory: net.ip_addr("host") or net.ip_addr("host", port)
-        .addFunction("ip_addr",
-                     +[](const std::string & host, luabridge::LuaRef port) -> IpAddr {
-                         if (port.isNil())
-                             return IpAddr(host);
-                         return IpAddr(host, static_cast<int>(port));
-                     })
+        .addFunction(
+            "ip_addr",
+            +[](const std::string & host, luabridge::LuaRef port) -> IpAddr {
+                if (port.isNil())
+                    return IpAddr(host);
+                return IpAddr(host, static_cast<int>(port));
+            })
         // devices (derive from core Device: core must be loaded first)
         .deriveClass<DeviceTcpClient, Device>("DeviceTcpClient")
         .addConstructorFrom<SmartNodePtr<DeviceTcpClient>, void(const std::string &, Node *)>()

@@ -1,10 +1,9 @@
+#include <sihd/core/DevRecorder.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
-
-#include <sihd/core/DevRecorder.hpp>
 
 #define CHANNEL_RECORDS "records"
 
@@ -41,9 +40,7 @@ bool DevRecorder::add_record_channel(std::string_view conf)
     std::vector<std::string> split = splitter.split(conf);
     if (split.size() != 2)
     {
-        SIHD_LOG(error,
-                 "DevRecorder: record channel configuration got '{}' - expected: ALIAS=CHANNEL_PATH",
-                 conf);
+        SIHD_LOG(error, "DevRecorder: record channel configuration got '{}' - expected: ALIAS=CHANNEL_PATH", conf);
         return false;
     }
     _map_channels_alias[split[0]] = split[1];

@@ -1,10 +1,9 @@
 #ifndef __SIHD_IMGUI_IMGUIRENDERERDIRECTX_HPP__
 #define __SIHD_IMGUI_IMGUIRENDERERDIRECTX_HPP__
 
-#include <tchar.h>
-
 #include <d3d11.h>
 #include <imgui_impl_dx11.h>
+#include <tchar.h>
 
 #include <sihd/imgui/IImguiRenderer.hpp>
 

@@ -3,12 +3,11 @@
 
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/Socket.hpp>
-
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/sys/Poll.hpp>
 
 namespace sihd::net
 {

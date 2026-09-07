@@ -11,8 +11,8 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -55,10 +55,7 @@ bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
         // 0 is returned if src does not contain a character string representing a valid network address in
         // the specified address family
         if (ret == -1)
-            SIHD_LOG(error,
-                     "IpAddr: to_sockaddr_in error for ip '{}': {}",
-                     ip,
-                     sihd::sys::os::last_error_str());
+            SIHD_LOG(error, "IpAddr: to_sockaddr_in error for ip '{}': {}", ip, sihd::sys::os::last_error_str());
         return false;
     }
     addr->sin_family = AF_INET;
@@ -74,10 +71,7 @@ bool to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int port = 0)
         // 0 is returned if src does not contain a character string representing a valid network address in
         // the specified address family
         if (ret == -1)
-            SIHD_LOG(error,
-                     "IpAddr: to_sockaddr_in6 error for ip '{}': {}",
-                     ip,
-                     sihd::sys::os::last_error_str());
+            SIHD_LOG(error, "IpAddr: to_sockaddr_in6 error for ip '{}': {}", ip, sihd::sys::os::last_error_str());
         return false;
     }
     addr->sin6_family = AF_INET6;
@@ -151,15 +145,9 @@ IpAddr::IpAddr(const sockaddr & addr, size_t addr_len): IpAddr()
 
 IpAddr::IpAddr(const sockaddr & addr): IpAddr(addr, 0) {}
 
-IpAddr::IpAddr(const sockaddr_in & addr):
-    IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in))
-{
-}
+IpAddr::IpAddr(const sockaddr_in & addr): IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in)) {}
 
-IpAddr::IpAddr(const sockaddr_in6 & addr):
-    IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in6))
-{
-}
+IpAddr::IpAddr(const sockaddr_in6 & addr): IpAddr(reinterpret_cast<const sockaddr &>(addr), sizeof(sockaddr_in6)) {}
 
 IpAddr::IpAddr(const IpAddr & addr): IpAddr()
 {
@@ -194,7 +182,6 @@ bool IpAddr::operator==(const IpAddr & other) const
         return memcmp(&_addr.sockaddr_in6.sin6_addr, &other._addr.sockaddr_in6.sin6_addr, sizeof(in6_addr)) == 0;
     return true;
 }
-
 
 void IpAddr::set_hostname(std::string_view hostname)
 {

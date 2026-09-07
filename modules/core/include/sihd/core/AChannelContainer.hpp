@@ -1,12 +1,11 @@
 #ifndef __SIHD_CORE_ACHANNELCONTAINER_HPP__
 #define __SIHD_CORE_ACHANNELCONTAINER_HPP__
 
+#include <sihd/core/Channel.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/str.hpp>
-
-#include <sihd/core/Channel.hpp>
 
 namespace sihd::core
 {
@@ -54,14 +53,8 @@ class AChannelContainer: public sihd::util::Node,
                                                 bool check_match = true);
 
         // creates a resizable channel and adds it as a child
-        Channel *add_channel_resizable(const std::string & name,
-                                       sihd::util::Type type,
-                                       size_t size,
-                                       size_t capacity);
-        Channel *add_channel_resizable(const std::string & name,
-                                       std::string_view type,
-                                       size_t size,
-                                       size_t capacity);
+        Channel *add_channel_resizable(const std::string & name, sihd::util::Type type, size_t size, size_t capacity);
+        Channel *add_channel_resizable(const std::string & name, std::string_view type, size_t size, size_t capacity);
 
         bool observe_channel(const std::string & channel_name);
         bool observe_channel(Channel *c);

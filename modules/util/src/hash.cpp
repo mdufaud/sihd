@@ -1,4 +1,5 @@
 #include <cstring>
+
 #include <sihd/util/hash.hpp>
 
 namespace sihd::util::hash

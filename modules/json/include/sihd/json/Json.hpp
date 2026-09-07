@@ -1,6 +1,8 @@
 #ifndef __SIHD_JSON_JSON_HPP__
 #define __SIHD_JSON_JSON_HPP__
 
+#include <simdjson.h>
+
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -9,8 +11,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <simdjson.h>
 
 namespace sihd::json
 {

@@ -6,13 +6,12 @@
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/request.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Worker.hpp>
-
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/http/LuaHttpApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Worker.hpp>
 
 namespace test
 {
@@ -24,10 +23,11 @@ using namespace sihd::http;
 class TestLuaHttpApi: public ::testing::Test
 {
     protected:
-        TestLuaHttpApi(): _worker([this] {
-            _server->start();
-            return true;
-        })
+        TestLuaHttpApi():
+            _worker([this] {
+                _server->start();
+                return true;
+            })
         {
             sihd::util::LoggerManager::stream();
         }

@@ -7,15 +7,14 @@
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
-
-#include <sihd/util/Array.hpp>
 #include <sihd/sys/File.hpp>
-#include <sihd/util/Handler.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/TmpDir.hpp>
-#include <sihd/util/Worker.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Handler.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Worker.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -219,11 +218,10 @@ TEST_F(TestSshServer, test_custom_auth_callback)
     BasicSshServerHandler handler;
 
     // Use custom callback instead of user list
-    handler.set_auth_password_callback(
-        [](SshSession *, std::string_view user, std::string_view password) -> bool {
-            SIHD_LOG(info, "Custom auth callback: user={}, pass={}", user, password);
-            return user == "dynamic" && password == "secret";
-        });
+    handler.set_auth_password_callback([](SshSession *, std::string_view user, std::string_view password) -> bool {
+        SIHD_LOG(info, "Custom auth callback: user={}, pass={}", user, password);
+        return user == "dynamic" && password == "secret";
+    });
 
     ASSERT_TRUE(server.set_port(0));
     ASSERT_TRUE(server.set_rsa_key(HOST_KEY_PATH));

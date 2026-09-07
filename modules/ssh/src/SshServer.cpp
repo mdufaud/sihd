@@ -14,18 +14,17 @@
 #include <libssh/callbacks.h>
 #include <libssh/server.h>
 
-#include <sihd/sys/NamedFactory.hpp>
-#include <sihd/sys/Poll.hpp>
-#include <sihd/sys/os.hpp>
-#include <sihd/util/Defer.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/ISshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/Poll.hpp>
+#include <sihd/sys/os.hpp>
+#include <sihd/util/Defer.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {
@@ -140,8 +139,7 @@ int callback_auth_pubkey(ssh_session session,
         return SSH_AUTH_DENIED;
 
     SshKey key(key_dup);
-    bool allowed
-        = data->server->server_handler()->on_auth_pubkey(data->server, data->session, user ? user : "", key);
+    bool allowed = data->server->server_handler()->on_auth_pubkey(data->server, data->session, user ? user : "", key);
     if (allowed)
     {
         data->authenticated = true;
@@ -180,8 +178,7 @@ ssh_channel callback_channel_open(ssh_session session, void *userdata)
 
     if (data->server->server_handler())
     {
-        bool allowed
-            = data->server->server_handler()->on_channel_open(data->server, data->session, ch_data->wrapper);
+        bool allowed = data->server->server_handler()->on_channel_open(data->server, data->session, ch_data->wrapper);
         if (!allowed)
         {
             // ~SshChannel frees the channel; detach so we free it exactly once.
@@ -288,10 +285,7 @@ int callback_channel_shell_request(ssh_session session, ssh_channel channel, voi
     return SSH_ERROR;
 }
 
-int callback_channel_exec_request(ssh_session session,
-                                  ssh_channel channel,
-                                  const char *command,
-                                  void *userdata)
+int callback_channel_exec_request(ssh_session session, ssh_channel channel, const char *command, void *userdata)
 {
     auto *data = static_cast<SessionData *>(userdata);
     (void)session;
@@ -324,11 +318,10 @@ int callback_channel_subsystem_request([[maybe_unused]] ssh_session session,
 
     if (data->server->server_handler())
     {
-        bool allowed
-            = data->server->server_handler()->on_channel_request_subsystem(data->server,
-                                                                           data->session,
-                                                                           ch_data->wrapper,
-                                                                           subsystem ? subsystem : "");
+        bool allowed = data->server->server_handler()->on_channel_request_subsystem(data->server,
+                                                                                    data->session,
+                                                                                    ch_data->wrapper,
+                                                                                    subsystem ? subsystem : "");
         return allowed ? SSH_OK : SSH_ERROR;
     }
     return SSH_ERROR;
@@ -634,12 +627,11 @@ struct SshServer::Impl
             ssh_event_remove_session(event, session);
 
             // Remove from sessions vector
-            sessions.erase(std::remove_if(sessions.begin(),
-                                          sessions.end(),
-                                          [session](const std::unique_ptr<SshSession> & s) {
-                                              return s->session() == session;
-                                          }),
-                           sessions.end());
+            sessions.erase(
+                std::remove_if(sessions.begin(),
+                               sessions.end(),
+                               [session](const std::unique_ptr<SshSession> & s) { return s->session() == session; }),
+                sessions.end());
         }
 
         void cleanup_closed_sessions(SshServer *server)

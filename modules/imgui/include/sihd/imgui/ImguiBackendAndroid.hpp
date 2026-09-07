@@ -1,16 +1,17 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDANDROID_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDANDROID_HPP__
 
+#include <android_native_app_glue.h>
+#include <imgui_impl_android.h>
+
+#include <string>
+
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <android/configuration.h>
 #include <android/log.h>
-#include <android_native_app_glue.h>
-#include <imgui_impl_android.h>
 
 #include <sihd/imgui/IImguiBackend.hpp>
-
-#include <string>
 
 namespace sihd::imgui
 {

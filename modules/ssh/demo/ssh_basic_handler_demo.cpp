@@ -17,16 +17,7 @@
  *   sftp -P 2222 demo@localhost                    # SFTP session
  */
 
-#include <CLI/CLI.hpp>
 #include <csignal>
-
-#include <sihd/sys/SigWatcher.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerManager.hpp>
-#include <sihd/util/Worker.hpp>
-#include <sihd/sys/platform.hpp>
-#include <sihd/util/term.hpp>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
@@ -35,6 +26,15 @@
 #include <sihd/ssh/SshSubsystemPty.hpp>
 #include <sihd/ssh/SshSubsystemSftp.hpp>
 #include <sihd/ssh/WinSize.hpp>
+#include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerManager.hpp>
+#include <sihd/util/Worker.hpp>
+#include <sihd/util/term.hpp>
+
+#include <CLI/CLI.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 

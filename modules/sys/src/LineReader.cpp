@@ -129,8 +129,7 @@ bool LineReader::read_next()
             // look for delimiter
             size_t copy_len = 0;
             const char *read_at = _read_buff.data() + _last_read_index;
-            const char *match
-                = static_cast<const char *>(memchr(read_at, _delimiter, _read_size - _last_read_index));
+            const char *match = static_cast<const char *>(memchr(read_at, _delimiter, _read_size - _last_read_index));
             if (match != nullptr)
                 copy_len = (match - read_at) + static_cast<size_t>(_put_delimiter_in_line);
             else

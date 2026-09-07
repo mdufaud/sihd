@@ -12,7 +12,11 @@ using sihd::util::Url;
 
 SIHD_LOGGER;
 
-int Navigator::Impl::ws_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len)
+int Navigator::Impl::ws_lws_callback(struct lws *wsi,
+                                     enum lws_callback_reasons reason,
+                                     void *user,
+                                     void *in,
+                                     size_t len)
 {
     Navigator::Impl *impl = static_cast<Navigator::Impl *>(user);
     if (impl == nullptr)
@@ -25,7 +29,7 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi, enum lws_callback_reasons 
             SIHD_LOG(debug, "Navigator: WebSocket connection established");
             {
                 std::lock_guard lock(impl->ws.mutex);
-                impl->ws.connected    = true;
+                impl->ws.connected = true;
                 impl->ws.handshake_done = true;
             }
             impl->ws.cv.notify_all();
@@ -65,7 +69,7 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi, enum lws_callback_reasons 
             std::lock_guard lock(impl->ws.mutex);
             if (!impl->ws.send_queue.empty())
             {
-                auto & msg      = impl->ws.send_queue.front();
+                auto & msg = impl->ws.send_queue.front();
                 size_t data_len = msg.data.size();
 
                 std::vector<uint8_t> buf(LWS_PRE + data_len);
@@ -93,7 +97,7 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi, enum lws_callback_reasons 
             SIHD_LOG(error, "Navigator: WebSocket connection error: {}", error_msg);
             {
                 std::lock_guard lock(impl->ws.mutex);
-                impl->ws.connected    = false;
+                impl->ws.connected = false;
                 impl->ws.handshake_done = true;
             }
             impl->ws.cv.notify_all();
@@ -194,7 +198,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
 
     struct lws_client_connect_info connect_info;
     memset(&connect_info, 0, sizeof(connect_info));
-    connect_info.context   = ws.context;
+    connect_info.context = ws.context;
     connect_info.address = parsed.host.c_str();
     connect_info.port = parsed.port != 0 ? parsed.port : scheme_port(parsed.scheme);
     connect_info.path = parsed.path.c_str();
@@ -222,7 +226,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     }
 
     ws.handshake_done = false;
-    ws.connected      = false;
+    ws.connected = false;
 
     ws.worker.set_method([this] {
         while (!ws.stop_requested && ws.worker.is_worker_started())
@@ -261,8 +265,8 @@ void Navigator::Impl::ws_disconnect()
         lws_context_destroy(ws.context);
         ws.context = nullptr;
     }
-    ws.wsi            = nullptr;
-    ws.connected      = false;
+    ws.wsi = nullptr;
+    ws.connected = false;
     ws.handshake_done = false;
     ws.stop_requested = false;
 }

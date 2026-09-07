@@ -1,9 +1,11 @@
-#include <gtest/gtest.h>
 #include <iostream>
+
+#include <gtest/gtest.h>
+
 #include <sihd/bt/BtUtils.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
 namespace test
@@ -57,12 +59,7 @@ TEST_F(TestBtScan, test_btscan_scan)
     auto devices = BtUtils::scan(3000);
     for (const auto & dev : devices)
     {
-        SIHD_LOG(info,
-                 "Device: {} [{}] {} dBm connectable={}",
-                 dev.identifier,
-                 dev.address,
-                 dev.rssi,
-                 dev.connectable);
+        SIHD_LOG(info, "Device: {} [{}] {} dBm connectable={}", dev.identifier, dev.address, dev.rssi, dev.connectable);
     }
 }
 } // namespace test

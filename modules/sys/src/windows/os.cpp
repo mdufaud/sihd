@@ -23,9 +23,9 @@
 typedef void (*sighandler_t)(int);
 
 // same fallback as the one used by linux/os.cpp when rlimits are unavailable
-# if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
-#  define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
-# endif
+#if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
+# define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
+#endif
 
 using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
 

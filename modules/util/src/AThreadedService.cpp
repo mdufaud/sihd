@@ -3,9 +3,7 @@
 namespace sihd::util
 {
 
-AThreadedService::AThreadedService(std::string_view thread_name):
-    _thread_name(thread_name),
-    _start_synchronised(false)
+AThreadedService::AThreadedService(std::string_view thread_name): _thread_name(thread_name), _start_synchronised(false)
 {
     this->set_service_nb_thread(1);
 }

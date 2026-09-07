@@ -4,10 +4,11 @@
 #endif
 
 #include <gtest/gtest.h>
+
 #include <sihd/sys/LineReader.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/profiling.hpp>
 
@@ -326,8 +327,7 @@ TEST_F(TestLineReader, test_linereader_perf)
     std::string path_input = fs::combine(_tmp_dir.path(), "perf_filegen.txt");
     std::string path_file = fs::combine(_tmp_dir.path(), "perf_compare_file.txt");
     std::string path_line_reader = fs::combine(_tmp_dir.path(), "perf_compare_line_reader.txt");
-    std::string path_line_reader_no_memory
-        = fs::combine(_tmp_dir.path(), "perf_compare_line_reader_no_memory.txt");
+    std::string path_line_reader_no_memory = fs::combine(_tmp_dir.path(), "perf_compare_line_reader_no_memory.txt");
 
     SIHD_LOG(info, "Input: {}", path_input);
     SIHD_LOG(info, "Output std::getline: {}", path_file);

@@ -1,15 +1,13 @@
-#include <pybind11/embed.h>
-
 #include <chrono>
 
 #include <gtest/gtest.h>
+#include <pybind11/embed.h>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebService.hpp>
+#include <sihd/py/http/PyHttpApi.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
-
-#include <sihd/py/http/PyHttpApi.hpp>
 
 #include "../DirectorySwitcher.hpp"
 
@@ -23,10 +21,11 @@ using namespace sihd::util;
 class TestPyHttpApi: public ::testing::Test
 {
     protected:
-        TestPyHttpApi(): _worker([this] {
-            _server->start();
-            return true;
-        })
+        TestPyHttpApi():
+            _worker([this] {
+                _server->start();
+                return true;
+            })
         {
             sihd::util::LoggerManager::stream();
         }

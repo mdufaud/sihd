@@ -5,11 +5,10 @@
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
-
 #include <sihd/zip/zip.hpp>
 
 namespace test

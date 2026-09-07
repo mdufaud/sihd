@@ -1,4 +1,4 @@
-#include <sihd/sys/platform.hpp>
+#include <windows.h>
 
 #include <cstring>
 #include <list>
@@ -7,10 +7,9 @@
 #include <sihd/sys/FileWatcher.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
-
-#include <windows.h>
 
 #define EVENT_SIZE (sizeof(FILE_NOTIFY_INFORMATION))
 #define EVENT_BUFFER_LEN (20 * (EVENT_SIZE + MAX_PATH))
@@ -68,10 +67,7 @@ struct FileWatcher::Impl
                 std::string filename_filter;
         };
 
-        Impl(std::vector<FileWatcherEvent> & events): _events(events)
-        {
-            _buffer.resize(EVENT_BUFFER_LEN);
-        }
+        Impl(std::vector<FileWatcherEvent> & events): _events(events) { _buffer.resize(EVENT_BUFFER_LEN); }
         ~Impl() { this->terminate(); }
 
         std::string _buffer;
@@ -89,17 +85,13 @@ struct FileWatcher::Impl
 
 bool FileWatcher::Impl::is_watching(std::string_view path)
 {
-    return std::find_if(_watchers.begin(),
-                        _watchers.end(),
-                        [path](const Watcher & w) { return w.path == path; })
+    return std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; })
            != _watchers.end();
 }
 
 bool FileWatcher::Impl::rm_watch(std::string_view path)
 {
-    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) {
-        return w.path == path;
-    });
+    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; });
     const bool found = it != _watchers.end();
     if (found)
     {
@@ -237,8 +229,8 @@ bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
             {
                 break;
             }
-            event = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(
-                reinterpret_cast<uint8_t *>(event) + event->NextEntryOffset);
+            event = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(reinterpret_cast<uint8_t *>(event)
+                                                                + event->NextEntryOffset);
         }
 
         constexpr bool watch_subtree = FALSE;

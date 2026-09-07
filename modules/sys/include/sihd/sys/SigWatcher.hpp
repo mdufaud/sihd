@@ -7,13 +7,13 @@
 
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/SigHandler.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/sys/platform.hpp>
 
 // signalfd is only available on Linux (not Android, not Emscripten)
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)

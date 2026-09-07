@@ -1,13 +1,13 @@
+#include <iphlpapi.h>
+#include <ws2tcpip.h>
+
+#include <cstdio>
+
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <cstdio>
-
-#include <iphlpapi.h>
-#include <ws2tcpip.h>
 
 namespace sihd::net
 {
@@ -25,18 +25,54 @@ constexpr uint32_t WIFF_MULTICAST = 0x20;
 constexpr uint32_t WIFF_NOARP = 0x40;
 } // namespace
 
-bool NetInterface::up() const { return _flags & WIFF_UP; }
-bool NetInterface::broadcast() const { return _flags & WIFF_BROADCAST; }
-bool NetInterface::loopback() const { return _flags & WIFF_LOOPBACK; }
-bool NetInterface::point2point() const { return _flags & WIFF_POINTOPOINT; }
-bool NetInterface::running() const { return _flags & WIFF_RUNNING; }
-bool NetInterface::noarp() const { return _flags & WIFF_NOARP; }
-bool NetInterface::promisc() const { return false; }
-bool NetInterface::notrailers() const { return false; }
-bool NetInterface::master() const { return false; }
-bool NetInterface::slave() const { return false; }
-bool NetInterface::all_multicast() const { return false; }
-bool NetInterface::supports_multicast() const { return _flags & WIFF_MULTICAST; }
+bool NetInterface::up() const
+{
+    return _flags & WIFF_UP;
+}
+bool NetInterface::broadcast() const
+{
+    return _flags & WIFF_BROADCAST;
+}
+bool NetInterface::loopback() const
+{
+    return _flags & WIFF_LOOPBACK;
+}
+bool NetInterface::point2point() const
+{
+    return _flags & WIFF_POINTOPOINT;
+}
+bool NetInterface::running() const
+{
+    return _flags & WIFF_RUNNING;
+}
+bool NetInterface::noarp() const
+{
+    return _flags & WIFF_NOARP;
+}
+bool NetInterface::promisc() const
+{
+    return false;
+}
+bool NetInterface::notrailers() const
+{
+    return false;
+}
+bool NetInterface::master() const
+{
+    return false;
+}
+bool NetInterface::slave() const
+{
+    return false;
+}
+bool NetInterface::all_multicast() const
+{
+    return false;
+}
+bool NetInterface::supports_multicast() const
+{
+    return _flags & WIFF_MULTICAST;
+}
 
 std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
@@ -57,7 +93,8 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
             free(addresses);
             addresses = nullptr;
         }
-    } while (result == ERROR_BUFFER_OVERFLOW);
+    }
+    while (result == ERROR_BUFFER_OVERFLOW);
 
     if (result != NO_ERROR)
     {
@@ -101,10 +138,14 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
         if (adapter->PhysicalAddressLength == 6)
         {
             char macaddrstr[18] = {0};
-            sprintf(macaddrstr, "%02X:%02X:%02X:%02X:%02X:%02X",
-                    adapter->PhysicalAddress[0], adapter->PhysicalAddress[1],
-                    adapter->PhysicalAddress[2], adapter->PhysicalAddress[3],
-                    adapter->PhysicalAddress[4], adapter->PhysicalAddress[5]);
+            sprintf(macaddrstr,
+                    "%02X:%02X:%02X:%02X:%02X:%02X",
+                    adapter->PhysicalAddress[0],
+                    adapter->PhysicalAddress[1],
+                    adapter->PhysicalAddress[2],
+                    adapter->PhysicalAddress[3],
+                    adapter->PhysicalAddress[4],
+                    adapter->PhysicalAddress[5]);
             netif.set_macaddr(macaddrstr);
         }
 

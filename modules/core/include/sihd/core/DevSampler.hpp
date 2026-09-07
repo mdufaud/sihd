@@ -3,10 +3,9 @@
 
 #include <set>
 
+#include <sihd/core/Device.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/StepWorker.hpp>
-
-#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {

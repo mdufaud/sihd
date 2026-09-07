@@ -2,16 +2,13 @@
 #include <sihd/util/Logger.hpp>
 
 // Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd,
-                                                             UINT msg,
-                                                             WPARAM wParam,
-                                                             LPARAM lParam);
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 // Win32 message handler
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    sihd::imgui::ImguiBackendWin32 *backend_ptr
-        = (sihd::imgui::ImguiBackendWin32 *)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+    sihd::imgui::ImguiBackendWin32 *backend_ptr = (sihd::imgui::ImguiBackendWin32 *)GetWindowLongPtr(hWnd,
+                                                                                                     GWLP_USERDATA);
     if (backend_ptr != nullptr)
         return backend_ptr->handle_win32_msg_handler(hWnd, msg, wParam, lParam);
     return ::DefWindowProc(hWnd, msg, wParam, lParam);

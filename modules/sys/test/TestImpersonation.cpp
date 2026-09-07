@@ -1,8 +1,8 @@
-#include <gtest/gtest.h>
-
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+
+#include <gtest/gtest.h>
 
 #include <sihd/sys/Impersonation.hpp>
 #include <sihd/sys/user.hpp>
@@ -111,7 +111,7 @@ TEST_F(TestImpersonation, test_impersonation_self_roundtrip)
     }
 }
 
-TEST_F(TestImpersonation, test_impersonation_other_identity)
+TEST_F(TestImpersonation, test_impersonation_other_identity_as_root)
 {
     if constexpr (!Impersonation::supports_privileged)
     {
@@ -128,8 +128,7 @@ TEST_F(TestImpersonation, test_impersonation_other_identity)
         const auto nobody = user::user_id_of("nobody");
         const user::UserId target = nobody.value_or(user::UserId::from_native(before.native() + 1));
         const auto nobody_group = user::primary_group_of(target);
-        const user::GroupId target_group
-            = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
+        const user::GroupId target_group = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
 
         Impersonation impersonation;
         const bool switched = impersonation.impersonate_as(target, target_group);
@@ -159,7 +158,7 @@ TEST_F(TestImpersonation, test_impersonation_other_identity)
     }
 }
 
-TEST_F(TestImpersonation, test_impersonation_is_per_thread)
+TEST_F(TestImpersonation, test_impersonation_is_per_thread_as_root)
 {
     if constexpr (!Impersonation::supports_privileged)
     {
@@ -175,8 +174,7 @@ TEST_F(TestImpersonation, test_impersonation_is_per_thread)
         const auto nobody = user::user_id_of("nobody");
         const user::UserId target = nobody.value_or(user::UserId::from_native(before.native() + 1));
         const auto nobody_group = user::primary_group_of(target);
-        const user::GroupId target_group
-            = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
+        const user::GroupId target_group = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
 
         // the switch must stay confined to the worker thread - the libc wrappers would broadcast it
         enum class State

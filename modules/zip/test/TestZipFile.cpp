@@ -5,7 +5,6 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
-
 #include <sihd/zip/ZipFile.hpp>
 
 namespace test

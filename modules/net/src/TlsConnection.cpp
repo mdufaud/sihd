@@ -84,8 +84,8 @@ bool drive_handshake(SSL *ssl, bool is_connect, int timeout_ms)
             SIHD_LOG(error, "TlsConnection: {} failed: {}", what, err);
             break;
         }
-        auto elapsed
-            = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                           .count();
         int remaining = timeout_ms - static_cast<int>(elapsed);
         if (remaining <= 0)
         {

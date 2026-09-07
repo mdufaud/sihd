@@ -1,10 +1,9 @@
 #ifndef __SIHD_PY_PYCOREAPI_HPP__
 #define __SIHD_PY_PYCOREAPI_HPP__
 
-#include <sihd/py/PyApi.hpp>
-
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/Device.hpp>
+#include <sihd/py/PyApi.hpp>
 
 namespace sihd::py
 {
@@ -14,8 +13,7 @@ class PyCoreApi
     public:
         static void add_core_api(PyApi::PyModule & pymodule);
 
-        class __attribute__((visibility("hidden"))) PyChannelHandler
-            : public sihd::util::IHandler<sihd::core::Channel *>
+        class __attribute__((visibility("hidden"))) PyChannelHandler: public sihd::util::IHandler<sihd::core::Channel *>
         {
             public:
                 PyChannelHandler();

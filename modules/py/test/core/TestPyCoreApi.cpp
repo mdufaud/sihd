@@ -1,15 +1,13 @@
-#include <pybind11/embed.h>
-
 #include <iostream>
 
 #include <gtest/gtest.h>
-
-#include <sihd/sys/fs.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/sys/platform.hpp>
-#include <sihd/util/term.hpp>
+#include <pybind11/embed.h>
 
 #include <sihd/py/core/PyCoreApi.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/term.hpp>
 
 #include "../DirectorySwitcher.hpp"
 

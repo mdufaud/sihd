@@ -1,11 +1,12 @@
 #ifndef __SIHD_SYS_SIGNAL_HPP__
 #define __SIHD_SYS_SIGNAL_HPP__
 
+#include <sys/types.h>
+
 #include <atomic>
 #include <optional>
 #include <span>
 #include <string>
-#include <sys/types.h>
 
 #include <sihd/util/Timestamp.hpp>
 

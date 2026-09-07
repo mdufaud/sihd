@@ -1,11 +1,10 @@
-#include <sihd/sys/platform.hpp>
-
 #include <list>
 #include <stdexcept>
 
 #include <sihd/sys/FileWatcher.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -98,17 +97,13 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
 
 bool FileWatcher::Impl::is_watching(std::string_view path)
 {
-    return std::find_if(_watchers.begin(),
-                        _watchers.end(),
-                        [path](const Watcher & w) { return w.path == path; })
+    return std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; })
            != _watchers.end();
 }
 
 bool FileWatcher::Impl::rm_watch(std::string_view path)
 {
-    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) {
-        return w.path == path;
-    });
+    auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; });
     const bool found = it != _watchers.end();
     if (found)
     {
@@ -274,9 +269,8 @@ void FileWatcher::Impl::handle(Poll *poll)
                     watcher.old_filename.clear();
                 }
 
-                else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF
-                         || event->mask & IN_UNMOUNT || event->mask & IN_Q_OVERFLOW
-                         || event->mask & IN_IGNORED)
+                else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF || event->mask & IN_UNMOUNT
+                         || event->mask & IN_Q_OVERFLOW || event->mask & IN_IGNORED)
                 {
                     // not supported or termination events
                     fw_event.type = FileWatcherEventType::terminated;

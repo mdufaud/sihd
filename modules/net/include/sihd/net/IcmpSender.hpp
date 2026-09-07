@@ -3,14 +3,13 @@
 
 #include <memory>
 
+#include <sihd/net/Socket.hpp>
+#include <sihd/net/ip.hpp>
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
-#include <sihd/sys/Poll.hpp>
 #include <sihd/util/fwd.hpp>
-
-#include <sihd/net/Socket.hpp>
-#include <sihd/net/ip.hpp>
 
 struct icmp;
 struct icmp6_hdr;

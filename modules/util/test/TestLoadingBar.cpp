@@ -23,8 +23,7 @@ TEST_F(TestLoadingBar, test_loadingbar)
     constexpr size_t width = 20;
     constexpr size_t total = 100;
 
-    LoadingBar bar(
-        {.width = width, .total = total, .progression_pos = LoadingBarConfiguration::ProgressionPos::Right});
+    LoadingBar bar({.width = width, .total = total, .progression_pos = LoadingBarConfiguration::ProgressionPos::Right});
 
     for (size_t i = 0; i < 100; ++i)
     {

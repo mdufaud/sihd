@@ -23,10 +23,7 @@ class SshChannel
         bool open_session();
         bool open_agent();
         bool open_x11(std::string_view addr, int port);
-        bool open_forward(std::string_view remotehost,
-                          int remoteport,
-                          std::string_view sourcehost,
-                          int localport);
+        bool open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport);
         bool open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport);
 
         bool is_open();

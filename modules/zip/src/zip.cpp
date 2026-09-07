@@ -1,6 +1,5 @@
-#include <sihd/util/Logger.hpp>
 #include <sihd/sys/fs.hpp>
-
+#include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 

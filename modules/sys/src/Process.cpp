@@ -22,8 +22,7 @@ namespace
 
 auto get_in_env(const std::vector<std::string> & env, std::string_view key)
 {
-    return container::find_if(env,
-                              [&key](const std::string & env) { return str::starts_with(env, key, "="); });
+    return container::find_if(env, [&key](const std::string & env) { return str::starts_with(env, key, "="); });
 }
 
 template <typename T>

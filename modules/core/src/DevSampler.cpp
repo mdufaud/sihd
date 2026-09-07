@@ -1,8 +1,7 @@
+#include <sihd/core/DevSampler.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
-
-#include <sihd/core/DevSampler.hpp>
 
 #define CHANNEL_SAMPLE "sample"
 
@@ -89,8 +88,7 @@ bool DevSampler::on_start()
         return false;
     for (const auto & [channel_out_path, channel_in_path] : _conf_map)
     {
-        if (this->find_channel(channel_in_path, &channel_in)
-            && this->find_channel(channel_out_path, &channel_out))
+        if (this->find_channel(channel_in_path, &channel_in) && this->find_channel(channel_out_path, &channel_out))
         {
             if (this->observe_channel(channel_in) == false)
                 ret = false;

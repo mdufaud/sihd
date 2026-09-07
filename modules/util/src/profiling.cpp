@@ -20,10 +20,7 @@ Timeit::~Timeit()
     const Duration duration = std::max(Duration(0), _clock.now() - _begin);
     const bool show_nano = duration < std::chrono::microseconds(1);
 
-    SIHD_LOG(debug,
-             "Time<{}>: {}",
-             _label,
-             duration.str(show_total_parenthesis, show_nano));
+    SIHD_LOG(debug, "Time<{}>: {}", _label, duration.str(show_total_parenthesis, show_nano));
 }
 
 Duration Timeit::elapsed() const

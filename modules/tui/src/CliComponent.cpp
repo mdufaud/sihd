@@ -121,9 +121,8 @@ class CliBase: public ComponentBase,
             {
                 // focus drives yframe scrolling; inverted highlights only in manual-browse mode
                 const auto scroll_focus = (focus_idx == (ssize_t)i) ? focus : nothing;
-                const auto style = (is_focused && !_options.scroll_to_last_output && focus_idx == (ssize_t)i)
-                                       ? inverted
-                                       : nothing;
+                const auto style = (is_focused && !_options.scroll_to_last_output && focus_idx == (ssize_t)i) ? inverted
+                                                                                                              : nothing;
                 const auto emphasis = line.is_command ? bold : nothing;
                 elements.push_back(text(line.text) | style_decorator(line.style) | emphasis | scroll_focus | style);
                 ++i;

@@ -1,6 +1,3 @@
-#include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshKey.hpp>
@@ -8,6 +5,8 @@
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {
@@ -505,8 +504,7 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
 
 // ===== Private Methods =====
 
-BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(SshSession *session,
-                                                                              SshChannel *channel)
+BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(SshSession *session, SshChannel *channel)
 {
     std::lock_guard<std::mutex> lock(_sessions_mtx);
     auto session_it = _sessions.find(session);

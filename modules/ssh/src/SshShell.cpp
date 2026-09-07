@@ -1,10 +1,10 @@
 #include <libssh/libssh.h>
 
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
-#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <conio.h>
@@ -48,9 +48,7 @@ bool SshShell::open(bool x11)
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
     {
-        SIHD_LOG(error,
-                 "SshShell: failed to create a ssh channel: {}",
-                 ssh_get_error(_impl_ptr->ssh_session_ptr));
+        SIHD_LOG(error, "SshShell: failed to create a ssh channel: {}", ssh_get_error(_impl_ptr->ssh_session_ptr));
         return false;
     }
     _impl_ptr->channel.set_channel(channel_ptr);

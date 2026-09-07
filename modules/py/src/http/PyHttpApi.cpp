@@ -1,15 +1,8 @@
-#include <pybind11/functional.h>
-#include <pybind11/stl.h>
-
 #include <chrono>
 #include <functional>
 
-#include <sihd/py/http/PyHttpApi.hpp>
-
-#include <sihd/util/Configurable.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/Node.hpp>
-#include <sihd/util/SmartNodePtr.hpp>
+#include <pybind11/functional.h>
+#include <pybind11/stl.h>
 
 #include <sihd/http/CurlOptions.hpp>
 #include <sihd/http/HttpRequest.hpp>
@@ -19,6 +12,11 @@
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/http/request.hpp>
+#include <sihd/py/http/PyHttpApi.hpp>
+#include <sihd/util/Configurable.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::py
 {
@@ -78,9 +76,13 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         .def("path_params", &HttpRequest::path_params)
         .def("query_params", &HttpRequest::query_params)
         .def("cookies", &HttpRequest::cookies)
-        .def("path_param", [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.path_param(n)); })
-        .def("query_param", [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.query_param(n)); })
-        .def("cookie", [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.cookie(n)); })
+        .def("path_param",
+             [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.path_param(n)); })
+        .def(
+            "query_param",
+            [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.query_param(n)); })
+        .def("cookie",
+             [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.cookie(n)); })
         .def("is_authenticated", &HttpRequest::is_authenticated)
         .def("auth_user", &HttpRequest::auth_user)
         .def("auth_token", &HttpRequest::auth_token);
@@ -94,8 +96,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         // handler-side setters
         .def("set_status", &HttpResponse::set_status)
         .def("set_plain_content", &HttpResponse::set_plain_content)
-        .def("set_content",
-             [](HttpResponse & self, std::string_view data) { return self.set_content(data); })
+        .def("set_content", [](HttpResponse & self, std::string_view data) { return self.set_content(data); })
         .def("set_byte_content",
              [](HttpResponse & self, pybind11::bytes data) {
                  std::string bytes = data;
@@ -171,10 +172,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
              pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("delete", &Navigator::del, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("head", &Navigator::head, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("options",
-             &Navigator::options,
-             pybind11::arg("url"),
-             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("options", &Navigator::options, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("download",
              &Navigator::download,
              pybind11::arg("url"),
@@ -232,7 +230,9 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "put",
-        [](std::string_view url, std::string_view file_path, const CurlOptions & opt) { return put(url, file_path, opt); },
+        [](std::string_view url, std::string_view file_path, const CurlOptions & opt) {
+            return put(url, file_path, opt);
+        },
         pybind11::arg("url"),
         pybind11::arg("file_path"),
         pybind11::arg("options") = CurlOptions::none(),
@@ -295,8 +295,14 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
             [](HttpServer & self, const std::string & name) { return self.add_child<WebService>(name); },
             pybind11::arg("name"),
             pybind11::return_value_policy::reference_internal)
-        .def("start", [](HttpServer & self) { return self.start(); }, pybind11::call_guard<pybind11::gil_scoped_release>())
-        .def("stop", [](HttpServer & self) { return self.stop(); }, pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def(
+            "start",
+            [](HttpServer & self) { return self.start(); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def(
+            "stop",
+            [](HttpServer & self) { return self.stop(); },
+            pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("request_stop", &HttpServer::request_stop)
         .def("set_service_wait_stop", &HttpServer::set_service_wait_stop)
         .def("is_running", [](const HttpServer & self) { return self.is_running(); })

@@ -2,8 +2,8 @@
 
 #include <sihd/sys/FileMutex.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Clocks.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Clocks.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/file.h>

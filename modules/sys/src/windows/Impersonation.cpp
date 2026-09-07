@@ -25,7 +25,7 @@ class ScrubbedString
         ScrubbedString(const ScrubbedString &) = delete;
         ScrubbedString & operator=(const ScrubbedString &) = delete;
 
-        const char * c_str() const { return _str.c_str(); }
+        const char *c_str() const { return _str.c_str(); }
 
     private:
         std::string _str;

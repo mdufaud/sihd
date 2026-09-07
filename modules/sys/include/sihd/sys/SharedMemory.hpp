@@ -20,8 +20,8 @@ class SharedMemory
 {
     public:
         static constexpr bool supported = sihd::util::build::is_windows
-            || (sihd::util::build::is_unix && !sihd::util::build::is_android
-                && !sihd::util::build::is_emscripten);
+                                          || (sihd::util::build::is_unix && !sihd::util::build::is_android
+                                              && !sihd::util::build::is_emscripten);
 
         SharedMemory();
         virtual ~SharedMemory();

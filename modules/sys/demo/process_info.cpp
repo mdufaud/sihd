@@ -1,4 +1,3 @@
-#include <CLI/CLI.hpp>
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
@@ -8,6 +7,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/term.hpp>
+
+#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;

@@ -1,4 +1,5 @@
 #include <imgui.h>
+
 #include <ncursesw/ncurses.h>
 // ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++
 // builtin-bool probe fails (e.g. musl cross) - undef it so it cannot poison
@@ -208,24 +209,40 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     if (_mstate & BUTTON1_PRESSED)
     {
         pressed_l = true;
-        if (!_lbut) { _lbut = 1; io.AddMouseButtonEvent(0, true); }
+        if (!_lbut)
+        {
+            _lbut = 1;
+            io.AddMouseButtonEvent(0, true);
+        }
     }
     if (_mstate & BUTTON1_RELEASED)
     {
         if (pressed_l)
             _pending_lrelease = true;
-        else if (_lbut) { _lbut = 0; io.AddMouseButtonEvent(0, false); }
+        else if (_lbut)
+        {
+            _lbut = 0;
+            io.AddMouseButtonEvent(0, false);
+        }
     }
     if (_mstate & BUTTON3_PRESSED)
     {
         pressed_r = true;
-        if (!_rbut) { _rbut = 1; io.AddMouseButtonEvent(1, true); }
+        if (!_rbut)
+        {
+            _rbut = 1;
+            io.AddMouseButtonEvent(1, true);
+        }
     }
     if (_mstate & BUTTON3_RELEASED)
     {
         if (pressed_r)
             _pending_rrelease = true;
-        else if (_rbut) { _rbut = 0; io.AddMouseButtonEvent(1, false); }
+        else if (_rbut)
+        {
+            _rbut = 0;
+            io.AddMouseButtonEvent(1, false);
+        }
     }
 
     if (_mstate & BUTTON4_PRESSED)
@@ -255,12 +272,36 @@ bool ImguiBackendNcurses::_process_key_event(int key, ImGuiIO & io)
     }
 
     // Shift+arrow keys
-    if (key == KEY_SLEFT)  { _emit_shift_arrow(io, ImGuiKey_LeftArrow);  return false; }
-    if (key == KEY_SRIGHT) { _emit_shift_arrow(io, ImGuiKey_RightArrow); return false; }
-    if (key == KEY_SR)     { _emit_shift_arrow(io, ImGuiKey_UpArrow);    return false; }
-    if (key == KEY_SF)     { _emit_shift_arrow(io, ImGuiKey_DownArrow);  return false; }
-    if (key == KEY_SHOME)  { _emit_shift_arrow(io, ImGuiKey_Home);       return false; }
-    if (key == KEY_SEND)   { _emit_shift_arrow(io, ImGuiKey_End);        return false; }
+    if (key == KEY_SLEFT)
+    {
+        _emit_shift_arrow(io, ImGuiKey_LeftArrow);
+        return false;
+    }
+    if (key == KEY_SRIGHT)
+    {
+        _emit_shift_arrow(io, ImGuiKey_RightArrow);
+        return false;
+    }
+    if (key == KEY_SR)
+    {
+        _emit_shift_arrow(io, ImGuiKey_UpArrow);
+        return false;
+    }
+    if (key == KEY_SF)
+    {
+        _emit_shift_arrow(io, ImGuiKey_DownArrow);
+        return false;
+    }
+    if (key == KEY_SHOME)
+    {
+        _emit_shift_arrow(io, ImGuiKey_Home);
+        return false;
+    }
+    if (key == KEY_SEND)
+    {
+        _emit_shift_arrow(io, ImGuiKey_End);
+        return false;
+    }
 
     ImGuiKey imgui_key = _ncurses_key_to_imgui(key);
     if (imgui_key != ImGuiKey_None)
@@ -289,8 +330,18 @@ void ImguiBackendNcurses::poll()
 
     // Flush releases deferred from the previous poll: the down state has now been
     // visible for a full frame, so the click was detected and we can release.
-    if (_pending_lrelease) { _pending_lrelease = false; _lbut = 0; io.AddMouseButtonEvent(0, false); }
-    if (_pending_rrelease) { _pending_rrelease = false; _rbut = 0; io.AddMouseButtonEvent(1, false); }
+    if (_pending_lrelease)
+    {
+        _pending_lrelease = false;
+        _lbut = 0;
+        io.AddMouseButtonEvent(0, false);
+    }
+    if (_pending_rrelease)
+    {
+        _pending_rrelease = false;
+        _rbut = 0;
+        io.AddMouseButtonEvent(1, false);
+    }
 
     // Track press transitions within THIS poll so a same-poll release gets latched.
     bool pressed_l = false, pressed_r = false;
@@ -302,8 +353,15 @@ void ImguiBackendNcurses::poll()
         if (key == ERR)
             break;
 
-        if (key == KEY_RESIZE) { continue; }
-        if (key == KEY_MOUSE)  { _process_mouse_event(io, pressed_l, pressed_r); continue; }
+        if (key == KEY_RESIZE)
+        {
+            continue;
+        }
+        if (key == KEY_MOUSE)
+        {
+            _process_mouse_event(io, pressed_l, pressed_r);
+            continue;
+        }
 
         if (_process_key_event(key, io))
             _should_close = true;

@@ -23,10 +23,7 @@ class ABlockingService: public sihd::util::AService
         virtual bool is_ready() const;
         virtual bool is_running() const override;
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override
-        {
-            return &_service_controller;
-        }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
 
     protected:
         virtual bool on_start() = 0;

@@ -1,13 +1,13 @@
 #ifndef __SIHD_SSH_SSHSUBSYSTEMSFTP_HPP__
 #define __SIHD_SSH_SSHSUBSYSTEMSFTP_HPP__
 
-#include <sihd/ssh/ISshSubsystemHandler.hpp>
-
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <sihd/ssh/ISshSubsystemHandler.hpp>
 
 namespace sihd::ssh
 {

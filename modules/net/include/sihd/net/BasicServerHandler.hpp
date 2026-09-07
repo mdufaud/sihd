@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <mutex>
-
 #include <optional>
 
 #include <sihd/net/INetServerHandler.hpp>

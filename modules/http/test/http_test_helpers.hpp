@@ -2,8 +2,8 @@
 #define __HTTP_TEST_HELPERS_HPP__
 
 #include <atomic>
-#include <chrono>
 #include <cctype>
+#include <chrono>
 #include <cstdint>
 #include <mutex>
 #include <sstream>
@@ -115,9 +115,7 @@ class SimpleWsServer: public sihd::http::HttpServer,
 
         void on_open([[maybe_unused]] std::string_view protocol) override { ++_nopen; }
         void on_close() override { ++_nclosed; }
-        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) override
-        {
-        }
+        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) override {}
 
         bool on_read([[maybe_unused]] const sihd::util::ArrChar & arr) override
         {
@@ -150,10 +148,7 @@ class SimpleWsServer: public sihd::http::HttpServer,
 class SimpleConnectProxy
 {
     public:
-        SimpleConnectProxy(std::string user, std::string pass):
-            _expected_token(_base64(user + ":" + pass))
-        {
-        }
+        SimpleConnectProxy(std::string user, std::string pass): _expected_token(_base64(user + ":" + pass)) {}
 
         ~SimpleConnectProxy() { stop(); }
 

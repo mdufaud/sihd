@@ -1,10 +1,11 @@
 #include <cstring>
 
 #include <gtest/gtest.h>
+
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/sys/Poll.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <winsock2.h>

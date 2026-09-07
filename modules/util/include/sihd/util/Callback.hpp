@@ -25,26 +25,25 @@ class CallbackManager
         template <typename R, typename... Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks.emplace(name,
-                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
-                                   [fun](Targs... args) { return (*fun)(args...); })));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args) {
+                                   return (*fun)(args...);
+                               })));
         }
 
         // Member functions binding
         template <typename C, typename R, typename... Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks.emplace(name,
-                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
-                                   [fun, obj](Targs... args) { return (obj->*fun)(args...); })));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args) {
+                                   return (obj->*fun)(args...);
+                               })));
         }
 
         // std::function binding
         template <typename R, typename... Targs>
         void set(const std::string & name, std::function<R(Targs...)> fun)
         {
-            _callbacks.emplace(name,
-                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // The entire signature of the lambda must be passed to this overload.
@@ -52,8 +51,7 @@ class CallbackManager
         void set(const std::string & name, Callable callable)
         {
             std::function<R(Targs...)> fun(callable);
-            _callbacks.emplace(name,
-                               std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
+            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         // Calling

@@ -1,13 +1,13 @@
-#include <algorithm>
-
 #include <fcntl.h> // fcntl
-#include <net/if.h> // IFNAMSIZ
 
+#include <algorithm>
 #include <cstring>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include <net/if.h> // IFNAMSIZ
 
 namespace sihd::net
 {
@@ -32,12 +32,7 @@ bool Socket::bind_socket_to_device(int socket, std::string_view name)
     char device_name[IFNAMSIZ];
 
     strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
-    return sihd::sys::os::setsockopt(socket,
-                                     SOL_SOCKET,
-                                     SO_BINDTODEVICE,
-                                     device_name,
-                                     sizeof(device_name),
-                                     true);
+    return sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
 }
 
 bool Socket::set_socket_blocking(int socket, bool active)

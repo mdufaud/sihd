@@ -25,8 +25,7 @@ class Impersonation
         // windows: LogonUser + ImpersonateLoggedOnUser
         static constexpr bool supports_credentials = sihd::util::build::is_windows;
         // linux: per-thread setresgid/setresuid
-        static constexpr bool supports_privileged
-            = sihd::util::build::is_linux && !sihd::util::build::is_emscripten;
+        static constexpr bool supports_privileged = sihd::util::build::is_linux && !sihd::util::build::is_emscripten;
 
         Impersonation();
         ~Impersonation();

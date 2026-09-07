@@ -1,12 +1,11 @@
 #ifndef __SIHD_CORE_MEMRECORDER_HPP__
 #define __SIHD_CORE_MEMRECORDER_HPP__
 
-#include <sihd/util/IHandler.hpp>
-#include <sihd/util/IProvider.hpp>
-
 #include <sihd/core/ACoreObject.hpp>
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/Records.hpp>
+#include <sihd/util/IHandler.hpp>
+#include <sihd/util/IProvider.hpp>
 
 namespace sihd::core
 {

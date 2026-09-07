@@ -1,8 +1,9 @@
 #ifndef __SIHD_NET_TLSCONNECTION_HPP__
 #define __SIHD_NET_TLSCONNECTION_HPP__
 
-#include <cstddef>
 #include <sys/types.h>
+
+#include <cstddef>
 
 namespace sihd::crypto
 {

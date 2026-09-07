@@ -1,19 +1,18 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <sihd/pcap/PcapInterfaces.hpp>
+#include <sihd/pcap/Sniffer.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/SigWaiter.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
-
-#include <sihd/pcap/PcapInterfaces.hpp>
-#include <sihd/pcap/Sniffer.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // prevents error: previous declaration as 'typedef long int suseconds_t'

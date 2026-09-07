@@ -2,9 +2,9 @@
 #include <filesystem>
 
 #include <sihd/sys/PathManager.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {
@@ -31,10 +31,7 @@ std::filesystem::perms mode_from_str(std::string_view mode)
     return ret;
 }
 
-bool check_if_match(std::string_view path,
-                    std::string_view search,
-                    std::string_view mode_str,
-                    std::string & result_str)
+bool check_if_match(std::string_view path, std::string_view search, std::string_view mode_str, std::string & result_str)
 {
     bool ret = false;
     std::filesystem::perms mode = mode_from_str(mode_str);

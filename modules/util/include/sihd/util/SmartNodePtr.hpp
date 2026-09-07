@@ -9,13 +9,13 @@ namespace sihd::util
 template <typename T>
 struct SmartNodeDeleter
 {
-    void operator()(T *ptr)
-    {
-        if (ptr != nullptr && ptr->is_owned_by_parent() == false)
+        void operator()(T *ptr)
         {
-            delete ptr;
+            if (ptr != nullptr && ptr->is_owned_by_parent() == false)
+            {
+                delete ptr;
+            }
         }
-    }
 };
 
 template <class T>

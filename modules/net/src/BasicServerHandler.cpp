@@ -124,7 +124,8 @@ bool BasicServerHandler::remove_client(int socket)
     return this->remove_client(it->second);
 }
 
-void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server, sihd::util::time::UnixTime milliseconds)
+void BasicServerHandler::handle_no_activity([[maybe_unused]] INetServer *server,
+                                            sihd::util::time::UnixTime milliseconds)
 {
     if (_last_time <= 0)
         _last_time = _clock.now() + sihd::util::Duration(milliseconds);

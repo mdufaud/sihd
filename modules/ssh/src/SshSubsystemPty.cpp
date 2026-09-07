@@ -1,9 +1,8 @@
-#include <sihd/util/Array.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshSubsystemPty.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/util/Array.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::ssh
 {

@@ -8,10 +8,10 @@
 #endif
 
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/time.hpp>
 
 #define FIRST_SIG 1
@@ -381,10 +381,7 @@ std::string status_str()
             if (received > 0)
             {
                 const sihd::util::Timestamp time_received = status->time_received.load(std::memory_order_relaxed);
-                ret += fmt::format("{} -> {} ({})\n",
-                                   signal::name(sig),
-                                   received,
-                                   time_received.day_str());
+                ret += fmt::format("{} -> {} ({})\n", signal::name(sig), received, time_received.day_str());
             }
         }
         else

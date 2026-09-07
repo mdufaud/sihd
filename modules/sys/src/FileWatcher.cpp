@@ -1,6 +1,5 @@
-#include <sihd/sys/platform.hpp>
-
 #include <sihd/sys/FileWatcher.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 
 // FileWatcher::Impl and the methods touching it live in src/linux|windows/FileWatcher.cpp:

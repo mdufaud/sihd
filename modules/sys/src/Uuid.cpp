@@ -1,8 +1,7 @@
 #include <sihd/sys/Uuid.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/hash.hpp>
-
-#include <sihd/sys/platform.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <rpc.h>
@@ -143,8 +142,7 @@ bool Uuid::operator==(const Uuid & other) const
 {
 #if defined(__SIHD_WINDOWS__)
     RPC_STATUS status;
-    return UuidCompare(const_cast<uuid_t *>(&_impl->uuid), const_cast<uuid_t *>(&other._impl->uuid), &status)
-               == 0
+    return UuidCompare(const_cast<uuid_t *>(&_impl->uuid), const_cast<uuid_t *>(&other._impl->uuid), &status) == 0
            && status == RPC_S_OK;
 #else
     return uuid_compare(_impl->uuid, other._impl->uuid) == 0;

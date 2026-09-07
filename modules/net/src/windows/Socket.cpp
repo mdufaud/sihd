@@ -1,13 +1,13 @@
+#include <ws2tcpip.h> // CSADDR_INFO
+
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include <ws2tcpip.h> // CSADDR_INFO
-
 // missing mingw getsockopt action
-# ifndef SO_BSP_STATE
-#  define SO_BSP_STATE 0x1009
-# endif
+#ifndef SO_BSP_STATE
+# define SO_BSP_STATE 0x1009
+#endif
 
 namespace sihd::net
 {

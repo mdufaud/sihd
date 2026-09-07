@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-
 #include <chrono>
+
+#include <gtest/gtest.h>
 
 #include <sihd/sys/platform.hpp>
 
@@ -134,8 +134,8 @@ TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
     constexpr int timeout_ms = 500;
     auto start = std::chrono::steady_clock::now();
     bool ok = client.open_and_connect(localhost, timeout_ms);
-    auto elapsed
-        = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start).count();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+                       .count();
 
     EXPECT_FALSE(ok);
     EXPECT_LT(elapsed, 5 * timeout_ms);

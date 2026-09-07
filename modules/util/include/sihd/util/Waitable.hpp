@@ -65,11 +65,11 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
-            return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(
-                                             std::chrono::duration_cast<std::chrono::system_clock::duration>(
-                                                 std::chrono::nanoseconds(timestamp))),
-                                         pred_stop_waiting);
+            return _condition.wait_until(
+                lock,
+                std::chrono::system_clock::time_point(std::chrono::duration_cast<std::chrono::system_clock::duration>(
+                    std::chrono::nanoseconds(timestamp))),
+                pred_stop_waiting);
         }
 
         // predicate must return false to keep waiting

@@ -6,10 +6,9 @@
 #include <memory>
 #include <set>
 
+#include <sihd/core/Device.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/fwd.hpp>
-
-#include <sihd/core/Device.hpp>
 
 namespace sihd::core
 {

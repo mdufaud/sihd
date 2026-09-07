@@ -5,11 +5,10 @@
 #include <libssh/libssh.h>
 #include <libssh/sftp.h>
 
-#include <sihd/sys/File.hpp>
-#include <sihd/util/Logger.hpp>
-
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/utils.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/util/Logger.hpp>
 
 #ifndef SIHD_SSH_SFTP_BUFSIZE
 # define SIHD_SSH_SFTP_BUFSIZE 4096
@@ -145,10 +144,7 @@ bool Sftp::send_file(std::string_view local_path, std::string_view remote_path, 
         nwritten = sftp_write(remote_file.get(), buf, nread);
         if (nwritten != nread)
         {
-            SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'",
-                           remote_path,
-                           nwritten,
-                           nread);
+            SIHD_LOG_ERROR("Sftp: failed writing remote file: '{}' '{} != '{}'", remote_path, nwritten, nread);
             ret = false;
             break;
         }

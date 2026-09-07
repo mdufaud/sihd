@@ -1,7 +1,7 @@
-#include <sihd/py/PyApi.hpp>
-
 #include <algorithm>
 #include <iostream>
+
+#include <sihd/py/PyApi.hpp>
 
 namespace sihd::py
 {
@@ -39,8 +39,7 @@ PyApi::PyModule::~PyModule() = default;
 
 bool PyApi::PyModule::is_loaded(std::string_view submodule_name)
 {
-    return std::find(_modules_imported.begin(), _modules_imported.end(), submodule_name)
-           != _modules_imported.end();
+    return std::find(_modules_imported.begin(), _modules_imported.end(), submodule_name) != _modules_imported.end();
 }
 
 bool PyApi::PyModule::load(std::string_view submodule_name)

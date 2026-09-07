@@ -3,8 +3,9 @@
 #include <sihd/util/Logger.hpp>
 
 #define SDL_MAIN_HANDLED
-#include <sihd/imgui/ImguiBackendSDL.hpp>
 #include <windows.h>
+
+#include <sihd/imgui/ImguiBackendSDL.hpp>
 
 using namespace sihd::util;
 using namespace sihd::imgui;

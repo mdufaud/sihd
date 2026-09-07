@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <sihd/net/Socket.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
-
-#include <sihd/net/Socket.hpp>
 
 namespace test
 {

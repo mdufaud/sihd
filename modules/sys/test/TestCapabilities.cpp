@@ -103,7 +103,7 @@ TEST_F(TestCapabilities, test_capabilities_raise_not_permitted)
     }
 }
 
-TEST_F(TestCapabilities, test_capabilities_raise_permitted)
+TEST_F(TestCapabilities, test_capabilities_raise_permitted_as_root)
 {
     CapabilitySet caps;
 
