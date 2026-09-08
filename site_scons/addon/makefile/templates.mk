@@ -45,4 +45,12 @@ TEST_NAME := $(word 3, $(MAKECMDGOALS))$(t)
 newsihdtest:
 	@bash $(MAKEFILE_ADDON_SCRIPTS)/make_sihd_test.sh $(APP_NAME) $(MODULE_NAME) $(TEST_NAME)
 
+# for no 'no rules to make...' (sbt routes test goals by exact match, so it
+# does not stub these args for us)
+$(MODULE_NAME):
+	$(QUIET) echo > /dev/null
+
+$(TEST_NAME):
+	$(QUIET) echo > /dev/null
+
 endif
