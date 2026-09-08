@@ -377,7 +377,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             pybind11::arg("reschedule_time") = 0,
             pybind11::arg("late_policy") = LatenessPolicy::replay_missed)
         .def("clear_tasks", &Scheduler::clear_tasks)
-        .def_property_readonly("overruns", +[](const Scheduler & self) { return self.overruns.load(); })
+        .def_property_readonly(
+            "overruns",
+            +[](const Scheduler & self) { return self.overruns.load(); })
         .def_readwrite("overrun_at", &Scheduler::overrun_at)
         .def_readwrite("acceptable_task_preplay_ns_time", &Scheduler::acceptable_task_preplay_ns_time);
 

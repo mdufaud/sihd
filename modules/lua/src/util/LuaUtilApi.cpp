@@ -123,13 +123,13 @@ void LuaUtilApi::load_threading(Vm & vm)
          * Task policies
          */
         .beginNamespace("LatenessPolicy")
-            .addVariable("replay_missed", LatenessPolicy::replay_missed)
-            .addVariable("push_back", LatenessPolicy::push_back)
-            .addVariable("skip_missed", LatenessPolicy::skip_missed)
+        .addVariable("replay_missed", LatenessPolicy::replay_missed)
+        .addVariable("push_back", LatenessPolicy::push_back)
+        .addVariable("skip_missed", LatenessPolicy::skip_missed)
         .endNamespace()
         .beginNamespace("IdlePolicy")
-            .addVariable("sleep", IdlePolicy::sleep)
-            .addVariable("sleep_then_spin", IdlePolicy::sleep_then_spin)
+        .addVariable("sleep", IdlePolicy::sleep)
+        .addVariable("sleep_then_spin", IdlePolicy::sleep_then_spin)
         .endNamespace()
         /**
          * Scheduler

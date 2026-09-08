@@ -541,9 +541,7 @@ TEST_F(TestScheduler, test_sched_exception_survives)
             return true;
         },
         {.reschedule_time = time::milli(15)}));
-    sched.add_task(new Task(
-        [&]() -> bool { throw std::runtime_error("poison"); },
-        {.run_in = time::milli(1)}));
+    sched.add_task(new Task([&]() -> bool { throw std::runtime_error("poison"); }, {.run_in = time::milli(1)}));
     sched.add_task(new Task(
         [&] {
             std::lock_guard lock(mutex);
@@ -558,9 +556,7 @@ TEST_F(TestScheduler, test_sched_exception_survives)
 
     {
         std::unique_lock lock(mutex);
-        EXPECT_TRUE(cv.wait_for(lock,
-                                std::chrono::seconds(5),
-                                [&] { return ticks.load() >= 3 && after_poison_ran; }));
+        EXPECT_TRUE(cv.wait_for(lock, std::chrono::seconds(5), [&] { return ticks.load() >= 3 && after_poison_ran; }));
     }
     EXPECT_GE(ticks.load(), 3);
 
@@ -628,9 +624,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
                 cv.notify_all();
                 return true;
             },
-            {.run_at = frozen_now - grid * 3,
-             .reschedule_time = grid,
-             .late_policy = LatenessPolicy::skip_missed});
+            {.run_at = frozen_now - grid * 3, .reschedule_time = grid, .late_policy = LatenessPolicy::skip_missed});
         sched.add_task(task);
 
         sched.set_start_synchronised(true);
