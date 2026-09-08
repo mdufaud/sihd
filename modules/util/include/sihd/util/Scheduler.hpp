@@ -63,15 +63,13 @@ class Scheduler: public Named,
         bool set_idle_policy(IdlePolicy policy);
         IdlePolicy idle_policy() const;
 
-        // time spent polling the clock before the deadline when idle_policy is sleep_then_spin
         bool set_spin_window(Duration window);
         Duration spin_window() const;
 
-        // at start, jump overdue periodic tasks to their next future grid slot
         bool set_skip_missed_on_start(bool active);
         bool skip_missed_on_start() const;
 
-        // number of overruns that occured after started - thread safe
+        // number of overruns that occurred after started
         std::atomic<size_t> overruns;
         // time after not running a task is considered an overrun
         Duration overrun_at;
@@ -109,7 +107,7 @@ class Scheduler: public Named,
         // only pushed by the worker thread
         std::list<Task *> _trash_task_list;
         Timestamp _next_run;
-        // bumped on every _task_map mutation
+        // bump to abort the worker's stale deadline wait
         std::atomic<uint64_t> _task_map_seq;
 
         IdlePolicy _idle_policy;

@@ -123,7 +123,7 @@ void Scheduler::_wait_for_next_task()
     // wait for new task if empty
     _waitable_task.wait([this] { return this->stop_requested || _task_map.empty() == false; });
     {
-        // a generation change since this snapshot makes the timed wait below return early
+        // a map mutation after this snapshot (seq mismatch) makes the timed waits below return early
         auto l = _waitable_task.guard();
         seq = _task_map_seq.load();
         next_run_at = _next_run;
@@ -138,8 +138,6 @@ void Scheduler::_wait_for_next_task()
 
     if (_idle_policy == IdlePolicy::sleep_then_spin)
     {
-        // sleep most of the wait on the condition variable, then poll the clock over the last
-        // spin_window to cut wakeup latency
         Duration sleep_delay = delay - _spin_window;
         if (sleep_delay > 0)
             this->_wait_until_deadline(sleep_delay, seq);
@@ -147,16 +145,14 @@ void Scheduler::_wait_for_next_task()
         return;
     }
 
-    // sleep until the deadline - an earlier task, a pause or an emptied queue wakes us up
     this->_wait_until_deadline(delay, seq);
 }
 
 void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
 {
-    // poll the clock to cut wakeup latency - a non advancing (virtual) clock falls back to sleep
     Timestamp previous = 0;
     int frozen_polls = 0;
-    int polls = 0;
+    uint64_t polls = 0;
     while (this->stop_requested == false && _paused == false)
     {
         Timestamp now = _clock_ptr->now();
@@ -177,7 +173,6 @@ void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
             frozen_polls = 0;
             previous = now;
         }
-        // periodically recheck the queue state while spinning
         if (++polls % 64 == 0)
         {
             auto l = _waitable_task.guard();
@@ -226,7 +221,6 @@ void Scheduler::_play_task(Task *task, Timestamp now)
         SIHD_LOG_ERROR("Scheduler '{}': task raised unknown exception", this->name());
     }
 
-    // reschedule or trash in one critical section
     auto l = _waitable_task.guard();
     if (task->reschedule_time > 0)
     {
@@ -265,10 +259,8 @@ void Scheduler::_prepare_tasks()
         {
             task->run_at = _begin_run + task->run_in;
         }
-        else if (_skip_missed_on_start && task->reschedule_time > 0 && task->run_at != 0
-                 && task->run_at < _begin_run)
+        else if (_skip_missed_on_start && task->reschedule_time > 0 && task->run_at != 0 && task->run_at < _begin_run)
         {
-            // jump to the next future slot instead of replaying missed runs
             task->run_at += (((_begin_run - task->run_at) / task->reschedule_time) + 1) * task->reschedule_time;
         }
         _task_map.emplace(task->run_at, task);
@@ -401,7 +393,7 @@ void Scheduler::add_task(Task *task)
         {
             if (task->run_in > 0)
                 task->run_at = this->now() + task->run_in;
-            // wake the worker only if the new task becomes the nearest deadline
+            // a later task cannot be missed: the worker's current deadline fires first
             wake_worker = _task_map.empty() || task->run_at < _next_run;
             this->_unprotected_add_task_to_map(task);
         }
