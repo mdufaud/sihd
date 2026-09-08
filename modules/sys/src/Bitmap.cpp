@@ -28,12 +28,12 @@ namespace
 
 struct ColorTable
 {
-#if __BYTE_ORDER == __BIG_ENDIAN
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         uint8_t blue;
         uint8_t red;
         uint8_t green;
         uint8_t reserved;
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         uint8_t reserved;
         uint8_t green;
         uint8_t red;

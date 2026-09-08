@@ -1,7 +1,8 @@
+#include <pybind11/embed.h>
+
 #include <iostream>
 
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
 
 #include <sihd/py/sys/PySysApi.hpp>
 #include <sihd/sys/platform.hpp>

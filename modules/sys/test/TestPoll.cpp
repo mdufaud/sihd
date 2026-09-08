@@ -9,6 +9,7 @@
 
 #if defined(__SIHD_WINDOWS__)
 # include <winsock2.h>
+
 # include <ws2tcpip.h>
 #else
 # include <unistd.h>

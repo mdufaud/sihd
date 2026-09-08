@@ -1,5 +1,6 @@
-#include <gtest/gtest.h>
 #include <pybind11/embed.h>
+
+#include <gtest/gtest.h>
 
 #include <sihd/py/net/PyNetApi.hpp>
 #include <sihd/util/Logger.hpp>

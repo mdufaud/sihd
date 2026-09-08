@@ -98,7 +98,7 @@ class Socket
         bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);
         virtual bool close();
-        bool shutdown();
+        virtual bool shutdown();
         bool is_open() const { return _socket >= 0; }
 
         // A dead peer raises SIGPIPE: the process must ignore or handle it,

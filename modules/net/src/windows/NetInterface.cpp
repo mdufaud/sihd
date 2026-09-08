@@ -1,3 +1,5 @@
+#include <winsock2.h>
+
 #include <iphlpapi.h>
 #include <ws2tcpip.h>
 

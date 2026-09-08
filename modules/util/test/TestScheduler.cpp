@@ -648,9 +648,10 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
 }
 
 // sleep_then_spin must sleep most of the wait on the condition variable, then poll the clock over
-// the last spin_window: a 10ms poll costs hundreds of thousands of clock reads against the handful
-// a pure cv sleep spends on the whole 50ms wait - the old short-waits-only behavior would spin
-// nothing at all here.
+// the last spin_window: a 100ms poll costs hundreds of thousands of clock reads against the handful
+// a pure cv sleep spends on the whole 500ms wait - the old short-waits-only behavior would spin
+// nothing at all here. The window is wide enough that coarse timers (windows, wine) cannot
+// overshoot the sleep past the whole spin window.
 TEST_F(TestScheduler, test_sched_spin_sleep_classification)
 {
     if (test::is_run_by_valgrind())
@@ -659,7 +660,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     CountingSteadyClock clock;
     sched.set_clock(&clock);
     ASSERT_TRUE(sched.set_idle_policy(IdlePolicy::sleep_then_spin));
-    ASSERT_TRUE(sched.set_spin_window(time::milli(10)));
+    ASSERT_TRUE(sched.set_spin_window(time::milli(100)));
 
     std::mutex mutex;
     std::condition_variable cv;
@@ -672,7 +673,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
             cv.notify_all();
             return true;
         },
-        {.run_in = time::milli(50)}));
+        {.run_in = time::milli(500)}));
 
     sched.set_start_synchronised(true);
     sched.start();

@@ -36,6 +36,7 @@ class TlsSocket: public Socket
         // process must ignore or handle itself.
         ssize_t send(sihd::util::ArrCharView view) override;
         ssize_t receive(void *data, size_t size) override;
+        bool shutdown() override;
         bool close() override;
 
     private:

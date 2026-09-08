@@ -1,3 +1,5 @@
+#include <pybind11/pybind11.h>
+
 #include <sihd/core/ACoreObject.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>

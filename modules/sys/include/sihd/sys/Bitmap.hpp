@@ -15,12 +15,14 @@ union Color
 {
         uint32_t value;
 
-#if __BYTE_ORDER == __BIG_ENDIAN
+// glibc's __BYTE_ORDER is undefined on mingw: without a value both sides
+// evaluate to 0 and the big-endian branch gets selected on windows builds.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         struct
         {
                 uint8_t alpha, red, green, blue;
         };
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         struct
         {
                 uint8_t blue, green, red, alpha;

@@ -15,6 +15,7 @@
 # include <netinet/in.h> // struct inX_addr
 #else
 # include <winsock2.h>
+
 # include <ws2tcpip.h> // addrinfo
 #endif
 

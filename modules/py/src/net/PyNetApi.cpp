@@ -1,3 +1,5 @@
+#include <pybind11/pybind11.h>
+
 #include <sihd/core/Device.hpp>
 #include <sihd/net/DeviceTcpClient.hpp>
 #include <sihd/net/DeviceTcpServer.hpp>

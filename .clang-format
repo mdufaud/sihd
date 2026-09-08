@@ -159,6 +159,19 @@ FixNamespaceComments: true
 IncludeBlocks: Regroup
 
 IncludeCategories:
+  # pybind11 pulls Python.h, which defines the POSIX feature macros: it must
+  # be the first include of a translation unit or glibc macro redefinitions
+  # become errors under -Werror.
+  - Regex: '^<pybind11/[^>]+>$'
+    Priority: 0
+    SortPriority: 0
+    CaseSensitive: true
+  # winsock2.h must come before the windows.h pulled in by ws2tcpip.h or
+  # mingw aborts the build on -Werror=cpp.
+  - Regex: '^<winsock2\.h>$'
+    Priority: 0
+    SortPriority: 0
+    CaseSensitive: true
   # C and POSIX headers.
   - Regex: '^<([[:alnum:]_]+|arpa/[[:alnum:]_]+|netinet/[[:alnum:]_]+|sys/[[:alnum:]_]+)\.h>$'
     Priority: 1
@@ -170,7 +183,7 @@ IncludeCategories:
     SortPriority: 2
     CaseSensitive: true
   # External dependencies used by the repository.
-  - Regex: '^<(android|curl|EGL|fmt|ftxui|GLES3|GLFW|gtest|libssh|libusb-1\.0|luabridge3|ncursesw|pybind11|SDL3|simpleble)/[^>]+>$'
+  - Regex: '^<(android|curl|EGL|fmt|ftxui|GLES3|GLFW|gtest|libssh|libusb-1\.0|luabridge3|ncursesw|SDL3|simpleble)/[^>]+>$'
     Priority: 3
     SortPriority: 3
     CaseSensitive: true

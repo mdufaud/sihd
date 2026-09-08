@@ -1,7 +1,8 @@
+#include <pybind11/embed.h>
+
 #include <chrono>
 
 #include <gtest/gtest.h>
-#include <pybind11/embed.h>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WebService.hpp>

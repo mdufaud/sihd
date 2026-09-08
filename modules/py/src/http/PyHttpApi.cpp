@@ -1,8 +1,8 @@
-#include <chrono>
-#include <functional>
-
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
+
+#include <chrono>
+#include <functional>
 
 #include <sihd/http/CurlOptions.hpp>
 #include <sihd/http/HttpRequest.hpp>

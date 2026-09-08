@@ -22,6 +22,7 @@
 # include <sys/socket.h> // getnameinfo
 #else
 # include <winsock2.h>
+
 # include <ws2tcpip.h> // addrinfo
 #endif
 

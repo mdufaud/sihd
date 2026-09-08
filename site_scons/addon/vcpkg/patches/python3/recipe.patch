@@ -65,7 +65,7 @@ index d2404a6..ccaebd7 100644
          if(NOT PYTHON3_BUGGY_GETADDRINFO)
              list(APPEND OPTIONS "ac_cv_buggy_getaddrinfo=no")
          endif()
-@@ -280,15 +282,22 @@ else()
+@@ -280,15 +282,25 @@ else()
          list(APPEND OPTIONS "--with-build-python=${_python_for_build}")
      endif()
  
@@ -86,9 +86,9 @@ index d2404a6..ccaebd7 100644
 -        DEFAULT_OPTIONS_EXCLUDE "^--(disable|enable)-static"
          OPTIONS
              ${OPTIONS}
--            py_cv_module__curses=n/a
--            py_cv_module__curses_panel=n/a
--            py_cv_module__tkinter=n/a
+             py_cv_module__curses=n/a
+             py_cv_module__curses_panel=n/a
+             py_cv_module__tkinter=n/a
          OPTIONS_DEBUG
              "--with-pydebug"
              "vcpkg_rpath=${CURRENT_INSTALLED_DIR}/debug/lib"

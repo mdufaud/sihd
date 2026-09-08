@@ -97,6 +97,15 @@ ssize_t TlsSocket::receive(void *data, size_t size)
     return Socket::receive(data, size);
 }
 
+bool TlsSocket::shutdown()
+{
+    // the TLS close_notify write must happen before SHUT_RDWR, or SSL_shutdown
+    // gets EPIPE and the process dies of SIGPIPE
+    if (_tls_conn)
+        _tls_conn.shutdown();
+    return Socket::shutdown();
+}
+
 bool TlsSocket::close()
 {
     if (_tls_conn)
