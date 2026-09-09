@@ -193,6 +193,8 @@ std::string remove_escape_char(std::string_view str, int escape = escape_char())
 std::string remove_enclosing(std::string_view str,
                              const char *authorized_start_enclose = encloses_start(),
                              int escape = escape_char());
+// unquote(" \"hello\" ") -> "hello"
+std::string_view unquote(std::string_view str);
 
 bool to_bool(std::string_view str, bool & value);
 bool to_char(std::string_view str, char & value);

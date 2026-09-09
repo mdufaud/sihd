@@ -16,6 +16,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+#include "internal/nt_dll.hpp"
+
 using _NtQueryInformationProcess = NTSTATUS(WINAPI *)(HANDLE ProcessHandle,
                                                       PROCESSINFOCLASS SystemInformationClass,
                                                       PVOID SystemInformation,
@@ -80,10 +82,8 @@ bool read_process_memory(HANDLE & handle, WindowsUserProcessInfos & procParams)
     PROCESS_BASIC_INFORMATION pbi;
     ULONG returnLength;
 
-    void *ptr = (void *)GetProcAddress(GetModuleHandle("ntdll"), "NtQueryInformationProcess");
-    if (ptr == nullptr)
-        return false;
-    _NtQueryInformationProcess fct = reinterpret_cast<_NtQueryInformationProcess>(ptr);
+    _NtQueryInformationProcess fct = reinterpret_cast<_NtQueryInformationProcess>(
+        internal::nt_dll_symbol("ntdll", "NtQueryInformationProcess"));
     if (fct == nullptr)
         return false;
     NTSTATUS status = fct(handle, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);

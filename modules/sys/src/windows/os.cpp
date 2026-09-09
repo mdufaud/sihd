@@ -43,6 +43,8 @@ using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, P
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 
+#include "internal/nt_dll.hpp"
+
 namespace sihd::sys::os
 {
 
@@ -149,10 +151,8 @@ Timestamp boot_time()
 
         SYSTEM_TIMEOFDAY_INFORMATION sysInfo;
 
-        void *ptr = (void *)GetProcAddress(GetModuleHandle("ntdll"), "NtQuerySystemInformation");
-        if (ptr == nullptr)
-            return Timestamp {};
-        _NtQuerySystemInformation fct = reinterpret_cast<_NtQuerySystemInformation>(ptr);
+        _NtQuerySystemInformation fct = reinterpret_cast<_NtQuerySystemInformation>(
+            internal::nt_dll_symbol("ntdll", "NtQuerySystemInformation"));
         if (fct == nullptr)
             return Timestamp {};
         NTSTATUS status = fct(SystemTimeOfDayInformation, &sysInfo, sizeof(sysInfo), NULL);

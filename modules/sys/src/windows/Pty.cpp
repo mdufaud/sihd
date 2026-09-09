@@ -12,6 +12,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
+#include "internal/nt_dll.hpp"
+
 #ifndef WIN32_LEAN_AND_MEAN
 # define WIN32_LEAN_AND_MEAN
 #endif
@@ -132,19 +134,12 @@ static bool CheckConPtySupport()
 
     s_conpty_checked = true;
 
-    HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
-    if (!kernel32)
-    {
-        SIHD_LOG(debug, "ConPty: kernel32.dll not found");
-        return false;
-    }
-
     pfnCreatePseudoConsole = reinterpret_cast<PFN_CreatePseudoConsole>(
-        reinterpret_cast<void *>(GetProcAddress(kernel32, "CreatePseudoConsole")));
+        internal::nt_dll_symbol("kernel32", "CreatePseudoConsole"));
     pfnResizePseudoConsole = reinterpret_cast<PFN_ResizePseudoConsole>(
-        reinterpret_cast<void *>(GetProcAddress(kernel32, "ResizePseudoConsole")));
+        internal::nt_dll_symbol("kernel32", "ResizePseudoConsole"));
     pfnClosePseudoConsole = reinterpret_cast<PFN_ClosePseudoConsole>(
-        reinterpret_cast<void *>(GetProcAddress(kernel32, "ClosePseudoConsole")));
+        internal::nt_dll_symbol("kernel32", "ClosePseudoConsole"));
 
     if (pfnCreatePseudoConsole && pfnResizePseudoConsole && pfnClosePseudoConsole)
     {

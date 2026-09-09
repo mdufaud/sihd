@@ -297,4 +297,39 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
     return ret;
 }
 
+std::optional<uint64_t> free_space(std::string_view path)
+{
+    ULARGE_INTEGER free_bytes;
+    if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
+        return std::nullopt;
+    return free_bytes.QuadPart;
+}
+
+std::optional<uint64_t> total_space(std::string_view path)
+{
+    ULARGE_INTEGER total_bytes;
+    if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))
+        return std::nullopt;
+    return total_bytes.QuadPart;
+}
+
+std::vector<MountEntry> mounts()
+{
+    std::vector<MountEntry> ret;
+    const DWORD drives = GetLogicalDrives();
+    for (char letter = 'A'; letter <= 'Z'; ++letter)
+    {
+        if (!(drives & (1u << (letter - 'A'))))
+            continue;
+        const std::string root = fmt::format("{}:\\", letter);
+        const UINT type = GetDriveTypeA(root.c_str());
+        if (type == DRIVE_UNKNOWN || type == DRIVE_NO_ROOT_DIR)
+            continue;
+        char fs_name[MAX_PATH + 1] = {};
+        GetVolumeInformationA(root.c_str(), nullptr, 0, nullptr, nullptr, nullptr, fs_name, sizeof(fs_name));
+        ret.push_back({root, root, fs_name});
+    }
+    return ret;
+}
+
 } // namespace sihd::sys::fs

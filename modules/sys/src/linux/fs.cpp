@@ -1,5 +1,6 @@
 #include <dirent.h> // DIR...
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h> // access
 
 #include <cstdio>
@@ -19,6 +20,10 @@
 # include <sys/sysmacros.h> // major / minor
 
 # include <linux/magic.h> // *_SUPER_MAGIC
+#endif
+
+#if defined(__SIHD_LINUX__)
+# include <mntent.h> // setmntent
 #endif
 
 namespace sihd::sys::fs
@@ -293,5 +298,48 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
     return StorageMedium::unknown;
 #endif
 }
+
+std::optional<uint64_t> free_space(std::string_view path)
+{
+    struct statvfs vfs;
+    if (::statvfs(path.data(), &vfs) != 0)
+        return std::nullopt;
+    return (uint64_t)vfs.f_bavail * vfs.f_frsize;
+}
+
+std::optional<uint64_t> total_space(std::string_view path)
+{
+    struct statvfs vfs;
+    if (::statvfs(path.data(), &vfs) != 0)
+        return std::nullopt;
+    return (uint64_t)vfs.f_blocks * vfs.f_frsize;
+}
+
+#if defined(__SIHD_LINUX__)
+
+std::vector<MountEntry> mounts()
+{
+    std::vector<MountEntry> ret;
+    FILE *file = setmntent("/proc/mounts", "r");
+    if (file == nullptr)
+        return ret;
+    mntent entry;
+    char buf[4096];
+    while (getmntent_r(file, &entry, buf, sizeof(buf)) != nullptr)
+    {
+        ret.push_back({entry.mnt_fsname, entry.mnt_dir, entry.mnt_type});
+    }
+    endmntent(file);
+    return ret;
+}
+
+#else
+
+std::vector<MountEntry> mounts()
+{
+    return {};
+}
+
+#endif
 
 } // namespace sihd::sys::fs

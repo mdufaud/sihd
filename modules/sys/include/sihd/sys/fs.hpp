@@ -63,6 +63,19 @@ MountType mount_type(std::string_view path);
 // network/ram/readonly/virtual/unresolvable backings
 StorageMedium storage_medium(std::string_view path);
 
+struct MountEntry
+{
+        std::string source;
+        std::string mount_point;
+        std::string fs_type;
+};
+
+std::vector<MountEntry> mounts();
+// bytes usable by the caller
+std::optional<uint64_t> free_space(std::string_view path);
+// bytes
+std::optional<uint64_t> total_space(std::string_view path);
+
 // permissions
 std::string permission_to_str(unsigned int mode);
 unsigned int permission_from_str(std::string_view mode);
@@ -131,6 +144,8 @@ ssize_t read_binary(std::string_view path, char *buf, size_t size);
 // offset < 0 : seek from end
 std::optional<std::string> read(std::string_view path, sihd::util::Slice slice);
 std::optional<std::string> read_line(std::string_view path, size_t line_number);
+// empty lines are omitted
+std::optional<std::vector<std::string>> read_lines(std::string_view path);
 // fast all file read
 std::optional<std::string> read_all(std::string_view path);
 

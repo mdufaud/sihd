@@ -36,6 +36,11 @@ class SigWatcher;
 class TmpDir;
 class Uuid;
 
+namespace info
+{
+class CpuUsage;
+}
+
 } // namespace sihd::sys
 
 #endif

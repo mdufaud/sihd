@@ -379,6 +379,20 @@ TEST_F(TestStr, test_str_remove_escape_sequences)
     EXPECT_EQ(escaped, "");
 }
 
+TEST_F(TestStr, test_str_unquote)
+{
+    EXPECT_EQ(str::unquote("hello"), "hello");
+    EXPECT_EQ(str::unquote("\"hello\""), "hello");
+    EXPECT_EQ(str::unquote("'hello'"), "hello");
+    EXPECT_EQ(str::unquote(" \"hello\" "), "hello");
+    EXPECT_EQ(str::unquote("\"it's\""), "it's");
+    EXPECT_EQ(str::unquote("\"hello"), "\"hello");
+    EXPECT_EQ(str::unquote("'hello\""), "'hello\"");
+    EXPECT_EQ(str::unquote(""), "");
+    EXPECT_EQ(str::unquote("\""), "\"");
+    EXPECT_EQ(str::unquote("'"), "'");
+}
+
 TEST_F(TestStr, test_str_bytes)
 {
     EXPECT_EQ(str::bytes_str(1), "1B");

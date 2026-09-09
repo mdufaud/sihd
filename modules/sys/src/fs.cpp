@@ -14,6 +14,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/str.hpp>
 
 // home/executable paths, children iteration, truncation, mount and storage queries,
 // chdir and tmp directories live in src/linux|windows/fs.cpp
@@ -579,6 +580,14 @@ std::optional<std::string> read_line(std::string_view path, size_t line_number)
         return line;
     }
     return std::nullopt;
+}
+
+std::optional<std::vector<std::string>> read_lines(std::string_view path)
+{
+    std::optional<std::string> content = read_all(path);
+    if (!content)
+        return std::nullopt;
+    return str::split(*content, '\n');
 }
 
 std::optional<std::string> read_all(std::string_view path)

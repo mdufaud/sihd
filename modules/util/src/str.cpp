@@ -1146,6 +1146,14 @@ std::string remove_enclosing(std::string_view str, const char *authorized_start_
     return ret;
 }
 
+std::string_view unquote(std::string_view str)
+{
+    str = trim(str);
+    if (str.size() >= 2 && (str.front() == '"' || str.front() == '\'') && str.back() == str.front())
+        return str.substr(1, str.size() - 2);
+    return str;
+}
+
 int find_str_not_enclosed(std::string_view origin,
                           std::string_view to_find,
                           const char *authorized_start_enclose,

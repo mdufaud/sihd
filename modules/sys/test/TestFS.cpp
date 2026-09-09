@@ -245,6 +245,22 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
 }
 
+TEST_F(TestFS, test_fs_read_lines)
+{
+    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
+    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+    std::string path = fs::combine({tmp_path.string(), "lines.txt"});
+
+    EXPECT_FALSE(fs::read_lines(path).has_value());
+
+    ASSERT_TRUE(fs::write(path, "first\n\nsecond\n"));
+    const auto lines = fs::read_lines(path);
+    ASSERT_TRUE(lines.has_value());
+    ASSERT_EQ(lines->size(), 2u);
+    EXPECT_EQ((*lines)[0], "first");
+    EXPECT_EQ((*lines)[1], "second");
+}
+
 TEST_F(TestFS, test_fs_permission)
 {
     auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
@@ -320,6 +336,43 @@ TEST_F(TestFS, test_fs_storage_medium)
     const fs::StorageMedium medium = fs::storage_medium(fs::cwd());
     EXPECT_TRUE(medium == fs::StorageMedium::ssd || medium == fs::StorageMedium::hdd
                 || medium == fs::StorageMedium::unknown);
+}
+
+TEST_F(TestFS, test_fs_disk_space)
+{
+    const auto free_bytes = fs::free_space(fs::cwd());
+    const auto total_bytes = fs::total_space(fs::cwd());
+    ASSERT_TRUE(free_bytes.has_value());
+    ASSERT_TRUE(total_bytes.has_value());
+    EXPECT_GT(*total_bytes, 0u);
+    EXPECT_LE(*free_bytes, *total_bytes);
+    SIHD_LOG(debug, "disk: {} / {} bytes free", *free_bytes, *total_bytes);
+
+    EXPECT_EQ(fs::free_space("/nonexistent/zzz"), std::nullopt);
+    EXPECT_EQ(fs::total_space("/nonexistent/zzz"), std::nullopt);
+}
+
+TEST_F(TestFS, test_fs_mounts)
+{
+#if defined(__SIHD_EMSCRIPTEN__)
+    GTEST_SKIP() << "no /proc/mounts on emscripten";
+#else
+    const std::vector<fs::MountEntry> mounts = fs::mounts();
+    ASSERT_FALSE(mounts.empty());
+# if defined(__SIHD_WINDOWS__)
+    const std::string expected_root = "C:\\";
+# else
+    const std::string expected_root = "/";
+# endif
+    bool found_root = false;
+    for (const auto & mount : mounts)
+    {
+        SIHD_LOG(debug, "mount: {} on {} ({})", mount.source, mount.mount_point, mount.fs_type);
+        if (mount.mount_point == expected_root)
+            found_root = true;
+    }
+    EXPECT_TRUE(found_root);
+#endif
 }
 
 } // namespace test
