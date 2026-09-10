@@ -1,6 +1,7 @@
 #ifndef __SIHD_SYS_FS_HPP__
 #define __SIHD_SYS_FS_HPP__
 
+#include <functional>
 #include <initializer_list>
 #include <optional>
 #include <span>
@@ -13,6 +14,37 @@
 
 namespace sihd::sys::fs
 {
+
+// creation is epoch 0 when the backing filesystem/kernel doesn't track birth times
+struct FileTimes
+{
+        sihd::util::Timestamp creation;
+        sihd::util::Timestamp access;
+        sihd::util::Timestamp write;
+};
+
+enum class MountType
+{
+    local,    // regular disk fs (ext4/xfs/btrfs/ntfs/...)
+    network,  // nfs/smb/cifs
+    ram,      // tmpfs (RAM-backed)
+    readonly, // squashfs (read-only compressed; live-ISO/snap/overlay lower)
+    unknown,
+};
+enum class StorageMedium
+{
+    ssd,
+    hdd,
+    unknown,
+};
+
+struct MountEntry
+{
+        std::string source;
+        std::string mount_point;
+        std::string fs_type;
+        MountType type = MountType::unknown;
+};
 
 // utils
 char sep();
@@ -33,6 +65,9 @@ bool is_block(std::string_view path);
 bool is_character(std::string_view path);
 bool is_fifo(std::string_view path);
 std::optional<size_t> file_size(std::string_view path);
+
+// creation is epoch 0 when the backing filesystem/kernel doesn't track birth times
+std::optional<FileTimes> times(std::string_view path);
 sihd::util::Timestamp last_write(std::string_view path);
 
 // uses _access
@@ -42,33 +77,12 @@ bool is_writable(std::string_view path);
 bool is_executable(std::string_view path);
 
 // storage
-enum class MountType
-{
-    local,    // regular disk fs (ext4/xfs/btrfs/ntfs/...)
-    network,  // nfs/smb/cifs
-    ram,      // tmpfs (RAM-backed)
-    readonly, // squashfs (read-only compressed; live-ISO/snap/overlay lower)
-    unknown,
-};
-enum class StorageMedium
-{
-    ssd,
-    hdd,
-    unknown,
-};
 
 // reliable classification of the filesystem backing 'path'
 MountType mount_type(std::string_view path);
 // heuristic (rotational vs seek-penalty); returns unknown for
 // network/ram/readonly/virtual/unresolvable backings
 StorageMedium storage_medium(std::string_view path);
-
-struct MountEntry
-{
-        std::string source;
-        std::string mount_point;
-        std::string fs_type;
-};
 
 std::vector<MountEntry> mounts();
 // bytes usable by the caller
@@ -120,6 +134,12 @@ bool rename(std::string_view from, std::string_view to);
 bool truncate(std::string_view path, int64_t size);
 bool are_equals(std::string_view path1, std::string_view path2);
 
+// overwrites 'to'; 'progress' returning false cancels and removes the partial 'to';
+// a copy that fails before starting leaves 'to' untouched; same-file copies are refused
+bool copy_file(std::string_view from,
+               std::string_view to,
+               const std::function<bool(size_t transferred, size_t total)> & progress = nullptr);
+
 // resolve
 std::string realpath(std::string_view path);
 
@@ -142,17 +162,17 @@ ssize_t read_binary(std::string_view path, char *buf, size_t size);
 // fast string read from file
 // offset > 0 : seek from beginning
 // offset < 0 : seek from end
-std::optional<std::string> read(std::string_view path, sihd::util::Slice slice);
+std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary = true);
+// text mode only: reads lines
 std::optional<std::string> read_line(std::string_view path, size_t line_number);
-// empty lines are omitted
+// text mode only; empty lines are omitted
 std::optional<std::vector<std::string>> read_lines(std::string_view path);
 // fast all file read
-std::optional<std::string> read_all(std::string_view path);
+// the default text mode stops at ^Z on windows: pass binary=true for raw bytes
+std::optional<std::string> read_all(std::string_view path, bool binary = false);
 
-// fast binary write into file
-bool write_binary(std::string_view path, std::string_view view, bool append = false);
-// fast write into file
-bool write(std::string_view path, std::string_view view, bool append = false);
+// fast write into file; text mode translates LF to CRLF on windows
+bool write(std::string_view path, std::string_view view, bool append = false, bool binary = false);
 
 bool chdir(std::string_view path);
 

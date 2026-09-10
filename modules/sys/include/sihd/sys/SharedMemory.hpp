@@ -26,6 +26,9 @@ class SharedMemory
         SharedMemory();
         virtual ~SharedMemory();
 
+        SharedMemory(SharedMemory &&);
+        SharedMemory & operator=(SharedMemory &&);
+
         bool create(std::string_view id, size_t size, mode_t mode = 0600);
 
         bool attach(std::string_view id, size_t size, mode_t mode = 0600);

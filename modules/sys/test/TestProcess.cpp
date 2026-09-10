@@ -325,7 +325,7 @@ TEST_F(TestProcess, test_process_file_out)
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
     EXPECT_TRUE(proc.terminate());
-    // fs::read_all opens in text mode, so CRLF is normalized to LF on every platform
+    // fs::read_all opens in text mode by default, so CRLF is normalized to LF
     EXPECT_EQ(fs::read_all(test_file).value(), "hello world\n");
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ((int)proc.return_code(), 0);

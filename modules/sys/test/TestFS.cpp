@@ -10,12 +10,31 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
+#include <sihd/util/time.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# include <windows.h>
+#endif
 
 namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::sys;
+
+#if defined(__SIHD_WINDOWS__)
+bool running_under_wine()
+{
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    return ntdll != nullptr && GetProcAddress(ntdll, "wine_get_version") != nullptr;
+}
+#else
+bool running_under_wine()
+{
+    return false;
+}
+#endif
+
 class TestFS: public ::testing::Test
 {
     protected:
@@ -240,6 +259,14 @@ TEST_F(TestFS, test_fs_fast_io)
     data[5] = 0;
     EXPECT_STREQ(data, "hello");
 
+    std::string content_z = "bin\032ary";
+    EXPECT_TRUE(fs::write(path, content_z, false, true));
+    EXPECT_EQ(fs::read_all(path, true).value_or(""), content_z);
+#if defined(__SIHD_WINDOWS__)
+    // the default text mode stops at ^Z
+    EXPECT_EQ(fs::read_all(path).value_or(""), "bin");
+#endif
+
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
     EXPECT_FALSE(fs::write("/there/is/no/path.txt", "none"));
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
@@ -365,14 +392,126 @@ TEST_F(TestFS, test_fs_mounts)
     const std::string expected_root = "/";
 # endif
     bool found_root = false;
+    bool found_local = false;
     for (const auto & mount : mounts)
     {
         SIHD_LOG(debug, "mount: {} on {} ({})", mount.source, mount.mount_point, mount.fs_type);
         if (mount.mount_point == expected_root)
             found_root = true;
+        if (mount.type == fs::MountType::local)
+            found_local = true;
     }
     EXPECT_TRUE(found_root);
+    EXPECT_TRUE(found_local);
+# if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+    // pseudo filesystems have no storage backing (paths exist under wine's Z:;
+    // /dev can be devtmpfs or tmpfs depending on the setup)
+    EXPECT_EQ(fs::mount_type("/proc"), fs::MountType::unknown);
+    EXPECT_EQ(fs::mount_type("/sys"), fs::MountType::unknown);
+# endif
 #endif
+}
+
+TEST_F(TestFS, test_fs_times)
+{
+    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
+    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+    std::string path = fs::combine({tmp_path.string(), "times.txt"});
+
+    EXPECT_FALSE(fs::times(path).has_value());
+
+    ASSERT_TRUE(fs::write(path, "times"));
+    const auto times = fs::times(path);
+    ASSERT_TRUE(times.has_value());
+    EXPECT_NE(times->write.get(), 0);
+    EXPECT_NE(times->access.get(), 0);
+#if defined(__SIHD_WINDOWS__)
+    EXPECT_NE(times->creation.get(), 0);
+#endif
+    if (times->creation.get() != 0)
+    {
+        EXPECT_LE(times->creation.get(), times->write.get());
+    }
+
+    // timestamps have a coarse granularity on some filesystems
+    time::msleep(20);
+    ASSERT_TRUE(fs::write(path, "times again"));
+    const auto times2 = fs::times(path);
+    ASSERT_TRUE(times2.has_value());
+    EXPECT_GT(times2->write.get(), times->write.get());
+    EXPECT_EQ(fs::last_write(path).get(), times2->write.get());
+}
+
+TEST_F(TestFS, test_fs_copy_file)
+{
+    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
+    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
+    const std::string src = fs::combine({tmp_path.string(), "copy_src.bin"});
+    const std::string dst = fs::combine({tmp_path.string(), "copy_dst.bin"});
+    const std::string dst_cancel = fs::combine({tmp_path.string(), "copy_cancel.bin"});
+    const std::string same = fs::combine({tmp_path.string(), "copy_same.bin"});
+
+    std::string content(5 * 1024 * 1024, '\0');
+    for (size_t i = 0; i < content.size(); ++i)
+        content[i] = (char)(i * 31 % 251);
+    ASSERT_TRUE(fs::write(src, content, false, true));
+
+    // Wine does not implement the CopyFile2 progress callback ("PCOPYFILE2_PROGRESS_ROUTINE
+    // is not supported" in its kernelbase/file.c): the callback never runs there, so
+    // progress counting and cancellation cannot be verified
+    size_t transferred = 0;
+    EXPECT_TRUE(fs::copy_file(src, dst, [&](size_t progress, size_t total) {
+        EXPECT_EQ(total, content.size());
+        EXPECT_GE(progress, transferred);
+        transferred = progress;
+        return true;
+    }));
+    EXPECT_TRUE(fs::are_equals(src, dst));
+    if (!running_under_wine())
+    {
+        EXPECT_EQ(transferred, content.size());
+    }
+    // the copy preserves the source write time (CopyFile2 / futimens)
+    const auto src_times = fs::times(src);
+    const auto dst_times = fs::times(dst);
+    ASSERT_TRUE(src_times.has_value());
+    ASSERT_TRUE(dst_times.has_value());
+    EXPECT_EQ(dst_times->write.get(), src_times->write.get());
+
+    // overwrite without progress callback
+    EXPECT_TRUE(fs::copy_file(src, dst));
+    EXPECT_TRUE(fs::are_equals(src, dst));
+
+    // copying a file onto itself is refused and keeps it intact
+    ASSERT_TRUE(fs::copy_file(src, same));
+    EXPECT_FALSE(fs::copy_file(same, same));
+    EXPECT_EQ(fs::file_size(same).value_or(0), content.size());
+
+    if (!running_under_wine())
+    {
+        // cancellation removes the partial destination
+        bool cancelled = false;
+        EXPECT_FALSE(fs::copy_file(src, dst_cancel, [&](size_t progress, size_t total) {
+            if (progress >= total / 2)
+            {
+                cancelled = true;
+                return false;
+            }
+            return true;
+        }));
+        EXPECT_TRUE(cancelled);
+        EXPECT_FALSE(fs::is_file(dst_cancel));
+    }
+
+    // empty files copy fine
+    const std::string empty_src = fs::combine({tmp_path.string(), "empty_src.bin"});
+    const std::string empty_dst = fs::combine({tmp_path.string(), "empty_dst.bin"});
+    ASSERT_TRUE(fs::write(empty_src, ""));
+    EXPECT_TRUE(fs::copy_file(empty_src, empty_dst));
+    EXPECT_TRUE(fs::are_equals(empty_src, empty_dst));
+
+    // missing source
+    EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.string(), "nope.bin"}), dst));
 }
 
 } // namespace test

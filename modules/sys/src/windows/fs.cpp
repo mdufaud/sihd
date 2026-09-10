@@ -12,9 +12,11 @@
 #include <fmt/ranges.h>
 
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::sys::fs
 {
@@ -26,9 +28,54 @@ SIHD_NEW_LOGGER("sihd::sys::fs");
 namespace
 {
 
+struct CopyProgressCtx
+{
+        const std::function<bool(size_t, size_t)> *progress;
+};
+
 bool do_stat(std::string_view path, struct stat *s)
 {
     return ::_stat(path.data(), reinterpret_cast<struct _stat *>(s)) == 0;
+}
+
+// FILETIME counts 100ns intervals since 1601-01-01; 0 means the field is not tracked
+Timestamp filetime_to_ts(int64_t filetime)
+{
+    if (filetime == 0)
+        return Timestamp(0);
+    return Timestamp((filetime - 116444736000000000LL) * 100);
+}
+
+COPYFILE2_MESSAGE_ACTION CALLBACK copy_progress_cb(const COPYFILE2_MESSAGE *message, PVOID context)
+{
+    auto *ctx = (CopyProgressCtx *)context;
+    if (message->Type == COPYFILE2_CALLBACK_CHUNK_FINISHED && ctx->progress && *ctx->progress)
+    {
+        const auto & chunk = message->Info.ChunkFinished;
+        const size_t transferred = (size_t)chunk.uliTotalBytesTransferred.QuadPart;
+        const size_t total = (size_t)chunk.uliTotalFileSize.QuadPart;
+        if (!(*ctx->progress)(transferred, total))
+            return COPYFILE2_PROGRESS_CANCEL; // CopyFile2 then removes the partial destination
+    }
+    return COPYFILE2_PROGRESS_CONTINUE;
+}
+
+MountType drive_type_to_mount(UINT type)
+{
+    switch (type)
+    {
+        case DRIVE_REMOTE:
+            return MountType::network;
+        case DRIVE_RAMDISK:
+            return MountType::ram;
+        case DRIVE_CDROM:
+            return MountType::readonly;
+        case DRIVE_FIXED:
+        case DRIVE_REMOVABLE:
+            return MountType::local;
+        default:
+            return MountType::unknown;
+    }
 }
 
 } // namespace
@@ -68,10 +115,34 @@ bool is_executable(std::string_view path)
     return _access(path.data(), 04) == 0;
 }
 
+std::optional<FileTimes> times(std::string_view path)
+{
+    HANDLE handle = CreateFileA(path.data(),
+                                // query access: metadata does not need read rights
+                                0,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                nullptr,
+                                OPEN_EXISTING,
+                                // backup semantics lets directories open too
+                                FILE_FLAG_BACKUP_SEMANTICS,
+                                nullptr);
+    if (handle == INVALID_HANDLE_VALUE)
+        return std::nullopt;
+    FILE_BASIC_INFO info;
+    const BOOL ok = GetFileInformationByHandleEx(handle, FileBasicInfo, &info, sizeof(info));
+    CloseHandle(handle);
+    if (!ok)
+        return std::nullopt;
+    FileTimes ret;
+    ret.creation = filetime_to_ts(info.CreationTime.QuadPart);
+    ret.access = filetime_to_ts(info.LastAccessTime.QuadPart);
+    ret.write = filetime_to_ts(info.LastWriteTime.QuadPart);
+    return ret;
+}
+
 Timestamp last_write(std::string_view path)
 {
-    struct stat s;
-    return do_stat(path.data(), &s) ? Timestamp(time::seconds(s.st_mtime)) : Timestamp {};
+    return times(path).value_or(FileTimes {}).write;
 }
 
 std::optional<size_t> file_size(std::string_view path)
@@ -181,6 +252,36 @@ bool truncate(std::string_view path, int64_t size)
     return rc == 0;
 }
 
+bool copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
+{
+    const std::wstring wfrom = str::to_wstr(from);
+    const std::wstring wto = str::to_wstr(to);
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0602
+    CopyProgressCtx ctx {progress ? &progress : nullptr};
+
+    COPYFILE2_EXTENDED_PARAMETERS params {};
+    params.dwSize = sizeof(params);
+    params.pProgressRoutine = &copy_progress_cb;
+    params.pvCallbackContext = &ctx;
+
+    // a failing CopyFile2 that never started the copy leaves the destination untouched:
+    // only remove a destination we made or a cancel left partial
+    const bool dest_existed = ::GetFileAttributesW(wto.c_str()) != INVALID_FILE_ATTRIBUTES;
+    const HRESULT hr = ::CopyFile2(wfrom.c_str(), wto.c_str(), &params);
+    if (SUCCEEDED(hr))
+        return true;
+    if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED) || !dest_existed)
+        ::DeleteFileW(wto.c_str());
+    if (hr != HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED))
+        SIHD_LOG(error, "fs: copy_file: CopyFile2: 0x{:08x}", (unsigned long)hr);
+    return false;
+#else
+    // SDK without the CopyFile2 declarations (Win7-era): no progress support
+    (void)progress;
+    return ::CopyFileW(wfrom.c_str(), wto.c_str(), FALSE) != 0;
+#endif
+}
+
 std::string realpath(std::string_view path)
 {
     // POSIX realpath requires every path component to exist; _fullpath is purely
@@ -213,20 +314,7 @@ MountType mount_type([[maybe_unused]] std::string_view path)
     if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
         return MountType::unknown;
 
-    switch (GetDriveTypeA(root))
-    {
-        case DRIVE_REMOTE:
-            return MountType::network;
-        case DRIVE_RAMDISK:
-            return MountType::ram;
-        case DRIVE_CDROM:
-            return MountType::readonly;
-        case DRIVE_FIXED:
-        case DRIVE_REMOVABLE:
-            return MountType::local;
-        default:
-            return MountType::unknown;
-    }
+    return drive_type_to_mount(GetDriveTypeA(root));
 }
 
 StorageMedium storage_medium([[maybe_unused]] std::string_view path)
@@ -327,7 +415,7 @@ std::vector<MountEntry> mounts()
             continue;
         char fs_name[MAX_PATH + 1] = {};
         GetVolumeInformationA(root.c_str(), nullptr, 0, nullptr, nullptr, nullptr, fs_name, sizeof(fs_name));
-        ret.push_back({root, root, fs_name});
+        ret.push_back({root, root, fs_name, drive_type_to_mount(type)});
     }
     return ret;
 }

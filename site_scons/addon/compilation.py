@@ -127,10 +127,11 @@ mode_release_em_link = ['--strip-debug']
 # _WIN64 -> activates sihd functionalities
 # _WIN32_WINNT -> activates higher version of WIN functionalities (mingw)
 # NTDDI_VERSION -> activates higher version of WIN functionalities (mingw)
+# 0x0602 (Win8): CopyFile2 and friends
 windows_defines = [
     "_WIN64",
-    "_WIN32_WINNT=0x0600",
-    "NTDDI_VERSION=0x06000000",
+    "_WIN32_WINNT=0x0602",
+    "NTDDI_VERSION=0x06020000",
     "_ISOC99_SOURCE",
 ]
 

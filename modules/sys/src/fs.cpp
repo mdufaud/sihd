@@ -521,27 +521,19 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     return candidate;
 }
 
-bool write(std::string_view path, std::string_view view, bool append)
+bool write(std::string_view path, std::string_view view, bool append, bool binary)
 {
-    File file(path, append ? "a" : "w");
+    const char *mode = binary ? (append ? "ab" : "wb") : (append ? "a" : "w");
+    File file(path, mode);
 
     if (file.is_open())
         return file.write(view) == (ssize_t)view.size();
     return false;
 }
 
-bool write_binary(std::string_view path, std::string_view view, bool append)
+std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary)
 {
-    File file(path, append ? "ab" : "wb");
-
-    if (file.is_open())
-        return file.write(view) == (ssize_t)view.size();
-    return false;
-}
-
-std::optional<std::string> read(std::string_view path, sihd::util::Slice slice)
-{
-    File file(path, "r");
+    File file(path, binary ? "rb" : "r");
     if (!file.is_open())
         return std::nullopt;
 
@@ -590,9 +582,10 @@ std::optional<std::vector<std::string>> read_lines(std::string_view path)
     return str::split(*content, '\n');
 }
 
-std::optional<std::string> read_all(std::string_view path)
+std::optional<std::string> read_all(std::string_view path, bool binary)
 {
-    std::ifstream file(path.data(), std::ifstream::in);
+    const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
+    std::ifstream file(path.data(), mode);
     if (file.is_open() && file.good())
     {
         std::stringstream buffer;
