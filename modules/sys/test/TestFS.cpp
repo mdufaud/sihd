@@ -5,12 +5,16 @@
 
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
+
+#include "test_helper.hpp"
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -513,5 +517,72 @@ TEST_F(TestFS, test_fs_copy_file)
     // missing source
     EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.string(), "nope.bin"}), dst));
 }
+
+TEST_F(TestFS, test_fs_platform_paths)
+{
+    for (const std::string & path : {fs::config_path(), fs::data_path(), fs::cache_path(), fs::download_path()})
+    {
+        EXPECT_FALSE(path.empty()) << path;
+        EXPECT_TRUE(fs::is_absolute(path)) << path;
+    }
+    EXPECT_NE(fs::config_path(), fs::cache_path());
+}
+
+#if !defined(__SIHD_WINDOWS__)
+
+TEST_F(TestFS, test_fs_xdg_paths)
+{
+    const std::string override_dir = fs::combine(fs::tmp_path(), "sihd_test_xdg");
+
+    {
+        ScopedEnv cache("XDG_CACHE_HOME", override_dir);
+        EXPECT_EQ(fs::cache_path(), override_dir);
+    }
+
+    // a relative value is ignored per the spec
+    {
+        ScopedEnv data("XDG_DATA_HOME", "relative/path");
+        EXPECT_TRUE(str::ends_with(fs::data_path(), "/.local/share"));
+    }
+
+    // no HOME means no default under home
+    {
+        ScopedEnv no_home("HOME", std::nullopt);
+        ScopedEnv no_config("XDG_CONFIG_HOME", std::nullopt);
+        EXPECT_EQ(fs::config_path(), "");
+    }
+}
+
+TEST_F(TestFS, test_fs_download_path)
+{
+    // destructor removes the directory even when an assertion aborts the test
+    TmpDir tmp_config;
+    ASSERT_TRUE(tmp_config);
+    const std::string dirs_file = fs::combine(tmp_config.path(), "user-dirs.dirs");
+    const std::string fallback = fs::combine(fs::home_path(), "Downloads");
+
+    ScopedEnv config("XDG_CONFIG_HOME", tmp_config.path());
+
+    // no user-dirs.dirs: falls back to ~/Downloads
+    EXPECT_EQ(fs::download_path(), fallback);
+
+    // $HOME is expanded
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"$HOME/Telechargements\"\n"));
+    EXPECT_EQ(fs::download_path(), fs::combine(fs::home_path(), "Telechargements"));
+
+    // absolute values are used as-is
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"/data/downloads\"\n"));
+    EXPECT_EQ(fs::download_path(), "/data/downloads");
+
+    // an unusable value falls back to ~/Downloads
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"relative/dir\"\n"));
+    EXPECT_EQ(fs::download_path(), fallback);
+
+    // other keys are ignored
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_MUSIC_DIR=\"$HOME/Music\"\n"));
+    EXPECT_EQ(fs::download_path(), fallback);
+}
+
+#endif
 
 } // namespace test

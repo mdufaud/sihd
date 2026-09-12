@@ -6,6 +6,7 @@
 #include <functional>
 #include <span>
 
+#include <sihd/sys/Environment.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
@@ -168,7 +169,9 @@ class Process: public sihd::util::IHandler<Poll *>,
 
         // get setted argv
         const std::vector<std::string> & argv() const { return _argv; }
-        const std::vector<std::string> & env() const { return _environment; }
+        // "KEY=VALUE" materialization of the environment
+        std::vector<std::string> env() const;
+        const Environment & environment() const { return _env; }
 
         // default file opening mode
         mode_t open_mode;
@@ -184,17 +187,17 @@ class Process: public sihd::util::IHandler<Poll *>,
 
         void handle(Poll *poll) override;
 
-        bool _do_execute(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-        bool _do_fork(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-        bool _do_spawn(const std::vector<const char *> & argv, const std::vector<const char *> & env);
-        bool _do_child_process(const std::vector<const char *> & argv, const std::vector<const char *> & env);
+        bool _do_execute(const std::vector<const char *> & argv, const Environment & env);
+        bool _do_fork(const std::vector<const char *> & argv, const Environment & env);
+        bool _do_spawn(const std::vector<const char *> & argv, const Environment & env);
+        bool _do_child_process(const std::vector<const char *> & argv, const Environment & env);
 
         std::atomic<bool> _started;
         std::atomic<bool> _executing;
         bool _close_stdin_after_exec;
         std::unique_ptr<Impl> _impl;
         std::vector<std::string> _argv;
-        std::vector<std::string> _environment;
+        Environment _env;
         std::string _chroot;
         std::string _chdir;
         bool _force_fork;

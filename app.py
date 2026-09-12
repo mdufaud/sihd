@@ -73,6 +73,9 @@ modules = {
             'gdi32', # wingdi (screenshot/clipboard)
             'imagehlp', # backtrace / SymFromAddr
             'advapi32', # token privileges (Capabilities) / GetUserName
+            'shell32', # SHGetKnownFolderPath (fs known folders)
+            'ole32', # CoTaskMemFree (fs known folders)
+            'uuid', # FOLDERID_* guids (fs known folders)
             # ! never add libucrt with mingw
         ],
         # === Export every libs for convenience ===

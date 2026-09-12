@@ -15,7 +15,9 @@
 
 #include <cstring>
 
+#include <sihd/sys/Environment.hpp>
 #include <sihd/sys/Pty.hpp>
+#include <sihd/sys/env.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
@@ -46,6 +48,8 @@
 # elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
 #  include <util.h>
 # endif
+
+# include "internal/environment.hpp"
 
 namespace sihd::sys
 {
@@ -105,11 +109,11 @@ class PosixPty: public Pty
         void send_eof() override;
 
     private:
-        std::string _shell;                                    ///< Shell executable path
-        std::vector<std::string> _args;                        ///< Shell arguments
-        std::vector<std::pair<std::string, std::string>> _env; ///< Environment variables
-        std::string _working_dir;                              ///< Working directory
-        PtySize _size;                                         ///< Terminal size
+        std::string _shell;             ///< Shell executable path
+        std::vector<std::string> _args; ///< Shell arguments
+        Environment _env;               ///< Environment variables
+        std::string _working_dir;       ///< Working directory
+        PtySize _size;                  ///< Terminal size
 
         pid_t _pid;       ///< Child process ID (-1 if not spawned)
         int _master_fd;   ///< Master side of the PTY (-1 if not spawned)
@@ -155,7 +159,7 @@ void PosixPty::set_args(std::vector<std::string> args)
 
 void PosixPty::set_env(std::string_view name, std::string_view value)
 {
-    _env.emplace_back(name, value);
+    _env.set(name, value);
 }
 
 void PosixPty::set_size(const PtySize & size)
@@ -211,16 +215,13 @@ bool PosixPty::spawn()
         }
 
         // Set environment variables
-        for (const auto & [name, value] : _env)
-        {
-            setenv(name.c_str(), value.c_str(), 1);
-        }
+        internal::apply(_env);
 
         // Set TERM if not already set by the caller
         // xterm-256color provides good compatibility with most applications
-        if (getenv("TERM") == nullptr)
+        if (!env::get("TERM").has_value())
         {
-            setenv("TERM", "xterm-256color", 0);
+            env::set("TERM", "xterm-256color");
         }
 
         // Build argv for execvp

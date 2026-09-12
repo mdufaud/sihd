@@ -8,6 +8,8 @@
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/clipboard.hpp>
 
+#include "test_helper.hpp"
+
 #if !defined(__SIHD_WINDOWS__)
 # include "../src/linux/internal/desktop_env.hpp"
 #endif
@@ -21,42 +23,6 @@ namespace
 {
 
 namespace mime = sihd::util::mime;
-
-#if !defined(__SIHD_WINDOWS__)
-
-// Scoped environment variable helper for the session detection test.
-struct EnvVar
-{
-        EnvVar(const char *name, const char *value): _name(name)
-        {
-            const char *old = getenv(name);
-            // Only a previously existing variable is restored to a value.
-            _restore = old != nullptr;
-            if (_restore)
-                _old_value = old;
-            if (value != nullptr)
-                setenv(name, value, 1);
-            else
-                unsetenv(name);
-        }
-
-        ~EnvVar()
-        {
-            if (_restore)
-                setenv(_name, _old_value.c_str(), 1);
-            else
-                unsetenv(_name);
-        }
-
-        EnvVar(const EnvVar &) = delete;
-        EnvVar & operator=(const EnvVar &) = delete;
-
-        const char *_name;
-        bool _restore;
-        std::string _old_value;
-};
-
-#endif
 
 class TestClipboardBackend: public ::testing::Test
 {
@@ -175,23 +141,23 @@ TEST(TestClipboardConvert, test_to_image_indexed_bmp)
 TEST(TestSessionDetection, test_wayland_session_env)
 {
     {
-        EnvVar display("WAYLAND_DISPLAY", "wayland-0");
+        ScopedEnv display("WAYLAND_DISPLAY", "wayland-0");
         EXPECT_TRUE(internal::wayland_session());
     }
     {
-        EnvVar socket("WAYLAND_SOCKET", "3");
+        ScopedEnv socket("WAYLAND_SOCKET", "3");
         EXPECT_TRUE(internal::wayland_session());
     }
     {
-        EnvVar display("WAYLAND_DISPLAY", nullptr);
-        EnvVar socket("WAYLAND_SOCKET", nullptr);
-        EnvVar type("XDG_SESSION_TYPE", "wayland");
+        ScopedEnv display("WAYLAND_DISPLAY", std::nullopt);
+        ScopedEnv socket("WAYLAND_SOCKET", std::nullopt);
+        ScopedEnv type("XDG_SESSION_TYPE", "wayland");
         EXPECT_TRUE(internal::wayland_session());
     }
     {
-        EnvVar display("WAYLAND_DISPLAY", nullptr);
-        EnvVar socket("WAYLAND_SOCKET", nullptr);
-        EnvVar type("XDG_SESSION_TYPE", "x11");
+        ScopedEnv display("WAYLAND_DISPLAY", std::nullopt);
+        ScopedEnv socket("WAYLAND_SOCKET", std::nullopt);
+        ScopedEnv type("XDG_SESSION_TYPE", "x11");
         EXPECT_FALSE(internal::wayland_session());
     }
 }

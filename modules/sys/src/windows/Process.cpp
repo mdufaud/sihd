@@ -20,13 +20,9 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
-extern "C"
-{
-extern char **environ;
-}
+#include "internal/environment.hpp"
 
 namespace sihd::sys
 {
@@ -432,8 +428,7 @@ void Process::reset_proc()
 
 void Process::clear()
 {
-    this->env_clear();
-    this->env_load(str::table_span(environ));
+    _env = Environment::from_current();
     this->reset_proc();
     _impl->pipe.reset();
 }
@@ -573,17 +568,17 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 // Execution
 
-bool Process::_do_fork(const std::vector<const char *> &, const std::vector<const char *> &)
+bool Process::_do_fork(const std::vector<const char *> &, const Environment &)
 {
     return false;
 }
 
-bool Process::_do_spawn(const std::vector<const char *> &, const std::vector<const char *> &)
+bool Process::_do_spawn(const std::vector<const char *> &, const Environment &)
 {
     return false;
 }
 
-bool Process::_do_child_process(const std::vector<const char *> & argv, const std::vector<const char *> & env)
+bool Process::_do_child_process(const std::vector<const char *> & argv, const Environment & env)
 {
     if (_fun_to_execute)
     {
@@ -625,16 +620,7 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
         cmd_line += arg;
     }
 
-    // CreateProcess wants a double-null-terminated block of null-separated strings
-    std::string env_str;
-    for (const char *val : env)
-    {
-        if (val == nullptr)
-            break;
-        env_str += val;
-        env_str.push_back('\0');
-    }
-    env_str.push_back('\0');
+    const std::string env_block = internal::to_windows_block(env);
 
     // Create the child process.
 
@@ -642,15 +628,15 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     const DWORD creation_flags = 0;
 
     success = CreateProcess(NULL,
-                            cmd_line.data(),                                 // command line
-                            NULL,                                            // process security attributes
-                            NULL,                                            // primary thread security attributes
-                            TRUE,                                            // handles are inherited
-                            creation_flags,                                  // creation flags
-                            env_str.empty() ? NULL : (LPVOID)env_str.data(), // environment
-                            _chdir.empty() ? NULL : _chdir.data(),           // current directory
-                            &start_info,                                     // STARTUPINFO pointer
-                            &_impl->process_watcher.procinfo);               // receives PROCESS_INFORMATION
+                            cmd_line.data(),                                     // command line
+                            NULL,                                                // process security attributes
+                            NULL,                                                // primary thread security attributes
+                            TRUE,                                                // handles are inherited
+                            creation_flags,                                      // creation flags
+                            env_block.empty() ? NULL : (LPVOID)env_block.data(), // environment
+                            _chdir.empty() ? NULL : _chdir.data(),               // current directory
+                            &start_info,                                         // STARTUPINFO pointer
+                            &_impl->process_watcher.procinfo);                   // receives PROCESS_INFORMATION
 
     // If an error occurs, exit the application.
     if (!success)
@@ -667,7 +653,7 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const st
     return success;
 }
 
-bool Process::_do_execute(const std::vector<const char *> & argv, const std::vector<const char *> & env)
+bool Process::_do_execute(const std::vector<const char *> & argv, const Environment & env)
 {
     return this->_do_child_process(argv, env);
 }
@@ -693,15 +679,7 @@ bool Process::execute()
     }
     c_argv.emplace_back(nullptr);
 
-    std::vector<const char *> c_environ;
-    c_environ.reserve(_environment.size() + 1);
-    for (const std::string & env : _environment)
-    {
-        c_environ.emplace_back(env.c_str());
-    }
-    c_environ.emplace_back(nullptr);
-
-    const bool success = this->_do_execute(c_argv, c_environ);
+    const bool success = this->_do_execute(c_argv, _env);
     if (success)
     {
         safe_close(_impl->pipe.std_in.fd_read);

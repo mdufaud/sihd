@@ -3,6 +3,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
@@ -22,12 +23,12 @@ SIHD_NEW_LOGGER("sihd::sys::os");
 
 bool exists_in_path(std::string_view binary_name)
 {
-    const char *path = getenv("PATH");
-    if (path == nullptr)
+    const std::optional<std::string> path = env::get("PATH");
+    if (!path.has_value())
         return false;
 
     Splitter splitter(":");
-    for (const std::string & subpath : splitter.split(path))
+    for (const std::string & subpath : splitter.split(*path))
     {
         if (fs::is_executable(fs::combine(subpath, binary_name)))
             return true;
@@ -38,16 +39,17 @@ bool exists_in_path(std::string_view binary_name)
 
 bool is_run_by_valgrind()
 {
-    char *ldpreload = getenv("LD_PRELOAD");
-    return ldpreload != nullptr
-           && (strstr(ldpreload, "/valgrind/") != nullptr || strstr(ldpreload, "/vgpreload") != nullptr);
+    const std::optional<std::string> ldpreload = env::get("LD_PRELOAD");
+    return ldpreload.has_value()
+           && (strstr(ldpreload->c_str(), "/valgrind/") != nullptr
+               || strstr(ldpreload->c_str(), "/vgpreload") != nullptr);
 }
 
 bool is_run_by_qemu()
 {
     // qemu-user passes its own QEMU_LD_PREFIX into the guest environment (cross sysroot).
     // No reliable non-env signal: qemu-11 emulates the vDSO and fakes uname/auxv to the guest.
-    return getenv("QEMU_LD_PREFIX") != nullptr;
+    return env::get("QEMU_LD_PREFIX").has_value();
 }
 
 } // namespace sihd::sys::os

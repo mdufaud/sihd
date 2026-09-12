@@ -11,6 +11,7 @@
 #include <thread>
 
 #include <sihd/imgui/ImguiBackendNcurses.hpp>
+#include <sihd/sys/env.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::imgui
@@ -121,7 +122,7 @@ bool ImguiBackendNcurses::init()
     // not populated with terminfo data at runtime.
     // If no TERMINFO override is set by the user, append known system terminfo
     // directories to TERMINFO_DIRS so ncurses can fall back to them.
-    if (getenv("TERMINFO") == nullptr)
+    if (!sihd::sys::env::get("TERMINFO").has_value())
     {
         static const char *candidates[] = {
             "/usr/share/terminfo",
@@ -130,9 +131,8 @@ bool ImguiBackendNcurses::init()
             nullptr,
         };
         std::string dirs;
-        const char *existing = getenv("TERMINFO_DIRS");
-        if (existing)
-            dirs = existing;
+        if (const std::optional<std::string> existing = sihd::sys::env::get("TERMINFO_DIRS"))
+            dirs = *existing;
         for (const char **p = candidates; *p; ++p)
         {
             struct stat st;
@@ -144,7 +144,7 @@ bool ImguiBackendNcurses::init()
             }
         }
         if (!dirs.empty())
-            setenv("TERMINFO_DIRS", dirs.c_str(), /*overwrite=*/1);
+            sihd::sys::env::set("TERMINFO_DIRS", dirs);
     }
 
     if (initscr() == nullptr)

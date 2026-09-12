@@ -1,6 +1,7 @@
 #include <direct.h> // _mkdir _rmdir
 #include <fcntl.h>  // _O_WRONLY
 #include <io.h>     // _access _open _close _chsize_s
+#include <shlobj.h> // SHGetKnownFolderPath / FOLDERID_*
 #include <sys/stat.h>
 #include <windows.h>  // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
 #include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
@@ -11,6 +12,7 @@
 
 #include <fmt/ranges.h>
 
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
@@ -78,11 +80,72 @@ MountType drive_type_to_mount(UINT type)
     }
 }
 
+// SHGetKnownFolderPath with KF_FLAG_DONT_VERIFY: the path is returned even when it doesn't exist
+std::string known_folder(REFKNOWNFOLDERID folder_id)
+{
+    PWSTR wide = nullptr;
+    if (::SHGetKnownFolderPath(folder_id, KF_FLAG_DONT_VERIFY, nullptr, &wide) != S_OK)
+        return "";
+    std::string path;
+    const int size = ::WideCharToMultiByte(CP_UTF8, 0, wide, -1, nullptr, 0, nullptr, nullptr);
+    if (size > 1)
+    {
+        path.resize(size - 1);
+        ::WideCharToMultiByte(CP_UTF8, 0, wide, -1, path.data(), size, nullptr, nullptr);
+    }
+    ::CoTaskMemFree(wide);
+    return path;
+}
+
+std::string env_str(const char *name)
+{
+    return env::get(name).value_or("");
+}
+
+// roaming: settings and user data follow the user across machines
+std::string roaming_folder()
+{
+    std::string path = known_folder(FOLDERID_RoamingAppData);
+    return path.empty() ? env_str("APPDATA") : path;
+}
+
 } // namespace
 
 std::string home_path()
 {
-    return combine(getenv("HOMEDRIVE"), getenv("HOMEPATH"));
+    const std::optional<std::string> drive = env::get("HOMEDRIVE");
+    const std::optional<std::string> path = env::get("HOMEPATH");
+    if (!drive.has_value() || !path.has_value())
+        return "";
+    return combine(*drive, *path);
+}
+
+std::string config_path()
+{
+    return roaming_folder();
+}
+
+std::string data_path()
+{
+    return roaming_folder();
+}
+
+std::string cache_path()
+{
+    std::string path = known_folder(FOLDERID_LocalAppData);
+    return path.empty() ? env_str("LOCALAPPDATA") : path;
+}
+
+std::string download_path()
+{
+    std::string path = known_folder(FOLDERID_Downloads);
+    if (path.empty())
+    {
+        const std::optional<std::string> profile = env::get("USERPROFILE");
+        if (profile.has_value())
+            path = combine(*profile, "Downloads");
+    }
+    return path;
 }
 
 std::string executable_path()
@@ -162,8 +225,8 @@ std::string tmp_path()
     catch ([[maybe_unused]] const std::filesystem::filesystem_error & e)
     {
     }
-    const char *tmp_path = getenv("Temp");
-    return tmp_path != nullptr ? tmp_path : "C:\\Windows\\TEMP\\";
+    const std::optional<std::string> tmp_path = env::get("Temp");
+    return tmp_path.value_or("C:\\Windows\\TEMP\\");
 }
 
 std::string make_tmp_directory(std::string_view prefix)

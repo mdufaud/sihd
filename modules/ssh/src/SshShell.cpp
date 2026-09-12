@@ -1,6 +1,7 @@
 #include <libssh/libssh.h>
 
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
@@ -62,17 +63,15 @@ bool SshShell::open(bool x11)
     }
 
     long columns = 80;
-    const char *env_columns = getenv("COLUMNS");
-    if (env_columns != nullptr)
+    if (const std::optional<std::string> env_columns = env::get("COLUMNS"))
     {
-        if (const auto val = str::convert_from_string<long>(env_columns); val.has_value() && *val > 0)
+        if (const auto val = str::convert_from_string<long>(*env_columns); val.has_value() && *val > 0)
             columns = *val;
     }
     long rows = 24;
-    const char *env_rows = getenv("LINES");
-    if (env_rows != nullptr)
+    if (const std::optional<std::string> env_rows = env::get("LINES"))
     {
-        if (const auto val = str::convert_from_string<long>(env_rows); val.has_value() && *val > 0)
+        if (const auto val = str::convert_from_string<long>(*env_rows); val.has_value() && *val > 0)
             rows = *val;
     }
 

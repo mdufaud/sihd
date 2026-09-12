@@ -17,11 +17,13 @@
 
 #include <fmt/ranges.h>
 
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/str.hpp>
 
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <sys/statfs.h>    // statfs
@@ -247,11 +249,78 @@ StorageMedium storage_medium_from_devnum(dev_t st_dev)
 
 #endif
 
+// default location, relative to the home directory
+std::string home_subpath(std::string_view sub)
+{
+    const std::string home = home_path();
+    return home.empty() ? "" : combine(home, sub);
+}
+
+// XDG base-dir spec: the variable wins only when it holds an absolute path
+std::string xdg_path(const char *var, std::string_view default_under_home)
+{
+    const std::optional<std::string> from_env = env::get(var);
+    if (from_env.has_value() && is_absolute(*from_env))
+        return *from_env;
+    return home_subpath(default_under_home);
+}
+
+// XDG user-dirs spec: 'XDG_...="$HOME/..."' lines of user-dirs.dirs
+std::string user_dirs_path(std::string_view key)
+{
+    const std::string config_dir = xdg_path("XDG_CONFIG_HOME", ".config");
+    if (config_dir.empty())
+        return "";
+    const std::optional<std::string> content = read_all(combine(config_dir, "user-dirs.dirs"));
+    if (!content.has_value())
+        return "";
+    const std::string home = home_path();
+    for (const std::string & line : str::split(content.value(), '\n'))
+    {
+        const auto [line_key, line_value] = str::split_pair(line, "=");
+        if (str::trim(line_key) != key)
+            continue;
+        std::string dir(str::trim(line_value));
+        if (dir.size() >= 2 && dir.front() == '"' && dir.back() == '"')
+            dir = dir.substr(1, dir.size() - 2);
+        if (str::starts_with(dir, "$HOME"))
+        {
+            if (home.empty())
+                continue;
+            dir.replace(0, 5, home);
+        }
+        if (!dir.empty() && is_absolute(dir))
+            return dir;
+    }
+    return "";
+}
+
 } // namespace
 
 std::string home_path()
 {
-    return getenv("HOME");
+    return env::get("HOME").value_or("");
+}
+
+std::string config_path()
+{
+    return xdg_path("XDG_CONFIG_HOME", ".config");
+}
+
+std::string data_path()
+{
+    return xdg_path("XDG_DATA_HOME", ".local/share");
+}
+
+std::string cache_path()
+{
+    return xdg_path("XDG_CACHE_HOME", ".cache");
+}
+
+std::string download_path()
+{
+    const std::string dir = user_dirs_path("XDG_DOWNLOAD_DIR");
+    return dir.empty() ? home_subpath("Downloads") : dir;
 }
 
 std::string executable_path()
@@ -346,11 +415,13 @@ std::optional<size_t> file_size(std::string_view path)
 
 std::string tmp_path()
 {
-    const char *tmp_path;
-
-    (tmp_path = getenv("TMPDIR")) || (tmp_path = getenv("TMP")) || (tmp_path = getenv("TEMP"))
-        || (tmp_path = getenv("TMPDIR"));
-    return tmp_path != nullptr ? tmp_path : "/tmp";
+    for (const char *var : {"TMPDIR", "TMP", "TEMP"})
+    {
+        const std::optional<std::string> path = env::get(var);
+        if (path.has_value())
+            return *path;
+    }
+    return "/tmp";
 }
 
 std::string make_tmp_directory(std::string_view prefix)

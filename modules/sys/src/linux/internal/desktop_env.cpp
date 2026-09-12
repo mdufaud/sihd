@@ -1,16 +1,15 @@
 #include "desktop_env.hpp"
 
-#include <cstdlib>
-#include <cstring>
+#include <sihd/sys/env.hpp>
 
 namespace sihd::sys::internal
 {
 
 bool wayland_session()
 {
-    const char *session_type = getenv("XDG_SESSION_TYPE");
-    return getenv("WAYLAND_DISPLAY") != nullptr || getenv("WAYLAND_SOCKET") != nullptr
-           || (session_type != nullptr && strcmp(session_type, "wayland") == 0);
+    const std::optional<std::string> session_type = env::get("XDG_SESSION_TYPE");
+    return env::get("WAYLAND_DISPLAY").has_value() || env::get("WAYLAND_SOCKET").has_value()
+           || (session_type.has_value() && *session_type == "wayland");
 }
 
 } // namespace sihd::sys::internal

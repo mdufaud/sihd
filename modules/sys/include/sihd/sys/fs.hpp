@@ -56,6 +56,14 @@ std::string home_path();
 std::string cwd();
 std::string executable_path();
 
+// XDG base-dir spec on linux
+// SHGetKnownFolders on windows
+// no directory is created
+std::string config_path();
+std::string data_path();
+std::string cache_path();
+std::string download_path();
+
 // stat
 bool is_file(std::string_view path);
 bool is_dir(std::string_view path);
