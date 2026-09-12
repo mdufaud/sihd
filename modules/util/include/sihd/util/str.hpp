@@ -36,6 +36,14 @@ std::vector<std::string> regex_filter(std::span<const std::string> input, const 
 std::vector<std::string> regex_filter(std::span<std::string_view> input, const std::string & pattern);
 std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern);
 
+// fnmatch syntax: '*', '?', '[set]' with '!' negation, a-z ranges, [:alpha:] classes and '\' escapes
+bool glob_match(std::string_view str, std::string_view pattern, bool ignore_case = false);
+std::vector<std::string>
+    glob_filter(std::span<const std::string> input, std::string_view pattern, bool ignore_case = false);
+std::vector<std::string>
+    glob_filter(std::span<std::string_view> input, std::string_view pattern, bool ignore_case = false);
+std::vector<std::string> glob_filter(std::span<const char *> input, std::string_view pattern, bool ignore_case = false);
+
 void append_sep(std::string & str, std::string_view append, std::string_view sep = ",");
 
 std::string timeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);

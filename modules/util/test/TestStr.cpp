@@ -183,6 +183,127 @@ TEST_F(TestStr, test_str_regex_search)
     EXPECT_EQ(results[6], "dog");
 }
 
+TEST_F(TestStr, test_str_glob_match)
+{
+    EXPECT_TRUE(str::glob_match("hello", "hello"));
+    EXPECT_FALSE(str::glob_match("hello", "hell"));
+    EXPECT_FALSE(str::glob_match("hello", "helloo"));
+
+    EXPECT_TRUE(str::glob_match("", ""));
+    EXPECT_TRUE(str::glob_match("", "*"));
+    EXPECT_FALSE(str::glob_match("", "?"));
+    EXPECT_FALSE(str::glob_match("a", ""));
+
+    EXPECT_TRUE(str::glob_match("hello world", "*"));
+    EXPECT_TRUE(str::glob_match("hello world", "hello*"));
+    EXPECT_TRUE(str::glob_match("hello world", "*world"));
+    EXPECT_TRUE(str::glob_match("hello world", "hello*world"));
+    EXPECT_TRUE(str::glob_match("hello world", "h*d"));
+    EXPECT_TRUE(str::glob_match("aaa", "*a"));
+    EXPECT_TRUE(str::glob_match("file.log", "*.log"));
+    EXPECT_FALSE(str::glob_match("file.log", "*.txt"));
+
+    EXPECT_TRUE(str::glob_match("hello", "hell?"));
+    EXPECT_TRUE(str::glob_match("abc", "a?c"));
+    EXPECT_TRUE(str::glob_match("a", "?"));
+    EXPECT_FALSE(str::glob_match("ab", "?"));
+    EXPECT_FALSE(str::glob_match("abc", "a?"));
+
+    EXPECT_TRUE(str::glob_match("b", "[abc]"));
+    EXPECT_FALSE(str::glob_match("d", "[abc]"));
+    EXPECT_TRUE(str::glob_match("m", "[a-z]"));
+    EXPECT_FALSE(str::glob_match("M", "[a-z]"));
+    EXPECT_TRUE(str::glob_match("file1.txt", "file[0-9].txt"));
+    EXPECT_FALSE(str::glob_match("file12.txt", "file[0-9].txt"));
+    EXPECT_TRUE(str::glob_match("a", "[a-c]"));
+    EXPECT_TRUE(str::glob_match("c", "[a-c]"));
+    EXPECT_FALSE(str::glob_match("d", "[a-c]"));
+    EXPECT_TRUE(str::glob_match("d", "[!abc]"));
+    EXPECT_FALSE(str::glob_match("a", "[!abc]"));
+    EXPECT_FALSE(str::glob_match("m", "[!a-z]"));
+    EXPECT_TRUE(str::glob_match("]", "[]]"));
+    EXPECT_FALSE(str::glob_match("[", "[]]"));
+    EXPECT_TRUE(str::glob_match("-", "[a-]"));
+    EXPECT_TRUE(str::glob_match("-", "[-a]"));
+    EXPECT_TRUE(str::glob_match("[abc", "[abc"));
+    EXPECT_FALSE(str::glob_match("a", "[abc"));
+
+    EXPECT_TRUE(str::glob_match("*", "\\*"));
+    EXPECT_FALSE(str::glob_match("a", "\\*"));
+    EXPECT_TRUE(str::glob_match("?", "\\?"));
+    EXPECT_TRUE(str::glob_match("a?", "a\\?"));
+    EXPECT_FALSE(str::glob_match("ab", "a\\?"));
+    EXPECT_TRUE(str::glob_match("[abc]", "\\[abc]"));
+    EXPECT_TRUE(str::glob_match("a\\", "a\\\\"));
+    EXPECT_TRUE(str::glob_match("**", "\\*\\*"));
+    EXPECT_TRUE(str::glob_match("]", "[\\]]"));
+    EXPECT_TRUE(str::glob_match("a", "[\\a]"));
+
+    EXPECT_TRUE(str::glob_match("aaa", "a**"));
+    EXPECT_TRUE(str::glob_match("abcabcab", "*abc*ab"));
+    EXPECT_TRUE(str::glob_match("a/b/c", "a*c"));
+    EXPECT_TRUE(str::glob_match("[]", "[]"));
+    EXPECT_FALSE(str::glob_match("x", "[]"));
+
+    EXPECT_TRUE(str::glob_match("Hello.TXT", "*.txt", true));
+    EXPECT_FALSE(str::glob_match("Hello.TXT", "*.txt"));
+    EXPECT_TRUE(str::glob_match("WORLD", "world", true));
+    EXPECT_TRUE(str::glob_match("HELLO", "h?LLO", true));
+    EXPECT_TRUE(str::glob_match("M", "[a-z]", true));
+    EXPECT_TRUE(str::glob_match("M", "[A-Z]", true));
+    EXPECT_FALSE(str::glob_match("Hello.TXT", "h*.log", true));
+
+    EXPECT_TRUE(str::glob_match("a", "[[:alpha:]]"));
+    EXPECT_FALSE(str::glob_match("1", "[[:alpha:]]"));
+    EXPECT_TRUE(str::glob_match("7", "[[:digit:]]"));
+    EXPECT_FALSE(str::glob_match("a", "[[:digit:]]"));
+    EXPECT_TRUE(str::glob_match(" ", "[[:space:]]"));
+    EXPECT_TRUE(str::glob_match("f", "[[:lower:]]"));
+    EXPECT_FALSE(str::glob_match("F", "[[:lower:]]"));
+    EXPECT_TRUE(str::glob_match("F", "[[:upper:]]"));
+    EXPECT_TRUE(str::glob_match("_", "[[:punct:]]"));
+    EXPECT_TRUE(str::glob_match("ff", "[[:xdigit:]][[:xdigit:]]"));
+    EXPECT_FALSE(str::glob_match("gg", "[[:xdigit:]][[:xdigit:]]"));
+    EXPECT_TRUE(str::glob_match("a9", "[[:alpha:]][[:digit:]]"));
+    EXPECT_TRUE(str::glob_match("a", "[[:alpha:][:digit:]]"));
+    EXPECT_TRUE(str::glob_match("3", "[[:alpha:][:digit:]]"));
+    EXPECT_FALSE(str::glob_match("x", "[[:foo:]]"));
+    EXPECT_TRUE(str::glob_match("[[:alpha", "[[:alpha"));
+    EXPECT_FALSE(str::glob_match("a", "[[:alpha"));
+    EXPECT_TRUE(str::glob_match("Z9", "[[:alpha:]][[:digit:]]", true));
+}
+
+TEST_F(TestStr, test_str_glob_match_combined)
+{
+    // literal ? [0-9] [!a-z] [[:alpha:]] [[:digit:]] * \* [a-f] \[ \] \\ [[:upper:][:digit:]] \? . [!0-9] [a-z]
+    const std::string
+        pattern = "log-?[0-9][!a-z][[:alpha:]][[:digit:]]*\\*[a-f]\\[OK\\]\\\\[[:upper:][:digit:]]\\?.[!0-9][a-z]t";
+    EXPECT_TRUE(str::glob_match("log-23_x7 build *c[OK]\\Z?.txt", pattern));
+    EXPECT_TRUE(str::glob_match("LOG-23_X7 BUILD *C[ok]\\9?.TXT", pattern, true));
+
+    EXPECT_FALSE(str::glob_match("log-23_x7 build *c[ok]\\Z?.txt", pattern));
+    EXPECT_FALSE(str::glob_match("log-23_x7 build *c[OK]\\z?.txt", pattern));
+    EXPECT_FALSE(str::glob_match("log-23_x7 build *c[OK]Z?.txt", pattern));
+    EXPECT_FALSE(str::glob_match("log-23_x7 build c[OK]\\Z?.txt", pattern));
+    EXPECT_FALSE(str::glob_match("log-233_x7 build *c[OK]\\Z?.txt", pattern));
+}
+
+TEST_F(TestStr, test_str_glob_filter)
+{
+    std::vector<std::string> input = {"file.txt", "file.cpp", "other.TXT", "notes.md"};
+    EXPECT_EQ(str::glob_filter(std::span<const std::string>(input), "*.txt"), (std::vector<std::string> {"file.txt"}));
+    EXPECT_EQ(str::glob_filter(std::span<const std::string>(input), "*.txt", true),
+              (std::vector<std::string> {"file.txt", "other.TXT"}));
+
+    std::vector<std::string_view> views = {"a.log", "b.LOG", "c.txt"};
+    EXPECT_EQ(str::glob_filter(std::span<std::string_view>(views), "*.log", true),
+              (std::vector<std::string> {"a.log", "b.LOG"}));
+
+    const char *arr[] = {"x.c", "y.hpp", "z.c"};
+    EXPECT_EQ(str::glob_filter(arr, "*.c"), (std::vector<std::string> {"x.c", "z.c"}));
+    EXPECT_TRUE(str::glob_filter(std::span<const std::string>(input), "*.nope").empty());
+}
+
 TEST_F(TestStr, test_str_search)
 {
     const std::vector<std::string> list = {"paydays", "day", "moonday", "sunday", "survey"};

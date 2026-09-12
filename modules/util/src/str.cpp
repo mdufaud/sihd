@@ -302,6 +302,184 @@ std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string
     return output;
 }
 
+char glob_lower(char c)
+{
+    return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+}
+
+// POSIX bracket classes: [:alpha:], [:digit:]...
+bool glob_posix_class_match(std::string_view name, char c)
+{
+    static constexpr std::pair<std::string_view, int (*)(int)> classes[] = {
+        {"alnum", std::isalnum},
+        {"alpha", std::isalpha},
+        {"blank", std::isblank},
+        {"cntrl", std::iscntrl},
+        {"digit", std::isdigit},
+        {"graph", std::isgraph},
+        {"lower", std::islower},
+        {"print", std::isprint},
+        {"punct", std::ispunct},
+        {"space", std::isspace},
+        {"upper", std::isupper},
+        {"xdigit", std::isxdigit},
+    };
+    for (const auto & [class_name, is_type] : classes)
+    {
+        if (class_name == name)
+            return is_type(static_cast<unsigned char>(c)) != 0;
+    }
+    return false;
+}
+
+// parses the character class starting at pattern[i] ('[') and tells if c is a member;
+// on match i is left past the closing ']' or right after '[' when the class is unterminated
+bool glob_match_class(std::string_view pattern, size_t & i, char c)
+{
+    const size_t start = i;
+    size_t j = start + 1;
+    bool negate = false;
+    if (j < pattern.size() && pattern[j] == '!')
+    {
+        negate = true;
+        ++j;
+    }
+    // fnmatch: ']' first in class is a literal member
+    const size_t body = j;
+    bool member = false;
+    while (j < pattern.size())
+    {
+        if (pattern[j] == ']' && j > body)
+        {
+            if (member != negate)
+            {
+                i = j + 1;
+                return true;
+            }
+            return false;
+        }
+        if (pattern[j] == '[' && j + 1 < pattern.size() && pattern[j + 1] == ':')
+        {
+            const size_t stop = pattern.find(":]", j + 2);
+            if (stop != std::string_view::npos)
+            {
+                if (glob_posix_class_match(pattern.substr(j + 2, stop - j - 2), c))
+                    member = true;
+                j = stop + 2;
+                continue;
+            }
+        }
+        char first = pattern[j];
+        if (first == '\\' && j + 1 < pattern.size())
+            first = pattern[++j];
+        char last = first;
+        size_t element_end = j;
+        // fnmatch: '-' is literal at class edges
+        if (j + 2 < pattern.size() && pattern[j + 1] == '-' && pattern[j + 2] != ']')
+        {
+            last = pattern[j + 2];
+            element_end = j + 2;
+            if (last == '\\' && j + 3 < pattern.size())
+            {
+                last = pattern[j + 3];
+                element_end = j + 3;
+            }
+        }
+        if (c >= first && c <= last)
+            member = true;
+        j = element_end + 1;
+    }
+    // fnmatch: unterminated '[' is a literal
+    if (c != '[')
+        return false;
+    i = start + 1;
+    return true;
+}
+
+// advances p past the matched pattern element: '?', class, escaped char or literal
+bool glob_match_element(std::string_view pattern, size_t & p, char c)
+{
+    char literal = pattern[p];
+    bool escaped = false;
+    size_t next = p + 1;
+    if (literal == '\\')
+    {
+        // fnmatch: trailing escape is a literal backslash
+        if (next == pattern.size())
+        {
+            if (c != '\\')
+                return false;
+            p = next;
+            return true;
+        }
+        literal = pattern[next++];
+        escaped = true;
+    }
+    if (!escaped)
+    {
+        if (literal == '?')
+        {
+            p = next;
+            return true;
+        }
+        if (literal == '[')
+            return glob_match_class(pattern, p, c);
+    }
+    if (literal != c)
+        return false;
+    p = next;
+    return true;
+}
+
+bool glob_match_impl(std::string_view str, std::string_view pattern, bool ignore_case)
+{
+    std::string lower_pattern;
+    if (ignore_case)
+    {
+        lower_pattern = pattern;
+        to_lower(lower_pattern);
+        pattern = lower_pattern;
+    }
+    size_t si = 0;
+    size_t pi = 0;
+    size_t star_pi = std::string_view::npos;
+    size_t star_si = 0;
+    while (si < str.size())
+    {
+        const char c = ignore_case ? glob_lower(str[si]) : str[si];
+        if (pi < pattern.size() && pattern[pi] != '*' && glob_match_element(pattern, pi, c))
+        {
+            ++si;
+            continue;
+        }
+        if (pi < pattern.size() && pattern[pi] == '*')
+        {
+            star_pi = pi++;
+            star_si = si;
+            continue;
+        }
+        if (star_pi == std::string_view::npos)
+            return false;
+        pi = star_pi + 1;
+        si = ++star_si;
+    }
+    while (pi < pattern.size() && pattern[pi] == '*')
+        ++pi;
+    return pi == pattern.size();
+}
+
+template <typename T>
+std::vector<std::string> glob_filter_impl(std::span<T> input, std::string_view pattern, bool ignore_case)
+{
+    std::vector<std::string> output;
+    for (const auto & entry : input)
+    {
+        if (glob_match(entry, pattern, ignore_case))
+            output.emplace_back(entry);
+    }
+    return output;
+}
+
 // strips a base prefix (0x, 0b, 0o) when it matches the requested base and returns the base to use
 // base == 0 auto-detects from the prefix: 0x -> 16, 0b -> 2, 0o -> 8, otherwise 10
 uint16_t resolve_base_prefix(std::string_view & str, uint16_t base)
@@ -457,6 +635,26 @@ std::vector<std::string> regex_filter(std::span<std::string_view> input, const s
 std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern)
 {
     return regex_filter_impl(input, pattern);
+}
+
+bool glob_match(std::string_view str, std::string_view pattern, bool ignore_case)
+{
+    return glob_match_impl(str, pattern, ignore_case);
+}
+
+std::vector<std::string> glob_filter(std::span<const std::string> input, std::string_view pattern, bool ignore_case)
+{
+    return glob_filter_impl(input, pattern, ignore_case);
+}
+
+std::vector<std::string> glob_filter(std::span<std::string_view> input, std::string_view pattern, bool ignore_case)
+{
+    return glob_filter_impl(input, pattern, ignore_case);
+}
+
+std::vector<std::string> glob_filter(std::span<const char *> input, std::string_view pattern, bool ignore_case)
+{
+    return glob_filter_impl(input, pattern, ignore_case);
 }
 
 std::vector<std::string> split(std::string_view str)
