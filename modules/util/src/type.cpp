@@ -113,76 +113,19 @@ size_t size(sihd::util::Type type)
     return 0;
 }
 
-template <>
-sihd::util::Type from<bool>()
+bool is_unsigned(sihd::util::Type type)
 {
-    return TYPE_BOOL;
-};
-
-template <>
-sihd::util::Type from<char>()
-{
-    return TYPE_CHAR;
-};
-
-template <>
-sihd::util::Type from<int8_t>()
-{
-    return TYPE_BYTE;
-};
-
-template <>
-sihd::util::Type from<uint8_t>()
-{
-    return TYPE_UBYTE;
-};
-
-template <>
-sihd::util::Type from<int16_t>()
-{
-    return TYPE_SHORT;
-};
-
-template <>
-sihd::util::Type from<uint16_t>()
-{
-    return TYPE_USHORT;
-};
-
-template <>
-sihd::util::Type from<int32_t>()
-{
-    return TYPE_INT;
-};
-
-template <>
-sihd::util::Type from<uint32_t>()
-{
-    return TYPE_UINT;
-};
-
-template <>
-sihd::util::Type from<int64_t>()
-{
-    return TYPE_LONG;
-};
-
-template <>
-sihd::util::Type from<uint64_t>()
-{
-    return TYPE_ULONG;
-};
-
-template <>
-sihd::util::Type from<float>()
-{
-    return TYPE_FLOAT;
-};
-
-template <>
-sihd::util::Type from<double>()
-{
-    return TYPE_DOUBLE;
-};
+    switch (type)
+    {
+        case TYPE_UBYTE:
+        case TYPE_USHORT:
+        case TYPE_UINT:
+        case TYPE_ULONG:
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
 
 } // namespace sihd::util::type

@@ -1,3 +1,9 @@
+#include <cmath>
+#include <cstring>
+#include <limits>
+#include <stdexcept>
+#include <string>
+
 #include <sihd/util/Value.hpp>
 
 namespace sihd::util
@@ -5,11 +11,18 @@ namespace sihd::util
 
 Value::Value(): data({.n = 0}), type(TYPE_NONE) {}
 
+Value::Value(float val): data({.f = val}), type(TYPE_FLOAT) {}
+
+Value::Value(double val): data({.d = val}), type(TYPE_DOUBLE) {}
+
 Value::Value(const uint8_t *buf, Type type)
 {
+    const size_t type_size = type::size(type);
+    if (type_size == 0 || type_size > sizeof(PrimitiveTypeHolder))
+        throw std::invalid_argument("Value: no buffer constructor for this type");
     this->type = type;
-    this->data.n = 0;
-    memcpy(&this->data.n, buf, type::size(type));
+    memset(&this->data, 0, sizeof(this->data));
+    memcpy(&this->data, buf, type_size);
 }
 
 bool Value::empty() const
@@ -114,12 +127,41 @@ std::string Value::str() const
         return std::to_string(this->data.f);
     else if (this->type == TYPE_DOUBLE)
         return std::to_string(this->data.d);
+    else if (this->type == TYPE_BOOL)
+        return this->data.n != 0 ? "true" : "false";
+    else if (this->type == TYPE_ULONG)
+        return std::to_string(this->data.un);
     return std::to_string(this->data.n);
 }
 
 bool Value::is_float() const
 {
     return this->type == TYPE_FLOAT || this->type == TYPE_DOUBLE;
+}
+
+double Value::to_double() const
+{
+    if (this->type == TYPE_FLOAT)
+        return this->data.f;
+    else if (this->type == TYPE_DOUBLE)
+        return this->data.d;
+    else if (type::is_unsigned(this->type))
+        return static_cast<double>(this->data.un);
+    return static_cast<double>(this->data.n);
+}
+
+int Value::compare_mixed(uint64_t uint_val, int64_t int_val)
+{
+    if (int_val < 0)
+        return 1;
+    return Value::order(uint_val, static_cast<uint64_t>(int_val));
+}
+
+int Value::compare_mixed(int64_t int_val, uint64_t uint_val)
+{
+    if (int_val < 0)
+        return -1;
+    return Value::order(static_cast<uint64_t>(int_val), uint_val);
 }
 
 int Value::compare_float(float cmp_val) const
@@ -201,15 +243,18 @@ int Value::compare_double_epsilon(double cmp_val, double epsilon) const
 template <>
 int Value::compare(const Value & val) const
 {
-    if (val.type == TYPE_FLOAT)
+    if (this->is_float() || val.is_float())
+        return this->order(this->to_double(), val.to_double());
+
+    if (type::is_unsigned(this->type))
     {
-        return this->compare_float(val.data.f);
+        if (type::is_unsigned(val.type))
+            return this->order(this->data.un, val.data.un);
+        return this->compare_mixed(this->data.un, val.data.n);
     }
-    else if (val.type == TYPE_DOUBLE)
-    {
-        return this->compare_double(val.data.d);
-    }
-    return this->compare(val.data.n);
+    if (type::is_unsigned(val.type))
+        return this->compare_mixed(this->data.n, val.data.un);
+    return this->order(this->data.n, val.data.n);
 }
 
 template <>
