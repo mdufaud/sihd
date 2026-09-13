@@ -119,8 +119,6 @@ class Value
             return this->compare<T>(val) <= 0;
         }
 
-        Type type;
-
         union PrimitiveTypeHolder
         {
                 char c;
@@ -136,6 +134,7 @@ class Value
                 double d;
         };
         PrimitiveTypeHolder data;
+        Type type;
 
     protected:
 

@@ -437,4 +437,119 @@ TEST_F(TestSplitter, test_splitter_string_equals_delimiter)
     std::vector<std::string> split = splitter.split("test");
     EXPECT_EQ(split.size(), 0u);
 }
+
+TEST_F(TestSplitter, test_splitter_view_bounds)
+{
+    // tokening must not depend on bytes past the end of the view
+    char buf[] = "a[b]c;d";
+    Splitter splitter({.delimiter_str = ";", .open_escape_sequences = "["});
+
+    const std::string_view truncated(buf, 3); // "a[b"
+    std::vector<std::string_view> tokens = splitter.split_view(truncated);
+    ASSERT_EQ(tokens.size(), 1u);
+    EXPECT_EQ(tokens[0], "a[b");
+
+    const std::string_view full(buf);
+    tokens = splitter.split_view(full);
+    ASSERT_EQ(tokens.size(), 2u);
+    EXPECT_EQ(tokens[0], "a[b]c");
+    EXPECT_EQ(tokens[1], "d");
+
+    // a delimiter prefix at the end of the view must not read past it
+    char prefix_buf[] = "ab:cd";
+    const std::string_view delim_prefix(prefix_buf, 3); // "ab:"
+    Splitter multi("::");
+    std::vector<std::string_view> prefix_tokens = multi.split_view(delim_prefix);
+    ASSERT_EQ(prefix_tokens.size(), 1u);
+    EXPECT_EQ(prefix_tokens[0], "ab:");
+}
+
+TEST_F(TestSplitter, test_splitter_next_token_trailing_delimiter)
+{
+    Splitter splitter(",");
+    std::string input = "a,";
+    int idx = 0;
+    EXPECT_EQ(splitter.next_token(input, &idx), "a");
+    EXPECT_EQ(idx, 1);
+    // the trailing delimiter is consumed and yields a final empty token
+    EXPECT_EQ(splitter.next_token(input, &idx), "");
+    EXPECT_EQ(idx, 2);
+    // exhausted - the index does not move anymore
+    EXPECT_EQ(splitter.next_token(input, &idx), "");
+    EXPECT_EQ(idx, 2);
+
+    Splitter empty_splitter(",");
+    empty_splitter.set_empty_delimitations(true);
+    idx = 0;
+    EXPECT_EQ(empty_splitter.next_token(input, &idx), "a");
+    EXPECT_EQ(idx, 1);
+    EXPECT_EQ(empty_splitter.next_token(input, &idx), "");
+    EXPECT_EQ(idx, 2);
+    EXPECT_EQ(empty_splitter.next_token(input, &idx), "");
+    EXPECT_EQ(idx, 2);
+}
+
+TEST_F(TestSplitter, test_splitter_iteration_agrees_with_split)
+{
+    const std::vector<std::string> inputs = {
+        ",",
+        "::",
+        "a",
+        "a,",
+        ",a",
+        "a,b",
+        "a,,b",
+        ",,",
+        ",,,",
+        "a,,,b",
+        "a,b,",
+        "a::b::c",
+        "a[b,c]d,e",
+        "a[b,c",
+        "a\\,b,c",
+        ",[,]",
+    };
+
+    for (const char *delimiter : {",", "::"})
+    {
+        for (const bool empty_delimitations : {false, true})
+        {
+            for (const bool escape_sequences : {false, true})
+            {
+                for (const std::string & input : inputs)
+                {
+                    Splitter splitter(delimiter);
+                    splitter.set_empty_delimitations(empty_delimitations);
+                    if (escape_sequences)
+                        splitter.set_escape_sequences_all();
+                    const std::vector<std::string> tokens = splitter.split(input);
+
+                    Splitter counter(delimiter);
+                    counter.set_empty_delimitations(empty_delimitations);
+                    if (escape_sequences)
+                        counter.set_escape_sequences_all();
+                    ASSERT_EQ(counter.count_tokens(input), (int)tokens.size()) << input;
+
+                    if (empty_delimitations)
+                    {
+                        Splitter iterator(delimiter);
+                        iterator.set_empty_delimitations(empty_delimitations);
+                        if (escape_sequences)
+                            iterator.set_escape_sequences_all();
+                        std::vector<std::string> iterated;
+                        int idx = 0;
+                        while (idx < (int)input.size())
+                        {
+                            std::string_view token = iterator.next_token(input, &idx);
+                            ASSERT_LE(idx, (int)input.size());
+                            iterated.emplace_back(token);
+                        }
+                        ASSERT_EQ(iterated, tokens) << input;
+                    }
+                }
+            }
+        }
+    }
+}
+
 } // namespace test

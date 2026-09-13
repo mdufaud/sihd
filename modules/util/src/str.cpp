@@ -9,8 +9,8 @@
 #include <cmath>   // HUGE_VAL
 #include <cstdarg>
 #include <iomanip> // std::put_time
+#include <iterator>
 #include <locale>
-#include <mutex>
 #include <random>
 #include <regex>
 #include <sstream>
@@ -41,20 +41,20 @@ namespace
 
 size_t levenshtein_distance(std::string_view source,
                             std::string_view target,
-                            size_t insert_cost = 3,
-                            size_t delete_cost = 4,
-                            size_t replace_cost = 2,
-                            bool ascii_case_insensitive = false)
+                            size_t insert_cost,
+                            size_t delete_cost,
+                            size_t replace_cost,
+                            std::vector<size_t> & lev_dist)
 {
     // https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance
     if (source.size() > target.size())
     {
-        return levenshtein_distance(target, source, delete_cost, insert_cost, replace_cost, ascii_case_insensitive);
+        return levenshtein_distance(target, source, delete_cost, insert_cost, replace_cost, lev_dist);
     }
 
     const size_t min_size = source.size();
     const size_t max_size = target.size();
-    std::vector<size_t> lev_dist(min_size + 1);
+    lev_dist.resize(min_size + 1);
 
     lev_dist[0] = 0;
     for (size_t i = 1; i <= min_size; ++i)
@@ -67,16 +67,11 @@ size_t levenshtein_distance(std::string_view source,
         size_t previous_diagonal = lev_dist[0], previous_diagonal_save;
         lev_dist[0] += insert_cost;
 
+        const char tc = target[j - 1];
         for (size_t i = 1; i <= min_size; ++i)
         {
             previous_diagonal_save = lev_dist[i];
-            char sc = source[i - 1];
-            char tc = target[j - 1];
-            if (ascii_case_insensitive)
-            {
-                sc = static_cast<char>(std::tolower(static_cast<unsigned char>(sc)));
-                tc = static_cast<char>(std::tolower(static_cast<unsigned char>(tc)));
-            }
+            const char sc = source[i - 1];
             if (sc == tc)
             {
                 lev_dist[i] = previous_diagonal;
@@ -101,17 +96,15 @@ std::string format_time(Timestamp timestamp,
 #if !defined(__SIHD_EMSCRIPTEN__)
     if (loc != nullptr)
     {
-        // Locale-aware formatting with std::put_time
         std::ostringstream oss;
         oss.imbue(*loc);
-        struct tm tm_val = localtime ? timestamp.local_tm() : timestamp.tm();
+        const struct tm tm_val = localtime ? timestamp.local_tm() : timestamp.tm();
         oss << std::put_time(&tm_val, format.data());
         return oss.str();
     }
     else
 #endif
     {
-        // Fast path: strftime with C locale
         constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
         thread_local char buffer[buffer_size];
 
@@ -125,33 +118,34 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
 {
     const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
     std::string s;
+    s.reserve(64);
     bool next_step;
 
     s += (timestamp >= 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
-        s += fmt::format("{}y:", tm.tm_year - 70);
+        fmt::format_to(std::back_inserter(s), "{}y:", tm.tm_year - 70);
     if ((next_step = next_step || tm.tm_mon > 0))
-        s += fmt::format("{}m:", tm.tm_mon);
+        fmt::format_to(std::back_inserter(s), "{}m:", tm.tm_mon);
     if ((next_step = next_step || (tm.tm_mday - 1) > 0))
-        s += fmt::format("{}d ", tm.tm_mday - 1);
+        fmt::format_to(std::back_inserter(s), "{}d ", tm.tm_mday - 1);
     if ((next_step = next_step || tm.tm_hour > 0))
-        s += fmt::format("{}h:", tm.tm_hour);
+        fmt::format_to(std::back_inserter(s), "{}h:", tm.tm_hour);
     if ((next_step = next_step || tm.tm_min > 0))
-        s += fmt::format("{}m:", tm.tm_min);
+        fmt::format_to(std::back_inserter(s), "{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
-        s += fmt::format("{}s:", tm.tm_sec);
-    time::UnixTime ms = time::to_milli(timestamp) % (int)1E3;
+        fmt::format_to(std::back_inserter(s), "{}s:", tm.tm_sec);
+    time::UnixTime ms = time::to_milli(timestamp) % 1000;
     if ((next_step = next_step || ms > 0))
-        s += fmt::format("{}ms:", ms);
-    time::UnixTime us = time::to_micro(timestamp) % (int)1E3;
-    s += fmt::format("{}us", us);
+        fmt::format_to(std::back_inserter(s), "{}ms:", ms);
+    time::UnixTime us = time::to_micro(timestamp) % 1000;
+    fmt::format_to(std::back_inserter(s), "{}us", us);
     if (nano_resolution)
     {
-        time::UnixTime ns = std::abs(timestamp) % (int)1E3;
-        s += fmt::format(":{}ns", ns);
+        time::UnixTime ns = std::abs(timestamp) % 1000;
+        fmt::format_to(std::back_inserter(s), ":{}ns", ns);
     }
     if (total_parenthesis)
-        s += fmt::format(" ({})", timestamp.nanoseconds());
+        fmt::format_to(std::back_inserter(s), " ({})", timestamp.nanoseconds());
     return s;
 }
 
@@ -160,21 +154,29 @@ std::vector<SearchResult> search_impl(std::span<T> list, const std::string & sel
 {
     std::vector<SearchResult> ret;
     ret.reserve(list.size());
-    for (const auto & str : list)
+
+    constexpr size_t insert_cost = 3;
+    constexpr size_t delete_cost = 4;
+    constexpr size_t replace_cost = 2;
+
+    // strings are lowered once and buffers reused across the list
+    std::string selection_lower = selection;
+    str::to_lower(selection_lower);
+    std::string word_lower;
+    std::vector<size_t> lev_dist;
+
+    for (const auto & entry : list)
     {
-        std::string_view sv(str);
-        constexpr size_t insert_cost = 3;
-        constexpr size_t delete_cost = 4;
-        constexpr size_t replace_cost = 2;
-        constexpr bool ascii_case_insensitive = true;
+        word_lower = std::string_view(entry);
+        str::to_lower(word_lower);
         ret.emplace_back(SearchResult {
-            .distance = levenshtein_distance(sv,
-                                             selection,
+            .distance = levenshtein_distance(word_lower,
+                                             selection_lower,
                                              insert_cost,
                                              delete_cost,
                                              replace_cost,
-                                             ascii_case_insensitive),
-            .word = std::string(sv.data(), sv.size()),
+                                             lev_dist),
+            .word = std::string(std::string_view(entry)),
         });
     }
     std::stable_sort(ret.begin(), ret.end(), [](const auto & a, const auto & b) {
@@ -198,37 +200,30 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
     std::vector<size_t> column_size;
     column_size.resize(max_possible_lines);
 
-    /**
-     * Check every column combinaison to check if we are inside the maximum width
-     */
     size_t selected_nb_lines = 0;
     size_t selected_max_line_size = 0;
     for (size_t line_index = 1; line_index <= max_possible_lines; ++line_index)
     {
-        const size_t nb_columns = std::ceil(words.size() / (float)line_index);
+        const size_t nb_columns = (words.size() + line_index - 1) / line_index;
         const size_t nb_word_per_columns = line_index;
 
         bool good = true;
 
         size_t current_line_size = 0;
-        size_t column_index = 0;
-        while (column_index < nb_columns)
+        for (size_t column_index = 0; column_index < nb_columns; ++column_index)
         {
             const size_t begin_word_index = nb_word_per_columns * column_index;
 
             size_t biggest_column_word_size = 0;
-            size_t i = 0;
-            while (i < nb_word_per_columns)
+            for (size_t i = 0; i < nb_word_per_columns; ++i)
             {
                 if (begin_word_index + i >= words.size())
                     break;
                 biggest_column_word_size = std::max(biggest_column_word_size,
                                                     std::string_view(words[begin_word_index + i]).size());
-                ++i;
             }
 
             current_line_size += biggest_column_word_size;
-            // take the joiner into account
             if (column_index > 0)
                 current_line_size += join_with.size();
 
@@ -239,8 +234,6 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
             }
 
             column_size[column_index] = biggest_column_word_size;
-
-            ++column_index;
         }
 
         if (good)
@@ -254,18 +247,16 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
     if (selected_nb_lines == 0)
         return {};
 
-    const size_t nb_columns = std::ceil(words.size() / (float)selected_nb_lines);
+    const size_t nb_columns = (words.size() + selected_nb_lines - 1) / selected_nb_lines;
 
     ret.reserve(selected_nb_lines);
 
-    size_t line_index = 0;
-    while (line_index < selected_nb_lines)
+    for (size_t line_index = 0; line_index < selected_nb_lines; ++line_index)
     {
         std::string str;
         str.reserve(selected_max_line_size);
 
-        size_t column_index = 0;
-        while (column_index < nb_columns)
+        for (size_t column_index = 0; column_index < nb_columns; ++column_index)
         {
             const size_t word_index = (selected_nb_lines * column_index) + line_index;
 
@@ -275,13 +266,12 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
             if (column_index > 0)
                 str += join_with;
 
-            str += fmt::format("{0:<{1}}", words[word_index], column_size[column_index]);
-
-            ++column_index;
+            const std::string_view word(words[word_index]);
+            str += word;
+            str.append(column_size[column_index] - word.size(), ' ');
         }
 
         ret.emplace_back(str);
-        ++line_index;
     }
 
     return ret;
@@ -292,11 +282,12 @@ std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string
 {
     std::regex regex_pattern(pattern);
     std::vector<std::string> output;
-    for (const auto & str : input)
+    for (const auto & entry : input)
     {
-        if (std::regex_search(std::string(str), regex_pattern))
+        const std::string_view view(entry);
+        if (std::regex_search(view.begin(), view.end(), regex_pattern))
         {
-            output.emplace_back(str);
+            output.emplace_back(view);
         }
     }
     return output;
@@ -431,15 +422,9 @@ bool glob_match_element(std::string_view pattern, size_t & p, char c)
     return true;
 }
 
+// pattern must already be lowered when matching case-insensitively
 bool glob_match_impl(std::string_view str, std::string_view pattern, bool ignore_case)
 {
-    std::string lower_pattern;
-    if (ignore_case)
-    {
-        lower_pattern = pattern;
-        to_lower(lower_pattern);
-        pattern = lower_pattern;
-    }
     size_t si = 0;
     size_t pi = 0;
     size_t star_pi = std::string_view::npos;
@@ -468,13 +453,25 @@ bool glob_match_impl(std::string_view str, std::string_view pattern, bool ignore
     return pi == pattern.size();
 }
 
+std::string_view glob_lower_pattern(std::string_view pattern, std::string & lower_pattern)
+{
+    lower_pattern = pattern;
+    to_lower(lower_pattern);
+    return lower_pattern;
+}
+
 template <typename T>
 std::vector<std::string> glob_filter_impl(std::span<T> input, std::string_view pattern, bool ignore_case)
 {
+    // the pattern is lowered once for the whole list
+    std::string lower_pattern;
+    if (ignore_case)
+        pattern = glob_lower_pattern(pattern, lower_pattern);
+
     std::vector<std::string> output;
     for (const auto & entry : input)
     {
-        if (glob_match(entry, pattern, ignore_case))
+        if (glob_match_impl(entry, pattern, ignore_case))
             output.emplace_back(entry);
     }
     return output;
@@ -524,6 +521,26 @@ std::optional<T> from_chars_to(std::string_view str, Args... args)
         return std::nullopt;
     return value;
 }
+
+#if !(defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L)
+
+std::optional<double> strtod_fallback(std::string_view str)
+{
+    // string_view is not guaranteed null-terminated, copy before strtod
+    const std::string tmp(str);
+    errno = 0;
+    char *endptr = nullptr;
+    const double val = strtod(tmp.c_str(), &endptr);
+    if (endptr == tmp.c_str())
+        return std::nullopt;
+    if (val == 0 && errno == EINVAL)
+        return std::nullopt;
+    if ((val == HUGE_VAL || val == -HUGE_VAL) && errno == ERANGE)
+        return std::nullopt;
+    return val;
+}
+
+#endif
 
 } // namespace
 
@@ -604,14 +621,15 @@ bool regex_match(std::string_view str, const std::string & pattern)
 std::vector<std::string> regex_search(std::string_view str, const std::string & pattern)
 {
     std::regex regex_pattern(pattern);
-    std::smatch match;
-    std::vector<std::string> matches;
+    using sv_iterator = std::string_view::const_iterator;
+    std::regex_iterator<sv_iterator> it(str.begin(), str.end(), regex_pattern);
+    const decltype(it) end;
 
-    std::string s(str);
-    while (std::regex_search(s, match, regex_pattern))
+    std::vector<std::string> matches;
+    while (it != end)
     {
-        matches.push_back(match.str());
-        s = match.suffix().str();
+        matches.push_back(it->str());
+        ++it;
     }
     return matches;
 }
@@ -639,6 +657,9 @@ std::vector<std::string> regex_filter(std::span<const char *> input, const std::
 
 bool glob_match(std::string_view str, std::string_view pattern, bool ignore_case)
 {
+    std::string lower_pattern;
+    if (ignore_case)
+        pattern = glob_lower_pattern(pattern, lower_pattern);
     return glob_match_impl(str, pattern, ignore_case);
 }
 
@@ -732,45 +753,48 @@ std::string demangle(std::string_view name)
     int status = -1;
     char *ptr = abi::__cxa_demangle(name.data(), NULL, NULL, &status);
 
-    if (status == 0)
+    if (status == 0 && ptr != nullptr)
     {
         std::string ret = ptr;
         free(ptr);
         return ret;
     }
-    return name.data();
+    return std::string(name);
 }
 
 std::string format(std::string_view format, ...)
 {
     constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
-    static char buffer[buffer_size];
-    static std::mutex buffer_mutex;
+    thread_local char buffer[buffer_size];
 
-    std::string str;
     va_list args;
-
     va_start(args, format);
-    {
-        std::lock_guard<std::mutex> l(buffer_mutex);
-        size_t ret = vsnprintf(buffer, buffer_size, format.data(), args);
-        ret = ret > buffer_size ? buffer_size : ret;
-        str.assign(buffer, ret);
-    }
+    const int size = vsnprintf(buffer, buffer_size, format.data(), args);
+    va_end(args);
+
+    if (size < 0)
+        return "";
+    if ((size_t)size < buffer_size)
+        return std::string(buffer, size);
+
+    // larger than the buffer: args were consumed, restart and format into the result
+    va_start(args, format);
+    std::string str(size, 0);
+    vsnprintf(str.data(), size + 1, format.data(), args);
     va_end(args);
     return str;
 }
 
 bool is_all_spaces(std::string_view s)
 {
-    return std::all_of(s.begin(), s.end(), isspace);
+    return std::all_of(s.begin(), s.end(), [](char c) { return std::isspace(static_cast<unsigned char>(c)) != 0; });
 }
 
 std::string_view rtrim(std::string_view s)
 {
     size_t j = s.size();
 
-    while (j > 0 && std::isspace(s[--j]))
+    while (j > 0 && std::isspace(static_cast<unsigned char>(s[--j])))
         ;
     return s.substr(0, j + 1);
 }
@@ -780,7 +804,7 @@ std::string_view ltrim(std::string_view s)
     const size_t len = s.size();
     size_t i = 0;
 
-    while (i < len && std::isspace(s[i]))
+    while (i < len && std::isspace(static_cast<unsigned char>(s[i])))
         ++i;
     return s.substr(i);
 }
@@ -792,41 +816,34 @@ std::string_view trim(std::string_view s)
 
 std::string & to_upper(std::string & s)
 {
-    size_t i = 0;
-
-    while (s[i])
-    {
-        s[i] = ::toupper(s[i]);
-        ++i;
-    }
+    for (char & c : s)
+        c = ::toupper(static_cast<unsigned char>(c));
     return s;
 }
 
 std::string & to_lower(std::string & s)
 {
-    size_t i = 0;
-
-    while (s[i])
-    {
-        s[i] = ::tolower(s[i]);
-        ++i;
-    }
+    for (char & c : s)
+        c = ::tolower(static_cast<unsigned char>(c));
     return s;
 }
 
 std::string replace(std::string_view s, std::string_view from, std::string_view to)
 {
+    if (from.empty())
+        return std::string(s);
+
     std::string ret;
     size_t i = s.find(from);
     size_t last = 0;
 
-    while (i != std::string::npos)
+    while (i != std::string_view::npos)
     {
         ret += s.substr(last, i - last);
         ret += to;
         i += from.size();
         last = i;
-        i = s.find(from, i + 1);
+        i = s.find(from, i);
     }
     ret += s.substr(last);
     return ret;
@@ -841,6 +858,8 @@ bool iequals(std::string_view s1, std::string_view s2)
 
 char num_to_char(size_t num)
 {
+    if (num >= 36)
+        return 0;
     if (num >= 10)
         return 'a' + (num - 10);
     else
@@ -864,6 +883,8 @@ std::string to_oct(uint64_t n)
 
 std::string num_str(uint64_t num, uint16_t base)
 {
+    if (base < 2 || base > 36)
+        return "";
     // max 64 digits (uint64_t in base 2)
     char buffer[64];
     const auto [ptr, ec] = std::to_chars(buffer, buffer + sizeof(buffer), num, static_cast<int>(base));
@@ -872,36 +893,21 @@ std::string num_str(uint64_t num, uint16_t base)
 
 std::string addr_str(const void *addr, size_t padding)
 {
-    const size_t numsize = num::size((size_t)addr, 16);
-    const ssize_t total_zero = padding - numsize;
-    ssize_t i = 0;
-    std::string ret;
-
-    ret.reserve(2 + numsize + total_zero);
-    ret = "0x";
-    while (i < total_zero)
-    {
-        ret += "0";
-        ++i;
-    }
-    ret += num_str((size_t)addr, 16);
-    return ret;
+    return fmt::format("0x{:0{}x}", (size_t)addr, padding);
 }
 
 std::string hexdump(const void *mem, size_t size, char delim)
 {
     std::string ret;
-    size_t i = 0;
+    ret.reserve(size * 3);
+    const unsigned char *bytes = (const unsigned char *)mem;
 
-    while (i < size)
+    for (size_t i = 0; i < size; ++i)
     {
-        uint16_t hex = 0xFF & ((char *)mem)[i];
-        if (delim != '\0' && ret.empty() == false)
+        if (delim != '\0' && i > 0)
             ret += delim;
-        if (hex < 16)
-            ret += "0";
-        ret += num_str(hex, 16);
-        ++i;
+        ret += num_to_char(bytes[i] / 16);
+        ret += num_to_char(bytes[i] % 16);
     }
     return ret;
 }
@@ -917,44 +923,47 @@ std::string hexdump(const IArrayView & arr, char delim)
 
 std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols)
 {
-    // add padding if number of columns does not match the size
+    if (cols == 0)
+        return {};
+
     const size_t suppl = size % cols == 0 ? 0 : (cols - (size % cols));
-    // compute the number of spaces needed
     const size_t max_addr_size = num::size(size, 16) + 1;
     std::vector<std::string> ret;
     std::string line;
+    const unsigned char *bytes = (const unsigned char *)mem;
 
     size_t i = 0;
     while (i < size + suppl)
     {
         if ((i % cols) == 0)
-            line += fmt::format("{0}:{1:>{2}}", addr_str((void *)i), "", max_addr_size - num::size(i, 16));
+        {
+            fmt::format_to(std::back_inserter(line), "0x{:x}:", i);
+            line.append(max_addr_size - num::size(i, 16), ' ');
+        }
         if (i < size)
         {
-            uint16_t hex = 0xFF & ((char *)mem)[i];
-            if (hex < 16)
-                line += "0";
-            line += num_str(hex, 16) + " ";
+            line += num_to_char(bytes[i] / 16);
+            line += num_to_char(bytes[i] % 16);
+            line += ' ';
         }
         else
+        {
             line += "   ";
+        }
         if ((i % cols) == cols - 1)
         {
             line += "  ";
-            size_t begin = i - (cols - 1);
-            while (begin <= i)
+            for (size_t begin = i - (cols - 1); begin <= i; ++begin)
             {
                 if (begin >= size)
-                    line += " ";
-                else if (isprint(((char *)mem)[begin]))
-                    line += ((char *)mem)[begin];
+                    line += ' ';
+                else if (std::isprint(bytes[begin]))
+                    line += (char)bytes[begin];
                 else
-                    line += ".";
-                ++begin;
+                    line += '.';
             }
             ret.emplace_back(std::move(line));
             line.clear();
-            // line += "\n";
         }
         ++i;
     }
@@ -974,7 +983,7 @@ bool print(std::string_view str)
 {
     try
     {
-        fmt::print("{:.{}}", str, str.size());
+        fmt::print("{}", str);
     }
     catch (const std::system_error &)
     {
@@ -987,7 +996,7 @@ bool println(std::string_view str)
 {
     try
     {
-        fmt::print("{:.{}}\n", str, str.size());
+        fmt::print("{}\n", str);
     }
     catch (const std::system_error &)
     {
@@ -1018,23 +1027,16 @@ std::string join(std::span<const char *> list, std::string_view join_str)
 
 bool starts_with(std::string_view s, std::string_view start, std::string_view suffix)
 {
-    if (start.length() > (s.length() + suffix.length()))
+    if (s.starts_with(start) == false)
         return false;
-    const bool success = strncmp(s.data(), start.data(), start.length()) == 0;
-    if (suffix.empty())
-        return success;
-    return success && strncmp(s.data() + start.length(), suffix.data(), suffix.length()) == 0;
+    return suffix.empty() || s.substr(start.size()).starts_with(suffix);
 }
 
 bool ends_with(std::string_view s, std::string_view end, std::string_view prefix)
 {
-    const ssize_t ending = s.length() - (end.length() + prefix.length());
-    if (ending < 0)
+    if (s.ends_with(end) == false)
         return false;
-    const bool success = strncmp(s.data() + ending + prefix.length(), end.data(), end.length()) == 0;
-    if (prefix.empty())
-        return success;
-    return success && strncmp(s.data() + ending, prefix.data(), prefix.length()) == 0;
+    return prefix.empty() || s.substr(0, s.size() - end.size()).ends_with(prefix);
 }
 
 bool is_digit(int c, uint16_t base)
@@ -1052,7 +1054,8 @@ bool is_number(std::string_view s, uint16_t base)
     const size_t len = s.length();
     while (i < len)
     {
-        if (isspace(data[i]) == 0 && data[i] != '-' && data[i] != '+' && is_digit(data[i], base) == false)
+        if (std::isspace(static_cast<unsigned char>(data[i])) == 0 && data[i] != '-' && data[i] != '+'
+            && is_digit(data[i], base) == false)
             return false;
         ++i;
     }
@@ -1061,6 +1064,8 @@ bool is_number(std::string_view s, uint16_t base)
 
 std::optional<long long> to_signed(std::string_view str, uint16_t base)
 {
+    if (base != 0 && (base < 2 || base > 36))
+        return std::nullopt;
     // std::from_chars handles neither a leading '+' nor a base prefix, strtol did
     bool negate = false;
     if (!str.empty() && (str.front() == '-' || str.front() == '+'))
@@ -1077,6 +1082,8 @@ std::optional<long long> to_signed(std::string_view str, uint16_t base)
 
 std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
 {
+    if (base != 0 && (base < 2 || base > 36))
+        return std::nullopt;
     // std::from_chars rejects a sign for unsigned, strtoul wrapped a negative input around
     bool negate = false;
     if (!str.empty() && (str.front() == '-' || str.front() == '+'))
@@ -1093,33 +1100,27 @@ std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t bas
 
 bool to_bool(std::string_view str, bool & value)
 {
-    bool ret = false;
     if (str == "1")
     {
         value = true;
-        ret = true;
+        return true;
     }
-    else if (str == "0")
+    if (str == "0")
     {
         value = false;
-        ret = true;
+        return true;
     }
-    if (!ret)
+    if (str == "true")
     {
-        std::string lower(str);
-        to_lower(lower);
-        if (str == "true")
-        {
-            value = true;
-            ret = true;
-        }
-        else if (str == "false")
-        {
-            value = false;
-            ret = true;
-        }
+        value = true;
+        return true;
     }
-    return ret;
+    if (str == "false")
+    {
+        value = false;
+        return true;
+    }
+    return false;
 }
 
 bool to_char(std::string_view str, char & value)
@@ -1149,27 +1150,6 @@ std::optional<double> to_double(std::string_view str, std::chars_format fmt)
 }
 
 #else
-
-namespace
-{
-
-std::optional<double> strtod_fallback(std::string_view str)
-{
-    // string_view is not guaranteed null-terminated, copy before strtod
-    const std::string tmp(str);
-    errno = 0;
-    char *endptr = nullptr;
-    const double val = strtod(tmp.c_str(), &endptr);
-    if (endptr == tmp.c_str())
-        return std::nullopt;
-    if (val == 0 && errno == EINVAL)
-        return std::nullopt;
-    if ((val == HUGE_VAL || val == -HUGE_VAL) && errno == ERANGE)
-        return std::nullopt;
-    return val;
-}
-
-} // namespace
 
 std::optional<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
@@ -1361,24 +1341,34 @@ int find_str_not_enclosed(std::string_view origin,
 
     while (i < origin.size())
     {
-        int closed_at = stopping_enclose_index(origin.data(), i, authorized_start_enclose, escape);
+        int closed_at = stopping_enclose_index(origin, (int)i, authorized_start_enclose, escape);
         if (closed_at > 0)
         {
             // matched closure - skip it
-            i = closed_at;
+            i = (size_t)closed_at;
+            continue;
         }
-        else if (closed_at == -2)
+        if (closed_at == -2)
         {
             // never ends - not possible to find a string not escaped here
             return -1;
         }
-        else
+        // i is not an enclosure start: search up to the next enclosure start only, matches may straddle it
+        const size_t next_start = authorized_start_enclose != nullptr
+                                      ? origin.find_first_of(authorized_start_enclose, i + 1)
+                                      : std::string_view::npos;
+        const size_t segment_size = (next_start != std::string_view::npos ? next_start : origin.size()) - i;
+        const size_t look_size = std::min(origin.size() - i, segment_size + to_find.size() - (to_find.empty() ? 0 : 1));
+        const size_t hit = origin.substr(i, look_size).find(to_find);
+        if (hit != std::string_view::npos && hit < segment_size)
         {
-            // not a closing escape
-            if (origin.compare(i, to_find.size(), to_find) == 0)
-                return i;
-            ++i;
+            return (int)(i + hit);
         }
+        if (next_start == std::string_view::npos)
+        {
+            return -1;
+        }
+        i = next_start;
     }
     return -1;
 }
@@ -1436,7 +1426,7 @@ std::string bytes_str(int64_t bytes, bool iec)
     int64_t current_scale;
 
     if (bytes < kbyte)
-        return std::to_string(bytes < 0 ? 0 : bytes) + "B";
+        return std::to_string(bytes) + "B";
     else if (bytes < mbyte)
     {
         scale_key = 'K';
@@ -1458,7 +1448,7 @@ std::string bytes_str(int64_t bytes, bool iec)
         current_scale = tbyte;
     }
 
-    ssize_t rest = ((bytes % current_scale) / (float)current_scale) * 10;
+    const ssize_t rest = ((bytes % current_scale) * 10) / current_scale;
     if (rest > 0)
         return fmt::format("{}.{}{}", bytes / current_scale, rest, scale_key);
     return fmt::format("{}{}", bytes / current_scale, scale_key);
@@ -1472,114 +1462,91 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
         append_hyphen = false;
 
     std::string ret;
-    size_t i;
-    size_t curr_width;
-    size_t word_begin;
-    size_t word_end;
-    bool in_word;
-
     ret.reserve(s.size() + (s.size() / max_width));
-    i = 0;
-    curr_width = 0;
-    word_begin = 0;
-    word_end = 0;
-    in_word = false;
-    while (i < s.size())
+
+    size_t line_width = 0;
+    size_t word_begin = 0;
+    bool in_word = false;
+
+    const auto append_word = [&](size_t begin, size_t end) {
+        const size_t word_size = end - begin;
+        if (word_size > max_width)
+        {
+            if (line_width > 0)
+                ret += '\n';
+            size_t offset = 0;
+            while (offset < word_size)
+            {
+                const size_t chunk_size = offset + max_width >= word_size ? word_size - offset
+                                                                          : (append_hyphen ? max_width - 1 : max_width);
+                ret.append(s.data() + begin + offset, chunk_size);
+                if (offset + chunk_size < word_size)
+                    ret += append_hyphen ? "-\n" : "\n";
+                offset += chunk_size;
+                line_width = chunk_size;
+            }
+        }
+        else if (line_width > 0 && line_width + word_size + 1 > max_width)
+        {
+            ret += '\n';
+            ret.append(s.data() + begin, word_size);
+            line_width = word_size;
+        }
+        else
+        {
+            if (line_width > 0)
+            {
+                ret += ' ';
+                ++line_width;
+            }
+            ret.append(s.data() + begin, word_size);
+            line_width += word_size;
+        }
+    };
+
+    for (size_t i = 0; i < s.size(); ++i)
     {
-        bool should_add = false;
-        if (isspace(s[i]))
+        if (std::isspace(static_cast<unsigned char>(s[i])))
         {
             if (in_word)
             {
-                // not in a word but was in a word last idx
-                word_end = i;
                 in_word = false;
-                should_add = true;
+                // a whitespace terminating the string is part of the word
+                append_word(word_begin, i + 1 == s.size() ? i + 1 : i);
+            }
+            if (s[i] == '\n' && i + 1 < s.size())
+            {
+                ret += '\n';
+                line_width = 0;
             }
         }
-        else /* isspace() == false */
+        else
         {
             if (in_word == false)
             {
-                // in a word but was not in a word last idx
                 word_begin = i;
                 in_word = true;
             }
+            if (i + 1 == s.size())
+                append_word(word_begin, i + 1);
         }
-        const bool next_is_end = i + 1 >= s.size();
-        if (should_add || (in_word && next_is_end))
-        {
-            // not in a word but was in a word last idx
-            if (next_is_end)
-                word_end = i + 1;
-            size_t word_size = word_end - word_begin;
-
-            if (word_size > max_width)
-            {
-                // word too big
-                if (curr_width > 0)
-                    ret.append("\n");
-                size_t j = 0;
-                size_t add_size;
-                while (j < word_size)
-                {
-                    // -1 for '-' cut
-                    if (j + max_width >= word_size)
-                        add_size = word_size - j;
-                    else
-                        add_size = append_hyphen ? max_width - 1 : max_width;
-                    ret.append(s.data() + word_begin + j, add_size);
-                    if (j + add_size < word_size)
-                    {
-                        if (append_hyphen)
-                            ret.append("-\n");
-                        else
-                            ret.push_back('\n');
-                    }
-                    j += add_size;
-                    curr_width = add_size;
-                }
-            }
-            else if ((curr_width + word_size > max_width) || (curr_width > 0 && curr_width + word_size + 1 > max_width))
-            {
-                ret.append("\n");
-                ret.append(s.data() + word_begin, word_size);
-                curr_width = word_size;
-            }
-            else
-            {
-                if (curr_width > 0)
-                {
-                    ret.push_back(' ');
-                    ++curr_width;
-                }
-                ret.append(s.data() + word_begin, word_size);
-                curr_width += word_size;
-            }
-        }
-        if (s[i] == '\n' && !next_is_end)
-        {
-            ret.push_back('\n');
-            curr_width = 0;
-        }
-        ++i;
     }
     return ret;
 }
 
 std::string generate_random(size_t size)
 {
-    constexpr char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+    constexpr std::string_view
+        charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
 
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<uint64_t> dist(0, sizeof(charset) - 1);
+    std::uniform_int_distribution<size_t> dist(0, charset.size() - 1);
 
     std::string str;
-    str.resize(size);
+    str.reserve(size);
     for (size_t i = 0; i < size; ++i)
-        str[i] = charset[dist(rng) % (sizeof(charset) - 1)];
-    str[size] = 0;
+        str.push_back(charset[dist(rng)]);
     return str;
 }
 
@@ -1593,7 +1560,10 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
     if (s.size() < max_width)
         return std::string(s.data(), s.size());
 
-    return fmt::format("{}{}", std::string_view(s.data(), max_width - end_with.size()), end_with);
+    const size_t content_size = max_width > end_with.size() ? max_width - end_with.size() : 0;
+    std::string ret(s.data(), content_size);
+    ret += end_with;
+    return ret;
 }
 
 std::vector<std::string> to_columns(std::span<std::string_view> words, size_t max_width, std::string_view join_with)

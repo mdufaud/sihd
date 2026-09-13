@@ -62,8 +62,11 @@ class Splitter
     protected:
 
     private:
-        // return the size of the delimiter matching the string c or -1
-        int _get_delimiter_offset(const char *c) const;
+        // return the size of the delimiter matching at index i in view or -1
+        int _get_delimiter_offset(std::string_view view, size_t i) const;
+        // find the token [begin, end) starting the scan at pos and set pos where the
+        // next search starts - returns false when the view is exhausted
+        bool _next_token_range(std::string_view view, int *pos, int *begin, int *end) const;
 
         int _escape_char;
         // if two delimiters must make an empty token

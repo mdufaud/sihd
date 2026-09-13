@@ -1,8 +1,6 @@
-#include <strings.h>
-
 #include <cctype>
-#include <cstring>
 #include <stdexcept>
+#include <utility>
 
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
@@ -13,7 +11,9 @@ namespace sihd::util
 
 SplitterDelimiterMethod SplitterOptions::delimiter_spaces()
 {
-    return &isspace;
+    return [](int c) {
+        return std::isspace(static_cast<unsigned char>(c)) != 0;
+    };
 }
 
 std::string_view SplitterOptions::all_encloses()
@@ -96,117 +96,78 @@ void Splitter::set_escape_sequences_all()
     _authorized_open_escape_sequences = SplitterOptions::all_encloses();
 }
 
-int Splitter::_get_delimiter_offset(const char *s) const
+// returns the size of the delimiter matching at index i in view or -1
+int Splitter::_get_delimiter_offset(std::string_view view, size_t i) const
 {
-    if (_compare_method && _compare_method(s[0]) != 0)
+    if (_compare_method && _compare_method(view[i]) != 0)
         return 1;
-    else if (strncmp(s, _delimiter.c_str(), _delimiter.size()) == 0)
+    if (_delimiter.empty() == false && view.substr(i, _delimiter.size()) == _delimiter)
         return (int)_delimiter.size();
     return -1;
 }
 
-int Splitter::count_tokens(std::string_view view) const
+bool Splitter::_next_token_range(std::string_view view, int *pos, int *begin, int *end) const
 {
-    const char *s = view.data();
-    const size_t size = view.size();
-    int delimiter_count;
+    const int size = (int)view.size();
+    int i = *pos;
+    if (i < 0)
+        return false;
+    const bool check_encloses = _authorized_open_escape_sequences.empty() == false;
+    int delimiter_count = 0;
     int delimiter_offset;
-    int count = 0;
-    int i = 0;
-    while (i >= 0 && i < (int)size)
+    while (i < size && (delimiter_offset = this->_get_delimiter_offset(view, (size_t)i)) > 0)
     {
-        // pass all delimiters
-        delimiter_count = 0;
-        while (i < (int)size && (delimiter_offset = this->_get_delimiter_offset(s + i)) > 0)
+        // empty token between consecutive delimiters - the delimiter is left for the next call
+        if (_empty_delimitations && delimiter_count > 0)
         {
-            // add another room for token if two delimiters or more follows
-            if (_empty_delimitations && delimiter_count > 0)
-                ++count;
-            i = i + delimiter_offset;
-            ++delimiter_count;
+            *begin = i;
+            *end = i;
+            *pos = i;
+            return true;
         }
-        // add a room for a token after a delimitation if it is not the end of the string
-        // or it ended by a delimiter
-        if (i < (int)size || (_empty_delimitations && delimiter_count > 0))
-            ++count;
-        while (i < (int)size)
+        i = i + delimiter_offset;
+        ++delimiter_count;
+    }
+    *pos = i;
+    // no token after the delimiters unless the string ended by one in empty mode
+    if (i >= size && (_empty_delimitations == false || delimiter_count == 0))
+        return false;
+    *begin = i;
+    while (i < size)
+    {
+        if (check_encloses)
         {
-            int closed_at = str::stopping_enclose_index(s, i, _authorized_open_escape_sequences.c_str(), _escape_char);
-            // matched closure
+            const int closed_at = str::stopping_enclose_index(view,
+                                                              i,
+                                                              _authorized_open_escape_sequences.c_str(),
+                                                              _escape_char);
+            // jump over the enclosure
             if (closed_at > 0)
+            {
                 i = closed_at;
-            // never ends - no more tokens
-            else if (closed_at == -2)
+                continue;
+            }
+            // never closes - the token takes the rest of the string
+            if (closed_at == -2)
             {
-                i = -1;
+                i = size;
                 break;
             }
-            // not a closing escape
-            else
-            {
-                // while not a delimiter found
-                if (this->_get_delimiter_offset(s + i) > 0)
-                    break;
-                ++i;
-            }
         }
-    }
-    return count;
-}
-
-std::string_view Splitter::next_token(std::string_view view, int *idx) const
-{
-    const char *s = view.data();
-    const size_t size = view.size();
-    int x = *idx;
-    int delimiter_offset;
-    while (x < (int)size && (delimiter_offset = this->_get_delimiter_offset(s + x)) > 0)
-    {
-        // if there is two delimiters following, return empty token
-        if (_empty_delimitations && x != *idx)
-        {
-            *idx = x;
-            return "";
-        }
-        x = x + delimiter_offset;
-    }
-    int y = x;
-    while (y < (int)size)
-    {
-        int closed_at = str::stopping_enclose_index(s, y, _authorized_open_escape_sequences.c_str(), _escape_char);
-        // matched closure
-        if (closed_at > 0)
-            y = closed_at;
-        // never ends - last token
-        else if (closed_at == -2)
-        {
-            y = view.size();
+        if (this->_get_delimiter_offset(view, (size_t)i) > 0)
             break;
-        }
-        // not a closing escape
-        else
-        {
-            if (this->_get_delimiter_offset(s + y) > 0)
-                break;
-            ++y;
-        }
+        ++i;
     }
-    *idx = y;
-    return std::string_view(s + x, std::max(0, y - x));
+    *end = i;
+    *pos = i;
+    return true;
 }
 
 std::vector<std::string> Splitter::split(std::string_view view) const
 {
-    if (_delimiter.empty() && !_compare_method)
-        return {std::string(view)};
-    int tokens = this->count_tokens(view);
     std::vector<std::string> ret;
-    ret.resize(tokens);
-
-    int i = 0;
-    int j = 0;
-    while (tokens-- > 0)
-        ret[i++] = this->next_token(view, &j);
+    for (std::string_view token : this->split_view(view))
+        ret.emplace_back(token);
     return ret;
 }
 
@@ -214,15 +175,34 @@ std::vector<std::string_view> Splitter::split_view(std::string_view view) const
 {
     if (_delimiter.empty() && !_compare_method)
         return {view};
-    int tokens = this->count_tokens(view);
-    std::vector<std::string_view> ret;
-    ret.resize(tokens);
 
-    int i = 0;
-    int j = 0;
-    while (tokens-- > 0)
-        ret[i++] = this->next_token(view, &j);
+    std::vector<std::string_view> ret;
+    int pos = 0;
+    int begin;
+    int end;
+    while (this->_next_token_range(view, &pos, &begin, &end))
+        ret.emplace_back(view.substr((size_t)begin, (size_t)(end - begin)));
     return ret;
+}
+
+int Splitter::count_tokens(std::string_view view) const
+{
+    int count = 0;
+    int pos = 0;
+    int begin;
+    int end;
+    while (this->_next_token_range(view, &pos, &begin, &end))
+        ++count;
+    return count;
+}
+
+std::string_view Splitter::next_token(std::string_view view, int *idx) const
+{
+    int begin;
+    int end;
+    if (this->_next_token_range(view, idx, &begin, &end) == false)
+        return "";
+    return view.substr((size_t)begin, (size_t)(end - begin));
 }
 
 } // namespace sihd::util

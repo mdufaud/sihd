@@ -48,7 +48,7 @@ void append_sep(std::string & str, std::string_view append, std::string_view sep
 
 std::string timeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
 std::string localtimeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
-// fmt strftime -> "%Y-%m-%d %H:%M:%S"
+// fmt strftime -> "%Y-%m-%d %H:%M:%S" - the format string must be null-terminated
 std::string format_time(Timestamp t, std::string_view format);
 std::string format_localtime(Timestamp t, std::string_view format);
 // With explicit locale (default: C locale) - note: strftime uses C locale unless setlocale called
@@ -69,6 +69,7 @@ bool println(std::string_view str);
 
 char *csub(std::string_view str, Slice slice = {});
 
+// name must be null-terminated
 std::string demangle(std::string_view name);
 template <typename T>
 std::string demangle_type_name(const T & type)
@@ -76,6 +77,7 @@ std::string demangle_type_name(const T & type)
     return str::demangle(typeid(type).name());
 }
 
+// the format string must be null-terminated
 std::string format(std::string_view format, ...);
 
 bool is_all_spaces(std::string_view s);
@@ -159,7 +161,7 @@ bool is_char_enclose_start(int c, const char *authorized_start_enclose = enclose
 bool is_char_enclose_stop(int c, const char *authorized_stop_enclose = encloses_stop());
 
 /**
- * @brief check if a char is escaped by calculating an impair number of escape '\' before the char
+ * @brief check if a char is escaped by calculating an odd number of escape '\' before the char
  *  must give the beginning pointer of string and the index of the actual char
  *
  *  example:
@@ -197,7 +199,7 @@ int find_str_not_enclosed(std::string_view origin,
                           int escape = escape_char());
 // remove_escape_char("hello \\? \\\\?") -> "hello ? \\?"
 std::string remove_escape_char(std::string_view str, int escape = escape_char());
-// remove_enclosing("hello 'world' \\'!\\'") -> "hello world '!'"
+// remove_enclosing("'hello '(world)'") -> "hello world"
 std::string remove_enclosing(std::string_view str,
                              const char *authorized_start_enclose = encloses_start(),
                              int escape = escape_char());

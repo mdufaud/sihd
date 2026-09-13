@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
@@ -319,6 +321,19 @@ TEST_F(TestStr, test_str_search)
     EXPECT_EQ(results[2].word, "moonday");
     EXPECT_EQ(results[3].word, "day");
     EXPECT_EQ(results[4].word, "paydays");
+
+    std::vector<std::string_view> views = {"paydays", "sunday"};
+    const auto view_results = str::search(std::span<std::string_view>(views), "sunday");
+    ASSERT_EQ(view_results.size(), 2u);
+    EXPECT_EQ(view_results[0].word, "sunday");
+    EXPECT_EQ(view_results[1].word, "paydays");
+
+    const char *words[] = {"paydays", "sunday"};
+    const auto ptr_results = str::search(words, "sunday");
+    ASSERT_EQ(ptr_results.size(), 2u);
+    EXPECT_EQ(ptr_results[0].word, "sunday");
+
+    EXPECT_TRUE(str::search(std::span<const std::string> {}, "anything").empty());
 }
 
 TEST_F(TestStr, test_str_split_pair)
@@ -354,6 +369,19 @@ TEST_F(TestStr, test_str_split_pair)
     pair = str::split_pair_view("TOTO=titi=tata", "=");
     EXPECT_EQ(pair.first, "TOTO");
     EXPECT_EQ(pair.second, "titi=tata");
+
+    // a multi-char delimiter stops at the first of its characters but skips its full length (pinned behavior)
+    pair = str::split_pair_view("a::b", "::");
+    EXPECT_EQ(pair.first, "a");
+    EXPECT_EQ(pair.second, "b");
+    pair = str::split_pair_view("a:x:b", "::");
+    EXPECT_EQ(pair.first, "a");
+    EXPECT_EQ(pair.second, ":b");
+
+    // an empty first part gives an empty pair
+    auto empty_pair = str::split_pair("=titi", "=");
+    EXPECT_EQ(empty_pair.first, "");
+    EXPECT_EQ(empty_pair.second, "");
 }
 
 TEST_F(TestStr, test_str_word_wrap)
@@ -374,6 +402,12 @@ TEST_F(TestStr, test_str_word_wrap)
     EXPECT_EQ(str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
     EXPECT_EQ(str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
     EXPECT_EQ(str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
+
+    EXPECT_EQ(str::word_wrap("ab", 2), "ab");
+    EXPECT_EQ(str::word_wrap("a  b", 2), "a\nb");
+    EXPECT_EQ(str::word_wrap("a\tb", 3), "a b");
+    // a long word after already placed content
+    EXPECT_EQ(str::word_wrap("x iamfartoolong", 5), "x\niamf-\narto-\nolong");
 
     const char *str = "The quick brown fox jumped over the lazy dog";
 
@@ -437,6 +471,17 @@ TEST_F(TestStr, test_str_base)
     EXPECT_EQ(str::to_hex(16), "10");
     EXPECT_EQ(str::to_hex(1337), "539");
     EXPECT_EQ(str::to_hex(283654106644), "420b1a2e14");
+    EXPECT_EQ(str::to_dec(1337), "1337");
+    EXPECT_EQ(str::to_oct(8), "10");
+    EXPECT_EQ(str::num_str(5, 2), "101");
+    EXPECT_EQ(str::num_str(255, 36), "73");
+    // out of range bases yield an empty string
+    EXPECT_EQ(str::num_str(255, 37), "");
+    EXPECT_EQ(str::num_to_char(0), '0');
+    EXPECT_EQ(str::num_to_char(9), '9');
+    EXPECT_EQ(str::num_to_char(10), 'a');
+    EXPECT_EQ(str::num_to_char(35), 'z');
+    EXPECT_EQ(str::num_to_char(36), '\0');
 }
 
 TEST_F(TestStr, test_str_find_escape)
@@ -469,6 +514,11 @@ TEST_F(TestStr, test_str_find_enclose)
 
     EXPECT_EQ(str::find_str_not_enclosed("hello world\n", "\n"), 11);
     EXPECT_EQ(str::find_str_not_enclosed("hello [world\n", "\n", "["), -1);
+
+    // the view does not extend to the end of the underlying buffer
+    char not_terminated[] = "a]b xyz";
+    const std::string_view truncated_view(not_terminated, 4);
+    EXPECT_EQ(str::find_str_not_enclosed(truncated_view, "x"), -1);
 }
 
 TEST_F(TestStr, test_str_remove_escape_char)
@@ -498,6 +548,10 @@ TEST_F(TestStr, test_str_remove_escape_sequences)
     EXPECT_EQ(escaped, "\\'hello \\'world");
     escaped = str::remove_enclosing("");
     EXPECT_EQ(escaped, "");
+
+    // an unterminated enclosure only removes its opener (pinned behavior)
+    EXPECT_EQ(str::remove_enclosing("'hello"), "hello");
+    EXPECT_EQ(str::remove_enclosing("hello 'world"), "hello world");
 }
 
 TEST_F(TestStr, test_str_unquote)
@@ -530,6 +584,15 @@ TEST_F(TestStr, test_str_bytes)
     int64_t tbyte = 1024LL * 1024LL * 1024LL * 1024LL;
     EXPECT_EQ(str::bytes_str(tbyte), "1T");
     EXPECT_EQ(str::bytes_str((tbyte) + (tbyte - gbyte)), "1.9T");
+
+    EXPECT_EQ(str::bytes_str(0), "0B");
+    // negative sizes have no representation (pinned behavior)
+    EXPECT_EQ(str::bytes_str(-1), "");
+
+    // SI units
+    EXPECT_EQ(str::bytes_str(999, false), "999B");
+    EXPECT_EQ(str::bytes_str(1000, false), "1K");
+    EXPECT_EQ(str::bytes_str(1500, false), "1.5K");
 }
 
 TEST_F(TestStr, test_str_time2str)
@@ -722,6 +785,10 @@ TEST_F(TestStr, test_str_tonumber)
     // overflow
     EXPECT_FALSE(this->test_ulong("15151651651651515113132132132132132"));
 
+    // invalid bases are rejected
+    EXPECT_FALSE(this->test_long("101", 1));
+    EXPECT_FALSE(this->test_ulong("ff", 37));
+
     // double
     EXPECT_TRUE(this->test_double("1234"));
     EXPECT_DOUBLE_EQ(_dval, 1234);
@@ -774,6 +841,11 @@ TEST_F(TestStr, test_str_format)
     std::string res2 = str::format("%s: %d", "hello world", 10);
     EXPECT_EQ(res, "hello -> 1337");
     EXPECT_EQ(res2, "hello world: 10");
+
+    // longer than the fixed buffer of the previous implementation
+    const std::string big(2000, 'x');
+    EXPECT_EQ(str::format("%s", big.c_str()), big);
+    EXPECT_EQ(str::format("%d%d", 0, 0), "00");
 }
 
 TEST_F(TestStr, test_str_demangle)
@@ -811,6 +883,10 @@ TEST_F(TestStr, test_str_replace)
     EXPECT_EQ(str::replace("wibbly wobbly timy wimey stuff", "i", "iii"), "wiiibbly wobbly tiiimy wiiimey stuff");
     EXPECT_EQ(str::replace("heh ih", "h", "hhh"), "hhhehhh ihhh");
     EXPECT_EQ(str::replace("hello", "", ""), "hello");
+    // occurrences adjacent to a previous match are replaced too
+    EXPECT_EQ(str::replace("aa", "a", "b"), "bb");
+    EXPECT_EQ(str::replace("abab", "ab", "x"), "xx");
+    EXPECT_EQ(str::replace("aaa", "aa", "b"), "ba");
 }
 
 TEST_F(TestStr, test_str_to_columns)
@@ -848,6 +924,14 @@ TEST_F(TestStr, test_str_to_columns)
     // 6 columns
     const std::vector<std::string> six_col {"The quick brown fox jumped over the lazy dog"};
     EXPECT_EQ(create_and_print(str.size()), six_col);
+
+    // other overloads
+    std::vector<std::string_view> word_views = {"aaa", "b", "cc"};
+    EXPECT_EQ(str::to_columns(std::span<std::string_view>(word_views), 7),
+              (std::vector<std::string> {"aaa cc", "b  "}));
+
+    const char *word_ptrs[] = {"aaa", "b", "cc"};
+    EXPECT_EQ(str::to_columns(word_ptrs, 7), (std::vector<std::string> {"aaa cc", "b  "}));
 }
 
 TEST_F(TestStr, test_str_hexdump)
@@ -868,6 +952,14 @@ TEST_F(TestStr, test_str_hexdump)
     EXPECT_EQ(dump[1], "0x8:  72 6c 64 20 2d 20 68 6f   rld - ho");
     EXPECT_EQ(dump[2], "0x10: 77 20 61 72 65 20 79 6f   w are yo");
     EXPECT_EQ(dump[3], "0x18: 75                        u       ");
+
+    // zero columns would divide by zero
+    EXPECT_TRUE(str::hexdump_fmt(s.data(), s.length(), 0).empty());
+
+    const Array<char> arr = {'h', 'e'};
+    EXPECT_EQ(str::hexdump(arr, ','), "68,65");
+    const ArrayView<char> view(s);
+    EXPECT_EQ(str::hexdump(view, ','), str::hexdump(s.data(), s.length(), ','));
 }
 
 TEST_F(TestStr, test_str_with)
@@ -892,12 +984,156 @@ TEST_F(TestStr, test_str_with)
     EXPECT_TRUE(str::ends_with("TOTO=titi", "titi", "="));
     EXPECT_TRUE(str::ends_with("=titi", "titi", "="));
     EXPECT_FALSE(str::ends_with("TOTO=titi", "titi", "!"));
+
+    // a suffix/prefix longer than what remains must not read past the string
+    EXPECT_FALSE(str::starts_with("ab", "a", "bcd"));
+    EXPECT_FALSE(str::ends_with("ab", "b", "cde"));
+}
+
+TEST_F(TestStr, test_str_predicates)
+{
+    EXPECT_TRUE(str::iequals("hello", "HELLO"));
+    EXPECT_TRUE(str::iequals("", ""));
+    EXPECT_FALSE(str::iequals("hello", "hell"));
+    EXPECT_FALSE(str::iequals("hello", "hello "));
+
+    EXPECT_TRUE(str::is_all_spaces(" \t\n "));
+    // an empty string is all spaces
+    EXPECT_TRUE(str::is_all_spaces(""));
+    EXPECT_FALSE(str::is_all_spaces("a "));
+
+    // signs and spaces are tolerated anywhere (pinned behavior)
+    EXPECT_TRUE(str::is_number("-123"));
+    EXPECT_TRUE(str::is_number(" 12 3 "));
+    EXPECT_TRUE(str::is_number("--5"));
+    EXPECT_TRUE(str::is_number("1-2"));
+    EXPECT_TRUE(str::is_number(""));
+    EXPECT_FALSE(str::is_number("a"));
+    EXPECT_TRUE(str::is_number("ff", 16));
+    EXPECT_FALSE(str::is_number("fg", 16));
+
+    EXPECT_TRUE(str::is_digit('7'));
+    EXPECT_TRUE(str::is_digit('7', 8));
+    EXPECT_FALSE(str::is_digit('8', 8));
+    EXPECT_TRUE(str::is_digit('a', 16));
+    EXPECT_TRUE(str::is_digit('F', 16));
+    EXPECT_FALSE(str::is_digit('g', 16));
 }
 
 TEST_F(TestStr, test_str_time_format)
 {
     std::string fmt = str::format_time(time::seconds(1) + time::minutes(2) + time::hours(3), "%X");
     EXPECT_EQ(fmt, "03:02:01");
+}
+
+TEST_F(TestStr, test_str_wrap)
+{
+    EXPECT_EQ(str::wrap("", 5), "");
+    EXPECT_EQ(str::wrap("hello", 10), "hello");
+    // truncation keeps room for the ellipsis twice (pinned behavior)
+    EXPECT_EQ(str::wrap("hello world", 10), "hell...");
+    EXPECT_EQ(str::wrap("hello world", 14), "hello wo...");
+    EXPECT_EQ(str::wrap("hello world", 16), "hello world");
+    // a truncated ellipsis when there is no room for it
+    EXPECT_EQ(str::wrap("hello", 2), "..");
+}
+
+TEST_F(TestStr, test_str_conversion_bool_char)
+{
+    bool b = false;
+    EXPECT_TRUE(str::to_bool("1", b));
+    EXPECT_TRUE(b);
+    EXPECT_TRUE(str::to_bool("0", b));
+    EXPECT_FALSE(b);
+    EXPECT_TRUE(str::to_bool("true", b));
+    EXPECT_TRUE(b);
+    EXPECT_TRUE(str::to_bool("false", b));
+    EXPECT_FALSE(b);
+    // case variations are not accepted (pinned behavior)
+    EXPECT_FALSE(str::to_bool("True", b));
+    EXPECT_FALSE(str::to_bool("FALSE", b));
+    EXPECT_FALSE(str::to_bool("", b));
+    EXPECT_FALSE(str::to_bool("nope", b));
+
+    char c = 'z';
+    EXPECT_TRUE(str::to_char("c", c));
+    EXPECT_EQ(c, 'c');
+    c = 'z';
+    EXPECT_TRUE(str::to_char("'c'", c));
+    EXPECT_EQ(c, 'c');
+    EXPECT_FALSE(str::to_char("ab", c));
+    EXPECT_FALSE(str::to_char("", c));
+    // a non printable char leaves the value untouched (pinned behavior)
+    c = 'z';
+    EXPECT_TRUE(str::to_char("\n", c));
+    EXPECT_EQ(c, 'z');
+}
+
+TEST_F(TestStr, test_str_join_split)
+{
+    EXPECT_EQ(str::join({"a", "b", "c"}, "-"), "a-b-c");
+    EXPECT_EQ(str::join({"a", "b"}), "a\nb");
+
+    const std::vector<std::string> vec = {"x", "y"};
+    EXPECT_EQ(str::join(std::span<const std::string>(vec), "+"), "x+y");
+
+    std::vector<std::string_view> views = {"x", "y"};
+    EXPECT_EQ(str::join(std::span<std::string_view>(views), "+"), "x+y");
+
+    const char *arr[] = {"x", "y"};
+    EXPECT_EQ(str::join(arr, "+"), "x+y");
+
+    auto splitted = str::split("hello  world");
+    ASSERT_EQ(splitted.size(), 2u);
+    EXPECT_EQ(splitted[0], "hello");
+    EXPECT_EQ(splitted[1], "world");
+
+    splitted = str::split("a;b;c", ';');
+    ASSERT_EQ(splitted.size(), 3u);
+    EXPECT_EQ(splitted[2], "c");
+
+    splitted = str::split("a::b", "::");
+    ASSERT_EQ(splitted.size(), 2u);
+    EXPECT_EQ(splitted[1], "b");
+
+    EXPECT_TRUE(str::split("").empty());
+
+    std::string appended;
+    str::append_sep(appended, "a");
+    EXPECT_EQ(appended, "a");
+    str::append_sep(appended, "b");
+    EXPECT_EQ(appended, "a,b");
+    str::append_sep(appended, "c", "|");
+    EXPECT_EQ(appended, "a,b|c");
+}
+
+TEST_F(TestStr, test_str_table)
+{
+    const char *table[] = {"a", "b", nullptr};
+    EXPECT_EQ(str::table_len(table), 2u);
+    EXPECT_EQ(str::table_span(table).size(), 2u);
+
+    char a[] = "hello";
+    char b[] = "world";
+    char *mutable_table[] = {a, b, nullptr};
+    EXPECT_EQ(str::table_len(mutable_table), 2u);
+    EXPECT_EQ(str::table_span(mutable_table).size(), 2u);
+
+    EXPECT_THROW(str::table_len((const char **)nullptr), std::invalid_argument);
+}
+
+TEST_F(TestStr, test_str_generate_random)
+{
+    constexpr std::string_view
+        charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+
+    const std::string str = str::generate_random(100);
+    ASSERT_EQ(str.size(), 100u);
+    for (const char c : str)
+        EXPECT_NE(charset.find(c), std::string_view::npos) << "unexpected char: " << c;
+
+    EXPECT_TRUE(str::generate_random(0).empty());
+    EXPECT_NE(str::generate_random(64), str::generate_random(64));
 }
 
 TEST_F(TestStr, test_str_csub)
