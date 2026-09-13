@@ -13,7 +13,6 @@ class IArrayView
 {
     public:
         virtual ~IArrayView() = default;
-        ;
 
         // informations
 

@@ -148,6 +148,65 @@ TEST_F(TestArrayView, test_arrayview_buf)
     ASSERT_EQ(view_int.size(), 0u);
 }
 
+TEST_F(TestArrayView, test_arrayview_byte_count)
+{
+    int val = 0x41424344;
+    // any non convertible pointer goes through the void* constructor which takes a byte size
+    ArrIntView view_bytes((const int8_t *)&val, sizeof(val));
+    ASSERT_EQ(view_bytes.size(), 1u);
+    EXPECT_EQ(view_bytes[0], val);
+
+    int8_t bytes[5] = {0};
+    // trailing bytes that do not fill a whole type are truncated
+    ArrIntView view_truncated(bytes, sizeof(bytes));
+    ASSERT_EQ(view_truncated.size(), 1u);
+}
+
+TEST_F(TestArrayView, test_arrayview_iterator_bounds)
+{
+    Array<int> arr({1, 2, 3});
+    ArrayView<int> view(arr);
+
+    auto it_end = view.end();
+    EXPECT_THROW(*it_end, std::out_of_range);
+    EXPECT_EQ(it_end.idx(), ArrayView<int>::npos);
+
+    auto it_before = view.begin();
+    --it_before;
+    EXPECT_THROW(*it_before, std::out_of_range);
+
+    auto it_far = view.begin();
+    it_far += 10;
+    EXPECT_THROW(*it_far, std::out_of_range);
+    EXPECT_EQ(it_far.idx(), ArrayView<int>::npos);
+
+    auto rit = view.rbegin();
+    --rit;
+    EXPECT_THROW(*rit, std::out_of_range);
+    EXPECT_EQ(rit.idx(), ArrayView<int>::npos);
+
+    ArrayView<int> empty_view;
+    EXPECT_THROW(*empty_view.begin(), std::out_of_range);
+}
+
+TEST_F(TestArrayView, test_arrayview_equal_sizes)
+{
+    Array<int> arr({1, 2, 3});
+    Array<int> arr_prefix({1, 2});
+    ArrayView<int> view(arr);
+    ArrayView<int> view_prefix(arr_prefix);
+
+    EXPECT_TRUE(view == ArrayView<int>(arr));
+    EXPECT_TRUE(view != view_prefix);
+    EXPECT_TRUE(view_prefix != view);
+    EXPECT_FALSE(view.is_equal(arr_prefix.data(), arr_prefix.size()));
+
+    ArrCharView view_str("hello");
+    EXPECT_TRUE(view_str == ArrCharView("hello"));
+    EXPECT_TRUE(view_str != ArrCharView("hell"));
+    EXPECT_FALSE(view_str.is_equal("hell"));
+}
+
 TEST_F(TestArrayView, test_arrayview_array)
 {
     Array<int> arr_int({1, 2, 3, 4});

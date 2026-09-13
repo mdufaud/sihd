@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_ARRAY_HPP__
 
 #include <cstdint>   // int8_t
+#include <cstdlib>   // malloc realloc free
 #include <cstring>   // mem* str*
 #include <stdexcept> // out of range
 #include <utility>   // std::enable_if
@@ -62,11 +63,7 @@ class Array: public IArray,
         {
         }
 
-        Array(std::initializer_list<T> list): Array()
-        {
-            auto it = list.begin();
-            this->push_back(&(*it), list.size());
-        }
+        Array(std::initializer_list<T> list): Array() { this->push_back(list.begin(), list.size()); }
 
         template <traits::Iterable Container>
         Array(const Container & container): Array()
@@ -502,8 +499,7 @@ class Array: public IArray,
 
         bool is_equal(std::initializer_list<T> init, size_t byte_offset = 0) const
         {
-            auto it = init.begin();
-            return this->is_equal(&(*it), init.size(), byte_offset);
+            return this->is_equal(init.begin(), init.size(), byte_offset);
         }
 
         // compares memory from internal buffer and array of size
@@ -528,11 +524,7 @@ class Array: public IArray,
             return this->from(view.data(), view.size());
         }
 
-        bool from(std::initializer_list<T> init)
-        {
-            auto it = init.begin();
-            return this->from(&(*it), init.size());
-        }
+        bool from(std::initializer_list<T> init) { return this->from(init.begin(), init.size()); }
 
         bool from(const T *arr, size_t size)
         {
@@ -568,8 +560,7 @@ class Array: public IArray,
 
         bool copy_from(std::initializer_list<T> init, size_t byte_offset = 0)
         {
-            auto it = init.begin();
-            return this->copy_from(&(*it), init.size(), byte_offset);
+            return this->copy_from(init.begin(), init.size(), byte_offset);
         }
 
         // copies values from array
@@ -639,11 +630,7 @@ class Array: public IArray,
             return this->push_back(str.data(), str.size());
         }
 
-        bool push_back(std::initializer_list<T> init)
-        {
-            auto it = init.begin();
-            return this->push_back(&(*it), init.size());
-        }
+        bool push_back(std::initializer_list<T> init) { return this->push_back(init.begin(), init.size()); }
 
         // push whole array buf of size at the end of the internal buffer
         bool push_back(const T *buf, size_t size) { return this->insert(buf, size, _size); }
@@ -696,8 +683,8 @@ class Array: public IArray,
 
             if (idx > _size)
                 return false;
-            if (_size + size > _capacity)
-                this->_internal_reserve(_size + size, false);
+            if (_size + size > _capacity && this->_internal_reserve(_size + size, false) == false)
+                return false;
             if (_buf_ptr != nullptr)
             {
                 // have to move 2 and 3 -> 3 * sizeof(int) to the right to leave room for insertion
@@ -718,7 +705,7 @@ class Array: public IArray,
 
         bool insert(const T & value, size_t idx) { return this->insert(&value, 1, idx); }
 
-        // remove value at idx and returns it
+        // remove value at idx
         void pop(size_t idx)
         {
             if (idx >= _size)
@@ -727,7 +714,6 @@ class Array: public IArray,
             // ex: pop(1)
             // internal buffer: {5, 10, 15}
 
-            // get value - might throw - checks idx
             size_t len = (_size - (idx + 1)) * this->data_size();
 
             // moving all remaining buffer to current idx
@@ -1143,13 +1129,24 @@ class Array: public IArray,
                 capacity = new_capacity;
             }
 
-            T *new_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
+            T *new_ptr = nullptr;
+            if (_has_ownership)
+            {
+                new_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
+            }
+            else
+            {
+                // cannot realloc a buffer we do not own - detach to a fresh owned one
+                new_ptr = (T *)malloc(capacity * sizeof(T));
+                if (new_ptr != nullptr && _size > 0)
+                    memcpy(new_ptr, _buf_ptr, std::min(_size, capacity) * sizeof(T));
+            }
             if (new_ptr == nullptr)
                 return false;
             _buf_ptr = new_ptr;
 
-            if (clear_mem && capacity > _capacity)
-                memset(_buf_ptr + _capacity, 0, (capacity - _capacity) * sizeof(T));
+            if (clear_mem && capacity > _size)
+                memset(_buf_ptr + _size, 0, (capacity - _size) * sizeof(T));
 
             _size = std::min(_size, capacity);
             _capacity = capacity;
@@ -1183,7 +1180,6 @@ size_t Array<T>::mult_resize_capacity = 2;
 static_assert(std::input_iterator<Array<int>::iterator>, "failed input iterator");
 static_assert(std::output_iterator<Array<int>::iterator, int>, "failed output iterator");
 static_assert(std::forward_iterator<Array<int>::iterator>, "failed forward iterator");
-static_assert(std::input_iterator<Array<int>::iterator>, "failed input iterator");
 static_assert(std::bidirectional_iterator<Array<int>::iterator>, "failed bidirectional iterator");
 static_assert(std::contiguous_iterator<Array<int>::iterator>, "failed random access iterator");
 static_assert(std::weakly_incrementable<Array<int>::iterator>, "Failed the weakly incrementable test");
@@ -1193,7 +1189,6 @@ static_assert(std::default_initializable<Array<int>::iterator>, "Failed the defa
 static_assert(std::input_iterator<Array<int>::reverse_iterator>, "failed input iterator");
 static_assert(std::output_iterator<Array<int>::reverse_iterator, int>, "failed output iterator");
 static_assert(std::forward_iterator<Array<int>::reverse_iterator>, "failed forward iterator");
-static_assert(std::input_iterator<Array<int>::reverse_iterator>, "failed input iterator");
 static_assert(std::bidirectional_iterator<Array<int>::reverse_iterator>, "failed bidirectional iterator");
 static_assert(std::contiguous_iterator<Array<int>::reverse_iterator>, "failed random access iterator");
 static_assert(std::weakly_incrementable<Array<int>::reverse_iterator>, "Failed the weakly incrementable test");

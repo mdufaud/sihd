@@ -564,6 +564,66 @@ TEST_F(TestArray, test_array_assign)
     EXPECT_EQ(arr.size(), 0ul);
     EXPECT_EQ(arr.capacity(), 0ul);
     delete[] arr8;
+
+    // shrinking a non-owned buffer keeps aliasing it
+    uint8_t *owned = new uint8_t[8] {1, 2, 3, 4, 5, 6, 7, 8};
+    Array<uint8_t> arr_alias;
+    arr_alias.assign(owned, 8, 8);
+    arr_alias.resize(4);
+    EXPECT_EQ(arr_alias.buf(), owned);
+    EXPECT_EQ(arr_alias.size(), 4ul);
+
+    // growing a non-owned buffer detaches to a fresh owned buffer
+    const uint8_t tail[5] = {9, 10, 11, 12, 13};
+    arr_alias.push_back(tail, 5);
+    EXPECT_NE(arr_alias.buf(), owned);
+    EXPECT_EQ(arr_alias.size(), 9ul);
+    EXPECT_EQ(arr_alias.capacity(), 16ul);
+    EXPECT_EQ(arr_alias[0], 1);
+    EXPECT_EQ(arr_alias[3], 4);
+    EXPECT_EQ(arr_alias[4], 9);
+    EXPECT_EQ(arr_alias[8], 13);
+
+    // the external buffer is left untouched and freeable
+    EXPECT_EQ(owned[0], 1);
+    EXPECT_EQ(owned[7], 8);
+    delete[] owned;
+}
+
+TEST_F(TestArray, test_array_insert_allocation_failure)
+{
+    ArrInt arr = {1, 2, 3};
+
+    // skipped on 32 bits: the huge reserve request wraps around
+#if SIZE_MAX > 0xFFFFFFFF
+    const int data[1] = {4};
+    EXPECT_FALSE(arr.insert(data, (size_t)1 << 62, 0));
+    EXPECT_EQ(arr.size(), 3ul);
+    EXPECT_EQ(arr[0], 1);
+    EXPECT_EQ(arr[1], 2);
+    EXPECT_EQ(arr[2], 3);
+#endif
+}
+
+TEST_F(TestArray, test_array_iterator_bounds)
+{
+    ArrInt arr = {1, 2, 3};
+
+    auto it_end = arr.end();
+    EXPECT_THROW(*it_end, std::out_of_range);
+    EXPECT_EQ(it_end.idx(), Array<int>::npos);
+
+    auto it_before = arr.begin();
+    --it_before;
+    EXPECT_THROW(*it_before, std::out_of_range);
+
+    auto rit = arr.rbegin();
+    --rit;
+    EXPECT_THROW(*rit, std::out_of_range);
+    EXPECT_EQ(rit.idx(), Array<int>::npos);
+
+    ArrInt empty;
+    EXPECT_THROW(*empty.begin(), std::out_of_range);
 }
 
 // Test storing in IArray

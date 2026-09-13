@@ -78,7 +78,7 @@ class ArrayView: public IArrayView
 
         // make sure buffer size is divisible by type size.
         // ex: int8_t[3] may not go into an ArrayView<int32_t> which will be size 0
-        ArrayView(const void *data, size_t byte_size): ArrayView((const T *)data, byte_size) {}
+        ArrayView(const void *data, size_t byte_size): ArrayView((const T *)data, byte_size / sizeof(T)) {}
 
         // WARNING: using braces initializer must only be used passed in functions,
         // where scope allows std::initializer_list's buffer to live
@@ -172,8 +172,13 @@ class ArrayView: public IArrayView
 
         bool is_equal(ArrayView<T> arr) const { return this->is_equal(arr.data(), arr.size()); }
 
-        // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size) const { return this->is_bytes_equal(arr, size * this->data_size()); }
+        // compares memory from internal buffer and array of same size
+        bool is_equal(const T *arr, size_t size) const
+        {
+            if (size != _size)
+                return false;
+            return this->is_bytes_equal(arr, size * this->data_size());
+        }
 
         /*********************************************************************/
         /* copy_to */
@@ -429,8 +434,8 @@ class ArrayView: public IArrayView
 
                 reference operator*() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
-                        throw std::out_of_range("Array::iterator: iterator out of range");
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
+                        throw std::out_of_range("ArrayView::iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
@@ -440,7 +445,7 @@ class ArrayView: public IArrayView
 
                 size_t idx() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
@@ -565,8 +570,8 @@ class ArrayView: public IArrayView
 
                 reference operator*() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
-                        throw std::out_of_range("Array::reverse_iterator: iterator out of range");
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
+                        throw std::out_of_range("ArrayView::reverse_iterator: iterator out of range");
                     return *this->array_curr;
                 }
 
@@ -576,7 +581,7 @@ class ArrayView: public IArrayView
 
                 size_t idx() const
                 {
-                    if (this->array_curr<this->array_beg && this->array_curr> this->array_end)
+                    if (this->array_curr < this->array_beg || this->array_curr >= this->array_end)
                         return ArrayView<T>::npos;
                     return this->array_curr - this->array_beg;
                 }
