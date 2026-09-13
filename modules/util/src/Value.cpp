@@ -3,7 +3,7 @@
 namespace sihd::util
 {
 
-Value::Value(): type(TYPE_NONE), data({.n = 0}) {}
+Value::Value(): data({.n = 0}), type(TYPE_NONE) {}
 
 Value::Value(const uint8_t *buf, Type type)
 {
