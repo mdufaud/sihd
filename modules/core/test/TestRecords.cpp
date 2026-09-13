@@ -81,7 +81,8 @@ TEST_F(TestRecords, test_records_dev_player)
     play->write(0, true);
 
     SIHD_LOG(debug, "Waiting the end");
-    EXPECT_TRUE(waiter.wait_for_nb(sihd::util::time::milli(50), 1));
+    // generous bound: replay is clock driven and qemu emulation runs slower
+    EXPECT_TRUE(waiter.wait_for_nb(sihd::util::time::milli(150), 1));
 
     EXPECT_TRUE(core.stop());
 
