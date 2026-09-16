@@ -1,6 +1,6 @@
 name: ci
 
-# Fast lane: one Ubuntu job on every push/PR — build + tests with warm vcpkg cache.
+# Fast lane: one Ubuntu job on every push/PR — asan build + tests with warm vcpkg cache.
 # Everything else (cross builds, web, android) lives in ci-nightly.yml.
 
 on:
@@ -68,11 +68,13 @@ jobs:
       - name: Install dependencies
         run: make dep test=1 demo=1
 
-      - name: Build (libs, tests, demos)
-        run: make test=1 demo=1
+      # iasantest sets asan=1 itself; the build step carries it too so both
+      # steps stay on the same flags in the shared build dir
+      - name: Build (libs, tests, demos, asan)
+        run: make test=1 demo=1 asan=1
 
-      - name: Run tests
-        run: make itest
+      - name: Run tests (asan, non-interactive)
+        run: make iasantest
         # ICMPv6 echo to external hosts: runners have no outbound IPv6
         env:
           TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*

@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <sihd/http/HttpHeader.hpp>
+#include <sihd/http/Multipart.hpp>
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
@@ -43,18 +44,24 @@ class HttpRequest
 
         bool has_content() const;
         void set_content(sihd::util::ArrCharView data);
+        // data must outlive the request
+        void set_content_view(sihd::util::ArrCharView data);
         void set_client_ip(const std::string & ip);
         void set_path_params(std::unordered_map<std::string, std::string> && params);
         void set_query_params(std::unordered_map<std::string, std::string> && params);
         void set_auth_user(std::string_view user);
         void set_auth_token(std::string_view token);
         void set_cookie(std::string_view name, std::string_view value);
+        void set_multipart(Multipart && multipart);
 
         sihd::json::Json content_as_json() const;
 
         std::optional<std::string_view> path_param(const std::string & name) const;
         std::optional<std::string_view> query_param(const std::string & name) const;
         std::optional<std::string_view> cookie(const std::string & name) const;
+
+        bool has_multipart() const;
+        const Multipart *multipart() const;
 
         const std::string & client_ip() const { return _ip; }
         const sihd::util::ArrChar & content() const { return _array; }
@@ -84,6 +91,7 @@ class HttpRequest
         std::unordered_map<std::string, std::string> _cookies;
         HttpHeader _http_header;
         sihd::util::ArrChar _array;
+        std::optional<Multipart> _multipart;
 };
 
 } // namespace sihd::http

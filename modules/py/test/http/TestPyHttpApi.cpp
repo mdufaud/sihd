@@ -5,6 +5,8 @@
 #include <gtest/gtest.h>
 
 #include <sihd/http/HttpServer.hpp>
+#include <sihd/http/HttpStatus.hpp>
+#include <sihd/http/Multipart.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/py/http/PyHttpApi.hpp>
 #include <sihd/util/Logger.hpp>
@@ -41,8 +43,29 @@ class TestPyHttpApi: public ::testing::Test
                 resp.set_plain_content("navigator-ok");
             });
             webservice->set_entry_point(
+                "hello",
+                [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
+                HttpRequest::Options);
+            webservice->set_entry_point(
                 "echo",
                 [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+                HttpRequest::Post);
+            webservice->set_entry_point(
+                "echo",
+                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+                HttpRequest::Patch);
+            webservice->set_entry_point(
+                "upload",
+                [](const HttpRequest & req, HttpResponse & resp) {
+                    const Multipart *multipart = req.multipart();
+                    if (multipart == nullptr)
+                    {
+                        resp.set_status(HttpStatus::BadRequest);
+                        return;
+                    }
+                    auto field = multipart->value("field");
+                    resp.set_plain_content(field.has_value() ? std::string(*field) : "no-field");
+                },
                 HttpRequest::Post);
 
             ASSERT_TRUE(_server->set_port(3012));

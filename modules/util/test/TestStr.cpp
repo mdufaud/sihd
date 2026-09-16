@@ -482,6 +482,15 @@ TEST_F(TestStr, test_str_base)
     EXPECT_EQ(str::num_to_char(10), 'a');
     EXPECT_EQ(str::num_to_char(35), 'z');
     EXPECT_EQ(str::num_to_char(36), '\0');
+    EXPECT_EQ(str::hex_digit('0'), 0);
+    EXPECT_EQ(str::hex_digit('9'), 9);
+    EXPECT_EQ(str::hex_digit('a'), 10);
+    EXPECT_EQ(str::hex_digit('f'), 15);
+    EXPECT_EQ(str::hex_digit('A'), 10);
+    EXPECT_EQ(str::hex_digit('F'), 15);
+    EXPECT_EQ(str::hex_digit('g'), -1);
+    EXPECT_EQ(str::hex_digit('/'), -1);
+    EXPECT_EQ(str::hex_digit(':'), -1);
 }
 
 TEST_F(TestStr, test_str_find_escape)

@@ -1,30 +1,23 @@
-#ifndef __SIHD_HTTP_MIME_HPP__
-#define __SIHD_HTTP_MIME_HPP__
+#ifndef __SIHD_HTTP_MIMETYPES_HPP__
+#define __SIHD_HTTP_MIMETYPES_HPP__
 
 #include <string>
+#include <string_view>
 #include <unordered_map>
-#include <vector>
 
 namespace sihd::http
 {
 
-class Mime
+class MimeTypes
 {
     public:
-        Mime();
-        virtual ~Mime();
+        MimeTypes();
+        ~MimeTypes();
 
-        /**
-         * Get the mimetype associated to given extension.
-         * @param ext the file extension.
-         * @return the mime type.
-         */
-        std::string get(const std::string & ext) const;
-
-        /**
-         * Add a new mime type.
-         */
-        void add(const std::string & ext, std::string_view content_type);
+        // extension without its dot, case-insensitive: an empty or unknown one
+        // answers application/octet-stream
+        std::string get(std::string_view ext) const;
+        void add(std::string_view ext, std::string_view content_type);
 
         static constexpr const char *MIME_TEXT_PLAIN = "text/plain";
         static constexpr const char *MIME_TEXT_HTML = "text/html";
@@ -40,11 +33,6 @@ class Mime
         static constexpr const char *MIME_IMAGE_GIF = "image/gif";
         static constexpr const char *MIME_IMAGE_SVG = "image/svg+xml";
         static constexpr const char *MIME_ANY = "*/*";
-
-        static std::string make_mime(std::string_view mime_type,
-                                     std::string_view sub_type,
-                                     const std::vector<std::string> & sub_type_suffixes = {},
-                                     float q_factor_weighting = 0.0);
 
     protected:
 

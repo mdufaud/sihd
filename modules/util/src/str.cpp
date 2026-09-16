@@ -866,6 +866,17 @@ char num_to_char(size_t num)
         return '0' + num;
 }
 
+int hex_digit(int c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    return -1;
+}
+
 std::string to_hex(uint64_t n)
 {
     return num_str(n, 16);

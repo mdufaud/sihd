@@ -1,6 +1,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <optional>
@@ -15,6 +16,9 @@
 #include <sihd/http/navigator/CsrfExtractor.hpp>
 #include <sihd/http/navigator/LinkExtractor.hpp>
 #include <sihd/http/navigator/RobotsTxt.hpp>
+#include <sihd/http/request.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 
@@ -414,6 +418,27 @@ TEST_F(TestNavigator, test_navigator_custom_headers)
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 }
 
+TEST_F(TestNavigator, test_navigator_user_agent_reaches_the_request)
+{
+    ServerScope scope;
+
+    std::string seen_agent;
+    scope.server._webservice->set_entry_point("echo", [&seen_agent](const HttpRequest & req, HttpResponse & resp) {
+        seen_agent = std::string(req.http_header().find("user-agent"));
+        resp.set_plain_content("ok");
+    });
+
+    scope.start();
+
+    Navigator nav;
+    nav.clear_proxy();
+    nav.set_user_agent("sihd-navigator/1.0");
+
+    auto resp = nav.get("localhost:3001/api/echo");
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(seen_agent, "sihd-navigator/1.0");
+}
+
 TEST_F(TestNavigator, test_navigator_ws_send_receive)
 {
     if constexpr (sihd::util::build::is_run_with_tsan)
@@ -493,6 +518,86 @@ TEST_F(TestNavigator, test_navigator_download)
     std::remove(path.c_str());
 }
 
+TEST_F(TestNavigator, test_navigator_put_file)
+{
+    ServerScope scope;
+    std::string received;
+
+    scope.server._webservice->set_entry_point(
+        "upload",
+        [&](const HttpRequest & req, HttpResponse & resp) {
+            received = req.content().cpp_str();
+            resp.set_plain_content("ok");
+        },
+        HttpRequest::Put);
+
+    scope.start();
+
+    // larger than one curl read buffer: the file must stream through the read callback
+    std::string content(256 * 1024, 'x');
+    for (size_t i = 0; i < content.size(); i += 16)
+        content.replace(i, 16, "0123456789abcdef");
+
+    sihd::sys::TmpDir tmp;
+    ASSERT_TRUE(tmp);
+    const std::string path = sihd::sys::fs::combine(tmp.path(), "upload.bin");
+    {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file.write(content.data(), (std::streamsize)content.size());
+    }
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    auto resp = nav.put_file("localhost:3001/api/upload", path);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    EXPECT_EQ(received, content);
+
+    EXPECT_FALSE(nav.put_file("localhost:3001/api/upload", "/no/such/file/here").has_value());
+}
+
+// one navigator: the transfer handle is reused, connections stay alive
+TEST_F(TestNavigator, test_navigator_connection_reuse)
+{
+    ServerScope scope;
+    int get_count = 0;
+
+    scope.server._webservice->set_entry_point("counter", [&get_count](const HttpRequest &, HttpResponse & resp) {
+        resp.set_plain_content("hit-" + std::to_string(++get_count));
+    });
+    scope.server._webservice->set_entry_point(
+        "counter",
+        [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+        HttpRequest::Post);
+
+    scope.start(3005);
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    for (int i = 1; i <= 3; ++i)
+    {
+        auto r = nav.get("localhost:3005/api/counter");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->content().cpp_str(), "hit-" + std::to_string(i));
+        EXPECT_EQ(nav.new_connection_count(), i == 1 ? 1 : 0);
+    }
+    {
+        auto r = nav.post("localhost:3005/api/counter", "posted");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->content().cpp_str(), "posted");
+        EXPECT_EQ(nav.new_connection_count(), 0);
+    }
+    {
+        auto r = nav.get("localhost:3005/api/counter");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->content().cpp_str(), "hit-4");
+        EXPECT_EQ(nav.new_connection_count(), 0);
+    }
+    EXPECT_EQ(get_count, 4);
+}
+
 TEST_F(TestNavigator, test_navigator_interceptor_observe)
 {
     ServerScope scope;
@@ -530,16 +635,55 @@ TEST_F(TestNavigator, test_navigator_interceptor_observe)
     EXPECT_EQ(seen_status, 200);
 }
 
+TEST_F(TestNavigator, test_navigator_interceptor_rewrite)
+{
+    ServerScope scope;
+
+    std::string seen_content_type;
+
+    scope.server._webservice->set_entry_point(
+        "echo",
+        [&](const HttpRequest & req, HttpResponse & resp) {
+            seen_content_type = std::string(req.http_header().content_type().value_or(""));
+            resp.set_plain_content(req.content().cpp_str());
+        },
+        HttpRequest::Post);
+
+    scope.start();
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    nav.on_before_request = [](RequestInfo & info) {
+        info.url = "localhost:3001/api/echo";
+        info.method = "POST";
+        info.headers["content-type"] = "application/sihd";
+        return true;
+    };
+
+    auto resp = nav.get("localhost:3001/api/unused");
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    EXPECT_EQ(seen_content_type, "application/sihd");
+}
+
 TEST_F(TestNavigator, test_navigator_multipart)
 {
     ServerScope scope;
 
     std::string received_body;
+    std::string seen_username;
+    std::string seen_bio;
 
     scope.server._webservice->set_entry_point(
         "upload",
         [&](const HttpRequest & req, HttpResponse & resp) {
             received_body = req.content().cpp_str();
+            if (const Multipart *multipart = req.multipart(); multipart != nullptr)
+            {
+                seen_username = multipart->value("username").value_or("");
+                seen_bio = multipart->value("bio").value_or("");
+            }
             resp.set_plain_content("ok");
         },
         HttpRequest::Post);
@@ -549,11 +693,11 @@ TEST_F(TestNavigator, test_navigator_multipart)
     Navigator nav;
     nav.clear_proxy();
 
-    std::vector<MultipartField> fields;
-    fields.push_back({.name = "username", .value = "testuser", .is_file = false, .content_type = "", .filename = ""});
-    fields.push_back({.name = "bio", .value = "hello world", .is_file = false, .content_type = "", .filename = ""});
+    Multipart form;
+    form.add_field("username", "testuser");
+    form.add_field("bio", "hello world");
 
-    auto resp = nav.post_multipart("localhost:3001/api/upload", fields);
+    auto resp = nav.post_multipart("localhost:3001/api/upload", form);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
@@ -561,6 +705,86 @@ TEST_F(TestNavigator, test_navigator_multipart)
     EXPECT_NE(received_body.find("testuser"), std::string::npos);
     EXPECT_NE(received_body.find("bio"), std::string::npos);
     EXPECT_NE(received_body.find("hello world"), std::string::npos);
+
+    EXPECT_EQ(seen_username, "testuser");
+    EXPECT_EQ(seen_bio, "hello world");
+}
+
+TEST_F(TestNavigator, test_navigator_multipart_file)
+{
+    ServerScope scope;
+
+    std::string seen_field;
+    std::string seen_filename;
+    std::string seen_content_type;
+    std::string seen_data;
+
+    scope.server._webservice->set_entry_point(
+        "upload",
+        [&](const HttpRequest & req, HttpResponse & resp) {
+            if (const Multipart *multipart = req.multipart(); multipart != nullptr)
+            {
+                seen_field = multipart->value("description").value_or("");
+                if (const Multipart::Part *file = multipart->file("document"); file != nullptr)
+                {
+                    seen_filename = file->filename;
+                    seen_content_type = file->content_type;
+                    seen_data = file->data;
+                }
+            }
+            resp.set_plain_content("ok");
+        },
+        HttpRequest::Post);
+
+    scope.start();
+
+    sihd::sys::TmpDir tmp;
+    ASSERT_TRUE(tmp);
+    const std::string path = sihd::sys::fs::combine(tmp.path(), "multipart.txt");
+    {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file << "file payload";
+    }
+
+    Multipart form;
+    form.add_field("description", "a file");
+    form.add_file("document", path, "document.txt", "text/plain");
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    auto resp = nav.post_multipart("localhost:3001/api/upload", form);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    EXPECT_EQ(seen_field, "a file");
+    EXPECT_EQ(seen_filename, "document.txt");
+    EXPECT_EQ(seen_content_type, "text/plain");
+    EXPECT_EQ(seen_data, "file payload");
+}
+
+TEST_F(TestNavigator, test_navigator_multipart_malformed)
+{
+    ServerScope scope;
+
+    int calls = 0;
+
+    scope.server._webservice->set_entry_point(
+        "upload",
+        [&](const HttpRequest &, HttpResponse & resp) {
+            calls++;
+            resp.set_plain_content("ok");
+        },
+        HttpRequest::Post);
+
+    scope.start();
+
+    RequestOptions options;
+    options.headers["content-type"] = "multipart/form-data; boundary=boundary";
+
+    auto resp = sihd::http::post("localhost:3001/api/upload", "not a multipart body", options);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::BadRequest);
+    EXPECT_EQ(calls, 0);
 }
 
 TEST_F(TestNavigator, test_navigator_interceptor_cancel)
@@ -582,6 +806,49 @@ TEST_F(TestNavigator, test_navigator_interceptor_cancel)
 
     auto resp = nav.get("localhost:3001/api/hello");
     EXPECT_FALSE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "request cancelled by the on_before_request interceptor");
+
+    nav.on_before_request = nullptr;
+    resp = nav.get("localhost:3001/api/hello");
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "");
+}
+
+TEST_F(TestNavigator, test_navigator_last_error)
+{
+    ServerScope scope;
+
+    scope.server._webservice->set_entry_point("hello", [](const HttpRequest &, HttpResponse & resp) {
+        resp.set_plain_content("navigator-ok");
+    });
+
+    scope.start();
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    auto resp = nav.get("localhost:3001/api/hello");
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "");
+
+    // nothing listens on that port
+    resp = nav.get("localhost:19999/api/hello");
+    EXPECT_FALSE(resp.has_value());
+    EXPECT_FALSE(nav.last_error().empty());
+
+    resp = nav.get("localhost:3001/api/hello");
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "");
+
+    nav.set_ssrf_guard(true);
+    resp = nav.get("http://127.0.0.1:3001/api/hello");
+    EXPECT_FALSE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "SSRF guard blocked a request to a private host");
+
+    // curl takes a URL without scheme, the guard must see the host all the same
+    resp = nav.get("127.0.0.1:3001/api/hello");
+    EXPECT_FALSE(resp.has_value());
+    EXPECT_EQ(nav.last_error(), "SSRF guard blocked a request to a private host");
 }
 
 TEST_F(TestNavigator, test_navigator_ws_proxy_auth)

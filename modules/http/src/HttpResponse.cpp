@@ -1,6 +1,8 @@
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/json/Json.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
@@ -9,7 +11,12 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
-HttpResponse::HttpResponse(Mime *mimes): _status(HttpStatus::Ok), _mime_ptr(mimes)
+namespace
+{
+constexpr size_t stream_chunk_size = 64 * 1024;
+}
+
+HttpResponse::HttpResponse(MimeTypes *mimes): _status(HttpStatus::Ok), _mime_ptr(mimes)
 {
     _http_header.set_accept_charset("utf-8");
 }
@@ -18,7 +25,11 @@ HttpResponse::~HttpResponse() = default;
 
 void HttpResponse::set_content_type(std::string_view mime_type)
 {
-    _http_header.set_content_type(mime_type, "utf-8");
+    // a mime type already carrying its charset must not grow a second one
+    if (mime_type.find("charset=") == std::string_view::npos)
+        _http_header.set_content_type(mime_type, "utf-8");
+    else
+        _http_header.set_content_type(mime_type);
 }
 
 void HttpResponse::set_content_type_from_extension(const std::string & type)
@@ -29,20 +40,47 @@ void HttpResponse::set_content_type_from_extension(const std::string & type)
 
 bool HttpResponse::set_json_content(const sihd::json::Json & data)
 {
-    this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_JSON);
+    this->_set_mime_type_if_not_set(MimeTypes::MIME_APPLICATION_JSON);
     std::string json_string = data.dump();
     return this->set_content({json_string.c_str(), json_string.size()});
 }
 
+bool HttpResponse::set_file_content(std::string_view path)
+{
+    sihd::sys::File file;
+    if (file.open(std::string(path), "rb") == false)
+    {
+        SIHD_LOG(error, "HttpResponse: cannot open file: {}", path);
+        return false;
+    }
+    const long size = file.file_size();
+    if (size < 0)
+    {
+        SIHD_LOG(error, "HttpResponse: cannot read file size: {}", path);
+        return false;
+    }
+
+    this->set_content_type_from_extension(sihd::sys::fs::extension(path));
+    _http_header.set_content_length(size);
+    this->set_stream_provider([file = std::move(file)](sihd::util::ArrByte & chunk) mutable {
+        chunk.resize(stream_chunk_size);
+        const ssize_t read = file.read(chunk.data(), chunk.size());
+        const size_t read_size = read > 0 ? (size_t)read : 0;
+        chunk.resize(read_size);
+        return read_size == stream_chunk_size;
+    });
+    return true;
+}
+
 bool HttpResponse::set_plain_content(std::string_view str)
 {
-    this->_set_mime_type_if_not_set(Mime::MIME_TEXT_PLAIN);
+    this->_set_mime_type_if_not_set(MimeTypes::MIME_TEXT_PLAIN);
     return this->set_content(str);
 }
 
 bool HttpResponse::set_byte_content(sihd::util::ArrByteView data)
 {
-    this->_set_mime_type_if_not_set(Mime::MIME_APPLICATION_OCTET);
+    this->_set_mime_type_if_not_set(MimeTypes::MIME_APPLICATION_OCTET);
     return this->set_content(data);
 }
 
@@ -61,7 +99,7 @@ bool HttpResponse::set_content(sihd::util::ArrCharView data)
 
 void HttpResponse::_set_mime_type_if_not_set(const char *type)
 {
-    if (_http_header.content_type().empty())
+    if (_http_header.content_type().has_value() == false)
         this->set_content_type(type);
 }
 

@@ -72,6 +72,8 @@ class RouteTable
         };
 
         std::optional<FindResult> find(HttpRequest::RequestType method, std::string_view path) const;
+        // methods a route answers for the path, empty when no route knows it
+        std::vector<HttpRequest::RequestType> allowed_methods(std::string_view path) const;
 
     private:
         std::unordered_map<int, std::vector<Route>> _routes;

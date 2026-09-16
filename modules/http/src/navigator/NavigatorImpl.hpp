@@ -13,46 +13,36 @@
 #include <unordered_map>
 #include <vector>
 
-#include <sihd/http/HttpResponse.hpp>
+#include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/Navigator.hpp>
+#include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Worker.hpp>
 
-#include "../curl/utils.hpp"
+#include "../Client.hpp"
 #include "../lws.hpp"
 
 namespace sihd::http
 {
 
-struct ContentWriteCtx
-{
-        std::string *content;
-        size_t max_size;
-        bool overflow;
-};
-
 struct Navigator::Impl
 {
-        CURL *curl_handle = nullptr;
+        Client client;
         Navigator *owner = nullptr;
+        std::string last_error;
 
-        struct HttpConfig
+        // every request starts from these and overrides what it needs
+        RequestOptions options;
+
+        // curl never follows redirects for us, the navigator does it to apply its policy
+        struct RedirectConfig
         {
-                bool verbose = false;
-                bool follow_redirects = true;
-                long max_redirects = 10;
-                RedirectPolicy redirect_policy = RedirectPolicy::All;
-                long timeout_s = 30;
-                long connect_timeout_s = 10;
-                bool accept_encoding = true;
-                bool http2 = false;
-                bool ssl_verify_peer = true;
-                bool ssl_verify_host = true;
-                size_t max_response_size = 0;
-                bool ssrf_guard = false;
-                std::string user_agent;
-        } http;
+                bool follow = true;
+                long max = 10;
+                RedirectPolicy policy = RedirectPolicy::All;
+        } redirects;
+        bool ssrf_guard = false;
 
         struct AuthConfig
         {
@@ -110,47 +100,46 @@ struct Navigator::Impl
                 std::queue<Message> send_queue;
         } ws;
 
+        struct Navigation
+        {
+                std::string url;
+                HttpRequest::RequestType type = HttpRequest::Get;
+                sihd::util::ArrCharView body = {};
+                Multipart multipart = {};
+                std::string upload_path = {};
+                std::string download_path = {};
+        };
+
         struct SingleResponse
         {
                 HttpResponse response;
-                std::string content;
                 bool overflow = false;
-                CURLcode code = CURLE_OK;
+                bool ok = true;
+                std::string error;
                 int http_status = 0;
                 std::string redirect_location;
         };
 
-        struct RequestOptions
-        {
-                FILE *download_fp;
-        };
-
-        void set_request_body(sihd::util::ArrCharView data);
-
-        // HTTP methods (NavigatorHttp.cpp)
         Impl(Navigator *nav);
         ~Impl();
 
-        std::vector<std::string> extract_raw_cookies();
-        void reset_handle_for_request();
+        RequestOptions make_options();
+        void apply_auth(RequestOptions & options);
+        void reset_for_request();
         std::optional<std::pair<std::string, ProxyType>> select_proxy();
-        void apply_proxy();
-        curl_slist *build_headers();
-        void configure_handle(const std::string & url,
-                              HttpResponse & response,
-                              ContentWriteCtx & write_ctx,
-                              FILE *download_fp = nullptr);
         void enforce_domain_delay(const std::string & url);
-        SingleResponse perform_single(const std::string & url, FILE *download_fp = nullptr);
+        SingleResponse perform_single(const std::string & url,
+                                      HttpRequest::RequestType type,
+                                      const RequestOptions & options,
+                                      const Navigation & navigation);
         bool check_redirect_policy(const std::string & original_url, const std::string & target_url) const;
-        std::optional<SingleResponse> try_perform(const std::string & url, FILE *download_fp = nullptr);
-        std::optional<NavigatorResponse> perform_request(const std::string & start_url,
-                                                         std::string_view method,
-                                                         RequestOptions opts = RequestOptions {});
-        std::optional<NavigatorResponse> perform_multipart(const std::string & url,
-                                                           const std::vector<MultipartField> & fields);
-        std::optional<NavigatorResponse> perform_download(const std::string & url, const std::string & path);
+        std::optional<SingleResponse> try_perform(const std::string & url,
+                                                  HttpRequest::RequestType type,
+                                                  const RequestOptions & options,
+                                                  const Navigation & navigation);
+        std::optional<NavigatorResponse> perform(const Navigation & navigation);
         std::map<std::string, std::string> extract_cookies();
+        std::vector<std::string> extract_raw_cookies();
 
         // WebSocket methods (NavigatorWebSocket.cpp)
         static int ws_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);

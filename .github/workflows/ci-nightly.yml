@@ -4,6 +4,10 @@ name: ci-nightly
 # free minutes are identical but this keeps costs at 1x if the repo ever goes private).
 # Each matrix entry has its own vcpkg binary-cache entry, keyed by triplet:
 # a dependency bump only rewrites that triplet's cache, not the whole blob.
+# Static is a first-class axis: every platform with a static vcpkg triplet
+# (arm-linux, riscv64-linux, x64-mingw-static) gets its own entry. asan is on
+# the one job that runs tests — the dep step stays sanitizer-agnostic (asan is
+# not part of build_path), and mingw/NDK/Emscripten reject sanitizers outright.
 
 on:
   schedule:
@@ -30,9 +34,11 @@ jobs:
           # default gcc config and stages extlib where the build never looks), and
           # demo=1 goes on both because bare make builds demos (cli11/ftxui are
           # dep-gated on it)
+          # asan is carried by the build and by `make iasantest`, not by dep
+          # (sanitizers are not part of build_path)
           - id: x64-linux
             dep-args: test=1 demo=1
-            make-args: test=1 demo=1
+            make-args: test=1 demo=1 asan=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             itest: true
           - id: x64-linux-clang
@@ -48,17 +54,38 @@ jobs:
             make-args: compiler=zig mode=size demo=1
             zig: true
             experimental: true
+          # static-only arm32 entry (arm-linux is the static vcpkg triplet);
+          # same module set as .internal/test.sh's arm32 target
+          - id: arm32-linux-static
+            dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
+            make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
           - id: arm64-linux
             dep-args: machine=aarch64 demo=1
             make-args: machine=aarch64 demo=1
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          - id: arm64-linux-static
+            dep-args: machine=aarch64 static=1 demo=1
+            make-args: machine=aarch64 static=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
           - id: riscv64-linux
             dep-args: machine=riscv64 demo=1
             make-args: machine=riscv64 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+          - id: riscv64-linux-static
+            dep-args: machine=riscv64 static=1 demo=1
+            make-args: machine=riscv64 static=1 demo=1
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
           - id: x64-mingw-dynamic
             dep-args: platform=windows demo=1
             make-args: platform=windows demo=1
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+            env: 'py=0'
+          # static mingw: every transitive dep must be explicit (app.py
+          # windows-static-libs), unlike the dynamic triplet
+          - id: x64-mingw-static
+            dep-args: platform=windows static=1 demo=1
+            make-args: platform=windows static=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
             env: 'py=0'
           - id: wasm32-emscripten
@@ -146,9 +173,11 @@ jobs:
       - name: Build
         run: make ${{ matrix.make-args }} ${{ matrix.env }}
 
-      - name: Run tests
+      # every entry with itest: true must carry asan=1 in its make-args, so the
+      # build step and iasantest stay on the same flags in the shared build dir
+      - name: Run tests (asan, non-interactive)
         if: matrix.itest
-        run: make itest
+        run: make iasantest
         # ICMPv6 echo to external hosts: runners have no outbound IPv6
         env:
           TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*

@@ -7,9 +7,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <vector>
 
-#include <sihd/http/navigator/MultipartField.hpp>
+#include <sihd/http/Multipart.hpp>
+#include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
@@ -23,13 +23,6 @@ enum class RedirectPolicy
     SameHost,   // only follow redirects to the exact same host
     SameDomain, // only follow redirects within the same registered domain
     None,       // do not follow any redirect
-};
-
-enum class ProxyType
-{
-    Http,
-    Socks4,
-    Socks5,
 };
 
 enum class ProxyRotation
@@ -76,17 +69,24 @@ class Navigator
         std::optional<NavigatorResponse> del(std::string_view url);
         std::optional<NavigatorResponse> head(std::string_view url);
         std::optional<NavigatorResponse> options(std::string_view url);
-        std::optional<NavigatorResponse> post_multipart(std::string_view url,
-                                                        const std::vector<MultipartField> & fields);
+        std::optional<NavigatorResponse> post_multipart(std::string_view url, const Multipart & multipart);
         std::optional<NavigatorResponse> download(std::string_view url, std::string_view path);
+        // streams the file through the request instead of loading it in memory
+        std::optional<NavigatorResponse> put_file(std::string_view url, std::string_view path);
+
+        // connections opened by the last request; 0 means an existing one was reused
+        long new_connection_count() const;
+
+        // reason of the last failed request, empty when the last one succeeded
+        std::string last_error() const;
 
         // Configuration
         void set_verbose(bool verbose);
         void set_follow_redirects(bool follow);
         void set_max_redirects(long max);
         void set_redirect_policy(RedirectPolicy policy);
-        void set_timeout(long seconds);
-        void set_connect_timeout(long seconds);
+        void set_timeout(sihd::util::Duration timeout);
+        void set_connect_timeout(sihd::util::Duration timeout);
         void set_accept_encoding(bool enable);
         void set_http2(bool enable);
         void set_ssl_verify(bool verify_peer, bool verify_host);

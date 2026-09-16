@@ -90,6 +90,34 @@ modules = {
         "export-libs": ['ssl', 'crypto'],
         "export-windows-libs": ['crypt32', 'bcrypt', 'ws2_32', 'mincore'],
     },
+    "curl": {
+        # curl has no emscripten/android port
+        "exclude-platforms": ["web", "android"],
+        "depends": ['util'],
+        # zlib/openssl are installed transitively by the curl port
+        "extlibs": ['curl'],
+        # vcpkg builds libcurl shared on every triplet used here: its transitive
+        # deps resolve inside the library itself, except for static libtype
+        "linux-libs": ["curl"],
+        # linux static libtype links vcpkg's libcurl.a: ssl/z deps must be explicit
+        "linux-native-static-libs": ["z", "ssl", "crypto"],
+        "linux-cross-libs": ["z", "ssl", "crypto"],
+        # Windows static linking: all transitive deps must be explicit
+        # order matters: higher-level libs first, their deps after; ssl/crypto last
+        "windows-static-libs": [
+            'curl',     # libcurl
+            'zlib',     # vcpkg zlib installs libzlib.a on mingw
+            'winmm',    # Multimedia (curl)
+            'advapi32', # Advanced API (curl)
+            'ssl',      # OpenSSL TLS - mingw uses openssl not schannel
+            'crypto',   # OpenSSL (ssl dep)
+            'crypt32',  # Windows crypto (openssl backend)
+            'bcrypt',   # Windows crypto (openssl backend)
+        ],
+        # Windows dynamic linking: import libs (.dll.a) resolve transitive deps
+        # inside each DLL, so only the directly-used libs are needed
+        "windows-shared-libs": ['curl'],
+    },
     "net": {
         # poll()/select() not proxied by emscripten + no raw sockets/getifaddrs: net unusable on web
         "exclude-platforms": ["web"],
@@ -98,36 +126,34 @@ modules = {
         "export-windows-libs": ['iphlpapi'],
     },
     "http": {
-        # depends net (web-excluded) + curl/libwebsockets have no emscripten port
+        # depends net (web-excluded) + libwebsockets has no emscripten port
         "exclude-platforms": ["web", "android"],
-        "depends": ['net'],
+        "depends": ['net', 'curl'],
         "extlibs": [
             'libwebsockets',
-            'curl',
             'zlib',
             'libuv',
-            'openssl', # TLS for libwebsockets + curl
+            'openssl', # TLS for libwebsockets
         ],
         "linux-extlibs": ["libcap"],
         # all libs are platform-specific due to different names and link order requirements
-        # ssl/crypto last: openssl provides symbols used by websockets/curl
-        "linux-libs": ["websockets", "curl", "z", "uv", "cap", "ssl", "crypto"],
+        # ssl/crypto last: openssl provides symbols used by websockets
+        "linux-libs": ["websockets", "z", "uv", "cap", "ssl", "crypto"],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after; ssl/crypto last
         "windows-static-libs": [
             'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
-            'curl',              # libcurl
             'uv',                # libuv (libwebsockets uses it)
             'zlib',              # vcpkg zlib installs libzlib.a on mingw
-            'winmm',             # Multimedia (curl)
+            'winmm',             # Multimedia (libuv)
             'iphlpapi',          # IP Helper (libwebsockets, libuv)
             'userenv',           # User environment (libwebsockets, libuv)
-            'advapi32',          # Advanced API (curl, libuv)
+            'advapi32',          # Advanced API (libuv)
             'user32',            # User interface (libuv)
             'dbghelp',           # Debug (libuv)
             'ole32',             # COM (libuv)
             'uuid',              # UUID (libuv)
-            'ssl',               # OpenSSL TLS (libwebsockets/curl) - mingw uses openssl not schannel
+            'ssl',               # OpenSSL TLS (libwebsockets) - mingw uses openssl not schannel
             'crypto',            # OpenSSL (ssl dep)
             'crypt32',           # Windows crypto (openssl backend)
             'bcrypt',            # Windows crypto (openssl backend)
@@ -136,7 +162,6 @@ modules = {
         # inside each DLL, so only the directly-used libs are needed
         "windows-shared-libs": [
             'websockets',        # libwebsockets.dll.a
-            'curl',              # libcurl.dll.a
         ],
     },
     "pcap": {

@@ -1,9 +1,11 @@
 #ifndef __SIHD_HTTP_HTTPHEADER_HPP__
 #define __SIHD_HTTP_HTTPHEADER_HPP__
 
+#include <optional>
+#include <string>
+#include <string_view>
 #include <unordered_map>
 
-#include <sihd/http/Mime.hpp>
 #include <sihd/util/Array.hpp>
 
 namespace sihd::http
@@ -33,10 +35,10 @@ class HttpHeader
 
         HttpHeader & remove_header(const std::string & name);
 
-        size_t content_length() const;
-        std::string_view accept_charset() const;
-        std::string_view content_type() const;
-        std::string_view server() const;
+        std::optional<size_t> content_length() const;
+        std::optional<std::string_view> accept_charset() const;
+        std::optional<std::string_view> content_type() const;
+        std::optional<std::string_view> server() const;
 
         const HeaderMap & headers() const { return _headers; }
         std::string_view find(const std::string & header_name) const;
@@ -47,6 +49,8 @@ class HttpHeader
     private:
         HeaderMap _headers;
 };
+
+std::optional<std::string> header_param(std::string_view value, std::string_view param);
 
 } // namespace sihd::http
 

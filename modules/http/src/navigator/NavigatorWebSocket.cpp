@@ -211,7 +211,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     if (scheme_is_ssl(parsed.scheme))
     {
         int ssl_flags = LCCSCF_USE_SSL;
-        if (!http.ssl_verify_peer)
+        if (!options.ssl_verify_peer)
             ssl_flags |= LCCSCF_ALLOW_SELFSIGNED | LCCSCF_SKIP_SERVER_CERT_HOSTNAME_CHECK;
         connect_info.ssl_connection = ssl_flags;
     }
@@ -244,7 +244,10 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
 
     {
         std::unique_lock lock(ws.mutex);
-        ws.cv.wait_for(lock, std::chrono::seconds(http.timeout_s), [this] { return ws.handshake_done; });
+        // Duration holds nanoseconds: hand the wait the converted duration, not its raw count
+        ws.cv.wait_for(lock, options.timeout.duration<std::chrono::milliseconds>(), [this] {
+            return ws.handshake_done;
+        });
     }
 
     if (!ws.connected)

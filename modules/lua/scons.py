@@ -1,5 +1,5 @@
 import os
-from os.path import join, isdir
+from os.path import join
 
 Import('env')
 
@@ -19,10 +19,13 @@ bound_modules = []
 for module in modules:
     if module == "lua":
         continue
-    if not isdir(join(str(src_dir), module)):
+    # Glob, never isdir(): variant subdirectories may not exist on a fresh
+    # build tree while Glob still resolves sources through the variant mapping
+    module_srcs = Glob(str(src_dir) + "/{}/*.cpp".format(module))
+    if not module_srcs:
         continue
     bound_modules.append(module)
-    srcs += Glob(str(src_dir) + "/{}/*.cpp".format(module))
+    srcs += module_srcs
     tests += Glob(str(test_dir) + "/{}/*.cpp".format(module))
 
 ## Generated config header

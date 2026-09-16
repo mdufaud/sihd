@@ -20,6 +20,16 @@ void WebService::set_entry_point(const std::string & path,
     _route_table.add(path, std::move(fun), type);
 }
 
+void WebService::set_body_stream(IBodyStream *stream)
+{
+    _body_stream_ptr = stream;
+}
+
+IBodyStream *WebService::body_stream() const
+{
+    return _body_stream_ptr;
+}
+
 bool WebService::call(std::string_view path, HttpRequest & request, HttpResponse & response)
 {
     auto result = _route_table.find(request.request_type(), path);
@@ -29,6 +39,11 @@ bool WebService::call(std::string_view path, HttpRequest & request, HttpResponse
         request.set_path_params(std::move(result->match.params));
     result->handler(request, response);
     return true;
+}
+
+std::vector<HttpRequest::RequestType> WebService::allowed_methods(std::string_view path) const
+{
+    return _route_table.allowed_methods(path);
 }
 
 } // namespace sihd::http

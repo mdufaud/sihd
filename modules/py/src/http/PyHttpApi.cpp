@@ -4,11 +4,12 @@
 #include <chrono>
 #include <functional>
 
-#include <sihd/http/CurlOptions.hpp>
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpServer.hpp>
+#include <sihd/http/Multipart.hpp>
 #include <sihd/http/Navigator.hpp>
+#include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/http/request.hpp>
@@ -17,6 +18,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::py
 {
@@ -35,7 +37,13 @@ pybind11::dict headers_to_dict(const HttpResponse & resp)
 {
     pybind11::dict headers;
     for (const auto & [name, value] : resp.http_header().headers())
-        headers[pybind11::str(name)] = value;
+    {
+        // stored names carry their ':' separator, python callers expect the plain name
+        std::string_view key = name;
+        if (sihd::util::str::ends_with(key, ":"))
+            key.remove_suffix(1);
+        headers[pybind11::str(std::string(key))] = value;
+    }
     return headers;
 }
 
@@ -85,7 +93,14 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
              [optional_sv](const HttpRequest & self, const std::string & n) { return optional_sv(self.cookie(n)); })
         .def("is_authenticated", &HttpRequest::is_authenticated)
         .def("auth_user", &HttpRequest::auth_user)
-        .def("auth_token", &HttpRequest::auth_token);
+        .def("auth_token", &HttpRequest::auth_token)
+        .def("has_multipart", &HttpRequest::has_multipart)
+        .def("multipart", [](const HttpRequest & self) -> pybind11::object {
+            const Multipart *multipart = self.multipart();
+            if (multipart == nullptr)
+                return pybind11::none();
+            return pybind11::cast(*multipart, pybind11::return_value_policy::copy);
+        });
 
     pybind11::class_<HttpResponse>(m_http, "HttpResponse")
         .def("status", &HttpResponse::status)
@@ -116,33 +131,69 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         .def("final_url", &NavigatorResponse::final_url)
         .def("was_method_downgraded", &NavigatorResponse::was_method_downgraded);
 
-    pybind11::class_<CurlFileOptions>(m_http, "CurlFileOptions")
-        .def(pybind11::init<>())
-        .def_readwrite("form_name", &CurlFileOptions::form_name)
-        .def_readwrite("file_path", &CurlFileOptions::file_path)
-        .def_readwrite("file_name", &CurlFileOptions::file_name)
-        .def_readwrite("data", &CurlFileOptions::data);
+    pybind11::class_<Multipart> multipart_class(m_http, "Multipart", "multipart/form-data body");
+    multipart_class.def(pybind11::init<>())
+        .def("add_field",
+             &Multipart::add_field,
+             pybind11::arg("name"),
+             pybind11::arg("value"),
+             pybind11::arg("content_type") = std::string {})
+        .def("add_file",
+             &Multipart::add_file,
+             pybind11::arg("name"),
+             pybind11::arg("path"),
+             pybind11::arg("filename") = std::string {},
+             pybind11::arg("content_type") = std::string {})
+        .def("clear", &Multipart::clear)
+        .def("empty", &Multipart::empty)
+        .def("value",
+             [optional_sv](const Multipart & self, const std::string & name) { return optional_sv(self.value(name)); })
+        .def("file", [](const Multipart & self, const std::string & name) -> pybind11::object {
+            const Multipart::Part *part = self.file(name);
+            if (part == nullptr)
+                return pybind11::none();
+            return pybind11::cast(*part, pybind11::return_value_policy::copy);
+        });
 
-    pybind11::class_<CurlOptions>(m_http, "CurlOptions")
+    pybind11::class_<Multipart::Part>(multipart_class, "Part")
+        .def_readonly("name", &Multipart::Part::name)
+        .def_readonly("filename", &Multipart::Part::filename)
+        .def_readonly("content_type", &Multipart::Part::content_type)
+        .def_readonly("data", &Multipart::Part::data)
+        .def_readonly("path", &Multipart::Part::path)
+        .def("is_file", &Multipart::Part::is_file);
+
+    pybind11::class_<Progress>(m_http, "Progress", "download and upload progress of a transfer, in bytes")
         .def(pybind11::init<>())
-        .def_readwrite("verbose", &CurlOptions::verbose)
-        .def_readwrite("follow_location", &CurlOptions::follow_location)
-        .def_readwrite("timeout_s", &CurlOptions::timeout_s)
-        .def_readwrite("connect_timeout_s", &CurlOptions::connect_timeout_s)
-        .def_readwrite("ssl_verify_peer", &CurlOptions::ssl_verify_peer)
-        .def_readwrite("ssl_verify_host", &CurlOptions::ssl_verify_host)
-        .def_readwrite("parameters", &CurlOptions::parameters)
-        .def_readwrite("headers", &CurlOptions::headers)
-        .def_readwrite("username", &CurlOptions::username)
-        .def_readwrite("password", &CurlOptions::password)
-        .def_readwrite("token", &CurlOptions::token)
-        .def_readwrite("user_agent", &CurlOptions::user_agent)
-        .def_readwrite("proxy", &CurlOptions::proxy)
-        .def_readwrite("proxy_username", &CurlOptions::proxy_username)
-        .def_readwrite("proxy_password", &CurlOptions::proxy_password)
-        .def_readwrite("file", &CurlOptions::file)
-        .def_readwrite("form_parameters", &CurlOptions::form_parameters)
-        .def_readwrite("upload_progress", &CurlOptions::upload_progress);
+        .def_readonly("download_total", &Progress::download_total)
+        .def_readonly("download_now", &Progress::download_now)
+        .def_readonly("upload_total", &Progress::upload_total)
+        .def_readonly("upload_now", &Progress::upload_now);
+
+    pybind11::class_<RequestOptions>(m_http, "RequestOptions", "per request options, durations are nanoseconds")
+        .def(pybind11::init<>())
+        .def_readwrite("verbose", &RequestOptions::verbose)
+        .def_readwrite("follow_location", &RequestOptions::follow_location)
+        .def_readwrite("accept_encoding", &RequestOptions::accept_encoding)
+        .def_readwrite("http2", &RequestOptions::http2)
+        .def_readwrite("timeout", &RequestOptions::timeout)
+        .def_readwrite("connect_timeout", &RequestOptions::connect_timeout)
+        .def_readwrite("ssl_verify_peer", &RequestOptions::ssl_verify_peer)
+        .def_readwrite("ssl_verify_host", &RequestOptions::ssl_verify_host)
+        .def_readwrite("max_response_size", &RequestOptions::max_response_size)
+        .def_readwrite("parameters", &RequestOptions::parameters)
+        .def_readwrite("headers", &RequestOptions::headers)
+        .def_readwrite("username", &RequestOptions::username)
+        .def_readwrite("password", &RequestOptions::password)
+        .def_readwrite("digest", &RequestOptions::digest)
+        .def_readwrite("token", &RequestOptions::token)
+        .def_readwrite("user_agent", &RequestOptions::user_agent)
+        .def_readwrite("multipart", &RequestOptions::multipart)
+        .def_readwrite("proxy", &RequestOptions::proxy)
+        .def_readwrite("proxy_type", &RequestOptions::proxy_type)
+        .def_readwrite("proxy_username", &RequestOptions::proxy_username)
+        .def_readwrite("proxy_password", &RequestOptions::proxy_password)
+        .def_readwrite("progress", &RequestOptions::progress);
 
     pybind11::enum_<ProxyType>(m_http, "ProxyType")
         .value("Http", ProxyType::Http)
@@ -170,6 +221,11 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
              pybind11::arg("url"),
              pybind11::arg("data"),
              pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("post_multipart",
+             &Navigator::post_multipart,
+             pybind11::arg("url"),
+             pybind11::arg("multipart"),
+             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("delete", &Navigator::del, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("head", &Navigator::head, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("options", &Navigator::options, pybind11::arg("url"), pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -178,6 +234,13 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
              pybind11::arg("url"),
              pybind11::arg("path"),
              pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("put_file",
+             &Navigator::put_file,
+             pybind11::arg("url"),
+             pybind11::arg("path"),
+             pybind11::call_guard<pybind11::gil_scoped_release>())
+        .def("new_connection_count", &Navigator::new_connection_count)
+        .def("last_error", &Navigator::last_error)
         // configuration
         .def("set_verbose", &Navigator::set_verbose)
         .def("set_follow_redirects", &Navigator::set_follow_redirects)
@@ -214,40 +277,53 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         .def("set_proxy_auth", &Navigator::set_proxy_auth)
         .def("clear_proxy", &Navigator::clear_proxy);
 
-    // stateless request helpers (CurlOptions consumers)
+    // stateless request helpers (RequestOptions consumers)
     m_http.def(
         "get",
-        [](std::string_view url, const CurlOptions & opt) { return get(url, opt); },
+        [](std::string_view url, const RequestOptions & opt) { return get(url, opt); },
         pybind11::arg("url"),
-        pybind11::arg("options") = CurlOptions::none(),
+        pybind11::arg("options") = RequestOptions::none(),
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "post",
-        [](std::string_view url, std::string_view data, const CurlOptions & opt) { return post(url, data, opt); },
+        [](std::string_view url, std::string_view data, const RequestOptions & opt) { return post(url, data, opt); },
         pybind11::arg("url"),
         pybind11::arg("data") = std::string_view {},
-        pybind11::arg("options") = CurlOptions::none(),
+        pybind11::arg("options") = RequestOptions::none(),
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "put",
-        [](std::string_view url, std::string_view file_path, const CurlOptions & opt) {
+        [](std::string_view url, std::string_view file_path, const RequestOptions & opt) {
             return put(url, file_path, opt);
         },
         pybind11::arg("url"),
         pybind11::arg("file_path"),
-        pybind11::arg("options") = CurlOptions::none(),
+        pybind11::arg("options") = RequestOptions::none(),
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "delete",
-        [](std::string_view url, const CurlOptions & opt) { return del(url, opt); },
+        [](std::string_view url, const RequestOptions & opt) { return del(url, opt); },
         pybind11::arg("url"),
-        pybind11::arg("options") = CurlOptions::none(),
+        pybind11::arg("options") = RequestOptions::none(),
+        pybind11::call_guard<pybind11::gil_scoped_release>());
+    m_http.def(
+        "patch",
+        [](std::string_view url, std::string_view data, const RequestOptions & opt) { return patch(url, data, opt); },
+        pybind11::arg("url"),
+        pybind11::arg("data"),
+        pybind11::arg("options") = RequestOptions::none(),
+        pybind11::call_guard<pybind11::gil_scoped_release>());
+    m_http.def(
+        "options",
+        [](std::string_view url, const RequestOptions & opt) { return options(url, opt); },
+        pybind11::arg("url"),
+        pybind11::arg("options") = RequestOptions::none(),
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "head",
-        [](std::string_view url, const CurlOptions & opt) { return head(url, opt); },
+        [](std::string_view url, const RequestOptions & opt) { return head(url, opt); },
         pybind11::arg("url"),
-        pybind11::arg("options") = CurlOptions::none(),
+        pybind11::arg("options") = RequestOptions::none(),
         pybind11::call_guard<pybind11::gil_scoped_release>());
 
     // --- server side ---

@@ -4,6 +4,7 @@
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
+#include <sihd/http/Multipart.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/request.hpp>
 #include <sihd/lua/Vm.hpp>
@@ -42,8 +43,33 @@ class TestLuaHttpApi: public ::testing::Test
                 resp.set_plain_content("navigator-ok");
             });
             webservice->set_entry_point(
+                "hello",
+                [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
+                HttpRequest::Options);
+            webservice->set_entry_point(
                 "echo",
                 [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+                HttpRequest::Post);
+            webservice->set_entry_point(
+                "echo",
+                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+                HttpRequest::Patch);
+            webservice->set_entry_point(
+                "echo_put",
+                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+                HttpRequest::Put);
+            webservice->set_entry_point(
+                "upload",
+                [](const HttpRequest & req, HttpResponse & resp) {
+                    const Multipart *multipart = req.multipart();
+                    if (multipart == nullptr)
+                    {
+                        resp.set_status(HttpStatus::BadRequest);
+                        return;
+                    }
+                    auto field = multipart->value("field");
+                    resp.set_plain_content(field.has_value() ? std::string(*field) : "no-field");
+                },
                 HttpRequest::Post);
 
             ASSERT_TRUE(_server->set_port(3011));
@@ -81,6 +107,7 @@ TEST_F(TestLuaHttpApi, test_luahttp_base)
 {
     // HttpServer derives Node, so the http bindings need util + core registered first
     LuaUtilApi::load_base(_vm);
+    LuaUtilApi::load_tools(_vm);
     LuaCoreApi::load(_vm);
     LuaHttpApi::load_base(_vm);
     EXPECT_TRUE(this->do_script("test/http/lua/test_http.lua"));
@@ -108,13 +135,22 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
     ASSERT_TRUE(worker.start_sync_worker("lua-http-server"));
     ASSERT_TRUE(lua_server->wait_ready(std::chrono::milliseconds(2000)));
 
-    CurlOptions opt;
+    RequestOptions opt;
     opt.proxy = "";
-    opt.timeout_s = 5;
+    opt.timeout = sihd::util::time::sec(5);
     auto resp = sihd::http::post("localhost:3021/api/compute", "payload", opt);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), 200u);
     EXPECT_EQ(resp->content().cpp_str(), "from-lua:payload");
+
+    // a lua handler reads a multipart body through the request bindings
+    Multipart form;
+    form.add_field("field", "lua-multipart-value");
+    opt.multipart = form;
+    auto upload = sihd::http::post("localhost:3021/api/upload", "", opt);
+    ASSERT_TRUE(upload.has_value());
+    EXPECT_EQ(upload->status(), 200u);
+    EXPECT_EQ(upload->content().cpp_str(), "lua-multipart:lua-multipart-value");
 
     lua_server->set_service_wait_stop(true);
     lua_server->request_stop();

@@ -25,21 +25,21 @@ TEST_F(TestHttpResponse, test_content_types)
     HttpResponse plain;
     EXPECT_TRUE(plain.set_plain_content("hello"));
     EXPECT_EQ(plain.content().cpp_str(), "hello");
-    EXPECT_NE(plain.http_header().content_type().find("text/plain"), std::string::npos);
+    EXPECT_EQ(plain.http_header().content_type(), "text/plain; charset=utf-8");
 
     // json: serializes and sets application/json
     HttpResponse json;
     EXPECT_TRUE(json.set_json_content({{"k", "v"}, {"n", 1}}));
     auto parsed = sihd::json::Json::parse(json.content().cpp_str());
     EXPECT_EQ(parsed["k"].get<std::string>(), "v");
-    EXPECT_NE(json.http_header().content_type().find("application/json"), std::string::npos);
+    EXPECT_EQ(json.http_header().content_type(), "application/json; charset=utf-8");
 
     // byte: sets octet-stream and preserves raw bytes
     HttpResponse bytes;
     const uint8_t raw[] = {0x00, 0xFF, 0x42};
     EXPECT_TRUE(bytes.set_byte_content(sihd::util::ArrByteView(raw, 3)));
     EXPECT_EQ(bytes.content().size(), 3u);
-    EXPECT_NE(bytes.http_header().content_type().find("octet-stream"), std::string::npos);
+    EXPECT_EQ(bytes.http_header().content_type(), "application/octet-stream; charset=utf-8");
 }
 
 TEST_F(TestHttpResponse, test_content_type_set_once)
@@ -47,18 +47,18 @@ TEST_F(TestHttpResponse, test_content_type_set_once)
     // mime type auto-detection should not overwrite an already-set type
     HttpResponse resp;
     EXPECT_TRUE(resp.set_plain_content("first"));
-    std::string ct = std::string(resp.http_header().content_type());
-    EXPECT_FALSE(ct.empty());
+    const std::optional<std::string_view> ct = resp.http_header().content_type();
+    ASSERT_TRUE(ct.has_value());
     EXPECT_TRUE(resp.set_plain_content("second"));
     EXPECT_EQ(resp.http_header().content_type(), ct);
 
     // explicit type on a fresh response is preserved
     HttpResponse resp2;
     resp2.set_content_type("application/xml");
-    EXPECT_NE(resp2.http_header().content_type().find("application/xml"), std::string::npos);
+    EXPECT_EQ(resp2.http_header().content_type(), "application/xml; charset=utf-8");
     // auto-detection does not override the explicitly set type
     resp2.set_plain_content("data");
-    EXPECT_NE(resp2.http_header().content_type().find("application/xml"), std::string::npos);
+    EXPECT_EQ(resp2.http_header().content_type(), "application/xml; charset=utf-8");
 }
 
 TEST_F(TestHttpResponse, test_cookies)
@@ -122,7 +122,7 @@ TEST_F(TestHttpResponse, test_from_string)
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "hello");
-    EXPECT_NE(resp->http_header().content_type().find("text/plain"), std::string::npos);
+    EXPECT_EQ(resp->http_header().content_type(), "text/plain");
 }
 
 TEST_F(TestHttpResponse, test_from_string_no_body)

@@ -32,6 +32,7 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("404_path", &HttpServer::set_404_path);
     this->add_conf("server_name", &HttpServer::set_server_name);
     this->add_conf("cors_origin", &HttpServer::set_cors_origin);
+    this->add_conf("max_request_size", &HttpServer::set_max_request_size);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
     this->add_conf("service_thread_count", &HttpServer::set_service_thread_count);
 }
@@ -118,6 +119,12 @@ bool HttpServer::set_server_name(std::string_view name)
 bool HttpServer::set_cors_origin(std::string_view origin)
 {
     _impl->default_cors_origin = origin;
+    return true;
+}
+
+bool HttpServer::set_max_request_size(size_t size)
+{
+    _impl->max_request_size = size;
     return true;
 }
 

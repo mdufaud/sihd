@@ -153,17 +153,8 @@ std::string Url::str_decode(std::string_view str)
     {
         if (str[i] == '%' && i + 2 < str.size())
         {
-            auto from_hex = [](char c) -> int {
-                if (c >= '0' && c <= '9')
-                    return c - '0';
-                if (c >= 'A' && c <= 'F')
-                    return c - 'A' + 10;
-                if (c >= 'a' && c <= 'f')
-                    return c - 'a' + 10;
-                return -1;
-            };
-            int hi = from_hex(str[i + 1]);
-            int lo = from_hex(str[i + 2]);
+            int hi = str::hex_digit(str[i + 1]);
+            int lo = str::hex_digit(str[i + 2]);
             if (hi >= 0 && lo >= 0)
             {
                 result += static_cast<char>((hi << 4) | lo);

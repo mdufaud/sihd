@@ -131,7 +131,8 @@ void sha1_update(SHA1Context *ctx, const uint8_t *data, size_t len)
         i = 0;
     }
 
-    memcpy(&ctx->buffer[j], &data[i], len - i);
+    if (len > i)
+        memcpy(&ctx->buffer[j], &data[i], len - i);
 }
 
 // Finalize SHA1 hash

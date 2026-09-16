@@ -3,6 +3,7 @@
 
 #include <cstdint>   // int8_t
 #include <cstring>   // mem* str*
+#include <limits>    // numeric_limits
 #include <stdexcept> // out of range
 #include <utility>   // std::enable_if
 
@@ -1067,6 +1068,8 @@ class Array: public IArray,
         }
         reverse_iterator rend()
         {
+            if (this->data() == nullptr)
+                return reverse_iterator();
             return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
@@ -1079,6 +1082,8 @@ class Array: public IArray,
 
         const_reverse_iterator crend() const
         {
+            if (this->data() == nullptr)
+                return const_reverse_iterator();
             return const_reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
@@ -1136,10 +1141,13 @@ class Array: public IArray,
             if (Array::mult_resize_capacity > 1 && _capacity > 0)
             {
                 size_t new_capacity = _capacity;
-                while (new_capacity < capacity)
+                while (new_capacity < capacity
+                       && new_capacity <= std::numeric_limits<size_t>::max() / Array::mult_resize_capacity)
                 {
                     new_capacity = new_capacity * Array::mult_resize_capacity;
                 }
+                if (new_capacity < capacity)
+                    return false;
                 capacity = new_capacity;
             }
 

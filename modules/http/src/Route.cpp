@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include <sihd/http/Route.hpp>
+#include <sihd/util/Url.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::http
@@ -9,38 +10,16 @@ namespace sihd::http
 namespace
 {
 
-int hex_digit(char c)
-{
-    if (c >= '0' && c <= '9')
-        return c - '0';
-    if (c >= 'a' && c <= 'f')
-        return 10 + (c - 'a');
-    if (c >= 'A' && c <= 'F')
-        return 10 + (c - 'A');
-    return -1;
-}
-
-std::string str_decode(std::string_view s)
-{
-    std::string result;
-    result.reserve(s.size());
-    for (size_t i = 0; i < s.size(); ++i)
-    {
-        if (s[i] == '%' && i + 2 < s.size())
-        {
-            int hi = hex_digit(s[i + 1]);
-            int lo = hex_digit(s[i + 2]);
-            if (hi >= 0 && lo >= 0)
-            {
-                result += static_cast<char>((hi << 4) | lo);
-                i += 2;
-                continue;
-            }
-        }
-        result += s[i];
-    }
-    return result;
-}
+// the allow header lists methods in a stable order
+constexpr HttpRequest::RequestType allowed_method_order[] = {
+    HttpRequest::Get,
+    HttpRequest::Post,
+    HttpRequest::Put,
+    HttpRequest::Delete,
+    HttpRequest::Patch,
+    HttpRequest::Head,
+    HttpRequest::Options,
+};
 
 } // namespace
 
@@ -50,7 +29,7 @@ std::string normalize_path(std::string_view raw)
     if (segments.empty())
         return "";
     for (auto & seg : segments)
-        seg = str_decode(seg);
+        seg = sihd::util::Url::str_decode(seg);
     return sihd::util::str::join(std::span<const std::string>(segments), "/");
 }
 
@@ -112,7 +91,7 @@ RouteMatch Route::match(std::string_view path) const
             {
                 if (!joined.empty())
                     joined += '/';
-                joined += str_decode(parts[j]);
+                joined += sihd::util::Url::str_decode(parts[j]);
             }
             result.params[_segments[i].value] = std::move(joined);
             result.matched = true;
@@ -120,9 +99,9 @@ RouteMatch Route::match(std::string_view path) const
         }
         else if (_segments[i].is_param)
         {
-            result.params[_segments[i].value] = str_decode(parts[i]);
+            result.params[_segments[i].value] = sihd::util::Url::str_decode(parts[i]);
         }
-        else if (_segments[i].value != str_decode(parts[i]))
+        else if (_segments[i].value != sihd::util::Url::str_decode(parts[i]))
         {
             return RouteMatch {};
         }
@@ -176,6 +155,28 @@ std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType 
             return FindResult {route->_handler, std::move(m)};
     }
     return std::nullopt;
+}
+
+std::vector<HttpRequest::RequestType> RouteTable::allowed_methods(std::string_view path) const
+{
+    const std::string normalized = normalize_path(path);
+    std::vector<HttpRequest::RequestType> allowed;
+
+    for (HttpRequest::RequestType method : allowed_method_order)
+    {
+        const auto it = _routes.find(static_cast<int>(method));
+        if (it == _routes.end())
+            continue;
+        for (const Route & route : it->second)
+        {
+            if (route.match(normalized).matched)
+            {
+                allowed.push_back(method);
+                break;
+            }
+        }
+    }
+    return allowed;
 }
 
 } // namespace sihd::http

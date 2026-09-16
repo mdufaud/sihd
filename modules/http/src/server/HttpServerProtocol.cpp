@@ -32,26 +32,22 @@ HttpServer::Impl::Impl(HttpServer *server):
 HttpServer::Impl::~Impl()
 {
     {
-        std::lock_guard sl(sessions_mutex);
-        for (HttpSession *session : active_sessions)
+        std::lock_guard l(mutex);
+        if (lws_protocols_ptr != nullptr)
         {
-            session->clean();
-            if (lws_context_ptr == nullptr)
-                free(session);
+            free(lws_protocols_ptr);
+            lws_protocols_ptr = nullptr;
         }
-        active_sessions.clear();
+        if (lws_context_ptr != nullptr)
+        {
+            lws_context_destroy(lws_context_ptr);
+            lws_context_ptr = nullptr;
+        }
     }
-    std::lock_guard l(mutex);
-    if (lws_protocols_ptr != nullptr)
-    {
-        free(lws_protocols_ptr);
-        lws_protocols_ptr = nullptr;
-    }
-    if (lws_context_ptr != nullptr)
-    {
-        lws_context_destroy(lws_context_ptr);
-        lws_context_ptr = nullptr;
-    }
+    // sessions live inside lws-owned memory: whatever the context destruction leaves in
+    // the set was already freed by lws, only the bookkeeping can be dropped here
+    std::lock_guard sl(sessions_mutex);
+    active_sessions.clear();
 }
 
 bool HttpServer::Impl::add_protocol(const char *name,

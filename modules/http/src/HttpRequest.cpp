@@ -72,6 +72,11 @@ void HttpRequest::set_content(sihd::util::ArrCharView data)
     _array.from_bytes(data);
 }
 
+void HttpRequest::set_content_view(sihd::util::ArrCharView data)
+{
+    _array.assign((char *)data.data(), data.size());
+}
+
 void HttpRequest::set_client_ip(const std::string & ip)
 {
     _ip = ip;
@@ -124,6 +129,21 @@ std::optional<std::string_view> HttpRequest::cookie(const std::string & name) co
 void HttpRequest::set_cookie(std::string_view name, std::string_view value)
 {
     _cookies.emplace(std::string(name), std::string(value));
+}
+
+void HttpRequest::set_multipart(Multipart && multipart)
+{
+    _multipart = std::move(multipart);
+}
+
+bool HttpRequest::has_multipart() const
+{
+    return _multipart.has_value();
+}
+
+const Multipart *HttpRequest::multipart() const
+{
+    return _multipart.has_value() ? &_multipart.value() : nullptr;
 }
 
 sihd::json::Json HttpRequest::content_as_json() const

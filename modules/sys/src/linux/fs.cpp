@@ -181,12 +181,15 @@ CopyResult
 
 CopyResult kernel_copy(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
+    // bionic declares copy_file_range only from API 30
+# if !defined(__ANDROID__) || __ANDROID_API__ >= 30
     CopyResult r = kernel_copy_loop(
         [&](size_t chunk) { return ::copy_file_range(in_fd, nullptr, out_fd, nullptr, chunk, 0); },
         total,
         progress);
     if (r != CopyResult::unsupported)
         return r;
+# endif
     // copy_file_range wants a regular file on the same mount; sendfile covers more
     return kernel_copy_loop([&](size_t chunk) { return ::sendfile(out_fd, in_fd, nullptr, chunk); }, total, progress);
 }

@@ -486,6 +486,12 @@ TEST_F(TestFS, test_fs_copy_file)
     EXPECT_TRUE(fs::copy_file(src, dst));
     EXPECT_TRUE(fs::are_equals(src, dst));
 
+    // same size, different content
+    ASSERT_TRUE(fs::write(dst, std::string(content.size(), 'z'), false, true));
+    EXPECT_FALSE(fs::are_equals(src, dst));
+    EXPECT_TRUE(fs::copy_file(src, dst));
+    EXPECT_TRUE(fs::are_equals(src, dst));
+
     // copying a file onto itself is refused and keeps it intact
     ASSERT_TRUE(fs::copy_file(src, same));
     EXPECT_FALSE(fs::copy_file(same, same));

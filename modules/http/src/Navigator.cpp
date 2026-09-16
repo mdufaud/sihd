@@ -22,132 +22,135 @@ Navigator::~Navigator() = default;
 
 std::optional<NavigatorResponse> Navigator::get(std::string_view url)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_HTTPGET, 1L);
-    return _impl->perform_request(std::string(url), "GET");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url)});
 }
 
 std::optional<NavigatorResponse> Navigator::post(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_POST, 1L);
-    _impl->set_request_body(data);
-    return _impl->perform_request(std::string(url), "POST");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .body = data});
 }
 
 std::optional<NavigatorResponse> Navigator::patch(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_CUSTOMREQUEST, "PATCH");
-    _impl->set_request_body(data);
-    return _impl->perform_request(std::string(url), "PATCH");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Patch, .body = data});
 }
 
 std::optional<NavigatorResponse> Navigator::head(std::string_view url)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_NOBODY, 1L);
-    return _impl->perform_request(std::string(url), "HEAD");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Head});
 }
 
 std::optional<NavigatorResponse> Navigator::put(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_CUSTOMREQUEST, "PUT");
-    _impl->set_request_body(data);
-    return _impl->perform_request(std::string(url), "PUT");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .body = data});
 }
 
 std::optional<NavigatorResponse> Navigator::del(std::string_view url)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_CUSTOMREQUEST, "DELETE");
-    return _impl->perform_request(std::string(url), "DELETE");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Delete});
 }
 
 std::optional<NavigatorResponse> Navigator::options(std::string_view url)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_CUSTOMREQUEST, "OPTIONS");
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_NOBODY, 1L);
-    return _impl->perform_request(std::string(url), "OPTIONS");
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Options});
 }
 
-std::optional<NavigatorResponse> Navigator::post_multipart(std::string_view url,
-                                                           const std::vector<MultipartField> & fields)
+std::optional<NavigatorResponse> Navigator::post_multipart(std::string_view url, const Multipart & multipart)
 {
-    _impl->reset_handle_for_request();
-    return _impl->perform_multipart(std::string(url), fields);
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .multipart = multipart});
 }
 
 std::optional<NavigatorResponse> Navigator::download(std::string_view url, std::string_view path)
 {
-    _impl->reset_handle_for_request();
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_HTTPGET, 1L);
-    return _impl->perform_download(std::string(url), std::string(path));
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .download_path = std::string(path)});
+}
+
+std::optional<NavigatorResponse> Navigator::put_file(std::string_view url, std::string_view path)
+{
+    _impl->reset_for_request();
+    return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .upload_path = std::string(path)});
+}
+
+long Navigator::new_connection_count() const
+{
+    return _impl->client.new_connection_count();
+}
+
+std::string Navigator::last_error() const
+{
+    return _impl->last_error;
 }
 
 // Configuration
 
 void Navigator::set_verbose(bool verbose)
 {
-    _impl->http.verbose = verbose;
+    _impl->options.verbose = verbose;
 }
 
 void Navigator::set_follow_redirects(bool follow)
 {
-    _impl->http.follow_redirects = follow;
+    _impl->redirects.follow = follow;
 }
 
 void Navigator::set_max_redirects(long max)
 {
-    _impl->http.max_redirects = max;
+    _impl->redirects.max = max;
 }
 
 void Navigator::set_redirect_policy(RedirectPolicy policy)
 {
-    _impl->http.redirect_policy = policy;
+    _impl->redirects.policy = policy;
 }
 
-void Navigator::set_timeout(long seconds)
+void Navigator::set_timeout(sihd::util::Duration timeout)
 {
-    _impl->http.timeout_s = seconds;
+    _impl->options.timeout = timeout;
 }
 
-void Navigator::set_connect_timeout(long seconds)
+void Navigator::set_connect_timeout(sihd::util::Duration timeout)
 {
-    _impl->http.connect_timeout_s = seconds;
+    _impl->options.connect_timeout = timeout;
 }
 
 void Navigator::set_accept_encoding(bool enable)
 {
-    _impl->http.accept_encoding = enable;
+    _impl->options.accept_encoding = enable;
 }
 
 void Navigator::set_http2(bool enable)
 {
-    _impl->http.http2 = enable;
+    _impl->options.http2 = enable;
 }
 
 void Navigator::set_ssl_verify(bool verify_peer, bool verify_host)
 {
-    _impl->http.ssl_verify_peer = verify_peer;
-    _impl->http.ssl_verify_host = verify_host;
+    _impl->options.ssl_verify_peer = verify_peer;
+    _impl->options.ssl_verify_host = verify_host;
 }
 
 void Navigator::set_user_agent(std::string_view agent)
 {
-    _impl->http.user_agent = std::string(agent);
+    _impl->options.user_agent = std::string(agent);
 }
 
 void Navigator::set_max_response_size(size_t bytes)
 {
-    _impl->http.max_response_size = bytes;
+    _impl->options.max_response_size = bytes;
 }
 
 void Navigator::set_ssrf_guard(bool enable)
 {
-    _impl->http.ssrf_guard = enable;
+    _impl->ssrf_guard = enable;
 }
 
 // Authentication
@@ -253,23 +256,22 @@ void Navigator::set_cookie(std::string_view name, std::string_view value, std::s
 {
     std::string domain_str = domain.empty() ? "." : std::string(domain);
     std::string cookie_line = fmt::format("{}\tTRUE\t/\tFALSE\t0\t{}\t{}", domain_str, name, value);
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_COOKIELIST, cookie_line.c_str());
+    _impl->client.add_cookie(cookie_line);
 }
 
 void Navigator::clear_cookies()
 {
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_COOKIELIST, "ALL");
+    _impl->client.clear_cookies();
 }
 
 void Navigator::save_cookies(std::string_view path)
 {
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_COOKIEJAR, std::string(path).c_str());
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_COOKIELIST, "FLUSH");
+    _impl->client.save_cookies(path);
 }
 
 void Navigator::load_cookies(std::string_view path)
 {
-    curl_easy_setopt(_impl->curl_handle, CURLOPT_COOKIEFILE, std::string(path).c_str());
+    _impl->client.load_cookies(path);
 }
 
 // Proxy

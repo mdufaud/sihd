@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <sihd/http/HttpHeader.hpp>
-#include <sihd/http/Mime.hpp>
+#include <sihd/http/MimeTypes.hpp>
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/ArrayView.hpp>
 
@@ -18,9 +18,9 @@ class HttpResponse
 {
     public:
         // returns true while there is more data to send, false when done
-        using StreamProvider = std::function<bool(sihd::util::ArrByte & chunk)>;
+        using StreamProvider = std::move_only_function<bool(sihd::util::ArrByte & chunk)>;
 
-        HttpResponse(Mime *mimes = nullptr);
+        HttpResponse(MimeTypes *mimes = nullptr);
         HttpResponse(HttpResponse &&) = default;
         HttpResponse & operator=(HttpResponse &&) = default;
         virtual ~HttpResponse();
@@ -34,6 +34,7 @@ class HttpResponse
         bool set_plain_content(std::string_view str);
         bool set_byte_content(sihd::util::ArrByteView data);
         bool set_json_content(const sihd::json::Json & data);
+        bool set_file_content(std::string_view path);
 
         void set_content_type(std::string_view mime_type);
         void set_content_type_from_extension(const std::string & extension);
@@ -59,7 +60,7 @@ class HttpResponse
         uint32_t _status;
         HttpHeader _http_header;
         sihd::util::ArrByte _array;
-        Mime *_mime_ptr;
+        MimeTypes *_mime_ptr;
         StreamProvider _stream_provider;
         std::vector<std::string> _cookies;
 };

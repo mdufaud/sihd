@@ -100,6 +100,10 @@ TEST_F(TestFile, test_file_size)
 
     File f(path, "r");
     EXPECT_EQ(f.file_size(), 5);
+
+    char buf[6] = {};
+    EXPECT_EQ(f.read(buf, 5), 5);
+    EXPECT_STREQ(buf, "12345");
 }
 
 TEST_F(TestFile, test_file_eof)

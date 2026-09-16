@@ -1,8 +1,15 @@
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
+#include <fstream>
+
 #include <gtest/gtest.h>
 
-#include <sihd/http/CurlOptions.hpp>
 #include <sihd/http/HttpStatus.hpp>
+#include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/request.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include "http_test_helpers.hpp"
@@ -61,6 +68,10 @@ TEST_F(TestRequest, test_http_methods)
         "res",
         [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("ok"); },
         HttpRequest::Head);
+    scope.server._webservice->set_entry_point(
+        "opts",
+        [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
+        HttpRequest::Options);
     scope.server.set_cors_origin("https://app.com");
     scope.start(3004);
 
@@ -80,7 +91,7 @@ TEST_F(TestRequest, test_http_methods)
         EXPECT_EQ(r->status(), HttpStatus::Ok);
     }
 
-    CurlOptions cors;
+    RequestOptions cors;
     cors.headers["Origin"] = "https://app.com";
     cors.headers["Access-Control-Request-Method"] = "POST";
     EXPECT_EQ(http::options("localhost:3004/api/res", cors)->status(), HttpStatus::NoContent);
@@ -93,6 +104,46 @@ TEST_F(TestRequest, test_http_methods)
         auto r = http::head("localhost:3004/api/res");
         ASSERT_TRUE(r.has_value());
         EXPECT_EQ(r->status(), HttpStatus::Ok);
+    }
+    {
+        // a preflight is an OPTIONS carrying origin and access-control-request-method
+        auto r = http::options("localhost:3004/api/opts", cors);
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::NoContent);
+        EXPECT_EQ(r->http_header().find("access-control-allow-methods"),
+                  "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS");
+    }
+    {
+        auto r = http::get("localhost:3004/api/opts", cors);
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->http_header().find("access-control-allow-origin"), "https://app.com");
+    }
+    {
+        // a plain OPTIONS reaches the routes
+        auto r = http::options("localhost:3004/api/opts");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        EXPECT_EQ(r->content().cpp_str(), "options-ok");
+    }
+    {
+        // the path is known, the method is not: the answer carries what is allowed
+        auto r = http::options("localhost:3004/api/res");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::MethodNotAllowed);
+        EXPECT_EQ(r->http_header().find("allow"), "GET, POST, DELETE, PATCH, HEAD");
+    }
+    {
+        // the same answer is reached through the body path
+        auto r = http::post("localhost:3004/api/opts", "body");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::MethodNotAllowed);
+        EXPECT_EQ(r->http_header().find("allow"), "OPTIONS");
+    }
+    {
+        // nothing routes that path
+        auto r = http::options("localhost:3004/api/missing");
+        ASSERT_TRUE(r.has_value());
+        EXPECT_EQ(r->status(), HttpStatus::NotFound);
     }
 }
 
@@ -152,7 +203,7 @@ TEST_F(TestRequest, test_auth)
     }
 
     // wrong password → 401
-    CurlOptions bad;
+    RequestOptions bad;
     bad.username = "admin";
     bad.password = "wrong";
     {
@@ -162,7 +213,7 @@ TEST_F(TestRequest, test_auth)
     }
 
     // basic auth → 200, user propagated
-    CurlOptions basic;
+    RequestOptions basic;
     basic.username = "admin";
     basic.password = "secret";
     {
@@ -175,7 +226,7 @@ TEST_F(TestRequest, test_auth)
 
     // bearer token → 200, token propagated
     captured_user.clear();
-    CurlOptions token;
+    RequestOptions token;
     token.token = "my-secret-token-123";
     {
         auto r = http::get("localhost:3004/api/who", token);
@@ -248,6 +299,109 @@ TEST_F(TestRequest, test_http_status)
     EXPECT_TRUE(HttpStatus::is_rate_limit(429));
     EXPECT_TRUE(HttpStatus::is_rate_limit(503));
     EXPECT_FALSE(HttpStatus::is_rate_limit(200));
+}
+
+// free helpers are one-shots: each call opens its own connection
+TEST_F(TestRequest, test_stateless_connections)
+{
+    ServerScope scope;
+    int get_count = 0;
+    scope.server._webservice->set_entry_point("counter", [&get_count](const HttpRequest &, HttpResponse & resp) {
+        resp.set_plain_content("hit-" + std::to_string(++get_count));
+    });
+    scope.start(3005);
+
+    auto r1 = http::get("localhost:3005/api/counter");
+    ASSERT_TRUE(r1.has_value());
+    EXPECT_EQ(r1->content().cpp_str(), "hit-1");
+
+    auto r2 = http::get("localhost:3005/api/counter");
+    ASSERT_TRUE(r2.has_value());
+    EXPECT_EQ(r2->content().cpp_str(), "hit-2");
+    EXPECT_EQ(get_count, 2);
+}
+
+TEST_F(TestRequest, test_put_file)
+{
+    ServerScope scope;
+    sihd::sys::TmpDir tmp;
+    ASSERT_TRUE(tmp);
+
+    scope.server._webservice->set_entry_point(
+        "upload",
+        [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
+        HttpRequest::Put);
+    scope.start(3005);
+
+    // larger than one curl read buffer: the file must stream through the read callback
+    std::string content(256 * 1024, 'x');
+    for (size_t i = 0; i < content.size(); i += 16)
+        std::memcpy(content.data() + i, "0123456789abcdef", 16);
+
+    const std::string path = sihd::sys::fs::combine(tmp.path(), "put.bin");
+    {
+        std::ofstream file(path, std::ios::binary | std::ios::trunc);
+        file.write(content.data(), (std::streamsize)content.size());
+    }
+
+    auto resp = http::put("localhost:3005/api/upload", path);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), 200u);
+    EXPECT_EQ(resp->content().cpp_str(), content);
+
+    EXPECT_FALSE(http::put("localhost:3005/api/upload", "/no/such/file/here").has_value());
+}
+
+// a response cut short by max_response_size is still returned, truncated
+TEST_F(TestRequest, test_max_response_size_overflow)
+{
+    ServerScope scope;
+    scope.server._webservice->set_entry_point("big", [](const HttpRequest &, HttpResponse & resp) {
+        resp.set_plain_content(std::string(8192, 'x'));
+    });
+    scope.start(3005);
+
+    RequestOptions options;
+    options.max_response_size = 1024;
+    auto r = http::get("localhost:3005/api/big", options);
+    ASSERT_TRUE(r.has_value());
+    EXPECT_EQ(r->status(), HttpStatus::Ok);
+    EXPECT_LE(r->content().size(), 1024u);
+
+    // without the limit the whole body comes through
+    auto full = http::get("localhost:3005/api/big");
+    ASSERT_TRUE(full.has_value());
+    EXPECT_EQ(full->content().size(), 8192u);
+}
+
+// query parameters reach the handler and the progress callback observes the transfer
+TEST_F(TestRequest, test_request_options_parameters_and_progress)
+{
+    ServerScope scope;
+    scope.server._webservice->set_entry_point(
+        "params",
+        [](const HttpRequest & req, HttpResponse & resp) {
+            resp.set_plain_content(req.query_param("q").value_or("missing"));
+        },
+        HttpRequest::Post);
+    scope.start(3005);
+
+    RequestOptions options;
+    options.parameters["q"] = "sihd";
+    bool saw_upload_total = false;
+    bool saw_download_total = false;
+    options.progress = [&](const http::Progress & prog) {
+        saw_upload_total = saw_upload_total || prog.upload_total == 4;
+        saw_download_total = saw_download_total || prog.download_total > 0;
+        return true;
+    };
+
+    auto r = http::post("localhost:3005/api/params", "body", options);
+    ASSERT_TRUE(r.has_value());
+    EXPECT_EQ(r->status(), HttpStatus::Ok);
+    EXPECT_EQ(r->content().cpp_str(), "sihd");
+    EXPECT_TRUE(saw_upload_total);
+    EXPECT_TRUE(saw_download_total);
 }
 
 } // namespace test

@@ -113,6 +113,8 @@ std::string addr_str(const void *addr, size_t padding = 0);
 std::string num_str(uint64_t num, uint16_t base);
 // 0 -> 9 -> a -> z
 char num_to_char(size_t num);
+// hex digit value ('0'-'9', 'a'-'f', 'A'-'F'), -1 otherwise
+int hex_digit(int c);
 
 std::string hexdump(const IArray & arr, char delim);
 std::string hexdump(const IArrayView & arr, char delim);

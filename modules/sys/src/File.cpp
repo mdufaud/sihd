@@ -393,7 +393,7 @@ long File::file_size()
         if (this->seek_end(0))
         {
             ret = this->tell();
-            this->seek(current_offset);
+            this->seek_begin(current_offset);
         }
     }
     return ret;

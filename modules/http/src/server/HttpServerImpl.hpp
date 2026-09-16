@@ -18,7 +18,7 @@
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/IHttpFilter.hpp>
 #include <sihd/http/IWebsocketHandler.hpp>
-#include <sihd/http/Mime.hpp>
+#include <sihd/http/MimeTypes.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WriteProtocol.hpp>
 #include <sihd/util/Array.hpp>
@@ -48,47 +48,54 @@ struct HttpServer::Impl
 {
         struct HttpSession
         {
-                void init()
-                {
-                    wsi = nullptr;
-                    in = nullptr;
-                    len = 0;
-                    rc = 0;
-                    request_type = HttpRequest::None;
-                    content_size = 0;
-                    should_complete_transaction = true;
-                    stream_provider = nullptr;
-                }
-
-                void clean()
-                {
-                    request.reset();
-                    content.reset();
-                    cached_auth_header.reset();
-                    stream_provider = nullptr;
-                }
-
                 void new_request()
                 {
                     request.reset();
-                    content.reset();
-                    content_size = 0;
-                    should_complete_transaction = true;
+                    // a keep-alive connection must not pin the largest body it served
+                    if (content.capacity() > max_retained_body_capacity)
+                        content = sihd::util::ArrChar {};
+                    else
+                        content.clear();
+                    body_stream.reset();
                     stream_provider = nullptr;
                     cached_auth_header.reset();
+                    content_length = 0;
+                    content_size = 0;
+                    request_type = HttpRequest::None;
+                    rc = 0;
+                    stream_sent = 0;
+                    stream_length = 0;
+                    waiting_body = false;
+                    response_pending = false;
+                    reject_body = false;
+                    close_after_stream = false;
                 }
 
-                struct lws *wsi;
-                void *in;
-                size_t len;
-                int rc;
-                HttpRequest::RequestType request_type;
-                std::unique_ptr<sihd::util::ArrUByte> content;
-                size_t content_size;
+                struct lws *wsi = nullptr;
+                void *in = nullptr;
+                size_t len = 0;
+                int rc = 0;
+                HttpRequest::RequestType request_type = HttpRequest::None;
+                sihd::util::ArrChar content;
+                size_t content_length = 0;
+                size_t content_size = 0;
+                std::unique_ptr<IBodyStream> body_stream;
                 std::unique_ptr<HttpRequest> request;
-                bool should_complete_transaction;
                 HttpResponse::StreamProvider stream_provider;
+                size_t stream_sent = 0;
+                size_t stream_length = 0;
                 std::optional<std::string> cached_auth_header;
+                // lws expects the request body, the transaction cannot end yet
+                bool waiting_body = false;
+                // the response writes past this callback: a stream or a served file
+                bool response_pending = false;
+                bool reject_body = false;
+                bool close_after_stream = false;
+                // one way: a body the server refused leaves the connection unusable, the
+                // response is flushed and the connection closed instead of desyncing it
+                bool close_connection = false;
+
+                static constexpr size_t max_retained_body_capacity = 64 * 1024;
         };
 
         struct WebsocketSession
@@ -135,11 +142,30 @@ struct HttpServer::Impl
         // http callbacks & helpers
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
         HttpRequest::RequestType get_request_type(struct lws *wsi);
+        bool is_cors_preflight(struct lws *wsi);
         int on_http_request(HttpSession *session, std::string_view path);
         int on_http_body(HttpSession *session, const uint8_t *buf, size_t size);
         int on_http_body_end(HttpSession *session);
+        // ends the lws transaction, or drops the connection when the body was refused
+        int complete_transaction(HttpSession *session, int rc);
+        bool check_stream_length(HttpSession *session);
         WebService *_get_webservice_from_path(std::string_view path, std::string *webservice_name = nullptr);
         bool check_webservices(HttpSession *session, std::string_view path);
+        // returns the announced body length, or nothing once the body was refused
+        std::optional<size_t>
+            resolve_body_length(HttpSession *session, HttpRequest & request, const std::string & webservice_name);
+        // installs the body stream, false once the body was refused
+        bool prepare_body_stream(HttpSession *session,
+                                 WebService *webservice,
+                                 HttpRequest & request,
+                                 size_t content_length,
+                                 const std::string & webservice_name);
+        bool serve_bodyless(HttpSession *session, WebService *webservice, HttpRequest & request);
+        int serve_body(HttpSession *session);
+        // fills the request fields the stream providers and handlers may read while the body streams in
+        void populate_request(HttpSession *session, HttpRequest & request);
+        // answers a request no route matched, from either the bodyless or the body path
+        bool serve_not_found(HttpSession *session, std::string_view path);
 
         struct AuthResult
         {
@@ -158,10 +184,18 @@ struct HttpServer::Impl
 
         // header/response helpers
         std::optional<std::string> get_header(struct lws *wsi, enum lws_token_indexes idx);
+        // name must carry its trailing ':' as lws matches it verbatim
+        std::optional<std::string> get_custom_header(struct lws *wsi, std::string_view name);
+        void apply_request_headers(struct lws *wsi, HttpRequest & request);
         std::string get_client_ip(struct lws *wsi);
         std::vector<std::string> get_uri_args(struct lws *wsi);
         bool send_404(struct lws *wsi, std::string_view html_404);
-        bool send_http_no_content(struct lws *wsi, int code);
+        // header-only error response, allow is the method list of a 405
+        bool send_http_error(HttpSession *session, int code, std::string_view allow = {});
+        // refuses the body: the response carries connection: close and the transaction
+        // ends by dropping the connection instead of desyncing it
+        bool reject_body(HttpSession *session, int code);
+        bool reject_body(HttpSession *session, HttpResponse & response);
         bool send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         bool send_http_headers(struct lws *wsi, HttpResponse & response);
 
@@ -202,7 +236,11 @@ struct HttpServer::Impl
 
         std::string page_404_path;
 
-        Mime mime;
+        size_t max_request_size = 0;
+        // a buffered body is read fully in memory: streaming is the path for bigger payloads
+        size_t max_buffered_request_size = 16 * 1024 * 1024;
+
+        MimeTypes mime;
         LwsPollingScheduler polling_scheduler;
         sihd::util::StepWorker stepworker;
 

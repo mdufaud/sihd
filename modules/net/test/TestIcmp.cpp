@@ -150,7 +150,9 @@ class TestIcmp: public ::testing::Test
 #if defined(__SIHD_WINDOWS__)
             return err == WSAENETUNREACH || err == WSAEHOSTUNREACH || err == WSAEADDRNOTAVAIL;
 #else
-            return err == ENETUNREACH || err == EHOSTUNREACH || err == EADDRNOTAVAIL;
+            // EPERM: the kernel rejects sendto while the global source address is
+            // being rotated (RA churn), same transient window as unreachable routes
+            return err == ENETUNREACH || err == EHOSTUNREACH || err == EADDRNOTAVAIL || err == EPERM;
 #endif
         }
 

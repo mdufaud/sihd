@@ -34,8 +34,10 @@ constexpr uint32_t Forbidden = 403;
 constexpr uint32_t NotFound = 404;
 constexpr uint32_t MethodNotAllowed = 405;
 constexpr uint32_t RequestTimeout = 408;
+constexpr uint32_t LengthRequired = 411;
 constexpr uint32_t Conflict = 409;
 constexpr uint32_t Gone = 410;
+constexpr uint32_t PayloadTooLarge = 413;
 constexpr uint32_t TooManyRequests = 429;
 
 // 5xx Server Error
@@ -84,10 +86,14 @@ constexpr std::string_view to_string(uint32_t code)
             return "Method Not Allowed";
         case RequestTimeout:
             return "Request Timeout";
+        case LengthRequired:
+            return "Length Required";
         case Conflict:
             return "Conflict";
         case Gone:
             return "Gone";
+        case PayloadTooLarge:
+            return "Payload Too Large";
         case TooManyRequests:
             return "Too Many Requests";
         case InternalServerError:
