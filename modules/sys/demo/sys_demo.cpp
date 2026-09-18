@@ -1,12 +1,12 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/NamedFactory.hpp>
-#include <sihd/sys/SigWaiter.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>
@@ -19,14 +19,13 @@
 #include <sihd/sys/user.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
-
-#include <CLI/CLI.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # include "emscripten.h"
@@ -308,50 +307,65 @@ void backtrace()
 
 int main(int argc, char **argv)
 {
-    CLI::App app {"Testing utility for module sys"};
+    App app({
+        .name = "sys_demo",
+        .description = "Testing utility for module sys",
+    });
 
-    CLI11_PARSE(app, argc, argv);
+    app.root().add_command("os", "process informations").on_run([] { demo::os(); });
+    app.root().add_command("fs", "filesystem informations").on_run([] { demo::fs(); });
+    app.root().add_command("uuid", "uuid generation").on_run([] { demo::uuid(); });
+    app.root().add_command("dynlib", "dynamic library loading").on_run([] { demo::dynlib(); });
+    app.root().add_command("file", "in memory files").on_run([] {
+        demo::file_mem_read();
+        demo::file_mem_write();
+    });
+    app.root().add_command("bitmap", "bitmap save and read").on_run([] { demo::bitmap(); });
+    app.root().add_command("backtrace", "print a backtrace").on_run([] { demo::backtrace(); });
 
-    if (term::supports_color())
-        LoggerManager::console();
-    else
-        LoggerManager::stream(sihd::util::build::is_emscripten ? stdout : stderr);
-
-    demo::os();
-    demo::fs();
-    demo::uuid();
-    demo::dynlib();
-    demo::file_mem_read();
-    demo::file_mem_write();
-    demo::bitmap();
-    demo::backtrace();
-
-    if constexpr (sihd::util::build::is_emscripten)
+#if defined(__SIHD_EMSCRIPTEN__)
+    app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
+#else
+    if constexpr (clipboard::supported)
     {
-        demo::read_line();
+        app.root().add_command("clipboard", "clipboard content").on_run([] { demo::clipboard(); });
     }
-    else
+    if constexpr (screenshot::supported)
     {
+        app.root().add_command("screenshot", "take screenshots").on_run([] { demo::screenshot(); });
+    }
+    app.root().add_command("process", "execute a process").on_run([] { demo::process(); });
+    app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
+    app.root().add_command("wait", "wait 5 seconds or until a stop signal").on_run([&app] {
+        fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
+        app.wait_for_termination(time::seconds(5));
+        fmt::print("Exiting...\n");
+    });
+#endif
+
+    app.root().on_run([&app] {
+        demo::os();
+        demo::fs();
+        demo::uuid();
+        demo::dynlib();
+        demo::file_mem_read();
+        demo::file_mem_write();
+        demo::bitmap();
+        demo::backtrace();
+#if defined(__SIHD_EMSCRIPTEN__)
+        demo::read_line();
+#else
         if constexpr (clipboard::supported)
-        {
             demo::clipboard();
-        }
         if constexpr (screenshot::supported)
-        {
             demo::screenshot();
-        }
         demo::process();
         demo::read_line();
-        fmt::print("Press Ctrl + c to exit (or wait 5 seconds)\n");
-        SigWaiter waiter({
-            .timeout = time::seconds(5),
-        });
-        if (waiter.received_signal())
-            fmt::print("(Received signal)\n");
-        else
-            fmt::print("(Timeout)\n");
+        fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
+        app.wait_for_termination(time::seconds(5));
         fmt::print("Exiting...\n");
-    }
+#endif
+    });
 
-    return 0;
+    return app.run(argc, argv);
 }

@@ -66,6 +66,8 @@ TEST_F(TestSignal, test_signal_handle)
     ASSERT_TRUE(signal::handle(sig));
 
     fmt::print("{}", signal::status_str());
+    // a forked child inherits this buffer: leftovers must not pollute its captured stdout
+    fflush(stdout);
 
     EXPECT_FALSE(signal::stop_received());
     EXPECT_FALSE(signal::termination_received());

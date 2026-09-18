@@ -1,5 +1,6 @@
 #include <fmt/format.h>
 
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/LoadingBar.hpp>
 #include <sihd/util/Logger.hpp>
@@ -7,10 +8,7 @@
 #include <sihd/util/StepWorker.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
-
-#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 
@@ -75,24 +73,17 @@ void time()
 
 int main(int argc, char **argv)
 {
+    CliApp app({
+        .name = "util_demo",
+        .description = "Testing utility for module util",
+    });
+
     double worker_frequency = 10.0;
-    CLI::App app {"Testing utility for module util"};
-    app.add_option("-f,--worker-frequency", worker_frequency, "Change the worker execution frequency in HZ")
-        ->default_val("10.0");
+    app.root().bind("worker-frequency", worker_frequency, "Change the worker execution frequency in HZ");
+    app.root().on_run([&worker_frequency] {
+        demo::time();
+        demo::worker(worker_frequency);
+    });
 
-    CLI11_PARSE(app, argc, argv);
-
-#if defined(__SIHD_EMSCRIPTEN__)
-    LoggerManager::stream(stdout);
-#else
-    if (term::is_interactive())
-        LoggerManager::console();
-    else
-        LoggerManager::stream(stderr);
-#endif
-
-    demo::time();
-    demo::worker(worker_frequency);
-
-    return 0;
+    return app.run(argc, argv);
 }

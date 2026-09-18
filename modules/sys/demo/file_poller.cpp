@@ -1,19 +1,25 @@
+#include <string>
+#include <vector>
+
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/FilePoller.hpp>
-#include <sihd/sys/SigHandler.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/signal.hpp>
+#include <sihd/util/CliApp.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/str.hpp>
-
-#include <CLI/CLI.hpp>
+#include <sihd/util/time.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
+
+SIHD_NEW_LOGGER("demo");
+
+namespace
+{
 
 std::string display_fw(std::string_view category, const std::vector<std::string> & list)
 {
@@ -21,46 +27,52 @@ std::string display_fw(std::string_view category, const std::vector<std::string>
     return str::wrap(fmt::format("{} [{}]: {}", category, list.size(), fmt::join(list, ",")), max_width);
 }
 
+} // namespace
+
 int main(int argc, char **argv)
 {
+    App app({
+        .name = "file_poller",
+        .description = "Testing file poller",
+    });
+
     std::string path;
     size_t depth = 10;
     double time_val = 0.5;
+    app.root().bind("path", path, "Watch path for changes", "p");
+    app.root().bind("depth", depth, "Depth to watch files", "d");
+    app.root().bind("time", time_val, "Execute x times per seconds", "t");
 
-    CLI::App app {"Testing file poller"};
-    app.add_option("-p,--path", path, "Watch path for changes")->required();
-    app.add_option("-d,--depth", depth, "Depth to watch files")->default_val("10");
-    app.add_option("-t,--time", time_val, "Execute x times per seconds")->default_val("0.5");
+    app.root().on_run([&] {
+        if (path.empty())
+        {
+            SIHD_LOG(error, "Missing --path");
+            app.exit(EXIT_FAILURE);
+        }
 
-    CLI11_PARSE(app, argc, argv);
+        Handler<FilePoller *> handler([](FilePoller *fw) {
+            SIHD_LOG(debug, "watching '{}' with {} files", fw->watch_path(), fw->watch_size());
 
-    LoggerManager::console();
-    Logger log("demo");
+            if (!fw->created().empty())
+                SIHD_LOG(notice, "{}", display_fw("created", fw->created()));
+            if (!fw->removed().empty())
+                SIHD_LOG(warning, "{}", display_fw("removed", fw->removed()));
+            if (!fw->changed().empty())
+                SIHD_LOG(info, "{}", display_fw("changed", fw->changed()));
+        });
 
-    Handler<FilePoller *> handler([&log](FilePoller *fw) {
-        log.debug(fmt::format("watching '{}' with {} files", fw->watch_path(), fw->watch_size()));
+        const Timestamp sleep_for = time::from_double(time_val);
+        FilePoller fpoller(path, depth);
+        fpoller.add_observer(&handler);
 
-        if (!fw->created().empty())
-            log.notice(display_fw("created", fw->created()));
-        if (!fw->removed().empty())
-            log.warning(display_fw("removed", fw->removed()));
-        if (!fw->changed().empty())
-            log.info(display_fw("changed", fw->changed()));
+        while (app.should_stop() == false)
+        {
+            fpoller.run();
+            app.wait_for_termination(Duration(sleep_for));
+        }
+
+        SIHD_LOG(info, "stopped watching: {} files", fpoller.watch_size());
     });
 
-    const Timestamp sleep_for = time::from_double(time_val);
-    FilePoller fpoller(path, depth);
-
-    fpoller.add_observer(&handler);
-
-    SigHandler sig_handler(SIGINT);
-    while (!signal::termination_received())
-    {
-        time::sleep(sleep_for);
-        fpoller.run();
-    }
-
-    log.info(fmt::format("stopped watching: {} files", fpoller.watch_size()));
-
-    return 0;
+    return app.run(argc, argv);
 }

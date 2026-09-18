@@ -3,8 +3,6 @@
 namespace sihd::json
 {
 
-// constructors
-
 Json::Json(): _value(nullptr), _discarded(false) {}
 
 Json::Json(std::nullptr_t): _value(nullptr), _discarded(false) {}
@@ -69,8 +67,6 @@ Json::Json(std::initializer_list<Json> init): _discarded(false)
 }
 
 Json::Json(DiscardedTag): _value(nullptr), _discarded(true) {}
-
-// copy
 
 Json::Json(const Json & other):
     _discarded(other._discarded),
@@ -203,8 +199,6 @@ bool Json::is_discarded() const
     return _discarded;
 }
 
-// type() is not inlined
-
 Json::Type Json::type() const
 {
     if (_discarded)
@@ -256,8 +250,6 @@ Json::Type Json::type() const
             return Type::Null;
     }
 }
-
-// element access
 
 Json Json::operator[](std::string_view key) const
 {
@@ -369,8 +361,6 @@ bool Json::contains(std::string_view key) const
     }
     return false;
 }
-
-// get specializations — read from DOM directly when available
 
 template <>
 bool Json::get<bool>() const
@@ -520,7 +510,19 @@ std::string Json::get<std::string>() const
     throw std::runtime_error("Json: not a string");
 }
 
-// parsing — store only the DOM element, no eager variant build
+template <>
+std::vector<std::string> Json::get<std::vector<std::string>>() const
+{
+    if (is_array() == false)
+        throw std::runtime_error("Json: not an array");
+    std::vector<std::string> out;
+    out.reserve(size());
+    for (auto it = this->begin(); it != this->end(); ++it)
+        out.push_back(it->get<std::string>());
+    return out;
+}
+
+// the DOM is kept as-is: the variant is built lazily
 
 Json Json::parse(std::string_view str)
 {
@@ -552,8 +554,6 @@ Json Json::parse(const char *begin, const char *end, bool allow_exceptions)
         return Json(DiscardedTag {});
     }
 }
-
-// comparison
 
 bool Json::operator==(const Json & other) const
 {
@@ -604,8 +604,6 @@ bool Json::operator==(const Json & other) const
     }
     return false;
 }
-
-// serialization
 
 std::string Json::dump(int indent) const
 {
@@ -788,8 +786,6 @@ void Json::_dump_to_builder(simdjson::builder::string_builder & sb, int indent, 
         }
     }
 }
-
-// iterator
 
 Json::iterator::iterator(IterType type, size_t index, const void *container):
     _iter_type(type),

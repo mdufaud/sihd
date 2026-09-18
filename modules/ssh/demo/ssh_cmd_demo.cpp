@@ -1,77 +1,81 @@
+#include <cstdio>
+
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
-
-#include <CLI/CLI.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
 using namespace sihd::util;
+using namespace sihd::sys;
 using namespace sihd::ssh;
 
 int main(int argc, char **argv)
 {
+    App app({
+        .name = "ssh_cmd_demo",
+        .description = "Execute a command in a ssh host",
+    });
+
     std::string user;
     std::string password;
     std::string host;
     std::string cmd;
     int port = 22;
+    app.root().bind("user", user, "User for the ssh connexion", "u");
+    app.root().bind("password", password, "Password for the ssh connexion", "p");
+    app.root().bind("host", host, "Host for the ssh connexion", "H");
+    app.root().bind("port", port, "Port for the ssh connexion");
+    app.root().bind("cmd", cmd, "Command to execute in ssh host", "c");
 
-    CLI::App app {"Testing utility for module util"};
-    app.add_option("-u,--user", user, "User for the ssh connexion")->required();
-    app.add_option("-p,--password", password, "Password for the ssh connexion");
-    app.add_option("-H,--host", host, "Host for the ssh connexion")->required();
-    app.add_option("--port", port, "Port for the ssh connexion")->default_val("22");
-    app.add_option("-c,--cmd", cmd, "Command to execute in ssh host")->required();
+    app.root().on_run([&] {
+        if (user.empty() || host.empty() || cmd.empty())
+        {
+            SIHD_LOG(error, "Missing --user, --host or --cmd");
+            app.exit(EXIT_FAILURE);
+        }
 
-    CLI11_PARSE(app, argc, argv);
+        SshSession session;
+        if (session.fast_connect({.user = user, .host = host, .port = port}) == false)
+            app.exit(EXIT_FAILURE);
 
-    if (term::is_interactive() && build::is_unix && !build::is_emscripten)
-        LoggerManager::console();
-    else
-        LoggerManager::stream();
+        SshSession::AuthState auth_state {-1};
+        if (password.empty() == false)
+            auth_state = session.auth_password(password);
+        else
+            auth_state = session.auth_interactive_keyboard();
 
-    SshSession session;
-    if (!session.fast_connect({.user = user, .host = host, .port = port}))
-        return EXIT_FAILURE;
+        SIHD_LOG(info, "Auth status: {}", auth_state.str());
+        if (auth_state.success() == false)
+            app.exit(EXIT_FAILURE);
 
-    SshSession::AuthState auth_state {-1};
-    if (!password.empty())
-    {
-        auth_state = session.auth_password(password);
-    }
-    else
-    {
-        auth_state = session.auth_interactive_keyboard();
-    }
+        std::string stdout_str;
+        std::string stderr_str;
+        sihd::util::Handler<std::string_view, bool> test_output_handler(
+            [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
+                if (is_stderr)
+                    stderr_str += buf;
+                else
+                    stdout_str += buf;
+            });
 
-    SIHD_LOG(info, "Auth status: {}", auth_state.str());
-    if (!auth_state.success())
-        return EXIT_FAILURE;
+        SshCommand ssh_cmd = session.make_command();
+        ssh_cmd.output_handler = &test_output_handler;
+        ssh_cmd.execute(cmd);
+        ssh_cmd.wait();
 
-    std::string stdout_str;
-    std::string stderr_str;
-    sihd::util::Handler<std::string_view, bool> test_output_handler(
-        [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
-            if (is_stderr)
-                stderr_str += buf;
-            else
-                stdout_str += buf;
-        });
+        if (stdout_str.empty() == false)
+            fmt::print("{}", stdout_str);
 
-    SshCommand ssh_cmd = session.make_command();
-    ssh_cmd.output_handler = &test_output_handler;
-    ssh_cmd.execute(cmd);
-    ssh_cmd.wait();
+        if (stderr_str.empty() == false)
+            fmt::print(stderr, "{}", stderr_str);
 
-    if (!stdout_str.empty())
-        fmt::print("{}", stdout_str);
+        app.exit(ssh_cmd.exit_status());
+    });
 
-    if (!stderr_str.empty())
-        fmt::print(stderr, "{}", stderr_str);
-
-    return ssh_cmd.exit_status();
+    return app.run(argc, argv);
 }

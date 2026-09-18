@@ -37,8 +37,6 @@ class Json
             Discarded,
         };
 
-        // construction
-
         Json();
         Json(std::nullptr_t);
         Json(bool val);
@@ -54,8 +52,6 @@ class Json
         Json(Array && arr);
         Json(Object && obj);
         Json(std::initializer_list<Json> init);
-
-        // copy / move
 
         Json(const Json & other);
         Json(Json && other) noexcept;
@@ -77,16 +73,12 @@ class Json
 
         Type type() const;
 
-        // element access
-
         Json operator[](std::string_view key) const;
         Json operator[](size_t index) const;
 
         size_t size() const;
         bool empty() const;
         bool contains(std::string_view key) const;
-
-        // value extraction
 
         template <typename T>
         T get() const;
@@ -104,19 +96,13 @@ class Json
             }
         }
 
-        // parsing
-
         static Json parse(std::string_view str);
         static Json parse(std::string_view str, bool allow_exceptions);
         static Json parse(const char *begin, const char *end, bool allow_exceptions);
 
-        // serialization
-
         std::string dump(int indent = -1) const;
 
         bool operator==(const Json & other) const;
-
-        // iteration (defined after Json is complete to allow inline Json member)
 
         class iterator;
 
@@ -150,7 +136,7 @@ class Json
         static void _write_indent(simdjson::builder::string_builder & sb, int indent, int depth);
 };
 
-// Iterator defined outside Json so that Json is a complete type.
+// Json must be complete: the iterator holds one inline
 
 class Json::iterator
 {
@@ -195,7 +181,7 @@ class Json::iterator
                  simdjson::dom::object::iterator obj_end,
                  const std::shared_ptr<DomHolder> & holder);
 
-        // DOM end sentinel (lightweight, no shared_ptr copy)
+        // end sentinel, no shared_ptr copy
         struct EndTag
         {
         };
@@ -206,15 +192,12 @@ class Json::iterator
         size_t _index = 0;
         const void *_container = nullptr;
 
-        // DOM iteration (zero heap allocation)
         bool _dom_mode = false;
         simdjson::dom::array::iterator _arr_it {};
         simdjson::dom::object::iterator _obj_it {};
         mutable Json _current;
         mutable std::string _current_key;
 };
-
-// template specializations declared here, defined in .cpp
 
 template <>
 bool Json::get<bool>() const;
@@ -240,6 +223,8 @@ template <>
 double Json::get<double>() const;
 template <>
 std::string Json::get<std::string>() const;
+template <>
+std::vector<std::string> Json::get<std::vector<std::string>>() const;
 
 } // namespace sihd::json
 

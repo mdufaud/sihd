@@ -542,6 +542,20 @@ std::optional<double> strtod_fallback(std::string_view str)
 
 #endif
 
+// the {token length, replacement} matching s at pos, {0, {}} when no token does
+std::pair<size_t, std::string_view>
+    match_token(std::string_view s,
+                size_t pos,
+                std::initializer_list<std::pair<std::string_view, std::string_view>> pairs)
+{
+    for (const auto & [from, to] : pairs)
+    {
+        if (!from.empty() && s.compare(pos, from.size(), from) == 0)
+            return {from.size(), to};
+    }
+    return {0, {}};
+}
+
 } // namespace
 
 #if defined(__SIHD_WINDOWS__)
@@ -846,6 +860,41 @@ std::string replace(std::string_view s, std::string_view from, std::string_view 
         i = s.find(from, i);
     }
     ret += s.substr(last);
+    return ret;
+}
+
+std::string replace(std::string_view s, std::initializer_list<std::pair<std::string_view, std::string_view>> pairs)
+{
+    // sizing pass so the fill pass appends within a single allocation
+    size_t size = s.size();
+    for (size_t i = 0; i < s.size();)
+    {
+        const auto [len, to] = match_token(s, i, pairs);
+        if (len == 0)
+            ++i;
+        else
+        {
+            size = size - len + to.size();
+            i += len;
+        }
+    }
+
+    std::string ret;
+    ret.reserve(size);
+    for (size_t i = 0; i < s.size();)
+    {
+        const auto [len, to] = match_token(s, i, pairs);
+        if (len == 0)
+        {
+            ret += s[i];
+            ++i;
+        }
+        else
+        {
+            ret += to;
+            i += len;
+        }
+    }
     return ret;
 }
 

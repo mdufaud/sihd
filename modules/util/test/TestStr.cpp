@@ -898,6 +898,17 @@ TEST_F(TestStr, test_str_replace)
     EXPECT_EQ(str::replace("aaa", "aa", "b"), "ba");
 }
 
+TEST_F(TestStr, test_str_replace_pairs)
+{
+    EXPECT_EQ(str::replace("a {x} b {x} c {y}", {{"{x}", "1"}, {"{y}", "2"}}), "a 1 b 1 c 2");
+    EXPECT_EQ(str::replace("its nope", {{"something", "other"}}), "its nope");
+    EXPECT_EQ(str::replace("aab", {{"a", ""}}), "b");
+    // a token matched leaves no room for the tokens it is a prefix of
+    EXPECT_EQ(str::replace("aaa", {{"aa", "b"}, {"a", "z"}}), "bz");
+    EXPECT_EQ(str::replace("{a}b", {{"{a}", "X"}, {"{a}b", "Y"}}), "Xb");
+    EXPECT_EQ(str::replace("{a}b", {{"{a}b", "Y"}, {"{a}", "X"}}), "Y");
+}
+
 TEST_F(TestStr, test_str_to_columns)
 {
     const std::string str = "The quick brown fox jumped over the lazy dog";

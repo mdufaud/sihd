@@ -8,6 +8,8 @@
 
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/Navigator.hpp>
+#include <sihd/sys/App.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace demo
@@ -110,13 +112,17 @@ void demo_websocket()
 
 } // namespace demo
 
-int main()
+int main(int argc, char **argv)
 {
-    sihd::util::LoggerManager::stream();
+    sihd::sys::App app({
+        .name = "navigator_demo",
+        .description = "Http/webservice navigation demo",
+    });
 
-    demo::demo_http_cookies();
-    demo::demo_websocket();
+    app.root().on_run([] {
+        demo::demo_http_cookies();
+        demo::demo_websocket();
+    });
 
-    sihd::util::LoggerManager::clear_loggers();
-    return 0;
+    return app.run(argc, argv);
 }

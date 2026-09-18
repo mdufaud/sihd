@@ -10,13 +10,11 @@
 namespace sihd::json::utils
 {
 
-// Parses only until the first object in a top-level array is found, extracts
-// the value of `key`, and returns it as a Json. Stops immediately — zero
-// allocation for the rest of the document.
+// early-exit: parses only up to the first top-level object holding key
 std::optional<Json> find_first(std::string_view data, std::string_view key);
 
-// Streams a top-level JSON array element by element, calling callback(Json)
-// for each element. Return false from the callback to stop early.
+// walks the top-level array, element by element: returning false from the
+// callback stops early
 void for_each(std::string_view data, std::function<bool(Json)> callback);
 
 } // namespace sihd::json::utils

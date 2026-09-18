@@ -1,13 +1,11 @@
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshSession.hpp>
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Handler.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/term.hpp>
-
-#include <CLI/CLI.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
@@ -59,50 +57,49 @@ void print_extensions(Sftp & sftp)
 
 int main(int argc, char **argv)
 {
+    App app({
+        .name = "ssh_sftp_demo",
+        .description = "List directories through sftp",
+    });
+
     std::string user;
     std::string password;
     std::string path;
     std::string host;
     int port = 22;
+    app.root().bind("user", user, "User for the ssh connexion", "u");
+    app.root().bind("password", password, "Password for the ssh connexion", "p");
+    app.root().bind("path", path, "Path for the sftp list dir", "P");
+    app.root().bind("host", host, "Host for the ssh connexion", "H");
+    app.root().bind("port", port, "Port for the ssh connexion");
 
-    CLI::App app {"Testing utility for module util"};
-    app.add_option("-u,--user", user, "User for the ssh connexion")->required();
-    app.add_option("-p,--password", password, "Password for the ssh connexion");
-    app.add_option("-P,--path", path, "Path for the sftp list dir")->required();
-    app.add_option("-H,--host", host, "Host for the ssh connexion")->required();
-    app.add_option("--port", port, "Port for the ssh connexion")->default_val("22");
+    app.root().on_run([&] {
+        if (user.empty() || host.empty() || path.empty())
+        {
+            SIHD_LOG(error, "Missing --user, --host or --path");
+            app.exit(EXIT_FAILURE);
+        }
 
-    CLI11_PARSE(app, argc, argv);
+        SshSession session;
+        if (session.fast_connect({.user = user, .host = host, .port = port}) == false)
+            app.exit(EXIT_FAILURE);
 
-    if (term::is_interactive() && build::is_unix && !build::is_emscripten)
-        LoggerManager::console();
-    else
-        LoggerManager::stream();
+        SshSession::AuthState auth_state {-1};
+        if (password.empty() == false)
+            auth_state = session.auth_password(password);
+        else
+            auth_state = session.auth_interactive_keyboard();
 
-    SshSession session;
-    if (!session.fast_connect({.user = user, .host = host, .port = port}))
-        return EXIT_FAILURE;
+        SIHD_LOG(info, "Auth status: {}", auth_state.str());
+        if (auth_state.success() == false)
+            app.exit(EXIT_FAILURE);
 
-    SshSession::AuthState auth_state {-1};
-    if (!password.empty())
-    {
-        auth_state = session.auth_password(password);
-    }
-    else
-    {
-        auth_state = session.auth_interactive_keyboard();
-    }
-
-    SIHD_LOG(info, "Auth status: {}", auth_state.str());
-    if (!auth_state.success())
-        return EXIT_FAILURE;
-
-    Sftp sftp = session.make_sftp();
-    if (sftp.open())
-    {
+        Sftp sftp = session.make_sftp();
+        if (sftp.open() == false)
+            app.exit(EXIT_FAILURE);
         print_extensions(sftp);
         print_dir(sftp, path);
-        return EXIT_SUCCESS;
-    }
-    return EXIT_FAILURE;
+    });
+
+    return app.run(argc, argv);
 }

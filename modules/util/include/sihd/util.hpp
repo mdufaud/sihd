@@ -14,9 +14,11 @@
 #include <sihd/util/BlockingServiceController.hpp>
 #include <sihd/util/Cache.hpp>
 #include <sihd/util/Callback.hpp>
+#include <sihd/util/CliApp.hpp>
+#include <sihd/util/CliInterpreter.hpp>
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/CmdInterpreter.hpp>
 #include <sihd/util/Collector.hpp>
+#include <sihd/util/Command.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Decorator.hpp>
 #include <sihd/util/Defer.hpp>

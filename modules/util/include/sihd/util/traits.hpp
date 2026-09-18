@@ -214,6 +214,9 @@ using is_same_uncvref = std::is_same<std::remove_cv_t<std::remove_reference_t<T>
                                      std::remove_cv_t<std::remove_reference_t<U>>>;
 
 template <typename T, typename... U>
+using is_one_of = std::integral_constant<bool, (... || std::is_same_v<T, U>)>;
+
+template <typename T, typename... U>
 using are_all_same = std::integral_constant<bool, (... && std::is_same_v<T, U>)>;
 
 template <typename T, typename... U>

@@ -1,17 +1,18 @@
 #include <unistd.h> // usleep
 
-#include <csignal>
+#include <thread>
 
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/json/Json.hpp>
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/Process.hpp>
-#include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
@@ -131,15 +132,9 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         WebService *_webservice;
 };
 
-static void http_test()
+static void http_test(sihd::util::CliApp & app)
 {
     SimpleHttpServer server;
-
-    SigWatcher watcher({SIGINT}, [&server]([[maybe_unused]] int sig) {
-        SIHD_LOG(info, "Stopping http server...");
-        server.stop();
-        SIHD_LOG(info, "Stopped http server");
-    });
 
     std::string root_path = fs::parent(fs::parent(fs::executable_path()));
     std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});
@@ -149,15 +144,27 @@ static void http_test()
     SIHD_LOG(info, "=========================================================");
     SIHD_LOG(info, "Open web browser at http://localhost:3000");
     SIHD_LOG(info, "=========================================================");
-    server.start();
+
+    // the server blocks in start(); its end or a stop signal breaks the loop
+    std::thread server_thread([&] {
+        server.start();
+        app.stop();
+    });
+    app.loop();
+    server.stop();
+    server_thread.join();
 }
 
 } // namespace demo
 
-int main()
+int main(int argc, char **argv)
 {
-    sihd::util::LoggerManager::stream();
-    demo::http_test();
-    sihd::util::LoggerManager::clear_loggers();
-    return 0;
+    sihd::sys::App app({
+        .name = "http_demo",
+        .description = "Simple http server demo",
+    });
+
+    app.root().on_run([&app] { demo::http_test(app); });
+
+    return app.run(argc, argv);
 }

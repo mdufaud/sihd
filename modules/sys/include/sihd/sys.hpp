@@ -1,6 +1,7 @@
 #ifndef __SIHD_SYS_HPP__
 #define __SIHD_SYS_HPP__
 
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/DynLib.hpp>

@@ -1,0 +1,32 @@
+{
+    "sihd": {
+        "logging": {
+            "level": "info",
+            "console": true,
+            "file": {
+                "path": "/tmp/sihd_app.log",
+                "append": true
+            },
+            "system": {
+                "facility": 1
+            }
+        },
+        "signals": {
+            "stop": ["INT", "TERM"],
+            "ignore": ["PIPE"],
+            "reload": ["HUP"],
+            "callback": ["USR1", "USR2"]
+        },
+        "daemon": {
+            "user": "nobody",
+            "group": "daemon",
+            "pid_file": "/tmp/sihd_app.pid",
+            "working_dir": "/tmp",
+            "run": false
+        }
+    },
+    "serve": {
+        "host": "0.0.0.0",
+        "port": 8080
+    }
+}

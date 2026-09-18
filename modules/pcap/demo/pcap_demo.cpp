@@ -3,10 +3,11 @@
 
 #include <sihd/pcap/PcapInterfaces.hpp>
 #include <sihd/pcap/Sniffer.hpp>
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/File.hpp>
-#include <sihd/sys/SigWaiter.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
@@ -80,14 +81,19 @@ static void sniffer_test(const std::string & interface_to_sniff)
 
 } // namespace test::module
 
-int main()
+int main(int argc, char **argv)
 {
-    sihd::util::LoggerManager::stream();
+    sihd::sys::App app({
+        .name = "pcap_demo",
+        .description = "Packet capture demo",
+    });
 
-    std::string interface_to_sniff = test::module::interfaces_test();
-    test::module::sniffer_test(interface_to_sniff);
-    if (sihd::util::build::is_windows)
-        sihd::util::time::sleep(5);
+    app.root().on_run([] {
+        std::string interface_to_sniff = test::module::interfaces_test();
+        test::module::sniffer_test(interface_to_sniff);
+        if (sihd::util::build::is_windows)
+            sihd::util::time::sleep(5);
+    });
 
-    return 0;
+    return app.run(argc, argv);
 }

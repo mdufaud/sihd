@@ -6,6 +6,8 @@
 #include <sihd/imgui/ImguiBackendNcurses.hpp>
 #include <sihd/imgui/ImguiRendererNcurses.hpp>
 #include <sihd/imgui/ImguiRunner.hpp>
+#include <sihd/sys/App.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 
 #if defined(__clang__)
@@ -1190,60 +1192,66 @@ static void ShowDemoWindow()
     ImGui::End();
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    LoggerManager::stream();
-
-    ImguiRunner imgui("imgui-runner");
-    if (!imgui.init_imgui())
-        return 1;
-
-    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-    ImguiRendererNcurses ncurses_renderer;
-    ncurses_renderer.set_clear_color(&clear_color);
-
-    ImguiBackendNcurses ncurses_backend;
-    if (!ncurses_backend.init())
-        return 1;
-
-    if (!ncurses_renderer.init())
-        return 1;
-
-    ImGui::GetIO().IniFilename = nullptr;
-
-    imgui.set_backend(&ncurses_backend);
-    imgui.set_renderer(&ncurses_renderer);
-
-    int nframes = 0;
-    float fval = 1.23f;
-
-    imgui.set_build_frame([&]() -> bool {
-        const ImGuiIO & io = ImGui::GetIO();
-
-        ImGui::SetNextWindowPos(ImVec2(4, 27), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(50.0, 10.0), ImGuiCond_Once);
-        ImGui::Begin("Hello, world!");
-        ImGui::Text("NFrames = %d", nframes++);
-        ImGui::Text("Mouse Pos : x = %g, y = %g", io.MousePos.x, io.MousePos.y);
-        ImGui::Text("Time per frame %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-        ImGui::Text("Float:");
-        ImGui::SameLine();
-        ImGui::SliderFloat("##float", &fval, 0.0f, 10.0f);
-
-        ImGui::TextUnformatted("");
-        if (ImGui::Button("Exit program", {ImGui::GetContentRegionAvail().x, 2}))
-        {
-            ImGui::End();
-            return false;
-        }
-
-        ImGui::End();
-
-        ShowDemoWindow();
-
-        return true;
+    sihd::sys::App app({
+        .name = "imgui_ncurses_demo",
+        .description = "Imgui ncurses demo",
     });
 
-    imgui.run();
-    return 0;
+    app.root().on_run([&] {
+        ImguiRunner imgui("imgui-runner");
+        if (!imgui.init_imgui())
+            app.exit(EXIT_FAILURE);
+
+        ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        ImguiRendererNcurses ncurses_renderer;
+        ncurses_renderer.set_clear_color(&clear_color);
+
+        ImguiBackendNcurses ncurses_backend;
+        if (!ncurses_backend.init())
+            app.exit(EXIT_FAILURE);
+
+        if (!ncurses_renderer.init())
+            app.exit(EXIT_FAILURE);
+
+        ImGui::GetIO().IniFilename = nullptr;
+
+        imgui.set_backend(&ncurses_backend);
+        imgui.set_renderer(&ncurses_renderer);
+
+        int nframes = 0;
+        float fval = 1.23f;
+
+        imgui.set_build_frame([&]() -> bool {
+            const ImGuiIO & io = ImGui::GetIO();
+
+            ImGui::SetNextWindowPos(ImVec2(4, 27), ImGuiCond_Once);
+            ImGui::SetNextWindowSize(ImVec2(50.0, 10.0), ImGuiCond_Once);
+            ImGui::Begin("Hello, world!");
+            ImGui::Text("NFrames = %d", nframes++);
+            ImGui::Text("Mouse Pos : x = %g, y = %g", io.MousePos.x, io.MousePos.y);
+            ImGui::Text("Time per frame %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            ImGui::Text("Float:");
+            ImGui::SameLine();
+            ImGui::SliderFloat("##float", &fval, 0.0f, 10.0f);
+
+            ImGui::TextUnformatted("");
+            if (ImGui::Button("Exit program", {ImGui::GetContentRegionAvail().x, 2}))
+            {
+                ImGui::End();
+                return false;
+            }
+
+            ImGui::End();
+
+            ShowDemoWindow();
+
+            return true;
+        });
+
+        imgui.run();
+    });
+
+    return app.run(argc, argv);
 }

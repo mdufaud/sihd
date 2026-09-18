@@ -6,6 +6,7 @@
 
 #include <fmt/format.h>
 
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
@@ -13,7 +14,6 @@
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
 using namespace sihd::util;
@@ -33,8 +33,6 @@ std::string format_interval(sihd::util::Duration ns)
         return fmt::format("{} us", time::to_micro(ns));
     return fmt::format("{} ns", ns.nanoseconds());
 }
-
-// --- Phase 1: Latency & Jitter ---
 
 struct LatencyResult
 {
@@ -164,8 +162,6 @@ void print_latency_row(const char *label, const LatencyResult & r)
                format_us((double)r.jitter.p99() / 1000.0));
 }
 
-// --- Phase 2: Throughput ---
-
 struct ThroughputResult
 {
         size_t tasks;
@@ -224,8 +220,6 @@ ThroughputResult
     };
 }
 
-// --- Phase 3: Resolution finder ---
-
 struct ResolutionResult
 {
         sihd::util::Duration min_stable_interval_ns;
@@ -235,7 +229,6 @@ struct ResolutionResult
 
 ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
 {
-    // binary search for the minimum interval at which 1 task stays above 95% accuracy
     sihd::util::Duration lo = sihd::util::time::micro(1);
     sihd::util::Duration hi = sihd::util::time::milli(10);
     sihd::util::Duration best_interval = hi;
@@ -263,7 +256,7 @@ ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
         }
     }
 
-    // find max tasks at 2x the found resolution
+    // headroom above the found resolution
     sihd::util::Duration test_interval = best_interval * 2;
     if (test_interval < sihd::util::time::micro(100))
         test_interval = sihd::util::time::micro(100);
@@ -301,141 +294,132 @@ ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
 
 // --- Main ---
 
-int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
+int main(int argc, char **argv)
 {
-#if defined(__SIHD_EMSCRIPTEN__)
-    LoggerManager::stream(stdout);
-#else
-    if (term::is_interactive())
-        LoggerManager::console();
-    else
-        LoggerManager::stream(stderr);
-#endif
+    CliApp app({
+        .name = "scheduler_bench",
+        .description = "Scheduler benchmark",
+    });
 
-    constexpr sihd::util::Duration phase_duration = sihd::util::time::milli(500);
+    app.root().on_run([] {
+        constexpr sihd::util::Duration phase_duration = sihd::util::time::milli(500);
 
-    // ===================================================================
-    fmt::print(
-        "╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
-    fmt::print(
-        "║                                   Scheduler Benchmark                                              ║\n");
-    fmt::print(
-        "╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\n\n");
+        fmt::print(
+            "╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
+        fmt::print(
+            "║                                   Scheduler Benchmark                                              ║\n");
+        fmt::print(
+            "╚══════════════════════════════════════════════════════════════════════════════════════════════════════╝\n\n");
 
-    // --- Phase 1: Latency & Jitter profiling ---
-    fmt::print(
-        "── Phase 1: Latency & Jitter ─────────────────────────────────────────────────────────────────────────\n");
-    fmt::print("  Measuring scheduling precision across different frequencies (duration: {} ms per test)\n\n",
-               time::to_milli(phase_duration));
+        fmt::print(
+            "── Phase 1: Latency & Jitter ─────────────────────────────────────────────────────────────────────────\n");
+        fmt::print("  Measuring scheduling precision across different frequencies (duration: {} ms per test)\n\n",
+                   time::to_milli(phase_duration));
 
-    struct TestCase
-    {
-            size_t tasks;
-            sihd::util::Duration interval_ns;
-            const char *label;
-    };
-
-    std::vector<TestCase> latency_cases = {
-        {1, time::milli(10), "1T @ 100 Hz"},
-        {10, time::milli(10), "10T @ 100 Hz"},
-        {1, time::milli(1), "1T @ 1 kHz"},
-        {10, time::milli(1), "10T @ 1 kHz"},
-        {50, time::milli(1), "50T @ 1 kHz"},
-        {1, time::micro(500), "1T @ 2 kHz"},
-        {10, time::micro(500), "10T @ 2 kHz"},
-        {1, time::micro(100), "1T @ 10 kHz"},
-        {10, time::micro(100), "10T @ 10 kHz"},
-        {1, time::micro(50), "1T @ 20 kHz"},
-        {1, time::micro(10), "1T @ 100 kHz"},
-    };
-
-    print_latency_header();
-
-    std::vector<LatencyResult> latency_results;
-    for (const auto & tc : latency_cases)
-    {
-        auto r = bench_latency(tc.tasks, tc.interval_ns, phase_duration);
-        print_latency_row(tc.label, r);
-        latency_results.push_back(r);
-    }
-
-    // --- Phase 2: Throughput scaling ---
-    fmt::print(
-        "\n── Phase 2: Throughput scaling ────────────────────────────────────────────────────────────────────────\n");
-    fmt::print("  Fixed interval, increasing task count to find scheduler throughput ceiling\n\n");
-
-    constexpr sihd::util::Duration tp_interval = sihd::util::time::micro(500);
-    fmt::print("{:<22s} {:>8s} {:>8s} {:>9s} {:>8s}  {:>12s}\n",
-               "Config",
-               "Expect",
-               "Actual",
-               "Accuracy",
-               "Overrun",
-               "Throughput");
-    fmt::print("{:-<22s}-{:-<8s}-{:-<8s}-{:-<9s}-{:-<8s}--{:-<12s}\n", "", "", "", "", "", "");
-
-    for (size_t tasks : {1, 5, 10, 25, 50, 100, 200})
-    {
-        auto r = bench_throughput(tasks, tp_interval, phase_duration);
-        fmt::print("{:<22s} {:>8d} {:>8d} {:>8.1f}% {:>8d}  {:>9.1f} kHz\n",
-                   fmt::format("{}T @ 2 kHz", tasks),
-                   (size_t)(phase_duration / tp_interval) * tasks,
-                   r.total_ticks,
-                   r.accuracy_pct,
-                   r.overruns,
-                   r.throughput_khz);
-    }
-
-    // --- Phase 3: Automatic resolution detection ---
-    fmt::print(
-        "\n── Phase 3: Resolution detection ─────────────────────────────────────────────────────────────────────\n");
-    fmt::print("  Binary search for minimum stable scheduling interval (>= 95% accuracy)\n\n");
-
-    auto resolution = find_resolution(phase_duration);
-
-    // --- Summary ---
-    fmt::print(
-        "\n══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
-    fmt::print("  Summary\n");
-    fmt::print(
-        "══════════════════════════════════════════════════════════════════════════════════════════════════════\n\n");
-
-    // find best latency result that's still accurate
-    const LatencyResult *best_lat = nullptr;
-    for (const auto & r : latency_results)
-    {
-        if (r.accuracy_pct >= 95.0)
+        struct TestCase
         {
-            if (!best_lat || r.interval_ns < best_lat->interval_ns
-                || (r.interval_ns == best_lat->interval_ns && r.tasks > best_lat->tasks))
+                size_t tasks;
+                sihd::util::Duration interval_ns;
+                const char *label;
+        };
+
+        std::vector<TestCase> latency_cases = {
+            {1, time::milli(10), "1T @ 100 Hz"},
+            {10, time::milli(10), "10T @ 100 Hz"},
+            {1, time::milli(1), "1T @ 1 kHz"},
+            {10, time::milli(1), "10T @ 1 kHz"},
+            {50, time::milli(1), "50T @ 1 kHz"},
+            {1, time::micro(500), "1T @ 2 kHz"},
+            {10, time::micro(500), "10T @ 2 kHz"},
+            {1, time::micro(100), "1T @ 10 kHz"},
+            {10, time::micro(100), "10T @ 10 kHz"},
+            {1, time::micro(50), "1T @ 20 kHz"},
+            {1, time::micro(10), "1T @ 100 kHz"},
+        };
+
+        print_latency_header();
+
+        std::vector<LatencyResult> latency_results;
+        for (const auto & tc : latency_cases)
+        {
+            auto r = bench_latency(tc.tasks, tc.interval_ns, phase_duration);
+            print_latency_row(tc.label, r);
+            latency_results.push_back(r);
+        }
+
+        fmt::print(
+            "\n── Phase 2: Throughput scaling ────────────────────────────────────────────────────────────────────────\n");
+        fmt::print("  Fixed interval, increasing task count to find scheduler throughput ceiling\n\n");
+
+        constexpr sihd::util::Duration tp_interval = sihd::util::time::micro(500);
+        fmt::print("{:<22s} {:>8s} {:>8s} {:>9s} {:>8s}  {:>12s}\n",
+                   "Config",
+                   "Expect",
+                   "Actual",
+                   "Accuracy",
+                   "Overrun",
+                   "Throughput");
+        fmt::print("{:-<22s}-{:-<8s}-{:-<8s}-{:-<9s}-{:-<8s}--{:-<12s}\n", "", "", "", "", "", "");
+
+        for (size_t tasks : {1, 5, 10, 25, 50, 100, 200})
+        {
+            auto r = bench_throughput(tasks, tp_interval, phase_duration);
+            fmt::print("{:<22s} {:>8d} {:>8d} {:>8.1f}% {:>8d}  {:>9.1f} kHz\n",
+                       fmt::format("{}T @ 2 kHz", tasks),
+                       (size_t)(phase_duration / tp_interval) * tasks,
+                       r.total_ticks,
+                       r.accuracy_pct,
+                       r.overruns,
+                       r.throughput_khz);
+        }
+
+        fmt::print(
+            "\n── Phase 3: Resolution detection ─────────────────────────────────────────────────────────────────────\n");
+        fmt::print("  Binary search for minimum stable scheduling interval (>= 95% accuracy)\n\n");
+
+        auto resolution = find_resolution(phase_duration);
+
+        fmt::print(
+            "\n══════════════════════════════════════════════════════════════════════════════════════════════════════\n");
+        fmt::print("  Summary\n");
+        fmt::print(
+            "══════════════════════════════════════════════════════════════════════════════════════════════════════\n\n");
+
+        const LatencyResult *best_lat = nullptr;
+        for (const auto & r : latency_results)
+        {
+            if (r.accuracy_pct >= 95.0)
             {
-                best_lat = &r;
+                if (!best_lat || r.interval_ns < best_lat->interval_ns
+                    || (r.interval_ns == best_lat->interval_ns && r.tasks > best_lat->tasks))
+                {
+                    best_lat = &r;
+                }
             }
         }
-    }
 
-    fmt::print("  Scheduling resolution : {}\n", format_interval(resolution.min_stable_interval_ns));
-    fmt::print("  Max frequency (1 task): {:.0f} Hz\n", 1e9 / (double)resolution.min_stable_interval_ns);
-    fmt::print("  Max parallel tasks    : {} (at {} interval)\n",
-               resolution.max_stable_tasks,
-               format_interval(resolution.min_stable_interval_ns * 2));
-    fmt::print("  Peak throughput       : {:.1f} kHz\n", resolution.max_throughput_khz);
+        fmt::print("  Scheduling resolution : {}\n", format_interval(resolution.min_stable_interval_ns));
+        fmt::print("  Max frequency (1 task): {:.0f} Hz\n", 1e9 / (double)resolution.min_stable_interval_ns);
+        fmt::print("  Max parallel tasks    : {} (at {} interval)\n",
+                   resolution.max_stable_tasks,
+                   format_interval(resolution.min_stable_interval_ns * 2));
+        fmt::print("  Peak throughput       : {:.1f} kHz\n", resolution.max_throughput_khz);
 
-    if (best_lat)
-    {
-        fmt::print("\n  Best stable latency profile ({} tasks @ {}):\n",
-                   best_lat->tasks,
-                   format_interval(best_lat->interval_ns));
-        fmt::print("    Mean latency : {}\n", format_us((double)best_lat->latency.average() / 1000.0));
-        fmt::print("    p50  latency : {}\n", format_us((double)best_lat->latency.median() / 1000.0));
-        fmt::print("    p99  latency : {}\n", format_us((double)best_lat->latency.p99() / 1000.0));
-        fmt::print("    Max  latency : {}\n", format_us((double)best_lat->latency.max / 1000.0));
-        fmt::print("    Mean jitter  : {}\n", format_us((double)best_lat->jitter.average() / 1000.0));
-        fmt::print("    p99  jitter  : {}\n", format_us((double)best_lat->jitter.p99() / 1000.0));
-    }
+        if (best_lat)
+        {
+            fmt::print("\n  Best stable latency profile ({} tasks @ {}):\n",
+                       best_lat->tasks,
+                       format_interval(best_lat->interval_ns));
+            fmt::print("    Mean latency : {}\n", format_us((double)best_lat->latency.average() / 1000.0));
+            fmt::print("    p50  latency : {}\n", format_us((double)best_lat->latency.median() / 1000.0));
+            fmt::print("    p99  latency : {}\n", format_us((double)best_lat->latency.p99() / 1000.0));
+            fmt::print("    Max  latency : {}\n", format_us((double)best_lat->latency.max / 1000.0));
+            fmt::print("    Mean jitter  : {}\n", format_us((double)best_lat->jitter.average() / 1000.0));
+            fmt::print("    p99  jitter  : {}\n", format_us((double)best_lat->jitter.p99() / 1000.0));
+        }
 
-    double score = resolution.max_throughput_khz;
-    fmt::print("\n  Score: {:.1f} kHz effective throughput\n\n", score);
-
-    return 0;
+        double score = resolution.max_throughput_khz;
+        fmt::print("\n  Score: {:.1f} kHz effective throughput\n\n", score);
+    });
+    return app.run(argc, argv);
 }

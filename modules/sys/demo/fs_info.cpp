@@ -1,9 +1,13 @@
+#include <string>
+#include <vector>
+
 #include <fmt/format.h>
 
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/CliApp.hpp>
 
-#include <CLI/CLI.hpp>
-
+using namespace sihd::util;
 using namespace sihd::sys;
 
 namespace
@@ -57,18 +61,20 @@ void dump(std::string_view path)
 
 int main(int argc, char **argv)
 {
-    CLI::App app {"Dump filesystem/storage info for paths"};
+    App app({
+        .name = "fs_info",
+        .description = "Dump filesystem/storage info for paths",
+    });
 
     std::vector<std::string> paths;
-    app.add_option("paths", paths, "paths to inspect (default: cwd)");
+    app.root().bind_positional("paths", paths, "paths to inspect (default: cwd)");
+    app.root().on_run([&paths] {
+        if (paths.empty())
+            paths.push_back(fs::cwd());
 
-    CLI11_PARSE(app, argc, argv);
+        for (const auto & path : paths)
+            dump(path);
+    });
 
-    if (paths.empty())
-        paths.push_back(fs::cwd());
-
-    for (const auto & path : paths)
-        dump(path);
-
-    return 0;
+    return app.run(argc, argv);
 }

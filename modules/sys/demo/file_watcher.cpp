@@ -1,17 +1,13 @@
+#include <string>
+
 #include <fmt/format.h>
 
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/FileWatcher.hpp>
-#include <sihd/sys/SigHandler.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/os.hpp>
-#include <sihd/sys/signal.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerStream.hpp>
-#include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
-
-#include <CLI/CLI.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -25,55 +21,61 @@ int main(int argc, char **argv)
         term::set_output_utf8();
     }
 
+    App app({
+        .name = "file_watcher",
+        .description = "Testing file watcher",
+    });
+
     std::string path;
-    CLI::App app {"Testing file watcher"};
-    app.add_option("-p,--path", path, "Watch path for changes")->required();
+    app.root().bind("path", path, "Watch path for changes", "p");
 
-    CLI11_PARSE(app, argc, argv);
-
-    LoggerManager::console();
-
-    bool stop = false;
-    Handler<FileWatcher *> handler([&stop](FileWatcher *fw) {
-        for (const FileWatcherEvent & event : fw->events())
+    app.root().on_run([&] {
+        if (path.empty())
         {
-            if (event.type == FileWatcherEventType::renamed)
+            SIHD_LOG(error, "Missing --path");
+            app.exit(EXIT_FAILURE);
+        }
+
+        bool stop = false;
+        Handler<FileWatcher *> handler([&stop](FileWatcher *fw) {
+            for (const FileWatcherEvent & event : fw->events())
             {
-                SIHD_LOG(notice,
-                         "Event: renamed {}/{} -> {}/{}",
-                         event.watch_path,
-                         event.old_filename,
-                         event.watch_path,
-                         event.filename);
+                if (event.type == FileWatcherEventType::renamed)
+                {
+                    SIHD_LOG(notice,
+                             "Event: renamed {}/{} -> {}/{}",
+                             event.watch_path,
+                             event.old_filename,
+                             event.watch_path,
+                             event.filename);
+                }
+                else if (event.type == FileWatcherEventType::terminated)
+                {
+                    SIHD_LOG(warning, "Event: watch is terminated ({} has probably been deleted)", event.watch_path);
+                    stop = true;
+                }
+                else
+                {
+                    SIHD_LOG(info, "Event: {}/{} {}", event.watch_path, event.filename, event.type_str());
+                }
             }
-            else if (event.type == FileWatcherEventType::terminated)
-            {
-                SIHD_LOG(warning, "Event: watch is terminated ({} has probably been deleted)", event.watch_path);
-                stop = true;
-            }
-            else
-            {
-                SIHD_LOG(info, "Event: {}/{} {}", event.watch_path, event.filename, event.type_str());
-            }
+        });
+
+        FileWatcher fw;
+        if (fw.watch(path) == false)
+        {
+            SIHD_LOG(error, "Failed to watch: {}", path);
+            app.exit(EXIT_FAILURE);
+        }
+        constexpr int timeout_milliseconds = 500;
+        fw.set_run_timeout(timeout_milliseconds);
+        fw.add_observer(&handler);
+
+        while (stop == false && app.should_stop() == false)
+        {
+            fw.run();
         }
     });
 
-    const std::string & watch_path = path;
-    FileWatcher fw;
-    if (!fw.watch(watch_path))
-    {
-        SIHD_LOG(error, "Failed to watch: {}", watch_path);
-        return 1;
-    }
-    constexpr int timeout_milliseconds = 500;
-    fw.set_run_timeout(timeout_milliseconds);
-    fw.add_observer(&handler);
-
-    SigHandler sig_handler(SIGINT);
-    while (!stop && !signal::termination_received())
-    {
-        fw.run();
-    }
-
-    return 0;
+    return app.run(argc, argv);
 }

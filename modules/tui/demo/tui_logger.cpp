@@ -1,5 +1,7 @@
+#include <sihd/sys/App.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/tui/LoggerComponent.hpp>
+#include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/str.hpp>
@@ -52,30 +54,38 @@ void randomize_log()
     }
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    auto container = LoggerComponent(LoggerOptions {
-        .max_logs = 200,
-        .scroll_to_last_log = true,
+    App app({
+        .name = "tui_logger",
+        .description = "TUI logger demo",
     });
 
-    container |= ftxui::CatchEvent([&](ftxui::Event event) {
-        if (event.character() == "L")
-        {
-            randomize_log();
-            return true;
-        }
-        return false;
+    app.root().on_run([&] {
+        auto container = LoggerComponent(LoggerOptions {
+            .max_logs = 200,
+            .scroll_to_last_log = true,
+        });
+
+        container |= ftxui::CatchEvent([&](ftxui::Event event) {
+            if (event.character() == "L")
+            {
+                randomize_log();
+                return true;
+            }
+            return false;
+        });
+
+        auto renderer = ftxui::Renderer(container, [&] {
+            return window(text("logger") | hcenter | bold, container->Render()) | size(WIDTH, EQUAL, 100)
+                   | size(HEIGHT, EQUAL, 20);
+        });
+
+        logger.info("Press 'L' to generate logs");
+
+        auto screen = ftxui::ScreenInteractive::FitComponent();
+        screen.Loop(renderer);
     });
 
-    auto renderer = ftxui::Renderer(container, [&] {
-        return window(text("logger") | hcenter | bold, container->Render()) | size(WIDTH, EQUAL, 100)
-               | size(HEIGHT, EQUAL, 20);
-    });
-
-    logger.info("Press 'L' to generate logs");
-
-    auto screen = ftxui::ScreenInteractive::FitComponent();
-    screen.Loop(renderer);
-    return 0;
+    return app.run(argc, argv);
 }

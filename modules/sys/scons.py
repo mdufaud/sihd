@@ -35,6 +35,7 @@ else:
 lib = env.build_lib(sources)
 
 env.build_demo("demo/sys_demo.cpp", name = "sys_demo", libs = [sihd_sys_libname])
+env.build_demo("demo/app_demo.cpp", name = "app_demo", libs = [sihd_sys_libname])
 
 if builder.build_platform != "web":
     env.build_demo("demo/file_watcher.cpp", name = "file_watcher", libs = [sihd_sys_libname])
