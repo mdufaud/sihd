@@ -24,6 +24,7 @@
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/SigWaiter.hpp>
 #include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/StreamCapture.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>

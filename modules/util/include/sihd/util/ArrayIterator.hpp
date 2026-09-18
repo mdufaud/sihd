@@ -1,6 +1,8 @@
 #ifndef __SIHD_UTIL_ARRAYITERATOR_HPP__
 #define __SIHD_UTIL_ARRAYITERATOR_HPP__
 
+#include <cstddef>   // std::ptrdiff_t, size_t
+#include <iterator>  // std::contiguous_iterator_tag
 #include <stdexcept> // out of range
 
 namespace sihd::util

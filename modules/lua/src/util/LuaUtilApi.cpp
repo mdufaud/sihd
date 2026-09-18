@@ -512,7 +512,9 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("timeoffset_str", &str::timeoffset_str)
         .addFunction("localtimeoffset_str", &str::localtimeoffset_str)
         .addFunction("trim", &str::trim)
-        .addFunction("replace", &str::replace)
+        .addFunction(
+            "replace",
+            +[](std::string_view s, std::string_view from, std::string_view to) { return str::replace(s, from, to); })
         .addFunction("starts_with", &str::starts_with)
         .addFunction("ends_with", &str::ends_with)
         .addFunction(
