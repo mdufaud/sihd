@@ -126,11 +126,11 @@ std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType 
     // exact routes first (no params, no catch-all)
     for (const auto & route : it->second)
     {
-        if (!route._has_params)
+        if (route.is_parameterized() == false)
         {
             auto m = route.match(normalized);
             if (m.matched)
-                return FindResult {route._handler, std::move(m)};
+                return FindResult {route.handler(), std::move(m)};
         }
     }
 
@@ -139,20 +139,20 @@ std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType 
     std::vector<const Route *> param_routes;
     for (const auto & route : it->second)
     {
-        if (route._has_params)
+        if (route.is_parameterized())
             param_routes.push_back(&route);
     }
     std::stable_sort(param_routes.begin(), param_routes.end(), [](const Route *a, const Route *b) {
-        if (a->_has_catch_all != b->_has_catch_all)
-            return !a->_has_catch_all;
-        return a->_specificity > b->_specificity;
+        if (a->has_catch_all() != b->has_catch_all())
+            return !a->has_catch_all();
+        return a->specificity() > b->specificity();
     });
 
     for (const auto *route : param_routes)
     {
         auto m = route->match(normalized);
         if (m.matched)
-            return FindResult {route->_handler, std::move(m)};
+            return FindResult {route->handler(), std::move(m)};
     }
     return std::nullopt;
 }

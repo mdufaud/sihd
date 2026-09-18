@@ -80,9 +80,8 @@ class Request
         // nullopt-like state: proxy comes back from the environment
         bool clear_proxy();
         bool set_proxy_auth(std::string_view user, std::string_view password);
-        // the list must outlive perform()
         bool set_headers(const HeaderList & headers);
-        // the mime must outlive perform(): freeing it detaches the payload
+        // parts are copied into the transfer handle
         bool set_mime(const Mime & mime);
         bool clear_mime();
         // the body is copied by the transfer handle
@@ -121,8 +120,6 @@ class Request
         // error of the last failed operation - option setting or transfer - since the last reset()
         std::string last_error() const;
         void reset();
-
-        Mime new_mime();
 
     private:
         struct Impl;

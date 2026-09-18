@@ -28,7 +28,6 @@ class HeaderList
         std::vector<std::string> lines() const;
 
     private:
-        friend class Request;
         HeaderListImpl *_impl = nullptr;
 };
 

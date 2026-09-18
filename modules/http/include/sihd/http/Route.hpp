@@ -35,6 +35,7 @@ class Route
         const std::string & pattern() const { return _pattern; }
         // number of literal (non-param) segments — higher = more specific
         size_t specificity() const { return _specificity; }
+        const Handler & handler() const { return _handler; }
 
     private:
         struct Segment
@@ -50,8 +51,6 @@ class Route
         bool _has_catch_all;
         size_t _specificity;
         Handler _handler;
-
-        friend class RouteTable;
 };
 
 // normalize a URL path: strip trailing slash, collapse double slashes, percent-decode

@@ -918,56 +918,66 @@ bool Json::iterator::operator!=(const iterator & other) const
 
 Json::iterator Json::begin() const
 {
-    if (_dom_holder != nullptr)
-    {
-        auto dom_type = _dom_element.type();
-        if (dom_type == simdjson::dom::element_type::ARRAY)
-        {
-            simdjson::dom::array arr(_dom_element);
-            return iterator(arr.begin(), arr.end(), _dom_holder);
-        }
-        if (dom_type == simdjson::dom::element_type::OBJECT)
-        {
-            simdjson::dom::object obj(_dom_element);
-            return iterator(obj.begin(), obj.end(), _dom_holder);
-        }
-        return iterator(iterator::IterType::Array, 0, nullptr);
-    }
-    if (is_array())
-        return iterator(iterator::IterType::Array, 0, std::get<ArrayPtr>(_value).get());
-    if (is_object())
-        return iterator(iterator::IterType::Object, 0, std::get<ObjectPtr>(_value).get());
-    return iterator(iterator::IterType::Array, 0, nullptr);
+    return iterator::begin(*this);
 }
 
 Json::iterator Json::end() const
 {
-    if (_dom_holder != nullptr)
+    return iterator::end(*this);
+}
+
+Json::iterator Json::iterator::begin(const Json & json)
+{
+    if (json._dom_holder != nullptr)
     {
-        auto dom_type = _dom_element.type();
+        auto dom_type = json._dom_element.type();
         if (dom_type == simdjson::dom::element_type::ARRAY)
         {
-            simdjson::dom::array arr(_dom_element);
-            return iterator(iterator::EndTag {}, iterator::IterType::Array, arr.end());
+            simdjson::dom::array arr(json._dom_element);
+            return iterator(arr.begin(), arr.end(), json._dom_holder);
         }
         if (dom_type == simdjson::dom::element_type::OBJECT)
         {
-            simdjson::dom::object obj(_dom_element);
-            return iterator(iterator::EndTag {}, iterator::IterType::Object, obj.end());
+            simdjson::dom::object obj(json._dom_element);
+            return iterator(obj.begin(), obj.end(), json._dom_holder);
         }
-        return iterator(iterator::IterType::Array, 0, nullptr);
+        return iterator(IterType::Array, 0, nullptr);
     }
-    if (is_array())
+    if (json.is_array())
+        return iterator(IterType::Array, 0, std::get<ArrayPtr>(json._value).get());
+    if (json.is_object())
+        return iterator(IterType::Object, 0, std::get<ObjectPtr>(json._value).get());
+    return iterator(IterType::Array, 0, nullptr);
+}
+
+Json::iterator Json::iterator::end(const Json & json)
+{
+    if (json._dom_holder != nullptr)
     {
-        const auto & arr = *std::get<ArrayPtr>(_value);
-        return iterator(iterator::IterType::Array, arr.size(), &arr);
+        auto dom_type = json._dom_element.type();
+        if (dom_type == simdjson::dom::element_type::ARRAY)
+        {
+            simdjson::dom::array arr(json._dom_element);
+            return iterator(EndTag {}, IterType::Array, arr.end());
+        }
+        if (dom_type == simdjson::dom::element_type::OBJECT)
+        {
+            simdjson::dom::object obj(json._dom_element);
+            return iterator(EndTag {}, IterType::Object, obj.end());
+        }
+        return iterator(IterType::Array, 0, nullptr);
     }
-    if (is_object())
+    if (json.is_array())
     {
-        const auto & obj = *std::get<ObjectPtr>(_value);
-        return iterator(iterator::IterType::Object, obj.size(), &obj);
+        const auto & arr = *std::get<ArrayPtr>(json._value);
+        return iterator(IterType::Array, arr.size(), &arr);
     }
-    return iterator(iterator::IterType::Array, 0, nullptr);
+    if (json.is_object())
+    {
+        const auto & obj = *std::get<ObjectPtr>(json._value);
+        return iterator(IterType::Object, obj.size(), &obj);
+    }
+    return iterator(IterType::Array, 0, nullptr);
 }
 
 } // namespace sihd::json

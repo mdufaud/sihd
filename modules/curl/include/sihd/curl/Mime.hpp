@@ -2,16 +2,22 @@
 #define __SIHD_CURL_MIME_HPP__
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 #include <vector>
 
 namespace sihd::curl
 {
 
-struct MimeImpl;
-struct MimePartImpl;
-
-class Request;
+// one multipart part as plain data, materialized by Request::set_mime
+struct MimePart
+{
+        std::string name;
+        std::vector<uint8_t> data;
+        std::string path;
+        std::string filename;
+        std::string content_type;
+};
 
 class Mime
 {
@@ -19,6 +25,9 @@ class Mime
         class Part
         {
             public:
+                Part() = default;
+                explicit Part(MimePart *part);
+
                 Part & name(std::string_view name);
                 Part & data(std::string_view data);
                 Part & data(const std::vector<uint8_t> & data);
@@ -27,24 +36,21 @@ class Mime
                 Part & content_type(std::string_view content_type);
 
             private:
-                friend class Mime;
-                Part() = default;
-                Part(MimePartImpl *part): _part(part) {}
-
-                MimePartImpl *_part = nullptr;
+                MimePart *_part = nullptr;
         };
 
-        Mime();
-        ~Mime();
+        Mime() = default;
+        ~Mime() = default;
 
-        Mime(Mime &&);
-        Mime & operator=(Mime &&);
+        Mime(Mime &&) = default;
+        Mime & operator=(Mime &&) = default;
 
         Part add_part();
 
+        const std::vector<MimePart> & parts() const { return _parts; }
+
     private:
-        friend class Request;
-        MimeImpl *_impl = nullptr;
+        std::vector<MimePart> _parts;
 };
 
 } // namespace sihd::curl

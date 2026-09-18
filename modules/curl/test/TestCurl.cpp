@@ -227,7 +227,7 @@ TEST(TestCurl, test_mime)
     ASSERT_FALSE(dir.path().empty());
 
     Request request;
-    Mime mime = request.new_mime();
+    Mime mime;
 
     std::vector<uint8_t> binary = {0, 1, 2, 255};
     mime.add_part().name("field").data("value");
@@ -241,9 +241,9 @@ TEST(TestCurl, test_mime)
     request.set_write_callback([](sihd::util::ArrByteView) { return true; });
     EXPECT_TRUE(request.perform());
 
-    // a default-constructed mime has no part: its setters do not crash
-    Mime empty;
-    empty.add_part().name("x").data("y").content_type("text/plain");
+    // a default-constructed part has no target: its setters do not crash
+    Mime::Part empty;
+    empty.name("x").data("y").content_type("text/plain");
 }
 
 } // namespace test

@@ -110,8 +110,6 @@ class Json
         iterator end() const;
 
     private:
-        friend class iterator;
-
         struct DomHolder
         {
                 simdjson::dom::parser parser;
@@ -149,6 +147,9 @@ class Json::iterator
 
         iterator() = default;
 
+        static iterator begin(const Json & json);
+        static iterator end(const Json & json);
+
         const std::string & key() const;
 
         const Json & value() const;
@@ -163,8 +164,6 @@ class Json::iterator
         bool operator!=(const iterator & other) const;
 
     private:
-        friend class Json;
-
         enum class IterType
         {
             Array,

@@ -111,12 +111,24 @@ int progress_trampoline(void *userdata, curl_off_t dltotal, curl_off_t dlnow, cu
     return callbacks->progress(prog) ? CURL_PROGRESSFUNC_CONTINUE : 1;
 }
 
+// curl_mime setters only report through their return code
+bool mime_check(CURLcode code, std::string_view what)
+{
+    if (code == CURLE_OK)
+        return true;
+    SIHD_LOG(error, "Request: could not {}: {}", what, curl_easy_strerror(code));
+    return false;
+}
+
 } // namespace
 
 struct Request::Impl
 {
         CURL *curl = nullptr;
         CURLcode code = CURLE_OK;
+
+        curl_slist *header_list = nullptr;
+        curl_mime *mime = nullptr;
 
         std::string url;
         std::string user_agent;
@@ -135,6 +147,10 @@ struct Request::Impl
 
         ~Impl()
         {
+            if (header_list != nullptr)
+                curl_slist_free_all(header_list);
+            if (mime != nullptr)
+                curl_mime_free(mime);
             if (curl != nullptr)
                 curl_easy_cleanup(curl);
         }
@@ -260,16 +276,71 @@ bool Request::clear_proxy()
 
 bool Request::set_headers(const HeaderList & headers)
 {
-    return set_opt(*_impl, CURLOPT_HTTPHEADER, headers._impl->list);
+    curl_slist *list = nullptr;
+    for (const std::string & line : headers.lines())
+    {
+        // curl_slist_append takes a null-terminated string and copies it
+        curl_slist *appended = curl_slist_append(list, line.c_str());
+        if (appended == nullptr)
+        {
+            curl_slist_free_all(list);
+            SIHD_LOG(error, "Request: could not build header list");
+            return false;
+        }
+        list = appended;
+    }
+    if (_impl->header_list != nullptr)
+        curl_slist_free_all(_impl->header_list);
+    _impl->header_list = list;
+    return set_opt(*_impl, CURLOPT_HTTPHEADER, list);
 }
 
 bool Request::set_mime(const Mime & mime)
 {
-    return set_opt(*_impl, CURLOPT_MIMEPOST, mime._impl->mime);
+    if (_impl->curl == nullptr)
+    {
+        SIHD_LOG(error, "Request: no curl handle");
+        return false;
+    }
+    curl_mime *handle = curl_mime_init(_impl->curl);
+    if (handle == nullptr)
+    {
+        SIHD_LOG(error, "Request: could not init mime");
+        return false;
+    }
+    for (const MimePart & part : mime.parts())
+    {
+        curl_mimepart *mime_part = curl_mime_addpart(handle);
+        if (mime_part == nullptr)
+        {
+            SIHD_LOG(error, "Request: could not add mime part");
+            curl_mime_free(handle);
+            return false;
+        }
+        if (part.name.empty() == false)
+            mime_check(curl_mime_name(mime_part, part.name.c_str()), "set part name");
+        if (part.data.empty() == false)
+            mime_check(curl_mime_data(mime_part, (const char *)part.data.data(), part.data.size()), "set part data");
+        if (part.path.empty() == false)
+            mime_check(curl_mime_filedata(mime_part, part.path.c_str()), "set part file");
+        if (part.filename.empty() == false)
+            mime_check(curl_mime_filename(mime_part, part.filename.c_str()), "set part filename");
+        if (part.content_type.empty() == false)
+            mime_check(curl_mime_type(mime_part, part.content_type.c_str()), "set part content type");
+    }
+    if (_impl->mime != nullptr)
+        curl_mime_free(_impl->mime);
+    _impl->mime = handle;
+    return set_opt(*_impl, CURLOPT_MIMEPOST, handle);
 }
 
 bool Request::clear_mime()
 {
+    if (_impl->mime != nullptr)
+    {
+        curl_mime_free(_impl->mime);
+        _impl->mime = nullptr;
+    }
     return set_opt(*_impl, CURLOPT_MIMEPOST, (const void *)nullptr);
 }
 
@@ -461,16 +532,17 @@ void Request::reset()
     if (_impl->curl == nullptr)
         return;
     curl_easy_reset(_impl->curl);
+    if (_impl->header_list != nullptr)
+    {
+        curl_slist_free_all(_impl->header_list);
+        _impl->header_list = nullptr;
+    }
+    if (_impl->mime != nullptr)
+    {
+        curl_mime_free(_impl->mime);
+        _impl->mime = nullptr;
+    }
     _impl->code = CURLE_OK;
-}
-
-Mime Request::new_mime()
-{
-    if (_impl->curl == nullptr)
-        return Mime();
-    Mime mime;
-    mime._impl->mime = curl_mime_init(_impl->curl);
-    return mime;
 }
 
 } // namespace sihd::curl

@@ -54,20 +54,15 @@ sihd::curl::Proxy to_curl_proxy(ProxyType type)
 struct Client::Impl
 {
         sihd::curl::Request request;
-        sihd::curl::HeaderList headers;
-        std::unique_ptr<sihd::curl::Mime> mime;
         std::string content;
         bool overflow = false;
 
-        // the per-transfer state nothing else restates: the response buffer and
-        // the previous mime payload. Must run before the body wiring: a mime
-        // detach past the post fields would discard them.
+        // the per-transfer state nothing else restates: the response buffer
         void begin_transfer()
         {
             overflow = false;
             content.clear();
             request.clear_mime();
-            mime.reset();
         }
 
         bool configure(std::string_view url,
@@ -164,10 +159,7 @@ struct Client::Impl
                     return false;
                 }
             }
-            // curl only keeps the list pointer: attach the new list before the old
-            // one is dropped, and keep it alive in headers until the next attach
             request.set_headers(new_headers);
-            headers = std::move(new_headers);
 
             // only HEAD has no response body: an OPTIONS response carries one
             request.set_nobody(type == HttpRequest::Head);
@@ -222,10 +214,10 @@ struct Client::Impl
 
             // must run after every other option: CURLOPT_MIMEPOST is what makes
             // the transfer a POST_MIME, any method option set later cancels it
-            mime = std::make_unique<sihd::curl::Mime>(request.new_mime());
+            sihd::curl::Mime mime;
             for (const Multipart::Part & part : options.multipart.parts())
             {
-                sihd::curl::Mime::Part mime_part = mime->add_part().name(part.name);
+                sihd::curl::Mime::Part mime_part = mime.add_part().name(part.name);
                 if (part.path.empty() == false)
                     mime_part.file(part.path);
                 else
@@ -235,7 +227,7 @@ struct Client::Impl
                 if (part.content_type.empty() == false)
                     mime_part.content_type(part.content_type);
             }
-            request.set_mime(*mime);
+            request.set_mime(mime);
         }
 
         void set_body(const Streams & streams)
@@ -266,7 +258,6 @@ Client::~Client() = default;
 void Client::reset()
 {
     _impl->request.reset();
-    _impl->headers = sihd::curl::HeaderList();
     _impl->begin_transfer();
 }
 
