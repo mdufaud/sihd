@@ -1,12 +1,16 @@
+#include <cctype>
+#include <map>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
 #include <sihd/util/Clocks.hpp>
-#include <sihd/util/Decorator.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/ObserverWatcher.hpp>
 
 namespace test
 {
@@ -16,16 +20,46 @@ using namespace sihd::util;
 class SomeObservable: public Observable<SomeObservable>
 {
     public:
-        SomeObservable() = default;
-        ;
-        ~SomeObservable() = default;
-        ;
-
         int get_val() { return val; }
 
         void notify() { this->notify_observers(this); }
 
         int val = 0;
+};
+
+// records each observer callback: its letter on before, uppercase on after
+class RecordingWatcher: public IObserverWatcher<SomeObservable>
+{
+    public:
+        RecordingWatcher(std::string *seq_ptr): seq(seq_ptr) {}
+
+        void watch(IHandler<SomeObservable *> *obs, char letter) { letters.emplace(obs, letter); }
+
+        void before_observer(IHandler<SomeObservable *> *obs, [[maybe_unused]] SomeObservable *sender) override
+        {
+            seq->push_back(letters[obs]);
+        }
+
+        void after_observer(IHandler<SomeObservable *> *obs, [[maybe_unused]] SomeObservable *sender) override
+        {
+            seq->push_back(std::toupper(letters[obs]));
+        }
+
+        std::string *seq;
+        std::map<IHandler<SomeObservable *> *, char> letters;
+};
+
+class CountingWatcher: public IObserverWatcher<SomeObservable>
+{
+    public:
+        void before_observer(IHandler<SomeObservable *> *, [[maybe_unused]] SomeObservable *sender) override
+        {
+            ++calls;
+        }
+
+        void after_observer(IHandler<SomeObservable *> *, [[maybe_unused]] SomeObservable *sender) override { ++calls; }
+
+        int calls = 0;
 };
 
 class TestObservable: public ::testing::Test,
@@ -154,38 +188,354 @@ TEST_F(TestObservable, test_obs_lambda)
     EXPECT_EQ(val, 1337);
 }
 
-TEST_F(TestObservable, test_obs_decorator)
+TEST_F(TestObservable, test_obs_watcher)
 {
-    SteadyClock clock;
+    std::string seq;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> handler_c([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> handler_d([]([[maybe_unused]] SomeObservable *obs) {});
+
     SomeObservable observable;
-    Timestamp ts_begin(0);
-    Timestamp ts_handler(0);
-    Timestamp ts_end(0);
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+    observable.add_observer(&handler_c);
 
-    Decorator<SomeObservable> decorator;
-
-    Handler<SomeObservable *> handler([&]([[maybe_unused]] SomeObservable *obs) { ts_handler = clock.now(); });
-    observable.add_observer(&handler);
-
-    decorator.decorate(&observable);
-
-    decorator.set_handler_begin([&ts_begin, &clock](auto) { ts_begin = clock.now(); });
-    decorator.set_handler_end([&ts_end, &clock](auto) { ts_end = clock.now(); });
-
-    EXPECT_EQ(ts_handler, ts_begin);
-    EXPECT_EQ(ts_handler, ts_end);
+    RecordingWatcher watcher(&seq);
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&handler_b, 'b');
+    watcher.watch(&handler_c, 'c');
+    watcher.watch(&handler_d, 'd');
+    observable.set_watcher(&watcher);
 
     observable.notify();
+    EXPECT_EQ(seq, "aAbBcC");
 
-    EXPECT_LE(ts_begin, ts_handler);
-    EXPECT_LE(ts_handler, ts_end);
+    observable.add_observer(&handler_d);
+    seq.clear();
+    observable.notify();
+    EXPECT_EQ(seq, "aAbBcCdD");
 
-    decorator.reset();
+    observable.set_watcher(nullptr);
+    seq.clear();
+    observable.notify();
+    EXPECT_EQ(seq, "");
+}
+
+TEST_F(TestObservable, test_obs_watcher_self_removal)
+{
+    std::string seq;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> handler_b([&](SomeObservable *obs) { obs->remove_observer(&handler_b); });
+    Handler<SomeObservable *> handler_c([]([[maybe_unused]] SomeObservable *obs) {});
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+    observable.add_observer(&handler_c);
+
+    RecordingWatcher watcher(&seq);
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&handler_b, 'b');
+    watcher.watch(&handler_c, 'c');
+    observable.set_watcher(&watcher);
+
+    // the observer removing itself mid-notification is still watched until it returns
+    observable.notify();
+    EXPECT_EQ(seq, "aAbBcC");
+    EXPECT_FALSE(observable.is_observer(&handler_b));
+
+    seq.clear();
+    observable.notify();
+    EXPECT_EQ(seq, "aAcC");
+}
+
+TEST_F(TestObservable, test_obs_watcher_replaced_mid_notification)
+{
+    SomeObservable observable;
+    CountingWatcher watcher1;
+    CountingWatcher watcher2;
+    Handler<SomeObservable *> switcher([&](SomeObservable *obs) { obs->set_watcher(&watcher2); });
+
+    Handler<SomeObservable *> handler_a([&]([[maybe_unused]] SomeObservable *obs) {});
+    observable.add_observer(&handler_a);
+    observable.add_observer(&switcher);
+
+    observable.set_watcher(&watcher1);
+
+    // the watcher is read at every hook call: the replacement applies to the
+    // remaining observers of the same notification
+    observable.notify();
+    EXPECT_EQ(watcher1.calls, 3);
+    EXPECT_EQ(watcher2.calls, 1);
 
     observable.notify();
+    EXPECT_EQ(watcher1.calls, 3);
+    EXPECT_EQ(watcher2.calls, 5);
+}
 
-    EXPECT_LE(ts_begin, ts_handler);
-    EXPECT_LE(ts_end, ts_handler);
+TEST_F(TestObservable, test_obs_watcher_replaced_and_destroyed)
+{
+    std::string seq;
+    CountingWatcher watcher2;
+    int watcher1_calls = 0;
+    CountingWatcher *watcher1 = new CountingWatcher();
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *) {});
+    SomeObservable observable;
+    bool switched = false;
+    Handler<SomeObservable *> switcher([&]([[maybe_unused]] SomeObservable *) {
+        if (switched)
+            return;
+        switched = true;
+        observable.set_watcher(&watcher2);
+        watcher1_calls = watcher1->calls;
+        // the replaced watcher is destroyed right away: it must not be
+        // called again for the rest of the notification
+        delete watcher1;
+    });
+
+    observable.add_observer(&handler_a);
+    observable.add_observer(&switcher);
+    observable.add_observer(&handler_b);
+    observable.set_watcher(watcher1);
+
+    observable.notify();
+    EXPECT_EQ(watcher1_calls, 3);
+    EXPECT_EQ(watcher2.calls, 3);
+
+    observable.notify();
+    EXPECT_EQ(watcher2.calls, 9);
+}
+
+TEST_F(TestObservable, test_obs_watcher_reattach_mid_notification)
+{
+    std::string seq;
+    RecordingWatcher watcher(&seq);
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_c([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([&]([[maybe_unused]] SomeObservable *obs) {
+        obs->set_watcher(nullptr);
+        obs->set_watcher(&watcher);
+    });
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&handler_b, 'b');
+    watcher.watch(&handler_c, 'c');
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+    observable.add_observer(&handler_c);
+    observable.set_watcher(&watcher);
+
+    observable.notify();
+    EXPECT_EQ(seq, "aAbBcC");
+}
+
+TEST_F(TestObservable, test_obs_watcher_recursive_notification)
+{
+    std::string seq;
+    bool recursed = false;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> recursor([&](SomeObservable *obs) {
+        if (recursed == false)
+        {
+            recursed = true;
+            obs->notify();
+        }
+    });
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&recursor);
+    observable.add_observer(&handler_b);
+
+    RecordingWatcher watcher(&seq);
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&recursor, 'r');
+    watcher.watch(&handler_b, 'b');
+    observable.set_watcher(&watcher);
+
+    observable.notify();
+    EXPECT_EQ(seq, "aAraArRbBRbB");
+}
+
+TEST_F(TestObservable, test_obs_watcher_recursive_detach)
+{
+    std::string seq;
+    bool recursed = false;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> recursor([&](SomeObservable *obs) {
+        if (recursed == false)
+        {
+            recursed = true;
+            obs->notify();
+        }
+    });
+    Handler<SomeObservable *> detacher([&](SomeObservable *obs) { obs->set_watcher(nullptr); });
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&recursor);
+    observable.add_observer(&detacher);
+    observable.add_observer(&handler_b);
+
+    RecordingWatcher watcher(&seq);
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&recursor, 'r');
+    watcher.watch(&detacher, 'd');
+    watcher.watch(&handler_b, 'b');
+    observable.set_watcher(&watcher);
+
+    // the inner notification detaches the watcher: the outer notification
+    // ends without any watcher call
+    observable.notify();
+    EXPECT_EQ(seq, "aAraArRd");
+}
+
+TEST_F(TestObservable, test_obs_watcher_removed_and_detached)
+{
+    std::string seq;
+    RecordingWatcher watcher(&seq);
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_c([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([&](SomeObservable *obs) {
+        obs->remove_observer(&handler_c);
+        obs->set_watcher(nullptr);
+    });
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&handler_b, 'b');
+    watcher.watch(&handler_c, 'c');
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+    observable.add_observer(&handler_c);
+    observable.set_watcher(&watcher);
+
+    observable.notify();
+    EXPECT_EQ(seq, "aAb");
+    EXPECT_FALSE(observable.is_observer(&handler_c));
+
+    seq.clear();
+    observable.notify();
+    EXPECT_EQ(seq, "");
+}
+
+TEST_F(TestObservable, test_obs_watcher_detached_from_envelope)
+{
+    std::string seq;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+
+    ObserverWatcher<SomeObservable> watcher(
+        [&](SomeObservable *obs) {
+            seq += "n";
+            obs->set_watcher(nullptr);
+        },
+        nullptr,
+        nullptr,
+        nullptr);
+    observable.set_watcher(&watcher);
+
+    // detached from the before hook: no observer is watched, no after hook
+    observable.notify();
+    EXPECT_EQ(seq, "n");
+}
+
+TEST_F(TestObservable, test_obs_watcher_switches_itself)
+{
+    std::string seq;
+    CountingWatcher watcher2;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *) {});
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+
+    bool switched = false;
+    ObserverWatcher<SomeObservable> watcher(
+        nullptr,
+        nullptr,
+        [&](IHandler<SomeObservable *> *, [[maybe_unused]] SomeObservable *) {
+            seq += "<";
+            if (switched == false)
+            {
+                switched = true;
+                observable.set_watcher(&watcher2);
+            }
+        },
+        [&](IHandler<SomeObservable *> *, [[maybe_unused]] SomeObservable *) { seq += ">"; });
+    observable.set_watcher(&watcher);
+
+    observable.notify();
+    EXPECT_EQ(seq, "<");
+    EXPECT_EQ(watcher2.calls, 3);
+
+    observable.notify();
+    EXPECT_EQ(seq, "<");
+    EXPECT_EQ(watcher2.calls, 7);
+}
+
+TEST_F(TestObservable, test_obs_watcher_lambdas)
+{
+    std::string seq;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> handler_b([]([[maybe_unused]] SomeObservable *obs) {});
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&handler_b);
+
+    ObserverWatcher<SomeObservable> watcher(
+        [&](SomeObservable *) { seq += "n"; },
+        nullptr,
+        [&](IHandler<SomeObservable *> *obs, SomeObservable *) { seq += obs == &handler_a ? "<a" : "<b"; },
+        [&](IHandler<SomeObservable *> *, SomeObservable *) { seq += ">"; });
+
+    observable.set_watcher(&watcher);
+    observable.notify();
+    EXPECT_EQ(seq, "n<a><b>");
+
+    seq.clear();
+    ObserverWatcher<SomeObservable> empty;
+    observable.set_watcher(&empty);
+    observable.notify();
+    EXPECT_EQ(seq, "");
+
+    observable.set_watcher(nullptr);
+    observable.notify();
+    EXPECT_EQ(seq, "");
+}
+
+TEST_F(TestObservable, test_obs_watcher_detached_mid_notification)
+{
+    std::string seq;
+    Handler<SomeObservable *> handler_a([]([[maybe_unused]] SomeObservable *obs) {});
+    Handler<SomeObservable *> detacher([&](SomeObservable *obs) {
+        obs->set_watcher(nullptr);
+        seq += "x";
+    });
+
+    SomeObservable observable;
+    observable.add_observer(&handler_a);
+    observable.add_observer(&detacher);
+
+    RecordingWatcher watcher(&seq);
+    watcher.watch(&handler_a, 'a');
+    watcher.watch(&detacher, 'd');
+    observable.set_watcher(&watcher);
+
+    // the observer detaching the watcher mid-notification is not called again
+    observable.notify();
+    EXPECT_EQ(seq, "aAdx");
+
+    seq.clear();
+    observable.notify();
+    EXPECT_EQ(seq, "x");
 }
 
 } // namespace test

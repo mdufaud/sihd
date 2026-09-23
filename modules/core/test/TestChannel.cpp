@@ -1,8 +1,11 @@
+#include <clock_helper.hpp>
+
 #include <gtest/gtest.h>
 
 #include <sihd/core/Channel.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/time.hpp>
 
 namespace test
 {
@@ -93,6 +96,21 @@ TEST_F(TestChannel, test_channel_write_array)
     c.set_write_on_change(false);
     c.write(arr);
     EXPECT_EQ(_notified[&c], 2);
+}
+
+TEST_F(TestChannel, test_channel_set_clock)
+{
+    FakeClock clock;
+    Channel c("chan", "int");
+
+    c.write<int>(0, 1);
+    EXPECT_GT(c.timestamp().get(), 0);
+
+    c.set_clock(&clock);
+    EXPECT_TRUE(c.write<int>(0, 2));
+    EXPECT_EQ(c.timestamp().get(), time::milli(1));
+    EXPECT_TRUE(c.write<int>(0, 3));
+    EXPECT_EQ(c.timestamp().get(), time::milli(2));
 }
 
 TEST_F(TestChannel, test_channel_conf)

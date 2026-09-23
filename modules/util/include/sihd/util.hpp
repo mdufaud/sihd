@@ -1,6 +1,5 @@
 #ifndef __SIHD_UTIL_HPP__
 #define __SIHD_UTIL_HPP__
-
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/ALogFilterer.hpp>
 #include <sihd/util/ALogger.hpp>
@@ -20,7 +19,6 @@
 #include <sihd/util/Collector.hpp>
 #include <sihd/util/Command.hpp>
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/Decorator.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/DynMessage.hpp>
@@ -32,6 +30,7 @@
 #include <sihd/util/ILoggerFilter.hpp>
 #include <sihd/util/IMessageField.hpp>
 #include <sihd/util/IObservable.hpp>
+#include <sihd/util/IObserverWatcher.hpp>
 #include <sihd/util/IProvider.hpp>
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/IRunnable.hpp>
@@ -52,6 +51,7 @@
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/ObservableDelegate.hpp>
 #include <sihd/util/ObserverWaiter.hpp>
+#include <sihd/util/ObserverWatcher.hpp>
 #include <sihd/util/Providers.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/SafeQueue.hpp>
@@ -71,6 +71,7 @@
 #include <sihd/util/ThreadPool.hpp>
 #include <sihd/util/ThreadedServiceController.hpp>
 #include <sihd/util/TimeBase.hpp>
+#include <sihd/util/TimedHandler.hpp>
 #include <sihd/util/Timer.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Url.hpp>
@@ -95,5 +96,4 @@
 #include <sihd/util/traits.hpp>
 #include <sihd/util/type.hpp>
 #include <sihd/util/version.hpp>
-
 #endif

@@ -104,6 +104,18 @@ bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool sta
     return ret;
 }
 
+ServiceController::State ServiceController::state() const
+{
+    std::lock_guard l(_state_mutex);
+    return statemachine.state();
+}
+
+AService::Operation ServiceController::last_event() const
+{
+    std::lock_guard l(_state_mutex);
+    return statemachine.last_event();
+}
+
 const char *ServiceController::state_str(State state)
 {
     switch (state)

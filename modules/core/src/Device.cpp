@@ -45,9 +45,9 @@ Device::~Device()
 {
     if (this->parent() == nullptr)
     {
-        if (_service_controller.statemachine.last_event() == AService::Start)
+        if (_service_controller.last_event() == AService::Start)
             this->stop();
-        if (_service_controller.statemachine.last_event() == AService::Stop)
+        if (_service_controller.last_event() == AService::Stop)
             this->reset();
     }
 }

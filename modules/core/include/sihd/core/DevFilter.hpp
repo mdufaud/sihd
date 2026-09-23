@@ -3,6 +3,7 @@
 
 #include <atomic>
 
+#include <sihd/core/ChannelMatch.hpp>
 #include <sihd/core/Device.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
@@ -14,29 +15,15 @@ namespace sihd::core
 class DevFilter: public sihd::core::Device
 {
     public:
-        enum RuleType
-        {
-            None,
-            Equal,
-            Superior,
-            SuperiorEqual,
-            Inferior,
-            InferiorEqual,
-            ByteAnd,
-            ByteOr,
-            ByteXor,
-        };
-
         class Rule
         {
             public:
-                Rule(RuleType type);
+                Rule(ChannelMatch::Comparison comparison);
                 ~Rule();
 
                 bool parse(std::string_view conf);
                 Rule & in(std::string_view channel_name);
                 Rule & out(std::string_view channel_name);
-                // if rule should match or not match
                 Rule & match(bool active);
                 // write trigger value at channel's output idx
                 Rule & write_same(size_t idx);
@@ -50,8 +37,8 @@ class DevFilter: public sihd::core::Device
                 template <typename T>
                 Rule & trigger(size_t idx, T val)
                 {
-                    this->trigger_idx = idx;
-                    this->trigger_value = val;
+                    this->channel_match.idx = idx;
+                    this->channel_match.value = val;
                     return *this;
                 }
 
@@ -64,19 +51,12 @@ class DevFilter: public sihd::core::Device
                     return *this;
                 }
 
-                RuleType type;
-                // channels name
+                ChannelMatch channel_match;
                 std::string channel_in;
                 std::string channel_out;
-                // trigger
-                size_t trigger_idx;
-                sihd::util::Value trigger_value;
-                // write
                 bool write_same_value;
                 size_t write_idx;
                 sihd::util::Value write_value;
-                // options
-                bool should_match;
                 sihd::util::Duration nano_delay;
         };
 
@@ -137,7 +117,7 @@ class DevFilter: public sihd::core::Device
                 const Rule *rule_ptr;
         };
 
-        bool _parse_conf(std::string_view conf, RuleType type);
+        bool _parse_conf(std::string_view conf, ChannelMatch::Comparison comparison);
         void _apply_rule(const Channel *channel_in, Channel *channel_out, const Rule *rule_ptr);
 
         std::atomic<bool> _running;

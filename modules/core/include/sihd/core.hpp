@@ -5,6 +5,7 @@
 #include <sihd/core/ACoreObject.hpp>
 #include <sihd/core/ACoreService.hpp>
 #include <sihd/core/Channel.hpp>
+#include <sihd/core/ChannelMatch.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevFilter.hpp>
@@ -16,5 +17,6 @@
 #include <sihd/core/Device.hpp>
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/Records.hpp>
+#include <sihd/core/TreeProfiler.hpp>
 
 #endif

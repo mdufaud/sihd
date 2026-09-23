@@ -89,6 +89,92 @@ Channel *Channel::build(std::string_view configuration)
     return channel;
 }
 
+IClock *Channel::default_clock()
+{
+    return _default_channel_clock_ptr;
+}
+
+void Channel::set_write_on_change(bool activate)
+{
+    _write_change_only = activate;
+}
+
+void Channel::set_resizable(bool activate)
+{
+    _resizable = activate;
+}
+
+void Channel::set_clock(sihd::util::IClock *clock)
+{
+    std::lock_guard lock(_arr_mutex);
+    _clock_ptr = clock;
+}
+
+uint8_t *Channel::data() const
+{
+    return _array_ptr->buf();
+}
+
+const IArray *Channel::array() const
+{
+    return _array_ptr;
+}
+
+size_t Channel::size() const
+{
+    return _array_ptr->size();
+}
+
+size_t Channel::byte_size() const
+{
+    return _array_ptr->byte_size();
+}
+
+size_t Channel::byte_index(size_t idx) const
+{
+    return _array_ptr->byte_index(idx);
+}
+
+bool Channel::resizable() const
+{
+    return _resizable;
+}
+
+size_t Channel::capacity() const
+{
+    return _array_ptr->capacity();
+}
+
+size_t Channel::byte_capacity() const
+{
+    return _array_ptr->byte_capacity();
+}
+
+bool Channel::reserve(size_t capacity)
+{
+    return _array_ptr->reserve(capacity);
+}
+
+bool Channel::resize(size_t size)
+{
+    return _array_ptr->resize(size);
+}
+
+size_t Channel::data_size() const
+{
+    return _array_ptr->data_size();
+}
+
+Type Channel::data_type() const
+{
+    return _array_ptr->data_type();
+}
+
+bool Channel::is_same_type(const Channel *other) const
+{
+    return _array_ptr->is_same_type(*other->array());
+}
+
 Timestamp Channel::timestamp() const
 {
     std::lock_guard lock(_arr_mutex);
@@ -125,6 +211,14 @@ bool Channel::copy_to(IArray & arr, Slice slice, Timestamp *timestamp) const
     if (range.empty())
         return false;
     return arr.copy_from_bytes(_array_ptr->buf_at(range.from), range.size() * _array_ptr->data_size());
+}
+
+Value Channel::value_at(size_t idx) const
+{
+    std::lock_guard lock(_arr_mutex);
+    if (idx >= _array_ptr->size())
+        return Value();
+    return Value(_array_ptr->buf_at(idx), _array_ptr->data_type());
 }
 
 bool Channel::write(const Channel & other)

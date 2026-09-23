@@ -103,7 +103,7 @@ extlibs_skip_android = [
     "simpleble",
 ]
 
-vcpkg_baseline = "3a3285c4878c7f5a957202201ba41e6fdeba8db4"
+vcpkg_baseline = "00be06124721b0fa2fb451982e707f81b3b06e5a"
 
 # Declarative overlays over stock vcpkg ports (replaces hand-written overlay-ports/).
 # Schema: patches / remove_patches / manifest / files / recipe_patches (see sbt/vcpkg/patches.py).

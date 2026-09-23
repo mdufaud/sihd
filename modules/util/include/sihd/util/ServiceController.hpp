@@ -34,7 +34,8 @@ class ServiceController: public AService::IServiceController,
         virtual bool op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);
 
-        State state() const { return statemachine.state(); }
+        State state() const;
+        AService::Operation last_event() const;
 
         void optional_setup();
         void optional_init();
@@ -46,7 +47,7 @@ class ServiceController: public AService::IServiceController,
     protected:
 
     private:
-        std::mutex _state_mutex;
+        mutable std::mutex _state_mutex;
 };
 
 } // namespace sihd::util
