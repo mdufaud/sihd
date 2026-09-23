@@ -3,6 +3,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <utility>
 
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -14,6 +15,13 @@ template <typename Mutex, typename ConditionVariable>
 class WaitableImpl
 {
     public:
+        // the lock is held whether the predicate was satisfied or timed out
+        struct TimedGuard
+        {
+                std::unique_lock<Mutex> lock;
+                bool timed_out;
+        };
+
         WaitableImpl() = default;
         ~WaitableImpl() = default;
 
@@ -34,6 +42,16 @@ class WaitableImpl
             _condition.wait(lock, pred_stop_waiting);
         }
 
+        // waits for the predicate then returns holding the mutex: mutations that must be
+        // atomic with the wakeup happen under it
+        template <class Predicate>
+        std::unique_lock<Mutex> wait_guard(Predicate pred_stop_waiting)
+        {
+            std::unique_lock lock(_mutex);
+            _condition.wait(lock, pred_stop_waiting);
+            return lock;
+        }
+
         // predicate must return false to keep waiting
         template <class Predicate>
         Duration wait_elapsed(Predicate pred_stop_waiting)
@@ -51,6 +69,14 @@ class WaitableImpl
             return _condition.wait_for(lock, std::chrono::nanoseconds(duration), pred_stop_waiting);
         }
 
+        template <class Predicate>
+        TimedGuard wait_for_guard(Duration duration, Predicate pred_stop_waiting)
+        {
+            std::unique_lock lock(_mutex);
+            const bool satisfied = _condition.wait_for(lock, std::chrono::nanoseconds(duration), pred_stop_waiting);
+            return TimedGuard {std::move(lock), satisfied == false};
+        }
+
         // predicate must return false to keep waiting
         template <class Predicate>
         Duration wait_for_elapsed(Duration duration, Predicate pred_stop_waiting)
@@ -65,11 +91,15 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp, Predicate pred_stop_waiting)
         {
             std::unique_lock lock(_mutex);
-            return _condition.wait_until(
-                lock,
-                std::chrono::system_clock::time_point(std::chrono::duration_cast<std::chrono::system_clock::duration>(
-                    std::chrono::nanoseconds(timestamp))),
-                pred_stop_waiting);
+            return _condition.wait_until(lock, this->_time_point(timestamp), pred_stop_waiting);
+        }
+
+        template <class Predicate>
+        TimedGuard wait_until_guard(Timestamp timestamp, Predicate pred_stop_waiting)
+        {
+            std::unique_lock lock(_mutex);
+            const bool satisfied = _condition.wait_until(lock, this->_time_point(timestamp), pred_stop_waiting);
+            return TimedGuard {std::move(lock), satisfied == false};
         }
 
         // predicate must return false to keep waiting
@@ -97,11 +127,7 @@ class WaitableImpl
         bool wait_until(Timestamp timestamp)
         {
             std::unique_lock lock(_mutex);
-            return _condition.wait_until(lock,
-                                         std::chrono::system_clock::time_point(
-                                             std::chrono::duration_cast<std::chrono::system_clock::duration>(
-                                                 std::chrono::nanoseconds(timestamp))))
-                   == std::cv_status::timeout;
+            return _condition.wait_until(lock, this->_time_point(timestamp)) == std::cv_status::timeout;
         }
 
         /**
@@ -141,6 +167,13 @@ class WaitableImpl
 
         Mutex & mutex() { return _mutex; }
         std::lock_guard<Mutex> guard() { return std::lock_guard(_mutex); }
+
+    private:
+        static std::chrono::system_clock::time_point _time_point(Timestamp timestamp)
+        {
+            return std::chrono::system_clock::time_point(
+                std::chrono::duration_cast<std::chrono::system_clock::duration>(std::chrono::nanoseconds(timestamp)));
+        }
 
     protected:
         Mutex _mutex;

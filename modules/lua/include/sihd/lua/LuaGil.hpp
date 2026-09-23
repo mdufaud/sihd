@@ -1,9 +1,9 @@
 #ifndef __SIHD_LUA_LUAGIL_HPP__
 #define __SIHD_LUA_LUAGIL_HPP__
 
-#include <condition_variable>
-#include <mutex>
 #include <thread>
+
+#include <sihd/util/Waitable.hpp>
 
 struct lua_State;
 
@@ -28,8 +28,7 @@ class LuaGil
         void acquire_restore(int depth);
 
     private:
-        std::mutex _mutex;
-        std::condition_variable _cv;
+        sihd::util::Waitable _waitable;
         std::thread::id _owner;
         int _depth = 0;
 };

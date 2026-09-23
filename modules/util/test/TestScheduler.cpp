@@ -1,10 +1,8 @@
-#include <condition_variable>
-#include <mutex>
-
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Scheduler.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/profiling.hpp>
@@ -165,8 +163,7 @@ TEST_F(TestScheduler, test_sched_stop)
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    Waitable waitable;
     bool first_ran = false;
     bool second_ran = false;
 
@@ -174,10 +171,10 @@ TEST_F(TestScheduler, test_sched_stop)
         [&]() -> bool {
             SIHD_TRACE("Should run once");
             {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 first_ran = true;
             }
-            cv.notify_one();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(10)}));
@@ -185,26 +182,20 @@ TEST_F(TestScheduler, test_sched_stop)
         [&]() -> bool {
             SIHD_TRACE("Should not run");
             {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 second_ran = true;
             }
-            cv.notify_one();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(70)}));
     sched.set_start_synchronised(true);
     sched.start();
 
-    {
-        std::unique_lock lock(mutex);
-        ASSERT_TRUE(cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return first_ran; }));
-    }
+    ASSERT_TRUE(waitable.wait_for(time::milli(100), [&] { return first_ran; }));
     sched.stop();
 
-    {
-        std::unique_lock lock(mutex);
-        EXPECT_FALSE(cv.wait_for(lock, std::chrono::milliseconds(100), [&] { return second_ran; }));
-    }
+    EXPECT_FALSE(waitable.wait_for(time::milli(100), [&] { return second_ran; }));
 }
 
 TEST_F(TestScheduler, test_sched_pause)
@@ -402,8 +393,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
         GTEST_SKIP() << "Timing classification unstable under valgrind";
     Scheduler sched("sched-wakeups");
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    Waitable waitable;
     std::atomic<int> seq = 0;
     std::atomic<int> bulk_ran = 0;
     int urgent_seq = -1;
@@ -415,10 +405,10 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
     // the far deadline the worker sleeps on at start
     sched.add_task(new Task(
         [&] {
-            std::lock_guard lock(mutex);
+            auto l = waitable.guard();
             far_seq = seq.fetch_add(1);
             far_ran = true;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::sec(1)}));
@@ -429,7 +419,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
         sched.add_task(new Task(
             [&] {
                 ++bulk_ran;
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 if (bulk_seq < 0)
                     bulk_seq = seq.fetch_add(1);
                 return true;
@@ -446,25 +436,19 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
 
     sched.add_task(new Task(
         [&] {
-            std::lock_guard lock(mutex);
+            auto l = waitable.guard();
             urgent_seq = seq.fetch_add(1);
             urgent_ran = true;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(400)}));
 
-    {
-        std::unique_lock lock(mutex);
-        // healthy: satisfied at ~500ms - 3s ceiling for slow machines
-        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return urgent_ran; }));
-    }
+    // healthy: satisfied at ~500ms - 3s ceiling for slow machines
+    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return urgent_ran; }));
     const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - insert_tp);
 
-    {
-        std::unique_lock lock(mutex);
-        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return bulk_ran == 200 && far_ran; }));
-    }
+    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return bulk_ran == 200 && far_ran; }));
 
     EXPECT_LT(elapsed.count(), 650);
     // ordering sanity: urgent before bulk before far
@@ -487,15 +471,14 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
     CountingSteadyClock clock;
     sched.set_clock(&clock);
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    Waitable waitable;
     bool first_ran = false;
 
     sched.add_task(new Task(
         [&] {
-            std::lock_guard lock(mutex);
+            auto l = waitable.guard();
             first_ran = true;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(50)}));
@@ -507,10 +490,7 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
     sched.set_start_synchronised(true);
     sched.start();
 
-    {
-        std::unique_lock lock(mutex);
-        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return first_ran; }));
-    }
+    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return first_ran; }));
 
     // empty the queue while the worker sleeps toward the second deadline
     EXPECT_TRUE(sched.remove_task(second));
@@ -529,24 +509,23 @@ TEST_F(TestScheduler, test_sched_exception_survives)
 {
     Scheduler sched("sched-exc");
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    Waitable waitable;
     std::atomic<int> ticks = 0;
     bool after_poison_ran = false;
 
     sched.add_task(new Task(
         [&] {
             ++ticks;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.reschedule_time = time::milli(15)}));
     sched.add_task(new Task([&]() -> bool { throw std::runtime_error("poison"); }, {.run_in = time::milli(1)}));
     sched.add_task(new Task(
         [&] {
-            std::lock_guard lock(mutex);
+            auto l = waitable.guard();
             after_poison_ran = true;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(30)}));
@@ -554,10 +533,7 @@ TEST_F(TestScheduler, test_sched_exception_survives)
     sched.set_start_synchronised(true);
     sched.start();
 
-    {
-        std::unique_lock lock(mutex);
-        EXPECT_TRUE(cv.wait_for(lock, std::chrono::seconds(5), [&] { return ticks.load() >= 3 && after_poison_ran; }));
-    }
+    EXPECT_TRUE(waitable.wait_for(time::sec(5), [&] { return ticks.load() >= 3 && after_poison_ran; }));
     EXPECT_GE(ticks.load(), 3);
 
     sched.stop();
@@ -575,16 +551,15 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
         ManualClock clock(frozen_now);
         sched.set_clock(&clock);
 
-        std::mutex mutex;
-        std::condition_variable cv;
+        Waitable waitable;
         std::vector<Timestamp> played;
         Task *task = nullptr;
         task = new Task(
             [&] {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 if (played.size() < 8)
                     played.push_back(task->run_at);
-                cv.notify_all();
+                waitable.notify_all();
                 return true;
             },
             {.run_at = frozen_now - grid * 3, .reschedule_time = grid});
@@ -592,10 +567,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
 
         sched.set_start_synchronised(true);
         sched.start();
-        {
-            std::unique_lock lock(mutex);
-            ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return played.size() >= 4; }));
-        }
+        ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return played.size() >= 4; }));
         sched.stop();
 
         // overdue slots replayed as-is, then the future grid
@@ -612,16 +584,15 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
         sched.set_clock(&clock);
         ASSERT_TRUE(sched.set_skip_missed_on_start(true));
 
-        std::mutex mutex;
-        std::condition_variable cv;
+        Waitable waitable;
         std::vector<Timestamp> played;
         Task *task = nullptr;
         task = new Task(
             [&] {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 if (played.size() < 8)
                     played.push_back(task->run_at);
-                cv.notify_all();
+                waitable.notify_all();
                 return true;
             },
             {.run_at = frozen_now - grid * 3, .reschedule_time = grid, .late_policy = LatenessPolicy::skip_missed});
@@ -636,10 +607,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         ASSERT_GE(clock.calls.load(), 2);
         clock.advance(frozen_now + grid);
-        {
-            std::unique_lock lock(mutex);
-            ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return played.size() >= 1; }));
-        }
+        ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return played.size() >= 1; }));
         sched.stop();
 
         // first slot is the next grid multiple strictly after now: (T - 3g) + 4g == T + g
@@ -662,15 +630,14 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     ASSERT_TRUE(sched.set_idle_policy(IdlePolicy::sleep_then_spin));
     ASSERT_TRUE(sched.set_spin_window(time::milli(100)));
 
-    std::mutex mutex;
-    std::condition_variable cv;
+    Waitable waitable;
     bool ran = false;
 
     sched.add_task(new Task(
         [&] {
-            std::lock_guard lock(mutex);
+            auto l = waitable.guard();
             ran = true;
-            cv.notify_all();
+            waitable.notify_all();
             return true;
         },
         {.run_in = time::milli(500)}));
@@ -678,10 +645,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     sched.set_start_synchronised(true);
     sched.start();
 
-    {
-        std::unique_lock lock(mutex);
-        ASSERT_TRUE(cv.wait_for(lock, std::chrono::seconds(3), [&] { return ran; }));
-    }
+    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return ran; }));
     sched.stop();
 
     // the last 10ms of the 50ms wait were polled

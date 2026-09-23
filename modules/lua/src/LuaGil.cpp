@@ -7,38 +7,40 @@ namespace sihd::lua
 void LuaGil::lock()
 {
     const auto self = std::this_thread::get_id();
-    std::unique_lock l(_mutex);
-    if (_depth > 0 && _owner == self)
     {
-        ++_depth;
-        return;
+        auto l = _waitable.guard();
+        if (_depth > 0 && _owner == self)
+        {
+            ++_depth;
+            return;
+        }
     }
-    _cv.wait(l, [this] { return _depth == 0; });
+    auto l = _waitable.wait_guard([this] { return _depth == 0; });
     _owner = self;
     _depth = 1;
 }
 
 void LuaGil::unlock()
 {
-    std::lock_guard l(_mutex);
+    auto l = _waitable.guard();
     if (_depth == 0 || _owner != std::this_thread::get_id())
         return;
     if (--_depth == 0)
     {
         _owner = std::thread::id();
-        _cv.notify_one();
+        _waitable.notify();
     }
 }
 
 int LuaGil::release_save()
 {
-    std::lock_guard l(_mutex);
+    auto l = _waitable.guard();
     if (_depth == 0 || _owner != std::this_thread::get_id())
         return 0;
     const int depth = _depth;
     _depth = 0;
     _owner = std::thread::id();
-    _cv.notify_one();
+    _waitable.notify();
     return depth;
 }
 
@@ -46,8 +48,7 @@ void LuaGil::acquire_restore(int depth)
 {
     if (depth == 0)
         return;
-    std::unique_lock l(_mutex);
-    _cv.wait(l, [this] { return _depth == 0; });
+    auto l = _waitable.wait_guard([this] { return _depth == 0; });
     _owner = std::this_thread::get_id();
     _depth = depth;
 }

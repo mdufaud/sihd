@@ -1,9 +1,7 @@
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <filesystem>
 #include <fstream>
-#include <mutex>
 #include <optional>
 #include <string_view>
 
@@ -20,7 +18,9 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/time.hpp>
 
 #include "http_test_helpers.hpp"
 
@@ -459,22 +459,18 @@ TEST_F(TestNavigator, test_navigator_ws_send_receive)
     nav.clear_proxy();
 
     std::optional<std::string> ws_reply;
-    std::mutex reply_mutex;
-    std::condition_variable reply_cv;
+    Waitable reply_waitable;
 
     nav.on_ws_text = [&](std::string_view msg) {
-        std::lock_guard lock(reply_mutex);
+        auto l = reply_waitable.guard();
         ws_reply = std::string(msg);
-        reply_cv.notify_all();
+        reply_waitable.notify_all();
     };
 
     ASSERT_TRUE(nav.ws_connect("ws://localhost:3003", "proto-two"));
     ASSERT_TRUE(nav.ws_send("hello from navigator"));
 
-    {
-        std::unique_lock lock(reply_mutex);
-        reply_cv.wait_for(lock, std::chrono::seconds(2), [&] { return ws_reply.has_value(); });
-    }
+    reply_waitable.wait_for(time::sec(2), [&] { return ws_reply.has_value(); });
     ASSERT_TRUE(ws_reply.has_value());
     EXPECT_EQ(*ws_reply, "hello world");
 
@@ -875,19 +871,17 @@ TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
         nav.set_proxy_auth(user, pass);
 
         std::optional<std::string> reply;
-        std::mutex m;
-        std::condition_variable cv;
+        Waitable waitable;
         nav.on_ws_text = [&](std::string_view msg) {
-            std::lock_guard lock(m);
+            auto l = waitable.guard();
             reply = std::string(msg);
-            cv.notify_all();
+            waitable.notify_all();
         };
         bool connected = nav.ws_connect("ws://localhost:3013", "proto-two");
         if (connected)
         {
             nav.ws_send("hello from navigator");
-            std::unique_lock lock(m);
-            cv.wait_for(lock, std::chrono::seconds(2), [&] { return reply.has_value(); });
+            waitable.wait_for(time::sec(2), [&] { return reply.has_value(); });
             nav.ws_close();
         }
         return std::make_pair(connected, reply);

@@ -360,7 +360,7 @@ void Navigator::ws_close()
 
 bool Navigator::ws_is_connected() const
 {
-    std::lock_guard lock(_impl->ws.mutex);
+    auto lock = _impl->ws.waitable.guard();
     return _impl->ws.connected;
 }
 

@@ -3,9 +3,7 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <map>
-#include <mutex>
 #include <optional>
 #include <queue>
 #include <random>
@@ -18,6 +16,7 @@
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/util/Url.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
 
 #include "../Client.hpp"
@@ -92,8 +91,7 @@ struct Navigator::Impl
                 struct lws_context *context = nullptr;
                 struct lws *wsi = nullptr;
                 sihd::util::Worker worker;
-                std::mutex mutex;
-                std::condition_variable cv;
+                sihd::util::Waitable waitable;
                 bool connected = false;
                 bool handshake_done = false;
                 std::atomic<bool> stop_requested {false};

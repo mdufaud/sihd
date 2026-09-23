@@ -1,6 +1,4 @@
 #include <chrono>
-#include <condition_variable>
-#include <mutex>
 #include <stdexcept>
 #include <string_view>
 
@@ -24,6 +22,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -126,27 +125,27 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         {
             SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
             {
-                std::lock_guard lock(_ws_mutex);
+                auto l = _ws_waitable.guard();
                 ++_nopen;
             }
-            _ws_cv.notify_all();
+            _ws_waitable.notify_all();
         };
 
         bool on_read(const sihd::util::ArrChar & array) override
         {
             SIHD_LOG(debug, "Read from client websocket: {}", array.str());
             {
-                std::lock_guard lock(_ws_mutex);
+                auto l = _ws_waitable.guard();
                 _client_wrote = true;
                 ++_nread;
             }
-            _ws_cv.notify_all();
+            _ws_waitable.notify_all();
             return true;
         };
 
         bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol) override
         {
-            std::lock_guard lock(_ws_mutex);
+            auto l = _ws_waitable.guard();
             if (_client_wrote)
             {
                 ++_nwrite;
@@ -165,10 +164,10 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         {
             SIHD_LOG(debug, "Closed websocket");
             {
-                std::lock_guard lock(_ws_mutex);
+                auto l = _ws_waitable.guard();
                 ++_nclosed;
             }
-            _ws_cv.notify_all();
+            _ws_waitable.notify_all();
             this->request_stop();
         }
 
@@ -177,21 +176,18 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
         }
 
-        bool wait_for_open(std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
+        bool wait_for_open(sihd::util::Duration timeout = sihd::util::time::sec(2))
         {
-            std::unique_lock lock(_ws_mutex);
-            return _ws_cv.wait_for(lock, timeout, [this] { return _nopen > 0; });
+            return _ws_waitable.wait_for(timeout, [this] { return _nopen > 0; });
         }
 
-        bool wait_for_close(std::chrono::milliseconds timeout = std::chrono::milliseconds(2000))
+        bool wait_for_close(sihd::util::Duration timeout = sihd::util::time::sec(2))
         {
-            std::unique_lock lock(_ws_mutex);
-            return _ws_cv.wait_for(lock, timeout, [this] { return _nclosed > 0; });
+            return _ws_waitable.wait_for(timeout, [this] { return _nclosed > 0; });
         }
 
         // websocket
-        std::mutex _ws_mutex;
-        std::condition_variable _ws_cv;
+        Waitable _ws_waitable;
         int _nopen = 0;
         int _nread = 0;
         int _nwrite = 0;
@@ -408,7 +404,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     SimpleWsClient client;
     ASSERT_TRUE(client.connect(3002));
     ASSERT_TRUE(client.handshake("proto-two"));
-    ASSERT_TRUE(server.wait_for_open(std::chrono::milliseconds(2000)));
+    ASSERT_TRUE(server.wait_for_open());
 
     ASSERT_TRUE(client.send_text("hello from client"));
 
@@ -417,7 +413,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     EXPECT_EQ(*reply, "hello world");
 
     client.send_close();
-    ASSERT_TRUE(server.wait_for_close(std::chrono::milliseconds(2000)));
+    ASSERT_TRUE(server.wait_for_close());
     server.stop();
 
     EXPECT_EQ(server._nopen, 1);

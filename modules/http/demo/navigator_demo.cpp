@@ -1,7 +1,4 @@
-#include <chrono>
-#include <condition_variable>
 #include <csignal>
-#include <mutex>
 #include <optional>
 
 #include <fmt/format.h>
@@ -11,6 +8,8 @@
 #include <sihd/sys/App.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
+#include <sihd/util/time.hpp>
 
 namespace demo
 {
@@ -57,8 +56,7 @@ void demo_websocket()
     Navigator nav;
     nav.set_ssl_verify(false, false);
 
-    std::mutex mtx;
-    std::condition_variable cv;
+    sihd::util::Waitable waitable;
     std::optional<std::string> reply;
 
     nav.on_ws_open = [&](std::string_view protocol) {
@@ -67,9 +65,9 @@ void demo_websocket()
 
     nav.on_ws_text = [&](std::string_view msg) {
         SIHD_LOG(info, "[WS] Received: {}", msg);
-        std::lock_guard lock(mtx);
+        auto l = waitable.guard();
         reply = std::string(msg);
-        cv.notify_all();
+        waitable.notify_all();
     };
 
     nav.on_ws_close = [&]() {
@@ -98,8 +96,7 @@ void demo_websocket()
         SIHD_LOG(info, "[WS] Sending: {}", msg);
         nav.ws_send(msg);
 
-        std::unique_lock lock(mtx);
-        if (!cv.wait_for(lock, std::chrono::seconds(5), [&] { return reply.has_value(); }))
+        if (!waitable.wait_for(sihd::util::time::sec(5), [&] { return reply.has_value(); }))
         {
             SIHD_LOG(warning, "[WS] Timed out waiting for echo");
             break;

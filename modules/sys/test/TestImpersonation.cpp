@@ -1,5 +1,3 @@
-#include <condition_variable>
-#include <mutex>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -7,6 +5,7 @@
 #include <sihd/sys/Impersonation.hpp>
 #include <sihd/sys/user.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
 
 namespace test
@@ -184,39 +183,36 @@ TEST_F(TestImpersonation, test_impersonation_is_per_thread_as_root)
             failed,
         };
         State state = State::pending;
-        std::mutex mutex;
-        std::condition_variable cv;
+        Waitable waitable;
         bool main_checked = false;
 
         std::thread worker([&] {
             Impersonation impersonation;
             if (!impersonation.impersonate_as(target, target_group))
             {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 state = State::failed;
-                cv.notify_one();
+                waitable.notify_all();
                 return;
             }
             EXPECT_EQ(user::effective_user(), target);
             {
-                std::lock_guard lock(mutex);
+                auto l = waitable.guard();
                 state = State::switched;
             }
-            cv.notify_one();
+            waitable.notify_all();
 
-            std::unique_lock lock(mutex);
-            cv.wait(lock, [&] { return main_checked; });
+            waitable.wait([&] { return main_checked; });
             EXPECT_TRUE(impersonation.revert());
             EXPECT_EQ(user::effective_user(), before);
         });
 
-        std::unique_lock lock(mutex);
-        cv.wait(lock, [&] { return state != State::pending; });
+        auto l = waitable.wait_guard([&] { return state != State::pending; });
         // sampled while the worker thread is switched
         const bool identity_intact = user::effective_user() == before;
         main_checked = true;
-        lock.unlock();
-        cv.notify_one();
+        l.unlock();
+        waitable.notify_all();
         worker.join();
 
         if (state == State::failed)

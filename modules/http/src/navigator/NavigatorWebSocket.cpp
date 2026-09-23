@@ -28,11 +28,11 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
         {
             SIHD_LOG(debug, "Navigator: WebSocket connection established");
             {
-                std::lock_guard lock(impl->ws.mutex);
+                auto lock = impl->ws.waitable.guard();
                 impl->ws.connected = true;
                 impl->ws.handshake_done = true;
             }
-            impl->ws.cv.notify_all();
+            impl->ws.waitable.notify_all();
 
             const lws_protocols *proto = lws_get_protocol(wsi);
             if (impl->owner->on_ws_open && proto != nullptr)
@@ -66,7 +66,7 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
         }
         case LWS_CALLBACK_CLIENT_WRITEABLE:
         {
-            std::lock_guard lock(impl->ws.mutex);
+            auto lock = impl->ws.waitable.guard();
             if (!impl->ws.send_queue.empty())
             {
                 auto & msg = impl->ws.send_queue.front();
@@ -96,18 +96,18 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
             const char *error_msg = (in != nullptr) ? static_cast<const char *>(in) : "unknown error";
             SIHD_LOG(error, "Navigator: WebSocket connection error: {}", error_msg);
             {
-                std::lock_guard lock(impl->ws.mutex);
+                auto lock = impl->ws.waitable.guard();
                 impl->ws.connected = false;
                 impl->ws.handshake_done = true;
             }
-            impl->ws.cv.notify_all();
+            impl->ws.waitable.notify_all();
             break;
         }
         case LWS_CALLBACK_CLIENT_CLOSED:
         {
             SIHD_LOG(debug, "Navigator: WebSocket connection closed");
             {
-                std::lock_guard lock(impl->ws.mutex);
+                auto lock = impl->ws.waitable.guard();
                 impl->ws.connected = false;
             }
             if (impl->owner->on_ws_close)
@@ -233,7 +233,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
         {
             lws_service(ws.context, 0);
             {
-                std::lock_guard lock(ws.mutex);
+                auto lock = ws.waitable.guard();
                 if (!ws.connected && ws.handshake_done)
                     return true;
             }
@@ -242,13 +242,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     });
     ws.worker.start_worker("navigator-ws");
 
-    {
-        std::unique_lock lock(ws.mutex);
-        // Duration holds nanoseconds: hand the wait the converted duration, not its raw count
-        ws.cv.wait_for(lock, options.timeout.duration<std::chrono::milliseconds>(), [this] {
-            return ws.handshake_done;
-        });
-    }
+    ws.waitable.wait_for(options.timeout, [this] { return ws.handshake_done; });
 
     if (!ws.connected)
         ws_disconnect();
@@ -276,7 +270,7 @@ void Navigator::Impl::ws_disconnect()
 
 bool Navigator::Impl::ws_queue_message(const void *data, size_t len, bool binary)
 {
-    std::lock_guard lock(ws.mutex);
+    auto lock = ws.waitable.guard();
     if (!ws.connected || ws.wsi == nullptr)
         return false;
 

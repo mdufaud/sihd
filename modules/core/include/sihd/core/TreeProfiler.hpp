@@ -2,13 +2,12 @@
 #define __SIHD_CORE_TREEPROFILER_HPP__
 
 #include <atomic>
-#include <condition_variable>
 #include <deque>
 #include <functional>
 #include <list>
 #include <map>
 #include <memory>
-#include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
@@ -26,6 +25,7 @@
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
@@ -202,17 +202,19 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
     private:
         struct DispatchQueue
         {
-                std::mutex mutex;
-                std::condition_variable has_items;
-                std::condition_variable drained;
+                // one waitable serves the has-items and drained waits: notify_all on both sides
+                sihd::util::Waitable waitable;
                 std::deque<Event> items;
                 size_t pending = 0;
         };
 
-        // a report holds this walk flag to stop the service notification chain in
-        // op_start, before an op body can create or remove children; nested ops
-        // on a thread already running one belong to the awaited cascade
-        mutable std::condition_variable_any _ops_cv;
+        // the profiler lock doubles as the ops gate: a report holds the walk flag below
+        // to stop the service notification chain in op_start, before an op body can
+        // create or remove children; nested ops on a thread already running one belong
+        // to the awaited cascade
+        // a notification takes the profiler lock while holding its channel or observable
+        // lock: their apis are called without the profiler lock held
+        mutable sihd::util::WaitableRecursive _waitable;
         mutable bool _walk_in_progress = false;
         mutable size_t _ops_in_flight = 0;
         mutable std::map<std::thread::id, size_t> _ops_depth;
@@ -262,6 +264,10 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         std::string _handle_op_exit(ServiceEntry *entry, sihd::util::ServiceController *ctrl, const std::string & name);
         void _push_ops_depth();
         void _pop_ops_depth();
+        std::optional<std::string> _handle_op(ServiceEntry *entry,
+                                              sihd::util::ServiceController *ctrl,
+                                              const std::optional<Operation> & started_op,
+                                              const std::string & name);
 
         Event _push_event(sihd::util::Timestamp timestamp,
                           const std::string & source,
@@ -330,7 +336,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         std::atomic<bool> _dispatcher_running {false};
         std::atomic<size_t> _dropped_events_total {0};
         // sources already logged at the current queue pressure, guarded by the
-        // dispatch queue mutex
+        // dispatch queue waitable
         std::set<std::string> _warned_sources;
         std::set<std::string> _errored_sources;
         mutable DispatchQueue _dispatch_queue;
@@ -343,9 +349,6 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         size_t _window_opens = 0;
         sihd::util::Timestamp _session_begin {0};
         sihd::util::Duration _last_session_duration {0};
-        // a notification takes the profiler lock while holding its channel or observable
-        // lock: their apis are called without the profiler lock held
-        mutable std::recursive_mutex _mutex;
         std::vector<sihd::util::Named *> _roots;
         std::deque<Event> _events;
         ConditionList _start_conditions;
