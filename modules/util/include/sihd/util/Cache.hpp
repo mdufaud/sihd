@@ -35,7 +35,7 @@ class Cache
          * @param max_age The maximum age of the cached value.
          * @param lazy Whether to lazily initialize the cached value.
          */
-        void set(const Key & key, CacheGetter getter, Timestamp max_age = -1, bool lazy = false)
+        void set(const Key & key, CacheGetter getter, Timestamp max_age = Timestamp(-1), bool lazy = false)
         {
             if (lazy)
             {
@@ -51,7 +51,7 @@ class Cache
         }
 
         // This method throws if the key is missing.
-        Value & get(const Key & key, Timestamp ttl = -1)
+        Value & get(const Key & key, Timestamp ttl = Timestamp(-1))
         {
             auto & entry = _get_cache(key);
             if (this->_needs_refresh(entry, ttl))
@@ -69,7 +69,7 @@ class Cache
         }
 
         // This method does not throw if the key is missing, it returns std::nullopt instead.
-        OptionalCachedValue get_optional(const Key & key, Timestamp ttl = -1)
+        OptionalCachedValue get_optional(const Key & key, Timestamp ttl = Timestamp(-1))
         {
             try
             {
@@ -100,7 +100,7 @@ class Cache
             for (auto & [_, entry] : _cache)
             {
                 const Timestamp now = _clock.now();
-                if (this->_needs_refresh(entry, -1, now))
+                if (this->_needs_refresh(entry, Timestamp(-1), now))
                 {
                     entry.cached_value = entry.getter();
                     entry.last_refresh = now;
@@ -120,14 +120,14 @@ class Cache
         void invalidate(const Key & key)
         {
             auto & entry = this->_get_cache(key);
-            entry.last_refresh = -1;
+            entry.last_refresh = Timestamp(-1);
         }
 
         void invalidate_all()
         {
             for (auto & [_, entry] : _cache)
             {
-                entry.last_refresh = -1;
+                entry.last_refresh = Timestamp(-1);
             }
         }
 
@@ -158,7 +158,7 @@ class Cache
             return result;
         }
 
-        std::vector<Key> stale_entries(Timestamp ttl = -1) const
+        std::vector<Key> stale_entries(Timestamp ttl = Timestamp(-1)) const
         {
             std::vector<Key> result;
             const Timestamp now = _clock.now();
@@ -179,14 +179,14 @@ class Cache
                 size_t hit = 0;
                 size_t miss = 0;
                 // Time management
-                Timestamp last_refresh = -1;
-                Timestamp max_age = -1;
+                Timestamp last_refresh = Timestamp(-1);
+                Timestamp max_age = Timestamp(-1);
                 // Value management
                 std::function<Value()> getter;
                 Value cached_value;
         };
 
-        bool _needs_refresh(const CacheEntry & entry, Timestamp ttl, Timestamp now = -1) const
+        bool _needs_refresh(const CacheEntry & entry, Timestamp ttl, Timestamp now = Timestamp(-1)) const
         {
             now = now < 0 ? Timestamp(_clock.now()) : now;
             const bool was_never_refreshed = (entry.last_refresh < 0);

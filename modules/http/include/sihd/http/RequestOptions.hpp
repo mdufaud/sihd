@@ -35,8 +35,8 @@ struct RequestOptions
         bool follow_location = false;
         bool accept_encoding = true;
         bool http2 = false;
-        sihd::util::Duration timeout = sihd::util::time::sec(30);
-        sihd::util::Duration connect_timeout = sihd::util::time::sec(10);
+        sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(30));
+        sihd::util::Duration connect_timeout = sihd::util::Duration(sihd::util::time::sec(10));
         bool ssl_verify_peer = true;
         bool ssl_verify_host = true;
         size_t max_response_size = 0;

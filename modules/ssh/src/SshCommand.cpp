@@ -197,7 +197,7 @@ bool SshCommand::wait(sihd::util::Duration timeout_nano, sihd::util::time::UnixT
             break;
         }
         else
-            _impl->waitable.wait_for(sihd::util::time::milliseconds(milliseconds_poll_time),
+            _impl->waitable.wait_for(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds_poll_time)),
                                      [this] { return _impl->stop; });
     }
     if (r != -1)

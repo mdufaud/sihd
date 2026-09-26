@@ -568,17 +568,17 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 // Execution
 
-bool Process::_do_fork(const std::vector<const char *> &, const Environment &)
+bool Process::_do_fork(const std::vector<const char *> &)
 {
     return false;
 }
 
-bool Process::_do_spawn(const std::vector<const char *> &, const Environment &)
+bool Process::_do_spawn(const std::vector<const char *> &)
 {
     return false;
 }
 
-bool Process::_do_child_process(const std::vector<const char *> & argv, const Environment & env)
+bool Process::_do_child_process(const std::vector<const char *> & argv)
 {
     if (_fun_to_execute)
     {
@@ -620,7 +620,7 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const En
         cmd_line += arg;
     }
 
-    const std::string env_block = internal::to_windows_block(env);
+    const std::string env_block = internal::to_windows_block(_env);
 
     // Create the child process.
 
@@ -653,9 +653,9 @@ bool Process::_do_child_process(const std::vector<const char *> & argv, const En
     return success;
 }
 
-bool Process::_do_execute(const std::vector<const char *> & argv, const Environment & env)
+bool Process::_do_execute(const std::vector<const char *> & argv)
 {
-    return this->_do_child_process(argv, env);
+    return this->_do_child_process(argv);
 }
 
 bool Process::execute()
@@ -679,7 +679,7 @@ bool Process::execute()
     }
     c_argv.emplace_back(nullptr);
 
-    const bool success = this->_do_execute(c_argv, _env);
+    const bool success = this->_do_execute(c_argv);
     if (success)
     {
         safe_close(_impl->pipe.std_in.fd_read);
@@ -723,7 +723,7 @@ bool Process::read_pipes(int milliseconds_timeout)
         return false;
     SteadyClock clock;
     const Timestamp begin = clock.now();
-    const Duration timeout = time::milliseconds(milliseconds_timeout);
+    const Duration timeout = Duration(time::milliseconds(milliseconds_timeout));
     bool timed_out = false;
     while (!timed_out)
     {

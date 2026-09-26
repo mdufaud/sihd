@@ -16,7 +16,7 @@ class ZipFile: public sihd::util::IReader
                 ssize_t index = -1;
                 size_t size = 0;
                 size_t compressed_size = 0;
-                sihd::util::Timestamp modification_time = -1;
+                sihd::util::Timestamp modification_time = sihd::util::Timestamp(-1);
                 uint32_t crc = 0;
         };
 

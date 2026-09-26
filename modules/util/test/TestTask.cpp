@@ -21,9 +21,9 @@ class TestTask: public ::testing::Test
 TEST_F(TestTask, test_task_options_stored)
 {
     TaskOptions opts;
-    opts.run_at = 0;
-    opts.run_in = 100;
-    opts.reschedule_time = 50;
+    opts.run_at = Timestamp(0);
+    opts.run_in = Duration(100);
+    opts.reschedule_time = Duration(50);
 
     Task t(opts);
     EXPECT_EQ(t.run_at, (time_t)0);
@@ -34,8 +34,8 @@ TEST_F(TestTask, test_task_options_stored)
 TEST_F(TestTask, test_task_run_at_and_run_in_throws)
 {
     TaskOptions opts;
-    opts.run_at = 100;
-    opts.run_in = 100;
+    opts.run_at = Timestamp(100);
+    opts.run_in = Duration(100);
 
     EXPECT_THROW(Task t(opts), std::logic_error);
 }

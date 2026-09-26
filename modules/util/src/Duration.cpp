@@ -6,7 +6,7 @@ namespace sihd::util
 
 std::string Duration::str(bool total_parenthesis, bool nano_resolution) const
 {
-    return str::timeoffset_str(_nano, total_parenthesis, nano_resolution);
+    return str::timeoffset_str(Timestamp(_nano), total_parenthesis, nano_resolution);
 }
 
 } // namespace sihd::util

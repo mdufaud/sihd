@@ -22,7 +22,7 @@ SIHD_NEW_LOGGER("sihd::sys::clipboard");
 namespace
 {
 
-constexpr Duration serve_timeout = time::sec(10);
+constexpr Duration serve_timeout(time::sec(10));
 
 } // namespace
 

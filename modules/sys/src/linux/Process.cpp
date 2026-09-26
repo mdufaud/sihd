@@ -536,10 +536,10 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 #if defined(ENABLE_FORK)
 
-bool Process::_do_fork(const std::vector<const char *> & argv, const Environment & env)
+bool Process::_do_fork(const std::vector<const char *> & argv)
 {
     // the exec array is owned here: nothing may allocate in the forked child
-    internal::ExecEnviron exec_env = internal::to_exec_environ(env);
+    internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
     if ((pid = fork()) < 0)
     {
@@ -590,7 +590,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const Environment
         int status = 0;
         if (_fun_to_execute)
         {
-            internal::apply(env);
+            internal::apply(_env);
             status = _fun_to_execute();
         }
         else
@@ -605,7 +605,7 @@ bool Process::_do_fork(const std::vector<const char *> & argv, const Environment
 
 #else
 
-bool Process::_do_fork(const std::vector<const char *> &, const Environment &)
+bool Process::_do_fork(const std::vector<const char *> &)
 {
     return false;
 }
@@ -614,9 +614,9 @@ bool Process::_do_fork(const std::vector<const char *> &, const Environment &)
 
 #if defined(ENABLE_SPAWN)
 
-bool Process::_do_spawn(const std::vector<const char *> & argv, const Environment & env)
+bool Process::_do_spawn(const std::vector<const char *> & argv)
 {
-    internal::ExecEnviron exec_env = internal::to_exec_environ(env);
+    internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
     posix_spawn_file_actions_t actions;
 
@@ -664,27 +664,27 @@ bool Process::_do_spawn(const std::vector<const char *> & argv, const Environmen
 
 #else
 
-bool Process::_do_spawn(const std::vector<const char *> &, const Environment &)
+bool Process::_do_spawn(const std::vector<const char *> &)
 {
     return false;
 }
 
 #endif
 
-bool Process::_do_child_process(const std::vector<const char *> &, const Environment &)
+bool Process::_do_child_process(const std::vector<const char *> &)
 {
     return false;
 }
 
-bool Process::_do_execute(const std::vector<const char *> & argv, const Environment & env)
+bool Process::_do_execute(const std::vector<const char *> & argv)
 {
     init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
     if (_fun_to_execute || _force_fork)
-        return this->_do_fork(argv, env);
-    return this->_do_spawn(argv, env);
+        return this->_do_fork(argv);
+    return this->_do_spawn(argv);
 #else
-    return this->_do_fork(argv, env);
+    return this->_do_fork(argv);
 #endif
 }
 
@@ -709,7 +709,7 @@ bool Process::execute()
     }
     c_argv.emplace_back(nullptr);
 
-    const bool success = this->_do_execute(c_argv, _env);
+    const bool success = this->_do_execute(c_argv);
     if (success)
     {
         safe_close(_impl->pipe.std_in.fd_read);

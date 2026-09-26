@@ -157,9 +157,9 @@ bool PcapReader::get_read_timestamp(sihd::util::Timestamp *nano_timestamp) const
     if (_impl_ptr->pkt_hdr_ptr == nullptr)
         return false;
     if (_impl_ptr->precision == PCAP_TSTAMP_PRECISION_MICRO)
-        *nano_timestamp = sihd::util::time::tv(_impl_ptr->pkt_hdr_ptr->ts);
+        *nano_timestamp = sihd::util::Timestamp(sihd::util::time::tv(_impl_ptr->pkt_hdr_ptr->ts));
     else if (_impl_ptr->precision == PCAP_TSTAMP_PRECISION_NANO)
-        *nano_timestamp = sihd::util::time::nano_tv(_impl_ptr->pkt_hdr_ptr->ts);
+        *nano_timestamp = sihd::util::Timestamp(sihd::util::time::nano_tv(_impl_ptr->pkt_hdr_ptr->ts));
     return true;
 }
 

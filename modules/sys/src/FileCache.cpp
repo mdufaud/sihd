@@ -33,7 +33,7 @@ FileCache::~FileCache() {}
 
 void FileCache::add(const std::string & file_path, bool lazy)
 {
-    constexpr Timestamp max_age = -1;
+    constexpr Timestamp max_age(-1);
     _cache.set(file_path, [internal_file_path = file_path]() { return read_file(internal_file_path); }, max_age, lazy);
     _file_watcher.watch(file_path);
 }

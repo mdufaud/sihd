@@ -434,7 +434,7 @@ TEST_F(TestCsv, test_csv_timestamp_numeric)
     ASSERT_TRUE(reader.open(path));
     reader.set_timestamp_col(0);
 
-    sihd::util::Timestamp ts = 0;
+    sihd::util::Timestamp ts(0);
 
     ASSERT_TRUE(reader.read_next());
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"1000000000", "hello"}));
@@ -461,7 +461,7 @@ TEST_F(TestCsv, test_csv_timestamp_not_set)
 
     ASSERT_TRUE(reader.read_next());
 
-    sihd::util::Timestamp ts = 0;
+    sihd::util::Timestamp ts(0);
     // no timestamp column set -> returns false
     EXPECT_FALSE(reader.get_read_timestamp(&ts));
 }
@@ -479,7 +479,7 @@ TEST_F(TestCsv, test_csv_timestamp_out_of_bounds)
 
     ASSERT_TRUE(reader.read_next());
 
-    sihd::util::Timestamp ts = 0;
+    sihd::util::Timestamp ts(0);
     EXPECT_FALSE(reader.get_read_timestamp(&ts));
 }
 
@@ -496,7 +496,7 @@ TEST_F(TestCsv, test_csv_timestamp_invalid_value)
 
     ASSERT_TRUE(reader.read_next());
 
-    sihd::util::Timestamp ts = 0;
+    sihd::util::Timestamp ts(0);
     EXPECT_FALSE(reader.get_read_timestamp(&ts));
 }
 

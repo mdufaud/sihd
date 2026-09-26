@@ -221,7 +221,7 @@ TEST_F(TestChannel, test_channel_copy_to_timestamp)
 
     ArrInt dst;
     dst.resize(1);
-    Timestamp ts = 0;
+    Timestamp ts(0);
     EXPECT_TRUE(c.copy_to(dst, &ts));
     EXPECT_EQ(dst[0], 42);
     EXPECT_GT(ts, 0);

@@ -65,9 +65,9 @@ TEST_F(TestScheduler, test_sched_order)
         GTEST_SKIP() << "Buggy with valgrind";
     Scheduler sched("sched");
 
-    Timestamp task_first = 0;
-    Timestamp task_second = 0;
-    Timestamp task_third = 0;
+    Timestamp task_first(0);
+    Timestamp task_second(0);
+    Timestamp task_third(0);
 
 #if defined(__SIHD_EMSCRIPTEN__)
     // emscripten thread-wake granularity is coarse: space tasks in milliseconds
@@ -120,7 +120,7 @@ TEST_F(TestScheduler, test_sched_perf)
 
     // most overruns are below 100 microseconds
     this->delta_us = 100;
-    sched.overrun_at = time::micro(this->delta_us);
+    sched.overrun_at = Duration(time::micro(this->delta_us));
 
     this->should_run_every_us = 100;
     sched.add_task(new Task(this, {.reschedule_time = std::chrono::microseconds(this->should_run_every_us)}));
@@ -177,7 +177,7 @@ TEST_F(TestScheduler, test_sched_stop)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(10)}));
+        {.run_in = Duration(time::milli(10))}));
     sched.add_task(new Task(
         [&]() -> bool {
             SIHD_TRACE("Should not run");
@@ -188,14 +188,14 @@ TEST_F(TestScheduler, test_sched_stop)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(70)}));
+        {.run_in = Duration(time::milli(70))}));
     sched.set_start_synchronised(true);
     sched.start();
 
-    ASSERT_TRUE(waitable.wait_for(time::milli(100), [&] { return first_ran; }));
+    ASSERT_TRUE(waitable.wait_for(Duration(time::milli(100)), [&] { return first_ran; }));
     sched.stop();
 
-    EXPECT_FALSE(waitable.wait_for(time::milli(100), [&] { return second_ran; }));
+    EXPECT_FALSE(waitable.wait_for(Duration(time::milli(100)), [&] { return second_ran; }));
 }
 
 TEST_F(TestScheduler, test_sched_pause)
@@ -213,7 +213,7 @@ TEST_F(TestScheduler, test_sched_pause)
             ++lambda_ran;
             return true;
         },
-        {.reschedule_time = time::ms(should_run_every_ms)}));
+        {.reschedule_time = Duration(time::ms(should_run_every_ms))}));
     sched.set_start_synchronised(true);
     sched.start();
     SIHD_LOG(debug, "Started scheduler");
@@ -259,11 +259,11 @@ TEST_F(TestScheduler, test_sched_as_fast)
         ++lambda_ran;
         return true;
     };
-    sched.add_task(new Task(fun, {.run_in = time::milli(5)}));
-    sched.add_task(new Task(fun, {.run_in = time::milli(20)}));
-    sched.add_task(new Task(fun, {.run_in = time::milli(30)}));
-    sched.add_task(new Task(fun, {.run_in = time::milli(40)}));
-    sched.add_task(new Task(fun, {.run_in = time::milli(50)}));
+    sched.add_task(new Task(fun, {.run_in = Duration(time::milli(5))}));
+    sched.add_task(new Task(fun, {.run_in = Duration(time::milli(20))}));
+    sched.add_task(new Task(fun, {.run_in = Duration(time::milli(30))}));
+    sched.add_task(new Task(fun, {.run_in = Duration(time::milli(40))}));
+    sched.add_task(new Task(fun, {.run_in = Duration(time::milli(50))}));
     sched.set_no_delay(true);
     sched.set_start_synchronised(true);
     sched.start();
@@ -286,7 +286,7 @@ TEST_F(TestScheduler, test_sched_burst)
         return true;
     };
     // repeat task as fast as possible
-    sched.add_task(new Task(fun, {.reschedule_time = 1}));
+    sched.add_task(new Task(fun, {.reschedule_time = Duration(1)}));
     // spam state change
     std::thread t1([&]() {
         int i = 0;
@@ -307,10 +307,10 @@ TEST_F(TestScheduler, test_sched_burst)
         int i = 0;
         while (i < 100)
         {
-            sched.add_task(new Task(fun, {.run_in = time::us(100)}));
-            sched.add_task(new Task(fun, {.run_in = time::us(200)}));
-            sched.add_task(new Task(fun, {.run_in = time::us(300)}));
-            sched.add_task(new Task(fun, {.run_in = time::us(400)}));
+            sched.add_task(new Task(fun, {.run_in = Duration(time::us(100))}));
+            sched.add_task(new Task(fun, {.run_in = Duration(time::us(200))}));
+            sched.add_task(new Task(fun, {.run_in = Duration(time::us(300))}));
+            sched.add_task(new Task(fun, {.run_in = Duration(time::us(400))}));
             std::this_thread::sleep_for(std::chrono::microseconds(300));
             ++i;
         }
@@ -325,7 +325,7 @@ TEST_F(TestScheduler, test_sched_burst)
                     SIHD_LOG_ERROR("Should not be played ever");
                     return false;
                 },
-                {.run_in = time::seconds(303)});
+                {.run_in = Duration(time::seconds(303))});
             sched.add_task(t);
             std::this_thread::sleep_for(std::chrono::microseconds(500));
             ASSERT_TRUE(sched.remove_task(t));
@@ -411,7 +411,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::sec(1)}));
+        {.run_in = Duration(time::sec(1))}));
 
     // a bulk of nearer one shots - only the first may wake the worker
     for (int i = 0; i < 200; ++i)
@@ -424,7 +424,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
                     bulk_seq = seq.fetch_add(1);
                 return true;
             },
-            {.run_in = time::milli(800)}));
+            {.run_in = Duration(time::milli(800))}));
     }
 
     sched.set_start_synchronised(true);
@@ -442,13 +442,13 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(400)}));
+        {.run_in = Duration(time::milli(400))}));
 
     // healthy: satisfied at ~500ms - 3s ceiling for slow machines
-    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return urgent_ran; }));
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return urgent_ran; }));
     const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - insert_tp);
 
-    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return bulk_ran == 200 && far_ran; }));
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return bulk_ran == 200 && far_ran; }));
 
     EXPECT_LT(elapsed.count(), 650);
     // ordering sanity: urgent before bulk before far
@@ -481,16 +481,16 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(50)}));
+        {.run_in = Duration(time::milli(50))}));
 
     // far behind the first: an idle gap the worker must sleep through
-    Task *second = new Task([] { return true; }, {.run_in = time::milli(300)});
+    Task *second = new Task([] { return true; }, {.run_in = Duration(time::milli(300))});
     sched.add_task(second);
 
     sched.set_start_synchronised(true);
     sched.start();
 
-    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return first_ran; }));
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return first_ran; }));
 
     // empty the queue while the worker sleeps toward the second deadline
     EXPECT_TRUE(sched.remove_task(second));
@@ -519,8 +519,9 @@ TEST_F(TestScheduler, test_sched_exception_survives)
             waitable.notify_all();
             return true;
         },
-        {.reschedule_time = time::milli(15)}));
-    sched.add_task(new Task([&]() -> bool { throw std::runtime_error("poison"); }, {.run_in = time::milli(1)}));
+        {.reschedule_time = Duration(time::milli(15))}));
+    sched.add_task(
+        new Task([&]() -> bool { throw std::runtime_error("poison"); }, {.run_in = Duration(time::milli(1))}));
     sched.add_task(new Task(
         [&] {
             auto l = waitable.guard();
@@ -528,12 +529,12 @@ TEST_F(TestScheduler, test_sched_exception_survives)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(30)}));
+        {.run_in = Duration(time::milli(30))}));
 
     sched.set_start_synchronised(true);
     sched.start();
 
-    EXPECT_TRUE(waitable.wait_for(time::sec(5), [&] { return ticks.load() >= 3 && after_poison_ran; }));
+    EXPECT_TRUE(waitable.wait_for(Duration(time::sec(5)), [&] { return ticks.load() >= 3 && after_poison_ran; }));
     EXPECT_GE(ticks.load(), 3);
 
     sched.stop();
@@ -542,8 +543,8 @@ TEST_F(TestScheduler, test_sched_exception_survives)
 // Lateness policies verified by exact grid arithmetic on a frozen clock - no wall measurement.
 TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
 {
-    const Timestamp frozen_now = time::sec(100);
-    const Duration grid = time::milli(5);
+    const Timestamp frozen_now = Timestamp(time::sec(100));
+    const Duration grid = Duration(time::milli(5));
 
     // default policy (replay_missed): the grid stays where it was put - missed runs replay in a burst
     {
@@ -567,7 +568,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
 
         sched.set_start_synchronised(true);
         sched.start();
-        ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return played.size() >= 4; }));
+        ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return played.size() >= 4; }));
         sched.stop();
 
         // overdue slots replayed as-is, then the future grid
@@ -607,7 +608,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         ASSERT_GE(clock.calls.load(), 2);
         clock.advance(frozen_now + grid);
-        ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return played.size() >= 1; }));
+        ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return played.size() >= 1; }));
         sched.stop();
 
         // first slot is the next grid multiple strictly after now: (T - 3g) + 4g == T + g
@@ -628,7 +629,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     CountingSteadyClock clock;
     sched.set_clock(&clock);
     ASSERT_TRUE(sched.set_idle_policy(IdlePolicy::sleep_then_spin));
-    ASSERT_TRUE(sched.set_spin_window(time::milli(100)));
+    ASSERT_TRUE(sched.set_spin_window(Duration(time::milli(100))));
 
     Waitable waitable;
     bool ran = false;
@@ -640,12 +641,12 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
             waitable.notify_all();
             return true;
         },
-        {.run_in = time::milli(500)}));
+        {.run_in = Duration(time::milli(500))}));
 
     sched.set_start_synchronised(true);
     sched.start();
 
-    ASSERT_TRUE(waitable.wait_for(time::sec(3), [&] { return ran; }));
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return ran; }));
     sched.stop();
 
     // the last 10ms of the 50ms wait were polled

@@ -96,7 +96,7 @@ void demo_websocket()
         SIHD_LOG(info, "[WS] Sending: {}", msg);
         nav.ws_send(msg);
 
-        if (!waitable.wait_for(sihd::util::time::sec(5), [&] { return reply.has_value(); }))
+        if (!waitable.wait_for(sihd::util::Duration(sihd::util::time::sec(5)), [&] { return reply.has_value(); }))
         {
             SIHD_LOG(warning, "[WS] Timed out waiting for echo");
             break;

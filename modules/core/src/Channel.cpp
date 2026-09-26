@@ -25,7 +25,7 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
     _notifying = false;
     _write_change_only = true;
     _resizable = false;
-    _timestamp = 0;
+    _timestamp = Timestamp(0);
     _clock_ptr = Channel::default_clock();
 }
 

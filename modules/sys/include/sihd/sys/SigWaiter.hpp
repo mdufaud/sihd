@@ -15,7 +15,7 @@ class SigWaiter
         struct Conf
         {
                 std::optional<int> signal = std::nullopt;
-                sihd::util::Duration timeout = 0;
+                sihd::util::Duration timeout {};
         };
 
         SigWaiter();

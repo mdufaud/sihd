@@ -34,7 +34,7 @@ SIHD_LOGGER;
 SigWatcher::SigWatcher(const std::string & name, Node *parent):
     Named(name, parent),
     _running(false),
-    _polling_interval_ns(time::sec(1)) // Default 1 second for polling mode
+    _polling_interval_ns(Duration(time::sec(1))) // Default 1 second for polling mode
 {
 #if defined(SIHD_HAS_SIGSET)
     sigemptyset(&_sigset);
@@ -66,7 +66,7 @@ bool SigWatcher::set_polling_frequency(double frequency)
 {
     if (frequency <= 0)
         return false;
-    _polling_interval_ns = time::freq(frequency);
+    _polling_interval_ns = Duration(time::freq(frequency));
     return true;
 }
 

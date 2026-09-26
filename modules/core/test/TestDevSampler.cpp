@@ -67,28 +67,28 @@ TEST_F(TestDevSampler, test_devsampler)
     ChannelWaiter sample_channel_waiter(sample_channel);
 
     ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
-    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
     EXPECT_EQ(out_channel->array()->str(','), "0,0,1");
     EXPECT_EQ(out_channel_notif, 1);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({3, 4, 5})));
-    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
     EXPECT_EQ(out_channel->array()->str(','), "3,4,5");
     EXPECT_EQ(out_channel_notif, 2);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({4, 5, 6})));
-    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
     EXPECT_EQ(out_channel->array()->str(','), "4,5,6");
     EXPECT_EQ(out_channel_notif, 3);
 
     ASSERT_TRUE(in_channel->write(ArrInt({1, 2, 3})));
     ASSERT_TRUE(in_channel->write(ArrInt({2, 3, 4})));
     ASSERT_TRUE(in_channel->write(ArrInt({5, 6, 7})));
-    EXPECT_TRUE(out_channel_waiter.prev_wait_for(time::sec(1)));
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
     EXPECT_EQ(out_channel->array()->str(','), "5,6,7");
     EXPECT_EQ(out_channel_notif, 4);
 

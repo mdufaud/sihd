@@ -45,7 +45,7 @@ bool parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration &
             SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, *key_delay);
             return false;
         }
-        rule.nano_delay = sihd::util::time::from_double(*delay);
+        rule.nano_delay = sihd::util::Duration(sihd::util::time::from_double(*delay));
     }
     return true;
 }
@@ -349,7 +349,7 @@ DevFilter::Rule & DevFilter::Rule::write_same(size_t idx)
 
 DevFilter::Rule & DevFilter::Rule::delay(double delay)
 {
-    this->nano_delay = sihd::util::time::from_double(delay);
+    this->nano_delay = sihd::util::Duration(sihd::util::time::from_double(delay));
     return *this;
 }
 

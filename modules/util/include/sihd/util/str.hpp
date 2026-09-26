@@ -17,6 +17,7 @@
 #include <sihd/util/Slice.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
+
 namespace sihd::util::str
 {
 

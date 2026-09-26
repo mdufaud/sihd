@@ -180,17 +180,17 @@ class Process: public sihd::util::IHandler<Poll *>,
         // start process then if stdout or stderr is piped, polls them until the process is stopped
         bool on_start() override;
         bool on_stop() override;
-        bool wait_process_end(sihd::util::Duration nano_duration = 0);
+        bool wait_process_end(sihd::util::Duration nano_duration = {});
 
     private:
         struct Impl;
 
         void handle(Poll *poll) override;
 
-        bool _do_execute(const std::vector<const char *> & argv, const Environment & env);
-        bool _do_fork(const std::vector<const char *> & argv, const Environment & env);
-        bool _do_spawn(const std::vector<const char *> & argv, const Environment & env);
-        bool _do_child_process(const std::vector<const char *> & argv, const Environment & env);
+        bool _do_execute(const std::vector<const char *> & argv);
+        bool _do_fork(const std::vector<const char *> & argv);
+        bool _do_spawn(const std::vector<const char *> & argv);
+        bool _do_child_process(const std::vector<const char *> & argv);
 
         std::atomic<bool> _started;
         std::atomic<bool> _executing;

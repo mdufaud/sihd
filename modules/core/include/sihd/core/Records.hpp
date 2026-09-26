@@ -13,7 +13,7 @@ namespace sihd::core
 struct PlayableRecord
 {
         std::string name;
-        sihd::util::Timestamp timestamp = 0;
+        sihd::util::Timestamp timestamp {};
         sihd::util::IArrayShared value = nullptr;
 };
 

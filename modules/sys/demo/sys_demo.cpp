@@ -338,7 +338,7 @@ int main(int argc, char **argv)
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
     app.root().add_command("wait", "wait 5 seconds or until a stop signal").on_run([&app] {
         fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
-        app.wait_for_termination(time::seconds(5));
+        app.wait_for_termination(sihd::util::Duration(time::seconds(5)));
         fmt::print("Exiting...\n");
     });
 #endif
@@ -362,7 +362,7 @@ int main(int argc, char **argv)
         demo::process();
         demo::read_line();
         fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
-        app.wait_for_termination(time::seconds(5));
+        app.wait_for_termination(sihd::util::Duration(time::seconds(5)));
         fmt::print("Exiting...\n");
 #endif
     });

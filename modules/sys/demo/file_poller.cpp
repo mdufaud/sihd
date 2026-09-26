@@ -61,7 +61,7 @@ int main(int argc, char **argv)
                 SIHD_LOG(info, "{}", display_fw("changed", fw->changed()));
         });
 
-        const Timestamp sleep_for = time::from_double(time_val);
+        const Timestamp sleep_for = Timestamp(time::from_double(time_val));
         FilePoller fpoller(path, depth);
         fpoller.add_observer(&handler);
 

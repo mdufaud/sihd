@@ -12,20 +12,20 @@ SIHD_LOGGER;
 
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent), AWorkerService(name)
 {
-    overrun_at = time::micro(300);
-    acceptable_task_preplay_ns_time = 100;
+    overrun_at = Duration(time::micro(300));
+    acceptable_task_preplay_ns_time = Duration(100);
 
     _clock_ptr = &_default_clock;
 
-    _next_run = 0;
-    _paused_time_at = 0;
+    _next_run = Timestamp(0);
+    _paused_time_at = Timestamp(0);
     _paused = false;
     _no_delay = false;
     _tasks_prepared = false;
     _task_map_seq = 0;
 
     _idle_policy = IdlePolicy::sleep;
-    _spin_window = time::micro(100);
+    _spin_window = Duration(time::micro(100));
     _skip_missed_on_start = false;
 
     this->add_conf("no_delay", &Scheduler::set_no_delay);
@@ -119,7 +119,7 @@ void Scheduler::_wait_for_next_task()
     _waitable_pause.wait([this] { return this->stop_requested || _paused == false; });
 
     uint64_t seq = 0;
-    Timestamp next_run_at = 0;
+    Timestamp next_run_at(0);
     // wait for new task if empty
     _waitable_task.wait([this] { return this->stop_requested || _task_map.empty() == false; });
     {
@@ -150,7 +150,7 @@ void Scheduler::_wait_for_next_task()
 
 void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
 {
-    Timestamp previous = 0;
+    Timestamp previous(0);
     int frozen_polls = 0;
     uint64_t polls = 0;
     while (this->stop_requested == false && _paused == false)
@@ -330,7 +330,7 @@ void Scheduler::_resume_tasks()
         return;
 
     const Duration paused_time = this->now() - std::max(_begin_run, _paused_time_at);
-    _paused_time_at = 0;
+    _paused_time_at = Timestamp(0);
 
     std::multimap<Timestamp, Task *> new_task_map;
     for (auto & [_, task] : _task_map)
@@ -368,7 +368,7 @@ bool Scheduler::on_work_stop()
     }
     {
         auto l = _waitable_task.guard();
-        _begin_run = 0;
+        _begin_run = Timestamp(0);
         _waitable_task.notify();
     }
     if (_clock_ptr != nullptr)
@@ -451,7 +451,7 @@ void Scheduler::clear_tasks()
             delete task;
     }
     _task_map.clear();
-    _next_run = 0;
+    _next_run = Timestamp(0);
     _task_map_seq.fetch_add(1, std::memory_order_release);
 
     _waitable_task.notify();

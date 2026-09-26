@@ -61,7 +61,7 @@ LatencyResult bench_latency(size_t task_count, sihd::util::Duration interval_ns,
     struct TaskData
     {
             std::vector<long long> latencies_ns;
-            sihd::util::Timestamp last_expected = 0;
+            sihd::util::Timestamp last_expected {0};
     };
     std::vector<TaskData> task_data(task_count);
     for (auto & td : task_data)
@@ -229,8 +229,8 @@ struct ResolutionResult
 
 ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
 {
-    sihd::util::Duration lo = sihd::util::time::micro(1);
-    sihd::util::Duration hi = sihd::util::time::milli(10);
+    sihd::util::Duration lo = sihd::util::Duration(sihd::util::time::micro(1));
+    sihd::util::Duration hi = sihd::util::Duration(sihd::util::time::milli(10));
     sihd::util::Duration best_interval = hi;
 
     fmt::print("  Binary search: 1 task, finding minimum stable interval...\n");
@@ -259,7 +259,7 @@ ResolutionResult find_resolution(sihd::util::Duration run_duration_ns)
     // headroom above the found resolution
     sihd::util::Duration test_interval = best_interval * 2;
     if (test_interval < sihd::util::time::micro(100))
-        test_interval = sihd::util::time::micro(100);
+        test_interval = sihd::util::Duration(sihd::util::time::micro(100));
 
     fmt::print("\n  Scaling tasks at {} interval...\n", format_interval(test_interval));
 
@@ -302,7 +302,7 @@ int main(int argc, char **argv)
     });
 
     app.root().on_run([] {
-        constexpr sihd::util::Duration phase_duration = sihd::util::time::milli(500);
+        constexpr sihd::util::Duration phase_duration = sihd::util::Duration(sihd::util::time::milli(500));
 
         fmt::print(
             "╔══════════════════════════════════════════════════════════════════════════════════════════════════════╗\n");
@@ -324,17 +324,17 @@ int main(int argc, char **argv)
         };
 
         std::vector<TestCase> latency_cases = {
-            {1, time::milli(10), "1T @ 100 Hz"},
-            {10, time::milli(10), "10T @ 100 Hz"},
-            {1, time::milli(1), "1T @ 1 kHz"},
-            {10, time::milli(1), "10T @ 1 kHz"},
-            {50, time::milli(1), "50T @ 1 kHz"},
-            {1, time::micro(500), "1T @ 2 kHz"},
-            {10, time::micro(500), "10T @ 2 kHz"},
-            {1, time::micro(100), "1T @ 10 kHz"},
-            {10, time::micro(100), "10T @ 10 kHz"},
-            {1, time::micro(50), "1T @ 20 kHz"},
-            {1, time::micro(10), "1T @ 100 kHz"},
+            {1, Duration(time::milli(10)), "1T @ 100 Hz"},
+            {10, Duration(time::milli(10)), "10T @ 100 Hz"},
+            {1, Duration(time::milli(1)), "1T @ 1 kHz"},
+            {10, Duration(time::milli(1)), "10T @ 1 kHz"},
+            {50, Duration(time::milli(1)), "50T @ 1 kHz"},
+            {1, Duration(time::micro(500)), "1T @ 2 kHz"},
+            {10, Duration(time::micro(500)), "10T @ 2 kHz"},
+            {1, Duration(time::micro(100)), "1T @ 10 kHz"},
+            {10, Duration(time::micro(100)), "10T @ 10 kHz"},
+            {1, Duration(time::micro(50)), "1T @ 20 kHz"},
+            {1, Duration(time::micro(10)), "1T @ 100 kHz"},
         };
 
         print_latency_header();
@@ -351,7 +351,7 @@ int main(int argc, char **argv)
             "\n── Phase 2: Throughput scaling ────────────────────────────────────────────────────────────────────────\n");
         fmt::print("  Fixed interval, increasing task count to find scheduler throughput ceiling\n\n");
 
-        constexpr sihd::util::Duration tp_interval = sihd::util::time::micro(500);
+        constexpr sihd::util::Duration tp_interval = sihd::util::Duration(sihd::util::time::micro(500));
         fmt::print("{:<22s} {:>8s} {:>8s} {:>9s} {:>8s}  {:>12s}\n",
                    "Config",
                    "Expect",

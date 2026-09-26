@@ -24,7 +24,7 @@ time::UnixTime clock_now_ns(const ClockType & clk)
 
 Timestamp SteadyClock::now() const
 {
-    return clock_now_ns(_clock);
+    return Timestamp(clock_now_ns(_clock));
 }
 
 bool SteadyClock::is_steady() const
@@ -34,7 +34,7 @@ bool SteadyClock::is_steady() const
 
 Timestamp SystemClock::now() const
 {
-    return clock_now_ns(_clock);
+    return Timestamp(clock_now_ns(_clock));
 }
 
 bool SystemClock::is_steady() const

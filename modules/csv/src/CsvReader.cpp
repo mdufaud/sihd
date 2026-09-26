@@ -173,7 +173,7 @@ bool CsvReader::get_read_timestamp(Timestamp *nano_timestamp) const
     {
         if (const auto value = sihd::util::str::convert_from_string<int64_t>(time_str))
         {
-            *nano_timestamp = *value;
+            *nano_timestamp = Timestamp(*value);
             return true;
         }
         return false;

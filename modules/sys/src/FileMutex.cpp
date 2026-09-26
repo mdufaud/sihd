@@ -21,7 +21,7 @@ namespace
 
 bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Duration duration, bool shared)
 {
-    const Duration retry_in_ms = time::milliseconds(10);
+    const Duration retry_in_ms(time::milliseconds(10));
 
     SteadyClock clock;
     Timestamp begin = clock.now();

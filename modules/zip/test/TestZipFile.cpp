@@ -134,7 +134,7 @@ TEST_F(TestZipFile, test_zip_entry_not_loaded)
     EXPECT_FALSE(zip.unchange_entry());
     EXPECT_FALSE(zip.remove_entry());
     EXPECT_FALSE(zip.rename_entry("whatever"));
-    EXPECT_FALSE(zip.modify_entry_time(0));
+    EXPECT_FALSE(zip.modify_entry_time(sihd::util::Timestamp(0)));
     EXPECT_FALSE(zip.comment_entry("comment"));
     EXPECT_FALSE(zip.encrypt_entry("pass"));
     EXPECT_FALSE(zip.replace_entry("data"));

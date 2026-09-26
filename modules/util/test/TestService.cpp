@@ -277,7 +277,7 @@ TEST_F(TestService, test_service_blocking)
     EXPECT_FALSE(service.is_running());
 
     EXPECT_TRUE(service.start());
-    EXPECT_TRUE(service.wait_ready(time::ms(500)));
+    EXPECT_TRUE(service.wait_ready(Duration(time::ms(500))));
     EXPECT_TRUE(service.is_ready());
     EXPECT_TRUE(service.is_running());
     EXPECT_FALSE(service.start());
@@ -288,7 +288,7 @@ TEST_F(TestService, test_service_blocking)
     EXPECT_FALSE(service.stop());
 
     EXPECT_TRUE(service.start());
-    EXPECT_TRUE(service.wait_ready(time::ms(500)));
+    EXPECT_TRUE(service.wait_ready(Duration(time::ms(500))));
     EXPECT_TRUE(service.is_ready());
     EXPECT_TRUE(service.is_running());
     EXPECT_FALSE(service.start());

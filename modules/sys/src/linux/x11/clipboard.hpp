@@ -17,7 +17,7 @@
 namespace sihd::sys::clipboard::x11
 {
 
-inline constexpr sihd::util::Duration get_timeout = sihd::util::time::sec(1);
+inline constexpr sihd::util::Duration get_timeout(sihd::util::time::sec(1));
 
 #if defined(SIHD_COMPILE_WITH_X11)
 

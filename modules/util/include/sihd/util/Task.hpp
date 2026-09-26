@@ -30,12 +30,12 @@ struct TaskOptions
         static TaskOptions none() { return TaskOptions {}; }
         // MUTUALLY EXCLUSIVE WITH RUN_IN
         // precise timestamp to run task at
-        Timestamp run_at = 0;
+        Timestamp run_at {};
         // MUTUALLY EXCLUSIVE WITH RUN_AT
         // task to run in a certain duration
-        Duration run_in = 0;
+        Duration run_in {};
         // reschedule task based on previous time
-        Duration reschedule_time = 0;
+        Duration reschedule_time {};
         LatenessPolicy late_policy = LatenessPolicy::replay_missed;
 };
 

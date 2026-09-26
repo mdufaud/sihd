@@ -367,9 +367,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
                 LatenessPolicy late_policy) {
                 self.add_task(new PyUtilApi::PyTask(task,
                                                     util::TaskOptions {
-                                                        .run_at = run_at,
-                                                        .run_in = run_in,
-                                                        .reschedule_time = reschedule_time,
+                                                        .run_at = sihd::util::Timestamp(run_at),
+                                                        .run_in = sihd::util::Duration(run_in),
+                                                        .reschedule_time = sihd::util::Duration(reschedule_time),
                                                         .late_policy = late_policy,
                                                     }));
             },

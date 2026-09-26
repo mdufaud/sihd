@@ -66,7 +66,7 @@ TEST_F(TestPcap, test_pcap_writer)
     EXPECT_TRUE(writer.open(path, DLT_EN10MB));
     EXPECT_EQ(writer.snaplen(), 65535);
     EXPECT_EQ(writer.datalink(), DLT_EN10MB);
-    EXPECT_TRUE(writer.write(hw, sizeof(hw)));
+    EXPECT_TRUE(writer.write({hw, sizeof(hw)}));
     EXPECT_TRUE(writer.close());
 
     std::string content = fs::read_all(path).value();

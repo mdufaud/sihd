@@ -470,7 +470,7 @@ TEST_F(TestNavigator, test_navigator_ws_send_receive)
     ASSERT_TRUE(nav.ws_connect("ws://localhost:3003", "proto-two"));
     ASSERT_TRUE(nav.ws_send("hello from navigator"));
 
-    reply_waitable.wait_for(time::sec(2), [&] { return ws_reply.has_value(); });
+    reply_waitable.wait_for(sihd::util::Duration(time::sec(2)), [&] { return ws_reply.has_value(); });
     ASSERT_TRUE(ws_reply.has_value());
     EXPECT_EQ(*ws_reply, "hello world");
 
@@ -881,7 +881,7 @@ TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
         if (connected)
         {
             nav.ws_send("hello from navigator");
-            waitable.wait_for(time::sec(2), [&] { return reply.has_value(); });
+            waitable.wait_for(sihd::util::Duration(time::sec(2)), [&] { return reply.has_value(); });
             nav.ws_close();
         }
         return std::make_pair(connected, reply);

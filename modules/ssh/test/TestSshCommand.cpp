@@ -49,7 +49,7 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
     EXPECT_TRUE(cmd.execute("echo 'hello world'"));
-    EXPECT_TRUE(cmd.wait(time::seconds(5)));
+    EXPECT_TRUE(cmd.wait(sihd::util::Duration(time::seconds(5))));
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello world\n");
     EXPECT_EQ(cmd.exit_status(), 0);
@@ -78,7 +78,7 @@ TEST_F(TestSshCommand, test_sshcommand_async)
 
     // Test async execution - command runs via proc::execute on server
     EXPECT_TRUE(cmd.execute_async("echo hello; echo world"));
-    EXPECT_TRUE(cmd.wait(time::seconds(2)));
+    EXPECT_TRUE(cmd.wait(sihd::util::Duration(time::seconds(2))));
 
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello\nworld\n");

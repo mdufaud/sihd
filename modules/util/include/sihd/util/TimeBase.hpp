@@ -45,7 +45,8 @@ template <typename Derived>
 class TimeBase
 {
     public:
-        constexpr TimeBase(time::UnixTime nano = 0): _nano(nano) {};
+        // explicit: a raw number is nanoseconds here, the unit must not be silent
+        constexpr explicit TimeBase(time::UnixTime nano = 0): _nano(nano) {};
         constexpr TimeBase(timespec ts): _nano(ts.tv_nsec + time::sec(ts.tv_sec)) {};
 
         template <typename T>

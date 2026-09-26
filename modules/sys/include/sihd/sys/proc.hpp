@@ -19,7 +19,7 @@ constexpr bool supported = !sihd::util::build::is_emscripten;
 
 struct Options
 {
-        sihd::util::Duration timeout = -1;
+        sihd::util::Duration timeout = sihd::util::Duration(-1);
         std::string to_stdin = {};
         std::function<void(std::string_view)> stdout_callback = {};
         std::function<void(std::string_view)> stderr_callback = {};

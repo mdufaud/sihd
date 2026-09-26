@@ -189,17 +189,17 @@ void LuaUtilApi::load_threading(Vm & vm)
                 if (lua_fun.isFunction() == false)
                     luaL_error(state, "add_task table at 'task' must contain a function");
 
-                Timestamp timestamp_to_run_at = 0;
+                Timestamp timestamp_to_run_at(0);
                 luabridge::LuaRef run_at = tbl["run_at"];
                 if (run_at.isNil() == false)
                     timestamp_to_run_at = sihd::lua::to_timestamp(run_at);
 
-                Duration timestamp_to_run_in = 0;
+                Duration timestamp_to_run_in(0);
                 luabridge::LuaRef run_in = tbl["run_in"];
                 if (run_in.isNil() == false)
                     timestamp_to_run_in = sihd::lua::to_duration(run_in);
 
-                Duration reschedule_time = 0;
+                Duration reschedule_time(0);
                 luabridge::LuaRef reschedule = tbl["reschedule_time"];
                 if (reschedule.isNil() == false)
                     reschedule_time = sihd::lua::to_duration(reschedule);

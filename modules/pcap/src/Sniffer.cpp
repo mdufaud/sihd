@@ -155,9 +155,9 @@ void Sniffer::_new_packet(const void *hdr, const void *bytes)
     const auto *h = static_cast<const struct pcap_pkthdr *>(hdr);
     const auto *data = static_cast<const u_char *>(bytes);
     if (_nano_precision)
-        _pkt_nano_timestamp = sihd::util::time::nano_tv(h->ts);
+        _pkt_nano_timestamp = sihd::util::Timestamp(sihd::util::time::nano_tv(h->ts));
     else
-        _pkt_nano_timestamp = sihd::util::time::tv(h->ts);
+        _pkt_nano_timestamp = sihd::util::Timestamp(sihd::util::time::tv(h->ts));
     _array.resize(h->len);
     _array.copy_from_bytes(data, h->len);
     this->notify_observers(this);

@@ -176,12 +176,12 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
         }
 
-        bool wait_for_open(sihd::util::Duration timeout = sihd::util::time::sec(2))
+        bool wait_for_open(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
         {
             return _ws_waitable.wait_for(timeout, [this] { return _nopen > 0; });
         }
 
-        bool wait_for_close(sihd::util::Duration timeout = sihd::util::time::sec(2))
+        bool wait_for_close(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
         {
             return _ws_waitable.wait_for(timeout, [this] { return _nclosed > 0; });
         }

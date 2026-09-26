@@ -54,15 +54,15 @@ TEST_F(TestRecords, test_records_dev_player)
 
     sihd::util::ArrInt arr_int = {10, 0};
     sihd::util::ArrBool arr_bool = {false, false, false, false};
-    mem_recorder.add_record("int", sihd::util::time::milli(5), &arr_int);
-    mem_recorder.add_record("bool", sihd::util::time::milli(10), &arr_bool);
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(5)), &arr_int);
+    mem_recorder.add_record("bool", sihd::util::Timestamp(sihd::util::time::milli(10)), &arr_bool);
     arr_int[1] = 20;
-    mem_recorder.add_record("int", sihd::util::time::milli(15), &arr_int);
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(15)), &arr_int);
     arr_bool[0] = true;
-    mem_recorder.add_record("bool", sihd::util::time::milli(20), &arr_bool);
+    mem_recorder.add_record("bool", sihd::util::Timestamp(sihd::util::time::milli(20)), &arr_bool);
     arr_bool[2] = true;
     arr_bool[3] = true;
-    mem_recorder.add_record("bool", sihd::util::time::milli(25), &arr_bool);
+    mem_recorder.add_record("bool", sihd::util::Timestamp(sihd::util::time::milli(25)), &arr_bool);
 
     std::cout << core.tree_desc_str() << std::endl;
     EXPECT_TRUE(core.init());
@@ -82,7 +82,7 @@ TEST_F(TestRecords, test_records_dev_player)
 
     SIHD_LOG(debug, "Waiting the end");
     // generous bound: replay is clock driven and qemu emulation runs slower
-    EXPECT_TRUE(waiter.wait_for_nb(sihd::util::time::milli(150), 1));
+    EXPECT_TRUE(waiter.wait_for_nb(sihd::util::Duration(sihd::util::time::milli(150)), 1));
 
     EXPECT_TRUE(core.stop());
 
@@ -167,7 +167,7 @@ TEST_F(TestRecords, test_records_dev_recorder)
     const MapListRecordedValues & map = mem_recorder.make_recorded_values();
     const SortedRecordedValues & sorted_map = mem_recorder.sorted_recorded_values();
 
-    sihd::util::Timestamp last_timestamp = -1;
+    sihd::util::Timestamp last_timestamp(-1);
     for (const auto & pair : sorted_map)
     {
         if (last_timestamp < 0)

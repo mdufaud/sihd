@@ -51,7 +51,7 @@ TEST_F(TestClocks, test_clocks_elapsed)
     const sihd::util::Timestamp after = clock.now();
 
     // elapsed should be at least 5ms in nanoseconds
-    constexpr sihd::util::Duration five_ms_ns = 5'000'000;
+    constexpr sihd::util::Duration five_ms_ns(5'000'000);
     EXPECT_GT(after - before, five_ms_ns);
 }
 

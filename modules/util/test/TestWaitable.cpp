@@ -90,7 +90,7 @@ TEST_F(TestWaitable, test_waitable_until)
     });
     synchro_start.sync();
 
-    bool condition_ok = waitable.wait_until(clock.now() + time::ms(50), [&data] { return data == true; });
+    bool condition_ok = waitable.wait_until(Timestamp(clock.now() + time::ms(50)), [&data] { return data == true; });
     EXPECT_TRUE(condition_ok);
     t.join();
 }

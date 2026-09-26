@@ -54,32 +54,32 @@ bool Timestamp::in_interval(Timestamp from, Duration offset) const
 
 std::string Timestamp::timeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
-    return str::timeoffset_str(_nano, total_parenthesis, nano_resolution);
+    return str::timeoffset_str(Timestamp(_nano), total_parenthesis, nano_resolution);
 }
 
 std::string Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_resolution) const
 {
-    return str::localtimeoffset_str(_nano, total_parenthesis, nano_resolution);
+    return str::localtimeoffset_str(Timestamp(_nano), total_parenthesis, nano_resolution);
 }
 
 std::string Timestamp::format(std::string_view format) const
 {
-    return str::format_time(std::abs(_nano), format);
+    return str::format_time(Timestamp(std::abs(_nano)), format);
 }
 
 std::string Timestamp::local_format(std::string_view format) const
 {
-    return str::format_localtime(std::abs(_nano), format);
+    return str::format_localtime(Timestamp(std::abs(_nano)), format);
 }
 
 std::string Timestamp::format(std::string_view format, const std::locale & loc) const
 {
-    return str::format_time(std::abs(_nano), format, loc);
+    return str::format_time(Timestamp(std::abs(_nano)), format, loc);
 }
 
 std::string Timestamp::local_format(std::string_view format, const std::locale & loc) const
 {
-    return str::format_localtime(std::abs(_nano), format, loc);
+    return str::format_localtime(Timestamp(std::abs(_nano)), format, loc);
 }
 
 std::string Timestamp::sec_str(std::string_view format) const

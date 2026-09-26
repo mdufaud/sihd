@@ -606,31 +606,31 @@ TEST_F(TestStr, test_str_bytes)
 
 TEST_F(TestStr, test_str_time2str)
 {
-    std::string time_str = str::timeoffset_str(time::micro(123));
+    std::string time_str = str::timeoffset_str(Timestamp(time::micro(123)));
     EXPECT_EQ(time_str, "+123us");
-    time_str = str::timeoffset_str(time::milli(1));
+    time_str = str::timeoffset_str(Timestamp(time::milli(1)));
     EXPECT_EQ(time_str, "+1ms:0us");
-    time_str = str::timeoffset_str(time::sec(12) + time::micro(12));
+    time_str = str::timeoffset_str(Timestamp(time::sec(12) + time::micro(12)));
     EXPECT_EQ(time_str, "+12s:0ms:12us");
-    time_str = str::timeoffset_str(time::hours(12));
+    time_str = str::timeoffset_str(Timestamp(time::hours(12)));
     EXPECT_EQ(time_str, "+12h:0m:0s:0ms:0us");
-    time_str = str::timeoffset_str(time::hours(24));
+    time_str = str::timeoffset_str(Timestamp(time::hours(24)));
     EXPECT_EQ(time_str, "+1d 0h:0m:0s:0ms:0us");
-    time_str = str::timeoffset_str(time::days(24));
+    time_str = str::timeoffset_str(Timestamp(time::days(24)));
     EXPECT_EQ(time_str, "+24d 0h:0m:0s:0ms:0us");
-    time_str = str::timeoffset_str(time::days(31));
+    time_str = str::timeoffset_str(Timestamp(time::days(31)));
     EXPECT_EQ(time_str, "+1m:0d 0h:0m:0s:0ms:0us");
-    time_str = str::timeoffset_str(time::days(365));
+    time_str = str::timeoffset_str(Timestamp(time::days(365)));
     EXPECT_EQ(time_str, "+1y:0m:0d 0h:0m:0s:0ms:0us");
-    time_str = str::timeoffset_str(time::days(365) * 2);
+    time_str = str::timeoffset_str(Timestamp(time::days(365) * 2));
     EXPECT_EQ(time_str, "+2y:0m:0d 0h:0m:0s:0ms:0us");
 
-    time_str = str::timeoffset_str(-time::sec(42));
+    time_str = str::timeoffset_str(Timestamp(-time::sec(42)));
     EXPECT_EQ(time_str, "-42s:0ms:0us");
 
-    std::string nano_time_str = str::timeoffset_str(123, false, true);
+    std::string nano_time_str = str::timeoffset_str(Timestamp(123), false, true);
     EXPECT_EQ(nano_time_str, "+0us:123ns");
-    nano_time_str = str::timeoffset_str(-123, true, true);
+    nano_time_str = str::timeoffset_str(Timestamp(-123), true, true);
     EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
 }
 
@@ -1042,7 +1042,7 @@ TEST_F(TestStr, test_str_predicates)
 
 TEST_F(TestStr, test_str_time_format)
 {
-    std::string fmt = str::format_time(time::seconds(1) + time::minutes(2) + time::hours(3), "%X");
+    std::string fmt = str::format_time(Timestamp(time::seconds(1) + time::minutes(2) + time::hours(3)), "%X");
     EXPECT_EQ(fmt, "03:02:01");
 }
 
