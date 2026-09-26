@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include <gtest/gtest.h>
 
 #include <sihd/net/IpAddr.hpp>
@@ -222,6 +224,77 @@ TEST_F(TestIpAddr, test_ipaddr_operators)
     // move
     IpAddr moved(std::move(a));
     EXPECT_EQ(moved, b);
+}
+
+TEST_F(TestIpAddr, test_ipaddr_invalid_mask)
+{
+    IpAddr v4("10.0.0.1/abc");
+    EXPECT_EQ(v4.subnet_value(), 0u);
+    EXPECT_TRUE(v4.is_ipv4());
+
+    IpAddr v4_big("10.0.0.1/200");
+    EXPECT_EQ(v4_big.subnet_value(), 0u);
+
+    IpAddr v6_big("2001:db8::1/129");
+    EXPECT_EQ(v6_big.subnet_value(), 0u);
+    EXPECT_TRUE(v6_big.is_ipv6());
+
+    IpAddr addr_v4("10.0.0.1");
+    EXPECT_TRUE(addr_v4.set_subnet_mask(24));
+    EXPECT_FALSE(addr_v4.set_subnet_mask(33));
+    // a failed set keeps the previous mask
+    EXPECT_EQ(addr_v4.subnet_value(), 24u);
+    EXPECT_TRUE(addr_v4.set_subnet_mask(32));
+
+    IpAddr v6("2001:db8::1");
+    EXPECT_TRUE(v6.set_subnet_mask(64));
+    EXPECT_FALSE(v6.set_subnet_mask(129));
+    EXPECT_EQ(v6.subnet_value(), 64u);
+    EXPECT_TRUE(v6.set_subnet_mask(128));
+
+    IpAddr empty;
+    EXPECT_FALSE(empty.set_subnet_mask(24));
+    EXPECT_FALSE(empty.has_subnet());
+
+    IpAddr a("10.0.0.1/24");
+    EXPECT_EQ(a.subnet_value(), 24u);
+    IpAddr b("::1");
+    EXPECT_FALSE(a.is_same_subnet(b.addr6()));
+}
+
+TEST_F(TestIpAddr, test_ipaddr_assign_empty)
+{
+    IpAddr fallback("127.0.0.1", 80);
+    fallback = IpAddr();
+    EXPECT_TRUE(fallback.empty());
+    EXPECT_FALSE(fallback.has_ip());
+
+    // via a reference: a direct self-assign would warn
+    IpAddr self("10.0.0.1");
+    IpAddr & self_ref = self;
+    self = self_ref;
+    EXPECT_TRUE(self == IpAddr("10.0.0.1"));
+
+    fallback = IpAddr("10.0.0.1", 80);
+    EXPECT_TRUE(fallback.has_ip());
+    // requires internet
+    fallback = dns::find("unresolvable-host-sihd-test");
+    EXPECT_TRUE(fallback.empty());
+}
+
+TEST_F(TestIpAddr, test_ipaddr_subnet_edges)
+{
+    IpAddr a("10.0.0.1");
+    a.set_subnet_mask(32);
+    // /32 has a zero wildcard: hosts must not underflow
+    EXPECT_EQ(a.subnet().hosts, 0u);
+
+    // subnet math is ipv4 only
+    IpAddr v6("2001:db8::1/64");
+    Subnet zeroed;
+    memset(&zeroed, 0, sizeof(zeroed));
+    Subnet sub = v6.subnet();
+    EXPECT_EQ(memcmp(&sub, &zeroed, sizeof(Subnet)), 0);
 }
 
 } // namespace test

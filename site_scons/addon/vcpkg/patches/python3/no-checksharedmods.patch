@@ -1,0 +1,12 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -615,7 +615,7 @@ all:		@DEF_MAKE_ALL_RULE@
+ 
+ .PHONY: build_all
+ build_all:	check-clean-src $(BUILDPYTHON) platform sharedmods \
+-		gdbhooks Programs/_testembed scripts checksharedmods rundsymutil
++		gdbhooks Programs/_testembed scripts rundsymutil
+ 
+ .PHONY: build_wasm
+ build_wasm: check-clean-src $(BUILDPYTHON) platform sharedmods \

@@ -1,14 +1,15 @@
 #ifndef __SIHD_SYS_APP_HPP__
 #define __SIHD_SYS_APP_HPP__
 
+#include <array>
 #include <functional>
-#include <map>
 #include <string>
 
 #include <sihd/json/Json.hpp>
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/LoggerFile.hpp>
 #include <sihd/sys/LoggerSystem.hpp>
+#include <sihd/sys/signal.hpp>
 #include <sihd/util/CliApp.hpp>
 
 namespace sihd::sys
@@ -38,6 +39,7 @@ class App: public sihd::util::CliApp
     private:
         enum class SigAction
         {
+            none,
             stop,
             ignore,
             reload,
@@ -50,7 +52,7 @@ class App: public sihd::util::CliApp
         void _install_signals();
         std::string _read_conf();
 
-        std::map<int, SigAction> _sig_actions;
+        std::array<SigAction, signal::max_signal> _sig_actions {};
         std::function<void(int)> _on_signal;
         std::string _conf_path;
         std::string _log_file_path;

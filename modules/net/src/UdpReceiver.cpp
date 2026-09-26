@@ -125,6 +125,7 @@ void UdpReceiver::handle(sihd::sys::Poll *poll)
             }
             else if (event.error)
             {
+                poll->clear_fd(event.fd);
                 this->close();
             }
         }

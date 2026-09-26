@@ -17,6 +17,8 @@
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/net/TcpServer.hpp>
+#include <sihd/net/TlsConnection.hpp>
+#include <sihd/net/TlsSocket.hpp>
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/net/dns.hpp>

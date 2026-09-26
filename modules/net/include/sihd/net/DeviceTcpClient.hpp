@@ -6,6 +6,7 @@
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Synchronizer.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
 
 namespace sihd::net
@@ -44,10 +45,12 @@ class DeviceTcpClient: public sihd::core::Device,
 
     private:
         bool _connect();
+        void _set_connected(bool connected);
 
         TcpClient _tcp_client;
         sihd::util::Worker _worker;
         sihd::util::Synchronizer _start_sync;
+        sihd::util::Waitable _waitable;
         std::atomic<bool> _stop_requested;
         bool _start_ok;
 

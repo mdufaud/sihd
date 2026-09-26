@@ -23,7 +23,7 @@ struct PingEvent
         bool received = false;
         bool timeout = false;
 
-        sihd::util::Duration trip_time = 0;
+        sihd::util::Duration trip_time {};
         IcmpResponse icmp_response = {};
 };
 

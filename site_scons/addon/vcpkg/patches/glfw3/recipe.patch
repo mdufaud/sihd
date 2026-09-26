@@ -1,0 +1,41 @@
+diff --git a/vcpkg.json b/vcpkg.json
+index 245bcb694f..7fee39c29a 100644
+--- a/vcpkg.json
++++ b/vcpkg.json
+@@ -10,6 +10,26 @@
+       "name": "libx11",
+       "platform": "linux"
+     },
++    {
++      "name": "libxext",
++      "platform": "linux"
++    },
++    {
++      "name": "libxcursor",
++      "platform": "linux"
++    },
++    {
++      "name": "libxi",
++      "platform": "linux"
++    },
++    {
++      "name": "libxinerama",
++      "platform": "linux"
++    },
++    {
++      "name": "libxrandr",
++      "platform": "linux"
++    },
+     {
+       "name": "vcpkg-cmake",
+       "host": true
+@@ -24,7 +44,8 @@
+       "description": "Use Wayland display server",
+       "supports": "linux",
+       "dependencies": [
+-        "wayland"
++        "wayland",
++        "libxkbcommon"
+       ]
+     }
+   }

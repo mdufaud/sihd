@@ -23,4 +23,4 @@ test = env.build_test(test_srcs,
 					  libs = [sihd_util_libname],
 					  **test_kwargs)
 
-env.export_test(includes = ['test/clock'])
+env.export_test(includes = ['test/clock', 'test/wait'])

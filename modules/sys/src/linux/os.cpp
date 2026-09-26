@@ -1,3 +1,4 @@
+#include <cstring>
 #include <stdexcept>
 
 #include <sihd/sys/platform.hpp>
@@ -72,6 +73,22 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::os");
 
+namespace
+{
+
+// glibc's _GNU_SOURCE strerror_r returns char *, musl and emscripten return int
+[[maybe_unused]] const char *strerror_result(int ret, const char *buf)
+{
+    return ret == 0 ? buf : "";
+}
+
+[[maybe_unused]] const char *strerror_result(const char *ret, const char *buf)
+{
+    return ret != nullptr ? ret : buf;
+}
+
+} // namespace
+
 pid_t pid()
 {
     return getpid();
@@ -106,7 +123,7 @@ bool setsockopt(int socket, int level, int optname, const void *optval, socklen_
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
     bool ret = ::setsockopt(socket, level, optname, optval, optlen) >= 0;
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
+        SIHD_LOG(error, "OS: setsockopt error: {}", last_error_str());
     return ret;
 }
 
@@ -122,7 +139,7 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
 
 Timestamp boot_time()
 {
-    static Timestamp boot_timestamp = 0;
+    static Timestamp boot_timestamp = Timestamp(0);
     if (boot_timestamp == 0)
     {
         auto content_opt = fs::read_all("/proc/stat");
@@ -345,7 +362,13 @@ ssize_t current_rss()
 
 std::string error_str(int error_code)
 {
-    return strerror(error_code);
+    char buf[128] = {};
+    return strerror_result(strerror_r(error_code, buf, sizeof(buf)), buf);
+}
+
+int last_error()
+{
+    return errno;
 }
 
 std::string last_error_str()

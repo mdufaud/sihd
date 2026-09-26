@@ -145,7 +145,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         void set_queue_max(size_t queue_max);
         void set_queue_warning(size_t warning_threshold);
 
-        bool flush(sihd::util::Duration timeout = sihd::util::time::sec(1)) const;
+        bool flush(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(1))) const;
 
         size_t dropped_events() const;
 
@@ -355,7 +355,6 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         ConditionList _stop_conditions;
         std::map<Channel *, std::unique_ptr<ChannelEntry>> _channels;
         std::map<sihd::util::ServiceController *, std::unique_ptr<ServiceEntry>> _services;
-        std::map<const sihd::util::AService *, ServiceEntry *> _service_entries;
 };
 
 } // namespace sihd::core

@@ -20,6 +20,8 @@ class Pinger;
 class Socket;
 class TcpClient;
 class TcpServer;
+class TlsConnection;
+class TlsSocket;
 class UdpReceiver;
 class UdpSender;
 

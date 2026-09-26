@@ -1067,7 +1067,8 @@ bool println(std::string_view str)
 
 std::string join(std::initializer_list<std::string_view> list, std::string_view join_str)
 {
-    return fmt::format("{}", fmt::join(list, join_str));
+    // fmt 12 deprecated join over initializer_list
+    return fmt::format("{}", fmt::join(list.begin(), list.end(), join_str));
 }
 
 std::string join(std::span<std::string_view> list, std::string_view join_str)

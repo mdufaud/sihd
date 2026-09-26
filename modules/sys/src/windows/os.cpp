@@ -58,16 +58,15 @@ struct Wsa
         {
             WORD wVersionRequested;
             WSADATA wsaData;
-            int err;
 
             /* Use the MAKEWORD(lowbyte, highbyte) macro declared in Windef.h */
             wVersionRequested = MAKEWORD(2, 2);
-            err = WSAStartup(wVersionRequested, &wsaData);
+            const int err = WSAStartup(wVersionRequested, &wsaData);
             if (err != 0)
             {
                 SIHD_LOG(error, "WSAStartup failed: {} ({})", last_error_str(), err);
             }
-            if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
+            else if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
             {
                 SIHD_LOG(error, "Could not find a usable version of Winsock.dll");
             }
@@ -102,7 +101,7 @@ bool setsockopt(int socket, int level, int optname, const void *optval, socklen_
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
     bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
+        SIHD_LOG(error, "OS: setsockopt error: {}", last_error_str());
     return ret;
 }
 
@@ -134,7 +133,7 @@ Timestamp filetime_now()
 
 Timestamp boot_time()
 {
-    static Timestamp boot_timestamp = 0;
+    static Timestamp boot_timestamp = Timestamp(0);
     if (boot_timestamp == 0)
     {
         auto uptime = std::chrono::milliseconds(GetTickCount64());
@@ -224,6 +223,11 @@ std::string error_str(int error_code)
     std::string message(messageBuffer, size);
     LocalFree(messageBuffer);
     return message;
+}
+
+int last_error()
+{
+    return WSAGetLastError();
 }
 
 std::string last_error_str()

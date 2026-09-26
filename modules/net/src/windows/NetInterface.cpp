@@ -114,8 +114,9 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
             continue;
 
         char friendly[256];
-        WideCharToMultiByte(CP_UTF8, 0, adapter->FriendlyName, -1, friendly, sizeof(friendly), nullptr, nullptr);
-        iface_name = friendly;
+        if (WideCharToMultiByte(CP_UTF8, 0, adapter->FriendlyName, -1, friendly, sizeof(friendly), nullptr, nullptr)
+            > 0)
+            iface_name = friendly;
 
         NetInterface & netif = ret[iface_name];
 
@@ -137,7 +138,7 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
             flags |= WIFF_NOARP;
         netif.set_flags(flags);
 
-        if (adapter->PhysicalAddressLength == 6)
+        if (adapter->PhysicalAddressLength >= 6)
         {
             char macaddrstr[18] = {0};
             sprintf(macaddrstr,

@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <sihd/net/TcpServer.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
@@ -35,6 +37,12 @@ TcpServer::~TcpServer()
 
 bool TcpServer::set_queue_size(size_t size)
 {
+    // listen(2) takes a 16 bits backlog
+    if (size > std::numeric_limits<uint16_t>::max())
+    {
+        SIHD_LOG(error, "TcpServer: queue size too big: {}", size);
+        return false;
+    }
     _queue_size = size;
     return true;
 }
@@ -175,17 +183,20 @@ void TcpServer::handle(sihd::sys::Poll *poll)
                 _server_handler_ptr->handle_new_client(this);
             else if (event.closed || event.error)
             {
-                this->stop();
+                // stopping the service from inside its own poll thread would
+                // self-deadlock on the wait-stop mutex: flag the loop instead
+                poll->request_stop();
                 break;
             }
         }
-        else if (event.readable)
+        else
         {
-            _server_handler_ptr->handle_client_read(this, event.fd);
-        }
-        else if (event.writable)
-        {
-            _server_handler_ptr->handle_client_write(this, event.fd);
+            // wine's WSAPoll reports a FIN as POLLHUP without POLLIN: the read must still run
+            if (event.readable || event.closed || event.error)
+                _server_handler_ptr->handle_client_read(this, event.fd);
+            // writable is served even when readable: a POLLIN flood would starve a pending write
+            if (event.writable)
+                _server_handler_ptr->handle_client_write(this, event.fd);
         }
     }
     _server_handler_ptr->handle_after_activity(this);

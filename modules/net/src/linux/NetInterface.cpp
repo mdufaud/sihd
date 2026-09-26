@@ -151,13 +151,16 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
             else if (iface->ifa_addr->sa_family == AF_PACKET)
             {
                 struct sockaddr_ll *s = (struct sockaddr_ll *)iface->ifa_addr;
-                char macaddrstr[18] = {0};
-                int len = 0;
-                for (int i = 0; i < 6; i++)
+                if (s->sll_halen >= 6)
                 {
-                    len += sprintf(macaddrstr + len, "%02X%s", s->sll_addr[i], i < 5 ? ":" : "");
+                    char macaddrstr[18] = {0};
+                    int len = 0;
+                    for (int i = 0; i < 6; i++)
+                    {
+                        len += sprintf(macaddrstr + len, "%02X%s", s->sll_addr[i], i < 5 ? ":" : "");
+                    }
+                    netif.set_macaddr(macaddrstr);
                 }
-                netif.set_macaddr(macaddrstr);
             }
         }
 

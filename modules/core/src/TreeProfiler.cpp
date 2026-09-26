@@ -400,7 +400,6 @@ void TreeProfiler::reset()
         auto l = _waitable.guard();
         _channels.clear();
         _services.clear();
-        _service_entries.clear();
         _events.clear();
         _start_conditions.clear();
         _stop_conditions.clear();
@@ -650,9 +649,7 @@ bool TreeProfiler::_observe_service(sihd::util::AService *service)
             ctrl->remove_observer(this);
             return true;
         }
-        ServiceEntry *entry_ptr = entry.get();
         _services.emplace(ctrl, std::move(entry));
-        _service_entries.emplace(service, entry_ptr);
     }
     return true;
 }
@@ -1203,7 +1200,7 @@ std::string TreeProfiler::report_str(const ReportOpts & opts) const
     WalkGuard walk_guard {_waitable, _walk_in_progress};
     // the report reflects every queued notification, or gives up when the
     // dispatch thread itself is held by this report (report from a hook)
-    this->flush(sihd::util::time::milli(100));
+    this->flush(sihd::util::Duration(sihd::util::time::milli(100)));
     std::string s;
     {
         auto l = _waitable.guard();
@@ -1359,8 +1356,12 @@ TreeProfiler::ServiceEntry *TreeProfiler::_find_service_entry(sihd::util::Servic
 
 const TreeProfiler::ServiceEntry *TreeProfiler::_cfind_service_entry(const sihd::util::AService *service) const
 {
-    auto it = _service_entries.find(service);
-    return it != _service_entries.end() ? it->second : nullptr;
+    for (const auto & [ctrl, entry] : _services)
+    {
+        if (entry->service == service)
+            return entry.get();
+    }
+    return nullptr;
 }
 
 void TreeProfiler::_collect_live(const sihd::util::Named *named,

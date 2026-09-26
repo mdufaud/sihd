@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/util/LoadingBar.hpp>
 

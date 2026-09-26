@@ -41,6 +41,8 @@ ssize_t current_rss();
 bool exists_in_path(std::string_view binary_name);
 
 std::string error_str(int error_code);
+// errno on posix, WSAGetLastError on windows
+int last_error();
 std::string last_error_str();
 
 bool is_run_by_valgrind();

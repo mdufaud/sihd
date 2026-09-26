@@ -78,8 +78,11 @@ App::App(const Options & options): CliApp(options), _daemon("daemon")
 
 App::~App()
 {
-    for (const auto & pair : _sig_actions)
-        signal::unhandle(pair.first);
+    for (int sig = 1; sig < signal::max_signal; ++sig)
+    {
+        if (_sig_actions[sig] != SigAction::none)
+            signal::unhandle(sig);
+    }
     this->uninstall_logging();
 }
 
@@ -232,13 +235,16 @@ void App::uninstall_logging()
 void App::poll_events()
 {
     // copied under the lock: a reload from another thread may rework the signal policy
-    std::vector<std::pair<int, SigAction>> actions;
+    std::array<SigAction, signal::max_signal> actions;
     {
         std::lock_guard<std::recursive_mutex> lock(this->mutex());
-        actions.assign(_sig_actions.begin(), _sig_actions.end());
+        actions = _sig_actions;
     }
-    for (const auto & [sig, action] : actions)
+    for (int sig = 1; sig < signal::max_signal; ++sig)
     {
+        const SigAction action = actions[sig];
+        if (action == SigAction::none)
+            continue;
         std::optional<signal::SigStatus> status = signal::status(sig);
         if (status.has_value() == false || status->received.load() == 0)
             continue;
@@ -248,6 +254,8 @@ void App::poll_events()
             case SigAction::stop:
                 SIHD_LOG(info, "App: {} received, stopping", signal::name(sig));
                 this->stop();
+                break;
+            case SigAction::none:
                 break;
             case SigAction::ignore:
                 break;
@@ -264,13 +272,18 @@ void App::poll_events()
 
 void App::_set_default_signal_actions()
 {
-    _sig_actions.clear();
+    _sig_actions.fill(SigAction::none);
     _sig_actions[SIGINT] = SigAction::stop;
     _sig_actions[SIGTERM] = SigAction::stop;
 }
 
 void App::_set_signal_action(int sig, SigAction action)
 {
+    if (sig < 1 || sig >= signal::max_signal)
+    {
+        SIHD_LOG(error, "App: signal {} out of range", sig);
+        return;
+    }
     _sig_actions[sig] = action;
 }
 
@@ -305,9 +318,11 @@ bool App::_signal_actions_from_json(const sihd::json::Json & json, SigAction act
 
 void App::_install_signals()
 {
-    for (const auto & [sig, action] : _sig_actions)
+    for (int sig = 1; sig < signal::max_signal; ++sig)
     {
-        bool done = action == SigAction::ignore ? signal::ignore(sig) : signal::handle(sig);
+        if (_sig_actions[sig] == SigAction::none)
+            continue;
+        bool done = _sig_actions[sig] == SigAction::ignore ? signal::ignore(sig) : signal::handle(sig);
         if (done == false)
             SIHD_LOG(error, "App: cannot set action for signal {}", sig);
     }

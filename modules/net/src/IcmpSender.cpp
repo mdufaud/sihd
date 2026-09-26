@@ -50,6 +50,16 @@ SIHD_REGISTER_FACTORY(IcmpSender);
 
 SIHD_LOGGER;
 
+namespace
+{
+
+bool in_bounds(size_t offset, size_t size, size_t total)
+{
+    return offset + size <= total;
+}
+
+} // namespace
+
 IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
     sihd::util::Named(name, parent),
     _config_applied(false),
@@ -69,7 +79,7 @@ IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
     _poll.add_observer(this);
     _poll.set_service_wait_stop(true);
 
-    _array_rcv_ptr->resize(256);
+    _array_rcv_ptr->resize(2048);
     _array_send_ptr->resize(ICMP_MINLEN);
 
     this->add_conf("poll_timeout", &IcmpSender::set_poll_timeout);
@@ -303,15 +313,8 @@ bool IcmpSender::send_to(const IpAddr & addr)
 
     if (_socket.is_ipv6())
     {
+        // the v6 checksum needs the pseudo-header: only the kernel knows it (IPV6_CHECKSUM)
         icmp6()->icmp6_cksum = 0;
-        if (_socket_type == SOCK_RAW)
-        {
-            // For SOCK_RAW, calculate the checksum manually
-            icmp6()->icmp6_cksum = utils::checksum((unsigned short *)icmp6(), _array_send_ptr->size());
-            if (icmp6()->icmp6_cksum == 0)
-                icmp6()->icmp6_cksum = 0xffff;
-        }
-        // For SOCK_DGRAM, kernel calculates checksum automatically (icmp6_cksum = 0)
     }
     else
     {
@@ -370,6 +373,7 @@ void IcmpSender::handle(sihd::sys::Poll *poll)
             }
             else if (event.error)
             {
+                poll->clear_fd(event.fd);
                 this->close();
             }
         }
@@ -383,13 +387,10 @@ void IcmpSender::_read_socket()
     struct sockaddr_storage addr_storage;
     socklen_t addr_len = sizeof(addr_storage);
 
-    ssize_t ret = ::recvfrom(_socket.socket(),
-                             reinterpret_cast<char *>(_array_rcv_ptr->buf()),
-                             _array_rcv_ptr->byte_capacity(),
-                             0,
-                             (struct sockaddr *)&addr_storage,
-                             &addr_len);
-
+    ssize_t ret = this->_socket.receive_from((struct sockaddr *)&addr_storage,
+                                             &addr_len,
+                                             _array_rcv_ptr->buf(),
+                                             _array_rcv_ptr->byte_capacity());
     if (ret > 0)
     {
         _array_rcv_ptr->byte_resize(ret);
@@ -415,75 +416,104 @@ void IcmpSender::_read_socket()
 
 void IcmpSender::_process_ipv6()
 {
-    struct icmp6_hdr *icmp6hdr = (struct icmp6_hdr *)_array_rcv_ptr->buf();
+    const size_t total = _array_rcv_ptr->byte_size();
+    const uint8_t *base = _array_rcv_ptr->buf();
+    size_t offset = 0;
     uint8_t ttl = 0;
 
     // On Linux with SOCK_DGRAM, kernel strips IPv6 header
     // With SOCK_RAW, IPv6 header might be present
     // Check if first byte looks like IPv6 version (0x6X)
-    if (_socket_type == SOCK_RAW && _array_rcv_ptr->byte_size() >= sizeof(struct ip6_hdr))
+    if (_socket_type == SOCK_RAW && total >= sizeof(struct ip6_hdr) && ((base[0] >> 4) & 0x0F) == 6)
     {
-        uint8_t version = (*_array_rcv_ptr->buf() >> 4) & 0x0F;
-        if (version == 6)
-        {
-            // IPv6 header is present
-            struct ip6_hdr *ip6hdr = (struct ip6_hdr *)_array_rcv_ptr->buf();
-            ttl = ip6hdr->ip6_hlim;
-            icmp6hdr = (struct icmp6_hdr *)((char *)ip6hdr + sizeof(struct ip6_hdr));
-        }
+        const struct ip6_hdr *ip6hdr = (const struct ip6_hdr *)base;
+        ttl = ip6hdr->ip6_hlim;
+        offset = sizeof(struct ip6_hdr);
     }
 
-    if (icmp6hdr->icmp6_type == ICMP6_ECHO_REPLY || icmp6hdr->icmp6_type == ICMP6_ECHO_REQUEST
-        || (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT))
-    {
-        if (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT)
-        {
-            // get original packet from the error message
-            icmp6hdr = (struct icmp6_hdr *)((char *)icmp6hdr + sizeof(struct icmp6_hdr) + sizeof(struct ip6_hdr));
-        }
-        _icmp_response.data = (char *)(icmp6hdr + 1);
-        _icmp_response.size = _array_rcv_ptr->byte_size() - ((char *)(icmp6hdr + 1) - (char *)_array_rcv_ptr->buf());
-        _icmp_response.type = icmp6hdr->icmp6_type;
-        _icmp_response.code = icmp6hdr->icmp6_code;
-        _icmp_response.ttl = ttl;
-        _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
-        _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
+    if (in_bounds(offset, sizeof(struct icmp6_hdr), total) == false)
+        return;
+    const struct icmp6_hdr *icmp6hdr = (const struct icmp6_hdr *)(base + offset);
 
-        this->notify_observers(this);
+    const bool time_exceeded = (icmp6hdr->icmp6_type == ICMP6_TIME_EXCEEDED
+                                && icmp6hdr->icmp6_code == ICMP6_TIME_EXCEED_TRANSIT);
+    if (icmp6hdr->icmp6_type != ICMP6_ECHO_REPLY && icmp6hdr->icmp6_type != ICMP6_ECHO_REQUEST && !time_exceeded)
+        return;
+
+    if (time_exceeded)
+    {
+        offset += sizeof(struct icmp6_hdr) + sizeof(struct ip6_hdr);
+        if (in_bounds(offset, sizeof(struct icmp6_hdr), total) == false)
+            return;
+        icmp6hdr = (const struct icmp6_hdr *)(base + offset);
+        if (icmp6hdr->icmp6_type != ICMP6_ECHO_REPLY && icmp6hdr->icmp6_type != ICMP6_ECHO_REQUEST)
+            return;
     }
+
+    const size_t data_offset = offset + sizeof(struct icmp6_hdr);
+    _icmp_response.data = (char *)base + data_offset;
+    _icmp_response.size = total - data_offset;
+    _icmp_response.type = icmp6hdr->icmp6_type;
+    _icmp_response.code = icmp6hdr->icmp6_code;
+    _icmp_response.ttl = ttl;
+    _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
+    _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
+
+    this->notify_observers(this);
 }
 
 void IcmpSender::_process_ipv4()
 {
-    struct ip *iphdr = (struct ip *)_array_rcv_ptr->buf();
-    size_t iphdr_len = iphdr->ip_hl << 2;
-    struct icmp *icmphdr = (struct icmp *)((char *)iphdr + iphdr_len);
+    const size_t total = _array_rcv_ptr->byte_size();
+    const uint8_t *base = _array_rcv_ptr->buf();
 
-    if (iphdr->ip_p == IPPROTO_ICMP)
+    if (total < sizeof(struct ip))
+        return;
+    const struct ip *iphdr = (const struct ip *)base;
+    if (iphdr->ip_p != IPPROTO_ICMP || iphdr->ip_hl < 5)
+        return;
+    const size_t icmp_offset = (size_t)(iphdr->ip_hl << 2);
+    if (in_bounds(icmp_offset, ICMP_MINLEN, total) == false)
+        return;
+    const struct icmp *icmphdr = (const struct icmp *)(base + icmp_offset);
+    // some raw delivery paths skip kernel checksum validation
+    if (utils::checksum((uint16_t *)icmphdr, (int)(total - icmp_offset)) != 0)
+        return;
+
+    const bool time_exceeded = (icmphdr->icmp_type == ICMP_TIME_EXCEEDED
+                                && icmphdr->icmp_code == ICMP_TIMXCEED_INTRANS);
+    if (icmphdr->icmp_type != ICMP_ECHOREPLY && icmphdr->icmp_type != ICMP_ECHO && !time_exceeded)
+        return;
+
+    if (time_exceeded)
     {
-        if (icmphdr->icmp_type == ICMP_ECHOREPLY || icmphdr->icmp_type == ICMP_ECHO
-            || (icmphdr->icmp_type == ICMP_TIME_EXCEEDED && icmphdr->icmp_code == ICMP_TIMXCEED_INTRANS))
-        {
-            if (icmphdr->icmp_type == ICMP_TIME_EXCEEDED && icmphdr->icmp_code == ICMP_TIMXCEED_INTRANS)
-            {
-                // get original packet
-                iphdr = &icmphdr->icmp_ip;
-                iphdr_len = iphdr->ip_hl << 2;
-                icmphdr = (struct icmp *)((char *)iphdr + iphdr_len);
-            }
-            // id is the same as original packet and it is our type
-            _icmp_response.data = icmphdr->icmp_data;
-            _icmp_response.size = _array_rcv_ptr->byte_size()
-                                  - ((char *)icmphdr->icmp_data - (char *)_array_rcv_ptr->buf());
-            _icmp_response.type = icmphdr->icmp_type;
-            _icmp_response.code = icmphdr->icmp_code;
-            _icmp_response.ttl = iphdr->ip_ttl;
-            _icmp_response.id = ntohs(icmphdr->icmp_id);
-            _icmp_response.seq = ntohs(icmphdr->icmp_seq);
-
-            this->notify_observers(this);
-        }
+        const size_t inner_offset = icmp_offset + ICMP_MINLEN;
+        if (in_bounds(inner_offset, sizeof(struct ip), total) == false)
+            return;
+        const struct ip *inner_ip = (const struct ip *)(base + inner_offset);
+        if (inner_ip->ip_hl < 5)
+            return;
+        const size_t inner_icmp_offset = inner_offset + (size_t)(inner_ip->ip_hl << 2);
+        if (in_bounds(inner_icmp_offset, ICMP_MINLEN, total) == false)
+            return;
+        const struct icmp *inner_icmp = (const struct icmp *)(base + inner_icmp_offset);
+        // rfc792 allows quoting as little as ip header + 8 bytes: the inner checksum may not verify
+        if (inner_icmp->icmp_type != ICMP_ECHOREPLY && inner_icmp->icmp_type != ICMP_ECHO)
+            return;
+        iphdr = inner_ip;
+        icmphdr = inner_icmp;
     }
+
+    const size_t data_offset = (size_t)((const uint8_t *)icmphdr->icmp_data - base);
+    _icmp_response.data = (char *)base + data_offset;
+    _icmp_response.size = total - data_offset;
+    _icmp_response.type = icmphdr->icmp_type;
+    _icmp_response.code = icmphdr->icmp_code;
+    _icmp_response.ttl = iphdr->ip_ttl;
+    _icmp_response.id = ntohs(icmphdr->icmp_id);
+    _icmp_response.seq = ntohs(icmphdr->icmp_seq);
+
+    this->notify_observers(this);
 }
 
 struct icmp *IcmpSender::icmp()

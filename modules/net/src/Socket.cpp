@@ -1,11 +1,11 @@
 #include <unistd.h>
 
-#include <cerrno>
 #include <cstring>
 #include <stdexcept>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -16,15 +16,14 @@
 # include <net/if.h> // if_nametoindex
 #else
 # include <afunix.h>   // AF_UNIX
-# include <ws2tcpip.h> // IP_TTL SUN_LEN
-
-/* Evaluate to actual length of the `sockaddr_un' structure.  */
-# define SUN_LEN(ptr) (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
+# include <ws2tcpip.h> // IP_TTL
 
 #endif
 
 namespace sihd::net
 {
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -36,9 +35,92 @@ ssize_t _adapt_array_size(sihd::util::IArray & arr, ssize_t sent)
     return sent;
 }
 
-} // namespace
+bool would_block_error(int err)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return err == EAGAIN || err == EWOULDBLOCK;
+#else
+    return err == WSAEWOULDBLOCK;
+#endif
+}
 
-SIHD_LOGGER;
+bool not_connected_error(int err)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return err == ENOTCONN;
+#else
+    return err == WSAENOTCONN;
+#endif
+}
+
+bool interrupted_error([[maybe_unused]] int err)
+{
+    // winsock operations are not interrupted by signals
+#if !defined(__SIHD_WINDOWS__)
+    return err == EINTR;
+#else
+    return false;
+#endif
+}
+
+template <typename Syscall>
+auto retry_interrupted(Syscall && syscall)
+{
+    auto ret = syscall();
+    while (ret < 0 && interrupted_error(sihd::sys::os::last_error()))
+        ret = syscall();
+    return ret;
+}
+
+template <typename Syscall>
+auto socket_call(std::atomic<bool> & retryable, Syscall && syscall)
+{
+    auto ret = retry_interrupted(syscall);
+    retryable = ret < 0 && would_block_error(sihd::sys::os::last_error());
+    return ret;
+}
+
+bool atomic_datagram_type(int type)
+{
+    return type == SOCK_DGRAM
+#if defined(SOCK_SEQPACKET)
+           || type == SOCK_SEQPACKET
+#endif
+#if defined(SOCK_RDM)
+           || type == SOCK_RDM
+#endif
+        ;
+}
+
+std::optional<socklen_t> unix_path_to_sockaddr(sockaddr_un *addr, std::string_view path)
+{
+    if (path.empty())
+    {
+        SIHD_LOG(error, "Socket: empty unix path");
+        return std::nullopt;
+    }
+    // addr_len separates pathname (terminator included) from abstract (leading null kept)
+    const size_t terminator = (path[0] != '\0');
+    if (path.size() + terminator > sizeof(addr->sun_path))
+    {
+        SIHD_LOG(error, "Socket: unix path too long: {}", path);
+        return std::nullopt;
+    }
+    memset(addr, 0, sizeof(*addr));
+    addr->sun_family = AF_UNIX;
+    memcpy(addr->sun_path, path.data(), path.size());
+    return offsetof(sockaddr_un, sun_path) + path.size() + terminator;
+}
+
+std::string unix_path_from_addr(const sockaddr_un & addr, socklen_t addr_len)
+{
+    // an abstract name starts with the null byte a C string would stop at
+    if (addr_len > (socklen_t)offsetof(sockaddr_un, sun_path) && addr.sun_path[0] == '\0')
+        return std::string(addr.sun_path, addr_len - offsetof(sockaddr_un, sun_path));
+    return std::string(addr.sun_path);
+}
+
+} // namespace
 
 Socket::Socket()
 {
@@ -90,25 +172,35 @@ Socket::Socket(int socket, std::string_view domain, std::string_view socket_type
         SIHD_LOG(error, "Socket: protocol unknown: {}", protocol);
 }
 
-Socket::Socket(Socket && other)
+Socket::Socket(Socket && other): Socket()
 {
     *this = std::move(other);
 }
 
 Socket & Socket::operator=(Socket && other)
 {
-    _socket = other._socket;
-    _domain = other._domain;
-    _type = other._type;
-    _protocol = other._protocol;
-    _verbose = other._verbose;
-    _send_flags = other._send_flags;
-    _rcv_flags = other._rcv_flags;
-    _unix_bind_path = std::move(other._unix_bind_path);
-    _connect_addr = std::move(other._connect_addr);
-    _connect_unix_path = std::move(other._connect_unix_path);
+    if (this != &other)
+    {
+        this->shutdown();
+        this->close();
+        _socket = other._socket;
+        _domain = other._domain;
+        _type = other._type;
+        _protocol = other._protocol;
+        _verbose = other._verbose;
+        _send_flags = other._send_flags;
+        _rcv_flags = other._rcv_flags;
+        _unix_bind_path = std::move(other._unix_bind_path);
+        _connect_addr = std::move(other._connect_addr);
+        _connect_unix_path = std::move(other._connect_unix_path);
+        _retryable = other._retryable.load();
+        _blocking = other._blocking;
 
-    other._clear_socket_info();
+        other._clear_socket_info();
+        other._domain = 0;
+        other._type = 0;
+        other._protocol = 0;
+    }
     return *this;
 }
 
@@ -121,6 +213,8 @@ Socket::~Socket()
 void Socket::_clear_socket_info()
 {
     _socket = -1;
+    _retryable = false;
+    _blocking = true;
 }
 
 /* ************************************************************************* */
@@ -227,15 +321,21 @@ int Socket::get_socket_sndbuf(int socket)
     return val;
 }
 
+std::optional<int> Socket::get_socket_error(int socket)
+{
+    int so_error = 0;
+    socklen_t len = sizeof(so_error);
+    if (sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_ERROR, &so_error, &len) == false)
+        return std::nullopt;
+    return so_error;
+}
+
 bool Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
 {
     if (socket < 0)
         throw std::runtime_error("Socket: cannot get peer name on a negative socket");
-    socklen_t initial = *addr_len;
     int ret = ::getpeername(socket, addr, addr_len);
-    if (ret == -1)
-        return false;
-    return ret == 0 && initial == *addr_len;
+    return ret == 0;
 }
 
 std::optional<IpAddr> Socket::socket_ip(int socket, bool ipv6)
@@ -292,7 +392,10 @@ bool Socket::set_tcp_nodelay(bool active) const
 }
 bool Socket::set_blocking(bool active) const
 {
-    return Socket::set_socket_blocking(_socket, active);
+    if (Socket::set_socket_blocking(_socket, active) == false)
+        return false;
+    _blocking = active;
+    return true;
 }
 bool Socket::set_reuseaddr(bool active) const
 {
@@ -312,7 +415,14 @@ bool Socket::is_tcp_nodelay() const
 }
 bool Socket::is_blocking() const
 {
+    if (_socket < 0)
+        return false;
+#if defined(__SIHD_WINDOWS__)
+    // winsock cannot report the mode: the tracked state is authoritative
+    return _blocking;
+#else
     return Socket::is_socket_blocking(_socket);
+#endif
 }
 bool Socket::is_broadcast() const
 {
@@ -386,23 +496,26 @@ bool Socket::open(int domain, int type, int protocol)
     return _socket >= 0;
 }
 
+bool Socket::close_socket(int socket)
+{
+#if defined(__SIHD_WINDOWS__)
+    return ::closesocket(socket) == 0;
+#else
+    return ::close(socket) == 0;
+#endif
+}
+
 bool Socket::close()
 {
     bool ret = true;
     if (_socket >= 0)
     {
-#if defined(__SIHD_WINDOWS__)
-        ret = ::closesocket(_socket) == 0;
-#else
-        ret = ::close(_socket) == 0;
-#endif
+        ret = Socket::close_socket(_socket);
         if (ret == false)
             SIHD_LOG(error, "Socket: close error: {}", sihd::sys::os::last_error_str());
         if (!_unix_bind_path.empty())
         {
-#if !defined(__SIHD_WINDOWS__)
-            ::unlink(_unix_bind_path.c_str());
-#endif
+            sihd::sys::fs::remove_file(_unix_bind_path);
             _unix_bind_path.clear();
         }
         this->_clear_socket_info();
@@ -410,14 +523,14 @@ bool Socket::close()
     return ret;
 }
 
-bool Socket::shutdown()
+bool Socket::shutdown() const
 {
     bool ret = true;
     if (_socket >= 0)
     {
         ret = ::shutdown(_socket, SHUT_RDWR) == 0;
         // no error message if socket was not connected
-        if (ret == false && errno != ENOTCONN)
+        if (ret == false && not_connected_error(sihd::sys::os::last_error()) == false)
             SIHD_LOG(error, "Socket: shutdown error: {}", sihd::sys::os::last_error_str());
     }
     return ret;
@@ -431,6 +544,7 @@ int Socket::accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot accept on a closed socket");
+    _retryable = false;
     if (timeout_ms >= 0)
     {
         sihd::sys::Poll poll;
@@ -444,12 +558,13 @@ int Socket::accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms)
         }
         if (poll.polling_timeout())
         {
-            SIHD_LOG(error, "Socket: accept timeout after {}ms", timeout_ms);
+            SIHD_LOG(warning, "Socket: accept timeout after {}ms", timeout_ms);
+            _retryable = true;
             return -1;
         }
     }
-    int sock = ::accept(_socket, addr, addr_len);
-    if (sock < 0)
+    int sock = socket_call(_retryable, [&] { return (int)::accept(_socket, addr, addr_len); });
+    if (sock < 0 && _retryable == false)
         SIHD_LOG(error, "Socket: accept error: {}", sihd::sys::os::last_error_str());
     return sock;
 }
@@ -486,22 +601,24 @@ bool Socket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
     bool was_blocking = false;
     if (use_timeout)
     {
-        was_blocking = Socket::is_socket_blocking(_socket);
+        was_blocking = this->is_blocking();
         if (was_blocking)
-            Socket::set_socket_blocking(_socket, false);
+            this->set_blocking(false);
     }
     bool ret = (::connect(_socket, addr, addr_len) == 0);
+    _retryable = false;
     if (!ret)
     {
+        const int err = sihd::sys::os::last_error();
 #if !defined(__SIHD_WINDOWS__)
-        int err = errno;
         bool in_progress = (err == EINPROGRESS || err == EALREADY);
         bool already_connected = (err == EISCONN);
 #else
-        int err = WSAGetLastError();
         bool in_progress = (err == WSAEWOULDBLOCK || err == WSAEALREADY);
         bool already_connected = (err == WSAEISCONN);
 #endif
+        // still in progress: the caller can poll the socket and retry
+        _retryable = in_progress;
         if (already_connected)
         {
             ret = true;
@@ -522,11 +639,19 @@ bool Socket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
             }
             else
             {
-                auto err_str = this->get_last_error();
-                if (!err_str.has_value())
-                    ret = true;
+                const std::optional<int> so_error = this->get_error();
+                if (so_error == std::nullopt)
+                {
+                    _retryable = false;
+                    SIHD_LOG(error, "Socket: connect error: {}", sihd::sys::os::last_error_str());
+                }
+                else if (*so_error != 0)
+                {
+                    _retryable = false;
+                    SIHD_LOG(error, "Socket: connect error: {}", sihd::sys::os::error_str(*so_error));
+                }
                 else
-                    SIHD_LOG(error, "Socket: connect error: {}", *err_str);
+                    ret = true;
             }
         }
         else if (!in_progress)
@@ -534,18 +659,24 @@ bool Socket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
             SIHD_LOG(error, "Socket: connect error: {}", sihd::sys::os::error_str(err));
         }
     }
+    if (ret)
+        _retryable = false;
     if (use_timeout && was_blocking)
-        Socket::set_socket_blocking(_socket, true);
+        this->set_blocking(true);
     return ret;
 }
 
-std::optional<std::string> Socket::get_last_error() const
+std::optional<int> Socket::get_error() const
 {
-    int so_error = 0;
-    socklen_t len = sizeof(so_error);
-    if (sihd::sys::os::getsockopt(_socket, SOL_SOCKET, SO_ERROR, &so_error, &len) && so_error != 0)
-        return sihd::sys::os::error_str(so_error);
-    return std::nullopt;
+    return Socket::get_socket_error(_socket);
+}
+
+std::string Socket::get_error_str() const
+{
+    const std::optional<int> so_error = this->get_error();
+    if (so_error == std::nullopt)
+        return "";
+    return sihd::sys::os::error_str(*so_error);
 }
 
 bool Socket::reconnect(int timeout_ms)
@@ -569,11 +700,13 @@ ssize_t Socket::send(sihd::util::ArrCharView view)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot send on a closed socket");
+    ssize_t sent = socket_call(_retryable, [&] {
 #if !defined(__SIHD_WINDOWS__)
-    ssize_t sent = ::send(_socket, view.data(), view.size(), _send_flags);
+        return ::send(_socket, view.data(), view.size(), _send_flags);
 #else
-    ssize_t sent = ::send(_socket, (const char *)view.data(), view.size(), _send_flags);
+        return ::send(_socket, (const char *)view.data(), view.size(), _send_flags);
 #endif
+    });
     if (sent < 0 && _verbose)
         SIHD_LOG(warning, "Socket send error: {}", sihd::sys::os::last_error_str());
     return sent;
@@ -581,6 +714,9 @@ ssize_t Socket::send(sihd::util::ArrCharView view)
 
 bool Socket::send_all(sihd::util::ArrCharView view)
 {
+    // datagrams are atomic: the remainder would be a second datagram
+    if (atomic_datagram_type(_type))
+        return this->send(view) == (ssize_t)view.size();
     ssize_t ret;
     size_t sent = 0;
 
@@ -598,12 +734,14 @@ ssize_t Socket::receive(void *data, size_t size)
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot receive on a closed socket");
+    ssize_t rcv = socket_call(_retryable, [&] {
 #if !defined(__SIHD_WINDOWS__)
-    ssize_t rcv = ::recv(_socket, data, size, _rcv_flags);
+        return ::recv(_socket, data, size, _rcv_flags);
 #else
-    ssize_t rcv = ::recv(_socket, (char *)data, size, _rcv_flags);
+        return ::recv(_socket, (char *)data, size, _rcv_flags);
 #endif
-    if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+    });
+    if (rcv < 0 && _retryable == false)
         SIHD_LOG(error, "Socket receive error: {}", sihd::sys::os::last_error_str());
     return rcv;
 }
@@ -617,11 +755,13 @@ ssize_t Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::Ar
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot send_to on a closed socket");
+    ssize_t sent = socket_call(_retryable, [&] {
 #if !defined(__SIHD_WINDOWS__)
-    ssize_t sent = ::sendto(_socket, view.data(), view.size(), _send_flags, addr, addr_len);
+        return ::sendto(_socket, view.data(), view.size(), _send_flags, addr, addr_len);
 #else
-    ssize_t sent = ::sendto(_socket, (const char *)view.data(), view.size(), _send_flags, addr, addr_len);
+        return ::sendto(_socket, (const char *)view.data(), view.size(), _send_flags, addr, addr_len);
 #endif
+    });
     if (sent < 0 && _verbose)
         SIHD_LOG(warning, "Socket send_to error: {}", sihd::sys::os::last_error_str());
     return sent;
@@ -629,6 +769,9 @@ ssize_t Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::Ar
 
 bool Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view)
 {
+    // datagrams are atomic: the remainder would be a second datagram
+    if (atomic_datagram_type(_type))
+        return this->send_to(addr, addr_len, view) == (ssize_t)view.size();
     ssize_t ret;
     size_t sent = 0;
 
@@ -646,12 +789,14 @@ ssize_t Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, si
 {
     if (this->is_open() == false)
         throw std::runtime_error("Socket: cannot receive_from on a closed socket");
+    ssize_t rcv = socket_call(_retryable, [&] {
 #if !defined(__SIHD_WINDOWS__)
-    ssize_t rcv = ::recvfrom(_socket, data, size, _rcv_flags, addr, addr_len);
+        return ::recvfrom(_socket, data, size, _rcv_flags, addr, addr_len);
 #else
-    ssize_t rcv = ::recvfrom(_socket, (char *)data, size, _rcv_flags, addr, addr_len);
+        return ::recvfrom(_socket, (char *)data, size, _rcv_flags, addr, addr_len);
 #endif
-    if (rcv < 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+    });
+    if (rcv < 0 && _retryable == false)
         SIHD_LOG(error, "Socket receive_from error: {}", sihd::sys::os::last_error_str());
     return rcv;
 }
@@ -673,11 +818,7 @@ ssize_t Socket::receive_from_unix(std::string & path, sihd::util::IArray & arr)
 
 bool Socket::is_unix() const
 {
-#if !defined(__SIHD_WINDOWS__)
     return _domain == AF_UNIX;
-#else
-    return false;
-#endif
 }
 
 bool Socket::is_ip() const
@@ -802,7 +943,14 @@ bool Socket::_multicast_membership(const IpAddr & group, std::string_view iface,
         mreq.ipv6mr_interface = 0;
 #if !defined(__SIHD_WINDOWS__)
         if (!iface.empty())
+        {
             mreq.ipv6mr_interface = if_nametoindex(iface.data());
+            if (mreq.ipv6mr_interface == 0)
+            {
+                SIHD_LOG(error, "Socket: no interface named: {}", iface);
+                return false;
+            }
+        }
 #endif
         return sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, ipv6_opt, &mreq, sizeof(mreq));
     }
@@ -848,12 +996,14 @@ bool Socket::set_multicast_loop(bool active)
 bool Socket::bind_unix(std::string_view path)
 {
     sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
-    if (this->bind((sockaddr *)&addr, SUN_LEN(&addr)))
+    std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
+    if (addr_len == std::nullopt)
+        return false;
+    if (this->bind((sockaddr *)&addr, *addr_len))
     {
-        _unix_bind_path = path;
+        // an abstract socket owns no filesystem name: nothing to unlink
+        if (path[0] != '\0')
+            _unix_bind_path = path;
         return true;
     }
     return false;
@@ -862,10 +1012,10 @@ bool Socket::bind_unix(std::string_view path)
 bool Socket::connect_unix(std::string_view path)
 {
     sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
-    if (this->connect((sockaddr *)&addr, SUN_LEN(&addr)))
+    std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
+    if (addr_len == std::nullopt)
+        return false;
+    if (this->connect((sockaddr *)&addr, *addr_len))
     {
         _connect_unix_path = path;
         _connect_addr = IpAddr();
@@ -877,30 +1027,19 @@ bool Socket::connect_unix(std::string_view path)
 ssize_t Socket::send_to_unix(std::string_view path, sihd::util::ArrCharView view)
 {
     sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
-    return this->send_to((sockaddr *)&addr, SUN_LEN(&addr), view);
+    std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
+    if (addr_len == std::nullopt)
+        return -1;
+    return this->send_to((sockaddr *)&addr, *addr_len, view);
 }
 
 bool Socket::send_all_to_unix(std::string_view path, sihd::util::ArrCharView view)
 {
-    ssize_t ret;
-    size_t sent = 0;
     sockaddr_un addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, path.data(), std::min(path.size(), sizeof(addr.sun_path) - 1));
-    size_t sun_len = SUN_LEN(&addr);
-
-    while (sent < view.size())
-    {
-        ret = this->send_to((sockaddr *)&addr, sun_len, {view.data() + sent, view.size() - sent});
-        if (ret <= 0)
-            return false;
-        sent += ret;
-    }
-    return sent == view.size();
+    std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
+    if (addr_len == std::nullopt)
+        return false;
+    return this->send_all_to((sockaddr *)&addr, *addr_len, view);
 }
 
 ssize_t Socket::receive_from_unix(std::string & path, void *data, size_t size)
@@ -911,16 +1050,17 @@ ssize_t Socket::receive_from_unix(std::string & path, void *data, size_t size)
     socklen_t addr_len = sizeof(sockaddr_un);
     ssize_t ret = this->receive_from((sockaddr *)&addr, &addr_len, data, size);
     if (ret > 0)
-        path = addr.sun_path;
+        path = unix_path_from_addr(addr, addr_len);
     return ret;
 }
 
 std::string Socket::unix_socket_peername(int socket)
 {
     sockaddr_un addr_un;
+    memset(&addr_un, 0, sizeof(addr_un));
     socklen_t len = sizeof(addr_un);
     if (Socket::get_socket_peername(socket, (sockaddr *)&addr_un, &len))
-        return addr_un.sun_path;
+        return unix_path_from_addr(addr_un, len);
     return "";
 }
 

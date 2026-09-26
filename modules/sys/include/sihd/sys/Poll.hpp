@@ -54,6 +54,9 @@ class Poll: public sihd::util::Observable<Poll>,
         // returns number of polleable fds
         int poll(int milliseconds_timeout = -1);
 
+        // ends the loop after the current poll: safe from the polling thread, unlike stop()
+        void request_stop();
+
         // filled with file descriptors - call in observer
         const std::vector<PollEvent> & events() const { return _lst_events; };
 
@@ -64,6 +67,7 @@ class Poll: public sihd::util::Observable<Poll>,
         size_t read_fds_size() const;
         size_t write_fds_size() const;
         size_t fds_size() const { return _lst_fds.size(); }
+
         rlim_t max_fds() const { return _max_fds; };
         // in ms
         sihd::util::time::UnixTime timeout() const { return _timeout_milliseconds; }

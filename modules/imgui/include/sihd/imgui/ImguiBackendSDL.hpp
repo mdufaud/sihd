@@ -20,6 +20,9 @@
 # if defined(IMGUI_IMPL_OPENGL_ES2)
 #  include <SDL3/SDL_opengles2.h>
 # else
+/* mesa's gl.h pulls the system glext.h, newer than SDL's vendored copy: redefinition
+   imgui renders through its own loader and needs no system glext symbols */
+#  define GL_GLEXT_LEGACY 1
 #  include <SDL3/SDL_opengl.h>
 # endif
 # ifdef __clang__

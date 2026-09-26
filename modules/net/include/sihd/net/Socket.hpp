@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_SOCKET_HPP__
 #define __SIHD_NET_SOCKET_HPP__
 
+#include <atomic>
 #include <optional>
 
 #include <sihd/net/IpAddr.hpp>
@@ -45,7 +46,10 @@ class Socket
         // first
         static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
         static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
+        // nullopt when the probe failed, the pending SO_ERROR otherwise (0 = none)
+        static std::optional<int> get_socket_error(int socket);
 
+        static bool close_socket(int socket);
         static bool set_socket_tcp_nodelay(int socket, bool active);
         static bool set_socket_blocking(int socket, bool active);
         static bool set_socket_reuseaddr(int socket, bool active);
@@ -98,7 +102,7 @@ class Socket
         bool open(std::string_view domain, std::string_view type, std::string_view protocol);
         bool open(int domain, int socket_type, int protocol);
         virtual bool close();
-        virtual bool shutdown();
+        virtual bool shutdown() const;
         bool is_open() const { return _socket >= 0; }
 
         // A dead peer raises SIGPIPE: the process must ignore or handle it,
@@ -169,7 +173,10 @@ class Socket
         bool is_ipv4() const;
         bool is_ipv6() const;
 
-        std::optional<std::string> get_last_error() const;
+        std::optional<int> get_error() const;
+        std::string get_error_str() const;
+
+        bool retryable() const { return _retryable; }
 
         bool reconnect(int timeout_ms = -1);
 
@@ -192,6 +199,9 @@ class Socket
         bool _verbose;
         int _send_flags;
         int _rcv_flags;
+        std::atomic<bool> _retryable = false;
+        // tracked instance state: windows cannot probe a socket's blocking mode
+        mutable bool _blocking = true;
 };
 
 } // namespace sihd::net

@@ -13,6 +13,7 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -72,7 +73,7 @@ class TestApp: public ::testing::Test
 
         virtual ~TestApp() { sihd::util::LoggerManager::clear_loggers(); }
 
-        virtual void SetUp() {}
+        virtual void SetUp() { signal::reset_all_received(); }
 
         virtual void TearDown() {}
 };
@@ -122,9 +123,14 @@ TEST_F(TestApp, test_conf_file_missing)
 #if defined(SIGHUP) && defined(SIGUSR1) && defined(SIGPIPE)
 TEST_F(TestApp, test_golden_conf)
 {
-    // the golden sample documents every conf key and must keep applying as a whole
-    const std::string path = "test/resources/golden_app_conf.json";
-    const std::string log_path = "/tmp/sihd_app.log";
+    // the golden sample documents every conf key and must keep applying as a whole;
+    // its log path is rewritten so concurrent test runs never share the file
+    std::string conf = fs::read_all("test/resources/golden_app_conf.json").value_or("");
+    ASSERT_FALSE(conf.empty());
+    const std::string log_path = tmp_path("golden.log");
+    const std::string conf_path = tmp_path("golden.json");
+    conf = str::replace(conf, "/tmp/sihd_app.log", log_path);
+    ASSERT_TRUE(fs::write(conf_path, conf));
     fs::remove_file(log_path);
 
     struct
@@ -149,13 +155,18 @@ TEST_F(TestApp, test_golden_conf)
             signal::kill(os::pid(), SIGUSR1);
             signal::kill(os::pid(), SIGPIPE);
             signal::kill(os::pid(), SIGHUP);
-            app.wait_for_termination(Duration(time::milli(500)));
+            Duration waited(0);
+            while ((signaled == 0 || reloads == 0) && waited < Duration(time::sec(2)))
+            {
+                app.wait_for_termination(Duration(time::milli(50)));
+                waited += Duration(time::milli(50));
+            }
             SIHD_LOG(info, "GOLDENMSG");
             if (signaled == 0 || reloads == 0 || app.should_stop())
                 app.exit(EXIT_FAILURE);
         });
 
-        ASSERT_EQ(run_app(app, {"--conf", path, "serve"}), 0);
+        ASSERT_EQ(run_app(app, {"--conf", conf_path, "serve"}), 0);
         EXPECT_EQ(opts.host, "0.0.0.0");
         EXPECT_EQ(opts.port, 8080);
         EXPECT_EQ(app.daemon().working_dir(), "/tmp");
@@ -166,6 +177,7 @@ TEST_F(TestApp, test_golden_conf)
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("GOLDENMSG"), std::string::npos);
     fs::remove_file(log_path);
+    fs::remove_file(conf_path);
 }
 #endif
 

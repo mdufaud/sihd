@@ -2,6 +2,7 @@
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::net
 {
@@ -124,13 +125,14 @@ bool DeviceTcpClient::on_start()
 bool DeviceTcpClient::on_stop()
 {
     _stop_requested = true;
-    _tcp_client.stop();
+    _waitable.notify_all();
+    // best-effort unblock of a stuck tx send: the join below waits for it
+    _tcp_client.socket().shutdown();
     _worker.stop_worker();
     _tcp_client.remove_observer(this);
     _tcp_client.close();
 
-    if (_channel_connected != nullptr)
-        _channel_connected->write<bool>(0, false);
+    this->_set_connected(false);
 
     return true;
 }
@@ -150,12 +152,18 @@ bool DeviceTcpClient::_connect()
     return _tcp_client.open_and_connect(_host, _port, _connect_timeout);
 }
 
+void DeviceTcpClient::_set_connected(bool connected)
+{
+    if (_channel_connected != nullptr)
+        _channel_connected->write<bool>(0, connected);
+}
+
 bool DeviceTcpClient::run()
 {
     bool ok = this->_connect();
     if (ok)
     {
-        _channel_connected->write<bool>(0, true);
+        this->_set_connected(true);
         _tcp_client.add_observer(this);
     }
     else
@@ -171,30 +179,38 @@ bool DeviceTcpClient::run()
 
     while (!_stop_requested)
     {
-        _tcp_client.start();
-
+        while (!_stop_requested && _tcp_client.connected())
+        {
+            if (_tcp_client.socket().tls_pending())
+                this->handle(&_tcp_client);
+            else
+                _tcp_client.poll();
+        }
         if (_stop_requested)
             break;
 
         _tcp_client.remove_observer(this);
-        _channel_connected->write<bool>(0, false);
+        this->_set_connected(false);
         _tcp_client.close();
 
         SIHD_LOG(info, "DeviceTcpClient: disconnected, reconnecting...");
 
         while (!_stop_requested)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(_reconnect_interval));
+            _waitable.wait_for(std::chrono::milliseconds(_reconnect_interval),
+                               [this] { return this->_stop_requested.load(); });
             if (_stop_requested)
                 break;
 
             if (this->_connect())
             {
                 SIHD_LOG(info, "DeviceTcpClient: reconnected");
-                _channel_connected->write<bool>(0, true);
+                this->_set_connected(true);
                 _tcp_client.add_observer(this);
                 break;
             }
+            // a failed connect leaves the socket open: the next attempt would fail on open
+            _tcp_client.close();
         }
     }
 
@@ -203,31 +219,26 @@ bool DeviceTcpClient::run()
 
 void DeviceTcpClient::handle(sihd::core::Channel *c)
 {
-    if (c == _channel_tx && _tcp_client.connected())
-    {
+    if (c != _channel_tx)
+        return;
+    if (_tcp_client.connected())
         _tcp_client.send_all(sihd::util::ArrCharView(*c->array()));
-    }
 }
 
 void DeviceTcpClient::handle(INetReceiver *receiver)
 {
     if (!_tcp_client.connected())
     {
-        _channel_connected->write<bool>(0, false);
+        this->_set_connected(false);
         return;
     }
 
     sihd::util::ArrByte buf(_buffer_capacity);
-    ssize_t received = receiver->receive(buf);
-    if (received > 0)
-    {
-        buf.resize(static_cast<size_t>(received));
+    // notifications must drain: the peer FIN notification is the last one
+    while (receiver->receive(buf) > 0)
         _channel_rx->write(buf);
-    }
-    else
-    {
-        _channel_connected->write<bool>(0, false);
-    }
+    if (!_tcp_client.connected())
+        this->_set_connected(false);
 }
 
 } // namespace sihd::net

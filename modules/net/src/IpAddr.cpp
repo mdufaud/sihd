@@ -37,7 +37,7 @@ using namespace sihd::net;
 namespace
 {
 
-uint32_t netmask_value_from_str(std::string_view mask_value_str)
+std::optional<uint32_t> netmask_value_from_str(std::string_view mask_value_str)
 {
     if (str::is_number(mask_value_str))
     {
@@ -45,7 +45,20 @@ uint32_t netmask_value_from_str(std::string_view mask_value_str)
             return *mask_value;
     }
     SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
-    return -1;
+    return std::nullopt;
+}
+
+uint32_t netmask_value_for_family(std::optional<uint32_t> mask_value, int family)
+{
+    if (!mask_value.has_value())
+        return 0;
+    const uint32_t max_value = (family == AF_INET6) ? 128 : 32;
+    if (*mask_value > max_value)
+    {
+        SIHD_LOG(error, "IpAddr: subnet mask out of range: {}", *mask_value);
+        return 0;
+    }
+    return *mask_value;
 }
 
 bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
@@ -111,21 +124,22 @@ IpAddr::IpAddr(int port, bool ipv6): IpAddr()
 IpAddr::IpAddr(std::string_view host, int port): IpAddr()
 {
     std::string ip;
-    size_t idx = host.find('/');
+    std::optional<uint32_t> mask_value;
+    const size_t idx = host.find('/');
     if (idx != std::string::npos)
     {
         ip = host.substr(0, idx);
-        _netmask_value = netmask_value_from_str(host.substr(idx + 1));
+        mask_value = netmask_value_from_str(host.substr(idx + 1));
     }
     else
     {
         ip = host;
     }
 
-    if (!to_sockaddr_in(&_addr.sockaddr_in, ip, port))
-    {
-        to_sockaddr_in6(&_addr.sockaddr_in6, ip, port);
-    }
+    if (to_sockaddr_in(&_addr.sockaddr_in, ip, port))
+        _netmask_value = netmask_value_for_family(mask_value, AF_INET);
+    else if (to_sockaddr_in6(&_addr.sockaddr_in6, ip, port))
+        _netmask_value = netmask_value_for_family(mask_value, AF_INET6);
 }
 
 IpAddr::IpAddr(std::string_view host): IpAddr(host, 0) {}
@@ -157,16 +171,11 @@ IpAddr::IpAddr(const IpAddr & addr): IpAddr()
 
 IpAddr & IpAddr::operator=(const IpAddr & addr)
 {
+    if (this == &addr)
+        return *this;
     this->_hostname = addr._hostname;
     this->_port = addr._port;
-    if (addr._addr.sockaddr.sa_family == AF_INET)
-    {
-        memcpy(&this->_addr.sockaddr, &addr._addr.sockaddr, sizeof(struct sockaddr_in));
-    }
-    else if (addr._addr.sockaddr.sa_family == AF_INET6)
-    {
-        memcpy(&this->_addr.sockaddr, &addr._addr.sockaddr, sizeof(struct sockaddr_in6));
-    }
+    memcpy(&this->_addr.sockaddr, &addr._addr.sockaddr, sizeof(struct sockaddr_in6));
     this->_netmask_value = addr._netmask_value;
     return *this;
 }
@@ -236,16 +245,18 @@ Subnet IpAddr::subnet() const
 
     memset(&ret, 0, sizeof(Subnet));
 
-    if (this->has_subnet())
-    {
-        ret.netmask.s_addr = ip::to_netmask(_netmask_value);
-        ret.netid.s_addr = _addr.sockaddr_in.sin_addr.s_addr & ret.netmask.s_addr;
-        ret.wildcard.s_addr = ~ret.netmask.s_addr;
-        ret.broadcast.s_addr = ret.netid.s_addr | ret.wildcard.s_addr;
-        ret.hostmin.s_addr = ntohl(htonl(ret.netid.s_addr) + 1);
-        ret.hostmax.s_addr = ntohl(htonl(ret.broadcast.s_addr) - 1);
-        ret.hosts = htonl(ret.wildcard.s_addr) - 1;
-    }
+    if (this->is_ipv4() == false || this->has_subnet() == false)
+        return ret;
+
+    ret.netmask.s_addr = ip::to_netmask(_netmask_value);
+    ret.netid.s_addr = _addr.sockaddr_in.sin_addr.s_addr & ret.netmask.s_addr;
+    ret.wildcard.s_addr = ~ret.netmask.s_addr;
+    ret.broadcast.s_addr = ret.netid.s_addr | ret.wildcard.s_addr;
+    ret.hostmin.s_addr = ntohl(htonl(ret.netid.s_addr) + 1);
+    ret.hostmax.s_addr = ntohl(htonl(ret.broadcast.s_addr) - 1);
+    ret.hosts = htonl(ret.wildcard.s_addr);
+    if (ret.hosts != 0)
+        ret.hosts -= 1;
 
     return ret;
 }
@@ -277,18 +288,13 @@ uint32_t IpAddr::subnet_value() const
 
 bool IpAddr::set_subnet_mask(uint32_t mask_value)
 {
-    if (mask_value == 0)
-    {
-        _netmask_value = 0;
-        return true;
-    }
-    uint32_t actual_mask = ip::to_netmask(mask_value);
-    if (ip::is_valid_netmask(htonl(actual_mask)) == false)
-    {
-        SIHD_LOG(error, "IpAddr: not a valid mask: {}", mask_value);
+    const int family = this->addr().sa_family;
+    if (family != AF_INET && family != AF_INET6)
         return false;
-    }
-    _netmask_value = mask_value;
+    const uint32_t validated = netmask_value_for_family(mask_value, family);
+    if (validated != mask_value)
+        return false;
+    _netmask_value = validated;
     return true;
 }
 
@@ -308,6 +314,8 @@ bool IpAddr::is_same_subnet(const sockaddr & other_addr) const
 
 bool IpAddr::is_same_subnet(const sockaddr_in & other_addr) const
 {
+    if (this->is_ipv4() == false || !this->has_subnet())
+        return false;
     struct in_addr netmask;
     struct in_addr netid;
 
@@ -319,6 +327,8 @@ bool IpAddr::is_same_subnet(const sockaddr_in & other_addr) const
 
 bool IpAddr::is_same_subnet(const sockaddr_in6 & addr) const
 {
+    if (this->is_ipv6() == false || !this->has_subnet())
+        return false;
     struct in6_addr mask;
     struct in6_addr masked_addr1;
     struct in6_addr masked_addr2;

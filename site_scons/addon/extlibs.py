@@ -30,7 +30,6 @@ extlibs = {
     "ncurses": "6.5#3", # ncursesw
     "libxcrypt": "4.5.2", # fixes a compilation issue with imgui
     # bindings
-    "python3": "3.12.9",
     "pybind11": "3.0.1",
     # compressing utility
     "libzip": "1.7.3",
@@ -103,7 +102,7 @@ extlibs_skip_android = [
     "simpleble",
 ]
 
-vcpkg_baseline = "00be06124721b0fa2fb451982e707f81b3b06e5a"
+vcpkg_baseline = "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
 
 # Declarative overlays over stock vcpkg ports (replaces hand-written overlay-ports/).
 # Schema: patches / remove_patches / manifest / files / recipe_patches (see sbt/vcpkg/patches.py).
@@ -130,6 +129,7 @@ vcpkg_ports = {
     },
     "python3": {
         "files": {"files/python3/0012-force-disable-modules.patch": "0012-force-disable-modules.patch"},
+        "patches": ["patches/python3/no-checksharedmods.patch"],
         "recipe_patches": ["patches/python3/recipe.patch"],
     },
     "lua": {
@@ -144,5 +144,15 @@ vcpkg_ports = {
         # pulled target-side by libx11; lld (zig triplets) errors on the
         # version-script symbols LIBXSLT_WITH_DEBUGGER=OFF compiles out
         "recipe_patches": ["patches/libxslt/recipe.patch"],
+    },
+    # glfw3/sdl3 probe X11/Wayland headers with cmake FindX11 at configure time
+    # without declaring them: on cross-linux the two-phase foundation install can
+    # be torn down mid-plan before they configure. Declaring the deps here pins
+    # the ordering in vcpkg's graph (no-op ports on native linux).
+    "glfw3": {
+        "recipe_patches": ["patches/glfw3/recipe.patch"],
+    },
+    "sdl3": {
+        "recipe_patches": ["patches/sdl3/recipe.patch"],
     },
 }

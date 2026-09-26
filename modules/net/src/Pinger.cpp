@@ -1,4 +1,5 @@
 #include <cstddef>
+#include <cstring>
 #include <memory>
 
 #include <sihd/sys/platform.hpp>
@@ -126,7 +127,6 @@ bool Pinger::set_interval(sihd::util::time::UnixTime milliseconds_interval)
 
 bool Pinger::on_stop()
 {
-    _sender.close();
     auto l = _waitable.guard();
     _stop = true;
     _waitable.notify();
@@ -231,7 +231,9 @@ void Pinger::handle(IcmpSender *sender)
     if (response.size < sizeof(sihd::util::Timestamp))
         return;
 
-    const sihd::util::Timestamp timestamp = ((sihd::util::Timestamp *)response.data)[0];
+    // icmp payload is not guaranteed to be aligned for an 8 bytes read
+    sihd::util::Timestamp timestamp {};
+    memcpy(&timestamp, response.data, sizeof(timestamp));
     const sihd::util::Timestamp now = _clock_ptr->now();
     const sihd::util::Duration triptime = now - timestamp;
 
@@ -261,10 +263,10 @@ void Pinger::_clear_event()
 
 void PingResult::clear()
 {
-    time_start = 0;
-    last_time_sent = 0;
-    last_time_received = 0;
-    time_end = 0;
+    time_start = sihd::util::Timestamp(0);
+    last_time_sent = sihd::util::Timestamp(0);
+    last_time_received = sihd::util::Timestamp(0);
+    time_end = sihd::util::Timestamp(0);
     transmitted = 0;
     received = 0;
     rtt.clear();

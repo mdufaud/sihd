@@ -13,6 +13,8 @@
 namespace sihd::sys::signal
 {
 
+inline constexpr int max_signal = 64;
+
 struct SigStatus
 {
         std::atomic<size_t> received = 0;

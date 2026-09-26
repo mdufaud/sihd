@@ -15,7 +15,6 @@
 #include <sihd/util/time.hpp>
 
 #define FIRST_SIG 1
-#define LAST_SIG 64
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
@@ -40,7 +39,7 @@ SigExitConfig g_exit_config;
 // important volatile tag: the processor should NOT use its cache here
 volatile std::sig_atomic_t g_last_signal_received = -1;
 
-std::array<SigStatus, LAST_SIG> g_signals_status;
+std::array<SigStatus, signal::max_signal> g_signals_status;
 
 void _check_exit_config(int sig)
 {
@@ -75,7 +74,7 @@ void _set_signal_received(int sig)
         // clock_gettime is async-signal-safe
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
-        status.time_received.store(time::sec(ts.tv_sec) + ts.tv_nsec, std::memory_order_relaxed);
+        status.time_received.store(Timestamp(time::sec(ts.tv_sec) + ts.tv_nsec), std::memory_order_relaxed);
 #else
         status.time_received.store(os::filetime_now(), std::memory_order_relaxed);
 #endif
@@ -90,7 +89,7 @@ void _reset_signal(int sig)
         auto & status = g_signals_status[idx];
 
         status.received.store(0, std::memory_order_relaxed);
-        status.time_received.store(-1, std::memory_order_relaxed);
+        status.time_received.store(Timestamp(-1), std::memory_order_relaxed);
     }
 }
 
@@ -300,14 +299,14 @@ int last_received()
 
 std::optional<SigStatus> status(int sig)
 {
-    if (sig < FIRST_SIG || sig >= LAST_SIG)
+    if (sig < FIRST_SIG || sig >= signal::max_signal)
         return std::nullopt;
     return SigStatus(g_signals_status[sig - FIRST_SIG]);
 }
 
 bool stop_received()
 {
-    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    for (int sig = FIRST_SIG; sig <= signal::max_signal; ++sig)
     {
         if (signal::is_category_stop(sig))
         {
@@ -321,7 +320,7 @@ bool stop_received()
 
 bool termination_received()
 {
-    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    for (int sig = FIRST_SIG; sig <= signal::max_signal; ++sig)
     {
         if (signal::is_category_termination(sig))
         {
@@ -335,7 +334,7 @@ bool termination_received()
 
 bool dump_received()
 {
-    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    for (int sig = FIRST_SIG; sig <= signal::max_signal; ++sig)
     {
         if (signal::is_category_dump(sig))
         {
@@ -359,7 +358,7 @@ void reset_received(int sig)
 
 void reset_all_received()
 {
-    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    for (int sig = FIRST_SIG; sig <= signal::max_signal; ++sig)
     {
         reset_received(sig);
     }
@@ -372,7 +371,7 @@ std::string status_str()
 {
     std::string ret;
 
-    for (int sig = FIRST_SIG; sig <= LAST_SIG; ++sig)
+    for (int sig = FIRST_SIG; sig <= signal::max_signal; ++sig)
     {
         const auto status = signal::status(sig);
         if (status.has_value())

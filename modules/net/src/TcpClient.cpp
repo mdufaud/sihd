@@ -1,5 +1,7 @@
+#include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/sys/NamedFactory.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::net
@@ -113,12 +115,16 @@ bool TcpClient::on_start()
 
 bool TcpClient::poll(int milliseconds)
 {
+    if (!_connected)
+        return false;
     this->_setup_poll();
     return _poll.poll(milliseconds) > 0;
 }
 
 bool TcpClient::poll()
 {
+    if (!_connected)
+        return false;
     this->_setup_poll();
     return _poll.poll(_poll.timeout()) > 0;
 }
@@ -127,7 +133,7 @@ ssize_t TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
 {
     ssize_t ret = _socket.receive_from(addr, arr);
     if (_connected)
-        _connected = ret > 0;
+        _connected = ret > 0 || _socket.retryable();
     return ret;
 }
 
@@ -135,7 +141,7 @@ ssize_t TcpClient::receive(sihd::util::IArray & arr)
 {
     ssize_t ret = _socket.receive(arr);
     if (_connected)
-        _connected = ret > 0;
+        _connected = ret > 0 || _socket.retryable();
     return ret;
 }
 
@@ -143,7 +149,7 @@ ssize_t TcpClient::receive(void *buf, size_t len)
 {
     ssize_t ret = _socket.receive(buf, len);
     if (_connected)
-        _connected = ret > 0;
+        _connected = ret > 0 || _socket.retryable();
     return ret;
 }
 
@@ -159,26 +165,34 @@ bool TcpClient::send_all(sihd::util::ArrCharView view)
 
 void TcpClient::handle(sihd::sys::Poll *poll)
 {
-    auto events = poll->events();
-    if (events.size() > 0)
+    const auto & events = poll->events();
+    if (events.empty() || events[0].fd != _socket.socket())
+        return;
+
+    const auto event = events[0];
+    if (event.error)
     {
-        auto event = events[0];
-        if (event.fd == _socket.socket())
-        {
-            if (event.readable)
-            {
-                this->notify_observers(this);
-            }
-            else if (event.closed)
-            {
-                _connected = false;
-                this->notify_observers(this);
-            }
-            else if (event.error)
-            {
-                this->close();
-            }
-        }
+        const std::optional<int> so_error = _socket.get_error();
+        if (so_error && *so_error != 0)
+            SIHD_LOG(error, "TcpClient: socket error: {}", sihd::sys::os::error_str(*so_error));
+        else if (!so_error)
+            SIHD_LOG(error, "TcpClient: socket error: {}", sihd::sys::os::last_error_str());
+        poll->clear_fd(event.fd);
+        this->close();
+        return;
+    }
+    if (event.closed)
+    {
+        // the FIN notification is the last one: observers drain the tail, then disconnect
+        if (_connected)
+            this->notify_observers(this);
+        _connected = false;
+        SIHD_LOG(debug, "TcpClient: connection closed by peer");
+        poll->clear_fd(event.fd);
+    }
+    else if (event.readable)
+    {
+        this->notify_observers(this);
     }
 }
 

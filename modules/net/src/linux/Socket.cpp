@@ -1,6 +1,5 @@
 #include <fcntl.h> // fcntl
 
-#include <algorithm>
 #include <cstring>
 
 #include <sihd/net/Socket.hpp>
@@ -29,9 +28,18 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 
 bool Socket::bind_socket_to_device(int socket, std::string_view name)
 {
-    char device_name[IFNAMSIZ];
-
-    strncpy(device_name, name.data(), std::min(name.size(), (size_t)IFNAMSIZ));
+    if (name.empty())
+    {
+        SIHD_LOG(error, "Socket: empty device name");
+        return false;
+    }
+    if (name.size() >= IFNAMSIZ)
+    {
+        SIHD_LOG(error, "Socket: device name too long: {}", name);
+        return false;
+    }
+    char device_name[IFNAMSIZ] = {0};
+    memcpy(device_name, name.data(), name.size());
     return sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
 }
 

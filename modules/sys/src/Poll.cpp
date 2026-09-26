@@ -77,7 +77,7 @@ Poll::Poll()
     _stop = false;
     _timeout_milliseconds = -1; // infinite block
     _max_fds = 0;
-    _last_poll_time = 0;
+    _last_poll_time = Duration(0);
     _timedout = false;
     _error = false;
 }
@@ -227,6 +227,11 @@ bool Poll::on_stop()
     return true;
 }
 
+void Poll::request_stop()
+{
+    _stop = true;
+}
+
 bool Poll::on_start()
 {
     if (_timeout_milliseconds < 0)
@@ -235,9 +240,10 @@ bool Poll::on_start()
         return false;
     }
 
-    this->service_set_ready();
-
+    // a stop landing after set_ready must not be erased here
     _stop = false;
+
+    this->service_set_ready();
     int ret = 0;
     bool interrupted = false;
     while (_stop == false && (ret >= 0 || interrupted))

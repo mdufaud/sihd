@@ -1,0 +1,57 @@
+diff --git a/vcpkg.json b/vcpkg.json
+--- a/vcpkg.json
++++ b/vcpkg.json
+@@ -77,11 +77,51 @@
+     },
+     "wayland": {
+       "description": "Build with Wayland support",
+-      "supports": "linux"
++      "supports": "linux",
++      "dependencies": [
++        {
++          "name": "libxkbcommon",
++          "platform": "linux"
++        },
++        {
++          "name": "wayland",
++          "platform": "linux"
++        },
++        {
++          "name": "wayland-protocols",
++          "platform": "linux"
++        }
++      ]
+     },
+     "x11": {
+       "description": "Build with X11 support",
+-      "supports": "!windows"
++      "supports": "!windows",
++      "dependencies": [
++        {
++          "name": "libx11",
++          "platform": "linux"
++        },
++        {
++          "name": "libxcursor",
++          "platform": "linux"
++        },
++        {
++          "name": "libxext",
++          "platform": "linux"
++        },
++        {
++          "name": "libxi",
++          "platform": "linux"
++        },
++        {
++          "name": "libxinerama",
++          "platform": "linux"
++        },
++        {
++          "name": "libxrandr",
++          "platform": "linux"
++        }
++      ]
+     }
+   }
+ }

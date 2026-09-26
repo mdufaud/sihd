@@ -43,6 +43,7 @@ bool Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     (void)socket;
     (void)name;
+    SIHD_LOG(error, "Socket: bind to device unsupported on windows");
     return false;
 }
 
@@ -63,18 +64,8 @@ bool Socket::is_socket_blocking(int socket)
 {
     if (socket < 0)
         throw std::runtime_error("Socket: check blocking on a closed socket");
-    /// @note windows sockets are created in blocking mode by default
-    // currently on windows, there is no easy way to obtain the socket's current blocking mode since
-    // WSAIsBlocking was deprecated
-    unsigned long mode = 1;
-    bool set_blocking = sihd::sys::os::ioctl(socket, FIONBIO, &mode);
-    if (set_blocking)
-    {
-        // put back non blocking
-        mode = 0;
-        return sihd::sys::os::ioctl(socket, FIONBIO, &mode, true);
-    }
-    return set_blocking == false;
+    // winsock provides no way to read the mode back: the default is reported
+    return true;
 }
 
 } // namespace sihd::net

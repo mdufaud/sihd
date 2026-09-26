@@ -1,8 +1,11 @@
 #include <chrono>
+#include <string>
 
 #include <gtest/gtest.h>
 
 #include <sihd/sys/platform.hpp>
+
+#include "listener/make_listener.hpp"
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/socket.h>
@@ -14,8 +17,11 @@
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/TlsContext.hpp>
 #include <sihd/net/BasicServerHandler.hpp>
+#include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/net/TcpServer.hpp>
+#include <sihd/net/TlsConnection.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
@@ -64,6 +70,7 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     TcpClient client("tls-client");
 
     BasicServerHandler server_handler;
+    EXPECT_FALSE(server_handler.set_tls_accept_timeout(-1));
     server_handler.set_tls_context(_server_ctx);
     client.set_tls_context(_client_ctx);
 
@@ -94,6 +101,11 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
 
     Worker worker([&server] { return server.start(); });
     EXPECT_TRUE(worker.start_sync_worker("tls-server"));
+    // bounds the join if an ASSERT aborts first
+    sihd::util::Defer stop_worker([&] {
+        server.stop();
+        worker.stop_worker();
+    });
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
     ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms));
@@ -111,9 +123,65 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     ASSERT_GT(rcv, 0);
     EXPECT_EQ(std::string(recv_arr.data(), static_cast<size_t>(rcv)), "hello tls");
 
+    const std::string payload(128 * 1024, 'x');
+    ASSERT_TRUE(client.send_all({payload.data(), payload.size()}));
+    std::string echoed;
+    char buffer[8192];
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (echoed.size() < payload.size() && std::chrono::steady_clock::now() < deadline)
+    {
+        if (!client.socket().tls_pending() && !client.poll(100))
+            continue;
+        const ssize_t size = client.receive(buffer, sizeof(buffer));
+        if (size > 0)
+            echoed.append(buffer, static_cast<size_t>(size));
+        else if (!client.socket().retryable())
+            break;
+    }
+    EXPECT_EQ(echoed, payload);
+
     client.close();
     EXPECT_TRUE(server.stop());
     EXPECT_TRUE(worker.stop_worker());
+}
+
+TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
+{
+    IpAddr localhost = IpAddr::localhost(4346);
+    TcpServer server("tls-server");
+    TcpClient client("tls-client");
+    BasicServerHandler server_handler;
+    server_handler.set_tls_context(_server_ctx);
+    Synchronizer connected_sync(2);
+    std::atomic<bool> connected_signaled {false};
+    Handler<BasicServerHandler *> connected_handler([&](BasicServerHandler *srv) {
+        if (srv->client_count() == 1u && !connected_signaled.exchange(true))
+            connected_sync.sync(std::chrono::seconds(1));
+    });
+    server_handler.add_observer(&connected_handler);
+    server.open_and_bind(localhost);
+    server.set_server_handler(&server_handler);
+    server.set_poll_timeout(1);
+
+    Worker worker([&server] { return server.start(); });
+    ASSERT_TRUE(worker.start_sync_worker("tls-server"));
+    sihd::util::Defer stop_worker([&] {
+        server.stop();
+        worker.stop_worker();
+    });
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    Socket silent_peer;
+    ASSERT_TRUE(silent_peer.open(AF_INET, SOCK_STREAM, 0));
+    ASSERT_TRUE(silent_peer.connect(localhost));
+
+    client.set_tls_context(_client_ctx);
+    ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms));
+    ASSERT_TRUE(connected_sync.sync(std::chrono::seconds(2)));
+    EXPECT_EQ(server_handler.client_count(), 1u);
+
+    client.close();
+    silent_peer.close();
 }
 
 TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
@@ -123,10 +191,7 @@ TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
     // plain TCP listener that completes the TCP handshake but never speaks TLS:
     // the client's SSL handshake must time out instead of hanging forever
     Socket listener;
-    ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, 0));
-    ASSERT_TRUE(listener.set_reuseaddr(true));
-    ASSERT_TRUE(listener.bind(localhost));
-    ASSERT_TRUE(listener.listen(2));
+    make_listener(listener, localhost);
 
     TcpClient client("tls-client");
     client.set_tls_context(_client_ctx);
@@ -142,6 +207,51 @@ TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
 
     client.close();
     listener.close();
+}
+
+TEST_F(TestTlsTcp, tls_timed_handshake_on_blocking_socket)
+{
+    IpAddr localhost = IpAddr::localhost(4345);
+
+    Socket listener;
+    make_listener(listener, localhost);
+
+    // the timed handshake switches the mode itself and hands it back blocking
+    Socket raw;
+    ASSERT_TRUE(raw.open(AF_INET, SOCK_STREAM, 0));
+    ASSERT_TRUE(raw.connect(localhost));
+
+    Socket server_sock(listener.accept(tls_connect_timeout_ms), true);
+    ASSERT_TRUE(server_sock.is_open());
+
+    TlsConnection server_conn;
+    ASSERT_TRUE(server_conn.init(_server_ctx, server_sock));
+
+    Worker worker([&server_conn] { return server_conn.accept(tls_connect_timeout_ms); });
+    ASSERT_TRUE(worker.start_sync_worker("tls-accept"));
+    // bounds the join if an ASSERT aborts first
+    sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
+
+    TlsConnection client_conn;
+    ASSERT_TRUE(client_conn.init(_client_ctx, raw));
+    ASSERT_TRUE(client_conn.connect(tls_connect_timeout_ms));
+
+    ASSERT_TRUE(worker.stop_worker());
+
+    EXPECT_TRUE(raw.is_blocking());
+
+    const char msg[] = "blocking handshake";
+    ASSERT_GT(client_conn.write(msg, sizeof(msg) - 1), 0);
+
+    char recv_buf[32] = {0};
+    size_t total = 0;
+    while (total < sizeof(msg) - 1)
+    {
+        ssize_t rcv = server_conn.read(recv_buf + total, sizeof(recv_buf) - total);
+        ASSERT_GT(rcv, 0);
+        total += (size_t)rcv;
+    }
+    EXPECT_EQ(std::string(recv_buf, total), "blocking handshake");
 }
 
 } // namespace test

@@ -1,3 +1,5 @@
+#include <wait_for.hpp>
+
 #include <gtest/gtest.h>
 
 #include <sihd/core/ChannelWaiter.hpp>
@@ -8,6 +10,8 @@
 #include <sihd/net/DeviceUdpSender.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include "listener/make_listener.hpp"
 
 namespace test
 {
@@ -56,7 +60,8 @@ TEST_F(TestDevices, test_udp_devices)
     const char hello[] = "hello udp device";
     tx->write({hello, strlen(hello)});
 
-    ASSERT_TRUE(waiter.wait_for(std::chrono::milliseconds(500)));
+    // prev: the receiver device may have delivered rx before this call
+    ASSERT_TRUE(waiter.prev_wait_for(std::chrono::seconds(5)));
 
     EXPECT_EQ(rx->byte_size(), strlen(hello));
     EXPECT_EQ(memcmp(rx->data(), hello, strlen(hello)), 0);
@@ -68,10 +73,7 @@ TEST_F(TestDevices, test_udp_devices)
 TEST_F(TestDevices, test_tcp_client_device)
 {
     Socket server;
-    ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, 0));
-    ASSERT_TRUE(server.set_reuseaddr(true));
-    ASSERT_TRUE(server.bind(IpAddr::localhost(4301)));
-    ASSERT_TRUE(server.listen(2));
+    make_listener(server, IpAddr::localhost(4301));
 
     Core core;
 
@@ -181,6 +183,79 @@ TEST_F(TestDevices, test_tcp_server_device)
     EXPECT_FALSE(srv->is_running());
 
     client.close();
+}
+
+TEST_F(TestDevices, test_tcp_client_device_reconnect)
+{
+    Socket server;
+    make_listener(server, IpAddr::localhost(4303));
+
+    Core core;
+
+    auto *client = core.add_child<DeviceTcpClient>("client");
+    client->set_host("127.0.0.1");
+    client->set_port(4303);
+    client->set_poll_timeout(1);
+    client->set_buffer_capacity(1024);
+    client->set_connect_timeout(200);
+    client->set_reconnect_interval(50);
+
+    ASSERT_TRUE(core.init());
+
+    Channel *rx = client->find_channel("rx");
+    Channel *connected = client->find_channel("connected");
+    ASSERT_NE(rx, nullptr);
+    ASSERT_NE(connected, nullptr);
+
+    ASSERT_TRUE(core.start());
+    EXPECT_EQ(connected->read<bool>(0), true);
+
+    int accepted_fd = server.accept();
+    ASSERT_GE(accepted_fd, 0);
+    Socket accepted(accepted_fd);
+
+    accepted.close();
+    server.close();
+
+    // qemu emulated targets run the reconnect cycles far slower than native
+    wait_for([&] { return connected->read<bool>(0) == false; });
+    EXPECT_EQ(connected->read<bool>(0), false);
+
+    Socket server2;
+    make_listener(server2, IpAddr::localhost(4303));
+
+    // the waiter must exist first: qemu delivery wins the race
+    ChannelWaiter rx_waiter(rx);
+    wait_for([&] { return connected->read<bool>(0) == true; });
+    EXPECT_EQ(connected->read<bool>(0), true);
+    int fd2 = server2.accept(2000);
+    ASSERT_GE(fd2, 0);
+    Socket accepted2(fd2);
+    const char hello[] = "reconnected";
+    EXPECT_EQ(accepted2.send(hello), (ssize_t)strlen(hello));
+    // prev: the device may have delivered rx before this call
+    EXPECT_TRUE(rx_waiter.prev_wait_for(std::chrono::seconds(5)));
+    EXPECT_EQ(memcmp(rx->data(), hello, strlen(hello)), 0);
+
+    Channel *tx = client->find_channel("tx");
+    ASSERT_NE(tx, nullptr);
+    const char tx_msg[] = "tx after reconnect";
+    tx->write({tx_msg, strlen(tx_msg)});
+    char tx_buf[64] = {0};
+    ssize_t tx_received = 0;
+    ASSERT_TRUE(accepted2.set_blocking(false));
+    wait_for([&] {
+        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf));
+        return tx_received > 0;
+    });
+    EXPECT_EQ(tx_received, (ssize_t)strlen(tx_msg));
+    EXPECT_EQ(memcmp(tx_buf, tx_msg, strlen(tx_msg)), 0);
+
+    ASSERT_TRUE(core.stop());
+    EXPECT_FALSE(client->is_running());
+    EXPECT_EQ(connected->read<bool>(0), false);
+
+    server2.close();
 }
 
 } // namespace test
