@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
@@ -38,6 +39,25 @@ namespace sihd::util::str
 
 namespace
 {
+
+// base64 alphabet value by byte, -1 otherwise
+constexpr std::array<int8_t, 256> make_base64_table()
+{
+    std::array<int8_t, 256> table;
+    table.fill(-1);
+    for (int i = 0; i < 26; ++i)
+    {
+        table[size_t('A') + i] = int8_t(i);
+        table[size_t('a') + i] = int8_t(i + 26);
+    }
+    for (int i = 0; i < 10; ++i)
+        table[size_t('0') + i] = int8_t(i + 52);
+    table[size_t('+')] = 62;
+    table[size_t('/')] = 63;
+    return table;
+}
+
+constexpr auto base64_table = make_base64_table();
 
 size_t levenshtein_distance(std::string_view source,
                             std::string_view target,
@@ -1037,6 +1057,95 @@ std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols)
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols)
 {
     return hexdump_fmt(arr.buf(), arr.byte_size(), cols);
+}
+
+std::string to_base64(const void *mem, size_t size)
+{
+    static constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string ret;
+    ret.reserve(((size + 2) / 3) * 4);
+    const unsigned char *bytes = (const unsigned char *)mem;
+
+    size_t i = 0;
+    while (i + 2 < size)
+    {
+        const uint32_t n = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8) | uint32_t(bytes[i + 2]);
+        ret += alphabet[(n >> 18) & 63];
+        ret += alphabet[(n >> 12) & 63];
+        ret += alphabet[(n >> 6) & 63];
+        ret += alphabet[n & 63];
+        i += 3;
+    }
+    const size_t rem = size - i;
+    if (rem == 1)
+    {
+        const uint32_t n = uint32_t(bytes[i]) << 16;
+        ret += alphabet[(n >> 18) & 63];
+        ret += alphabet[(n >> 12) & 63];
+        ret += "==";
+    }
+    else if (rem == 2)
+    {
+        const uint32_t n = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8);
+        ret += alphabet[(n >> 18) & 63];
+        ret += alphabet[(n >> 12) & 63];
+        ret += alphabet[(n >> 6) & 63];
+        ret += '=';
+    }
+    return ret;
+}
+
+std::string to_base64(const IArray & arr)
+{
+    return to_base64(arr.buf(), arr.byte_size());
+}
+std::string to_base64(const IArrayView & arr)
+{
+    return to_base64(arr.buf(), arr.byte_size());
+}
+std::string to_base64(std::string_view str)
+{
+    return to_base64(str.data(), str.size());
+}
+
+std::optional<std::vector<uint8_t>> from_base64(std::string_view b64)
+{
+    std::vector<uint8_t> ret;
+    ret.reserve(b64.size() / 4 * 3);
+    uint32_t acc = 0;
+    int bits = 0;
+    size_t data_count = 0;
+    size_t pad_count = 0;
+    bool padding = false;
+    for (const char c : b64)
+    {
+        // ascii whitespace only: std::isspace is locale dependent and may accept bytes like 0xa0
+        if (c == ' ' || (c >= '\t' && c <= '\r'))
+            continue;
+        if (c == '=')
+        {
+            padding = true;
+            ++pad_count;
+            continue;
+        }
+        if (padding)
+            return std::nullopt;
+        const int digit = base64_table[size_t((unsigned char)c)];
+        if (digit < 0)
+            return std::nullopt;
+        acc = ((acc << 6) | uint32_t(digit)) & 0x3fff;
+        bits += 6;
+        ++data_count;
+        if (bits >= 8)
+        {
+            bits -= 8;
+            ret.push_back(uint8_t((acc >> bits) & 0xff));
+        }
+    }
+    const size_t remainder = data_count % 4;
+    if (remainder == 1 || (pad_count > 0 && (remainder == 0 || pad_count > 4 - remainder)))
+        return std::nullopt;
+    return ret;
 }
 
 bool print(std::string_view str)

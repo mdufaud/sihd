@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -13,6 +14,7 @@
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::http
 {
@@ -24,6 +26,8 @@ namespace sihd::http
 class Client
 {
     public:
+        using Result = std::expected<void, sihd::util::Error>;
+
         Client();
         ~Client();
 
@@ -32,28 +36,27 @@ class Client
 
         void reset();
 
-        bool send(std::string_view url,
-                  HttpRequest::RequestType type,
-                  const RequestOptions & options,
-                  HttpResponse & response);
-        bool send(std::string_view url,
-                  HttpRequest::RequestType type,
-                  sihd::util::ArrCharView body,
-                  const RequestOptions & options,
-                  HttpResponse & response);
-        bool send_file(std::string_view url,
-                       std::string_view path,
-                       HttpRequest::RequestType type,
-                       const RequestOptions & options,
-                       HttpResponse & response);
-        bool receive_file(std::string_view url,
-                          std::string_view path,
-                          const RequestOptions & options,
-                          HttpResponse & response);
+        Result send(std::string_view url,
+                    HttpRequest::RequestType type,
+                    const RequestOptions & options,
+                    HttpResponse & response);
+        Result send(std::string_view url,
+                    HttpRequest::RequestType type,
+                    sihd::util::ArrCharView body,
+                    const RequestOptions & options,
+                    HttpResponse & response);
+        Result send_file(std::string_view url,
+                         std::string_view path,
+                         HttpRequest::RequestType type,
+                         const RequestOptions & options,
+                         HttpResponse & response);
+        Result receive_file(std::string_view url,
+                            std::string_view path,
+                            const RequestOptions & options,
+                            HttpResponse & response);
 
         // true when the response was cut short by RequestOptions::max_response_size
         bool overflow() const;
-        std::string last_error() const;
         std::string redirect_url() const;
         long new_connection_count() const;
 
@@ -73,11 +76,11 @@ class Client
                 sihd::sys::File *download = nullptr;
         };
 
-        bool perform(std::string_view url,
-                     const Streams & streams,
-                     HttpRequest::RequestType type,
-                     const RequestOptions & options,
-                     HttpResponse & response);
+        Result perform(std::string_view url,
+                       const Streams & streams,
+                       HttpRequest::RequestType type,
+                       const RequestOptions & options,
+                       HttpResponse & response);
 
         struct Impl;
         std::unique_ptr<Impl> _impl;

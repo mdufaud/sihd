@@ -25,6 +25,7 @@
 #include <sihd/net/dns.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/str.hpp>
 
 namespace test
 {
@@ -148,7 +149,10 @@ class SimpleWsServer: public sihd::http::HttpServer,
 class SimpleConnectProxy
 {
     public:
-        SimpleConnectProxy(std::string user, std::string pass): _expected_token(_base64(user + ":" + pass)) {}
+        SimpleConnectProxy(std::string user, std::string pass):
+            _expected_token(sihd::util::str::to_base64(user + ":" + pass))
+        {
+        }
 
         ~SimpleConnectProxy() { stop(); }
 
@@ -188,39 +192,6 @@ class SimpleConnectProxy
         std::atomic<int> n_407 {0};
 
     private:
-        static std::string _base64(std::string_view in)
-        {
-            static constexpr char tbl[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            std::string out;
-            size_t i = 0;
-            for (; i + 2 < in.size(); i += 3)
-            {
-                uint32_t n = (uint32_t(uint8_t(in[i])) << 16) | (uint32_t(uint8_t(in[i + 1])) << 8)
-                             | uint32_t(uint8_t(in[i + 2]));
-                out += tbl[(n >> 18) & 63];
-                out += tbl[(n >> 12) & 63];
-                out += tbl[(n >> 6) & 63];
-                out += tbl[n & 63];
-            }
-            size_t rem = in.size() - i;
-            if (rem == 1)
-            {
-                uint32_t n = uint32_t(uint8_t(in[i])) << 16;
-                out += tbl[(n >> 18) & 63];
-                out += tbl[(n >> 12) & 63];
-                out += "==";
-            }
-            else if (rem == 2)
-            {
-                uint32_t n = (uint32_t(uint8_t(in[i])) << 16) | (uint32_t(uint8_t(in[i + 1])) << 8);
-                out += tbl[(n >> 18) & 63];
-                out += tbl[(n >> 12) & 63];
-                out += tbl[(n >> 6) & 63];
-                out += '=';
-            }
-            return out;
-        }
-
         static std::string _lower(std::string s)
         {
             for (char & c : s)

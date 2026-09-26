@@ -1,11 +1,14 @@
 #include <future>
 
 #include <sihd/http/request.hpp>
+#include <sihd/util/Logger.hpp>
 
 #include "Client.hpp"
 
 namespace sihd::http
 {
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -16,8 +19,12 @@ template <typename Send>
 std::optional<HttpResponse> one_shot(Send && send)
 {
     HttpResponse response;
-    if (send(response) == false)
+    auto result = send(response);
+    if (!result)
+    {
+        SIHD_LOG(error, "request: {}", result.error().message);
         return std::nullopt;
+    }
     return response;
 }
 

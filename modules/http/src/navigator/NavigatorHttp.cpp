@@ -166,18 +166,20 @@ Navigator::Impl::SingleResponse Navigator::Impl::perform_single(const std::strin
 {
     SingleResponse result;
 
+    Client::Result request_result;
     if (!navigation.download_path.empty())
-        result.ok = client.receive_file(url, navigation.download_path, options, result.response);
+        request_result = client.receive_file(url, navigation.download_path, options, result.response);
     else if (!navigation.upload_path.empty())
-        result.ok = client.send_file(url, navigation.upload_path, type, options, result.response);
+        request_result = client.send_file(url, navigation.upload_path, type, options, result.response);
     else
-        result.ok = client.send(url, type, navigation.body, options, result.response);
+        request_result = client.send(url, type, navigation.body, options, result.response);
+    result.ok = request_result.has_value();
 
     result.overflow = client.overflow();
 
     if (!result.ok && !result.overflow)
     {
-        result.error = client.last_error();
+        result.error = request_result.error().message;
         last_error = result.error;
     }
 

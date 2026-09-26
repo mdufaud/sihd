@@ -13,6 +13,7 @@
 #include <sihd/http/MimeTypes.hpp>
 #include <sihd/http/Multipart.hpp>
 #include <sihd/http/Navigator.hpp>
+#include <sihd/http/RateLimitFilter.hpp>
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/Route.hpp>
 #include <sihd/http/WebService.hpp>

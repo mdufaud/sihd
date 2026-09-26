@@ -821,13 +821,10 @@ HttpServer::Impl::AuthResult HttpServer::Impl::parse_authorization(std::string_v
     }
     else if (auth_header_value.starts_with(basic_prefix))
     {
-        std::string_view b64 = auth_header_value.substr(basic_prefix.size());
-        char decoded[256];
-        int decoded_len = lws_b64_decode_string(std::string(b64).c_str(), decoded, sizeof(decoded) - 1);
-        if (decoded_len > 0)
+        const auto decoded = sihd::util::str::from_base64(auth_header_value.substr(basic_prefix.size()));
+        if (decoded)
         {
-            decoded[decoded_len] = '\0';
-            std::string_view credentials(decoded, decoded_len);
+            std::string_view credentials((const char *)decoded->data(), decoded->size());
             auto sep = credentials.find(':');
             if (sep != std::string_view::npos)
             {

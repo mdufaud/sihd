@@ -11,7 +11,6 @@
 
 #include <sihd/curl.hpp>
 #include <sihd/http/HttpRequest.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/tools.hpp>
 
@@ -19,8 +18,6 @@ namespace sihd::http
 {
 
 using sihd::util::Url;
-
-SIHD_LOGGER;
 
 namespace
 {
@@ -33,6 +30,11 @@ std::string url_with_parameters(std::string_view url, const std::map<std::string
     for (const auto & [key, val] : parameters)
         parsed.query_params[key] = val;
     return parsed.encode();
+}
+
+std::unexpected<sihd::util::Error> err(std::string message)
+{
+    return std::unexpected(sihd::util::Error {.message = std::move(message)});
 }
 
 sihd::curl::Proxy to_curl_proxy(ProxyType type)
@@ -65,22 +67,20 @@ struct Client::Impl
             request.clear_mime();
         }
 
-        bool configure(std::string_view url,
-                       HttpRequest::RequestType type,
-                       const RequestOptions & options,
-                       HttpResponse & response)
+        Client::Result configure(std::string_view url,
+                                 HttpRequest::RequestType type,
+                                 const RequestOptions & options,
+                                 HttpResponse & response)
         {
             if (sihd::util::tools::maximum_one_true(!options.username.empty() && !options.password.empty(),
                                                     !options.token.empty())
                 == false)
             {
-                SIHD_LOG(error, "Client: there can only be one authentication method");
-                return false;
+                return err("there can only be one authentication method");
             }
             if ((options.username.empty() == false) != (options.password.empty() == false))
             {
-                SIHD_LOG(error, "Client: authentication needs both username and password");
-                return false;
+                return err("authentication needs both username and password");
             }
 
             request.set_verbose(options.verbose);
@@ -147,16 +147,14 @@ struct Client::Impl
             {
                 if (new_headers.append(fmt::format("Authorization: Bearer {}", options.token)) == false)
                 {
-                    SIHD_LOG(error, "Client: could not add authentication header");
-                    return false;
+                    return err("could not add authentication header");
                 }
             }
             for (const auto & [header_name, header_value] : options.headers)
             {
                 if (new_headers.append(fmt::format("{}: {}", header_name, header_value)) == false)
                 {
-                    SIHD_LOG(error, "Client: could not add header '{}'", header_name);
-                    return false;
+                    return err(fmt::format("could not add header '{}'", header_name));
                 }
             }
             request.set_headers(new_headers);
@@ -180,7 +178,7 @@ struct Client::Impl
             }
             request.set_custom_request(HttpRequest::type_str(type));
 
-            return true;
+            return {};
         }
 
         void set_content_sink(const Streams & streams, const RequestOptions & options)
@@ -261,11 +259,11 @@ void Client::reset()
     _impl->begin_transfer();
 }
 
-bool Client::perform(std::string_view url,
-                     const Streams & streams,
-                     HttpRequest::RequestType type,
-                     const RequestOptions & options,
-                     HttpResponse & response)
+Client::Result Client::perform(std::string_view url,
+                               const Streams & streams,
+                               HttpRequest::RequestType type,
+                               const RequestOptions & options,
+                               HttpResponse & response)
 {
     _impl->begin_transfer();
 
@@ -274,18 +272,13 @@ bool Client::perform(std::string_view url,
     _impl->set_content_sink(streams, options);
     _impl->set_body(streams);
 
-    if (_impl->configure(url, type, options, response) == false)
-        return false;
+    if (auto configured = _impl->configure(url, type, options, response); !configured)
+        return std::unexpected(configured.error());
 
     _impl->set_multipart(options);
 
-    bool ok = _impl->request.perform();
-
-    if (!ok && !_impl->overflow)
-    {
-        SIHD_LOG(error, "Client: could not perform request: {}", _impl->request.last_error());
-        return false;
-    }
+    if (_impl->request.perform() == false && _impl->overflow == false)
+        return err(_impl->request.last_error());
 
     response.set_status((int)_impl->request.response_code());
 
@@ -297,61 +290,52 @@ bool Client::perform(std::string_view url,
         response.set_content(_impl->content);
 
     // a truncated response is still a response: overflow() tells it apart
-    return true;
+    return {};
 }
 
-bool Client::send(std::string_view url,
-                  HttpRequest::RequestType type,
-                  const RequestOptions & options,
-                  HttpResponse & response)
+Client::Result Client::send(std::string_view url,
+                            HttpRequest::RequestType type,
+                            const RequestOptions & options,
+                            HttpResponse & response)
 {
     return this->perform(url, Streams {}, type, options, response);
 }
 
-bool Client::send(std::string_view url,
-                  HttpRequest::RequestType type,
-                  sihd::util::ArrCharView body,
-                  const RequestOptions & options,
-                  HttpResponse & response)
+Client::Result Client::send(std::string_view url,
+                            HttpRequest::RequestType type,
+                            sihd::util::ArrCharView body,
+                            const RequestOptions & options,
+                            HttpResponse & response)
 {
     return this->perform(url, Streams {.body = body}, type, options, response);
 }
 
-bool Client::send_file(std::string_view url,
-                       std::string_view path,
-                       HttpRequest::RequestType type,
-                       const RequestOptions & options,
-                       HttpResponse & response)
+Client::Result Client::send_file(std::string_view url,
+                                 std::string_view path,
+                                 HttpRequest::RequestType type,
+                                 const RequestOptions & options,
+                                 HttpResponse & response)
 {
     sihd::sys::File file;
     if (file.open(std::string(path), "rb") == false)
-    {
-        SIHD_LOG(error, "Client: cannot open file: {}", path);
-        return false;
-    }
+        return err(fmt::format("could not open file: {}", path));
 
     const int64_t size = file.file_size();
     if (size < 0)
-    {
-        SIHD_LOG(error, "Client: cannot read file size: {}", path);
-        return false;
-    }
+        return err(fmt::format("could not read file size: {}", path));
 
     sihd::sys::File *fp = &file;
     return this->perform(url, Streams {.upload = fp, .upload_size = size}, type, options, response);
 }
 
-bool Client::receive_file(std::string_view url,
-                          std::string_view path,
-                          const RequestOptions & options,
-                          HttpResponse & response)
+Client::Result Client::receive_file(std::string_view url,
+                                    std::string_view path,
+                                    const RequestOptions & options,
+                                    HttpResponse & response)
 {
     sihd::sys::File file;
     if (file.open(std::string(path), "wb") == false)
-    {
-        SIHD_LOG(error, "Client: cannot open file for download: {}", path);
-        return false;
-    }
+        return err(fmt::format("could not open file for download: {}", path));
 
     sihd::sys::File *fp = &file;
     return this->perform(url, Streams {.download = fp}, HttpRequest::Get, options, response);
@@ -360,11 +344,6 @@ bool Client::receive_file(std::string_view url,
 bool Client::overflow() const
 {
     return _impl->overflow;
-}
-
-std::string Client::last_error() const
-{
-    return _impl->request.last_error();
 }
 
 std::string Client::redirect_url() const

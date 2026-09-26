@@ -22,6 +22,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/DynMessage.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
@@ -53,6 +54,8 @@
 #include <sihd/util/ObserverWaiter.hpp>
 #include <sihd/util/ObserverWatcher.hpp>
 #include <sihd/util/Providers.hpp>
+#include <sihd/util/RateLimiter.hpp>
+#include <sihd/util/RingBuffer.hpp>
 #include <sihd/util/Runnable.hpp>
 #include <sihd/util/SafeQueue.hpp>
 #include <sihd/util/Scheduler.hpp>
@@ -74,6 +77,7 @@
 #include <sihd/util/TimedHandler.hpp>
 #include <sihd/util/Timer.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/TokenBucket.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>

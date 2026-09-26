@@ -2,6 +2,7 @@
 #define __SIHD_UTIL_STR_HPP__
 
 #include <charconv>
+#include <cstdint>
 #include <initializer_list>
 #include <optional>
 #include <span>
@@ -129,6 +130,14 @@ std::string hexdump(const void *mem, size_t size, char delim);
 std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols = 8);
+
+// rfc 4648 base64
+std::string to_base64(const void *mem, size_t size);
+std::string to_base64(const IArray & arr);
+std::string to_base64(const IArrayView & arr);
+std::string to_base64(std::string_view str);
+// decoding ignores whitespace, accepts missing padding and non-canonical trailing bits
+std::optional<std::vector<uint8_t>> from_base64(std::string_view b64);
 
 struct SearchResult
 {

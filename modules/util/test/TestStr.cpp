@@ -493,6 +493,103 @@ TEST_F(TestStr, test_str_base)
     EXPECT_EQ(str::hex_digit(':'), -1);
 }
 
+TEST_F(TestStr, test_str_base64)
+{
+    // rfc 4648 test vectors
+    EXPECT_EQ(str::to_base64(""), "");
+    EXPECT_EQ(str::to_base64("f"), "Zg==");
+    EXPECT_EQ(str::to_base64("fo"), "Zm8=");
+    EXPECT_EQ(str::to_base64("foo"), "Zm9v");
+    EXPECT_EQ(str::to_base64("foob"), "Zm9vYg==");
+    EXPECT_EQ(str::to_base64("fooba"), "Zm9vYmE=");
+    EXPECT_EQ(str::to_base64("foobar"), "Zm9vYmFy");
+
+    auto decoded = str::from_base64("Zg==");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
+
+    decoded = str::from_base64("Zm9vYmFy");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, (std::vector<uint8_t> {'f', 'o', 'o', 'b', 'a', 'r'}));
+
+    decoded = str::from_base64("");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_TRUE(decoded->empty());
+}
+
+TEST_F(TestStr, test_str_base64_array)
+{
+    const std::vector<uint8_t> data {1, 2, 3, 4, 5};
+    Array<uint8_t> arr(data.data(), data.size());
+    EXPECT_EQ(str::to_base64(arr), "AQIDBAU=");
+    ArrayView<uint8_t> view(arr);
+    EXPECT_EQ(str::to_base64(view), "AQIDBAU=");
+    EXPECT_EQ(str::to_base64(data.data(), data.size()), "AQIDBAU=");
+}
+
+TEST_F(TestStr, test_str_base64_lenient)
+{
+    // missing padding
+    auto decoded = str::from_base64("Zg");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
+
+    // single padding char
+    decoded = str::from_base64("Zg=");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
+
+    // non-canonical trailing bits
+    decoded = str::from_base64("Zh==");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
+
+    // whitespace anywhere
+    decoded = str::from_base64("Zm 9v\n\tYg==");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, (std::vector<uint8_t> {'f', 'o', 'o', 'b'}));
+
+    // every ascii whitespace byte
+    decoded = str::from_base64("Zm\v9\fv");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_EQ(*decoded, (std::vector<uint8_t> {'f', 'o', 'o'}));
+
+    // whitespace only
+    decoded = str::from_base64("  \n");
+    ASSERT_TRUE(decoded.has_value());
+    EXPECT_TRUE(decoded->empty());
+}
+
+TEST_F(TestStr, test_str_base64_invalid)
+{
+    EXPECT_FALSE(str::from_base64("A").has_value()); // data length % 4 == 1
+    EXPECT_FALSE(str::from_base64("A=").has_value());
+    EXPECT_FALSE(str::from_base64("Zm9v=").has_value()); // padding after a full group
+    EXPECT_FALSE(str::from_base64("Zm9==").has_value());
+    EXPECT_FALSE(str::from_base64("Zm9=v").has_value()); // data after padding
+    EXPECT_FALSE(str::from_base64("====").has_value());  // padding without data
+    EXPECT_FALSE(str::from_base64("==").has_value());
+    EXPECT_FALSE(str::from_base64("Zm9v!").has_value());   // invalid char
+    EXPECT_FALSE(str::from_base64("Zm9vYg-").has_value()); // base64url is not base64
+    // non-ascii bytes are never whitespace, whatever the locale
+    EXPECT_FALSE(str::from_base64(std::string("Zm9v\xa0Yg==", 9)).has_value());
+}
+
+TEST_F(TestStr, test_str_base64_roundtrip)
+{
+    for (size_t len = 0; len < 300; ++len)
+    {
+        std::vector<uint8_t> data(len);
+        for (size_t i = 0; i < len; ++i)
+            data[i] = uint8_t(i * 7 + len);
+        const std::string encoded = str::to_base64(data.data(), data.size());
+        ASSERT_EQ(encoded.size(), ((len + 2) / 3) * 4) << "len " << len;
+        const auto decoded = str::from_base64(encoded);
+        ASSERT_TRUE(decoded.has_value()) << "len " << len;
+        EXPECT_EQ(*decoded, data) << "len " << len;
+    }
+}
+
 TEST_F(TestStr, test_str_find_escape)
 {
     EXPECT_EQ(str::find_char_not_escaped("hello ?", '?'), 6);

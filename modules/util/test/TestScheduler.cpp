@@ -8,6 +8,7 @@
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
 
+#include "clock/clock_helper.hpp"
 #include "test_helper.hpp"
 
 namespace test
@@ -359,30 +360,6 @@ class CountingSteadyClock: public sihd::util::IClock
         std::chrono::steady_clock _clock;
 };
 
-// clock the test controls: frozen until advanced - deadlines become exact arithmetic instead of
-// wall measurements
-class ManualClock: public sihd::util::IClock
-{
-    public:
-        ManualClock(Timestamp now): _now(now.get()) {}
-
-        Timestamp now() const override
-        {
-            calls.fetch_add(1, std::memory_order_relaxed);
-            return Timestamp(_now.load());
-        }
-        bool is_steady() const override { return true; }
-        bool start() override { return true; }
-        bool stop() override { return true; }
-
-        void advance(Timestamp now) { _now.store(now.get()); }
-
-        mutable std::atomic<int> calls = 0;
-
-    private:
-        std::atomic<int64_t> _now;
-};
-
 // Classifies scheduler wakeups with a decade-wide chasm instead of latency tolerances:
 // a queue change while sleeping must wake the worker (urgent plays at ~400ms), a scheduler
 // sleeping until the stale far deadline cannot play it before ~900ms - cpu load moves both
@@ -607,7 +584,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
         for (int i = 0; i < 10000 && clock.calls.load() < 2; ++i)
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         ASSERT_GE(clock.calls.load(), 2);
-        clock.advance(frozen_now + grid);
+        clock.set(frozen_now + grid);
         ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return played.size() >= 1; }));
         sched.stop();
 
