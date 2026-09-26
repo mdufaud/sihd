@@ -10,7 +10,6 @@
 #include <sihd/http/IHttpFilter.hpp>
 #include <sihd/http/Navigator.hpp>
 #include <sihd/http/WebService.hpp>
-#include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/http/request.hpp>
 #include <sihd/json/Json.hpp>
 #include <sihd/net/TcpClient.hpp>
@@ -22,7 +21,6 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
-#include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
@@ -52,156 +50,6 @@ class TestHttpServer: public ::testing::Test
 
         std::string _cwd;
         std::string _base_test_dir;
-};
-
-class SimpleHttpServer: public sihd::http::HttpServer,
-                        public sihd::http::IWebsocketHandler
-{
-    public:
-        SimpleHttpServer(): HttpServer("http-server-test")
-        {
-            // HttpServer protected call
-            this->add_websocket("proto-two", this);
-            _webservice = this->add_child<WebService>("web");
-            this->setup_webservice_entry_points();
-        }
-
-        ~SimpleHttpServer() = default;
-
-        void setup_webservice_entry_points()
-        {
-            _webservice->set_entry_point("some_get", [this](const HttpRequest & req, HttpResponse & resp) {
-                SIHD_LOG(info, "{} request received", req.type_str());
-                resp.set_plain_content("hello get world");
-                ++_nget;
-            });
-
-            _webservice->set_entry_point(
-                "some_post",
-                [this](const HttpRequest & req, HttpResponse & resp) {
-                    SIHD_LOG(info, "{} request received", req.type_str());
-                    if (req.has_content())
-                    {
-                        _post_content = req.content().str();
-                        SIHD_LOG(info, "Received POST body: {}", _post_content);
-                        resp.set_status(HttpStatus::Ok);
-                        ++_npost;
-                    }
-                    else
-                        resp.set_status(HttpStatus::BadRequest);
-                },
-                HttpRequest::Post);
-
-            _webservice->set_entry_point(
-                "some_delete",
-                [this](const HttpRequest & req, HttpResponse & resp) {
-                    SIHD_LOG(info, "{} request received", req.type_str());
-                    resp.set_status(HttpStatus::Ok);
-                    resp.set_json_content({"hello", "world"});
-                    ++_ndelete;
-                },
-                HttpRequest::Delete);
-
-            _webservice->set_entry_point(
-                "some_put",
-                [this](const HttpRequest & req, HttpResponse & resp) {
-                    SIHD_LOG(info, "{} request received", req.type_str());
-                    if (req.has_content())
-                    {
-                        _put_content = req.content().str();
-                        SIHD_LOG(info, "Received PUT body: {}", _put_content);
-                        resp.set_status(HttpStatus::Ok);
-                        ++_nput;
-                    }
-                    else
-                        resp.set_status(HttpStatus::BadRequest);
-                },
-                HttpRequest::Put);
-        }
-
-        // IWebsocketHandler
-
-        void on_open(std::string_view protocol_name) override
-        {
-            SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
-            {
-                auto l = _ws_waitable.guard();
-                ++_nopen;
-            }
-            _ws_waitable.notify_all();
-        };
-
-        bool on_read(const sihd::util::ArrChar & array) override
-        {
-            SIHD_LOG(debug, "Read from client websocket: {}", array.str());
-            {
-                auto l = _ws_waitable.guard();
-                _client_wrote = true;
-                ++_nread;
-            }
-            _ws_waitable.notify_all();
-            return true;
-        };
-
-        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol) override
-        {
-            auto l = _ws_waitable.guard();
-            if (_client_wrote)
-            {
-                ++_nwrite;
-                _client_wrote = false;
-
-                const char hw[] = "hello world";
-                array.from(hw);
-
-                protocol = WriteProtocol::Text;
-                SIHD_LOG(debug, "Wrote back to client websocket: {}", hw);
-            }
-            return true;
-        }
-
-        void on_close() override
-        {
-            SIHD_LOG(debug, "Closed websocket");
-            {
-                auto l = _ws_waitable.guard();
-                ++_nclosed;
-            }
-            _ws_waitable.notify_all();
-            this->request_stop();
-        }
-
-        void on_peer_close(uint16_t code, std::string_view reason) override
-        {
-            SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
-        }
-
-        bool wait_for_open(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
-        {
-            return _ws_waitable.wait_for(timeout, [this] { return _nopen > 0; });
-        }
-
-        bool wait_for_close(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
-        {
-            return _ws_waitable.wait_for(timeout, [this] { return _nclosed > 0; });
-        }
-
-        // websocket
-        Waitable _ws_waitable;
-        int _nopen = 0;
-        int _nread = 0;
-        int _nwrite = 0;
-        int _nclosed = 0;
-        bool _client_wrote = false;
-        WebsocketHandler _websocket_handler;
-        // webservice
-        int _npost = 0;
-        int _nput = 0;
-        int _ndelete = 0;
-        int _nget = 0;
-        WebService *_webservice;
-        std::string _post_content;
-        std::string _put_content;
 };
 
 TEST_F(TestHttpServer, test_httpserver_auto)

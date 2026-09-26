@@ -15,17 +15,24 @@
 #include <gtest/gtest.h>
 
 #include <sihd/http/HttpServer.hpp>
+#include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/IHttpFilter.hpp>
 #include <sihd/http/IWebsocketHandler.hpp>
+#include <sihd/http/Multipart.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/WriteProtocol.hpp>
+#include <sihd/http/request.hpp>
+#include <sihd/json/Json.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/str.hpp>
+#include <sihd/util/time.hpp>
 
 namespace test
 {
@@ -106,43 +113,189 @@ struct ServerScope
         ~ServerScope() { stop(); }
 };
 
-class SimpleWsServer: public sihd::http::HttpServer,
-                      public sihd::http::IWebsocketHandler
+// WebService entry points shared by the scripting tests: echoes bodies, serves
+// "hello" for GET/OPTIONS and reads back a multipart "field" on upload.
+inline void setup_echo_webservice(sihd::http::WebService *webservice)
+{
+    webservice->set_entry_point("hello", [](const sihd::http::HttpRequest &, sihd::http::HttpResponse & resp) {
+        resp.set_plain_content("navigator-ok");
+    });
+    webservice->set_entry_point(
+        "hello",
+        [](const sihd::http::HttpRequest &, sihd::http::HttpResponse & resp) { resp.set_plain_content("options-ok"); },
+        sihd::http::HttpRequest::Options);
+    webservice->set_entry_point(
+        "echo",
+        [](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+            resp.set_plain_content(req.content().cpp_str());
+        },
+        sihd::http::HttpRequest::Post);
+    webservice->set_entry_point(
+        "echo",
+        [](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+            resp.set_plain_content(req.content().cpp_str());
+        },
+        sihd::http::HttpRequest::Patch);
+    webservice->set_entry_point(
+        "echo_put",
+        [](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+            resp.set_plain_content(req.content().cpp_str());
+        },
+        sihd::http::HttpRequest::Put);
+    webservice->set_entry_point(
+        "upload",
+        [](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+            const sihd::http::Multipart *multipart = req.multipart();
+            if (multipart == nullptr)
+            {
+                resp.set_status(sihd::http::HttpStatus::BadRequest);
+                return;
+            }
+            auto field = multipart->value("field");
+            resp.set_plain_content(field.has_value() ? std::string(*field) : "no-field");
+        },
+        sihd::http::HttpRequest::Post);
+}
+
+struct EchoServerScope: ServerScope
+{
+        EchoServerScope() { setup_echo_webservice(server._webservice); }
+};
+
+// Test websocket + webservice server: counts every ws event, replies "hello world"
+// to each client message and serves the /web entry points.
+class SimpleHttpServer: public sihd::http::HttpServer,
+                        public sihd::http::IWebsocketHandler
 {
     public:
-        SimpleWsServer(): HttpServer("ws-server-test") { this->add_websocket("proto-two", this); }
+        SimpleHttpServer(): HttpServer("http-server-test")
+        {
+            // HttpServer protected call
+            this->add_websocket("proto-two", this);
+            _webservice = this->add_child<sihd::http::WebService>("web");
+            this->setup_webservice_entry_points();
+        }
 
-        ~SimpleWsServer() = default;
+        ~SimpleHttpServer() = default;
 
-        void on_open([[maybe_unused]] std::string_view protocol) override { ++_nopen; }
-        void on_close() override { ++_nclosed; }
-        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) override {}
+        void setup_webservice_entry_points()
+        {
+            _webservice->set_entry_point("some_get",
+                                         [this](const sihd::http::HttpRequest &, sihd::http::HttpResponse & resp) {
+                                             resp.set_plain_content("hello get world");
+                                             ++_nget;
+                                         });
+
+            _webservice->set_entry_point(
+                "some_post",
+                [this](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+                    if (req.has_content())
+                    {
+                        _post_content = req.content().str();
+                        resp.set_status(sihd::http::HttpStatus::Ok);
+                        ++_npost;
+                    }
+                    else
+                        resp.set_status(sihd::http::HttpStatus::BadRequest);
+                },
+                sihd::http::HttpRequest::Post);
+
+            _webservice->set_entry_point(
+                "some_delete",
+                [this](const sihd::http::HttpRequest &, sihd::http::HttpResponse & resp) {
+                    resp.set_status(sihd::http::HttpStatus::Ok);
+                    resp.set_json_content({"hello", "world"});
+                    ++_ndelete;
+                },
+                sihd::http::HttpRequest::Delete);
+
+            _webservice->set_entry_point(
+                "some_put",
+                [this](const sihd::http::HttpRequest & req, sihd::http::HttpResponse & resp) {
+                    if (req.has_content())
+                    {
+                        _put_content = req.content().str();
+                        resp.set_status(sihd::http::HttpStatus::Ok);
+                        ++_nput;
+                    }
+                    else
+                        resp.set_status(sihd::http::HttpStatus::BadRequest);
+                },
+                sihd::http::HttpRequest::Put);
+        }
+
+        // IWebsocketHandler
+
+        void on_open([[maybe_unused]] std::string_view protocol) override
+        {
+            {
+                auto l = _ws_waitable.guard();
+                ++_nopen;
+            }
+            _ws_waitable.notify_all();
+        }
 
         bool on_read([[maybe_unused]] const sihd::util::ArrChar & arr) override
         {
-            ++_nread;
-            _should_reply = true;
+            {
+                auto l = _ws_waitable.guard();
+                _client_wrote = true;
+                ++_nread;
+            }
+            _ws_waitable.notify_all();
             return true;
         }
 
         bool on_write(sihd::util::ArrChar & arr, sihd::http::WriteProtocol & protocol) override
         {
-            if (_should_reply)
+            auto l = _ws_waitable.guard();
+            if (_client_wrote)
             {
-                _should_reply = false;
+                ++_nwrite;
+                _client_wrote = false;
                 const char reply[] = "hello world";
                 arr.from(reply);
                 protocol = sihd::http::WriteProtocol::Text;
-                ++_nwrite;
             }
             return true;
         }
 
+        void on_close() override
+        {
+            {
+                auto l = _ws_waitable.guard();
+                ++_nclosed;
+            }
+            _ws_waitable.notify_all();
+        }
+
+        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) override {}
+
+        bool wait_for_open(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
+        {
+            return _ws_waitable.wait_for(timeout, [this] { return _nopen > 0; });
+        }
+
+        bool wait_for_close(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
+        {
+            return _ws_waitable.wait_for(timeout, [this] { return _nclosed > 0; });
+        }
+
+        // websocket
+        sihd::util::Waitable _ws_waitable;
         int _nopen = 0;
         int _nread = 0;
         int _nwrite = 0;
         int _nclosed = 0;
-        bool _should_reply = false;
+        bool _client_wrote = false;
+        // webservice
+        int _npost = 0;
+        int _nput = 0;
+        int _ndelete = 0;
+        int _nget = 0;
+        sihd::http::WebService *_webservice;
+        std::string _post_content;
+        std::string _put_content;
 };
 
 // Minimal HTTP CONNECT proxy with mandatory Basic proxy-auth. Test fixture only.

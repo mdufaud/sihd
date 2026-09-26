@@ -1,16 +1,11 @@
 #include <pybind11/embed.h>
 
-#include <chrono>
+#include <http_test_helpers.hpp>
 
 #include <gtest/gtest.h>
 
-#include <sihd/http/HttpServer.hpp>
-#include <sihd/http/HttpStatus.hpp>
-#include <sihd/http/Multipart.hpp>
-#include <sihd/http/WebService.hpp>
 #include <sihd/py/http/PyHttpApi.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Worker.hpp>
 
 #include "../DirectorySwitcher.hpp"
 
@@ -24,65 +19,19 @@ using namespace sihd::util;
 class TestPyHttpApi: public ::testing::Test
 {
     protected:
-        TestPyHttpApi():
-            _worker([this] {
-                _server->start();
-                return true;
-            })
-        {
-            sihd::util::LoggerManager::stream();
-        }
+        TestPyHttpApi() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestPyHttpApi() { sihd::util::LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
-            _server = std::make_unique<HttpServer>("http-server");
-            WebService *webservice = _server->add_child<WebService>("api");
-            webservice->set_entry_point("hello", [](const HttpRequest &, HttpResponse & resp) {
-                resp.set_plain_content("navigator-ok");
-            });
-            webservice->set_entry_point(
-                "hello",
-                [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
-                HttpRequest::Options);
-            webservice->set_entry_point(
-                "echo",
-                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
-                HttpRequest::Post);
-            webservice->set_entry_point(
-                "echo",
-                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
-                HttpRequest::Patch);
-            webservice->set_entry_point(
-                "upload",
-                [](const HttpRequest & req, HttpResponse & resp) {
-                    const Multipart *multipart = req.multipart();
-                    if (multipart == nullptr)
-                    {
-                        resp.set_status(HttpStatus::BadRequest);
-                        return;
-                    }
-                    auto field = multipart->value("field");
-                    resp.set_plain_content(field.has_value() ? std::string(*field) : "no-field");
-                },
-                HttpRequest::Post);
-
-            ASSERT_TRUE(_server->set_port(3012));
-            ASSERT_TRUE(_worker.start_sync_worker("test-http-server"));
-            ASSERT_TRUE(_server->wait_ready(std::chrono::milliseconds(500)));
+            _server = std::make_unique<EchoServerScope>();
+            _server->start(3012);
         }
 
-        virtual void TearDown()
-        {
-            _server->set_service_wait_stop(true);
-            _server->stop();
-            _worker.stop_worker();
-            _server.reset();
-        }
+        virtual void TearDown() { _server.reset(); }
 
-        std::unique_ptr<HttpServer> _server;
-        Worker _worker;
+        std::unique_ptr<EchoServerScope> _server;
 };
 
 TEST_F(TestPyHttpApi, test_pyhttp_navigator)

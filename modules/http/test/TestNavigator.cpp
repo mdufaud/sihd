@@ -444,7 +444,7 @@ TEST_F(TestNavigator, test_navigator_ws_send_receive)
     if constexpr (sihd::util::build::is_run_with_tsan)
         GTEST_SKIP_("has weird interaction with lws and tsan");
 
-    SimpleWsServer server;
+    SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3003);
 
@@ -855,7 +855,7 @@ TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
     SimpleConnectProxy proxy("testuser", "testpass");
     ASSERT_TRUE(proxy.start(3099));
 
-    SimpleWsServer server;
+    SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
     server.set_port(3013);
     Worker worker([&server] {

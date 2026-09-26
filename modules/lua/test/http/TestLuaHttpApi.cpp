@@ -1,11 +1,10 @@
 #include <chrono>
+#include <http_test_helpers.hpp>
 
 #include <gtest/gtest.h>
 
 #include <sihd/http/HttpServer.hpp>
-#include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/Multipart.hpp>
-#include <sihd/http/WebService.hpp>
 #include <sihd/http/request.hpp>
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
@@ -24,57 +23,14 @@ using namespace sihd::http;
 class TestLuaHttpApi: public ::testing::Test
 {
     protected:
-        TestLuaHttpApi():
-            _worker([this] {
-                _server->start();
-                return true;
-            })
-        {
-            sihd::util::LoggerManager::stream();
-        }
+        TestLuaHttpApi() { sihd::util::LoggerManager::stream(); }
 
         virtual ~TestLuaHttpApi() { sihd::util::LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
-            _server = std::make_unique<HttpServer>("http-server");
-            WebService *webservice = _server->add_child<WebService>("api");
-            webservice->set_entry_point("hello", [](const HttpRequest &, HttpResponse & resp) {
-                resp.set_plain_content("navigator-ok");
-            });
-            webservice->set_entry_point(
-                "hello",
-                [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
-                HttpRequest::Options);
-            webservice->set_entry_point(
-                "echo",
-                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
-                HttpRequest::Post);
-            webservice->set_entry_point(
-                "echo",
-                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
-                HttpRequest::Patch);
-            webservice->set_entry_point(
-                "echo_put",
-                [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
-                HttpRequest::Put);
-            webservice->set_entry_point(
-                "upload",
-                [](const HttpRequest & req, HttpResponse & resp) {
-                    const Multipart *multipart = req.multipart();
-                    if (multipart == nullptr)
-                    {
-                        resp.set_status(HttpStatus::BadRequest);
-                        return;
-                    }
-                    auto field = multipart->value("field");
-                    resp.set_plain_content(field.has_value() ? std::string(*field) : "no-field");
-                },
-                HttpRequest::Post);
-
-            ASSERT_TRUE(_server->set_port(3011));
-            ASSERT_TRUE(_worker.start_sync_worker("test-http-server"));
-            ASSERT_TRUE(_server->wait_ready(std::chrono::milliseconds(500)));
+            _server = std::make_unique<EchoServerScope>();
+            _server->start(3011);
 
             _vm.new_state();
             ASSERT_NE(_vm.lua_state(), nullptr);
@@ -83,9 +39,6 @@ class TestLuaHttpApi: public ::testing::Test
         virtual void TearDown()
         {
             _vm.close_state();
-            _server->set_service_wait_stop(true);
-            _server->stop();
-            _worker.stop_worker();
             _server.reset();
         }
 
@@ -98,8 +51,7 @@ class TestLuaHttpApi: public ::testing::Test
             return ret;
         }
 
-        std::unique_ptr<HttpServer> _server;
-        Worker _worker;
+        std::unique_ptr<EchoServerScope> _server;
         Vm _vm;
 };
 

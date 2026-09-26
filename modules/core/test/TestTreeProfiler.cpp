@@ -4,6 +4,7 @@
 #include <functional>
 #include <future>
 #include <thread>
+#include <wait_for.hpp>
 
 #include <gtest/gtest.h>
 
@@ -20,19 +21,6 @@ namespace test
 {
 using namespace sihd::util;
 using namespace sihd::core;
-
-// polls a predicate with a deadline: a broken dispatcher fails the test instead of hanging it
-bool wait_for(const std::function<bool()> & pred, sihd::util::time::UnixTime timeout = sihd::util::time::sec(5))
-{
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(timeout);
-    while (pred() == false)
-    {
-        if (std::chrono::steady_clock::now() >= deadline)
-            return false;
-        time::msleep(1);
-    }
-    return true;
-}
 
 class NamedObserver: public sihd::util::Named,
                      public sihd::util::IHandler<Channel *>
@@ -1059,7 +1047,7 @@ TEST_F(TestTreeProfiler, test_report_waits_for_in_flight_op)
         report_done = true;
     });
     // the report waits for the op in flight: it cannot complete while init runs
-    EXPECT_FALSE(wait_for([&] { return report_done.load(); }, sihd::util::time::milli(100)));
+    EXPECT_FALSE(wait_for([&] { return report_done.load(); }, std::chrono::milliseconds(100)));
 
     dev->release_init();
     ASSERT_TRUE(wait_for([&] { return report_done.load(); }));

@@ -10,7 +10,6 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/num.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -182,9 +181,8 @@ TEST_F(TestFS, test_fs_jail)
 
 TEST_F(TestFS, test_fs_creation)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    auto tmp_path_str = tmp_path.string();
+    TmpDir tmp_path;
+    auto tmp_path_str = tmp_path.path();
 
     EXPECT_TRUE(fs::exists(tmp_path_str));
     EXPECT_TRUE(fs::is_dir(tmp_path_str));
@@ -247,9 +245,8 @@ TEST_F(TestFS, test_fs_creation)
 
 TEST_F(TestFS, test_fs_fast_io)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path.string(), "io", "test.txt"});
+    TmpDir tmp_path;
+    std::string path = fs::combine({tmp_path.path(), "io", "test.txt"});
 
     std::string file_content = "hello world\n";
     EXPECT_TRUE(str::ends_with(path, fs::combine("io", "test.txt")));
@@ -278,9 +275,8 @@ TEST_F(TestFS, test_fs_fast_io)
 
 TEST_F(TestFS, test_fs_read_lines)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path.string(), "lines.txt"});
+    TmpDir tmp_path;
+    std::string path = fs::combine({tmp_path.path(), "lines.txt"});
 
     EXPECT_FALSE(fs::read_lines(path).has_value());
 
@@ -294,9 +290,8 @@ TEST_F(TestFS, test_fs_read_lines)
 
 TEST_F(TestFS, test_fs_permission)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path.string(), "permission"});
+    TmpDir tmp_path;
+    std::string path = fs::combine({tmp_path.path(), "permission"});
     std::ofstream ofs(path);
     ofs << "\n";
     ofs.close();
@@ -418,9 +413,8 @@ TEST_F(TestFS, test_fs_mounts)
 
 TEST_F(TestFS, test_fs_times)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    std::string path = fs::combine({tmp_path.string(), "times.txt"});
+    TmpDir tmp_path;
+    std::string path = fs::combine({tmp_path.path(), "times.txt"});
 
     EXPECT_FALSE(fs::times(path).has_value());
 
@@ -448,12 +442,11 @@ TEST_F(TestFS, test_fs_times)
 
 TEST_F(TestFS, test_fs_copy_file)
 {
-    auto tmp_path = std::filesystem::temp_directory_path() / str::to_hex(num::rand());
-    ASSERT_TRUE(std::filesystem::create_directory(tmp_path));
-    const std::string src = fs::combine({tmp_path.string(), "copy_src.bin"});
-    const std::string dst = fs::combine({tmp_path.string(), "copy_dst.bin"});
-    const std::string dst_cancel = fs::combine({tmp_path.string(), "copy_cancel.bin"});
-    const std::string same = fs::combine({tmp_path.string(), "copy_same.bin"});
+    TmpDir tmp_path;
+    const std::string src = fs::combine({tmp_path.path(), "copy_src.bin"});
+    const std::string dst = fs::combine({tmp_path.path(), "copy_dst.bin"});
+    const std::string dst_cancel = fs::combine({tmp_path.path(), "copy_cancel.bin"});
+    const std::string same = fs::combine({tmp_path.path(), "copy_same.bin"});
 
     std::string content(5 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
@@ -514,14 +507,14 @@ TEST_F(TestFS, test_fs_copy_file)
     }
 
     // empty files copy fine
-    const std::string empty_src = fs::combine({tmp_path.string(), "empty_src.bin"});
-    const std::string empty_dst = fs::combine({tmp_path.string(), "empty_dst.bin"});
+    const std::string empty_src = fs::combine({tmp_path.path(), "empty_src.bin"});
+    const std::string empty_dst = fs::combine({tmp_path.path(), "empty_dst.bin"});
     ASSERT_TRUE(fs::write(empty_src, ""));
     EXPECT_TRUE(fs::copy_file(empty_src, empty_dst));
     EXPECT_TRUE(fs::are_equals(empty_src, empty_dst));
 
     // missing source
-    EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.string(), "nope.bin"}), dst));
+    EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.path(), "nope.bin"}), dst));
 }
 
 TEST_F(TestFS, test_fs_platform_paths)

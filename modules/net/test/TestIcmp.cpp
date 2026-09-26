@@ -1,5 +1,6 @@
 #include <atomic>
 #include <cerrno>
+#include <wait_for.hpp>
 
 #include <gtest/gtest.h>
 
@@ -85,13 +86,7 @@ class TestIcmp: public ::testing::Test
 
             EXPECT_TRUE(this->send(sender, _host_ipaddr));
 
-            // Wait up to 5 seconds for response
-            int wait_count = 0;
-            while (!response_received && wait_count < 50)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                ++wait_count;
-            }
+            wait_for([&] { return response_received.load(); });
 
             sender.stop();
             EXPECT_TRUE(worker.stop_worker());

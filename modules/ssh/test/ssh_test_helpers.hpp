@@ -109,18 +109,6 @@ struct SshServerHelper
             server.stop();
             worker.stop_worker();
         }
-
-        // Connect a client session with password authentication
-        bool connect_client(SshSession & session, const char *user = "testuser", const char *password = "testpass")
-        {
-            // process_config=false: ignore ~/.ssh/config (proxy) for localhost tests
-            if (!session.fast_connect({.user = user, .host = "127.0.0.1", .port = port, .process_config = false}))
-                return false;
-            if (!session.connected())
-                return false;
-            auto auth = session.auth_password(password);
-            return auth.success();
-        }
 };
 
 // Start a test server with default configuration
