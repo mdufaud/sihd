@@ -71,7 +71,7 @@ TEST_F(TestPathManager, test_pathmanager_get)
     path_manager.push_back(test_path_parent.string());
     EXPECT_FALSE(path_manager.find("child").empty());
 
-    path_manager.remove(test_path.string());
+    (void)path_manager.remove(test_path.string());
     EXPECT_TRUE(path_manager.find("parent").empty());
     EXPECT_TRUE(path_manager.find("random-dir").empty());
     EXPECT_FALSE(path_manager.find("child").empty());
@@ -96,7 +96,7 @@ TEST_F(TestPathManager, test_pathmanager_get)
     path_manager.push_back(test_path.string());
     path_manager.push_back(test_path_parent.string());
     EXPECT_EQ(path_manager.find("twin"), test_path_twin.string());
-    path_manager.remove(test_path_parent.string());
+    (void)path_manager.remove(test_path_parent.string());
     path_manager.push_front(test_path_parent.string());
     EXPECT_EQ(path_manager.find("twin"), test_path_parent_twin.string());
 

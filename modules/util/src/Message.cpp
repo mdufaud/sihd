@@ -106,7 +106,9 @@ bool Message::add_field(const std::string & name, IMessageField *msg)
         SIHD_LOG(error, "Message: cannot add '{}' as a child - not a Named object", name);
         return false;
     }
-    return this->add_child(name, named, true) && this->_add_field_size(msg);
+    if (SIHD_UNEXPECTED_LOG(this->add_child(name, named, true)))
+        return false;
+    return this->_add_field_size(msg);
 }
 
 bool Message::add_field(const std::string & name, Type dt, size_t size)

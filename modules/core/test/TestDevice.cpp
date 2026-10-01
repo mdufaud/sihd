@@ -90,29 +90,29 @@ TEST_F(TestDevice, test_device_service)
     dev->add_link("c2", "..declared_channel");
     dev->add_link("c3", "..extra_channel");
 
-    EXPECT_EQ(dev->get_channel("c1"), nullptr);
-    EXPECT_EQ(dev->get_channel("c2"), nullptr);
-    EXPECT_EQ(dev->get_channel("c3"), nullptr);
+    EXPECT_EQ(dev->get_channel("c1").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c3").value_or(nullptr), nullptr);
     // device init the channel
     EXPECT_TRUE(dev->init());
-    EXPECT_NE(dev->get_channel("c1"), nullptr);
-    EXPECT_EQ(dev->get_channel("c2"), nullptr);
-    EXPECT_EQ(dev->get_channel("c3"), nullptr);
+    EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c3").value_or(nullptr), nullptr);
     // links are done
     EXPECT_TRUE(dev->start());
-    EXPECT_NE(dev->get_channel("c1"), nullptr);
-    EXPECT_NE(dev->get_channel("c2"), nullptr);
-    EXPECT_NE(dev->get_channel("c3"), nullptr);
+    EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
+    EXPECT_NE(dev->get_channel("c2").value_or(nullptr), nullptr);
+    EXPECT_NE(dev->get_channel("c3").value_or(nullptr), nullptr);
     // remove observations
     EXPECT_TRUE(dev->stop());
-    EXPECT_NE(dev->get_channel("c1"), nullptr);
-    EXPECT_NE(dev->get_channel("c2"), nullptr);
-    EXPECT_NE(dev->get_channel("c3"), nullptr);
+    EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
+    EXPECT_NE(dev->get_channel("c2").value_or(nullptr), nullptr);
+    EXPECT_NE(dev->get_channel("c3").value_or(nullptr), nullptr);
     // delete_children
     EXPECT_TRUE(dev->reset());
-    EXPECT_EQ(dev->get_channel("c1"), nullptr);
-    EXPECT_EQ(dev->get_channel("c2"), nullptr);
-    EXPECT_EQ(dev->get_channel("c3"), nullptr);
+    EXPECT_EQ(dev->get_channel("c1").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
+    EXPECT_EQ(dev->get_channel("c3").value_or(nullptr), nullptr);
 }
 
 TEST_F(TestDevice, test_device_channel_resizable)
@@ -121,7 +121,7 @@ TEST_F(TestDevice, test_device_channel_resizable)
     ResizableDevice *dev = root.add_child<ResizableDevice>("device");
 
     EXPECT_TRUE(dev->init());
-    Channel *c = dev->get_channel("local");
+    Channel *c = dev->get_channel("local").value_or(nullptr);
     ASSERT_NE(c, nullptr);
     EXPECT_TRUE(c->resizable());
     EXPECT_EQ(c->size(), 1u);

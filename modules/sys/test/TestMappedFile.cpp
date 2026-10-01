@@ -90,7 +90,7 @@ TEST_F(TestMappedFile, test_mappedfile_create)
     MappedFile truncated;
     ASSERT_TRUE(truncated.create(path, size / 2));
     EXPECT_EQ(truncated.size(), size / 2);
-    truncated.clear();
+    (void)truncated.clear();
     EXPECT_EQ(read_file(path, size / 2), std::string(size / 2, '\0'));
 }
 
@@ -99,7 +99,7 @@ TEST_F(TestMappedFile, test_mappedfile_errors)
     TmpDir tmp_dir;
     ASSERT_TRUE(static_cast<bool>(tmp_dir));
     const std::string empty_path = fs::combine(tmp_dir.path(), "empty.bin");
-    ASSERT_TRUE(fs::write(empty_path, ""));
+    ASSERT_TRUE(fs::write(empty_path, "").has_value());
 
     MappedFile mapping;
     EXPECT_FALSE(mapping.open_read_only(empty_path));

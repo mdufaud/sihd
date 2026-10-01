@@ -313,7 +313,7 @@ class SimpleConnectProxy
         {
             if (!_listen.open(AF_INET, SOCK_STREAM, IPPROTO_TCP))
                 return false;
-            _listen.set_reuseaddr(true);
+            (void)_listen.set_reuseaddr(true);
             if (!_listen.bind(sihd::net::IpAddr("127.0.0.1", port)) || !_listen.listen(16))
                 return false;
             _port = port;
@@ -329,11 +329,11 @@ class SimpleConnectProxy
             // wake the blocking accept(): close() alone does not unblock it
             sihd::net::Socket waker;
             if (waker.open(AF_INET, SOCK_STREAM, IPPROTO_TCP))
-                waker.connect(sihd::net::IpAddr("127.0.0.1", _port));
+                (void)waker.connect(sihd::net::IpAddr("127.0.0.1", _port));
             if (_accept_thread.joinable())
                 _accept_thread.join();
-            waker.close();
-            _listen.close();
+            (void)waker.close();
+            (void)_listen.close();
             std::lock_guard lock(_mutex);
             for (auto & t : _handlers)
                 if (t.joinable())
@@ -365,16 +365,16 @@ class SimpleConnectProxy
             while (_running)
             {
                 sihd::net::IpAddr client_ip;
-                int fd = _listen.accept(client_ip);
-                if (fd < 0)
+                auto fd = _listen.accept(client_ip);
+                if (!fd)
                     break;
                 if (!_running)
                 {
-                    sihd::net::Socket discard(fd);
+                    sihd::net::Socket discard(fd.value());
                     break;
                 }
                 std::lock_guard lock(_mutex);
-                _handlers.emplace_back([this, fd] { _handle(fd); });
+                _handlers.emplace_back([this, fd = fd.value()] { _handle(fd); });
             }
         }
 
@@ -383,14 +383,14 @@ class SimpleConnectProxy
             std::vector<char> tmp(65536);
             while (_running && src.is_open() && dst.is_open())
             {
-                ssize_t n = src.receive(tmp.data(), tmp.size());
-                if (n <= 0)
+                auto n = src.receive(tmp.data(), tmp.size());
+                if (!n || n.value() == 0)
                     break;
-                if (!dst.send_all(sihd::util::ArrCharView(tmp.data(), size_t(n))))
+                if (!dst.send_all(sihd::util::ArrCharView(tmp.data(), n.value())))
                     break;
             }
-            src.shutdown();
-            dst.shutdown();
+            (void)src.shutdown();
+            (void)dst.shutdown();
         }
 
         void _handle(int fd)
@@ -400,10 +400,10 @@ class SimpleConnectProxy
             std::vector<char> tmp(4096);
             while (buf.find("\r\n\r\n") == std::string::npos)
             {
-                ssize_t n = client.receive(tmp.data(), tmp.size());
-                if (n <= 0)
+                auto n = client.receive(tmp.data(), tmp.size());
+                if (!n || n.value() == 0)
                     return;
-                buf.append(tmp.data(), size_t(n));
+                buf.append(tmp.data(), n.value());
             }
 
             auto head_end = buf.find("\r\n\r\n");
@@ -435,13 +435,13 @@ class SimpleConnectProxy
 
             if (method != "CONNECT")
             {
-                client.send_all(std::string_view("HTTP/1.1 405 Method Not Allowed\r\n\r\n"));
+                (void)client.send_all(std::string_view("HTTP/1.1 405 Method Not Allowed\r\n\r\n"));
                 return;
             }
             if (!_auth_ok(proxy_auth))
             {
                 ++n_407;
-                client.send_all(std::string_view(
+                (void)client.send_all(std::string_view(
                     "HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"test\"\r\n\r\n"));
                 return;
             }
@@ -454,13 +454,13 @@ class SimpleConnectProxy
             sihd::net::Socket upstream;
             if (!upstream.open(AF_INET, SOCK_STREAM, IPPROTO_TCP) || !upstream.connect(up_addr))
             {
-                client.send_all(std::string_view("HTTP/1.1 502 Bad Gateway\r\n\r\n"));
+                (void)client.send_all(std::string_view("HTTP/1.1 502 Bad Gateway\r\n\r\n"));
                 return;
             }
             ++n_200;
-            client.send_all(std::string_view("HTTP/1.1 200 Connection Established\r\n\r\n"));
+            (void)client.send_all(std::string_view("HTTP/1.1 200 Connection Established\r\n\r\n"));
             if (!rest.empty())
-                upstream.send_all(sihd::util::ArrCharView(rest.data(), rest.size()));
+                (void)upstream.send_all(sihd::util::ArrCharView(rest.data(), rest.size()));
 
             std::thread up([&] { _pipe(client, upstream); });
             _pipe(upstream, client);

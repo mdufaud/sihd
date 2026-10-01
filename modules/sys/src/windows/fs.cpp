@@ -7,6 +7,7 @@
 #include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
 
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 
@@ -20,10 +21,11 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::sys::fs
 {
-
-using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::fs");
 
@@ -229,35 +231,39 @@ std::string tmp_path()
     return tmp_path.value_or("C:\\Windows\\TEMP\\");
 }
 
-std::string make_tmp_directory(std::string_view prefix)
+std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
 {
     (void)prefix;
     std::error_code ec;
     auto tmp_path = std::filesystem::temp_directory_path(ec);
-    if (!ec)
+    if (ec)
     {
-        char name[L_tmpnam];
-        if (std::tmpnam(name))
-        {
-            std::string_view tmp_name = name;
-            tmp_name.remove_prefix(1);
-            tmp_path /= tmp_name;
-            std::string path = tmp_path.string();
-            if (make_directory(path))
-                return path;
-        }
+        return std::unexpected(Error(ec, "could not resolve the temp directory: {}", ec.message()));
     }
-    return "";
+    char name[L_tmpnam];
+    if (std::tmpnam(name) == nullptr)
+        return std::unexpected(Error(io_error, "could not generate a temporary name"));
+    std::string_view tmp_name = name;
+    tmp_name.remove_prefix(1);
+    tmp_path /= tmp_name;
+    std::string path = tmp_path.string();
+    auto res = make_directory(path);
+    SIHD_UNEXPECTED_RETURN(res);
+    return path;
 }
 
-bool make_directory(std::string_view path, unsigned int mode)
+std::expected<void, Error> make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
-        return true;
+        return {};
     if (path.empty())
-        return false;
+        return std::unexpected(Error(invalid_argument, "empty path"));
     (void)mode;
-    return _mkdir(path.data()) == 0;
+    if (_mkdir(path.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not make directory '{}'", path));
+    }
+    return {};
 }
 
 std::vector<std::string> children(std::string_view path)
@@ -305,17 +311,23 @@ std::vector<std::string> recursive_children(std::string_view path, uint32_t max_
 
 // files
 
-bool truncate(std::string_view path, int64_t size)
+std::expected<void, Error> truncate(std::string_view path, int64_t size)
 {
     int fd = _open(path.data(), _O_WRONLY);
     if (fd < 0)
-        return false;
+    {
+        return std::unexpected(Error::from_errno("could not open '{}' for truncating", path));
+    }
     errno_t rc = _chsize_s(fd, size);
     _close(fd);
-    return rc == 0;
+    if (rc != 0)
+        return std::unexpected(
+            Error(error_errno(rc), "could not truncate '{}' to {} bytes: {}", path, size, strerror(rc)));
+    return {};
 }
 
-bool copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
+std::expected<void, Error>
+    copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
 {
     const std::wstring wfrom = str::to_wstr(from);
     const std::wstring wto = str::to_wstr(to);
@@ -332,16 +344,19 @@ bool copy_file(std::string_view from, std::string_view to, const std::function<b
     const bool dest_existed = ::GetFileAttributesW(wto.c_str()) != INVALID_FILE_ATTRIBUTES;
     const HRESULT hr = ::CopyFile2(wfrom.c_str(), wto.c_str(), &params);
     if (SUCCEEDED(hr))
-        return true;
+        return {};
     if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED) || !dest_existed)
         ::DeleteFileW(wto.c_str());
-    if (hr != HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED))
-        SIHD_LOG(error, "fs: copy_file: CopyFile2: 0x{:08x}", (unsigned long)hr);
-    return false;
+    if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED))
+        return std::unexpected(Error(interrupted, "copy '{}' cancelled", from));
+    return std::unexpected(
+        Error(io_error, "could not copy '{}' to '{}': CopyFile2 0x{:08x}", from, to, (unsigned long)hr));
 #else
     // SDK without the CopyFile2 declarations (Win7-era): no progress support
     (void)progress;
-    return ::CopyFileW(wfrom.c_str(), wto.c_str(), FALSE) != 0;
+    if (::CopyFileW(wfrom.c_str(), wto.c_str(), FALSE) == 0)
+        return std::unexpected(Error(io_error, "could not copy '{}' to '{}': {}", from, to, os::last_error_str()));
+    return {};
 #endif
 }
 
@@ -357,9 +372,13 @@ std::string realpath(std::string_view path)
     return std::string(resolved);
 }
 
-bool chdir(std::string_view path)
+std::expected<void, Error> chdir(std::string_view path)
 {
-    return ::_chdir(path.data()) == 0;
+    if (::_chdir(path.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not chdir to '{}'", path));
+    }
+    return {};
 }
 
 MountType mount_type([[maybe_unused]] std::string_view path)

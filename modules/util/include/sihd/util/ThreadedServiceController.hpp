@@ -20,7 +20,7 @@ class ThreadedServiceController: public sihd::util::AService::IServiceController
             Running,
             Stopping,
             Stopped,
-            Error,
+            Failure,
         };
 
         virtual bool op_start(AService::Operation op);

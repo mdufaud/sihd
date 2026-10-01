@@ -144,7 +144,7 @@ bool ImguiBackendNcurses::init()
             }
         }
         if (!dirs.empty())
-            sihd::sys::env::set("TERMINFO_DIRS", dirs);
+            SIHD_UNEXPECTED_LOG(sihd::sys::env::set("TERMINFO_DIRS", dirs));
     }
 
     if (initscr() == nullptr)

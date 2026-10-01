@@ -62,7 +62,7 @@ int main(int argc, char **argv)
         });
 
         FileWatcher fw;
-        if (fw.watch(path) == false)
+        if (fw.watch(path).has_value() == false)
         {
             SIHD_LOG(error, "Failed to watch: {}", path);
             app.exit(EXIT_FAILURE);

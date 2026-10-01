@@ -58,7 +58,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
         const auto lines = str::hexdump_fmt(obj->array().buf(), obj->array().byte_size(), hexdump_cols);
         SIHD_COUT("{}\n", fmt::join(lines, "\n"));
     });
-    if (!pcap.open(interface_to_sniff))
+    if (pcap.open(interface_to_sniff).has_value() == false)
         return;
     pcap.add_observer(&obs);
     // pcap.set_monitor(true);
@@ -67,7 +67,7 @@ static void sniffer_test(const std::string & interface_to_sniff)
     pcap.set_snaplen(2048);
     pcap.set_timeout(512);
     SIHD_LOG(info, "Activating packet capture");
-    pcap.activate();
+    SIHD_UNEXPECTED_LOG(pcap.activate());
     if (pcap.is_active())
     {
         pcap.set_filter("portrange 0-2000");

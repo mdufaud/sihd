@@ -1,3 +1,5 @@
+#include <cstdio>
+
 #include <sihd/net/TlsSocket.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
@@ -13,7 +15,7 @@ TlsSocket::TlsSocket(int socket, bool get_infos): Socket(socket, get_infos) {}
 
 TlsSocket::~TlsSocket()
 {
-    this->close();
+    SIHD_UNEXPECTED_LOG(this->close());
 }
 
 void TlsSocket::set_tls_context(sihd::crypto::TlsContext ctx)
@@ -40,7 +42,7 @@ TlsHandshakeStep TlsSocket::tls_accept_step()
     }
     if (!_tls_conn)
     {
-        if (!this->set_blocking(false) || !_tls_conn.init(*_tls_ctx, *this))
+        if (SIHD_UNEXPECTED_LOG(this->set_blocking(false)) || SIHD_UNEXPECTED_LOG(_tls_conn.init(*_tls_ctx, *this)))
             return TlsHandshakeStep::failed;
     }
     const TlsHandshakeStep step = _tls_conn.accept_step();
@@ -56,73 +58,68 @@ bool TlsSocket::tls_accept(int timeout_ms)
         SIHD_LOG(error, "TlsSocket: cannot tls_accept without context and open socket");
         return false;
     }
-    return this->_handshake(true, timeout_ms);
+    return this->_handshake(true, timeout_ms).has_value();
 }
 
-bool TlsSocket::_handshake(bool is_accept, int timeout_ms)
+std::expected<void, sihd::util::Error> TlsSocket::_handshake(bool is_accept, int timeout_ms)
 {
-    if (!_tls_conn.init(*_tls_ctx, *this))
-        return false;
-    const bool ret = is_accept ? _tls_conn.accept(timeout_ms) : _tls_conn.connect(timeout_ms);
-    if (!ret)
+    auto init = _tls_conn.init(*_tls_ctx, *this);
+    if (!init)
+        return init;
+    auto res = is_accept ? _tls_conn.accept(timeout_ms) : _tls_conn.connect(timeout_ms);
+    if (!res)
     {
         _tls_conn.clear();
-        return false;
+        return res;
     }
-    return true;
+    return {};
 }
 
-bool TlsSocket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
+std::expected<void, sihd::util::Error> TlsSocket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
 {
-    if (!Socket::connect(addr, addr_len, timeout_ms))
-        return false;
+    auto res = Socket::connect(addr, addr_len, timeout_ms);
+    if (!res)
+        return res;
     if (_tls_ctx)
     {
-        if (!this->_handshake(false, timeout_ms))
+        auto handshake = this->_handshake(false, timeout_ms);
+        if (!handshake)
         {
-            Socket::close();
-            return false;
+            (void)Socket::close();
+            return handshake;
         }
     }
-    return true;
+    return {};
 }
 
-ssize_t TlsSocket::send(sihd::util::ArrCharView view)
+std::expected<size_t, sihd::util::Error> TlsSocket::send(sihd::util::ArrCharView view)
 {
     if (_tls_conn)
-    {
-        ssize_t ret = _tls_conn.write(view.data(), view.size());
-        _retryable = ret < 0 && _tls_conn.retryable();
-        return ret;
-    }
+        return _tls_conn.write(view.data(), view.size());
     return Socket::send(view);
 }
 
-ssize_t TlsSocket::receive(void *data, size_t size)
+std::expected<size_t, sihd::util::Error> TlsSocket::receive(void *data, size_t size)
 {
     if (_tls_conn)
-    {
-        ssize_t ret = _tls_conn.read(data, size);
-        _retryable = ret < 0 && _tls_conn.retryable();
-        return ret;
-    }
+        return _tls_conn.read(data, size);
     return Socket::receive(data, size);
 }
 
-bool TlsSocket::shutdown() const
+std::expected<void, sihd::util::Error> TlsSocket::shutdown() const
 {
     // the TLS close_notify write must happen before SHUT_RDWR, or SSL_shutdown
     // gets EPIPE and the process dies of SIGPIPE
     if (_tls_conn)
-        _tls_conn.shutdown();
+        (void)_tls_conn.shutdown();
     return Socket::shutdown();
 }
 
-bool TlsSocket::close()
+std::expected<void, sihd::util::Error> TlsSocket::close()
 {
     if (_tls_conn)
     {
-        _tls_conn.shutdown();
+        (void)_tls_conn.shutdown();
         _tls_conn.clear();
     }
     return Socket::close();

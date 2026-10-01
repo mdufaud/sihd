@@ -215,15 +215,12 @@ bool is_category_dump(int sig)
     }
 }
 
-bool ignore(int sig)
+std::expected<void, Error> ignore(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_IGN);
     if (previous_handler == SIG_ERR)
-    {
-        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, os::last_error_str());
-    }
-    return previous_handler != SIG_ERR;
+        return std::unexpected(Error::from_errno("could not ignore signal {}", sig));
 #else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
@@ -231,15 +228,12 @@ bool ignore(int sig)
     sigemptyset(&sa.sa_mask);
 
     if (sigaction(sig, &sa, nullptr) != 0)
-    {
-        SIHD_LOG(error, "Error ignoring signal '{}': {}", sig, os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not ignore signal {}", sig));
 #endif
-    return true;
+    return {};
 }
 
-bool handle(int sig)
+std::expected<void, Error> handle(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     // Install console control handler for better CTRL+C/BREAK handling
@@ -247,10 +241,7 @@ bool handle(int sig)
 
     sighandler_t previous_handler = ::signal(sig, _signal_callback);
     if (previous_handler == SIG_ERR)
-    {
-        SIHD_LOG(error, "Error handling signal '{}': {}", sig, os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not handle signal {}", sig));
 #else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
@@ -260,23 +251,17 @@ bool handle(int sig)
     sigemptyset(&sa.sa_mask);
 
     if (sigaction(sig, &sa, nullptr) != 0)
-    {
-        SIHD_LOG(error, "Error handling signal '{}': {}", sig, os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not handle signal {}", sig));
 #endif
-    return true;
+    return {};
 }
 
-bool unhandle(int sig)
+std::expected<void, Error> unhandle(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_DFL);
     if (previous_handler == SIG_ERR)
-    {
-        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not unhandle signal {}", sig));
 #else
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
@@ -284,12 +269,9 @@ bool unhandle(int sig)
     sigemptyset(&sa.sa_mask);
 
     if (sigaction(sig, &sa, nullptr) != 0)
-    {
-        SIHD_LOG(error, "Error unhandling signal '{}': {}", sig, os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not unhandle signal {}", sig));
 #endif
-    return true;
+    return {};
 }
 
 int last_received()

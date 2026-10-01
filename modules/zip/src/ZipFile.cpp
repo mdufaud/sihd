@@ -7,15 +7,25 @@
 # pragma clang diagnostic pop
 #endif
 
+#include <cerrno>
+#include <cstring>
+#include <optional>
+#include <utility>
+
+#include <fmt/core.h>
+
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 
 #define ZIP_ENTRY_NAME_OR_INDEX(entry) (entry.name != nullptr ? entry.name : std::to_string(entry.index))
+
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+using namespace sihd::sys;
 
 namespace sihd::zip
 {
@@ -24,6 +34,29 @@ SIHD_NEW_LOGGER("sihd::zip");
 
 namespace
 {
+
+ErrorCode zip_error_code(int ze)
+{
+    switch (ze)
+    {
+        case ZIP_ER_EXISTS:
+            return already_exists;
+        case ZIP_ER_NOENT:
+        case ZIP_ER_NOZIP:
+            return not_found;
+        case ZIP_ER_OPEN:
+            return io_error;
+        case ZIP_ER_RDONLY:
+            return permission_denied;
+        case ZIP_ER_INCONS:
+        case ZIP_ER_CRC:
+            return io_error;
+        case ZIP_ER_MEMORY:
+            return out_of_memory;
+        default:
+            return io_error;
+    }
+}
 
 std::string get_error(int code)
 {
@@ -37,6 +70,69 @@ std::string get_error(int code)
 std::string get_error(zip_t *ptr)
 {
     return zip_strerror(ptr);
+}
+
+Error make_error(int ze, std::string && message)
+{
+    return Error(zip_error_code(ze), "{}: {} ({})", std::move(message), get_error(ze), ze);
+}
+
+template <typename... Args>
+    requires(sizeof...(Args) != 0)
+Error make_error(int ze, fmt::format_string<Args...> format, Args &&...args)
+{
+    return make_error(ze, fmt::format(format, std::forward<Args>(args)...));
+}
+
+Error make_error(zip_t *ptr, std::string && message)
+{
+    const int ze = zip_error_code_zip(zip_get_error(ptr));
+    return Error(zip_error_code(ze), "{}: {} ({})", std::move(message), get_error(ptr), ze);
+}
+
+template <typename... Args>
+    requires(sizeof...(Args) != 0)
+Error make_error(zip_t *ptr, fmt::format_string<Args...> format, Args &&...args)
+{
+    return make_error(ptr, fmt::format(format, std::forward<Args>(args)...));
+}
+
+Error make_error(zip_file *file_ptr, std::string && message)
+{
+    const int ze = zip_error_code_zip(zip_file_get_error(file_ptr));
+    return Error(zip_error_code(ze), "{}: {} ({})", std::move(message), zip_file_strerror(file_ptr), ze);
+}
+
+template <typename... Args>
+    requires(sizeof...(Args) != 0)
+Error make_error(zip_file *file_ptr, fmt::format_string<Args...> format, Args &&...args)
+{
+    return make_error(file_ptr, fmt::format(format, std::forward<Args>(args)...));
+}
+
+Error not_open_error()
+{
+    return Error(not_initialized, "no zip file open");
+}
+
+Error no_entry_error()
+{
+    return Error(not_initialized, "no entry loaded");
+}
+
+std::expected<void, Error> add_source(zip_t *zip_ptr, std::string_view name, zip_source_t *source)
+{
+    if (zip_ptr == nullptr)
+    {
+        zip_source_free(source);
+        return std::unexpected(not_open_error());
+    }
+    if (zip_file_add(zip_ptr, name.data(), source, ZIP_FL_ENC_UTF_8) < 0)
+    {
+        zip_source_free(source);
+        return std::unexpected(make_error(zip_ptr, "could not add file '{}'", name));
+    }
+    return {};
 }
 
 void save_entry(struct zip_stat *zip_stat, ZipFile::ZipEntry & zip_entry)
@@ -55,22 +151,6 @@ void save_entry(struct zip_stat *zip_stat, ZipFile::ZipEntry & zip_entry)
         zip_entry.crc = zip_stat->crc;
 }
 
-ssize_t add_source(zip_t *zip_ptr, std::string_view name, zip_source_t *source)
-{
-    if (zip_ptr == nullptr)
-    {
-        zip_source_free(source);
-        return -1;
-    }
-    const ssize_t file_idx = zip_file_add(zip_ptr, name.data(), source, ZIP_FL_ENC_UTF_8);
-    if (file_idx < 0)
-    {
-        zip_source_free(source);
-        SIHD_LOG(error, "ZipFile: could not add file '{}' to zip: '{}'", name, get_error(zip_ptr));
-    }
-    return file_idx;
-}
-
 void close_zip_file_and_null(zip_file **file_ptr)
 {
     if (file_ptr != nullptr && *file_ptr != nullptr)
@@ -81,9 +161,6 @@ void close_zip_file_and_null(zip_file **file_ptr)
 }
 
 } // namespace
-
-using namespace sihd::util;
-using namespace sihd::sys;
 
 struct ZipFile::ZipHandle
 {
@@ -98,7 +175,7 @@ ZipFile::ZipFile(): _zip_handle(std::make_unique<ZipHandle>())
 
 ZipFile::ZipFile(std::string_view path, bool read_only, bool do_strict_checks): ZipFile()
 {
-    this->open(path, read_only, do_strict_checks);
+    SIHD_UNEXPECTED_LOG(this->open(path, read_only, do_strict_checks));
 }
 
 ZipFile::~ZipFile()
@@ -106,30 +183,24 @@ ZipFile::~ZipFile()
     this->discard();
 }
 
-bool ZipFile::set_password(std::string_view password)
+std::expected<void, Error> ZipFile::set_password(std::string_view password)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
     if (zip_set_default_password(_zip_handle->handle_ptr, password.data()) < 0)
-    {
-        SIHD_LOG(error, "ZipFile: could not set password: {}", get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error(_zip_handle->handle_ptr, "could not set password"));
+    return {};
 }
 
-bool ZipFile::set_buffer_size(size_t size)
+std::expected<void, Error> ZipFile::set_buffer_size(size_t size)
 {
     if (size == 0)
-    {
-        SIHD_LOG(error, "ZipFile: cannot set buffer to 0");
-        return false;
-    }
+        return std::unexpected(Error(invalid_argument, "cannot set buffer to 0"));
     _buf.reserve(size + 1);
-    return true;
+    return {};
 }
 
-bool ZipFile::set_aes_encryption(int aes)
+std::expected<void, Error> ZipFile::set_aes_encryption(int aes)
 {
     switch (aes)
     {
@@ -146,15 +217,15 @@ bool ZipFile::set_aes_encryption(int aes)
             this->encrypt_in_aes_256();
             break;
         default:
-            SIHD_LOG(error, "ZipWriter: no such encryption for AES: {}", aes);
-            return false;
+            return std::unexpected(Error(invalid_argument, "no such encryption for AES: {}", aes));
     }
-    return true;
+    return {};
 }
 
-bool ZipFile::open(std::string_view path, bool read_only, bool do_strict_checks)
+std::expected<void, Error> ZipFile::open(std::string_view path, bool read_only, bool do_strict_checks)
 {
-    this->close();
+    // a failing close must not prevent opening another archive
+    SIHD_UNEXPECTED_LOG(this->close());
 
     int flags = ZIP_CREATE;
     if (read_only)
@@ -162,18 +233,15 @@ bool ZipFile::open(std::string_view path, bool read_only, bool do_strict_checks)
     if (do_strict_checks)
         flags |= ZIP_CHECKCONS;
 
-    int error;
-    _zip_handle->handle_ptr = zip_open(path.data(), flags, &error);
+    int ze = 0;
+    _zip_handle->handle_ptr = zip_open(path.data(), flags, &ze);
     if (_zip_handle->handle_ptr == nullptr)
-    {
-        SIHD_LOG(error, "ZipFile: could not open zip: {}", get_error(error));
-    }
+        return std::unexpected(make_error(ze, "could not open zip '{}'", path));
 
     _current_zip_entry = ZipEntry {};
     _zip_handle->file_handle_ptr = nullptr;
     _buf.clear();
-
-    return _zip_handle->handle_ptr != nullptr;
+    return {};
 }
 
 bool ZipFile::is_open() const
@@ -193,20 +261,21 @@ void ZipFile::discard()
     _buf.clear();
 }
 
-bool ZipFile::close()
+std::expected<void, Error> ZipFile::close()
 {
-    bool ret = true;
+    std::optional<Error> error;
     if (_zip_handle->handle_ptr != nullptr)
     {
         close_zip_file_and_null(&_zip_handle->file_handle_ptr);
-        ret = zip_close(_zip_handle->handle_ptr) == 0;
-        if (!ret)
-            SIHD_LOG(error, "ZipFile: could not close zip file: {}", get_error(_zip_handle->handle_ptr));
+        if (zip_close(_zip_handle->handle_ptr) != 0)
+            error = make_error(_zip_handle->handle_ptr, "could not close zip file");
         _zip_handle->handle_ptr = nullptr;
     }
     _current_zip_entry = ZipEntry {};
     _buf.clear();
-    return ret;
+    if (error)
+        return std::unexpected(std::move(*error));
+    return {};
 }
 
 std::string_view ZipFile::archive_comment() const
@@ -218,31 +287,23 @@ std::string_view ZipFile::archive_comment() const
     return archive_comment != nullptr ? std::string_view(archive_comment, comment_length) : "";
 }
 
-bool ZipFile::comment_archive(std::string_view comment)
+std::expected<void, Error> ZipFile::comment_archive(std::string_view comment)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
-    const bool success = zip_set_archive_comment(_zip_handle->handle_ptr, comment.data(), comment.size()) == 0;
-    if (!success)
-    {
-        SIHD_LOG(error, "ZipFile: could not write zip archive commentary: {}", get_error(_zip_handle->handle_ptr));
-    }
-    return success;
+        return std::unexpected(not_open_error());
+    if (zip_set_archive_comment(_zip_handle->handle_ptr, comment.data(), comment.size()) != 0)
+        return std::unexpected(make_error(_zip_handle->handle_ptr, "could not write zip archive commentary"));
+    return {};
 }
 
-bool ZipFile::set_archive_readonly(bool active)
+std::expected<void, Error> ZipFile::set_archive_readonly(bool active)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
-    const bool success = zip_set_archive_flag(_zip_handle->handle_ptr, ZIP_AFL_RDONLY, (int)active) == 0;
-    if (!success)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not set archive {}: {}",
-                 active ? "read-only" : "non read-only",
-                 get_error(_zip_handle->handle_ptr));
-    }
-    return success;
+        return std::unexpected(not_open_error());
+    if (zip_set_archive_flag(_zip_handle->handle_ptr, ZIP_AFL_RDONLY, (int)active) != 0)
+        return std::unexpected(
+            make_error(_zip_handle->handle_ptr, "could not set archive {}", active ? "read-only" : "non read-only"));
+    return {};
 }
 
 void ZipFile::no_encrypt()
@@ -265,21 +326,22 @@ void ZipFile::encrypt_in_aes_256()
     _encryption_method = ZIP_EM_AES_256;
 }
 
-bool ZipFile::encrypt_all(std::string_view password)
+std::expected<void, Error> ZipFile::encrypt_all(std::string_view password)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
 
     const size_t total_entries = this->count_entries();
     size_t idx = 0;
     while (idx < total_entries)
     {
-        const bool success = this->load_entry(idx) && this->encrypt_entry(password);
-        if (!success)
-            return false;
+        auto loaded = this->load_entry(idx);
+        SIHD_UNEXPECTED_RETURN(loaded);
+        auto encrypted = this->encrypt_entry(password);
+        SIHD_UNEXPECTED_RETURN(encrypted);
         ++idx;
     }
-    return true;
+    return {};
 }
 
 ssize_t ZipFile::count_original_entries() const
@@ -296,48 +358,36 @@ ssize_t ZipFile::count_entries() const
     return zip_get_num_entries(_zip_handle->handle_ptr, 0);
 }
 
-bool ZipFile::load_entry(size_t idx)
+std::expected<ZipFile::ZipEntry, Error> ZipFile::load_entry(size_t idx)
 {
     _current_zip_entry = ZipEntry {};
     close_zip_file_and_null(&_zip_handle->file_handle_ptr);
 
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
 
     zip_stat_t zip_entry;
     zip_stat_init(&zip_entry);
-    const bool success = zip_stat_index(_zip_handle->handle_ptr, idx, 0, &zip_entry) == 0;
-    if (success)
-    {
-        save_entry(&zip_entry, _current_zip_entry);
-    }
-    else
-    {
-        SIHD_LOG(error, "ZipFile: could not read entry '{}': {}", idx, get_error(_zip_handle->handle_ptr));
-    }
-    return success;
+    if (zip_stat_index(_zip_handle->handle_ptr, idx, 0, &zip_entry) != 0)
+        return std::unexpected(make_error(_zip_handle->handle_ptr, "could not read entry '{}'", idx));
+    save_entry(&zip_entry, _current_zip_entry);
+    return _current_zip_entry;
 }
 
-bool ZipFile::load_entry(std::string_view name)
+std::expected<ZipFile::ZipEntry, Error> ZipFile::load_entry(std::string_view name)
 {
     _current_zip_entry = ZipEntry {};
     close_zip_file_and_null(&_zip_handle->file_handle_ptr);
 
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
 
     zip_stat_t zip_entry;
     zip_stat_init(&zip_entry);
-    const bool success = zip_stat(_zip_handle->handle_ptr, name.data(), 0, &zip_entry) == 0;
-    if (success)
-    {
-        save_entry(&zip_entry, _current_zip_entry);
-    }
-    else
-    {
-        SIHD_LOG(error, "ZipFile: could not read entry '{}': {}", name, get_error(_zip_handle->handle_ptr));
-    }
-    return success;
+    if (zip_stat(_zip_handle->handle_ptr, name.data(), 0, &zip_entry) != 0)
+        return std::unexpected(make_error(_zip_handle->handle_ptr, "could not read entry '{}'", name));
+    save_entry(&zip_entry, _current_zip_entry);
+    return _current_zip_entry;
 }
 
 bool ZipFile::is_entry_loaded() const
@@ -345,14 +395,16 @@ bool ZipFile::is_entry_loaded() const
     return _zip_handle->handle_ptr != nullptr && _current_zip_entry.index >= 0;
 }
 
-bool ZipFile::read_next_entry()
+std::expected<bool, Error> ZipFile::read_next_entry()
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
     const ssize_t total_entries = this->count_original_entries();
     if (_current_zip_entry.index + 1 >= total_entries)
         return false;
-    return this->load_entry(_current_zip_entry.index + 1);
+    auto entry = this->load_entry(_current_zip_entry.index + 1);
+    SIHD_UNEXPECTED_RETURN(entry);
+    return true;
 }
 
 std::string_view ZipFile::entry_name() const
@@ -389,10 +441,11 @@ bool ZipFile::is_entry_directory() const
     return _current_zip_entry.name[len - 1] == '/';
 }
 
-bool ZipFile::read_next()
+std::expected<bool, Error> ZipFile::read_next()
 {
-    const ssize_t size_read = this->read_entry();
-    return size_read > 0;
+    auto size_read = this->read_entry();
+    SIHD_UNEXPECTED_RETURN(size_read);
+    return *size_read > 0;
 }
 
 bool ZipFile::get_read_data(sihd::util::ArrCharView & view) const
@@ -403,11 +456,11 @@ bool ZipFile::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-ssize_t ZipFile::read_entry(std::string_view password)
+std::expected<ssize_t, Error> ZipFile::read_entry(std::string_view password)
 {
     _buf.clear();
     if (this->is_entry_loaded() == false)
-        return -1;
+        return std::unexpected(no_entry_error());
 
     if (_zip_handle->file_handle_ptr == nullptr)
     {
@@ -419,208 +472,166 @@ ssize_t ZipFile::read_entry(std::string_view password)
         else
             _zip_handle->file_handle_ptr = zip_fopen_index(_zip_handle->handle_ptr, _current_zip_entry.index, 0);
         if (_zip_handle->file_handle_ptr == nullptr)
-        {
-            SIHD_LOG(error, "ZipFile: could not open entry: {}", _current_zip_entry.name);
-            return -1;
-        }
+            return std::unexpected(
+                make_error(_zip_handle->handle_ptr, "could not open entry '{}'", _current_zip_entry.name));
     }
 
     if (_buf.capacity() == 0)
-        this->set_buffer_size(4096);
+    {
+        auto resized = this->set_buffer_size(4096);
+        SIHD_UNEXPECTED_RETURN(resized);
+    }
 
     _buf.resize(_buf.capacity());
     // -1 to account for the \0
     ssize_t ret = zip_fread(_zip_handle->file_handle_ptr, _buf.data(), _buf.capacity() - 1);
     if (ret < 0)
     {
-        SIHD_LOG(error, "ZipFile: could not read entry: {}", _current_zip_entry.name);
+        auto error = make_error(_zip_handle->file_handle_ptr, "could not read entry '{}'", _current_zip_entry.name);
         _buf.clear();
+        close_zip_file_and_null(&_zip_handle->file_handle_ptr);
+        return std::unexpected(std::move(error));
     }
-    else
-    {
-        _buf.resize((size_t)ret);
-        _buf[ret] = 0;
-    }
-    if (ret <= 0)
+    _buf.resize((size_t)ret);
+    _buf[ret] = 0;
+    if (ret == 0)
         close_zip_file_and_null(&_zip_handle->file_handle_ptr);
     return ret;
 }
 
-bool ZipFile::unchange_entry()
+std::expected<void, Error> ZipFile::unchange_entry()
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
     if (zip_unchange(_zip_handle->handle_ptr, _current_zip_entry.index) < 0)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not remove changes to entry '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not remove changes to entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    return {};
 }
 
-bool ZipFile::remove_entry()
+std::expected<void, Error> ZipFile::remove_entry()
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
     if (zip_delete(_zip_handle->handle_ptr, _current_zip_entry.index) < 0)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not remove entry '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not remove entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    return {};
 }
 
-bool ZipFile::rename_entry(std::string_view new_name)
+std::expected<void, Error> ZipFile::rename_entry(std::string_view new_name)
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
     if (zip_file_rename(_zip_handle->handle_ptr, _current_zip_entry.index, new_name.data(), 0) < 0)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not rename entry '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    // reload new data
-    return this->load_entry(_current_zip_entry.index);
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not rename entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    auto reloaded = this->load_entry(_current_zip_entry.index);
+    SIHD_UNEXPECTED_RETURN(reloaded);
+    return {};
 }
 
-bool ZipFile::modify_entry_time(sihd::util::Timestamp new_timestamp)
+std::expected<void, Error> ZipFile::modify_entry_time(sihd::util::Timestamp new_timestamp)
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
     if (zip_file_set_mtime(_zip_handle->handle_ptr, _current_zip_entry.index, new_timestamp.seconds(), 0) < 0)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not modify entry time '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    // reload new data
-    return this->load_entry(_current_zip_entry.index);
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not modify entry time '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    auto reloaded_2 = this->load_entry(_current_zip_entry.index);
+    SIHD_UNEXPECTED_RETURN(reloaded_2);
+    return {};
 }
 
-bool ZipFile::comment_entry(std::string_view comment)
+std::expected<void, Error> ZipFile::comment_entry(std::string_view comment)
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
     if (zip_file_set_comment(_zip_handle->handle_ptr, _current_zip_entry.index, comment.data(), comment.size(), 0) < 0)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not comment entry '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not comment entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    return {};
 }
 
-bool ZipFile::encrypt_entry(std::string_view password)
+std::expected<void, Error> ZipFile::encrypt_entry(std::string_view password)
 {
     if (this->is_entry_loaded() == false)
-        return false;
-
-    const bool ret = zip_file_set_encryption(_zip_handle->handle_ptr,
-                                             _current_zip_entry.index,
-                                             _encryption_method,
-                                             password.data())
-                     == 0;
-    if (!ret)
-        SIHD_LOG(error,
-                 "ZipFile: failed to set encryption on index '{}': {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-    return ret;
+        return std::unexpected(no_entry_error());
+    if (zip_file_set_encryption(_zip_handle->handle_ptr, _current_zip_entry.index, _encryption_method, password.data())
+        < 0)
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "failed to set encryption on index '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
+    return {};
 }
 
-bool ZipFile::replace_entry(sihd::util::ArrCharView view)
+std::expected<void, Error> ZipFile::replace_entry(sihd::util::ArrCharView view)
 {
     if (this->is_entry_loaded() == false)
-        return false;
+        return std::unexpected(no_entry_error());
 
     close_zip_file_and_null(&_zip_handle->file_handle_ptr);
 
     zip_source_t *source = zip_source_buffer(_zip_handle->handle_ptr, view.data(), view.byte_size(), 0);
     if (source == nullptr)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not create source buffer for entry '{}' to zip: {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not create source buffer for entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
 
-    const bool success = zip_file_replace(_zip_handle->handle_ptr, _current_zip_entry.index, source, 0) == 0;
-    if (!success)
+    if (zip_file_replace(_zip_handle->handle_ptr, _current_zip_entry.index, source, 0) != 0)
     {
         zip_source_free(source);
-        SIHD_LOG(error,
-                 "ZipFile: could not replace entry '{}' to zip: {}",
-                 ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
-                 get_error(_zip_handle->handle_ptr));
+        return std::unexpected(make_error(_zip_handle->handle_ptr,
+                                          "could not replace entry '{}'",
+                                          ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
     }
-    return success;
+    return {};
 }
 
-bool ZipFile::add_dir(std::string_view name)
+std::expected<void, Error> ZipFile::add_dir(std::string_view name)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
     if (zip_dir_add(_zip_handle->handle_ptr, name.data(), 0) < 0)
-    {
-        SIHD_LOG(error, "ZipFile: could not add directory '{}': {}", name, get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error(_zip_handle->handle_ptr, "could not add directory '{}'", name));
+    return {};
 }
 
-bool ZipFile::add_file(std::string_view name, sihd::util::ArrCharView view)
+std::expected<void, Error> ZipFile::add_file(std::string_view name, sihd::util::ArrCharView view)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
     zip_source_t *source = zip_source_buffer(_zip_handle->handle_ptr, view.data(), view.byte_size(), 0);
     if (source == nullptr)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not create source buffer for entry '{}' to zip: {}",
-                 name,
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    const ssize_t file_idx = add_source(_zip_handle->handle_ptr, name, source);
-    return file_idx >= 0;
+        return std::unexpected(
+            make_error(_zip_handle->handle_ptr, "could not create source buffer for entry '{}'", name));
+    return add_source(_zip_handle->handle_ptr, name, source);
 }
 
-bool ZipFile::add_from_fs(std::string_view name, std::string_view path)
+std::expected<void, Error> ZipFile::add_from_fs(std::string_view name, std::string_view path)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
 
     if (fs::is_dir(path))
         return this->add_dir_from_fs(name, path);
-    else if (fs::is_file(path))
+    if (fs::is_file(path))
         return this->add_file_from_fs(name, path);
 
-    return false;
+    return std::unexpected(Error(not_found, "no such file or directory '{}'", path));
 }
 
-bool ZipFile::add_dir_from_fs(std::string_view name, std::string_view path)
+std::expected<void, Error> ZipFile::add_dir_from_fs(std::string_view name, std::string_view path)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
-    if (this->add_dir(name) == false)
-    {
-        SIHD_LOG(error, "ZipFile: could not add directory '{}' to zip: {}", name, get_error(_zip_handle->handle_ptr));
-        return false;
-    }
+        return std::unexpected(not_open_error());
+    if (auto added = this->add_dir(name); !added)
+        return added;
     std::vector<std::string> children = fs::children(path);
     for (std::string_view child : children)
     {
@@ -630,81 +641,55 @@ bool ZipFile::add_dir_from_fs(std::string_view name, std::string_view path)
             child_name.pop_back();
         // archive entry names always use '/', regardless of the host fs separator
         std::string entry_name = std::string(name) + "/" + child_name;
-        if (this->add_from_fs(entry_name, fs::combine(path, child_name)) == false)
-            return false;
+        if (auto added = this->add_from_fs(entry_name, fs::combine(path, child_name)); !added)
+            return added;
     }
-    return true;
+    return {};
 }
 
-bool ZipFile::add_file_from_fs(std::string_view name, std::string_view path)
+std::expected<void, Error> ZipFile::add_file_from_fs(std::string_view name, std::string_view path)
 {
     if (_zip_handle->handle_ptr == nullptr)
-        return false;
+        return std::unexpected(not_open_error());
     zip_source_t *source = zip_source_file(_zip_handle->handle_ptr, path.data(), 0, 0);
     if (source == nullptr)
-    {
-        SIHD_LOG(error,
-                 "ZipFile: could not create source file for entry '{}' to zip: {}",
-                 name,
-                 get_error(_zip_handle->handle_ptr));
-        return false;
-    }
-    return add_source(_zip_handle->handle_ptr, name, source) >= 0;
+        return std::unexpected(
+            make_error(_zip_handle->handle_ptr, "could not create source file for entry '{}'", name));
+    return add_source(_zip_handle->handle_ptr, name, source);
 }
 
-bool ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
+std::expected<void, Error> ZipFile::dump_entry_to_fs(std::string_view path, std::string_view password)
 {
     if (_zip_handle->handle_ptr == nullptr || !this->is_entry_loaded())
-        return false;
+        return std::unexpected(no_entry_error());
 
     if (this->is_entry_directory())
     {
-        const bool success = fs::make_directory(path.data(), 0750);
-        if (!success)
-            SIHD_LOG(error,
-                     "ZipFile: could not write directory entry '{}' - {} for: {}",
-                     _current_zip_entry.name,
-                     sys::os::last_error_str(),
-                     path);
-        return success;
+        auto res = fs::make_directory(path.data(), 0750);
+        SIHD_UNEXPECTED_RETURN(res);
+        return {};
     }
 
     File file(path, "w");
 
     if (!file.is_open())
     {
-        SIHD_LOG(error,
-                 "ZipFile: could not open file entry '{}' - {} for: {}",
-                 _current_zip_entry.name,
-                 sys::os::last_error_str(),
-                 path);
-        return false;
+        // File::open already logged the errno detail: reading it back may yield a clobbered value
+        return std::unexpected(Error(io_error, "could not write entry '{}' to '{}'", _current_zip_entry.name, path));
     }
 
-    ssize_t read;
-    ssize_t wrote;
-    while ((read = this->read_entry(password)) > 0)
+    while (true)
     {
-        wrote = file.write(_buf.data(), read);
-        if (wrote < 0)
-        {
-            SIHD_LOG(error,
-                     "ZipFile: could not write file entry '{}' - {} for: {}",
-                     _current_zip_entry.name,
-                     sys::os::last_error_str(),
-                     path);
-            close_zip_file_and_null(&_zip_handle->file_handle_ptr);
-            return false;
-        }
-        else if (wrote == 0)
+        auto read = this->read_entry(password);
+        SIHD_UNEXPECTED_RETURN(read);
+        if (*read == 0)
+            break;
+        auto wrote = file.write(_buf.data(), (size_t)*read);
+        SIHD_UNEXPECTED_RETURN(wrote);
+        if (*wrote == 0)
             break;
     }
-    if (read < 0)
-    {
-        SIHD_LOG(error, "ZipFile: error reading entry '{}' for: {}", _current_zip_entry.name, path);
-        return false;
-    }
-    return true;
+    return {};
 }
 
 } // namespace sihd::zip

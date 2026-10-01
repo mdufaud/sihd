@@ -7,6 +7,23 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 
+namespace
+{
+
+// asserts no read error and returns whether a line was read
+bool read_next_ok(sihd::csv::CsvReader & reader)
+{
+    auto res = reader.read_next();
+    if (!res.has_value())
+    {
+        ADD_FAILURE() << res.error().message;
+        return false;
+    }
+    return res.value();
+}
+
+} // namespace
+
 namespace test
 {
 SIHD_NEW_LOGGER("test");
@@ -68,7 +85,7 @@ TEST_F(TestCsv, test_csv_utils_tuple)
     TmpDir tmp_dir;
     const std::string path = fmt::format("{}/{}", tmp_dir.path(), "test_tuple.csv");
 
-    ASSERT_NO_THROW(utils::write_csv(path, columns, datas));
+    ASSERT_TRUE(utils::write_csv(path, columns, datas).has_value());
 
     const auto csv_data = utils::read_csv(path, true);
     ASSERT_TRUE(csv_data);
@@ -113,7 +130,7 @@ TEST_F(TestCsv, test_csv_reader)
     SIHD_LOG(info, "Reading csv: {}", path);
     EXPECT_TRUE(reader.open(path));
     // must skip the comments
-    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(read_next_ok(reader));
 
     // copy values as they will change at next read
     const auto values1 = reader.columns();
@@ -130,7 +147,7 @@ TEST_F(TestCsv, test_csv_reader)
         EXPECT_EQ(values1[5], "");
     }
 
-    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(read_next_ok(reader));
 
     // copy values as they will change at next read
     const auto values2 = reader.columns();
@@ -145,7 +162,7 @@ TEST_F(TestCsv, test_csv_reader)
         EXPECT_EQ(values2[3], "4.2");
     }
 
-    EXPECT_TRUE(reader.read_next());
+    EXPECT_TRUE(read_next_ok(reader));
 
     // copy values as they will change at next read
     const auto values3 = reader.columns();
@@ -160,7 +177,7 @@ TEST_F(TestCsv, test_csv_reader)
         EXPECT_EQ(values3[3], "");
     }
 
-    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
     auto csv_data = utils::read_csv(path, false);
@@ -206,13 +223,13 @@ TEST_F(TestCsv, test_csv_custom_delimiter)
         ASSERT_TRUE(reader.open(path));
         ASSERT_TRUE(reader.set_delimiter(';'));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"hello", "world", "test"}));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"1", "2", "3"}));
 
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(read_next_ok(reader));
         EXPECT_TRUE(reader.close());
     }
 
@@ -232,13 +249,13 @@ TEST_F(TestCsv, test_csv_custom_delimiter)
         ASSERT_TRUE(reader.open(space_path));
         ASSERT_TRUE(reader.set_delimiter(' '));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"col1", "col2"}));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"a", "b"}));
 
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(read_next_ok(reader));
     }
 
     // pipe delimiter
@@ -256,10 +273,10 @@ TEST_F(TestCsv, test_csv_custom_delimiter)
         ASSERT_TRUE(reader.open(pipe_path));
         ASSERT_TRUE(reader.set_delimiter('|'));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"x", "y", "z"}));
 
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(read_next_ok(reader));
     }
 }
 
@@ -286,10 +303,10 @@ TEST_F(TestCsv, test_csv_custom_commentary)
         ASSERT_TRUE(reader.open(path));
         ASSERT_TRUE(reader.set_commentary(';'));
 
-        ASSERT_TRUE(reader.read_next());
+        ASSERT_TRUE(read_next_ok(reader));
         EXPECT_EQ(reader.columns(), (std::vector<std::string> {"a", "b"}));
 
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(read_next_ok(reader));
     }
 }
 
@@ -300,14 +317,14 @@ TEST_F(TestCsv, test_csv_error_paths)
         CsvReader reader;
         EXPECT_FALSE(reader.open("/nonexistent/path/file.csv"));
         EXPECT_FALSE(reader.is_open());
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(reader.read_next().has_value());
     }
 
     // reader: constructor with nonexistent file
     {
         CsvReader reader("/nonexistent/path/file.csv");
         EXPECT_FALSE(reader.is_open());
-        EXPECT_FALSE(reader.read_next());
+        EXPECT_FALSE(reader.read_next().has_value());
     }
 
     // reader: columns on closed reader
@@ -329,12 +346,12 @@ TEST_F(TestCsv, test_csv_error_paths)
         EXPECT_FALSE(writer.is_open());
     }
 
-    // write_csv: throws on bad path
+    // write_csv: fails on bad path
     {
         using Data = std::tuple<int>;
         std::vector<Data> rows;
         rows.emplace_back(std::make_tuple(1));
-        EXPECT_THROW(utils::write_csv("/nonexistent/path/file.csv", {"col"}, rows), std::runtime_error);
+        EXPECT_FALSE(utils::write_csv("/nonexistent/path/file.csv", {"col"}, rows).has_value());
     }
 
     // set_delimiter: reject non-printable
@@ -359,11 +376,11 @@ TEST_F(TestCsv, test_csv_empty_file)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "empty.csv");
 
-    ASSERT_TRUE(fs::write(path, ""));
+    ASSERT_TRUE(fs::write(path, "").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
-    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
     auto csv_data = utils::read_csv(path, false);
@@ -376,11 +393,11 @@ TEST_F(TestCsv, test_csv_only_comments)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "comments.csv");
 
-    ASSERT_TRUE(fs::write(path, "#line1\n#line2\n#line3\n"));
+    ASSERT_TRUE(fs::write(path, "#line1\n#line2\n#line3\n").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
-    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
     auto csv_data = utils::read_csv(path, false);
@@ -414,13 +431,13 @@ TEST_F(TestCsv, test_csv_writer_append)
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"1", "2", "3"}));
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"4", "5", "6"}));
 
-    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(read_next_ok(reader));
 }
 
 TEST_F(TestCsv, test_csv_timestamp_numeric)
@@ -428,7 +445,7 @@ TEST_F(TestCsv, test_csv_timestamp_numeric)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "timestamp.csv");
 
-    ASSERT_TRUE(fs::write(path, "1000000000,hello\n2000000000,world\n"));
+    ASSERT_TRUE(fs::write(path, "1000000000,hello\n2000000000,world\n").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
@@ -436,17 +453,19 @@ TEST_F(TestCsv, test_csv_timestamp_numeric)
 
     sihd::util::Timestamp ts(0);
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"1000000000", "hello"}));
-    ASSERT_TRUE(reader.get_read_timestamp(&ts));
-    EXPECT_EQ(ts, 1000000000);
+    auto ts_res = reader.get_read_timestamp();
+    ASSERT_TRUE(ts_res.has_value());
+    EXPECT_EQ(ts_res.value(), 1000000000);
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"2000000000", "world"}));
-    ASSERT_TRUE(reader.get_read_timestamp(&ts));
-    EXPECT_EQ(ts, 2000000000);
+    ts_res = reader.get_read_timestamp();
+    ASSERT_TRUE(ts_res.has_value());
+    EXPECT_EQ(ts_res.value(), 2000000000);
 
-    EXPECT_FALSE(reader.read_next());
+    EXPECT_FALSE(read_next_ok(reader));
 }
 
 TEST_F(TestCsv, test_csv_timestamp_not_set)
@@ -454,16 +473,15 @@ TEST_F(TestCsv, test_csv_timestamp_not_set)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "no_ts.csv");
 
-    ASSERT_TRUE(fs::write(path, "a,b\n"));
+    ASSERT_TRUE(fs::write(path, "a,b\n").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
 
-    sihd::util::Timestamp ts(0);
-    // no timestamp column set -> returns false
-    EXPECT_FALSE(reader.get_read_timestamp(&ts));
+    // no timestamp column set -> error
+    EXPECT_FALSE(reader.get_read_timestamp().has_value());
 }
 
 TEST_F(TestCsv, test_csv_timestamp_out_of_bounds)
@@ -471,16 +489,15 @@ TEST_F(TestCsv, test_csv_timestamp_out_of_bounds)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "ts_oob.csv");
 
-    ASSERT_TRUE(fs::write(path, "a,b\n"));
+    ASSERT_TRUE(fs::write(path, "a,b\n").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
     reader.set_timestamp_col(5);
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
 
-    sihd::util::Timestamp ts(0);
-    EXPECT_FALSE(reader.get_read_timestamp(&ts));
+    EXPECT_FALSE(reader.get_read_timestamp().has_value());
 }
 
 TEST_F(TestCsv, test_csv_timestamp_invalid_value)
@@ -488,16 +505,15 @@ TEST_F(TestCsv, test_csv_timestamp_invalid_value)
     TmpDir tmp_dir;
     std::string path = fs::combine(tmp_dir.path(), "ts_invalid.csv");
 
-    ASSERT_TRUE(fs::write(path, "not_a_number,hello\n"));
+    ASSERT_TRUE(fs::write(path, "not_a_number,hello\n").has_value());
 
     CsvReader reader;
     ASSERT_TRUE(reader.open(path));
     reader.set_timestamp_col(0);
 
-    ASSERT_TRUE(reader.read_next());
+    ASSERT_TRUE(read_next_ok(reader));
 
-    sihd::util::Timestamp ts(0);
-    EXPECT_FALSE(reader.get_read_timestamp(&ts));
+    EXPECT_FALSE(reader.get_read_timestamp().has_value());
 }
 
 TEST_F(TestCsv, test_csv_escape_str)

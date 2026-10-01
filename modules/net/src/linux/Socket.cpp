@@ -1,6 +1,8 @@
-#include <fcntl.h> // fcntl
+#include <fcntl.h>    // fcntl
+#include <sys/time.h> // timeval
 
 #include <cstring>
+#include <expected>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
@@ -11,7 +13,8 @@
 namespace sihd::net
 {
 
-using namespace sihd::util;
+using sihd::util::Error;
+using sihd::util::ErrorCode;
 
 SIHD_LOGGER;
 
@@ -26,54 +29,57 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     return found;
 }
 
-bool Socket::bind_socket_to_device(int socket, std::string_view name)
+std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     if (name.empty())
-    {
-        SIHD_LOG(error, "Socket: empty device name");
-        return false;
-    }
+        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: empty device name"));
     if (name.size() >= IFNAMSIZ)
-    {
-        SIHD_LOG(error, "Socket: device name too long: {}", name);
-        return false;
-    }
+        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: device name too long: {}", name));
     char device_name[IFNAMSIZ] = {0};
     memcpy(device_name, name.data(), name.size());
-    return sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true);
+    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true))
+        return {};
+    return std::unexpected(make_error("Socket: bind to device error"));
 }
 
-bool Socket::set_socket_blocking(int socket, bool active)
+std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
-        throw std::runtime_error("Socket: cannot set blocking on a closed socket");
+        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set blocking on a closed socket"));
     int opts = ::fcntl(socket, F_GETFL);
     if (opts < 0)
-    {
-        SIHD_LOG(error, "Socket: could not get fcntl: {}", sihd::sys::os::last_error_str());
-        return false;
-    }
+        return std::unexpected(make_error("Socket: could not get fcntl"));
     if (active)
         opts &= ~O_NONBLOCK;
     else
         opts |= O_NONBLOCK;
-    opts = ::fcntl(socket, F_SETFL, opts);
-    if (opts < 0)
-        SIHD_LOG(error, "Socket: could not set fcntl options: {}", sihd::sys::os::last_error_str());
-    return opts >= 0;
+    if (::fcntl(socket, F_SETFL, opts) < 0)
+        return std::unexpected(make_error("Socket: could not set fcntl options"));
+    return {};
 }
 
 bool Socket::is_socket_blocking(int socket)
 {
     if (socket < 0)
-        throw std::runtime_error("Socket: cannot check blocking on a closed socket");
+        return false;
     int opts = ::fcntl(socket, F_GETFL);
+    // a predicate has no error channel: the log is the only trace
     if (opts < 0)
     {
         SIHD_LOG(error, "Socket: could not get fcntl: {}", sihd::sys::os::last_error_str());
         return false;
     }
     return !(opts & O_NONBLOCK);
+}
+
+std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milliseconds)
+{
+    if (socket < 0)
+        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set recv timeout on a closed socket"));
+    const timeval tv {milliseconds / 1000, (milliseconds % 1000) * 1000};
+    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
+        return {};
+    return std::unexpected(make_error("Socket: could not set recv timeout"));
 }
 
 } // namespace sihd::net

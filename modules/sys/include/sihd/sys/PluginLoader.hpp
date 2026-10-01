@@ -1,8 +1,10 @@
 #ifndef __SIHD_SYS_PLUGINLOADER_HPP__
 #define __SIHD_SYS_PLUGINLOADER_HPP__
 
+#include <expected>
 #include <string>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Named.hpp>
 
 namespace sihd::sys
@@ -15,10 +17,10 @@ class PluginLoader
         ~PluginLoader() = delete;
 
         // read dynamic library libname to search for classname and creates and returns it from name/parent
-        static sihd::util::Named *load(const std::string & libname,
-                                       const std::string & classname,
-                                       const std::string & name,
-                                       sihd::util::Node *parent = nullptr);
+        static std::expected<sihd::util::Named *, sihd::util::Error> load(const std::string & libname,
+                                                                          const std::string & classname,
+                                                                          const std::string & name,
+                                                                          sihd::util::Node *parent = nullptr);
 
         // unload a previously loaded library by name - returns false if not found
         static bool unload(const std::string & libname);

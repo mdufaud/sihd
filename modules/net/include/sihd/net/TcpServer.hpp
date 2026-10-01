@@ -1,6 +1,8 @@
 #ifndef __SIHD_NET_TCPSERVER_HPP__
 #define __SIHD_NET_TCPSERVER_HPP__
 
+#include <expected>
+
 #include <sihd/net/INetServer.hpp>
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/Socket.hpp>
@@ -24,21 +26,21 @@ class TcpServer: public INetServer,
         TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~TcpServer();
 
-        bool open_socket(bool ipv6 = false);
-        bool open_socket_unix();
+        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
+        std::expected<void, sihd::util::Error> open_socket_unix();
         bool socket_opened() { return _socket.is_open(); }
 
-        bool bind(const IpAddr & addr);
-        bool bind_unix(std::string_view path) { return _socket.bind_unix(path); }
+        std::expected<void, sihd::util::Error> bind(const IpAddr & addr);
+        std::expected<void, sihd::util::Error> bind_unix(std::string_view path) { return _socket.bind_unix(path); }
 
-        bool open_and_bind(const IpAddr & ip);
-        bool open_and_bind(std::string_view ip, int port);
-        bool open_unix_and_bind(std::string_view path);
+        std::expected<void, sihd::util::Error> open_and_bind(const IpAddr & ip);
+        std::expected<void, sihd::util::Error> open_and_bind(std::string_view ip, int port);
+        std::expected<void, sihd::util::Error> open_unix_and_bind(std::string_view path);
 
-        bool close();
+        std::expected<void, sihd::util::Error> close();
 
         // INetServer
-        int accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
+        std::expected<int, sihd::util::Error> accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
         bool add_client_read(int socket) override;
         bool add_client_write(int socket) override;
         bool remove_client_read(int socket) override;

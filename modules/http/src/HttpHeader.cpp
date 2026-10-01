@@ -99,7 +99,8 @@ std::optional<size_t> HttpHeader::content_length() const
         if (c < '0' || c > '9')
             return std::nullopt;
     }
-    return util::str::convert_from_string<size_t>(len);
+    const auto parsed = util::str::convert_from_string<size_t>(len);
+    return parsed ? std::optional<size_t>(*parsed) : std::nullopt;
 }
 
 std::optional<std::string_view> HttpHeader::accept_charset() const
@@ -132,18 +133,19 @@ HttpHeader & HttpHeader::set_header(const std::string & header_name, std::string
     return *this;
 }
 
-bool HttpHeader::add_header_from_str(std::string_view header)
+std::expected<void, sihd::util::Error> HttpHeader::add_header_from_str(std::string_view header)
 {
     if (util::str::ends_with(header, "\n"))
         header.remove_suffix(1);
     const size_t colon = header.find(':');
     if (colon == std::string_view::npos)
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "no ':' separator in '{}'", header));
     const std::string_view value = util::str::trim(header.substr(colon + 1));
     if (value.empty())
-        return false;
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "no value in '{}'", header));
     this->set_header(std::string(util::str::trim(header.substr(0, colon))), value);
-    return true;
+    return {};
 }
 
 std::optional<std::string> header_param(std::string_view value, std::string_view param)

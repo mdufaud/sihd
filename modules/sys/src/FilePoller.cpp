@@ -11,6 +11,7 @@
 namespace sihd::sys
 {
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 SIHD_LOGGER;
@@ -99,8 +100,9 @@ FilePoller::FilePoller()
 
 FilePoller::FilePoller(std::string_view path, size_t max_depth): FilePoller()
 {
-    if (!this->watch(path, max_depth))
-        throw std::runtime_error(fmt::format("cannot watch path '{}'", path));
+    auto watched = this->watch(path, max_depth);
+    if (!watched)
+        throw std::runtime_error(watched.error().message);
 }
 
 FilePoller::~FilePoller()
@@ -138,15 +140,15 @@ void FilePoller::unwatch()
     _impl = std::make_unique<Impl>();
 }
 
-bool FilePoller::watch(std::string_view path, size_t max_depth)
+std::expected<void, Error> FilePoller::watch(std::string_view path, size_t max_depth)
 {
     if (_impl->watch_path == path)
-        return true;
+        return {};
 
     this->unwatch();
 
     if (path.empty())
-        return false;
+        return std::unexpected(Error(invalid_argument, "cannot watch an empty path"));
 
     _impl->watch_path = path;
     _impl->max_depth = max_depth;
@@ -156,7 +158,7 @@ bool FilePoller::watch(std::string_view path, size_t max_depth)
 
     map_path_into(_impl->last, _impl->watch_path, max_depth);
 
-    return true;
+    return {};
 }
 
 bool FilePoller::run()

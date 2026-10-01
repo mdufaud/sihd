@@ -7,14 +7,16 @@
 
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::net
 {
-
-using namespace sihd::util;
 
 namespace
 {
@@ -76,7 +78,7 @@ bool NetInterface::supports_multicast() const
     return _flags & WIFF_MULTICAST;
 }
 
-std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
+std::expected<std::map<std::string, NetInterface>, sihd::util::Error> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 
@@ -88,7 +90,7 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
     {
         addresses = (PIP_ADAPTER_ADDRESSES)malloc(buf_size);
         if (addresses == nullptr)
-            return std::nullopt;
+            return std::unexpected(Error(out_of_memory, "could not list adapters"));
         result = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, addresses, &buf_size);
         if (result == ERROR_BUFFER_OVERFLOW)
         {
@@ -102,7 +104,7 @@ std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfa
     {
         if (addresses != nullptr)
             free(addresses);
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not list adapters: {}", sihd::sys::os::error_str((int)result)));
     }
 
     Defer d([&addresses] { free(addresses); });

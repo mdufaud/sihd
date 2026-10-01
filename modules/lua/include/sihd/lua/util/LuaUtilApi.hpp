@@ -113,7 +113,7 @@ struct luabridge::Stack<sihd::util::ServiceController::State>
                       sihd::util::ServiceController::State::Stopping,
                       sihd::util::ServiceController::State::Stopped,
                       sihd::util::ServiceController::State::Resetting,
-                      sihd::util::ServiceController::State::Error>
+                      sihd::util::ServiceController::State::Failure>
 {
 };
 

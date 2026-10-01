@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include <sihd/sys/Pty.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
@@ -358,7 +359,7 @@ bool ConPty::spawn()
                         &si.StartupInfo,
                         &_pi))
     {
-        SIHD_LOG(error, "ConPty: CreateProcess failed: {}", GetLastError());
+        SIHD_LOG(error, "ConPty: CreateProcess failed: {}", os::last_error_str());
         return false;
     }
 

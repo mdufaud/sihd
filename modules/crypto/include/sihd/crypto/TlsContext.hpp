@@ -1,7 +1,10 @@
 #ifndef __SIHD_CRYPTO_TLSCONTEXT_HPP__
 #define __SIHD_CRYPTO_TLSCONTEXT_HPP__
 
+#include <expected>
 #include <string_view>
+
+#include <sihd/util/Error.hpp>
 
 namespace sihd::crypto
 {
@@ -22,11 +25,11 @@ class TlsContext
 
         operator bool() const { return _handle != nullptr; }
 
-        bool init(bool server_mode);
+        std::expected<void, sihd::util::Error> init(bool server_mode);
 
-        bool set_certificate(const Certificate & cert);
-        bool set_private_key(const PrivateKey & key);
-        bool load_ca_cert(std::string_view path);
+        std::expected<void, sihd::util::Error> set_certificate(const Certificate & cert);
+        std::expected<void, sihd::util::Error> set_private_key(const PrivateKey & key);
+        std::expected<void, sihd::util::Error> load_ca_cert(std::string_view path);
         void set_verify_peer(bool verify);
 
         void clear();

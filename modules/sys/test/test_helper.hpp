@@ -32,17 +32,17 @@ struct ScopedEnv
         {
             _previous = sihd::sys::env::get(name);
             if (value.has_value())
-                sihd::sys::env::set(name, *value);
+                (void)sihd::sys::env::set(name, *value);
             else
-                sihd::sys::env::unset(name);
+                (void)sihd::sys::env::unset(name);
         }
 
         ~ScopedEnv()
         {
             if (_previous.has_value())
-                sihd::sys::env::set(_name, *_previous);
+                (void)sihd::sys::env::set(_name, *_previous);
             else
-                sihd::sys::env::unset(_name);
+                (void)sihd::sys::env::unset(_name);
         }
 
         ScopedEnv(const ScopedEnv &) = delete;

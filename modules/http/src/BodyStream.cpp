@@ -61,12 +61,17 @@ bool BodyStreamFile::on_chunk(const HttpRequest & request, sihd::util::ArrCharVi
 {
     if (_path_provider == nullptr)
         throw std::logic_error("body stream path is not set");
-    if (_file.is_open() == false && _file.open(_path_provider(request), "wb") == false)
+    if (_file.is_open() == false)
     {
-        SIHD_LOG(error, "BodyStream: cannot open '{}' for writing", _path_provider(request));
-        return false;
+        auto opened = _file.open(_path_provider(request), "wb");
+        if (!opened)
+        {
+            SIHD_LOG(error, "BodyStream: cannot open '{}' for writing", _path_provider(request));
+            return false;
+        }
     }
-    return _file.write(chunk) == (ssize_t)chunk.size();
+    const auto wrote = _file.write(chunk);
+    return wrote && *wrote == chunk.size();
 }
 
 } // namespace sihd::http

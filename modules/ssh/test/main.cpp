@@ -26,7 +26,7 @@ class SshTestEnvironment: public ::testing::Environment
                 // Cleanup for next run
                 while (sihd::ssh::utils::is_initialized())
                 {
-                    sihd::ssh::utils::finalize();
+                    static_cast<void>(sihd::ssh::utils::finalize());
                 }
             }
         }

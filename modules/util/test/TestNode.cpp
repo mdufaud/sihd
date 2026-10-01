@@ -24,13 +24,13 @@ TEST_F(TestNode, test_node_tree)
     constexpr bool get_pointer_ownership = true;
 
     Node root("root");
-    root.add_child(new Named("child1"), get_pointer_ownership);
-    root.add_child(new Named("child2"), get_pointer_ownership);
+    ASSERT_TRUE(root.add_child(new Named("child1"), get_pointer_ownership));
+    ASSERT_TRUE(root.add_child(new Named("child2"), get_pointer_ownership));
     Named *child3 = new Named("child3", &root);
     Node *parent = new Node("parent");
-    root.add_child(parent, get_pointer_ownership);
-    parent->add_child(new Named("cousin1"), get_pointer_ownership);
-    parent->add_child(new Named("cousin2"), get_pointer_ownership);
+    ASSERT_TRUE(root.add_child(parent, get_pointer_ownership));
+    ASSERT_TRUE(parent->add_child(new Named("cousin1"), get_pointer_ownership));
+    ASSERT_TRUE(parent->add_child(new Named("cousin2"), get_pointer_ownership));
     Named *cousin3 = parent->add_child<Named>("cousin3");
 
     Node *parent_found = nullptr;
@@ -114,6 +114,21 @@ TEST_F(TestNode, test_node_links)
     EXPECT_EQ(gp_node->get_child("mygrandchild2"), child2);
 }
 
+TEST_F(TestNode, test_node_resolve_links_best_effort)
+{
+    Node root("root");
+    Node *child = new Node("child", &root);
+
+    root.add_link("bad", "/does_not_exist.path");
+    root.add_link("good", "child");
+
+    auto res = root.resolve_links();
+    ASSERT_FALSE(res);
+    EXPECT_EQ(res.error().code, ErrorCode::not_found);
+    EXPECT_EQ(root.get_child("good"), child);
+    EXPECT_EQ(root.get_child("bad"), nullptr);
+}
+
 TEST_F(TestNode, test_node_errors)
 {
     Node root("root");
@@ -131,7 +146,7 @@ TEST_F(TestNode, test_node_errors)
 TEST_F(TestNode, test_node_add_child_unsafe_throws)
 {
     Node root("root");
-    root.add_child(new Named("dup"), true);
+    ASSERT_TRUE(root.add_child(new Named("dup"), true));
     Named *dup2 = new Named("dup");
     EXPECT_THROW(root.add_child_unsafe(dup2, false), std::invalid_argument);
     delete dup2;
@@ -143,8 +158,8 @@ TEST_F(TestNode, test_node_ownership)
     Named *owned = new Named("owned");
     Named *borrowed = new Named("borrowed");
 
-    root.add_child(owned, true);
-    root.add_child(borrowed, false);
+    ASSERT_TRUE(root.add_child(owned, true));
+    ASSERT_TRUE(root.add_child(borrowed, false));
 
     EXPECT_TRUE(root.has_ownership(owned));
     EXPECT_TRUE(root.has_ownership("owned"));
@@ -163,9 +178,9 @@ TEST_F(TestNode, test_node_ownership)
 TEST_F(TestNode, test_node_remove_children)
 {
     Node root("root");
-    root.add_child(new Named("a"), true);
-    root.add_child(new Named("b"), true);
-    root.add_child(new Named("c"), true);
+    ASSERT_TRUE(root.add_child(new Named("a"), true));
+    ASSERT_TRUE(root.add_child(new Named("b"), true));
+    ASSERT_TRUE(root.add_child(new Named("c"), true));
 
     EXPECT_NE(root.get_child("a"), nullptr);
     root.remove_children();

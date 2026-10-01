@@ -31,7 +31,7 @@ TEST_F(TestPinger, test_pinger)
 #endif
     Pinger pinger("pinger");
 
-    if (pinger.open(false) == false)
+    if (pinger.open(false).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
                      << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'\n";
@@ -55,7 +55,7 @@ TEST_F(TestPinger, test_pinger_ipv6)
 {
     Pinger pinger("pinger");
 
-    if (pinger.open(true) == false)
+    if (pinger.open(true).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
                      << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'\n";

@@ -11,6 +11,8 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 
+#include "../expected_caster.hpp"
+
 namespace sihd::py
 {
 
@@ -44,7 +46,9 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
         .def("fetch_hostname", &IpAddr::fetch_hostname)
         .def("hostname", &IpAddr::hostname)
         .def("str", &IpAddr::str)
-        .def("set_subnet_mask", static_cast<bool (IpAddr::*)(std::string_view)>(&IpAddr::set_subnet_mask))
+        .def(
+            "set_subnet_mask",
+            static_cast<std::expected<void, sihd::util::Error> (IpAddr::*)(std::string_view)>(&IpAddr::set_subnet_mask))
         .def("has_subnet", &IpAddr::has_subnet)
         .def("subnet_value", &IpAddr::subnet_value)
         .def("dump_subnet", &IpAddr::dump_subnet)

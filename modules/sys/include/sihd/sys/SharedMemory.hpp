@@ -3,10 +3,12 @@
 
 #include <sys/stat.h> // mode_t
 
+#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/build.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -29,12 +31,12 @@ class SharedMemory
         SharedMemory(SharedMemory &&);
         SharedMemory & operator=(SharedMemory &&);
 
-        bool create(std::string_view id, size_t size, mode_t mode = 0600);
+        std::expected<void, sihd::util::Error> create(std::string_view id, size_t size, mode_t mode = 0600);
 
-        bool attach(std::string_view id, size_t size, mode_t mode = 0600);
-        bool attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
+        std::expected<void, sihd::util::Error> attach(std::string_view id, size_t size, mode_t mode = 0600);
+        std::expected<void, sihd::util::Error> attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
 
-        bool clear();
+        std::expected<void, sihd::util::Error> clear();
 
         void *data() { return _addr; }
 

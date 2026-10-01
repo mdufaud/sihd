@@ -20,6 +20,8 @@
 // chdir and tmp directories live in src/linux|windows/fs.cpp
 
 using namespace sihd::util;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::sys::fs
 {
 
@@ -48,13 +50,16 @@ std::string combine_impl(std::string_view path1, std::string_view path2)
     return fmt::format("{0}{1}{2}", path1, g_separator_char, path2);
 }
 
-bool internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
+std::expected<void, Error>
+    internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
 {
     std::error_code ec;
     std::filesystem::permissions(path, static_cast<std::filesystem::perms>(mode), option, ec);
     if (ec)
-        SIHD_LOG(debug, "permissions: {}: {}", ec.message(), path);
-    return !ec;
+    {
+        return std::unexpected(Error(ec, "could not set permissions on '{}': {}", path, ec.message()));
+    }
+    return {};
 }
 
 template <typename T>
@@ -180,17 +185,17 @@ unsigned int permission_from_str(std::string_view mode)
     return static_cast<unsigned int>(p);
 }
 
-bool permission_add(std::string_view path, unsigned int mode)
+std::expected<void, Error> permission_add(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::add);
 }
 
-bool permission_rm(std::string_view path, unsigned int mode)
+std::expected<void, Error> permission_rm(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::remove);
 }
 
-bool permission_set(std::string_view path, unsigned int mode)
+std::expected<void, Error> permission_set(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::replace);
 }
@@ -206,75 +211,66 @@ unsigned int permission_get(std::string_view path)
 
 // directories
 
-bool remove_directory(std::string_view path)
+std::expected<void, Error> remove_directory(std::string_view path)
 {
-    return rmdir(path.data()) == 0;
+    if (rmdir(path.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not remove directory '{}'", path));
+    }
+    return {};
 }
 
-bool remove_directories(std::string_view path)
+std::expected<void, Error> remove_directories(std::string_view path)
 {
-    bool ret = true;
     std::vector<std::string> children = recursive_children(path);
+    std::expected<void, Error> res = {};
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
-        // remove maximum of entries
-        if (is_dir(*it))
-        {
-            if (remove_directory(*it) == false)
-            {
-                SIHD_LOG(warning, "cannot remove directory: {}", *it);
-                ret = false;
-            }
-        }
-        else if (remove_file(*it) == false)
-        {
-            SIHD_LOG(warning, "cannot remove file: {}", *it);
-            ret = false;
-        }
+        auto removed = is_dir(*it) ? remove_directory(*it) : remove_file(*it);
+        if (SIHD_UNEXPECTED_LOG(removed) && !res)
+            res = std::move(removed);
     }
-    return ret;
+    return res;
 }
 
-bool make_directory(std::string_view path, unsigned int mode);
+std::expected<void, Error> make_directory(std::string_view path, unsigned int mode);
 
-bool make_directories(std::string_view path, unsigned int mode)
+std::expected<void, Error> make_directories(std::string_view path, unsigned int mode)
 {
-    bool ret = true;
-    if (!path.empty())
+    if (path.empty())
+        return {};
+    std::string separator = sep_str();
+    Splitter splitter(separator);
+    std::vector<std::string> dirnames = splitter.split(path);
+    std::string current_path;
+    size_t start = 0;
+    if constexpr (sihd::util::build::is_windows)
     {
-        std::string separator = sep_str();
-        Splitter splitter(separator);
-        std::vector<std::string> dirnames = splitter.split(path);
-        std::string current_path;
-        size_t start = 0;
-        if constexpr (sihd::util::build::is_windows)
+        // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
+        if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
         {
-            // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
-            if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
-            {
-                current_path = dirnames[0] + separator;
-                start = 1;
-            }
-            else if (path[0] == g_separator_char)
-            {
-                current_path = separator;
-            }
+            current_path = dirnames[0] + separator;
+            start = 1;
         }
         else if (path[0] == g_separator_char)
         {
             current_path = separator;
         }
-        for (size_t i = start; i < dirnames.size(); ++i)
-        {
-            current_path = combine(current_path, dirnames[i]);
-            if (is_dir(current_path))
-                continue;
-            ret = make_directory(current_path, mode);
-            if (ret == false)
-                break;
-        }
     }
-    return ret;
+    else if (path[0] == g_separator_char)
+    {
+        current_path = separator;
+    }
+    for (size_t i = start; i < dirnames.size(); ++i)
+    {
+        current_path = combine(current_path, dirnames[i]);
+        if (is_dir(current_path))
+            continue;
+        auto res = make_directory(current_path, mode);
+        if (!res)
+            return res;
+    }
+    return {};
 }
 
 // path manipulation
@@ -419,31 +415,38 @@ std::optional<std::string> read_link(std::string_view path)
     return {link_path.string()};
 }
 
-bool make_file_link(std::string_view target, std::string_view link)
+std::expected<void, Error> make_file_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(debug, "make_file_link: {}: {} -> {}", ec.message(), target, link);
-    return ec.value() == 0;
+    {
+        return std::unexpected(Error(ec, "could not create file link '{}' -> '{}': {}", link, target, ec.message()));
+    }
+    return {};
 }
 
-bool make_dir_link(std::string_view target, std::string_view link)
+std::expected<void, Error> make_dir_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
     if (ec)
-        SIHD_LOG(debug, "make_dir_link: {}: {} -> {}", ec.message(), target, link);
-    return ec.value() == 0;
+    {
+        return std::unexpected(
+            Error(ec, "could not create directory link '{}' -> '{}': {}", link, target, ec.message()));
+    }
+    return {};
 }
 
-bool make_hard_link(std::string_view target, std::string_view link)
+std::expected<void, Error> make_hard_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
     if (ec)
-        SIHD_LOG(debug, "make_hard_link: {}: {} -> {}", ec.message(), target, link);
-    return ec.value() == 0;
+    {
+        return std::unexpected(Error(ec, "could not create hard link '{}' -> '{}': {}", link, target, ec.message()));
+    }
+    return {};
 }
 
 bool are_equals(std::string_view path1, std::string_view path2)
@@ -454,31 +457,46 @@ bool are_equals(std::string_view path1, std::string_view path2)
     if (!file1.is_open() || !file2.is_open())
         return false;
 
-    if (file1.file_size() != file2.file_size())
+    const auto size1 = file1.file_size();
+    const auto size2 = file2.file_size();
+    if (!size1 || !size2 || *size1 != *size2)
         return false;
 
-    ssize_t read_count;
     constexpr size_t buffer_size = 4096;
     char buffer1[buffer_size];
     char buffer2[buffer_size];
-    while ((read_count = file1.read(buffer1, buffer_size)) > 0)
+    while (true)
     {
-        if (file2.read(buffer2, buffer_size) != read_count)
+        const auto read1 = file1.read(buffer1, buffer_size);
+        if (!read1)
             return false;
-        if (::memcmp(buffer1, buffer2, read_count) != 0)
+        if (*read1 == 0)
+            break;
+        const auto read2 = file2.read(buffer2, buffer_size);
+        if (!read2 || *read2 != *read1)
+            return false;
+        if (::memcmp(buffer1, buffer2, *read1) != 0)
             return false;
     }
     return true;
 }
 
-bool remove_file(std::string_view path)
+std::expected<void, Error> remove_file(std::string_view path)
 {
-    return remove(path.data()) == 0;
+    if (remove(path.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not remove file '{}'", path));
+    }
+    return {};
 }
 
-bool rename(std::string_view from, std::string_view to)
+std::expected<void, Error> rename(std::string_view from, std::string_view to)
 {
-    return ::rename(from.data(), to.data()) == 0;
+    if (::rename(from.data(), to.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not rename '{}' to '{}'", from, to));
+    }
+    return {};
 }
 
 std::string jail(std::string_view root_view, std::string_view path_view)
@@ -521,14 +539,17 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     return candidate;
 }
 
-bool write(std::string_view path, std::string_view view, bool append, bool binary)
+std::expected<void, Error> write(std::string_view path, std::string_view view, bool append, bool binary)
 {
     const char *mode = binary ? (append ? "ab" : "wb") : (append ? "a" : "w");
-    File file(path, mode);
-
-    if (file.is_open())
-        return file.write(view) == (ssize_t)view.size();
-    return false;
+    File file;
+    auto opened = file.open(path, mode);
+    if (!opened)
+        return opened;
+    const auto wrote = file.write(view);
+    if (!wrote || *wrote != view.size())
+        return std::unexpected(Error(io_error, "short write to '{}'", path));
+    return {};
 }
 
 std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary)
@@ -537,8 +558,10 @@ std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, 
     if (!file.is_open())
         return std::nullopt;
 
-    const size_t file_size = file.file_size();
-    const auto range = slice.resolve(file_size);
+    const auto file_size = file.file_size();
+    if (!file_size)
+        return std::nullopt;
+    const auto range = slice.resolve((size_t)*file_size);
 
     if (range.empty())
         return std::nullopt;
@@ -546,12 +569,10 @@ std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, 
     if (!file.seek_begin(range.from))
         return std::nullopt;
 
-    ssize_t ret;
     std::string str;
-    if ((ret = file.read(str, range.size())) > 0)
-    {
+    const auto read = file.read(str, range.size());
+    if (read && *read > 0)
         return str;
-    }
 
     return std::nullopt;
 }
@@ -600,10 +621,13 @@ ssize_t read_binary(std::string_view path, char *buf, size_t size)
 {
     File file(path, "rb");
 
-    ssize_t ret = -1;
     if (file.is_open())
-        return file.read(buf, size);
-    return ret;
+    {
+        const auto read = file.read(buf, size);
+        if (read)
+            return (ssize_t)*read;
+    }
+    return -1;
 }
 
 } // namespace sihd::sys::fs

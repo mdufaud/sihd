@@ -2,6 +2,7 @@
 #define __SIHD_NET_TLSSOCKET_HPP__
 
 #include <cstddef>
+#include <expected>
 #include <optional>
 
 #include <sihd/crypto/TlsContext.hpp>
@@ -32,17 +33,18 @@ class TlsSocket: public Socket
         using Socket::receive;
         using Socket::send;
 
-        bool connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms = blocking_timeout) override;
+        std::expected<void, sihd::util::Error>
+            connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms = blocking_timeout) override;
         // TLS writes go through SSL_write: there is no MSG_NOSIGNAL to pass,
         // unlike plain sockets - a dead connection raises SIGPIPE, which the
         // process must ignore or handle itself.
-        ssize_t send(sihd::util::ArrCharView view) override;
-        ssize_t receive(void *data, size_t size) override;
-        bool shutdown() const override;
-        bool close() override;
+        std::expected<size_t, sihd::util::Error> send(sihd::util::ArrCharView view) override;
+        std::expected<size_t, sihd::util::Error> receive(void *data, size_t size) override;
+        std::expected<void, sihd::util::Error> shutdown() const override;
+        std::expected<void, sihd::util::Error> close() override;
 
     private:
-        bool _handshake(bool is_accept, int timeout_ms);
+        std::expected<void, sihd::util::Error> _handshake(bool is_accept, int timeout_ms);
 
         std::optional<sihd::crypto::TlsContext> _tls_ctx;
         TlsConnection _tls_conn;

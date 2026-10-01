@@ -5,6 +5,8 @@
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 SIHD_NEW_LOGGER("sihd::test");
@@ -41,7 +43,7 @@ TEST_F(TestPrivateKey, pem_roundtrip)
     EXPECT_FALSE(pem.empty());
 
     PrivateKey key2;
-    EXPECT_TRUE(key2.load_pem_string(pem));
+    EXPECT_TRUE(key2.load_pem_string(pem).has_value());
     EXPECT_TRUE(key2);
 
     EXPECT_EQ(key2.to_pem_string(), pem);
@@ -53,13 +55,25 @@ TEST_F(TestPrivateKey, pem_file_roundtrip)
 
     PrivateKey key;
     EXPECT_TRUE(key.generate_rsa(2048));
-    EXPECT_TRUE(key.save_pem(path));
+    EXPECT_TRUE(key.save_pem(path).has_value());
 
     PrivateKey key2;
-    EXPECT_TRUE(key2.load_pem(path));
+    EXPECT_TRUE(key2.load_pem(path).has_value());
     EXPECT_EQ(key2.to_pem_string(), key.to_pem_string());
 
     std::remove(path.c_str());
+}
+
+TEST_F(TestPrivateKey, load_pem_not_found)
+{
+    PrivateKey key;
+    const auto res = key.load_pem("/tmp/sihd_test_key_does_not_exist.pem");
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, not_found);
+
+    const auto bad = key.load_pem_string("not a pem");
+    ASSERT_FALSE(bad.has_value());
+    EXPECT_EQ(bad.error().code, invalid_argument);
 }
 
 TEST_F(TestPrivateKey, copy)

@@ -3,10 +3,12 @@
 
 #include <sys/stat.h> // mode_t
 
+#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/build.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -31,14 +33,14 @@ class MappedFile
         MappedFile & operator=(MappedFile &&);
 
         // truncates/creates 'path' to 'size' bytes and maps it read-write; size must not be 0
-        bool create(std::string_view path, size_t size, mode_t mode = 0600);
+        std::expected<void, sihd::util::Error> create(std::string_view path, size_t size, mode_t mode = 0600);
 
         // mapping an empty file fails
-        bool open_read_only(std::string_view path);
-        bool open_read_write(std::string_view path);
+        std::expected<void, sihd::util::Error> open_read_only(std::string_view path);
+        std::expected<void, sihd::util::Error> open_read_write(std::string_view path);
 
-        bool clear();
-        bool sync(bool async = false);
+        std::expected<void, sihd::util::Error> clear();
+        std::expected<void, sihd::util::Error> sync(bool async = false);
 
         void *data() { return _addr; }
 

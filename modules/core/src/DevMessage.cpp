@@ -164,8 +164,9 @@ bool DevMessage::on_start()
     {
         std::string suffix_name = name + IN_SUFFIX;
 
-        if (this->find_channel(suffix_name, &c))
+        if (auto found = this->find_channel(suffix_name))
         {
+            c = *found;
             _channels_in_to_field[c] = field;
             this->observe_channel(c);
         }
@@ -174,27 +175,29 @@ bool DevMessage::on_start()
 
         suffix_name = name + OUT_SUFFIX;
 
-        if (this->find_channel(suffix_name, &c))
-            _fields_to_channel_out[field] = c;
+        if (auto found = this->find_channel(suffix_name))
+            _fields_to_channel_out[field] = *found;
         else
             ret = false;
     }
 
-    if (this->find_channel(CHANNEL_MSG_IN, &c))
+    if (auto found = this->find_channel(CHANNEL_MSG_IN))
     {
+        c = *found;
         _channel_msg_in = c;
         this->observe_channel(c);
     }
     else
         ret = false;
 
-    if (this->find_channel(CHANNEL_MSG_OUT, &c))
-        _channel_msg_out = c;
+    if (auto found = this->find_channel(CHANNEL_MSG_OUT))
+        _channel_msg_out = *found;
     else
         ret = false;
 
-    if (this->find_channel(CHANNEL_TRIGGER, &c))
+    if (auto found = this->find_channel(CHANNEL_TRIGGER))
     {
+        c = *found;
         _channel_trigger = c;
         this->observe_channel(c);
     }

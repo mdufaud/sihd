@@ -2,6 +2,7 @@
 #define __SIHD_NET_TCPCLIENT_HPP__
 
 #include <atomic>
+#include <expected>
 
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
@@ -30,34 +31,38 @@ class TcpClient: public INetReceiver,
         TcpClient(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~TcpClient();
 
-        bool open_socket(bool ipv6 = false);
-        bool open_socket_unix();
+        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
+        std::expected<void, sihd::util::Error> open_socket_unix();
         bool socket_opened() { return _socket.is_open(); }
 
-        bool connect(const IpAddr & addr, int timeout_ms = Socket::blocking_timeout);
-        bool connect(std::string_view path);
-        bool reconnect(int timeout_ms = Socket::blocking_timeout);
+        std::expected<void, sihd::util::Error> connect(const IpAddr & addr, int timeout_ms = Socket::blocking_timeout);
+        std::expected<void, sihd::util::Error> connect(std::string_view path);
+        std::expected<void, sihd::util::Error> reconnect(int timeout_ms = Socket::blocking_timeout);
 
-        bool open_and_connect(const IpAddr & ip, int timeout_ms = Socket::blocking_timeout);
-        bool open_and_connect(std::string_view ip, int port, int timeout_ms = Socket::blocking_timeout);
-        bool open_unix_and_connect(std::string_view path);
+        std::expected<void, sihd::util::Error> open_and_connect(const IpAddr & ip,
+                                                                int timeout_ms = Socket::blocking_timeout);
+        std::expected<void, sihd::util::Error>
+            open_and_connect(std::string_view ip, int port, int timeout_ms = Socket::blocking_timeout);
+        std::expected<void, sihd::util::Error> open_unix_and_connect(std::string_view path);
 
         bool set_poll_timeout(int milliseconds);
+        // bounds each blocking receive (0 = unbounded): a poll-driven drain must never park on a quiet socket
+        bool set_recv_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
         // poll once with configured timeout
         bool poll();
 
-        ssize_t receive(void *buf, size_t len);
+        std::expected<size_t, sihd::util::Error> receive(void *buf, size_t len);
 
         // INetReceiver
-        bool close() override;
-        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) override;
-        ssize_t receive(sihd::util::IArray & arr) override;
+        std::expected<void, sihd::util::Error> close() override;
+        std::expected<size_t, sihd::util::Error> receive(IpAddr & addr, sihd::util::IArray & arr) override;
+        std::expected<size_t, sihd::util::Error> receive(sihd::util::IArray & arr) override;
 
         // INetSender
-        ssize_t send(sihd::util::ArrCharView view) override;
-        bool send_all(sihd::util::ArrCharView view) override;
+        std::expected<size_t, sihd::util::Error> send(sihd::util::ArrCharView view) override;
+        std::expected<void, sihd::util::Error> send_all(sihd::util::ArrCharView view) override;
 
         void set_tls_context(sihd::crypto::TlsContext ctx);
 
@@ -79,6 +84,7 @@ class TcpClient: public INetReceiver,
         std::atomic<bool> _connected;
         std::mutex _poll_mutex;
         sihd::sys::Poll _poll;
+        int _recv_timeout = 0;
 };
 
 } // namespace sihd::net

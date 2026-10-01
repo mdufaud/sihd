@@ -7,10 +7,12 @@ using namespace sihd::util;
 namespace sihd::sys
 {
 
+SIHD_LOGGER;
+
 LoggerFile::LoggerFile(const std::string & path, bool append)
 {
     _file.buffering_line();
-    _file.open(path, append ? "a" : "w");
+    SIHD_UNEXPECTED_LOG(_file.open(path, append ? "a" : "w"));
 }
 
 LoggerFile::~LoggerFile() = default;
@@ -35,7 +37,7 @@ void LoggerFile::log(const LogInfo & info, std::string_view msg)
                            info.source.data(),
                            msg);
 
-    _file.write_unlocked(fmt_msg);
+    (void)_file.write_unlocked(fmt_msg);
 }
 
 } // namespace sihd::sys

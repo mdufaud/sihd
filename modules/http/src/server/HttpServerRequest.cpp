@@ -401,11 +401,10 @@ int HttpServer::Impl::on_http_request(HttpSession *session, std::string_view pat
     }
 
     int rc = 0;
-    std::string resource_path;
-    if (server->get_resource_path(path, resource_path))
+    if (const auto resource_path = server->get_resource_path(path))
     {
-        std::string type = fmt::format("{}; charset={}", mime.get(fs::extension(resource_path)), encoding);
-        if (lws_serve_http_file(session->wsi, resource_path.c_str(), type.c_str(), nullptr, 0) < 0)
+        std::string type = fmt::format("{}; charset={}", mime.get(fs::extension(resource_path.value())), encoding);
+        if (lws_serve_http_file(session->wsi, resource_path.value().c_str(), type.c_str(), nullptr, 0) < 0)
             rc = -1;
         session->response_pending = true;
         return rc;
@@ -762,7 +761,7 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
             auto multipart = Multipart::parse(request.content().cpp_str_view(), *content_type);
             if (multipart.has_value() == false)
             {
-                SIHD_LOG(warning, "HttpServer: malformed multipart body");
+                SIHD_LOG(warning, "HttpServer: malformed multipart body: {}", multipart.error().message);
                 this->send_http_error(session, HttpStatus::BadRequest);
                 return true;
             }

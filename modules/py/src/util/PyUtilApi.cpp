@@ -46,7 +46,7 @@ namespace sihd::py
 
 using namespace sihd::util;
 // global api logger
-SIHD_NEW_LOGGER("sihd::py::api");
+SIHD_NEW_LOGGER("sihd::py");
 
 namespace
 {
@@ -143,7 +143,12 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     m_util.def_submodule("thread", "sihd::util::Thread")
         .def("id", &thread::id)
         .def("id_str", static_cast<std::string (*)(pthread_t)>(&thread::id_str))
-        .def("set_name", &thread::set_name)
+        .def(
+            "set_name",
+            +[](const std::string & name) {
+                auto res = thread::set_name(name);
+                return !SIHD_UNEXPECTED_LOG(res);
+            })
         .def("name", &thread::name);
 
     // path namespace removed - use PathManager class instead (see below)
@@ -203,7 +208,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init([](const std::string & name, Node *parent) {
                  Named *node = new Named(name);
                  if (parent != nullptr)
-                     parent->add_child(node, false);
+                     SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
                  return node;
              }),
              pybind11::keep_alive<1, 3>())
@@ -232,7 +237,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init([](const std::string & name, Node *parent) {
                  Node *node = new Node(name);
                  if (parent != nullptr)
-                     parent->add_child(node, false);
+                     SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
                  return node;
              }),
              pybind11::keep_alive<1, 3>())
@@ -242,17 +247,19 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
              pybind11::return_value_policy::reference_internal)
         .def(
             "add_child",
-            +[](Node *self, Named *child) { return self->add_child(child, false); })
+            +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })
         .def(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); })
+            +[](Node *self, const std::string & name, Named *child) {
+                return !SIHD_UNEXPECTED_LOG(self->add_child(name, child, false));
+            })
         .def("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .def("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .def("is_link", &Node::is_link)
         .def("add_link", &Node::add_link)
         .def("remove_link", &Node::remove_link)
         .def("resolve_link", &Node::resolve_link, pybind11::return_value_policy::reference_internal)
-        .def("resolve_links", &Node::resolve_links)
+        .def("resolve_links", [](Node *self) { return !SIHD_UNEXPECTED_LOG(self->resolve_links()); })
         .def("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .def("tree_desc_str", &Node::tree_desc_str)
         // ties lifetime of return to 'this'
@@ -269,7 +276,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .value("Stopping", ServiceController::State::Stopping)
         .value("Stopped", ServiceController::State::Stopped)
         .value("Resetting", ServiceController::State::Resetting)
-        .value("Error", ServiceController::State::Error);
+        .value("Failure", ServiceController::State::Failure);
 
     pybind11::class_<ServiceController>(m_util, "ServiceController")
         .def("state", &ServiceController::state)

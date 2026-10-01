@@ -33,9 +33,9 @@ TEST_F(TestUtils, sign_verify_roundtrip)
     auto data = reinterpret_cast<const uint8_t *>(message.data());
 
     auto signature = utils::sign_data(_key, data, message.size());
-    ASSERT_FALSE(signature.empty());
+    ASSERT_TRUE(signature.has_value());
 
-    EXPECT_TRUE(utils::verify_data(_cert, data, message.size(), signature.data(), signature.size()));
+    EXPECT_TRUE(utils::verify_data(_cert, data, message.size(), signature->data(), signature->size()));
 }
 
 TEST_F(TestUtils, verify_wrong_data)
@@ -44,11 +44,11 @@ TEST_F(TestUtils, verify_wrong_data)
     auto data = reinterpret_cast<const uint8_t *>(message.data());
 
     auto signature = utils::sign_data(_key, data, message.size());
-    ASSERT_FALSE(signature.empty());
+    ASSERT_TRUE(signature.has_value());
 
     std::string wrong = "wrong data";
     auto wrong_data = reinterpret_cast<const uint8_t *>(wrong.data());
-    EXPECT_FALSE(utils::verify_data(_cert, wrong_data, wrong.size(), signature.data(), signature.size()));
+    EXPECT_FALSE(utils::verify_data(_cert, wrong_data, wrong.size(), signature->data(), signature->size()));
 }
 
 TEST_F(TestUtils, verify_wrong_cert)
@@ -57,14 +57,14 @@ TEST_F(TestUtils, verify_wrong_cert)
     auto data = reinterpret_cast<const uint8_t *>(message.data());
 
     auto signature = utils::sign_data(_key, data, message.size());
-    ASSERT_FALSE(signature.empty());
+    ASSERT_TRUE(signature.has_value());
 
     PrivateKey other_key;
     ASSERT_TRUE(other_key.generate_rsa(2048));
     Certificate other_cert;
     ASSERT_TRUE(other_cert.generate_self_signed(other_key, "other.local"));
 
-    EXPECT_FALSE(utils::verify_data(other_cert, data, message.size(), signature.data(), signature.size()));
+    EXPECT_FALSE(utils::verify_data(other_cert, data, message.size(), signature->data(), signature->size()));
 }
 
 TEST_F(TestUtils, sign_verify_roundtrip_arrview)
@@ -74,21 +74,21 @@ TEST_F(TestUtils, sign_verify_roundtrip_arrview)
     ArrByteView data(message.data(), message.size());
 
     auto signature = utils::sign_data(_key, data);
-    ASSERT_FALSE(signature.empty());
+    ASSERT_TRUE(signature.has_value());
 
-    EXPECT_TRUE(utils::verify_data(_cert, data, ArrByteView(signature.data(), signature.size())));
+    EXPECT_TRUE(utils::verify_data(_cert, data, ArrByteView(signature->data(), signature->size())));
 
     std::string wrong = "wrong data";
     EXPECT_FALSE(utils::verify_data(_cert,
                                     ArrByteView(wrong.data(), wrong.size()),
-                                    ArrByteView(signature.data(), signature.size())));
+                                    ArrByteView(signature->data(), signature->size())));
 }
 
 TEST_F(TestUtils, sign_empty_key)
 {
     PrivateKey empty;
     auto sig = utils::sign_data(empty, nullptr, 0);
-    EXPECT_TRUE(sig.empty());
+    EXPECT_FALSE(sig.has_value());
 }
 
 } // namespace test

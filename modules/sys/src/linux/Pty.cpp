@@ -221,7 +221,7 @@ bool PosixPty::spawn()
         // xterm-256color provides good compatibility with most applications
         if (!env::get("TERM").has_value())
         {
-            env::set("TERM", "xterm-256color");
+            SIHD_UNEXPECTED_LOG(env::set("TERM", "xterm-256color"));
         }
 
         // Build argv for execvp

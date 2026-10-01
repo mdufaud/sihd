@@ -13,6 +13,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 
+#include "../lua_fixture.hpp"
+
 namespace test
 {
 SIHD_NEW_LOGGER("test");
@@ -20,39 +22,23 @@ using namespace sihd::util;
 using namespace sihd::lua;
 using namespace sihd::http;
 
-class TestLuaHttpApi: public ::testing::Test
+class TestLuaHttpApi: public test::LuaFixture
 {
     protected:
-        TestLuaHttpApi() { sihd::util::LoggerManager::stream(); }
-
-        virtual ~TestLuaHttpApi() { sihd::util::LoggerManager::clear_loggers(); }
-
-        virtual void SetUp()
+        void SetUp() override
         {
             _server = std::make_unique<EchoServerScope>();
             _server->start(3011);
-
-            _vm.new_state();
-            ASSERT_NE(_vm.lua_state(), nullptr);
+            LuaFixture::SetUp();
         }
 
-        virtual void TearDown()
+        void TearDown() override
         {
-            _vm.close_state();
+            LuaFixture::TearDown();
             _server.reset();
         }
 
-        bool do_script(const std::string & path)
-        {
-            SIHD_LOG_INFO("Starting LUA test: {}", path);
-            bool ret = _vm.do_file(path);
-            if (ret == false)
-                SIHD_LOG(error, "Lua error: {}", _vm.last_string());
-            return ret;
-        }
-
         std::unique_ptr<EchoServerScope> _server;
-        Vm _vm;
 };
 
 TEST_F(TestLuaHttpApi, test_luahttp_base)
@@ -62,7 +48,7 @@ TEST_F(TestLuaHttpApi, test_luahttp_base)
     LuaUtilApi::load_tools(_vm);
     LuaCoreApi::load(_vm);
     LuaHttpApi::load_base(_vm);
-    EXPECT_TRUE(this->do_script("test/http/lua/test_http.lua"));
+    this->do_script("test/http/lua/test_http.lua");
 }
 
 TEST_F(TestLuaHttpApi, test_luahttp_server_route)
@@ -72,7 +58,7 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
     LuaHttpApi::load_base(_vm);
 
     // the lua script builds an HttpServer with a lua route handler on port 3021
-    ASSERT_TRUE(this->do_script("test/http/lua/test_server.lua"));
+    this->do_script("test/http/lua/test_server.lua");
 
     luabridge::LuaRef server_ref = luabridge::getGlobal(_vm.lua_state(), "server");
     auto casted = server_ref.cast<HttpServer *>();
@@ -89,7 +75,7 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
 
     RequestOptions opt;
     opt.proxy = "";
-    opt.timeout = sihd::util::time::sec(5);
+    opt.timeout = sihd::util::Duration(sihd::util::time::sec(5));
     auto resp = sihd::http::post("localhost:3021/api/compute", "payload", opt);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), 200u);

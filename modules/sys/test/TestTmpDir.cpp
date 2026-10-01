@@ -48,7 +48,7 @@ TEST_F(TestTmpDir, test_tmpdir_write_file_in_it)
     ASSERT_TRUE(tmp);
 
     std::string path = fs::combine(tmp.path(), "hello.txt");
-    EXPECT_TRUE(fs::write(path, "world"));
+    EXPECT_TRUE(fs::write(path, "world").has_value());
     EXPECT_TRUE(fs::exists(path));
 
     auto content = fs::read_all(path);

@@ -125,8 +125,14 @@ int CliApp::run(int argc, char **argv)
         }
         if (content.empty() == false)
         {
-            sihd::json::Json conf = sihd::json::Json::parse(content, false);
-            if (conf.is_discarded() || this->apply_conf(conf) == false)
+            auto parsed = sihd::json::Json::parse(content);
+            if (!parsed)
+            {
+                SIHD_LOG(error, "CliApp: conf loading failed: {}", parsed.error());
+                this->_transition(Event::fail);
+                return EXIT_FAILURE;
+            }
+            if (this->apply_conf(*parsed) == false)
             {
                 SIHD_LOG(error, "CliApp: conf loading failed");
                 this->_transition(Event::fail);
@@ -182,8 +188,13 @@ bool CliApp::reload()
     }
     if (content.empty())
         return true;
-    sihd::json::Json conf = sihd::json::Json::parse(content, false);
-    if (conf.is_discarded() || this->apply_conf(conf) == false)
+    auto parsed = sihd::json::Json::parse(content);
+    if (!parsed)
+    {
+        SIHD_LOG(error, "CliApp: conf reload failed: {}", parsed.error());
+        return false;
+    }
+    if (this->apply_conf(*parsed) == false)
     {
         SIHD_LOG(error, "CliApp: conf reload failed");
         return false;

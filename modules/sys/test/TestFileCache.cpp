@@ -39,7 +39,7 @@ TEST_F(TestFileCache, test_filecache_file)
 
     std::string file_path = fs::combine({tmp_dir.path(), "test.txt"});
     std::string file_content = "hello world";
-    EXPECT_TRUE(fs::write(file_path, file_content));
+    EXPECT_TRUE(fs::write(file_path, file_content).has_value());
 
     FileCache file_cache;
     file_cache.add(file_path);
@@ -49,7 +49,7 @@ TEST_F(TestFileCache, test_filecache_file)
     EXPECT_EQ(opt_cached_value.value().get(), file_content);
 
     file_content = "new content";
-    EXPECT_TRUE(fs::write(file_path, file_content));
+    EXPECT_TRUE(fs::write(file_path, file_content).has_value());
     opt_cached_value = file_cache.get(file_path);
     ASSERT_TRUE(opt_cached_value.has_value());
     EXPECT_EQ(opt_cached_value.value().get(), file_content);

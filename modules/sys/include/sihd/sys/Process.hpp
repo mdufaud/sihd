@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <csignal>
+#include <expected>
 #include <functional>
 #include <span>
 
@@ -10,6 +11,7 @@
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ABlockingService.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
@@ -62,14 +64,14 @@ class Process: public sihd::util::IHandler<Poll *>,
         // reset and clear file descriptors configurations
         void clear();
         // execute binary / function
-        bool execute();
+        std::expected<void, sihd::util::Error> execute();
 
         bool is_process_running() const;
 
-        // wait for process
-        bool wait(int options = 0);
+        // wait for process: false means the process did not terminate
+        std::expected<bool, sihd::util::Error> wait(int options = 0);
         // wait for process but do not hang
-        bool wait_no_hang();
+        std::expected<bool, sihd::util::Error> wait_no_hang();
 
         bool can_read_pipes() const;
         // read pipes to call the callbacks on pipes
@@ -82,7 +84,7 @@ class Process: public sihd::util::IHandler<Poll *>,
          */
         bool terminate();
         // send signal to process - SIGTERM by default
-        bool kill(int sig = -1);
+        std::expected<void, sihd::util::Error> kill(int sig = -1);
 
         /**
          * Setup pipes
@@ -136,10 +138,10 @@ class Process: public sihd::util::IHandler<Poll *>,
         // use fork instead of spawn
         void set_force_fork(bool active);
 
-        // wait for process - report stopped child
-        bool wait_stop(int options = 0);
-        // wait for process - report continued child
-        bool wait_continue(int options = 0);
+        // wait for process - report stopped child: false means it did not stop
+        std::expected<bool, sihd::util::Error> wait_stop(int options = 0);
+        // wait for process - report continued child: false means it did not continue
+        std::expected<bool, sihd::util::Error> wait_continue(int options = 0);
 
         bool has_core_dumped() const;
         bool has_stopped_by_signal() const;
@@ -157,10 +159,10 @@ class Process: public sihd::util::IHandler<Poll *>,
         HANDLE process() const;
 #endif
 
-        // wait for process - report dead child (options = timeout ms, 0 = block)
-        bool wait_exit(int options = 0);
-        // wait for process (options = timeout ms, 0 = block)
-        bool wait_any(int options = 0);
+        // wait for process - report dead child (options = timeout ms, 0 = block): false means not terminated
+        std::expected<bool, sihd::util::Error> wait_exit(int options = 0);
+        // wait for process (options = timeout ms, 0 = block): false means not terminated
+        std::expected<bool, sihd::util::Error> wait_any(int options = 0);
         // windows processes always terminate by exit (no signal/stop semantics)
         bool has_exited() const;
 
@@ -187,10 +189,10 @@ class Process: public sihd::util::IHandler<Poll *>,
 
         void handle(Poll *poll) override;
 
-        bool _do_execute(const std::vector<const char *> & argv);
-        bool _do_fork(const std::vector<const char *> & argv);
-        bool _do_spawn(const std::vector<const char *> & argv);
-        bool _do_child_process(const std::vector<const char *> & argv);
+        std::expected<void, sihd::util::Error> _do_execute(const std::vector<const char *> & argv);
+        std::expected<void, sihd::util::Error> _do_fork(const std::vector<const char *> & argv);
+        std::expected<void, sihd::util::Error> _do_spawn(const std::vector<const char *> & argv);
+        std::expected<void, sihd::util::Error> _do_child_process(const std::vector<const char *> & argv);
 
         std::atomic<bool> _started;
         std::atomic<bool> _executing;

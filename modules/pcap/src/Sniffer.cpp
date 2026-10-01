@@ -6,6 +6,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::pcap
 {
 
@@ -58,13 +60,14 @@ Sniffer::~Sniffer()
     this->close();
 }
 
-bool Sniffer::open(const std::string & source)
+std::expected<void, sihd::util::Error> Sniffer::open(const std::string & source)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     _impl_ptr->pcap_ptr = pcap_create(source.c_str(), errbuf);
     if (_impl_ptr->pcap_ptr == nullptr)
-        SIHD_LOG(error, "Sniffer: {}", errbuf);
-    return _impl_ptr->pcap_ptr != nullptr;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot create capture on '{}': {}", source, errbuf));
+    return {};
 }
 
 bool Sniffer::is_open() const
@@ -89,14 +92,27 @@ bool Sniffer::is_active() const
     return _active;
 }
 
-bool Sniffer::activate()
+std::expected<void, sihd::util::Error> Sniffer::activate()
 {
     int ret = pcap_activate(_impl_ptr->pcap_ptr);
-    this->_log_if_error(ret);
-    if (ret < 0)
+    if (ret == PCAP_ERROR)
+    {
+        auto error = sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot activate capture: {}", this->error());
         this->close();
+        return std::unexpected(std::move(error));
+    }
+    if (ret == PCAP_WARNING)
+        SIHD_LOG(warning, "Sniffer: {}", this->error());
+    else if (ret != 0)
+        SIHD_LOG(error, "Sniffer: {}", utils::status_str(ret));
     _active = ret == 0;
-    return ret == 0;
+    if (ret != 0)
+    {
+        this->close();
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot activate capture: {}", utils::status_str(ret)));
+    }
+    return {};
 }
 
 bool Sniffer::on_start()
@@ -134,16 +150,14 @@ bool Sniffer::sniff()
     return ret == 0;
 }
 
-bool Sniffer::read_next()
+std::expected<bool, sihd::util::Error> Sniffer::read_next()
 {
     struct pcap_pkthdr *hdr;
     u_char *data;
     int ret = pcap_next_ex(_impl_ptr->pcap_ptr, &hdr, (const u_char **)(&data));
     if (ret == PCAP_ERROR)
-    {
-        SIHD_LOG(error, "Sniffer: {}", this->error());
-    }
-    else if (ret > 0)
+        return std::unexpected(sihd::util::Error(io_error, "Sniffer: {}", this->error()));
+    if (ret > 0)
         this->_new_packet(hdr, data);
     return ret > 0;
 }
@@ -174,10 +188,9 @@ bool Sniffer::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool Sniffer::get_read_timestamp(sihd::util::Timestamp *nano_timestamp) const
+std::expected<sihd::util::Timestamp, sihd::util::Error> Sniffer::get_read_timestamp() const
 {
-    *nano_timestamp = _pkt_nano_timestamp;
-    return true;
+    return _pkt_nano_timestamp;
 }
 
 // polling utilities

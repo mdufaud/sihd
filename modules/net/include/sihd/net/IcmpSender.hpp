@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_ICMPSENDER_HPP__
 #define __SIHD_NET_ICMPSENDER_HPP__
 
+#include <expected>
 #include <memory>
 
 #include <sihd/net/Socket.hpp>
@@ -39,9 +40,9 @@ class IcmpSender: public sihd::util::Named,
         IcmpSender(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~IcmpSender();
 
-        bool open_socket(bool ipv6 = false);
-        bool open_socket_unix();
-        bool close();
+        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
+        std::expected<void, sihd::util::Error> open_socket_unix();
+        std::expected<void, sihd::util::Error> close();
 
         void set_echo();
         void set_type(int type);
@@ -53,7 +54,7 @@ class IcmpSender: public sihd::util::Named,
         bool set_data(sihd::util::ArrByteView view);
         bool set_data_size(size_t byte_size);
 
-        bool send_to(const IpAddr & addr);
+        std::expected<void, sihd::util::Error> send_to(const IpAddr & addr);
 
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read

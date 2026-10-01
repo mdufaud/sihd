@@ -27,14 +27,14 @@ SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _has_pty(false),
     _winsize {}
 {
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshSubsystemExec::~SshSubsystemExec()
 {
     if (_started)
         this->on_close();
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 void SshSubsystemExec::set_shell(std::string_view shell)
@@ -123,7 +123,7 @@ bool SshSubsystemExec::start_sync_mode()
     _process.stdout_to(_sync_out);
     _process.stderr_to(_sync_err);
 
-    if (!_process.execute())
+    if (_process.execute().has_value() == false)
     {
         SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
         return false;
@@ -149,7 +149,7 @@ bool SshSubsystemExec::start_process_mode()
             _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
     });
 
-    if (!_process.execute())
+    if (_process.execute().has_value() == false)
     {
         SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
         return false;

@@ -307,13 +307,13 @@ void bench_file(const char *path)
         for (int i = 0; i < runs; ++i)
         {
             auto tp0 = Clock::now();
-            auto parsed = sihd::json::Json::parse(content, false);
-            if (parsed.is_discarded())
+            auto parsed = sihd::json::Json::parse(content);
+            if (!parsed)
             {
                 failed = true;
                 break;
             }
-            node_count = traverse_json(parsed);
+            node_count = traverse_json(*parsed);
             auto tp1 = Clock::now();
             total += tp1 - tp0;
         }
@@ -388,13 +388,13 @@ void bench_file(const char *path)
                 for (int i = 0; i < runs; ++i)
                 {
                     auto tp0 = Clock::now();
-                    auto parsed = sihd::json::Json::parse(content, false);
-                    if (parsed.is_discarded())
+                    auto parsed = sihd::json::Json::parse(content);
+                    if (!parsed)
                     {
                         failed = true;
                         break;
                     }
-                    hit_count = partial_json(parsed, first_key_str);
+                    hit_count = partial_json(*parsed, first_key_str);
                     auto tp1 = Clock::now();
                     total += tp1 - tp0;
                 }
@@ -478,13 +478,13 @@ void bench_file(const char *path)
                 for (int i = 0; i < runs; ++i)
                 {
                     auto tp0 = Clock::now();
-                    auto parsed = sihd::json::Json::parse(content, false);
-                    if (parsed.is_discarded())
+                    auto parsed = sihd::json::Json::parse(content);
+                    if (!parsed)
                     {
                         failed = true;
                         break;
                     }
-                    hit = first_field_json(parsed, first_key_str);
+                    hit = first_field_json(*parsed, first_key_str);
                     auto tp1 = Clock::now();
                     total += tp1 - tp0;
                 }

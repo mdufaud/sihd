@@ -13,63 +13,74 @@ UdpSender::UdpSender(const std::string & name, sihd::util::Node *parent): sihd::
 
 UdpSender::~UdpSender() = default;
 
-bool UdpSender::open_socket_unix()
+std::expected<void, sihd::util::Error> UdpSender::open_socket_unix()
 {
     if (_socket.is_open())
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpSender: socket already open"));
     return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
-bool UdpSender::open_socket(bool ipv6)
+std::expected<void, sihd::util::Error> UdpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpSender: socket already open"));
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
-bool UdpSender::connect(const IpAddr & addr)
+std::expected<void, sihd::util::Error> UdpSender::connect(const IpAddr & addr)
 {
     return _socket.connect(addr);
 }
 
-bool UdpSender::open_and_connect(const IpAddr & ip)
+std::expected<void, sihd::util::Error> UdpSender::open_and_connect(const IpAddr & ip)
 {
-    return this->open_socket(ip.is_ipv6()) && this->connect(ip);
+    auto opened = this->open_socket(ip.is_ipv6());
+    if (!opened)
+        return opened;
+    return this->connect(ip);
 }
 
-bool UdpSender::open_and_connect(std::string_view ip, int port)
+std::expected<void, sihd::util::Error> UdpSender::open_and_connect(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
-    return this->open_socket(addr.is_ipv6()) && this->connect(addr);
+    auto opened = this->open_socket(addr.is_ipv6());
+    if (!opened)
+        return opened;
+    return this->connect(addr);
 }
 
-bool UdpSender::open_unix_and_connect(std::string_view path)
+std::expected<void, sihd::util::Error> UdpSender::open_unix_and_connect(std::string_view path)
 {
-    return this->open_socket_unix() && this->connect(path);
+    auto opened = this->open_socket_unix();
+    if (!opened)
+        return opened;
+    return this->connect_unix(path);
 }
 
-bool UdpSender::close()
+std::expected<void, sihd::util::Error> UdpSender::close()
 {
-    _socket.shutdown();
+    (void)_socket.shutdown();
     return _socket.close();
 }
 
-ssize_t UdpSender::send(sihd::util::ArrCharView view)
+std::expected<size_t, sihd::util::Error> UdpSender::send(sihd::util::ArrCharView view)
 {
     return _socket.send(view);
 }
 
-bool UdpSender::send_all(sihd::util::ArrCharView view)
+std::expected<void, sihd::util::Error> UdpSender::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }
 
-ssize_t UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
+std::expected<size_t, sihd::util::Error> UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_to(addr, view);
 }
 
-bool UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrCharView view)
+std::expected<void, sihd::util::Error> UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_all_to(addr, view);
 }

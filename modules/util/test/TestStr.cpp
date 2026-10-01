@@ -1157,33 +1157,22 @@ TEST_F(TestStr, test_str_wrap)
 
 TEST_F(TestStr, test_str_conversion_bool_char)
 {
-    bool b = false;
-    EXPECT_TRUE(str::to_bool("1", b));
-    EXPECT_TRUE(b);
-    EXPECT_TRUE(str::to_bool("0", b));
-    EXPECT_FALSE(b);
-    EXPECT_TRUE(str::to_bool("true", b));
-    EXPECT_TRUE(b);
-    EXPECT_TRUE(str::to_bool("false", b));
-    EXPECT_FALSE(b);
+    EXPECT_TRUE(str::to_bool("1").value());
+    EXPECT_FALSE(str::to_bool("0").value());
+    EXPECT_TRUE(str::to_bool("true").value());
+    EXPECT_FALSE(str::to_bool("false").value());
     // case variations are not accepted (pinned behavior)
-    EXPECT_FALSE(str::to_bool("True", b));
-    EXPECT_FALSE(str::to_bool("FALSE", b));
-    EXPECT_FALSE(str::to_bool("", b));
-    EXPECT_FALSE(str::to_bool("nope", b));
+    EXPECT_FALSE(str::to_bool("True"));
+    EXPECT_FALSE(str::to_bool("FALSE"));
+    EXPECT_FALSE(str::to_bool(""));
+    EXPECT_FALSE(str::to_bool("nope"));
 
-    char c = 'z';
-    EXPECT_TRUE(str::to_char("c", c));
-    EXPECT_EQ(c, 'c');
-    c = 'z';
-    EXPECT_TRUE(str::to_char("'c'", c));
-    EXPECT_EQ(c, 'c');
-    EXPECT_FALSE(str::to_char("ab", c));
-    EXPECT_FALSE(str::to_char("", c));
-    // a non printable char leaves the value untouched (pinned behavior)
-    c = 'z';
-    EXPECT_TRUE(str::to_char("\n", c));
-    EXPECT_EQ(c, 'z');
+    EXPECT_EQ(str::to_char("c"), 'c');
+    EXPECT_EQ(str::to_char("'c'"), 'c');
+    EXPECT_FALSE(str::to_char("ab"));
+    EXPECT_FALSE(str::to_char(""));
+    // a non printable char is an error (pinned behavior)
+    EXPECT_FALSE(str::to_char("\n"));
 }
 
 TEST_F(TestStr, test_str_join_split)

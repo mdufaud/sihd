@@ -31,7 +31,8 @@ TEST_F(TestHttpResponse, test_content_types)
     HttpResponse json;
     EXPECT_TRUE(json.set_json_content({{"k", "v"}, {"n", 1}}));
     auto parsed = sihd::json::Json::parse(json.content().cpp_str());
-    EXPECT_EQ(parsed["k"].get<std::string>(), "v");
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ((*parsed)["k"].get<std::string>(), "v");
     EXPECT_EQ(json.http_header().content_type(), "application/json; charset=utf-8");
 
     // byte: sets octet-stream and preserves raw bytes

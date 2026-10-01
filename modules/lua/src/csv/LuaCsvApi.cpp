@@ -9,9 +9,12 @@
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/utils.hpp>
+#include <sihd/util/Logger.hpp>
 
 namespace sihd::lua
 {
+
+SIHD_LOGGER;
 
 using namespace sihd::csv;
 
@@ -61,7 +64,7 @@ void LuaCsvApi::load_base(Vm & vm)
                                             opt_bool(remove_header, false),
                                             opt_char(delimiter, ','),
                                             static_cast<char>(opt_char(comment, '#')));
-                if (!data.has_value())
+                if (SIHD_UNEXPECTED_LOG(data))
                     return luabridge::LuaRef(state, luabridge::LuaNil());
                 return luabridge::LuaRef(state, *data);
             })
@@ -85,15 +88,18 @@ void LuaCsvApi::load_base(Vm & vm)
             +[](const std::string & path,
                 const std::vector<std::vector<std::string>> & rows,
                 luabridge::LuaRef delimiter) -> bool {
-                CsvWriter writer(path);
-                if (!writer.is_open())
+                CsvWriter writer;
+                if (SIHD_UNEXPECTED_LOG(writer.open(path)))
                     return false;
                 if (!delimiter.isNil())
-                    writer.set_delimiter(opt_char(delimiter, ','));
+                    SIHD_UNEXPECTED_LOG(writer.set_delimiter(opt_char(delimiter, ',')));
                 for (const auto & row : rows)
                 {
                     if (writer.write_row(row) < 0)
+                    {
+                        SIHD_LOG(error, "could not write csv row on '{}'", path);
                         return false;
+                    }
                 }
                 return true;
             })
@@ -103,18 +109,31 @@ void LuaCsvApi::load_base(Vm & vm)
         // streaming reader
         .beginClass<CsvReader>("CsvReader")
         .addConstructor<void (*)()>()
-        .addFunction("open", &CsvReader::open)
+        .addFunction(
+            "open",
+            +[](CsvReader *self, const std::string & path) -> bool { return !SIHD_UNEXPECTED_LOG(self->open(path)); })
         .addFunction("is_open", &CsvReader::is_open)
         .addFunction("close", &CsvReader::close)
         .addFunction(
             "set_delimiter",
-            +[](CsvReader *self, luabridge::LuaRef c) -> bool { return self->set_delimiter(opt_char(c, ',')); })
+            +[](CsvReader *self, luabridge::LuaRef c) -> bool {
+                return !SIHD_UNEXPECTED_LOG(self->set_delimiter(opt_char(c, ',')));
+            })
         .addFunction(
             "set_commentary",
-            +[](CsvReader *self, luabridge::LuaRef c) -> bool { return self->set_commentary(opt_char(c, '#')); })
+            +[](CsvReader *self, luabridge::LuaRef c) -> bool {
+                return !SIHD_UNEXPECTED_LOG(self->set_commentary(opt_char(c, '#')));
+            })
         .addFunction("set_timestamp_col", &CsvReader::set_timestamp_col)
         .addFunction("set_timestamp_format", &CsvReader::set_timestamp_format)
-        .addFunction("read_next", &CsvReader::read_next)
+        .addFunction(
+            "read_next",
+            +[](CsvReader *self) -> bool {
+                auto next = self->read_next();
+                if (SIHD_UNEXPECTED_LOG(next))
+                    return false;
+                return next.value();
+            })
         .addFunction("columns", &CsvReader::columns)
         .endClass()
         // streaming writer
@@ -123,16 +142,20 @@ void LuaCsvApi::load_base(Vm & vm)
         .addFunction(
             "open",
             +[](CsvWriter *self, const std::string & path, luabridge::LuaRef append) -> bool {
-                return self->open(path, opt_bool(append, false));
+                return !SIHD_UNEXPECTED_LOG(self->open(path, opt_bool(append, false)));
             })
         .addFunction("is_open", &CsvWriter::is_open)
         .addFunction("close", &CsvWriter::close)
         .addFunction(
             "set_delimiter",
-            +[](CsvWriter *self, luabridge::LuaRef c) -> bool { return self->set_delimiter(opt_char(c, ',')); })
+            +[](CsvWriter *self, luabridge::LuaRef c) -> bool {
+                return !SIHD_UNEXPECTED_LOG(self->set_delimiter(opt_char(c, ',')));
+            })
         .addFunction(
             "set_commentary",
-            +[](CsvWriter *self, luabridge::LuaRef c) -> bool { return self->set_commentary(opt_char(c, '#')); })
+            +[](CsvWriter *self, luabridge::LuaRef c) -> bool {
+                return !SIHD_UNEXPECTED_LOG(self->set_commentary(opt_char(c, '#')));
+            })
         .addFunction(
             "write_row",
             +[](CsvWriter *self, const std::vector<std::string> & values) -> long {
@@ -143,7 +166,9 @@ void LuaCsvApi::load_base(Vm & vm)
             +[](CsvWriter *self, const std::string & commentary) -> long {
                 return static_cast<long>(self->write_commentary(commentary));
             })
-        .addFunction("new_row", &CsvWriter::new_row)
+        .addFunction(
+            "new_row",
+            +[](CsvWriter *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->new_row()); })
         .addFunction("current_row", &CsvWriter::current_row)
         .addFunction("current_col", &CsvWriter::current_col)
         .addFunction("max_col", &CsvWriter::max_col)

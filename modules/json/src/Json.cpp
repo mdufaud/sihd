@@ -3,6 +3,16 @@
 namespace sihd::json
 {
 
+namespace
+{
+
+std::string parse_error(const simdjson::simdjson_error & e)
+{
+    return std::string("parse error: ") + e.what();
+}
+
+} // namespace
+
 Json::Json(): _value(nullptr), _discarded(false) {}
 
 Json::Json(std::nullptr_t): _value(nullptr), _discarded(false) {}
@@ -524,17 +534,12 @@ std::vector<std::string> Json::get<std::vector<std::string>>() const
 
 // the DOM is kept as-is: the variant is built lazily
 
-Json Json::parse(std::string_view str)
+std::expected<Json, std::string> Json::parse(std::string_view str)
 {
-    return parse(str, true);
+    return parse(str.data(), str.data() + str.size());
 }
 
-Json Json::parse(std::string_view str, bool allow_exceptions)
-{
-    return parse(str.data(), str.data() + str.size(), allow_exceptions);
-}
-
-Json Json::parse(const char *begin, const char *end, bool allow_exceptions)
+std::expected<Json, std::string> Json::parse(const char *begin, const char *end)
 {
     try
     {
@@ -549,9 +554,7 @@ Json Json::parse(const char *begin, const char *end, bool allow_exceptions)
     }
     catch (const simdjson::simdjson_error & e)
     {
-        if (allow_exceptions)
-            throw std::runtime_error(std::string("Json parse error: ") + e.what());
-        return Json(DiscardedTag {});
+        return std::unexpected(parse_error(e));
     }
 }
 

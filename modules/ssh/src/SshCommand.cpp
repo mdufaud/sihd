@@ -1,10 +1,19 @@
+#include <cstring>
+#include <optional>
+
 #include <libssh/callbacks.h>
 
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Waitable.hpp>
+#include <sihd/util/fmt.hpp>
 #include <sihd/util/time.hpp>
+
+#include "ssh_error.hpp"
+
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::ssh
 {
@@ -18,7 +27,7 @@ struct SshCommand::Impl
                 int exit_status;
                 bool core_dumped;
                 std::string signal_str;
-                std::string err_msg;
+                std::optional<Error> exit_error;
         };
 
         ssh_session_struct *ssh_session_ptr;
@@ -34,19 +43,19 @@ struct SshCommand::Impl
             parent(parent_cmd),
             stop(false)
         {
-            utils::init();
+            SIHD_UNEXPECTED_LOG(utils::init());
             reset_command_status();
             ssh_callbacks_ptr = std::make_unique<struct ssh_channel_callbacks_struct>();
         }
 
-        ~Impl() { utils::finalize(); }
+        ~Impl() { SIHD_UNEXPECTED_LOG(utils::finalize()); }
 
         void reset_command_status()
         {
             command_status.exit_status = -1;
             command_status.core_dumped = false;
-            command_status.err_msg.clear();
             command_status.signal_str.clear();
+            command_status.exit_error.reset();
         }
 
         void callback_channel_output(char *buf, size_t size, bool is_stderr)
@@ -70,8 +79,11 @@ struct SshCommand::Impl
             {
                 auto l = waitable.guard();
                 command_status.signal_str = signal;
-                command_status.err_msg = errmsg;
                 command_status.core_dumped = core != 0;
+                command_status.exit_error = Error(unknown,
+                                                  "command terminated by signal '{}': {}",
+                                                  signal,
+                                                  errmsg != nullptr ? errmsg : "");
             }
             waitable.notify_all();
         }
@@ -137,26 +149,25 @@ SshChannel & SshCommand::channel()
     return _impl->channel;
 }
 
-bool SshCommand::execute(std::string_view cmd)
+std::expected<void, Error> SshCommand::execute(std::string_view cmd)
 {
-    return this->execute_async(cmd) && this->wait();
+    if (auto res = this->execute_async(cmd); !res)
+        return res;
+    return this->wait();
 }
 
-bool SshCommand::execute_async(std::string_view cmd)
+std::expected<void, Error> SshCommand::execute_async(std::string_view cmd)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl->ssh_session_ptr);
     if (channel_ptr == nullptr)
-    {
-        SIHD_LOG(error, "SshCommand: failed to create a ssh channel: {}", ssh_get_error(_impl->ssh_session_ptr));
-        return false;
-    }
+        return std::unexpected(
+            Error(_impl->ssh_session_ptr, "could not create a ssh channel: {}", ssh_error_str(_impl->ssh_session_ptr)));
     _impl->channel.set_channel(channel_ptr);
     _impl->channel.set_blocking(false);
-    if (_impl->channel.open_session() == false)
+    if (auto res = _impl->channel.open_session(); !res)
     {
-        SIHD_LOG(error, "SshCommand: failed to open a ssh channel session");
         _impl->channel.clear_channel();
-        return false;
+        return res;
     }
     memset(_impl->ssh_callbacks_ptr.get(), 0, sizeof(struct ssh_channel_callbacks_struct));
     _impl->ssh_callbacks_ptr->userdata = (void *)_impl.get();
@@ -167,26 +178,26 @@ bool SshCommand::execute_async(std::string_view cmd)
     if (ssh_set_channel_callbacks(static_cast<ssh_channel>(_impl->channel.channel()), _impl->ssh_callbacks_ptr.get())
         != SSH_OK)
     {
-        SIHD_LOG(error, "SshCommand: failed to set callbacks to the channel");
         _impl->channel.clear_channel();
-        return false;
+        return std::unexpected(Error(_impl->ssh_session_ptr,
+                                     "could not set callbacks to the channel: {}",
+                                     ssh_error_str(_impl->ssh_session_ptr)));
     }
     _impl->reset_command_status();
-    bool ret = _impl->channel.request_exec(cmd);
-    if (!ret)
+    if (auto res = _impl->channel.request_exec(cmd); !res)
     {
-        SIHD_LOG(error, "SshCommand: failed to execute command: {}", cmd);
         _impl->channel.clear_channel();
+        return res;
     }
-    else
-        _impl->channel.exit_status();
-    return ret;
+    _impl->channel.exit_status();
+    return {};
 }
 
-bool SshCommand::wait(sihd::util::Duration timeout_nano, sihd::util::time::UnixTime milliseconds_poll_time)
+std::expected<void, Error> SshCommand::wait(sihd::util::Duration timeout_nano,
+                                            sihd::util::time::UnixTime milliseconds_poll_time)
 {
     if (_impl->channel.is_open() == false)
-        return true;
+        return {};
     int r = 0;
     while (_impl->stop == false && (r = _impl->channel.exit_status()) == -1)
     {
@@ -200,14 +211,23 @@ bool SshCommand::wait(sihd::util::Duration timeout_nano, sihd::util::time::UnixT
             _impl->waitable.wait_for(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds_poll_time)),
                                      [this] { return _impl->stop; });
     }
-    if (r != -1)
-        _impl->channel.clear_channel();
-    return r != -1;
+    if (r == -1 && !_impl->command_status.exit_error)
+        return std::unexpected(
+            Error(_impl->stop ? interrupted : timeout, "could not wait for command: no exit status"));
+    _impl->channel.clear_channel();
+    // a valid exit status wins over a signal packet from a non compliant server
+    if (r == -1)
+        return std::unexpected(std::move(*_impl->command_status.exit_error));
+    return {};
 }
 
-bool SshCommand::input(sihd::util::ArrCharView view)
+std::expected<void, Error> SshCommand::input(sihd::util::ArrCharView view)
 {
-    return _impl->channel.is_open() && _impl->channel.write(view);
+    if (_impl->channel.is_open() == false)
+        return std::unexpected(Error(closed, "could not write command input: channel is not open"));
+    if (_impl->channel.write(view) > 0)
+        return {};
+    return std::unexpected(Error(io_error, "could not write command input"));
 }
 
 int SshCommand::exit_status()
@@ -223,11 +243,6 @@ bool SshCommand::core_dumped()
 const std::string & SshCommand::exit_signal_str()
 {
     return _impl->command_status.signal_str;
-}
-
-const std::string & SshCommand::exit_signal_error()
-{
-    return _impl->command_status.err_msg;
 }
 
 } // namespace sihd::ssh

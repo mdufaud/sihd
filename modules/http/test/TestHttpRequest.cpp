@@ -48,14 +48,14 @@ TEST_F(TestHttpRequest, test_content)
 
     // valid json roundtrip
     auto parsed = req.content_as_json();
-    EXPECT_FALSE(parsed.is_discarded());
-    EXPECT_EQ(parsed["key"].get<std::string>(), "val");
-    EXPECT_EQ(parsed["n"].get<int32_t>(), 7);
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ((*parsed)["key"].get<std::string>(), "val");
+    EXPECT_EQ((*parsed)["n"].get<int32_t>(), 7);
 
-    // invalid json returns discarded
+    // invalid json returns nothing
     std::string bad = "{ not json }";
     req.set_content(sihd::util::ArrCharView(bad.data(), bad.size()));
-    EXPECT_TRUE(req.content_as_json().is_discarded());
+    EXPECT_FALSE(req.content_as_json().has_value());
 }
 
 TEST_F(TestHttpRequest, test_routing_params)

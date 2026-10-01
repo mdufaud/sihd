@@ -160,7 +160,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
     _host_ipaddr = dns::find("google.com", false);
     IcmpSender sender("icmp-sender");
     sender.set_echo();
-    if (sender.open_socket(false) == false)
+    if (sender.open_socket(false).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
                      << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'";
@@ -177,7 +177,7 @@ TEST_F(TestIcmp, test_icmp_ipv6)
     _host_ipaddr = dns::find("google.com", true);
     IcmpSender sender("icmp-sender");
     sender.set_echo(); // to open SOCK_DGRAM on IPv6 thus avoiding raw socket requirement
-    ASSERT_TRUE(sender.open_socket(true));
+    ASSERT_TRUE(sender.open_socket(true).has_value());
     this->test_icmp(sender);
 }
 } // namespace test

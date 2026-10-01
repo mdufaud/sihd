@@ -14,6 +14,8 @@
 #include <sihd/ssh/SshShell.hpp>
 #include <sihd/ssh/utils.hpp>
 
+#include "ssh_error.hpp"
+
 namespace sihd::ssh
 {
 
@@ -31,12 +33,12 @@ struct SshShell::Impl
 SshShell::SshShell(void *session): _impl_ptr(std::make_unique<Impl>())
 {
     _impl_ptr->ssh_session_ptr = static_cast<ssh_session_struct *>(session);
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshShell::~SshShell()
 {
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 SshChannel & SshShell::channel()
@@ -44,23 +46,14 @@ SshChannel & SshShell::channel()
     return _impl_ptr->channel;
 }
 
-bool SshShell::open(bool x11)
+std::expected<void, Error> SshShell::open(bool x11)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
-    {
-        SIHD_LOG(error, "SshShell: failed to create a ssh channel: {}", ssh_get_error(_impl_ptr->ssh_session_ptr));
-        return false;
-    }
+        return std::unexpected(Error(sihd::util::ErrorCode::not_initialized,
+                                     "could not create a ssh channel: {}",
+                                     ssh_error_str(_impl_ptr->ssh_session_ptr)));
     _impl_ptr->channel.set_channel(channel_ptr);
-    bool ret = _impl_ptr->channel.open_session();
-    if (!ret)
-        SIHD_LOG(error, "SshShell: failed to open a ssh channel session");
-    if (ret && _impl_ptr->channel.request_pty() == false)
-    {
-        SIHD_LOG(error, "SshShell: failed to request a ssh pty");
-        ret = false;
-    }
 
     long columns = 80;
     if (const std::optional<std::string> env_columns = env::get("COLUMNS"))
@@ -75,24 +68,22 @@ bool SshShell::open(bool x11)
             rows = *val;
     }
 
-    if (ret && _impl_ptr->channel.change_pty_size(columns, rows) == false)
+    std::expected<void, Error> res = _impl_ptr->channel.open_session();
+    if (res)
+        res = _impl_ptr->channel.request_pty();
+    if (res)
+        res = _impl_ptr->channel.change_pty_size(columns, rows);
+    if (res && x11)
+        res = _impl_ptr->channel.request_x11("", "", 0, false);
+    if (res)
+        res = _impl_ptr->channel.request_shell();
+    if (!res)
     {
-        SIHD_LOG(error, "SshShell: failed to change pty size");
-        ret = false;
-    }
-    if (ret && x11 && _impl_ptr->channel.request_x11("", "", 0, false) == false)
-    {
-        SIHD_LOG(error, "SshShell: failed to request x11");
-        ret = false;
-    }
-    if (ret && _impl_ptr->channel.request_shell() == false)
-    {
-        SIHD_LOG(error, "SshShell: failed to request shell");
-        ret = false;
-    }
-    if (!ret)
+        SIHD_UNEXPECTED_LOG(res);
         _impl_ptr->channel.clear_channel();
-    return ret;
+        return res;
+    }
+    return {};
 }
 
 bool SshShell::read_loop()
@@ -110,7 +101,7 @@ bool SshShell::read_loop()
         .read_buffsize = 1,
         .delimiter_in_line = true,
     });
-    reader.set_stream(stdin);
+    (void)reader.set_stream(stdin);
 
     while (_impl_ptr->channel.is_open() && _impl_ptr->channel.is_eof() == false)
     {
@@ -177,22 +168,23 @@ bool SshShell::read_loop()
 #endif
         if (stdin_ready)
         {
-            if (reader.read_next())
+            auto line = reader.read_next();
+            if (line && *line)
             {
                 reader.get_read_data(view);
                 nwritten = _impl_ptr->channel.write(view);
                 if (nwritten != (int)view.size())
                 {
-                    SIHD_LOG_ERROR("SshShell: error writing to channel '{}' != '{}'", nwritten, view.size());
+                    SIHD_LOG_ERROR("error writing to channel '{}' != '{}'", nwritten, view.size());
                     ret = false;
                     break;
                 }
             }
             else
             {
-                if (reader.error())
+                if (!line)
                 {
-                    SIHD_LOG(error, "SshShell: error reading stdin");
+                    SIHD_LOG(error, "error reading stdin: {}", line.error().message);
                     ret = false;
                 }
                 fmt::print("\n");
@@ -201,7 +193,7 @@ bool SshShell::read_loop()
         }
     }
     if (!ret)
-        _impl_ptr->channel.send_eof();
+        SIHD_UNEXPECTED_LOG(_impl_ptr->channel.send_eof());
     _impl_ptr->channel.clear_channel();
     return ret;
 }

@@ -12,8 +12,20 @@
 # include <iomanip>
 #endif
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::util
 {
+
+namespace
+{
+
+std::unexpected<Error> date_parse_error(const std::string & date_str, std::string_view format)
+{
+    return std::unexpected(Error(invalid_argument, "could not parse date '{}' with format '{}'", date_str, format));
+}
+
+} // namespace
 
 Timestamp::Timestamp(Calendar calendar)
 {
@@ -168,34 +180,12 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-std::optional<Timestamp> Timestamp::from_str(const std::string & date_str, std::string_view format)
+std::expected<Timestamp, Error> Timestamp::from_str(const std::string & date_str, std::string_view format)
 {
-#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
-    std::chrono::system_clock::time_point tp;
-
-    std::istringstream ss {date_str};
-    ss.imbue(std::locale::classic());
-    ss >> std::chrono::parse(format.data(), tp);
-
-    if (ss.fail())
-        return std::nullopt;
-
-    return Timestamp {tp};
-#else
-    struct tm t = {};
-    std::istringstream ss {date_str.data()};
-
-    ss.imbue(std::locale::classic());
-    ss >> std::get_time(&t, format.data());
-
-    if (ss.fail())
-        return std::nullopt;
-
-    return Timestamp {time::local_tm(t)};
-#endif
+    return Timestamp::from_str(date_str, format, std::locale::classic());
 }
 
-std::optional<Timestamp>
+std::expected<Timestamp, Error>
     Timestamp::from_str(const std::string & date_str, std::string_view format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
@@ -206,7 +196,7 @@ std::optional<Timestamp>
     ss >> std::chrono::parse(format.data(), tp);
 
     if (ss.fail())
-        return std::nullopt;
+        return date_parse_error(date_str, format);
 
     return Timestamp {tp};
 #else
@@ -217,7 +207,7 @@ std::optional<Timestamp>
     ss >> std::get_time(&t, format.data());
 
     if (ss.fail())
-        return std::nullopt;
+        return date_parse_error(date_str, format);
 
     return Timestamp {time::local_tm(t)};
 #endif

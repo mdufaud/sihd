@@ -43,6 +43,7 @@
 namespace sihd::sys
 {
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 SIHD_LOGGER;
@@ -142,7 +143,7 @@ bool read_pipe_into_file(int fd, const std::string & path, bool append)
         return false;
 
     auto fun = [&file](std::string_view buffer) {
-        file.write(buffer.data(), buffer.size());
+        (void)file.write(buffer.data(), buffer.size());
     };
     return read_pipe_into_callback(fd, fun);
 }
@@ -536,16 +537,13 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 #if defined(ENABLE_FORK)
 
-bool Process::_do_fork(const std::vector<const char *> & argv)
+std::expected<void, Error> Process::_do_fork(const std::vector<const char *> & argv)
 {
     // the exec array is owned here: nothing may allocate in the forked child
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
     if ((pid = fork()) < 0)
-    {
-        SIHD_LOG(error, "Process: fork failed: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("fork failed"));
     if (pid == 0)
     {
         if (!_chroot.empty())
@@ -600,21 +598,21 @@ bool Process::_do_fork(const std::vector<const char *> & argv)
         _exit(status);
     }
     _impl->process_watcher.pid = pid;
-    return true;
+    return {};
 }
 
 #else
 
-bool Process::_do_fork(const std::vector<const char *> &)
+std::expected<void, Error> Process::_do_fork(const std::vector<const char *> &)
 {
-    return false;
+    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no fork on this platform"));
 }
 
 #endif
 
 #if defined(ENABLE_SPAWN)
 
-bool Process::_do_spawn(const std::vector<const char *> & argv)
+std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> & argv)
 {
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
@@ -654,29 +652,27 @@ bool Process::_do_spawn(const std::vector<const char *> & argv)
                            const_cast<char *const *>(&(exec_env.array[0])));
     posix_spawn_file_actions_destroy(&actions);
     if (err != 0)
-    {
-        SIHD_LOG(error, "Process: '{}': {}", argv[0], os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not spawn '{}'", argv[0]));
     _impl->process_watcher.pid = pid;
-    return true;
+    return {};
 }
 
 #else
 
-bool Process::_do_spawn(const std::vector<const char *> &)
+std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> &)
 {
-    return false;
+    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no spawn on this platform"));
 }
 
 #endif
 
-bool Process::_do_child_process(const std::vector<const char *> &)
+std::expected<void, Error> Process::_do_child_process(const std::vector<const char *> &)
 {
-    return false;
+    return std::unexpected(
+        sihd::util::Error(sihd::util::ErrorCode::not_supported, "no child process on this platform"));
 }
 
-bool Process::_do_execute(const std::vector<const char *> & argv)
+std::expected<void, Error> Process::_do_execute(const std::vector<const char *> & argv)
 {
     init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
@@ -688,18 +684,20 @@ bool Process::_do_execute(const std::vector<const char *> & argv)
 #endif
 }
 
-bool Process::execute()
+std::expected<void, Error> Process::execute()
 {
     if (this->is_process_running() || _executing.exchange(true) == true)
-        return false;
+    {
+        _executing.store(false);
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process already running or executing"));
+    }
 
     Defer d([this] { _executing.store(false); });
 
     if (!_fun_to_execute && _argv.size() == 0)
-    {
-        SIHD_LOG(error, "Process: Could not run process with no arguments");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "could not run process with no arguments"));
 
     std::vector<const char *> c_argv;
     c_argv.reserve(_argv.size() + 1);
@@ -709,8 +707,8 @@ bool Process::execute()
     }
     c_argv.emplace_back(nullptr);
 
-    const bool success = this->_do_execute(c_argv);
-    if (success)
+    auto executed = this->_do_execute(c_argv);
+    if (executed)
     {
         safe_close(_impl->pipe.std_in.fd_read);
         safe_close(_impl->pipe.std_out.fd_write);
@@ -722,8 +720,10 @@ bool Process::execute()
         safe_close(_impl->pipe.std_in.fd_write);
     }
 
-    _started.store(success);
-    return success;
+    _started.store(executed.has_value());
+    if (!executed)
+        return executed;
+    return {};
 }
 
 // Linux only methods
@@ -772,7 +772,7 @@ bool Process::terminate()
     int tries = 3;
     while (this->is_process_running() && tries > 0)
     {
-        this->wait_no_hang();
+        (void)this->wait_no_hang();
         if (this->is_process_running() == false)
             break;
         --tries;
@@ -781,27 +781,20 @@ bool Process::terminate()
 
     if (this->is_process_running())
     {
-        this->kill(SIGKILL);
-        this->wait_exit(WUNTRACED);
+        (void)this->kill(SIGKILL);
+        (void)this->wait_exit(WUNTRACED);
     }
 
     return this->is_process_running() == false;
 }
 
-bool Process::kill(int sig)
+std::expected<void, Error> Process::kill(int sig)
 {
+    if (this->is_process_running() == false)
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process is not running"));
     if (sig < 0)
-    {
         sig = SIGTERM;
-    }
-    bool ret = this->is_process_running();
-    if (ret)
-    {
-        ret = signal::kill(this->pid(), sig);
-        if (!ret)
-            SIHD_LOG(error, "Process: could not kill: {}", os::last_error_str());
-    }
-    return ret;
+    return signal::kill(this->pid(), sig);
 }
 
 // Run
@@ -832,7 +825,7 @@ void Process::handle(Poll *poll)
     if (poll->polling_timeout())
     {
         if (this->is_process_running())
-            this->wait_any(WNOHANG);
+            (void)this->wait_any(WNOHANG);
         else
             poll->stop();
     }
@@ -840,7 +833,7 @@ void Process::handle(Poll *poll)
 
 bool Process::on_start()
 {
-    const bool ret = this->execute();
+    const bool ret = this->execute().has_value();
 
     if (ret)
     {
@@ -868,12 +861,12 @@ bool Process::is_process_running() const
     return _started.load();
 }
 
-bool Process::wait_no_hang()
+std::expected<bool, Error> Process::wait_no_hang()
 {
     return this->wait(WEXITED | WNOHANG);
 }
 
-bool Process::wait(int options)
+std::expected<bool, Error> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
@@ -898,22 +891,22 @@ bool Process::has_terminated() const
     return _impl->process_watcher.has_terminated();
 }
 
-bool Process::wait_exit(int options)
+std::expected<bool, Error> Process::wait_exit(int options)
 {
     return this->wait(WEXITED | options);
 }
 
-bool Process::wait_stop(int options)
+std::expected<bool, Error> Process::wait_stop(int options)
 {
     return this->wait(WSTOPPED | options);
 }
 
-bool Process::wait_continue(int options)
+std::expected<bool, Error> Process::wait_continue(int options)
 {
     return this->wait(WCONTINUED | options);
 }
 
-bool Process::wait_any(int options)
+std::expected<bool, Error> Process::wait_any(int options)
 {
     return this->wait(WEXITED | WSTOPPED | WCONTINUED | options);
 }

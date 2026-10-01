@@ -34,11 +34,18 @@
 # include <stringapiset.h>
 #endif
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::util::str
 {
 
 namespace
 {
+
+Error errc_to_error(std::errc ec)
+{
+    return Error(ec, std::make_error_code(ec).message());
+}
 
 // base64 alphabet value by byte, -1 otherwise
 constexpr std::array<int8_t, 256> make_base64_table()
@@ -531,14 +538,16 @@ uint16_t resolve_base_prefix(std::string_view & str, uint16_t base)
 }
 
 template <typename T, typename... Args>
-std::optional<T> from_chars_to(std::string_view str, Args... args)
+std::expected<T, std::errc> from_chars_to(std::string_view str, Args... args)
 {
     T value {};
     const char *const first = str.data();
     const char *const last = first + str.size();
     const auto [ptr, ec] = std::from_chars(first, last, value, args...);
-    if (ec != std::errc {} || ptr == first)
-        return std::nullopt;
+    if (ec != std::errc {})
+        return std::unexpected(ec);
+    if (ptr == first)
+        return std::unexpected(std::errc::invalid_argument);
     return value;
 }
 
@@ -1108,7 +1117,7 @@ std::string to_base64(std::string_view str)
     return to_base64(str.data(), str.size());
 }
 
-std::optional<std::vector<uint8_t>> from_base64(std::string_view b64)
+std::expected<std::vector<uint8_t>, Error> from_base64(std::string_view b64)
 {
     std::vector<uint8_t> ret;
     ret.reserve(b64.size() / 4 * 3);
@@ -1117,8 +1126,10 @@ std::optional<std::vector<uint8_t>> from_base64(std::string_view b64)
     size_t data_count = 0;
     size_t pad_count = 0;
     bool padding = false;
+    size_t index = 0;
     for (const char c : b64)
     {
+        const size_t i = index++;
         // ascii whitespace only: std::isspace is locale dependent and may accept bytes like 0xa0
         if (c == ' ' || (c >= '\t' && c <= '\r'))
             continue;
@@ -1129,10 +1140,10 @@ std::optional<std::vector<uint8_t>> from_base64(std::string_view b64)
             continue;
         }
         if (padding)
-            return std::nullopt;
+            return std::unexpected(Error(invalid_argument, "invalid base64 padding at index {}", i));
         const int digit = base64_table[size_t((unsigned char)c)];
         if (digit < 0)
-            return std::nullopt;
+            return std::unexpected(Error(invalid_argument, "invalid base64 character '{}' at index {}", c, i));
         acc = ((acc << 6) | uint32_t(digit)) & 0x3fff;
         bits += 6;
         ++data_count;
@@ -1144,7 +1155,7 @@ std::optional<std::vector<uint8_t>> from_base64(std::string_view b64)
     }
     const size_t remainder = data_count % 4;
     if (remainder == 1 || (pad_count > 0 && (remainder == 0 || pad_count > 4 - remainder)))
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "invalid base64 data length {}", data_count));
     return ret;
 }
 
@@ -1232,10 +1243,10 @@ bool is_number(std::string_view s, uint16_t base)
     return true;
 }
 
-std::optional<long long> to_signed(std::string_view str, uint16_t base)
+std::expected<long long, Error> to_signed(std::string_view str, uint16_t base)
 {
     if (base != 0 && (base < 2 || base > 36))
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "base must be 0 or in [2, 36]"));
     // std::from_chars handles neither a leading '+' nor a base prefix, strtol did
     bool negate = false;
     if (!str.empty() && (str.front() == '-' || str.front() == '+'))
@@ -1244,16 +1255,16 @@ std::optional<long long> to_signed(std::string_view str, uint16_t base)
         str.remove_prefix(1);
     }
     base = resolve_base_prefix(str, base);
-    const auto opt = from_chars_to<long long>(str, static_cast<int>(base));
-    if (!opt)
-        return std::nullopt;
-    return negate ? -*opt : *opt;
+    const auto parsed = from_chars_to<long long>(str, static_cast<int>(base));
+    if (!parsed)
+        return std::unexpected(errc_to_error(parsed.error()));
+    return negate ? -*parsed : *parsed;
 }
 
-std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
+std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint16_t base)
 {
     if (base != 0 && (base < 2 || base > 36))
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "base must be 0 or in [2, 36]"));
     // std::from_chars rejects a sign for unsigned, strtoul wrapped a negative input around
     bool negate = false;
     if (!str.empty() && (str.front() == '-' || str.front() == '+'))
@@ -1262,76 +1273,66 @@ std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t bas
         str.remove_prefix(1);
     }
     base = resolve_base_prefix(str, base);
-    const auto opt = from_chars_to<unsigned long long>(str, static_cast<int>(base));
-    if (!opt)
-        return std::nullopt;
-    return negate ? static_cast<unsigned long long>(0) - *opt : *opt;
+    const auto parsed = from_chars_to<unsigned long long>(str, static_cast<int>(base));
+    if (!parsed)
+        return std::unexpected(errc_to_error(parsed.error()));
+    return negate ? static_cast<unsigned long long>(0) - *parsed : *parsed;
 }
 
-bool to_bool(std::string_view str, bool & value)
+std::expected<bool, Error> to_bool(std::string_view str)
 {
-    if (str == "1")
-    {
-        value = true;
+    if (str == "1" || str == "true")
         return true;
-    }
-    if (str == "0")
-    {
-        value = false;
-        return true;
-    }
-    if (str == "true")
-    {
-        value = true;
-        return true;
-    }
-    if (str == "false")
-    {
-        value = false;
-        return true;
-    }
-    return false;
-}
-
-bool to_char(std::string_view str, char & value)
-{
-    char c = 0;
-    if (str.size() == 1)
-        c = str[0];
-    else if (str.size() == 3 && str[0] == '\'' && str[2] == '\'')
-        c = str[1];
-    else
+    if (str == "0" || str == "false")
         return false;
-    if (isprint(c))
-        value = c;
-    return c != 0;
+    return std::unexpected(Error(invalid_argument, "cannot parse '{}' as bool", str));
+}
+
+std::expected<char, Error> to_char(std::string_view str)
+{
+    if (str.size() == 1)
+    {
+        if (isprint(static_cast<unsigned char>(str[0])))
+            return str[0];
+        return std::unexpected(Error(invalid_argument, "cannot parse '{}' as char: not printable", str));
+    }
+    if (str.size() == 3 && str[0] == '\'' && str[2] == '\'')
+    {
+        if (isprint(static_cast<unsigned char>(str[1])))
+            return str[1];
+        return std::unexpected(Error(invalid_argument, "cannot parse '{}' as char: not printable", str));
+    }
+    return std::unexpected(Error(invalid_argument, "cannot parse '{}' as char", str));
 }
 
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
 
-std::optional<float> to_float(std::string_view str, std::chars_format fmt)
+std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt)
 {
-    return from_chars_to<float>(str, fmt);
+    return from_chars_to<float>(str, fmt).transform_error(errc_to_error);
 }
 
-std::optional<double> to_double(std::string_view str, std::chars_format fmt)
+std::expected<double, Error> to_double(std::string_view str, std::chars_format fmt)
 {
-    return from_chars_to<double>(str, fmt);
+    return from_chars_to<double>(str, fmt).transform_error(errc_to_error);
 }
 
 #else
 
-std::optional<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+std::expected<float, Error> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
     const auto opt = strtod_fallback(str);
     if (!opt)
-        return std::nullopt;
+        return std::unexpected(errc_to_error(std::errc::invalid_argument));
     return static_cast<float>(*opt);
 }
 
-std::optional<double> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+std::expected<double, Error> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
-    return strtod_fallback(str);
+    const auto opt = strtod_fallback(str);
+    if (!opt)
+        return std::unexpected(errc_to_error(std::errc::invalid_argument));
+    return *opt;
 }
 
 #endif

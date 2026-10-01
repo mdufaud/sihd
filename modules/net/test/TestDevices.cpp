@@ -47,8 +47,8 @@ TEST_F(TestDevices, test_udp_devices)
 
     ASSERT_TRUE(core.init());
 
-    Channel *rx = receiver->find_channel("rx");
-    Channel *tx = sender->find_channel("tx");
+    Channel *rx = receiver->find_channel("rx").value_or(nullptr);
+    Channel *tx = sender->find_channel("tx").value_or(nullptr);
     ASSERT_NE(rx, nullptr);
     ASSERT_NE(tx, nullptr);
 
@@ -86,9 +86,9 @@ TEST_F(TestDevices, test_tcp_client_device)
 
     ASSERT_TRUE(core.init());
 
-    Channel *rx = client->find_channel("rx");
-    Channel *tx = client->find_channel("tx");
-    Channel *connected = client->find_channel("connected");
+    Channel *rx = client->find_channel("rx").value_or(nullptr);
+    Channel *tx = client->find_channel("tx").value_or(nullptr);
+    Channel *connected = client->find_channel("connected").value_or(nullptr);
     ASSERT_NE(rx, nullptr);
     ASSERT_NE(tx, nullptr);
     ASSERT_NE(connected, nullptr);
@@ -97,7 +97,7 @@ TEST_F(TestDevices, test_tcp_client_device)
     EXPECT_TRUE(client->is_running());
     EXPECT_EQ(connected->read<bool>(0), true);
 
-    int accepted_fd = server.accept();
+    int accepted_fd = server.accept().value_or(-1);
     ASSERT_GE(accepted_fd, 0);
     Socket accepted(accepted_fd);
 
@@ -107,7 +107,7 @@ TEST_F(TestDevices, test_tcp_client_device)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     sihd::util::ArrChar recv_buf(64);
-    ssize_t received = accepted.receive(recv_buf);
+    ssize_t received = accepted.receive(recv_buf).value_or(-1);
     EXPECT_EQ(received, (ssize_t)strlen(hello));
     EXPECT_EQ(memcmp(recv_buf.buf(), hello, strlen(hello)), 0);
 
@@ -123,8 +123,8 @@ TEST_F(TestDevices, test_tcp_client_device)
     EXPECT_FALSE(client->is_running());
     EXPECT_EQ(connected->read<bool>(0), false);
 
-    accepted.close();
-    server.close();
+    (void)accepted.close();
+    (void)server.close();
 }
 
 TEST_F(TestDevices, test_tcp_server_device)
@@ -141,9 +141,9 @@ TEST_F(TestDevices, test_tcp_server_device)
 
     ASSERT_TRUE(core.init());
 
-    Channel *rx = srv->find_channel("rx");
-    Channel *tx = srv->find_channel("tx");
-    Channel *client_count = srv->find_channel("client_count");
+    Channel *rx = srv->find_channel("rx").value_or(nullptr);
+    Channel *tx = srv->find_channel("tx").value_or(nullptr);
+    Channel *client_count = srv->find_channel("client_count").value_or(nullptr);
     ASSERT_NE(rx, nullptr);
     ASSERT_NE(tx, nullptr);
     ASSERT_NE(client_count, nullptr);
@@ -153,8 +153,8 @@ TEST_F(TestDevices, test_tcp_server_device)
     EXPECT_EQ(client_count->read<int32_t>(0), 0);
 
     Socket client;
-    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, 0));
-    ASSERT_TRUE(client.connect(IpAddr::localhost(4302)));
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(client.connect(IpAddr::localhost(4302)).has_value());
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -174,15 +174,15 @@ TEST_F(TestDevices, test_tcp_server_device)
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    ASSERT_TRUE(client.set_blocking(false));
-    ssize_t received = client.receive(recv_buf);
+    ASSERT_TRUE(client.set_blocking(false).has_value());
+    ssize_t received = client.receive(recv_buf).value_or(-1);
     EXPECT_EQ(received, (ssize_t)strlen(broadcast));
     EXPECT_EQ(memcmp(recv_buf.buf(), broadcast, strlen(broadcast)), 0);
 
     ASSERT_TRUE(core.stop());
     EXPECT_FALSE(srv->is_running());
 
-    client.close();
+    (void)client.close();
 }
 
 TEST_F(TestDevices, test_tcp_client_device_reconnect)
@@ -202,20 +202,20 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
 
     ASSERT_TRUE(core.init());
 
-    Channel *rx = client->find_channel("rx");
-    Channel *connected = client->find_channel("connected");
+    Channel *rx = client->find_channel("rx").value_or(nullptr);
+    Channel *connected = client->find_channel("connected").value_or(nullptr);
     ASSERT_NE(rx, nullptr);
     ASSERT_NE(connected, nullptr);
 
     ASSERT_TRUE(core.start());
     EXPECT_EQ(connected->read<bool>(0), true);
 
-    int accepted_fd = server.accept();
+    int accepted_fd = server.accept().value_or(-1);
     ASSERT_GE(accepted_fd, 0);
     Socket accepted(accepted_fd);
 
-    accepted.close();
-    server.close();
+    (void)accepted.close();
+    (void)server.close();
 
     // qemu emulated targets run the reconnect cycles far slower than native
     wait_for([&] { return connected->read<bool>(0) == false; });
@@ -228,7 +228,7 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     ChannelWaiter rx_waiter(rx);
     wait_for([&] { return connected->read<bool>(0) == true; });
     EXPECT_EQ(connected->read<bool>(0), true);
-    int fd2 = server2.accept(2000);
+    int fd2 = server2.accept(2000).value_or(-1);
     ASSERT_GE(fd2, 0);
     Socket accepted2(fd2);
     const char hello[] = "reconnected";
@@ -237,15 +237,15 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     EXPECT_TRUE(rx_waiter.prev_wait_for(std::chrono::seconds(5)));
     EXPECT_EQ(memcmp(rx->data(), hello, strlen(hello)), 0);
 
-    Channel *tx = client->find_channel("tx");
+    Channel *tx = client->find_channel("tx").value_or(nullptr);
     ASSERT_NE(tx, nullptr);
     const char tx_msg[] = "tx after reconnect";
     tx->write({tx_msg, strlen(tx_msg)});
     char tx_buf[64] = {0};
     ssize_t tx_received = 0;
-    ASSERT_TRUE(accepted2.set_blocking(false));
+    ASSERT_TRUE(accepted2.set_blocking(false).has_value());
     wait_for([&] {
-        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf));
+        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf)).value_or(-1);
         return tx_received > 0;
     });
     EXPECT_EQ(tx_received, (ssize_t)strlen(tx_msg));
@@ -255,7 +255,7 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     EXPECT_FALSE(client->is_running());
     EXPECT_EQ(connected->read<bool>(0), false);
 
-    server2.close();
+    (void)server2.close();
 }
 
 } // namespace test

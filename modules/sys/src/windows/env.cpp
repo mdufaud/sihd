@@ -1,12 +1,16 @@
 #include <windows.h> // GetEnvironmentVariableA / SetEnvironmentVariableA / GetEnvironmentStringsA
 
+#include <fmt/format.h>
+
 #include <sihd/sys/env.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/str.hpp>
+
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::sys::env
 {
-
-using namespace sihd::util;
 
 std::optional<std::string> get(std::string_view key)
 {
@@ -24,14 +28,31 @@ std::optional<std::string> get(std::string_view key)
     return value;
 }
 
-bool set(std::string_view key, std::string_view value)
+std::expected<void, Error> set(std::string_view key, std::string_view value)
 {
-    return ::SetEnvironmentVariableA(std::string(key).c_str(), std::string(value).c_str()) != 0;
+    if (::SetEnvironmentVariableA(std::string(key).c_str(), std::string(value).c_str()) == 0)
+    {
+        // same failure classes as the errno mapping on linux
+        const DWORD err = ::GetLastError();
+        const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
+                               : err == ERROR_INVALID_PARAMETER ? invalid_argument
+                                                                : io_error;
+        return std::unexpected(Error(code, "could not set environment variable '{}': {}", key, os::last_error_str()));
+    }
+    return {};
 }
 
-bool unset(std::string_view key)
+std::expected<void, Error> unset(std::string_view key)
 {
-    return ::SetEnvironmentVariableA(std::string(key).c_str(), nullptr) != 0;
+    if (::SetEnvironmentVariableA(std::string(key).c_str(), nullptr) == 0)
+    {
+        const DWORD err = ::GetLastError();
+        const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
+                               : err == ERROR_INVALID_PARAMETER ? invalid_argument
+                                                                : io_error;
+        return std::unexpected(Error(code, "could not unset environment variable '{}': {}", key, os::last_error_str()));
+    }
+    return {};
 }
 
 std::map<std::string, std::string> list()

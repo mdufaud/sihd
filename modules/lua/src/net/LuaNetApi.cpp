@@ -11,8 +11,11 @@
 #include <sihd/net/DeviceUdpReceiver.hpp>
 #include <sihd/net/DeviceUdpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
+
+SIHD_NEW_LOGGER("sihd::lua");
 
 namespace sihd::lua
 {
@@ -50,7 +53,9 @@ void LuaNetApi::load_base(Vm & vm)
         .addFunction("str", &IpAddr::str)
         .addFunction(
             "set_subnet_mask",
-            +[](IpAddr *self, const std::string & mask) -> bool { return self->set_subnet_mask(mask); })
+            +[](IpAddr *self, const std::string & mask) -> bool {
+                return !SIHD_UNEXPECTED_LOG(self->set_subnet_mask(mask));
+            })
         .addFunction("has_subnet", &IpAddr::has_subnet)
         .addFunction("subnet_value", &IpAddr::subnet_value)
         .addFunction("dump_subnet", &IpAddr::dump_subnet)

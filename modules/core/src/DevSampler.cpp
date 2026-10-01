@@ -84,12 +84,18 @@ bool DevSampler::on_start()
     Channel *channel_out;
 
     ret = true;
-    if (!this->get_channel(CHANNEL_SAMPLE, &_channel_sample))
-        return false;
+    auto sample = this->get_channel(CHANNEL_SAMPLE);
+    if (!sample)
+        return !SIHD_UNEXPECTED_LOG(sample);
+    _channel_sample = *sample;
     for (const auto & [channel_out_path, channel_in_path] : _conf_map)
     {
-        if (this->find_channel(channel_in_path, &channel_in) && this->find_channel(channel_out_path, &channel_out))
+        auto channel_in_res = this->find_channel(channel_in_path);
+        auto channel_out_res = this->find_channel(channel_out_path);
+        if (channel_in_res && channel_out_res)
         {
+            channel_in = *channel_in_res;
+            channel_out = *channel_out_res;
             if (this->observe_channel(channel_in) == false)
                 ret = false;
             _channels_map[channel_in] = channel_out;

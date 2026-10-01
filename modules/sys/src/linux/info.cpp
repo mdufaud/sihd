@@ -12,30 +12,33 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using namespace sihd::util;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::sys::info
 {
-
-using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::info");
 
 namespace
 {
 
-std::optional<uint64_t> read_uint(std::string_view path)
+std::expected<uint64_t, Error> read_uint(std::string_view path)
 {
     auto content_opt = fs::read_all(path);
     if (!content_opt)
-        return std::nullopt;
-    return str::convert_from_string<uint64_t>(str::trim(*content_opt));
+        return std::unexpected(Error(io_error, "could not read '{}'", path));
+    auto parsed = str::convert_from_string<uint64_t>(str::trim(*content_opt));
+    SIHD_UNEXPECTED_RETURN(parsed);
+    return parsed;
 }
 
 // /proc/meminfo values are kibibytes
-std::optional<uint64_t> meminfo_kib(std::string_view key)
+std::expected<uint64_t, Error> read_meminfo_kib(std::string_view key)
 {
     const auto lines = fs::read_lines("/proc/meminfo");
     if (!lines)
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not read /proc/meminfo"));
     for (const auto & line : *lines)
     {
         const auto [name, value] = str::split_pair_view(line, ":");
@@ -43,10 +46,19 @@ std::optional<uint64_t> meminfo_kib(std::string_view key)
             continue;
         std::string_view kib = str::trim(value);
         kib = kib.substr(0, kib.find(' '));
-        const auto v = str::convert_from_string<uint64_t>(kib);
-        return v ? std::optional<uint64_t>(*v * 1024) : std::nullopt;
+        auto parsed = str::convert_from_string<uint64_t>(kib);
+        SIHD_UNEXPECTED_RETURN(parsed);
+        return *parsed * 1024;
     }
-    return std::nullopt;
+    return std::unexpected(Error(not_found, "key '{}' not found in /proc/meminfo", key));
+}
+
+std::optional<uint64_t> meminfo_kib(std::string_view key)
+{
+    const auto read = read_meminfo_kib(key);
+    if (!read)
+        SIHD_LOG(debug, "{}", read.error().message);
+    return read ? std::optional<uint64_t>(*read) : std::nullopt;
 }
 
 std::optional<CpuTimes> parse_cpu_times(std::string_view line)
@@ -174,9 +186,15 @@ std::optional<uint32_t> physical_core_count()
             if (key == "processor" || key == "physical id")
                 flush();
             if (key == "physical id")
-                physical_id = str::convert_from_string<uint64_t>(str::trim(value));
+            {
+                const auto parsed = str::convert_from_string<uint64_t>(str::trim(value));
+                physical_id = parsed ? std::optional<uint64_t>(*parsed) : std::nullopt;
+            }
             else if (key == "core id")
-                core_id = str::convert_from_string<uint64_t>(str::trim(value));
+            {
+                const auto parsed = str::convert_from_string<uint64_t>(str::trim(value));
+                core_id = parsed ? std::optional<uint64_t>(*parsed) : std::nullopt;
+            }
         }
         flush();
         if (!cores.empty())

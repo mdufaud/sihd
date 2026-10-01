@@ -17,6 +17,7 @@
 namespace sihd::sys
 {
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 SIHD_LOGGER;
@@ -76,7 +77,7 @@ struct FileWatcher::Impl
         std::list<Watcher> _watchers;
 
         void init();
-        bool add_watch(std::string_view path);
+        std::expected<void, Error> add_watch(std::string_view path);
         bool rm_watch(std::string_view path);
         bool is_watching(std::string_view path);
         void terminate();
@@ -103,10 +104,10 @@ bool FileWatcher::Impl::rm_watch(std::string_view path)
 
 void FileWatcher::Impl::init() {}
 
-bool FileWatcher::Impl::add_watch(std::string_view path)
+std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
 {
     if (this->is_watching(path))
-        return true;
+        return {};
 
     // ReadDirectoryChangesW only watches directories: when given a file, watch its
     // parent directory and filter incoming events on the file name.
@@ -115,10 +116,7 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
     if (!fs::is_dir(path))
     {
         if (!fs::is_file(path))
-        {
-            SIHD_LOG(error, "FileWatcher: No such file or directory: {}", path);
-            return false;
-        }
+            return std::unexpected(Error(not_found, "no such file or directory: '{}'", path));
         filename_filter = fs::filename(path);
         dir_to_watch = fs::parent(path);
     }
@@ -131,10 +129,7 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
                                FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
                                NULL);
     if (handle == INVALID_HANDLE_VALUE)
-    {
-        SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(io_error, "could not watch '{}': {}", path, os::last_error_str()));
 
     // ReadDirectoryChangesW is asynchronous: the OVERLAPPED it is given must keep a stable address
     // until the operation completes. Store the Watcher first (std::list nodes never move) so the OS
@@ -158,12 +153,11 @@ bool FileWatcher::Impl::add_watch(std::string_view path)
                                &watcher.overlapped,
                                NULL))
     {
-        SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
         _watchers.pop_back();
-        return false;
+        return std::unexpected(Error(io_error, "could not watch '{}': {}", path, os::last_error_str()));
     }
 
-    return true;
+    return {};
 }
 
 bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
@@ -275,10 +269,9 @@ FileWatcher::FileWatcher()
 
 FileWatcher::FileWatcher(std::string_view path): FileWatcher()
 {
-    if (!_impl->add_watch(path))
-    {
-        throw std::runtime_error(os::last_error_str());
-    }
+    auto watched = _impl->add_watch(path);
+    if (!watched)
+        throw std::runtime_error(watched.error().message);
 }
 
 FileWatcher::FileWatcher(std::string_view path, int run_timeout_milliseconds): FileWatcher(path)
@@ -297,7 +290,7 @@ bool FileWatcher::run()
     return success;
 }
 
-bool FileWatcher::watch(std::string_view path)
+std::expected<void, Error> FileWatcher::watch(std::string_view path)
 {
     return _impl->add_watch(path);
 }

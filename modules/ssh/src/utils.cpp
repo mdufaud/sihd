@@ -4,6 +4,10 @@
 
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/fmt.hpp>
+
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::ssh::utils
 {
@@ -16,40 +20,32 @@ std::mutex _init_mutex;
 int _ref_count = 0;
 } // namespace
 
-bool init()
+std::expected<void, Error> init()
 {
     std::lock_guard l(_init_mutex);
     if (_ref_count == 0)
     {
-        int ret = ssh_init();
+        const int ret = ssh_init();
         if (ret != SSH_OK)
-        {
-            SIHD_LOG(error, "ssh_init() failed with code {}", ret);
-            return false;
-        }
+            return std::unexpected(Error(unknown, "ssh_init() failed with code {}", ret));
     }
     ++_ref_count;
-    return true;
+    return {};
 }
 
-bool finalize()
+std::expected<void, Error> finalize()
 {
     std::lock_guard l(_init_mutex);
     if (_ref_count == 0)
-    {
-        return false;
-    }
+        return std::unexpected(Error(not_initialized, "ssh not initialized"));
     --_ref_count;
     if (_ref_count == 0)
     {
-        int ret = ssh_finalize();
+        const int ret = ssh_finalize();
         if (ret != SSH_OK)
-        {
-            SIHD_LOG(error, "ssh_finalize() failed with code {}", ret);
-            return false;
-        }
+            return std::unexpected(Error(unknown, "ssh_finalize() failed with code {}", ret));
     }
-    return true;
+    return {};
 }
 
 bool is_initialized()

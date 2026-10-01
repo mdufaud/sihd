@@ -49,7 +49,7 @@ bool init(int opts)
     return _is_init;
 }
 
-bool lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
+std::expected<void, sihd::util::Error> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
 {
     static_assert(sizeof(bpf_u_int32) == sizeof(uint32_t));
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -58,8 +58,8 @@ bool lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
                              reinterpret_cast<bpf_u_int32 *>(mask),
                              errbuf);
     if (ret != 0)
-        SIHD_LOG(error, "{}", errbuf);
-    return ret == 0;
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_found, "{}: {}", dev, errbuf));
+    return {};
 }
 
 bool is_datalink(int dtl)

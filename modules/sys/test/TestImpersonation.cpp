@@ -130,7 +130,7 @@ TEST_F(TestImpersonation, test_impersonation_other_identity_as_root)
         const user::GroupId target_group = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
 
         Impersonation impersonation;
-        const bool switched = impersonation.impersonate_as(target, target_group);
+        const auto switched = impersonation.impersonate_as(target, target_group);
 
         if (!switched)
         {

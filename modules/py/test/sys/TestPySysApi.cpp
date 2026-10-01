@@ -30,49 +30,49 @@ class TestPySysApi: public ::testing::Test
 
 TEST_F(TestPySysApi, test_pysys_fs)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_fs.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_os)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_os.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_user)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_user.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_signal)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_signal.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_uuid)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_uuid.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_process_info)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_process_info.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_bitmap)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_bitmap.py"));
 }

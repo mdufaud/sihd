@@ -3,10 +3,13 @@
 #include <sihd/lua/Vm.hpp>
 #include <sihd/util/Logger.hpp>
 
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::lua
 {
 
-SIHD_NEW_LOGGER("sihd::lua::api");
+SIHD_NEW_LOGGER("sihd::lua");
 
 namespace
 {
@@ -45,6 +48,22 @@ void unregister_gil_universe(LuaGil *gil)
 {
     std::lock_guard l(g_mutex);
     std::erase_if(g_map_gil, [gil](const auto & pair) { return pair.second == gil; });
+}
+
+sihd::util::Error pop_lua_error(sihd::util::ErrorCode code, lua_State *state)
+{
+    const char *msg = lua_tostring(state, -1);
+    lua_pop(state, 1);
+    return Error(code, msg == nullptr ? "unknown lua error" : msg);
+}
+
+std::expected<void, sihd::util::Error> do_chunk(lua_State *state, int load_status, sihd::util::ErrorCode load_code)
+{
+    if (load_status != 0)
+        return std::unexpected(pop_lua_error(load_code, state));
+    if (lua_pcall(state, 0, LUA_MULTRET, 0) != 0)
+        return std::unexpected(pop_lua_error(unknown, state));
+    return {};
 }
 
 } // namespace
@@ -195,22 +214,24 @@ bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
     return ret;
 }
 
-bool Vm::do_file(std::string_view path)
+std::expected<void, sihd::util::Error> Vm::do_file(std::string_view path)
 {
     LuaGilGuard guard(_state_ptr);
-    return luaL_dofile(_state_ptr, path.data()) == 0;
+    const int load_status = luaL_loadfile(_state_ptr, path.data());
+    sihd::util::ErrorCode load_code = out_of_memory;
+    if (load_status == LUA_ERRFILE)
+        load_code = not_found;
+    else if (load_status == LUA_ERRSYNTAX)
+        load_code = invalid_argument;
+    return do_chunk(_state_ptr, load_status, load_code);
 }
 
-bool Vm::do_string(std::string_view path)
+std::expected<void, sihd::util::Error> Vm::do_string(std::string_view str)
 {
     LuaGilGuard guard(_state_ptr);
-    return luaL_dostring(_state_ptr, path.data()) == 0;
-}
-
-std::string Vm::last_string()
-{
-    const char *ret = lua_tostring(_state_ptr, -1);
-    return ret == nullptr ? std::string() : std::string(ret);
+    const int load_status = luaL_loadstring(_state_ptr, str.data());
+    const sihd::util::ErrorCode load_code = load_status == LUA_ERRSYNTAX ? invalid_argument : out_of_memory;
+    return do_chunk(_state_ptr, load_status, load_code);
 }
 
 void Vm::print_stack(int max, FILE *output)

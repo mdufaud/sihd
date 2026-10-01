@@ -534,7 +534,7 @@ struct SshServer::Impl
             // Bound the blocking key-exchange so a connect-and-stall client cannot
             // hang the single-threaded loop (pre-auth DoS). libssh applies this
             // timeout to the blocking handshake read below.
-            session_wrapper->set_timeout(kex_timeout_sec);
+            SIHD_UNEXPECTED_LOG(session_wrapper->set_timeout(kex_timeout_sec));
 
             // Setup session data for callbacks
             auto data_holder = std::make_unique<SessionData>(SessionData {.server = server,
@@ -742,80 +742,68 @@ SshServer::SshServer(const std::string & name, sihd::util::Node *parent):
     _stop(false)
 {
     _impl_ptr = std::make_unique<Impl>();
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshServer::~SshServer()
 {
     if (this->is_running())
         this->stop();
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-bool SshServer::set_port(int port)
+std::expected<void, sihd::util::Error> SshServer::set_port(int port)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change port while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change port while running"));
     _impl_ptr->port = port;
-    return true;
+    return {};
 }
 
-bool SshServer::set_bind_address(std::string_view addr)
+std::expected<void, sihd::util::Error> SshServer::set_bind_address(std::string_view addr)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change bind address while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change bind address while running"));
     _impl_ptr->bind_addr = addr;
-    return true;
+    return {};
 }
 
-bool SshServer::set_rsa_key(std::string_view key_path)
+std::expected<void, sihd::util::Error> SshServer::set_rsa_key(std::string_view key_path)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change keys while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change keys while running"));
     _impl_ptr->rsa_key = key_path;
-    return true;
+    return {};
 }
 
-bool SshServer::set_ecdsa_key(std::string_view key_path)
+std::expected<void, sihd::util::Error> SshServer::set_ecdsa_key(std::string_view key_path)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change keys while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change keys while running"));
     _impl_ptr->ecdsa_key = key_path;
-    return true;
+    return {};
 }
 
-bool SshServer::set_authorized_keys_file(std::string_view path)
+std::expected<void, sihd::util::Error> SshServer::set_authorized_keys_file(std::string_view path)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change authorized_keys while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change authorized_keys while running"));
     _impl_ptr->authorized_keys = path;
-    return true;
+    return {};
 }
 
-bool SshServer::set_banner(std::string_view banner)
+std::expected<void, sihd::util::Error> SshServer::set_banner(std::string_view banner)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change banner while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change banner while running"));
     _impl_ptr->banner = banner;
-    return true;
+    return {};
 }
 
 bool SshServer::set_verbosity(int level)
@@ -824,15 +812,13 @@ bool SshServer::set_verbosity(int level)
     return true;
 }
 
-bool SshServer::set_kex_timeout(int seconds)
+std::expected<void, sihd::util::Error> SshServer::set_kex_timeout(int seconds)
 {
     if (this->is_running())
-    {
-        SIHD_LOG(error, "SshServer: cannot change kex timeout while running");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change kex timeout while running"));
     _impl_ptr->kex_timeout_sec = seconds;
-    return true;
+    return {};
 }
 
 void SshServer::set_server_handler(ISshServerHandler *handler)

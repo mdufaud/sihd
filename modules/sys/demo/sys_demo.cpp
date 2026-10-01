@@ -92,8 +92,8 @@ void dynlib()
     {
         SIHD_LOG_INFO("Opened DLL sihd_sys");
 
-        void *handle = lib.load("sihd_factory_Node");
-        if (handle != nullptr)
+        auto handle = lib.load("sihd_factory_Node");
+        if (handle.has_value())
             SIHD_LOG_INFO("Handle found in DLL");
 
         lib.close();
@@ -107,25 +107,29 @@ void read_line()
         return;
     fmt::print("Say something: ");
     std::cout.flush();
-    std::string input;
-    LineReader::fast_read_stdin(input);
-    fmt::print("You said: '{}'\n", input);
+    auto input = LineReader::fast_read_stdin();
+    if (input)
+        fmt::print("You said: '{}'\n", input.value());
     fmt::print("\n");
 }
 
 void file_mem_write()
 {
     File file;
-    file.set_buffer_size(128);
-    SIHD_DIE_FALSE(file.open_mem("r+"));
+    SIHD_DIE_FALSE(file.set_buffer_size(128).has_value());
+    SIHD_DIE_FALSE(file.open_mem("r+").has_value());
 
-    ssize_t write_size = file.write("hello world !");
-    file.seek_begin(0);
+    const auto write_size = file.write("hello world !");
+    (void)file.seek_begin(0);
 
     ArrChar str(128);
-    ssize_t read_size = file.read(str);
+    const auto read_size = file.read(str);
 
-    SIHD_LOG(info, "Memory file wrote {} and read {} with content: {}", write_size, read_size, str);
+    SIHD_LOG(info,
+             "Memory file wrote {} and read {} with content: {}",
+             write_size.value_or(0),
+             read_size.value_or(0),
+             str);
 
     fmt::print("\n");
 }
@@ -133,13 +137,13 @@ void file_mem_write()
 void file_mem_read()
 {
     File file;
-    file.set_buffer_size(128);
-    SIHD_DIE_FALSE(file.open_mem("r", "hello world !"));
+    SIHD_DIE_FALSE(file.set_buffer_size(128).has_value());
+    SIHD_DIE_FALSE(file.open_mem("r", "hello world !").has_value());
 
     ArrChar str(128);
-    ssize_t read_size = file.read(str);
+    const auto read_size = file.read(str);
 
-    SIHD_LOG(info, "Memory file read {} with content: {}", read_size, str);
+    SIHD_LOG(info, "Memory file read {} with content: {}", read_size.value_or(0), str);
     fmt::print("\n");
 }
 

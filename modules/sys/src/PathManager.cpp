@@ -1,10 +1,15 @@
 #include <algorithm>
 #include <filesystem>
 
+#include <fmt/format.h>
+
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/container.hpp>
+
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
 
 namespace sihd::sys
 {
@@ -97,13 +102,15 @@ void PathManager::push_front(std::string_view path_item)
         _path_lst.emplace(_path_lst.begin(), path_item);
 }
 
-bool PathManager::remove(std::string_view path_item)
+std::expected<void, sihd::util::Error> PathManager::remove(std::string_view path_item)
 {
     auto it = std::remove(_path_lst.begin(), _path_lst.end(), path_item);
     if (it == _path_lst.end())
-        return false;
+    {
+        return std::unexpected(Error(not_found, "path '{}' not in list", path_item));
+    }
     _path_lst.erase(it);
-    return true;
+    return {};
 }
 
 void PathManager::clear()

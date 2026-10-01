@@ -2,9 +2,12 @@
 #define __SIHD_CRYPTO_PRIVATEKEY_HPP__
 
 #include <cstddef>
+#include <expected>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <sihd/util/Error.hpp>
 
 namespace sihd::crypto
 {
@@ -22,13 +25,13 @@ class PrivateKey
 
         operator bool() const { return _handle != nullptr; }
 
-        bool generate_rsa(int bits = 2048);
-        bool generate_ec(std::string_view curve_name = "prime256v1");
+        std::expected<void, sihd::util::Error> generate_rsa(int bits = 2048);
+        std::expected<void, sihd::util::Error> generate_ec(std::string_view curve_name = "prime256v1");
 
-        bool load_pem(std::string_view path);
-        bool save_pem(std::string_view path) const;
+        std::expected<void, sihd::util::Error> load_pem(std::string_view path);
+        std::expected<void, sihd::util::Error> save_pem(std::string_view path) const;
 
-        bool load_pem_string(std::string_view pem);
+        std::expected<void, sihd::util::Error> load_pem_string(std::string_view pem);
         std::string to_pem_string() const;
 
         void clear();

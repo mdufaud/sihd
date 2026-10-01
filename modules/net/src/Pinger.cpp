@@ -77,13 +77,13 @@ Pinger::~Pinger()
         this->stop();
 }
 
-bool Pinger::open_unix()
+std::expected<void, sihd::util::Error> Pinger::open_unix()
 {
     set_internal_data_size(_sender, _data_ptr, ICMP_ECHO_REQUEST_LENGTH);
     return _sender.open_socket_unix();
 }
 
-bool Pinger::open(bool ipv6)
+std::expected<void, sihd::util::Error> Pinger::open(bool ipv6)
 {
     if (ipv6)
         set_internal_data_size(_sender, _data_ptr, ICMP6_ECHO_REQUEST_LENGTH);
@@ -176,10 +176,11 @@ bool Pinger::on_start()
         _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(_result.last_time_sent));
         _sender.set_data(*_data_ptr);
         // send icmp echo
-        ret = _sender.send_to(_client);
-        if (ret == false)
+        auto sent = _sender.send_to(_client);
+        if (!sent)
         {
             SIHD_LOG_ERROR("Pinger: failed sending to client {}", _client.hostname());
+            ret = false;
             break;
         }
         _result.transmitted += 1;

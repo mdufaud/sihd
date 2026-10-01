@@ -1,6 +1,7 @@
 #ifndef __SIHD_SSH_SSHSESSION_HPP__
 #define __SIHD_SSH_SSHSESSION_HPP__
 
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -10,6 +11,7 @@
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshShell.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::ssh
 {
@@ -22,27 +24,27 @@ class SshSession
         SshSession(void *session);
         virtual ~SshSession();
 
-        bool new_session();
+        std::expected<void, sihd::util::Error> new_session();
 
-        bool set_user(std::string_view user);
-        bool set_host(std::string_view host);
-        bool set_port(int port);
+        std::expected<void, sihd::util::Error> set_user(std::string_view user);
+        std::expected<void, sihd::util::Error> set_host(std::string_view host);
+        std::expected<void, sihd::util::Error> set_port(int port);
         // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
-        bool set_verbosity(int verbosity);
+        std::expected<void, sihd::util::Error> set_verbosity(int verbosity);
         void set_blocking(bool active);
         // When disabled, libssh ignores ~/.ssh/config and system ssh_config
         // (ProxyCommand/ProxyJump, etc). libssh default is enabled.
-        bool set_process_config(bool enable);
+        std::expected<void, sihd::util::Error> set_process_config(bool enable);
         // Override the .ssh directory libssh reads (config, known_hosts, keys)
-        bool set_ssh_dir(std::string_view path);
+        std::expected<void, sihd::util::Error> set_ssh_dir(std::string_view path);
         // Bound connect/handshake/blocking ops (seconds). Applied by default in
         // new_session(); pass <= 0 to disable (block indefinitely).
-        bool set_timeout(int seconds);
+        std::expected<void, sihd::util::Error> set_timeout(int seconds);
 
         // Default connect/handshake timeout (seconds) set by new_session().
         static constexpr int default_timeout_sec = 10;
 
-        bool connect();
+        std::expected<void, sihd::util::Error> connect();
         bool connected();
 
         struct ConnectOptions
@@ -57,9 +59,9 @@ class SshSession
                 // Connect/handshake timeout (seconds); <= 0 blocks indefinitely
                 int timeout_sec = default_timeout_sec;
         };
-        bool fast_connect(const ConnectOptions & options);
+        std::expected<void, sihd::util::Error> fast_connect(const ConnectOptions & options);
 
-        bool check_hostkey();
+        std::expected<void, sihd::util::Error> check_hostkey();
 
         struct AuthMethods
         {
@@ -108,11 +110,11 @@ class SshSession
         void silent_disconnect();
         void delete_session();
 
-        bool update_known_hosts();
-        bool known_hosts(std::string & hosts);
+        std::expected<void, sihd::util::Error> update_known_hosts();
+        std::expected<void, sihd::util::Error> known_hosts(std::string & hosts);
 
-        bool make_channel(SshChannel & channel);
-        bool make_channel_session(SshChannel & channel);
+        std::expected<void, sihd::util::Error> make_channel(SshChannel & channel);
+        std::expected<void, sihd::util::Error> make_channel_session(SshChannel & channel);
 
         SshCommand make_command();
         SshShell make_shell();
@@ -122,8 +124,6 @@ class SshSession
 
         // Returns internal session pointer (void*)
         void *session() const;
-        const char *error() const;
-        int error_code() const;
 
         void set_userdata(void *userdata);
         void *userdata() const;

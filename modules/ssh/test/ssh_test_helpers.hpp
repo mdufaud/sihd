@@ -23,8 +23,6 @@ namespace test
 using namespace sihd;
 using namespace sihd::ssh;
 
-SIHD_LOGGER;
-
 // Path to test keys in resources/
 inline constexpr const char *HOST_KEY_PATH = "test/resources/test_host_key_pem";
 inline constexpr const char *CLIENT_KEY_PATH = "test/resources/test_client_key";
@@ -83,9 +81,9 @@ struct SshServerHelper
             });
 
             // Use port 0 for dynamic allocation
-            if (!server.set_port(0))
+            if (!server.set_port(0).has_value())
                 return false;
-            if (!server.set_rsa_key(HOST_KEY_PATH))
+            if (!server.set_rsa_key(HOST_KEY_PATH).has_value())
                 return false;
 
             server.set_server_handler(&handler);
@@ -136,19 +134,10 @@ inline std::unique_ptr<SshServerHelper> make_test_server_with_sftp(std::string_v
 }
 
 // Helper to create an authenticated client session
-inline bool connect_to_test_server(const SshServerHelper & server,
-                                   SshSession & session,
-                                   const char *user = "testuser",
-                                   const char *password = "testpass")
-{
-    // process_config=false: ignore ~/.ssh/config (proxy) for localhost tests
-    if (!session.fast_connect({.user = user, .host = "127.0.0.1", .port = server.port, .process_config = false}))
-        return false;
-    if (!session.connected())
-        return false;
-    auto auth = session.auth_password(password);
-    return auth.success();
-}
+bool connect_to_test_server(const SshServerHelper & server,
+                            SshSession & session,
+                            const char *user = "testuser",
+                            const char *password = "testpass");
 
 } // namespace test
 

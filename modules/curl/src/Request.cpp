@@ -1,5 +1,5 @@
+#include <expected>
 #include <mutex>
-#include <stdexcept>
 
 #include <fmt/core.h>
 
@@ -10,6 +10,10 @@
 #include <sihd/util/Logger.hpp>
 
 #include "impl.hpp"
+
+using sihd::util::Error;
+using sihd::util::error_from;
+using enum sihd::util::ErrorCode;
 
 namespace sihd::curl
 {
@@ -28,22 +32,39 @@ struct GlobalCleanup: public sihd::util::IRunnable
         }
 };
 
+std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, std::string message)
+{
+    return std::unexpected(Error(code, std::move(message)));
+}
+
+template <typename... Args>
+    requires(sizeof...(Args) != 0)
+std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, fmt::format_string<Args...> format, Args &&...args)
+{
+    return err(code, fmt::format(format, std::forward<Args>(args)...));
+}
+
 // curl_global_init() is not thread-safe and must be called before any other
 // curl function from a single thread: funnel every request creation here.
-void global_init_once()
+// a failed init is not sticky: the next request retries it
+std::expected<void, sihd::util::Error> global_init()
 {
-    static std::once_flag flag;
-    std::call_once(flag, [] {
-        CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
-        if (code != CURLE_OK)
-            throw std::runtime_error(fmt::format("curl_global_init failed: {}", curl_easy_strerror(code)));
-        // cleanup joins sihd's exit chain so it is ordered with the other
-        // exit handlers instead of racing them in the C atexit chain
-        if (sihd::util::atexit::install())
-            sihd::util::atexit::add_handler(new GlobalCleanup());
-        else
-            std::atexit(curl_global_cleanup);
-    });
+    static std::mutex mutex;
+    static bool initialized = false;
+    std::lock_guard lock(mutex);
+    if (initialized)
+        return {};
+    CURLcode code = curl_global_init(CURL_GLOBAL_ALL);
+    if (code != CURLE_OK)
+        return err(not_initialized, "curl_global_init failed: {}", curl_easy_strerror(code));
+    // cleanup joins sihd's exit chain so it is ordered with the other
+    // exit handlers instead of racing them in the C atexit chain
+    if (sihd::util::atexit::install())
+        sihd::util::atexit::add_handler(new GlobalCleanup());
+    else
+        std::atexit(curl_global_cleanup);
+    initialized = true;
+    return {};
 }
 
 // the implementation type is deduced: setters record every curl failure into
@@ -122,10 +143,50 @@ bool mime_check(CURLcode code, std::string_view what)
 
 } // namespace
 
+} // namespace sihd::curl
+
+namespace sihd::util
+{
+template <>
+struct ErrorResolver<CURLcode>
+{
+        static ErrorCode code(CURLcode native)
+        {
+            switch (native)
+            {
+                case CURLE_OPERATION_TIMEDOUT:
+                    return ErrorCode::timeout;
+                case CURLE_COULDNT_RESOLVE_HOST:
+                case CURLE_COULDNT_RESOLVE_PROXY:
+                    return ErrorCode::not_found;
+                case CURLE_COULDNT_CONNECT:
+                case CURLE_RECV_ERROR:
+                case CURLE_SEND_ERROR:
+                    return ErrorCode::io_error;
+                case CURLE_REMOTE_ACCESS_DENIED:
+                    return ErrorCode::permission_denied;
+                case CURLE_UNSUPPORTED_PROTOCOL:
+                    return ErrorCode::not_supported;
+                case CURLE_URL_MALFORMAT:
+                    return ErrorCode::invalid_argument;
+                case CURLE_ABORTED_BY_CALLBACK:
+                    return ErrorCode::interrupted;
+                default:
+                    return ErrorCode::io_error;
+            }
+        }
+};
+} // namespace sihd::util
+
+namespace sihd::curl
+{
+
 struct Request::Impl
 {
         CURL *curl = nullptr;
         CURLcode code = CURLE_OK;
+        // non-empty: construction failed and left the handle defunct
+        std::string init_error;
 
         curl_slist *header_list = nullptr;
         curl_mime *mime = nullptr;
@@ -158,10 +219,14 @@ struct Request::Impl
 
 Request::Request(): _impl(std::make_unique<Impl>())
 {
-    global_init_once();
+    if (auto initialized = global_init(); !initialized)
+    {
+        _impl->init_error = std::move(initialized.error()).message;
+        return;
+    }
     _impl->curl = curl_easy_init();
     if (_impl->curl == nullptr)
-        throw std::runtime_error("could not initialize curl request");
+        _impl->init_error = "could not initialize curl request";
 }
 
 Request::~Request() = default;
@@ -511,15 +576,14 @@ std::vector<std::string> Request::cookie_list() const
     return lines;
 }
 
-bool Request::perform()
+std::expected<void, sihd::util::Error> Request::perform()
 {
     if (_impl->curl == nullptr)
-    {
-        SIHD_LOG(error, "Request: no curl handle");
-        return false;
-    }
+        return err(not_initialized, _impl->init_error.empty() ? "no curl handle" : _impl->init_error);
     _impl->code = curl_easy_perform(_impl->curl);
-    return _impl->code == CURLE_OK;
+    if (_impl->code != CURLE_OK)
+        return err(error_from(_impl->code), "perform: {}", curl_easy_strerror(_impl->code));
+    return {};
 }
 
 std::string Request::last_error() const

@@ -59,118 +59,52 @@ bool Configurable::_set_conf_from_json(const std::string & key, const sihd::json
 
 bool Configurable::_set_conf_json(const std::string & name, const sihd::json::Json & val)
 {
-    try
-    {
+    if (_callback_manager.check_call_type<bool, const sihd::json::Json &>(name))
         return _callback_manager.call<bool, const sihd::json::Json &>(name, val);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    return _callback_manager.call<bool, const sihd::json::Json>(name, val);
+    return _callback_manager.call<bool, sihd::json::Json>(name, val);
 }
 
 bool Configurable::set_conf_float(const std::string & name, double param)
 {
-    try
-    {
+    if (_callback_manager.check_call_type<bool, double>(name))
         return _callback_manager.call<bool, double>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-        return _callback_manager.call<bool, float>(name, (float)param);
-    }
+    return _callback_manager.call<bool, float>(name, static_cast<float>(param));
 }
 
 bool Configurable::set_conf_int(const std::string & name, int64_t param)
 {
-    try
-    {
+    if (_callback_manager.check_call_type<bool, int64_t>(name))
         return _callback_manager.call<bool, int64_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, uint64_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, int32_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, uint32_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, int16_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, uint16_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
-        return _callback_manager.call<bool, int8_t>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-
-    return _callback_manager.call<bool, uint8_t>(name, param);
+    if (_callback_manager.check_call_type<bool, uint64_t>(name))
+        return _callback_manager.call<bool, uint64_t>(name, static_cast<uint64_t>(param));
+    if (_callback_manager.check_call_type<bool, int32_t>(name))
+        return _callback_manager.call<bool, int32_t>(name, static_cast<int32_t>(param));
+    if (_callback_manager.check_call_type<bool, uint32_t>(name))
+        return _callback_manager.call<bool, uint32_t>(name, static_cast<uint32_t>(param));
+    if (_callback_manager.check_call_type<bool, int16_t>(name))
+        return _callback_manager.call<bool, int16_t>(name, static_cast<int16_t>(param));
+    if (_callback_manager.check_call_type<bool, uint16_t>(name))
+        return _callback_manager.call<bool, uint16_t>(name, static_cast<uint16_t>(param));
+    if (_callback_manager.check_call_type<bool, int8_t>(name))
+        return _callback_manager.call<bool, int8_t>(name, static_cast<int8_t>(param));
+    return _callback_manager.call<bool, uint8_t>(name, static_cast<uint8_t>(param));
 }
 
 bool Configurable::set_conf_str(const std::string & name, const std::string & param)
 {
-    try
-    {
+    if (_callback_manager.check_call_type<bool, const std::string &>(name))
         return _callback_manager.call<bool, const std::string &>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
+    if (_callback_manager.check_call_type<bool, std::string_view>(name))
         return _callback_manager.call<bool, std::string_view>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
     return _callback_manager.call<bool, const char *>(name, param.c_str());
 }
 
 bool Configurable::set_conf_str(const std::string & name, std::string_view param)
 {
-    try
-    {
+    if (_callback_manager.check_call_type<bool, std::string_view>(name))
         return _callback_manager.call<bool, std::string_view>(name, param);
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
-    try
-    {
+    if (_callback_manager.check_call_type<bool, const char *>(name))
         return _callback_manager.call<bool, const char *>(name, param.data());
-    }
-    catch (const std::invalid_argument & e)
-    {
-    }
     std::string str(param.data(), param.size());
     return this->set_conf_str(name, str);
 }

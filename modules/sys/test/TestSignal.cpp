@@ -171,7 +171,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     SigHandler handler;
 
-    handler.handle(sig);
+    (void)handler.handle(sig);
 
     raise(sig);
 
@@ -179,7 +179,7 @@ TEST_F(TestSignal, test_signal_tmp)
     ASSERT_TRUE(sig_status);
     EXPECT_EQ(sig_status->received, 1u);
 
-    handler.unhandle();
+    (void)handler.unhandle();
 
     raise(sig);
 
@@ -187,7 +187,7 @@ TEST_F(TestSignal, test_signal_tmp)
     ASSERT_TRUE(sig_status);
     EXPECT_EQ(sig_status->received, 1u);
 
-    signal::handle(sig);
+    (void)signal::handle(sig);
 
     {
         SigHandler tmp_sig_handling(sig);
@@ -203,7 +203,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
     raise(sig);
 
-    signal::unhandle(sig);
+    (void)signal::unhandle(sig);
 
     sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);

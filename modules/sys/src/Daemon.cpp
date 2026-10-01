@@ -88,7 +88,7 @@ bool Daemon::_handle_signals()
     int sig = 1;
     while (sig < 65)
     {
-        if (signal::handle(sig) == false)
+        if (signal::handle(sig).has_value() == false)
             ret = false;
         ++sig;
     }
@@ -107,8 +107,8 @@ void Daemon::_remove_pid_file()
     if (file.is_open())
     {
         std::string path = file.path();
-        file.close();
-        fs::remove_file(path);
+        (void)file.close();
+        SIHD_UNEXPECTED_LOG(fs::remove_file(path));
     }
 }
 

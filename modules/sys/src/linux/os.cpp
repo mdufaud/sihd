@@ -376,6 +376,16 @@ std::string last_error_str()
     return error_str(errno);
 }
 
+int last_socket_error()
+{
+    return errno;
+}
+
+std::string last_socket_error_str()
+{
+    return error_str(errno);
+}
+
 bool is_run_by_debugger()
 {
 #if defined(__SIHD_EMSCRIPTEN__)

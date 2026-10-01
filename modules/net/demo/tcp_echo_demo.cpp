@@ -63,7 +63,7 @@ static int run_client(TcpClient & client, const std::string & host, int port, co
         SIHD_LOG(error, "no reply");
         return EXIT_FAILURE;
     }
-    ssize_t received = client.receive(recv);
+    ssize_t received = (ssize_t)client.receive(recv).value_or(0);
     if (received <= 0)
     {
         SIHD_LOG(error, "no echo received");

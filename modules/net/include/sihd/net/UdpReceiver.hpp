@@ -1,6 +1,8 @@
 #ifndef __SIHD_NET_UDPRECEIVER_HPP__
 #define __SIHD_NET_UDPRECEIVER_HPP__
 
+#include <expected>
+
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/Poll.hpp>
@@ -23,25 +25,25 @@ class UdpReceiver: public INetReceiver,
         UdpReceiver(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~UdpReceiver();
 
-        bool open_socket(bool ipv6 = false);
-        bool open_socket_unix();
+        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
+        std::expected<void, sihd::util::Error> open_socket_unix();
 
         bool socket_opened() { return _socket.is_open(); }
 
-        bool bind(const IpAddr & addr);
-        bool bind_unix(std::string_view path);
+        std::expected<void, sihd::util::Error> bind(const IpAddr & addr);
+        std::expected<void, sihd::util::Error> bind_unix(std::string_view path);
 
-        bool open_and_bind(const IpAddr & ip);
-        bool open_and_bind(std::string_view ip, int port);
-        bool open_unix_and_bind(std::string_view path);
+        std::expected<void, sihd::util::Error> open_and_bind(const IpAddr & ip);
+        std::expected<void, sihd::util::Error> open_and_bind(std::string_view ip, int port);
+        std::expected<void, sihd::util::Error> open_unix_and_bind(std::string_view path);
 
-        ssize_t receive(void *buf, size_t len);
-        ssize_t receive(IpAddr & addr, void *buf, size_t len);
+        std::expected<size_t, sihd::util::Error> receive(void *buf, size_t len);
+        std::expected<size_t, sihd::util::Error> receive(IpAddr & addr, void *buf, size_t len);
 
         // INetReceiver
-        bool close() override;
-        ssize_t receive(sihd::util::IArray & arr) override;
-        ssize_t receive(IpAddr & addr, sihd::util::IArray & arr) override;
+        std::expected<void, sihd::util::Error> close() override;
+        std::expected<size_t, sihd::util::Error> receive(sihd::util::IArray & arr) override;
+        std::expected<size_t, sihd::util::Error> receive(IpAddr & addr, sihd::util::IArray & arr) override;
 
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read

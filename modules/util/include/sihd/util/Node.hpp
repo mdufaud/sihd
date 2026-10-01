@@ -2,9 +2,11 @@
 #define __SIHD_UTIL_NODE_HPP__
 
 #include <exception>
+#include <expected>
 #include <unordered_map>
 #include <vector>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Named.hpp>
 
 namespace sihd::util
@@ -39,15 +41,18 @@ class Node: public Named
         virtual ~Node();
 
         // Children
-        bool add_child(Named *child, bool take_ownership = true);
-        virtual bool add_child(const std::string & name, Named *child, bool take_ownership = true);
+        std::expected<void, Error> add_child(Named *child, bool take_ownership = true);
+        virtual std::expected<void, Error>
+            add_child(const std::string & name, Named *child, bool take_ownership = true);
 
         template <typename T>
         T *add_child(const std::string & name)
         {
             T *child = new T(name);
-            if (this->add_child(child, true) == false)
+            auto res = this->add_child(child, true);
+            if (!res)
             {
+                this->_log_add_child_error(res.error());
                 delete child;
                 child = nullptr;
             }
@@ -137,7 +142,7 @@ class Node: public Named
         bool add_link(const std::string & link, const std::string & path);
         bool remove_link(const std::string & link);
         Named *resolve_link(const std::string & path, size_t recursion = 0);
-        bool resolve_links(size_t recursion = 0);
+        std::expected<void, Error> resolve_links(size_t recursion = 0);
 
         // Tree description
         std::string tree_str() const { return this->tree_str({}); };
@@ -156,6 +161,7 @@ class Node: public Named
         virtual void on_remove_child(const std::string & name, Named *child);
 
     private:
+        void _log_add_child_error(const Error & error);
         bool _remove_child_entry(ChildEntry *entry);
 
         ChildEntry *_get_child_entry(const std::string & name) const;

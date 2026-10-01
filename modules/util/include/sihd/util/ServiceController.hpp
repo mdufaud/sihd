@@ -24,7 +24,7 @@ class ServiceController: public AService::IServiceController,
             Stopping,
             Stopped,
             Resetting,
-            Error = 255,
+            Failure = 255,
         };
 
         ServiceController();

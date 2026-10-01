@@ -64,7 +64,7 @@ struct Wsa
             const int err = WSAStartup(wVersionRequested, &wsaData);
             if (err != 0)
             {
-                SIHD_LOG(error, "WSAStartup failed: {} ({})", last_error_str(), err);
+                SIHD_LOG(error, "WSAStartup failed: {} ({})", error_str(err), err);
             }
             else if (LOBYTE(wsaData.wVersion) != 2 || HIBYTE(wsaData.wVersion) != 2)
             {
@@ -91,7 +91,7 @@ bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
 {
     bool ret = ::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) == 0;
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: ioctl error: {}", last_error_str());
+        SIHD_LOG(error, "OS: ioctl error: {}", last_socket_error_str());
     return ret;
 }
 
@@ -101,7 +101,7 @@ bool setsockopt(int socket, int level, int optname, const void *optval, socklen_
         throw std::runtime_error("OS: cannot setsockopt on a negative socket");
     bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: setsockopt error: {}", last_error_str());
+        SIHD_LOG(error, "OS: setsockopt error: {}", last_socket_error_str());
     return ret;
 }
 
@@ -111,7 +111,7 @@ bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *opt
         throw std::runtime_error("OS: cannot getsockopt on a negative socket");
     bool ret = ::getsockopt(socket, level, optname, (char *)optval, optlen) >= 0;
     if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
+        SIHD_LOG(error, "OS: getsockopt error: {}", last_socket_error_str());
     return ret;
 }
 
@@ -227,10 +227,20 @@ std::string error_str(int error_code)
 
 int last_error()
 {
-    return WSAGetLastError();
+    return GetLastError();
 }
 
 std::string last_error_str()
+{
+    return error_str(GetLastError());
+}
+
+int last_socket_error()
+{
+    return WSAGetLastError();
+}
+
+std::string last_socket_error_str()
 {
     return error_str(WSAGetLastError());
 }

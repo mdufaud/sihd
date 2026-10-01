@@ -46,11 +46,11 @@ class TestTlsTcp: public ::testing::Test
             ASSERT_TRUE(_key.generate_rsa(2048));
             ASSERT_TRUE(_cert.generate_self_signed(_key, "localhost"));
 
-            _server_ctx.init(true);
+            (void)_server_ctx.init(true);
             ASSERT_TRUE(_server_ctx.set_certificate(_cert));
             ASSERT_TRUE(_server_ctx.set_private_key(_key));
 
-            _client_ctx.init(false);
+            (void)_client_ctx.init(false);
             _client_ctx.set_verify_peer(false);
         }
 
@@ -74,7 +74,7 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     server_handler.set_tls_context(_server_ctx);
     client.set_tls_context(_client_ctx);
 
-    server.open_and_bind(localhost);
+    (void)server.open_and_bind(localhost);
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -108,23 +108,23 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     });
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
-    ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms));
+    ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms).has_value());
 
     ASSERT_TRUE(connected_sync.sync(std::chrono::seconds(2)));
     EXPECT_EQ(server_handler.client_count(), 1u);
 
-    EXPECT_TRUE(client.send_all(hello_arr));
+    EXPECT_TRUE(client.send_all(hello_arr).has_value());
 
     ASSERT_TRUE(received_sync.sync(std::chrono::seconds(2)));
 
     EXPECT_TRUE(client.poll(500));
     ArrChar recv_arr(64);
-    ssize_t rcv = client.receive(recv_arr);
+    ssize_t rcv = client.receive(recv_arr).value_or(-1);
     ASSERT_GT(rcv, 0);
     EXPECT_EQ(std::string(recv_arr.data(), static_cast<size_t>(rcv)), "hello tls");
 
     const std::string payload(128 * 1024, 'x');
-    ASSERT_TRUE(client.send_all({payload.data(), payload.size()}));
+    ASSERT_TRUE(client.send_all({payload.data(), payload.size()}).has_value());
     std::string echoed;
     char buffer[8192];
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -132,15 +132,15 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     {
         if (!client.socket().tls_pending() && !client.poll(100))
             continue;
-        const ssize_t size = client.receive(buffer, sizeof(buffer));
-        if (size > 0)
-            echoed.append(buffer, static_cast<size_t>(size));
-        else if (!client.socket().retryable())
+        const auto size = client.receive(buffer, sizeof(buffer));
+        if (size && size.value() > 0)
+            echoed.append(buffer, size.value());
+        else if (!size && !size.error().retryable())
             break;
     }
     EXPECT_EQ(echoed, payload);
 
-    client.close();
+    (void)client.close();
     EXPECT_TRUE(server.stop());
     EXPECT_TRUE(worker.stop_worker());
 }
@@ -159,7 +159,7 @@ TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
             connected_sync.sync(std::chrono::seconds(1));
     });
     server_handler.add_observer(&connected_handler);
-    server.open_and_bind(localhost);
+    (void)server.open_and_bind(localhost);
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -172,16 +172,16 @@ TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
     Socket silent_peer;
-    ASSERT_TRUE(silent_peer.open(AF_INET, SOCK_STREAM, 0));
-    ASSERT_TRUE(silent_peer.connect(localhost));
+    ASSERT_TRUE(silent_peer.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(silent_peer.connect(localhost).has_value());
 
     client.set_tls_context(_client_ctx);
-    ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms));
+    ASSERT_TRUE(client.open_and_connect(localhost, tls_connect_timeout_ms).has_value());
     ASSERT_TRUE(connected_sync.sync(std::chrono::seconds(2)));
     EXPECT_EQ(server_handler.client_count(), 1u);
 
-    client.close();
-    silent_peer.close();
+    (void)client.close();
+    (void)silent_peer.close();
 }
 
 TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
@@ -198,15 +198,15 @@ TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
 
     constexpr int timeout_ms = 500;
     auto start = std::chrono::steady_clock::now();
-    bool ok = client.open_and_connect(localhost, timeout_ms);
+    bool ok = client.open_and_connect(localhost, timeout_ms).has_value();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
                        .count();
 
     EXPECT_FALSE(ok);
     EXPECT_LT(elapsed, 5 * timeout_ms);
 
-    client.close();
-    listener.close();
+    (void)client.close();
+    (void)listener.close();
 }
 
 TEST_F(TestTlsTcp, tls_timed_handshake_on_blocking_socket)
@@ -218,36 +218,36 @@ TEST_F(TestTlsTcp, tls_timed_handshake_on_blocking_socket)
 
     // the timed handshake switches the mode itself and hands it back blocking
     Socket raw;
-    ASSERT_TRUE(raw.open(AF_INET, SOCK_STREAM, 0));
-    ASSERT_TRUE(raw.connect(localhost));
+    ASSERT_TRUE(raw.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(raw.connect(localhost).has_value());
 
-    Socket server_sock(listener.accept(tls_connect_timeout_ms), true);
+    Socket server_sock(listener.accept(tls_connect_timeout_ms).value_or(-1), true);
     ASSERT_TRUE(server_sock.is_open());
 
     TlsConnection server_conn;
-    ASSERT_TRUE(server_conn.init(_server_ctx, server_sock));
+    ASSERT_TRUE(server_conn.init(_server_ctx, server_sock).has_value());
 
-    Worker worker([&server_conn] { return server_conn.accept(tls_connect_timeout_ms); });
+    Worker worker([&server_conn] { return server_conn.accept(tls_connect_timeout_ms).has_value(); });
     ASSERT_TRUE(worker.start_sync_worker("tls-accept"));
     // bounds the join if an ASSERT aborts first
     sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
 
     TlsConnection client_conn;
     ASSERT_TRUE(client_conn.init(_client_ctx, raw));
-    ASSERT_TRUE(client_conn.connect(tls_connect_timeout_ms));
+    ASSERT_TRUE(client_conn.connect(tls_connect_timeout_ms).has_value());
 
     ASSERT_TRUE(worker.stop_worker());
 
     EXPECT_TRUE(raw.is_blocking());
 
     const char msg[] = "blocking handshake";
-    ASSERT_GT(client_conn.write(msg, sizeof(msg) - 1), 0);
+    ASSERT_GT((ssize_t)client_conn.write(msg, sizeof(msg) - 1).value_or(0), 0);
 
     char recv_buf[32] = {0};
     size_t total = 0;
     while (total < sizeof(msg) - 1)
     {
-        ssize_t rcv = server_conn.read(recv_buf + total, sizeof(recv_buf) - total);
+        ssize_t rcv = (ssize_t)server_conn.read(recv_buf + total, sizeof(recv_buf) - total).value_or(0);
         ASSERT_GT(rcv, 0);
         total += (size_t)rcv;
     }

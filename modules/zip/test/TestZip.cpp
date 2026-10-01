@@ -11,6 +11,8 @@
 #include <sihd/util/term.hpp>
 #include <sihd/zip/zip.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 SIHD_LOGGER;
@@ -35,17 +37,17 @@ TEST_F(TestZip, test_zip_tools)
 
     const auto origin_path = fs::combine(tmp_dir.path(), "origin");
     const auto test_path = fs::combine(origin_path, "test");
-    ASSERT_TRUE(fs::make_directories(test_path));
-    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "one")));
-    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "two")));
-    ASSERT_TRUE(fs::write(fs::combine({test_path, "one", "file.txt"}), str::generate_random(10100)));
+    ASSERT_TRUE(fs::make_directories(test_path).has_value());
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "one")).has_value());
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "two")).has_value());
+    ASSERT_TRUE(fs::write(fs::combine({test_path, "one", "file.txt"}), str::generate_random(10100)).has_value());
 
     const auto archive_path = fs::combine(tmp_dir.path(), "archive.zip");
-    ASSERT_TRUE(sihd::zip::zip(test_path, archive_path));
+    ASSERT_TRUE(sihd::zip::zip(test_path, archive_path).has_value());
     EXPECT_TRUE(fs::exists(archive_path));
 
     const auto unzipped_path = fs::combine(tmp_dir.path(), "unzipped");
-    ASSERT_TRUE(sihd::zip::unzip(archive_path, unzipped_path));
+    ASSERT_TRUE(sihd::zip::unzip(archive_path, unzipped_path).has_value());
 
     auto children_fs = fs::recursive_children(unzipped_path);
     for (auto & child : children_fs)
@@ -65,13 +67,13 @@ TEST_F(TestZip, test_list_entries)
     sihd::sys::TmpDir tmp_dir;
 
     const auto test_path = fs::combine(tmp_dir.path(), "data");
-    ASSERT_TRUE(fs::make_directories(test_path));
-    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "subdir")));
-    ASSERT_TRUE(fs::write(fs::combine(test_path, "file1.txt"), "content1"));
-    ASSERT_TRUE(fs::write(fs::combine({test_path, "subdir", "file2.txt"}), "content2"));
+    ASSERT_TRUE(fs::make_directories(test_path).has_value());
+    ASSERT_TRUE(fs::make_directory(fs::combine(test_path, "subdir")).has_value());
+    ASSERT_TRUE(fs::write(fs::combine(test_path, "file1.txt"), "content1").has_value());
+    ASSERT_TRUE(fs::write(fs::combine({test_path, "subdir", "file2.txt"}), "content2").has_value());
 
     const auto archive_path = fs::combine(tmp_dir.path(), "test.zip");
-    ASSERT_TRUE(sihd::zip::zip(test_path, archive_path));
+    ASSERT_TRUE(sihd::zip::zip(test_path, archive_path).has_value());
 
     auto entries = sihd::zip::list_entries(archive_path);
     EXPECT_FALSE(entries.empty());
@@ -98,6 +100,18 @@ TEST_F(TestZip, test_list_entries_nonexistent)
 {
     auto entries = sihd::zip::list_entries("/nonexistent/archive.zip");
     EXPECT_TRUE(entries.empty());
+}
+
+TEST_F(TestZip, test_unzip_invalid_archive)
+{
+    sihd::sys::TmpDir tmp_dir;
+    const auto not_zip_path = fs::combine(tmp_dir.path(), "not_a_zip.zip");
+    ASSERT_TRUE(fs::write(not_zip_path, "this is not a zip archive").has_value());
+
+    auto res = sihd::zip::unzip(not_zip_path, fs::combine(tmp_dir.path(), "out"));
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, not_found);
+    EXPECT_FALSE(res.error().message.empty());
 }
 
 } // namespace test

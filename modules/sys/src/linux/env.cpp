@@ -8,10 +8,10 @@ extern "C"
 extern char **environ;
 }
 
+using namespace sihd::util;
+
 namespace sihd::sys::env
 {
-
-using namespace sihd::util;
 
 std::optional<std::string> get(std::string_view key)
 {
@@ -21,14 +21,18 @@ std::optional<std::string> get(std::string_view key)
     return std::string(value);
 }
 
-bool set(std::string_view key, std::string_view value)
+std::expected<void, Error> set(std::string_view key, std::string_view value)
 {
-    return ::setenv(std::string(key).c_str(), std::string(value).c_str(), 1) == 0;
+    if (::setenv(std::string(key).c_str(), std::string(value).c_str(), 1) != 0)
+        return std::unexpected(Error::from_errno("could not set environment variable '{}'", key));
+    return {};
 }
 
-bool unset(std::string_view key)
+std::expected<void, Error> unset(std::string_view key)
 {
-    return ::unsetenv(std::string(key).c_str()) == 0;
+    if (::unsetenv(std::string(key).c_str()) != 0)
+        return std::unexpected(Error::from_errno("could not unset environment variable '{}'", key));
+    return {};
 }
 
 std::map<std::string, std::string> list()

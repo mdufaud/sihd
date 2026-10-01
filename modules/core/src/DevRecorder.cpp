@@ -85,8 +85,10 @@ bool DevRecorder::on_init()
 
 bool DevRecorder::on_start()
 {
-    if (this->get_channel(CHANNEL_RECORDS, &_channel_records_ptr) == false)
-        return false;
+    auto records = this->get_channel(CHANNEL_RECORDS);
+    if (!records)
+        return !SIHD_UNEXPECTED_LOG(records);
+    _channel_records_ptr = *records;
     // find channels and observe them
     Channel *channel_ptr;
     for (const auto & pair : _map_channels_alias)

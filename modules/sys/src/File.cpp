@@ -31,6 +31,7 @@
 # include <windows.h>
 #endif
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 namespace sihd::sys
@@ -97,17 +98,17 @@ File::File()
 
 File::File(int fd, std::string_view mode): File()
 {
-    this->open_fd(fd, mode);
+    SIHD_UNEXPECTED_LOG(this->open_fd(fd, mode));
 }
 
 File::File(FILE *stream, bool ownership): File()
 {
-    this->set_stream(stream, ownership);
+    SIHD_UNEXPECTED_LOG(this->set_stream(stream, ownership));
 }
 
 File::File(std::string_view path, std::string_view mode): File()
 {
-    this->open(path, mode);
+    SIHD_UNEXPECTED_LOG(this->open(path, mode));
 }
 
 File::File(File && other)
@@ -117,7 +118,7 @@ File::File(File && other)
 
 File::~File()
 {
-    this->close();
+    (void)this->close();
     this->_delete_buffer();
 }
 
@@ -136,15 +137,17 @@ File & File::operator=(File && other)
     return *this;
 }
 
-bool File::set_buffer_size(size_t size)
+std::expected<void, Error> File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)
-        return true;
+        return {};
     if (size == 0)
-        return false;
+        return std::unexpected(Error(invalid_argument, "cannot set buffer size to 0"));
     this->_delete_buffer();
     _buf_size = size;
-    return this->_allocate_buffer_if_not_exists();
+    if (this->_allocate_buffer_if_not_exists() == false)
+        return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
+    return {};
 }
 
 void File::set_no_buffering()
@@ -180,19 +183,16 @@ bool File::_allocate_buffer_if_not_exists()
     return _buf_size == 0 || _buf_ptr != nullptr;
 }
 
-bool File::buff_stream()
+std::expected<void, Error> File::buff_stream()
 {
     this->_allocate_buffer_if_not_exists();
     if (_file_ptr != nullptr && _buf_ptr != nullptr)
     {
         int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
         if (ret < 0)
-        {
-            SIHD_LOG(error, "File: could not set stream buffer: {}", os::last_error_str());
-            return false;
-        }
+            return std::unexpected(Error::from_errno("could not set stream buffer"));
     }
-    return true;
+    return {};
 }
 
 void File::_delete_buffer()
@@ -205,66 +205,60 @@ void File::_delete_buffer()
     }
 }
 
-bool File::open_fd(int fd, std::string_view mode)
+std::expected<void, Error> File::open_fd(int fd, std::string_view mode)
 {
-    if (this->close() == false)
-        return false;
+    auto closed = this->close();
+    if (!closed)
+        return closed;
     _file_ptr = fdopen(fd, mode.data());
     if (_file_ptr == nullptr)
-    {
-        SIHD_LOG(error, "File: {}: for file descriptor {}", os::last_error_str(), fd);
-    }
-    else
-        _stream_ownership = true;
-    return _file_ptr != nullptr;
+        return std::unexpected(Error::from_errno("could not open file descriptor {}", fd));
+    _stream_ownership = true;
+    return {};
 }
 
-bool File::set_stream(FILE *stream, bool ownership)
+std::expected<void, Error> File::set_stream(FILE *stream, bool ownership)
 {
-    if (this->close() == false)
-        return false;
+    auto closed = this->close();
+    if (!closed)
+        return closed;
     _file_ptr = stream;
     _stream_ownership = ownership;
-    return true;
+    return {};
 }
 
-bool File::open_tmpfile()
+std::expected<void, Error> File::open_tmpfile()
 {
-    if (this->close() == false)
-        return false;
+    auto closed = this->close();
+    if (!closed)
+        return closed;
     _file_ptr = tmpfile();
     if (_file_ptr == nullptr)
-    {
-        SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
-    }
-    else
-        _stream_ownership = true;
-    return _file_ptr != nullptr;
+        return std::unexpected(Error::from_errno("could not open temporary file"));
+    _stream_ownership = true;
+    return {};
 }
 
-bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
+std::expected<void, Error> File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
 {
-    if (this->close() == false)
-        return false;
+    auto closed = this->close();
+    if (!closed)
+        return closed;
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size >= PATH_MAX)
-    {
-        SIHD_LOG(error, "File: Path too long: {}", path_size);
-        return false;
-    }
+        return std::unexpected(Error(invalid_argument, "path too long: {}", path_size));
     char path[PATH_MAX];
     strcpy(path, prefix.data());
     strcpy(path + prefix.size(), "XXXXXX");
     strcpy(path + prefix.size() + 6, suffix.data());
 #if !defined(__SIHD_WINDOWS__)
-    int fd = mkstemps(path, suffix.size());
+    int fd = mkstemps(path, (int)suffix.size());
     if (fd < 0)
-    {
-        SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
-        return false;
-    }
-    if (this->open_fd(fd, write_binary ? "wb" : "w"))
+        return std::unexpected(Error::from_errno("could not open temporary file"));
+    auto opened = this->open_fd(fd, write_binary ? "wb" : "w");
+    if (opened)
         _path = path;
+    return opened;
 #else
     // _mktemp_s only derives 5 digits from the PID and varies a single letter (max 26 names,
     // and is broken under wine where it returns EEXIST on the first call). Generate the random
@@ -281,32 +275,26 @@ bool File::open_tmp(std::string_view prefix, bool write_binary, std::string_view
         {
             _path = path;
             _stream_ownership = true;
-            return true;
+            return {};
         }
         if (errno != EEXIST)
             break;
     }
-    SIHD_LOG(error, "File: could not open temporary file: {}", os::last_error_str());
-    return false;
+    return std::unexpected(Error::from_errno("could not open temporary file"));
 #endif
-    return this->is_open();
 }
 
-bool File::open(std::string_view path, std::string_view mode)
+std::expected<void, Error> File::open(std::string_view path, std::string_view mode)
 {
-    if (this->close() == false)
-        return false;
+    auto closed = this->close();
+    if (!closed)
+        return closed;
     _file_ptr = fopen(path.data(), mode.data());
     if (_file_ptr == nullptr)
-    {
-        SIHD_LOG(error, "File: {}: {}", os::last_error_str(), path);
-    }
-    else
-    {
-        _path = path;
-        _stream_ownership = true;
-    }
-    return _file_ptr != nullptr;
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    _path = path;
+    _stream_ownership = true;
+    return {};
 }
 
 bool File::is_open() const
@@ -349,54 +337,50 @@ void File::clear_errors()
     clearerr(_file_ptr);
 }
 
-bool File::flush()
+std::expected<void, Error> File::flush()
 {
-    if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
-    {
-        SIHD_LOG(error, "File: could not flush file: {}", os::last_error_str());
-        return false;
-    }
-    return _file_ptr != nullptr;
+    if (_file_ptr == nullptr)
+        return std::unexpected(Error(not_initialized, "no file open"));
+    if (fflush(_file_ptr) != 0)
+        return std::unexpected(Error::from_errno("could not flush file"));
+    return {};
 }
 
-bool File::flush_unlocked()
+std::expected<void, Error> File::flush_unlocked()
 {
-    if (_file_ptr != nullptr && fflush_unlocked(_file_ptr) != 0)
-    {
-        SIHD_LOG(error, "File: could not flush file: {}", os::last_error_str());
-        return false;
-    }
-    return _file_ptr != nullptr;
+    if (_file_ptr == nullptr)
+        return std::unexpected(Error(not_initialized, "no file open"));
+    if (fflush_unlocked(_file_ptr) != 0)
+        return std::unexpected(Error::from_errno("could not flush file"));
+    return {};
 }
 
-bool File::close()
+std::expected<void, Error> File::close()
 {
     if (_file_ptr != nullptr)
     {
         if (_stream_ownership && fclose(_file_ptr) != 0)
         {
-            SIHD_LOG(error, "File: could not close file: {}", os::last_error_str());
-            return false;
+            _file_ptr = nullptr;
+            _path.clear();
+            return std::unexpected(Error::from_errno("could not close file"));
         }
         _file_ptr = nullptr;
         _path.clear();
     }
-    return true;
+    return {};
 }
 
-long File::file_size()
+std::expected<long, Error> File::file_size()
 {
-    long ret = -1;
-    long current_offset = this->tell();
-    if (current_offset >= 0)
-    {
-        if (this->seek_end(0))
-        {
-            ret = this->tell();
-            this->seek_begin(current_offset);
-        }
-    }
-    return ret;
+    auto current_offset = this->tell();
+    SIHD_UNEXPECTED_RETURN(current_offset);
+    auto seek_res = this->seek_end(0);
+    SIHD_UNEXPECTED_RETURN(seek_res);
+    auto size = this->tell();
+    (void)this->seek_begin(*current_offset);
+    SIHD_UNEXPECTED_RETURN(size);
+    return *size;
 }
 
 void File::lock()
@@ -427,10 +411,10 @@ void File::unlock()
 #endif
 }
 
-bool File::open_mem(std::string_view mode, std::string_view put_in_buffer)
+std::expected<void, Error> File::open_mem(std::string_view mode, std::string_view put_in_buffer)
 {
     if (this->_allocate_buffer_if_not_exists() == false)
-        return false;
+        return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
 
     if (put_in_buffer.empty() == false)
     {
@@ -457,32 +441,29 @@ bool File::open_mem(std::string_view mode, std::string_view put_in_buffer)
     int retner = -1;
     char tfname[] = "MemTF_";
     if (!GetTempPathA(sizeof(tp), tp))
-        return false;
+        return std::unexpected(Error(io_error, "could not get temporary path"));
     if (!GetTempFileNameA(tp, tfname, 0, fn))
-        return false;
+        return std::unexpected(Error(io_error, "could not get temporary file name"));
     retner = _sopen_s(pfd,
                       fn,
                       _O_CREAT | _O_SHORT_LIVED | _O_TEMPORARY | _O_RDWR | _O_BINARY | _O_NOINHERIT,
                       _SH_DENYRW,
                       _S_IREAD | _S_IWRITE);
     if (retner != 0)
-        return false;
+        return std::unexpected(Error::from_errno("could not open temporary file"));
     if (fd == -1)
-        return false;
+        return std::unexpected(Error(io_error, "could not open temporary file"));
 
     if (_write(fd, _buf_ptr, _buf_size) != (ssize_t)_buf_size)
     {
-        SIHD_LOG(error, "File: _write: {}", os::last_error_str());
+        auto error = Error::from_errno("could not write into temporary file");
         _close(fd);
-        return false;
+        return std::unexpected(std::move(error));
     }
 
     stream = _fdopen(fd, mode.data());
     if (!stream)
-    {
-        _close(fd);
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not open temporary file"));
     /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful,
      * do not call _close on the file descriptor.Calling fclose on the returned FILE * also closes the file
      * descriptor.*/
@@ -490,122 +471,138 @@ bool File::open_mem(std::string_view mode, std::string_view put_in_buffer)
 #else
     stream = fmemopen(_buf_ptr, _buf_size, mode.data());
     if (stream == nullptr)
-        return false;
+        return std::unexpected(Error::from_errno("could not open memory stream"));
 #endif
     return this->set_stream(stream, true);
 }
 
-long File::tell()
+std::expected<long, Error> File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
-        SIHD_LOG(error, "File: tell: {}", os::last_error_str());
+        return std::unexpected(Error::from_errno("could not tell position"));
     return ret;
 }
 
-bool File::seek(long offset)
+std::expected<void, Error> File::seek(long offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-bool File::seek_begin(long offset)
+std::expected<void, Error> File::seek_begin(long offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-bool File::seek_end(long offset)
+std::expected<void, Error> File::seek_end(long offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-bool File::_seek(long offset, int origin)
+std::expected<void, Error> File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
-        SIHD_LOG(error, "File: seek: {}", os::last_error_str());
-    return ret == 0;
+        return std::unexpected(Error::from_errno("could not seek"));
+    return {};
 }
 
-ssize_t File::read(void *buf, size_t size)
+std::expected<size_t, Error> File::read(void *buf, size_t size)
 {
     if (this->eof())
         return 0;
     size_t ret = fread(buf, sizeof(char), size, _file_ptr);
     if (this->error())
-        return -1;
-    return (ssize_t)ret;
+        return std::unexpected(Error(io_error, "could not read"));
+    return ret;
 }
 
-ssize_t File::read(std::string & str, size_t size)
+std::expected<size_t, Error> File::read(std::string & str, size_t size)
 {
     str.resize(size);
-    ssize_t ret = this->read(reinterpret_cast<char *>(str.data()), size);
-    if (ret >= 0)
-        str.resize((size_t)ret);
-    else
+    auto read = this->read(reinterpret_cast<char *>(str.data()), size);
+    if (!read)
+    {
         str.resize(0);
-    return ret;
+        return read;
+    }
+    str.resize(*read);
+    return read;
 }
 
-ssize_t File::read(IArray & array)
+std::expected<size_t, Error> File::read(IArray & array)
 {
-    ssize_t ret = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
-    if (ret >= 0 && array.byte_resize((size_t)ret) == false)
+    auto read = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
+    if (!read)
+        return read;
+    if (array.byte_resize(*read) == false)
     {
         array.byte_resize(0);
-        return -1;
+        return std::unexpected(Error(out_of_memory, "could not resize array to {} bytes", *read));
     }
-    return ret;
+    return read;
 }
 
-ssize_t File::write(const void *data, size_t size)
+std::expected<size_t, Error> File::write(const void *data, size_t size)
 {
     size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
-        return -1;
-    return (ssize_t)ret;
+        return std::unexpected(Error(io_error, "could not write"));
+    return ret;
 }
 
-ssize_t File::write(ArrCharView view)
+std::expected<size_t, Error> File::write(ArrCharView view)
 {
     return this->write(view.data(), view.size());
 }
 
-bool File::write_char(int c)
+std::expected<void, Error> File::write_char(int c)
 {
-    return fputc(c, _file_ptr) == c;
+    if (fputc(c, _file_ptr) != c)
+        return std::unexpected(Error::from_errno("could not write char"));
+    return {};
 }
 
-ssize_t File::write_unlocked(const void *data, size_t size)
+std::expected<size_t, Error> File::write_unlocked(const void *data, size_t size)
 {
     size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
-        return -1;
-    return (ssize_t)ret;
+        return std::unexpected(Error(io_error, "could not write"));
+    return ret;
 }
 
-ssize_t File::write_unlocked(ArrCharView view)
+std::expected<size_t, Error> File::write_unlocked(ArrCharView view)
 {
     return this->write_unlocked(view.data(), view.size());
 }
 
-bool File::write_char_unlocked(int c)
+std::expected<void, Error> File::write_char_unlocked(int c)
 {
-    return fputc_unlocked(c, _file_ptr) == c;
+    if (fputc_unlocked(c, _file_ptr) != c)
+        return std::unexpected(Error::from_errno("could not write char"));
+    return {};
 }
 
-ssize_t File::read_line(char **line, size_t *size)
+std::expected<size_t, Error> File::read_line(char **line, size_t *size)
 {
     return this->read_line_delim(line, size, '\n');
 }
 
-ssize_t File::read_line_delim(char **line, size_t *size, int delim)
+std::expected<size_t, Error> File::read_line_delim(char **line, size_t *size, int delim)
 {
 #if defined(__SIHD_WINDOWS__)
-    return win_getdelim(line, size, delim, _file_ptr);
+    ssize_t ret = win_getdelim(line, size, delim, _file_ptr);
 #else
-    return getdelim(line, size, delim, _file_ptr);
+    ssize_t ret = getdelim(line, size, delim, _file_ptr);
 #endif
+    if (ret < 0)
+    {
+        // getdelim conflates end of file and error
+        if (this->eof())
+            return 0;
+        return std::unexpected(Error::from_errno("could not read line"));
+    }
+    return (size_t)ret;
 }
 
 } // namespace sihd::sys

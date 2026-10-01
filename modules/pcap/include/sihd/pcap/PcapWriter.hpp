@@ -1,10 +1,12 @@
 #ifndef __SIHD_PCAP_PCAPWRITER_HPP__
 #define __SIHD_PCAP_PCAPWRITER_HPP__
 
+#include <expected>
 #include <memory>
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IWriter.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/time.hpp>
@@ -20,9 +22,9 @@ class PcapWriter: public sihd::util::Named,
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
         ~PcapWriter();
 
-        bool open(std::string_view path);
-        bool open(std::string_view path, int datalink);
-        bool open(std::string_view path, int datalink, int snaplen);
+        std::expected<void, sihd::util::Error> open(std::string_view path);
+        std::expected<void, sihd::util::Error> open(std::string_view path, int datalink);
+        std::expected<void, sihd::util::Error> open(std::string_view path, int datalink, int snaplen);
         bool close();
         bool is_open() const;
 

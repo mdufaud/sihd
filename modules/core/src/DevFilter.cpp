@@ -15,6 +15,8 @@
 #define CONF_KEY_MATCH "match"
 #define CONF_KEY_DELAY "delay"
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::core
 {
 
@@ -22,35 +24,26 @@ SIHD_LOGGER;
 
 namespace
 {
-
-bool parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+std::expected<void, util::Error> parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
 {
     auto [key_match, key_delay] = conf.find_all(CONF_KEY_MATCH, CONF_KEY_DELAY);
 
     if (key_match.has_value())
     {
-        const auto should_match = util::str::convert_from_string<bool>(*key_match);
-        if (should_match.has_value() == false)
-        {
-            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_MATCH, *key_match);
-            return false;
-        }
+        auto should_match = util::str::convert_from_string<bool>(*key_match);
+        SIHD_UNEXPECTED_RETURN(should_match);
         rule.channel_match.invert = *should_match == false;
     }
     if (key_delay.has_value())
     {
-        const auto delay = util::str::convert_from_string<double>(*key_delay);
-        if (delay.has_value() == false)
-        {
-            SIHD_LOG_ERROR("DevFilter: conf error for '{}': {}", CONF_KEY_DELAY, *key_delay);
-            return false;
-        }
+        auto delay = util::str::convert_from_string<double>(*key_delay);
+        SIHD_UNEXPECTED_RETURN(delay);
         rule.nano_delay = sihd::util::Duration(sihd::util::time::from_double(*delay));
     }
-    return true;
+    return {};
 }
 
-bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+std::expected<void, util::Error> parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
 {
     auto key_write = conf.find(CONF_KEY_WRITE);
 
@@ -58,7 +51,7 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
     {
         rule.write_idx = rule.channel_match.idx;
         rule.write_same_value = true;
-        return true;
+        return {};
     }
 
     sihd::util::Splitter splitter(":");
@@ -66,43 +59,27 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
     std::vector<std::string> split_write = splitter.split(*key_write);
 
     if (split_write.size() == 0 || split_write.size() > 2)
-    {
-        SIHD_LOG(error, "DevFilter: write conf error: {}", *key_write);
-        return false;
-    }
+        return std::unexpected(util::Error(invalid_argument, "write conf error: {}", *key_write));
     if (split_write.size() == 1)
     {
         // conf -> write=value
         if (split_write[0].empty())
-        {
-            SIHD_LOG(error, "DevFilter: write value empty: '{}'", *key_write);
-            return false;
-        }
+            return std::unexpected(util::Error(invalid_argument, "write value empty: '{}'", *key_write));
         rule.write_idx = rule.channel_match.idx;
         rule.write_same_value = false;
         rule.write_value = util::Value::from_any_string(split_write[0]);
         if (rule.write_value.empty())
-        {
-            SIHD_LOG(error, "DevFilter: cannot convert trigger value: {}", split_write[0]);
-            return false;
-        }
+            return std::unexpected(util::Error(invalid_argument, "cannot convert trigger value: {}", split_write[0]));
     }
     else
     {
         // conf -> write=index:value
         if (split_write[0].empty() && split_write[1].empty())
-        {
-            SIHD_LOG(error, "DevFilter: write idx and value empty: '{}'", *key_write);
-            return false;
-        }
+            return std::unexpected(util::Error(invalid_argument, "write idx and value empty: '{}'", *key_write));
         if (split_write[0].empty() == false)
         {
-            const auto write_idx = util::str::convert_from_string<size_t>(split_write[0]);
-            if (write_idx.has_value() == false)
-            {
-                SIHD_LOG(error, "DevFilter: cannot convert write idx: {}", split_write[0]);
-                return false;
-            }
+            auto write_idx = util::str::convert_from_string<size_t>(split_write[0]);
+            SIHD_UNEXPECTED_RETURN(write_idx);
             rule.write_idx = *write_idx;
         }
         rule.write_same_value = split_write[1].empty();
@@ -110,13 +87,10 @@ bool parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & c
         {
             rule.write_value = util::Value::from_any_string(split_write[1]);
             if (rule.write_value.empty())
-            {
-                SIHD_LOG(error, "DevFilter: cannot convert write value: {}", split_write[1]);
-                return false;
-            }
+                return std::unexpected(util::Error(invalid_argument, "cannot convert write value: {}", split_write[1]));
         }
     }
-    return true;
+    return {};
 }
 
 } // namespace
@@ -141,14 +115,22 @@ DevFilter::DevFilter(const std::string & name, sihd::util::Node *parent):
 
 DevFilter::~DevFilter() = default;
 
-bool DevFilter::_parse_conf(std::string_view rule_str, ChannelMatch::Comparison comparison)
+std::expected<void, sihd::util::Error> DevFilter::_parse_conf(std::string_view rule_str,
+                                                              ChannelMatch::Comparison comparison)
 {
     // in=channel_path_in;out=channel_path_out;trigger=i:val1;write=j:val2
     Rule rule(comparison);
-    bool ret = rule.parse(rule_str);
-    if (ret)
-        this->set_filter(rule);
-    return ret;
+    auto res = rule.parse(rule_str);
+    if (res.has_value() == false)
+        return res;
+    this->set_filter(rule);
+    return {};
+}
+
+bool DevFilter::_set_filter_conf(std::string_view rule_str, ChannelMatch::Comparison comparison)
+{
+    const auto res = this->_parse_conf(rule_str, comparison);
+    return !SIHD_UNEXPECTED_LOG(res);
 }
 
 void DevFilter::set_filter(const Rule & rule)
@@ -160,42 +142,42 @@ void DevFilter::set_filter(const Rule & rule)
 
 bool DevFilter::set_filter_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::Equal);
+    return this->_set_filter_conf(rule_str, ChannelMatch::Equal);
 }
 
 bool DevFilter::set_filter_superior(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::Superior);
+    return this->_set_filter_conf(rule_str, ChannelMatch::Superior);
 }
 
 bool DevFilter::set_filter_superior_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::SuperiorEqual);
+    return this->_set_filter_conf(rule_str, ChannelMatch::SuperiorEqual);
 }
 
 bool DevFilter::set_filter_inferior(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::Inferior);
+    return this->_set_filter_conf(rule_str, ChannelMatch::Inferior);
 }
 
 bool DevFilter::set_filter_inferior_equal(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::InferiorEqual);
+    return this->_set_filter_conf(rule_str, ChannelMatch::InferiorEqual);
 }
 
 bool DevFilter::set_filter_byte_and(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::ByteAnd);
+    return this->_set_filter_conf(rule_str, ChannelMatch::ByteAnd);
 }
 
 bool DevFilter::set_filter_byte_or(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::ByteOr);
+    return this->_set_filter_conf(rule_str, ChannelMatch::ByteOr);
 }
 
 bool DevFilter::set_filter_byte_xor(std::string_view rule_str)
 {
-    return this->_parse_conf(rule_str, ChannelMatch::ByteXor);
+    return this->_set_filter_conf(rule_str, ChannelMatch::ByteXor);
 }
 
 void DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
@@ -256,30 +238,38 @@ bool DevFilter::on_init()
 
 bool DevFilter::on_start()
 {
-    bool ret;
-    Channel *channel_in;
-    Channel *channel_out;
-
-    ret = true;
     for (const Rule & conf : _rules_lst)
     {
-        if (this->find_channel(conf.channel_in, &channel_in) && this->find_channel(conf.channel_out, &channel_out))
+        auto channel_in = this->find_channel(conf.channel_in);
+        if (!channel_in)
         {
-            std::unique_ptr<InternalRule> rule(new InternalRule());
-            if (rule.get()->set(&conf, channel_in, channel_out))
-                _rules_map[channel_in].push_back(std::move(rule));
-            else
-                ret = false;
-            ret = ret && this->observe_channel(channel_in);
+            SIHD_LOG(error, "input channel '{}' not found", conf.channel_in);
+            return false;
         }
-        else
-            ret = false;
+        auto channel_out = this->find_channel(conf.channel_out);
+        if (!channel_out)
+        {
+            SIHD_LOG(error, "output channel '{}' not found", conf.channel_out);
+            return false;
+        }
+        std::unique_ptr<InternalRule> rule(new InternalRule());
+        auto res = rule->set(&conf, *channel_in, *channel_out);
+        if (!res)
+        {
+            SIHD_LOG(error, "{}", res.error().message);
+            return false;
+        }
+        if (this->observe_channel(*channel_in) == false)
+        {
+            SIHD_LOG(error, "cannot observe channel '{}'", conf.channel_in);
+            return false;
+        }
+        _rules_map[*channel_in].push_back(std::move(rule));
     }
-    {
-        std::lock_guard l(_run_mutex);
-        _running = ret;
-    }
-    return ret;
+
+    std::lock_guard l(_run_mutex);
+    _running = true;
+    return true;
 }
 
 bool DevFilter::on_stop()
@@ -359,7 +349,7 @@ DevFilter::Rule & DevFilter::Rule::delay(sihd::util::Duration nano_delay)
     return *this;
 }
 
-bool DevFilter::Rule::parse(std::string_view conf_str)
+std::expected<void, sihd::util::Error> DevFilter::Rule::parse(std::string_view conf_str)
 {
     util::StrConfiguration conf(conf_str);
 
@@ -368,20 +358,25 @@ bool DevFilter::Rule::parse(std::string_view conf_str)
                                                                                   CONF_KEY_TRIGGER);
 
     if (channel_in_name.has_value() == false)
-        SIHD_LOG_ERROR("DevFilter: no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str);
+        return std::unexpected(
+            util::Error(not_found, "no channel input '{}' in configuration: {}", CONF_KEY_CHANNEL_IN, conf_str));
     if (channel_out_name.has_value() == false)
-        SIHD_LOG_ERROR("DevFilter: no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str);
+        return std::unexpected(
+            util::Error(not_found, "no channel output '{}' in configuration: {}", CONF_KEY_CHANNEL_OUT, conf_str));
     if (channel_key_trigger.has_value() == false)
-        SIHD_LOG_ERROR("DevFilter: no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str);
-
-    const bool good = channel_in_name.has_value() && channel_out_name.has_value() && channel_key_trigger.has_value();
-    if (!good)
-        return false;
+        return std::unexpected(
+            util::Error(not_found, "no trigger value '{}' in configuration: {}", CONF_KEY_TRIGGER, conf_str));
 
     this->channel_in = *channel_in_name;
     this->channel_out = *channel_out_name;
-    return this->channel_match.parse_trigger(*channel_key_trigger) && parse_write_config(*this, conf)
-           && parse_options_config(*this, conf);
+    auto trigger = this->channel_match.parse_trigger(*channel_key_trigger);
+    if (!trigger)
+        return std::unexpected(
+            util::Error(invalid_argument, "invalid trigger '{}' in configuration: {}", *channel_key_trigger, conf_str));
+    auto res = parse_write_config(*this, conf);
+    if (res.has_value() == false)
+        return res;
+    return parse_options_config(*this, conf);
 }
 
 /* ************************************************************************* */
@@ -413,45 +408,43 @@ DevFilter::InternalRule::InternalRule(): channel_in_ptr(nullptr), channel_out_pt
 
 DevFilter::InternalRule::~InternalRule() = default;
 
-bool DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, Channel *out)
+std::expected<void, sihd::util::Error>
+    DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, Channel *out)
 {
     if (in == out)
-    {
-        SIHD_LOG_ERROR("DevFilter: config error, channel input '{}' and output '{}' are the same",
-                       conf->channel_in,
-                       conf->channel_out);
-        return false;
-    }
+        return std::unexpected(util::Error(invalid_argument,
+                                           "config error, channel input '{}' and output '{}' are the same",
+                                           conf->channel_in,
+                                           conf->channel_out));
     this->channel_in_ptr = in;
     this->channel_out_ptr = out;
     this->rule_ptr = conf;
     return this->verify();
 }
 
-bool DevFilter::InternalRule::verify()
+std::expected<void, sihd::util::Error> DevFilter::InternalRule::verify()
 {
     if (rule_ptr->channel_match.verify(this->channel_in_ptr) == false)
-        return false;
+        return std::unexpected(util::Error(invalid_argument,
+                                           "invalid trigger index {} for channel input '{}'",
+                                           rule_ptr->channel_match.idx,
+                                           rule_ptr->channel_in));
     if (rule_ptr->write_idx >= this->channel_out_ptr->array()->size())
-    {
-        SIHD_LOG_ERROR("DevFilter: write index {} is higher or equal than channel output '{}' size {}",
-                       rule_ptr->write_idx,
-                       rule_ptr->channel_out,
-                       this->channel_out_ptr->array()->size());
-        return false;
-    }
-    // check write value type against channel
-    bool out_array_is_float = this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_FLOAT
-                              || this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_DOUBLE;
+        return std::unexpected(util::Error(invalid_argument,
+                                           "write index {} is higher or equal than channel output '{}' size {}",
+                                           rule_ptr->write_idx,
+                                           rule_ptr->channel_out,
+                                           this->channel_out_ptr->array()->size()));
+    const bool out_array_is_float = this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_FLOAT
+                                    || this->channel_out_ptr->array()->data_type() == sihd::util::TYPE_DOUBLE;
     if (out_array_is_float == false
         && ((rule_ptr->write_same_value && rule_ptr->channel_match.value.is_float())
             || (rule_ptr->write_same_value == false && rule_ptr->write_value.is_float())))
-    {
-        SIHD_LOG_ERROR("DevFilter: type error, write value is float and channel output '{}' is not a floating type",
-                       this->channel_out_ptr->name());
-        return false;
-    }
-    return true;
+        return std::unexpected(
+            util::Error(invalid_argument,
+                        "type error, write value is float and channel output '{}' is not a floating type",
+                        this->channel_out_ptr->name()));
+    return {};
 }
 
 } // namespace sihd::core

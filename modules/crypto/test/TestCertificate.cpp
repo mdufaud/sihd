@@ -67,6 +67,18 @@ TEST_F(TestCertificate, generate_self_signed_with_options)
     EXPECT_EQ(validity_secs, 30 * 24 * 60 * 60);
 }
 
+TEST_F(TestCertificate, generate_self_signed_invalid_san)
+{
+    CertOptions opts;
+    opts.subject_alt_names = {"not-a-valid-san"};
+
+    Certificate cert;
+    auto res = cert.generate_self_signed(_key, opts);
+    ASSERT_FALSE(res);
+    EXPECT_EQ(res.error().code, sihd::util::ErrorCode::invalid_argument);
+    EXPECT_FALSE(cert);
+}
+
 TEST_F(TestCertificate, pem_roundtrip)
 {
     Certificate cert;
@@ -76,7 +88,7 @@ TEST_F(TestCertificate, pem_roundtrip)
     EXPECT_FALSE(pem.empty());
 
     Certificate cert2;
-    EXPECT_TRUE(cert2.load_pem_string(pem));
+    EXPECT_TRUE(cert2.load_pem_string(pem).has_value());
     EXPECT_TRUE(cert2);
 
     EXPECT_EQ(cert2.to_pem_string(), pem);
@@ -88,10 +100,10 @@ TEST_F(TestCertificate, pem_file_roundtrip)
 
     Certificate cert;
     EXPECT_TRUE(cert.generate_self_signed(_key, "test.local"));
-    EXPECT_TRUE(cert.save_pem(path));
+    EXPECT_TRUE(cert.save_pem(path).has_value());
 
     Certificate cert2;
-    EXPECT_TRUE(cert2.load_pem(path));
+    EXPECT_TRUE(cert2.load_pem(path).has_value());
     EXPECT_EQ(cert2.to_pem_string(), cert.to_pem_string());
 
     std::remove(path.c_str());

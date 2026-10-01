@@ -35,7 +35,7 @@ int main(int argc, char **argv)
         }
 
         SshSession session;
-        if (session.fast_connect({.user = user, .host = host, .port = port}) == false)
+        if (SIHD_UNEXPECTED_LOG(session.fast_connect({.user = user, .host = host, .port = port})))
             app.exit(EXIT_FAILURE);
 
         SshSession::AuthState auth_state {-1};
@@ -49,7 +49,7 @@ int main(int argc, char **argv)
             app.exit(EXIT_FAILURE);
 
         SshShell shell = session.make_shell();
-        if (shell.open() == false)
+        if (shell.open().has_value() == false)
             app.exit(EXIT_FAILURE);
         if (shell.read_loop() == false)
             app.exit(EXIT_FAILURE);

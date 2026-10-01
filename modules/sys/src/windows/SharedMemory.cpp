@@ -4,6 +4,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 namespace sihd::sys
@@ -11,11 +12,13 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode; // Windows uses security descriptors, not POSIX mode
 
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
 
     HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE, // use paging file
                                        nullptr,              // default security
@@ -24,17 +27,14 @@ bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
                                        static_cast<DWORD>(size & 0xFFFFFFFF),
                                        id.data());
     if (handle == nullptr)
-    {
-        SIHD_LOG(error, "SharedMemory: CreateFileMappingA: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(io_error, "could not create file mapping: {}", os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
-        SIHD_LOG(error, "SharedMemory: MapViewOfFile: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
         CloseHandle(handle);
-        return false;
+        return std::unexpected(std::move(error));
     }
 
     // Store handle as fd (cast to int for compatibility with class interface)
@@ -44,28 +44,26 @@ bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
     _id = id;
     _size = size;
 
-    return true;
+    return {};
 }
 
-bool SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode;
 
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
 
     HANDLE handle = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, id.data());
     if (handle == nullptr)
-    {
-        SIHD_LOG(error, "SharedMemory: OpenFileMappingA: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(not_found, "could not open file mapping: {}", os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
-        SIHD_LOG(error, "SharedMemory: MapViewOfFile: {}", os::last_error_str());
         CloseHandle(handle);
-        return false;
+        return std::unexpected(Error(io_error, "could not map view of file: {}", os::last_error_str()));
     }
 
     _fd = reinterpret_cast<intptr_t>(handle);
@@ -74,50 +72,44 @@ bool SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
     _id = id;
     _size = size;
 
-    return true;
+    return {};
 }
 
-bool SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode;
 
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
 
     HANDLE handle = OpenFileMappingA(FILE_MAP_READ, FALSE, id.data());
     if (handle == nullptr)
-    {
-        SIHD_LOG(error, "SharedMemory: OpenFileMappingA: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(not_found, "could not open file mapping: {}", os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, size);
     if (addr == nullptr)
     {
-        SIHD_LOG(error, "SharedMemory: MapViewOfFile: {}", os::last_error_str());
         CloseHandle(handle);
-        return false;
+        return std::unexpected(Error(io_error, "could not map view of file: {}", os::last_error_str()));
     }
-
     _fd = reinterpret_cast<intptr_t>(handle);
     _addr = addr;
     _created = false;
     _id = id;
     _size = size;
 
-    return true;
+    return {};
 }
 
-bool SharedMemory::clear()
+std::expected<void, Error> SharedMemory::clear()
 {
     bool ret = true;
 
     if (_addr != nullptr)
     {
         if (!UnmapViewOfFile(_addr))
-        {
-            SIHD_LOG(error, "SharedMemory: UnmapViewOfFile: {}", os::last_error_str());
             ret = false;
-        }
         _addr = nullptr;
     }
 
@@ -125,10 +117,7 @@ bool SharedMemory::clear()
     {
         HANDLE handle = reinterpret_cast<HANDLE>(static_cast<intptr_t>(_fd));
         if (!CloseHandle(handle))
-        {
-            SIHD_LOG(error, "SharedMemory: CloseHandle: {}", os::last_error_str());
             ret = false;
-        }
         _fd = -1;
         _id.clear();
     }
@@ -136,7 +125,9 @@ bool SharedMemory::clear()
     _size = 0;
     _created = false;
 
-    return ret;
+    if (!ret)
+        return std::unexpected(Error(io_error, "could not release shared memory: {}", os::last_error_str()));
+    return {};
 }
 
 } // namespace sihd::sys

@@ -3,11 +3,26 @@
 
 #include <unistd.h>
 
+#include <cstdlib>
 #include <string>
 #include <string_view>
 
+#include <gtest/gtest.h>
+
 namespace test
 {
+
+// the generated test runner exports LIB_PATH: a bare binary run cannot locate the scripts
+inline std::string_view lib_path()
+{
+    const char *path = getenv("LIB_PATH");
+    if (path == nullptr)
+    {
+        ADD_FAILURE() << "LIB_PATH is not set: run the tests through the generated runner (make itest)";
+        return {};
+    }
+    return path;
+}
 
 class DirectorySwitcher
 {

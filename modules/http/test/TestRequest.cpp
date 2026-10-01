@@ -14,6 +14,8 @@
 
 #include "http_test_helpers.hpp"
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 
@@ -42,7 +44,9 @@ TEST_F(TestRequest, test_http_get_external)
 TEST_F(TestRequest, test_invalid_url)
 {
     auto resp = http::get("http://localhost:19999/no-server-here");
-    EXPECT_FALSE(resp.has_value());
+    ASSERT_FALSE(resp.has_value());
+    EXPECT_EQ(resp.error().code, io_error);
+    EXPECT_FALSE(resp.error().message.empty());
 }
 
 // GET, POST, PUT, DELETE and CORS OPTIONS all work via the free functions

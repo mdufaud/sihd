@@ -4,6 +4,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/file.h>
@@ -15,6 +16,8 @@
 using namespace sihd::util;
 namespace sihd::sys
 {
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -51,7 +54,7 @@ FileMutex::FileMutex(File && file)
 
 FileMutex::FileMutex(std::string_view path, bool create_file_if_not_exist)
 {
-    _file.open(path, create_file_if_not_exist ? "a" : "r");
+    SIHD_UNEXPECTED_LOG(_file.open(path, create_file_if_not_exist ? "a" : "r"));
 }
 
 FileMutex::FileMutex(FileMutex && other)

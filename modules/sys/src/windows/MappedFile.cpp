@@ -4,6 +4,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 namespace sihd::sys
@@ -27,7 +28,7 @@ HANDLE int_to_handle(int fd)
     return reinterpret_cast<HANDLE>(static_cast<intptr_t>(fd));
 }
 
-std::optional<Mapping> open_map(std::string_view path, DWORD desired_access, DWORD protect, DWORD view_access)
+std::expected<Mapping, Error> open_map(std::string_view path, DWORD desired_access, DWORD protect, DWORD view_access)
 {
     HANDLE handle = CreateFileA(path.data(),
                                 desired_access,
@@ -37,38 +38,34 @@ std::optional<Mapping> open_map(std::string_view path, DWORD desired_access, DWO
                                 FILE_ATTRIBUTE_NORMAL,
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
-    {
-        SIHD_LOG(error, "MappedFile: CreateFileA: {}", os::last_error_str());
-        return std::nullopt;
-    }
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
     LARGE_INTEGER li;
     if (!GetFileSizeEx(handle, &li))
     {
-        SIHD_LOG(error, "MappedFile: GetFileSizeEx: {}", os::last_error_str());
+        auto error = Error::from_errno("could not get size of '{}'", path);
         CloseHandle(handle);
-        return std::nullopt;
+        return std::unexpected(std::move(error));
     }
     if (li.QuadPart <= 0)
     {
-        SIHD_LOG(error, "MappedFile: cannot map an empty file: {}", path);
         CloseHandle(handle);
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "cannot map an empty file '{}'", path));
     }
     // a zero size maps the whole current file
     HANDLE mapping = CreateFileMappingA(handle, nullptr, protect, 0, 0, nullptr);
     if (mapping == nullptr)
     {
-        SIHD_LOG(error, "MappedFile: CreateFileMappingA: {}", os::last_error_str());
+        auto error = Error(io_error, "could not create file mapping: {}", os::last_error_str());
         CloseHandle(handle);
-        return std::nullopt;
+        return std::unexpected(std::move(error));
     }
     void *addr = MapViewOfFile(mapping, view_access, 0, 0, 0);
     if (addr == nullptr)
     {
-        SIHD_LOG(error, "MappedFile: MapViewOfFile: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
         CloseHandle(mapping);
         CloseHandle(handle);
-        return std::nullopt;
+        return std::unexpected(std::move(error));
     }
     return Mapping {static_cast<int>(reinterpret_cast<intptr_t>(handle)),
                     static_cast<int>(reinterpret_cast<intptr_t>(mapping)),
@@ -78,15 +75,14 @@ std::optional<Mapping> open_map(std::string_view path, DWORD desired_access, DWO
 
 } // namespace
 
-bool MappedFile::create(std::string_view path, size_t size, mode_t mode)
+std::expected<void, Error> MappedFile::create(std::string_view path, size_t size, mode_t mode)
 {
     (void)mode;
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
     if (size == 0)
-    {
-        SIHD_LOG(error, "MappedFile: cannot map an empty size");
-        return false;
-    }
+        return std::unexpected(Error(invalid_argument, "cannot map an empty size"));
     HANDLE handle = CreateFileA(path.data(),
                                 GENERIC_READ | GENERIC_WRITE,
                                 FILE_SHARE_READ,
@@ -95,18 +91,15 @@ bool MappedFile::create(std::string_view path, size_t size, mode_t mode)
                                 FILE_ATTRIBUTE_NORMAL,
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
-    {
-        SIHD_LOG(error, "MappedFile: CreateFileA: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not create '{}'", path));
     // commit the file size now, a bare mapping would extend it lazily
     LARGE_INTEGER offset {};
     offset.QuadPart = static_cast<LONGLONG>(size);
     if (SetFilePointerEx(handle, offset, nullptr, FILE_BEGIN) == 0 || SetEndOfFile(handle) == 0)
     {
-        SIHD_LOG(error, "MappedFile: SetEndOfFile: {}", os::last_error_str());
+        auto error = Error::from_errno("could not size '{}'", path);
         CloseHandle(handle);
-        return false;
+        return std::unexpected(std::move(error));
     }
     HANDLE mapping = CreateFileMappingA(handle,
                                         nullptr,
@@ -116,17 +109,17 @@ bool MappedFile::create(std::string_view path, size_t size, mode_t mode)
                                         nullptr);
     if (mapping == nullptr)
     {
-        SIHD_LOG(error, "MappedFile: CreateFileMappingA: {}", os::last_error_str());
+        auto error = Error(io_error, "could not create file mapping: {}", os::last_error_str());
         CloseHandle(handle);
-        return false;
+        return std::unexpected(std::move(error));
     }
     void *addr = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
-        SIHD_LOG(error, "MappedFile: MapViewOfFile: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
         CloseHandle(mapping);
         CloseHandle(handle);
-        return false;
+        return std::unexpected(std::move(error));
     }
     _fd = static_cast<int>(reinterpret_cast<intptr_t>(handle));
     _mapping = static_cast<int>(reinterpret_cast<intptr_t>(mapping));
@@ -134,91 +127,80 @@ bool MappedFile::create(std::string_view path, size_t size, mode_t mode)
     _size = size;
     _read_only = false;
     _path = path;
-    return true;
+    return {};
 }
 
-bool MappedFile::open_read_only(std::string_view path)
+std::expected<void, Error> MappedFile::open_read_only(std::string_view path)
 {
-    this->clear();
-    auto opt = open_map(path, GENERIC_READ, PAGE_READONLY, FILE_MAP_READ);
-    if (!opt)
-        return false;
-    _fd = opt->fd;
-    _mapping = opt->mapping;
-    _addr = opt->addr;
-    _size = opt->size;
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
+    auto mapped = open_map(path, GENERIC_READ, PAGE_READONLY, FILE_MAP_READ);
+    SIHD_UNEXPECTED_RETURN(mapped);
+    _fd = mapped->fd;
+    _mapping = mapped->mapping;
+    _addr = mapped->addr;
+    _size = mapped->size;
     _read_only = true;
     _path = path;
-    return true;
+    return {};
 }
 
-bool MappedFile::open_read_write(std::string_view path)
+std::expected<void, Error> MappedFile::open_read_write(std::string_view path)
 {
-    this->clear();
-    auto opt = open_map(path, GENERIC_READ | GENERIC_WRITE, PAGE_READWRITE, FILE_MAP_ALL_ACCESS);
-    if (!opt)
-        return false;
-    _fd = opt->fd;
-    _mapping = opt->mapping;
-    _addr = opt->addr;
-    _size = opt->size;
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
+    auto mapped = open_map(path, GENERIC_READ | GENERIC_WRITE, PAGE_READWRITE, FILE_MAP_ALL_ACCESS);
+    SIHD_UNEXPECTED_RETURN(mapped);
+    _fd = mapped->fd;
+    _mapping = mapped->mapping;
+    _addr = mapped->addr;
+    _size = mapped->size;
     _read_only = false;
     _path = path;
-    return true;
+    return {};
 }
 
-bool MappedFile::clear()
+std::expected<void, Error> MappedFile::clear()
 {
     bool ret = true;
     if (_addr != nullptr)
     {
         if (!UnmapViewOfFile(_addr))
-        {
-            SIHD_LOG(error, "MappedFile: UnmapViewOfFile: {}", os::last_error_str());
             ret = false;
-        }
         _addr = nullptr;
     }
     if (_mapping != -1)
     {
         if (!CloseHandle(int_to_handle(_mapping)))
-        {
-            SIHD_LOG(error, "MappedFile: CloseHandle: {}", os::last_error_str());
             ret = false;
-        }
         _mapping = -1;
     }
     if (_fd != -1)
     {
         if (!CloseHandle(int_to_handle(_fd)))
-        {
-            SIHD_LOG(error, "MappedFile: CloseHandle: {}", os::last_error_str());
             ret = false;
-        }
         _fd = -1;
     }
     _size = 0;
     _read_only = false;
     _path.clear();
-    return ret;
+    if (!ret)
+        return std::unexpected(Error(io_error, "could not release mapping: {}", os::last_error_str()));
+    return {};
 }
 
-bool MappedFile::sync(bool async)
+std::expected<void, Error> MappedFile::sync(bool async)
 {
     if (_addr == nullptr)
-        return false;
+        return std::unexpected(Error(not_initialized, "no mapping"));
     if (!FlushViewOfFile(_addr, 0))
-    {
-        SIHD_LOG(error, "MappedFile: FlushViewOfFile: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(io_error, "could not flush view: {}", os::last_error_str()));
     // the file handle is read-only when opened read-only: FlushFileBuffers would fail
     if (!async && !_read_only && !FlushFileBuffers(int_to_handle(_fd)))
-    {
-        SIHD_LOG(error, "MappedFile: FlushFileBuffers: {}", os::last_error_str());
-        return false;
-    }
-    return true;
+        return std::unexpected(Error(io_error, "could not flush file buffers: {}", os::last_error_str()));
+    return {};
 }
 
 } // namespace sihd::sys

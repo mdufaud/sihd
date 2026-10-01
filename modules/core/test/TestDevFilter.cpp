@@ -8,6 +8,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 SIHD_LOGGER;
@@ -39,8 +41,8 @@ TEST_F(TestDevFilter, test_devfilter_equal)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
 
@@ -70,8 +72,8 @@ TEST_F(TestDevFilter, test_devfilter_superior)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
 
@@ -104,8 +106,8 @@ TEST_F(TestDevFilter, test_devfilter_inferior)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
 
@@ -144,8 +146,8 @@ TEST_F(TestDevFilter, test_devfilter_float)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
 
@@ -190,8 +192,8 @@ TEST_F(TestDevFilter, test_devfilter_byte)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
 
@@ -217,4 +219,46 @@ TEST_F(TestDevFilter, test_devfilter_byte)
     in_channel->write<int>(1, 4);
     EXPECT_EQ(out_channel->read<int>(1), 4);
 }
+TEST_F(TestDevFilter, test_devfilter_parse_error)
+{
+    DevFilter::Rule rule(ChannelMatch::Equal);
+
+    auto missing_in = rule.parse("out=..out_channel;trigger=1:10");
+    ASSERT_FALSE(missing_in.has_value());
+    EXPECT_EQ(missing_in.error().code, not_found);
+    EXPECT_NE(missing_in.error().message.find("'in'"), std::string::npos);
+
+    auto bad_trigger = rule.parse("in=..in_channel;out=..out_channel;trigger=idx:notanumber");
+    ASSERT_FALSE(bad_trigger.has_value());
+    EXPECT_EQ(bad_trigger.error().code, invalid_argument);
+    EXPECT_NE(bad_trigger.error().message.find("trigger"), std::string::npos);
+
+    auto bad_match = rule.parse("in=..in_channel;out=..out_channel;trigger=1:10;match=notabool");
+    ASSERT_FALSE(bad_match.has_value());
+    EXPECT_EQ(bad_match.error().code, invalid_argument);
+    EXPECT_NE(bad_match.error().message.find("notabool"), std::string::npos);
+
+    DevFilter dev("filter");
+    EXPECT_FALSE(dev.set_filter_equal("in=..in_channel;out=..out_channel"));
+}
+
+TEST_F(TestDevFilter, test_devfilter_start_error)
+{
+    Core core;
+
+    DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
+    dev_ptr->set_filter(DevFilter::Rule(ChannelMatch::Equal)
+                            .in("..in_channel")
+                            .trigger<int>(0, 10)
+                            .out("..out_channel")
+                            .write<int>(5, 15));
+
+    core.add_channel("in_channel", "int", 3);
+    core.add_channel("out_channel", "int", 3);
+
+    ASSERT_TRUE(core.init());
+    ASSERT_FALSE(core.start());
+    ASSERT_FALSE(dev_ptr->is_running());
+}
+
 } // namespace test

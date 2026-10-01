@@ -29,52 +29,63 @@ bool UdpReceiver::set_poll_timeout(int milliseconds)
     return _poll.set_timeout(milliseconds);
 }
 
-bool UdpReceiver::open_socket_unix()
+std::expected<void, sihd::util::Error> UdpReceiver::open_socket_unix()
 {
     if (_socket.is_open())
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpReceiver: socket already open"));
     return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
-bool UdpReceiver::open_socket(bool ipv6)
+std::expected<void, sihd::util::Error> UdpReceiver::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return false;
-    bool ret = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (ret)
-        _socket.set_reuseaddr(true);
-    return ret;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpReceiver: socket already open"));
+    auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (res)
+        (void)_socket.set_reuseaddr(true);
+    return res;
 }
 
-bool UdpReceiver::bind(const IpAddr & addr)
+std::expected<void, sihd::util::Error> UdpReceiver::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-bool UdpReceiver::bind_unix(std::string_view path)
+std::expected<void, sihd::util::Error> UdpReceiver::bind_unix(std::string_view path)
 {
     return _socket.bind_unix(path);
 }
 
-bool UdpReceiver::open_and_bind(const IpAddr & ip)
+std::expected<void, sihd::util::Error> UdpReceiver::open_and_bind(const IpAddr & ip)
 {
-    return this->open_socket(ip.is_ipv6()) && this->bind(ip);
+    auto opened = this->open_socket(ip.is_ipv6());
+    if (!opened)
+        return opened;
+    return this->bind(ip);
 }
 
-bool UdpReceiver::open_and_bind(std::string_view ip, int port)
+std::expected<void, sihd::util::Error> UdpReceiver::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
-    return this->open_socket(addr.is_ipv6()) && this->bind(addr);
+    auto opened = this->open_socket(addr.is_ipv6());
+    if (!opened)
+        return opened;
+    return this->bind(addr);
 }
 
-bool UdpReceiver::open_unix_and_bind(std::string_view path)
+std::expected<void, sihd::util::Error> UdpReceiver::open_unix_and_bind(std::string_view path)
 {
-    return this->open_socket_unix() && this->bind_unix(path);
+    auto opened = this->open_socket_unix();
+    if (!opened)
+        return opened;
+    return this->bind_unix(path);
 }
 
-bool UdpReceiver::close()
+std::expected<void, sihd::util::Error> UdpReceiver::close()
 {
-    _socket.shutdown();
+    (void)_socket.shutdown();
     return _socket.close();
 }
 
@@ -126,28 +137,28 @@ void UdpReceiver::handle(sihd::sys::Poll *poll)
             else if (event.error)
             {
                 poll->clear_fd(event.fd);
-                this->close();
+                (void)this->close();
             }
         }
     }
 }
 
-ssize_t UdpReceiver::receive(void *buf, size_t len)
+std::expected<size_t, sihd::util::Error> UdpReceiver::receive(void *buf, size_t len)
 {
     return _socket.receive(buf, len);
 }
 
-ssize_t UdpReceiver::receive(sihd::util::IArray & arr)
+std::expected<size_t, sihd::util::Error> UdpReceiver::receive(sihd::util::IArray & arr)
 {
     return _socket.receive(arr);
 }
 
-ssize_t UdpReceiver::receive(IpAddr & addr, void *buf, size_t len)
+std::expected<size_t, sihd::util::Error> UdpReceiver::receive(IpAddr & addr, void *buf, size_t len)
 {
     return _socket.receive_from(addr, buf, len);
 }
 
-ssize_t UdpReceiver::receive(IpAddr & addr, sihd::util::IArray & arr)
+std::expected<size_t, sihd::util::Error> UdpReceiver::receive(IpAddr & addr, sihd::util::IArray & arr)
 {
     return _socket.receive_from(addr, arr);
 }

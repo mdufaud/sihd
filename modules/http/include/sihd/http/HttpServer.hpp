@@ -1,6 +1,7 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
 #define __SIHD_HTTP_HTTPSERVER_HPP__
 
+#include <expected>
 #include <memory>
 #include <set>
 
@@ -48,7 +49,7 @@ class HttpServer: public sihd::util::Node,
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
 
-        virtual bool get_resource_path(std::string_view path, std::string & res);
+        virtual std::expected<std::string, sihd::util::Error> get_resource_path(std::string_view path);
 
         bool add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
 

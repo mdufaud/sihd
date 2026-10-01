@@ -3,8 +3,15 @@
 
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
+
+namespace sihd::sys
+{
+
+SIHD_LOGGER;
+}
 
 namespace sihd::sys::proc
 {
@@ -52,7 +59,7 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)
     SteadyClock clock;
 
     // if process failed to execute return the POSIX-like failure code
-    if (!proc_ptr->execute())
+    if (proc_ptr->execute().has_value() == false)
         return Process::failure_return_code;
 
     const bool has_to_poll = proc_ptr->can_read_pipes();
@@ -67,9 +74,9 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)
         }
         // check the process status - break the loop if exited
 #if defined(WNOHANG)
-        proc_ptr->wait_any(WNOHANG);
+        (void)proc_ptr->wait_any(WNOHANG);
 #else
-        proc_ptr->wait(poll_timeout_ms);
+        (void)proc_ptr->wait(poll_timeout_ms);
 #endif
         if (proc_ptr->has_terminated())
         {
@@ -96,7 +103,7 @@ std::future<int> execute_impl(const T & args, const Options & options)
     configure_process(proc_ptr, options);
 
     std::future<int> exit_code = std::async(std::launch::async, [proc_ptr, timeout = options.timeout] {
-        thread::set_name("proc::execute");
+        SIHD_UNEXPECTED_LOG(thread::set_name("proc::execute"));
         return do_execute(proc_ptr, timeout);
     });
 

@@ -11,12 +11,12 @@ SIHD_LOGGER;
 
 SshSubsystemPty::SshSubsystemPty(): _channel(nullptr)
 {
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshSubsystemPty::~SshSubsystemPty()
 {
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 bool SshSubsystemPty::is_supported()

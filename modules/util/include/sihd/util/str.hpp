@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <cstdint>
+#include <expected>
 #include <initializer_list>
 #include <optional>
 #include <span>
@@ -13,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
 #include <sihd/util/Slice.hpp>
@@ -137,7 +139,7 @@ std::string to_base64(const IArray & arr);
 std::string to_base64(const IArrayView & arr);
 std::string to_base64(std::string_view str);
 // decoding ignores whitespace, accepts missing padding and non-canonical trailing bits
-std::optional<std::vector<uint8_t>> from_base64(std::string_view b64);
+std::expected<std::vector<uint8_t>, Error> from_base64(std::string_view b64);
 
 struct SearchResult
 {
@@ -222,30 +224,20 @@ std::string remove_enclosing(std::string_view str,
 // unquote(" \"hello\" ") -> "hello"
 std::string_view unquote(std::string_view str);
 
-bool to_bool(std::string_view str, bool & value);
-bool to_char(std::string_view str, char & value);
-std::optional<long long> to_signed(std::string_view str, uint16_t base);
-std::optional<unsigned long long> to_unsigned(std::string_view str, uint16_t base);
-std::optional<float> to_float(std::string_view str, std::chars_format fmt = std::chars_format::general);
-std::optional<double> to_double(std::string_view str, std::chars_format fmt = std::chars_format::general);
+std::expected<bool, Error> to_bool(std::string_view str);
+std::expected<char, Error> to_char(std::string_view str);
+std::expected<long long, Error> to_signed(std::string_view str, uint16_t base);
+std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint16_t base);
+std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt = std::chars_format::general);
+std::expected<double, Error> to_double(std::string_view str, std::chars_format fmt = std::chars_format::general);
 
 template <typename T>
-std::optional<T> convert_from_string(std::string_view str, uint16_t base = 10)
+std::expected<T, Error> convert_from_string(std::string_view str, uint16_t base = 10)
 {
     if constexpr (std::is_same_v<T, bool>)
-    {
-        bool value;
-        if (to_bool(str, value))
-            return value;
-        return std::nullopt;
-    }
+        return to_bool(str);
     else if constexpr (std::is_same_v<T, char>)
-    {
-        char value;
-        if (to_char(str, value))
-            return value;
-        return std::nullopt;
-    }
+        return to_char(str);
     else if constexpr (std::is_floating_point_v<T>)
     {
         if constexpr (std::is_same_v<T, float>)
@@ -259,15 +251,16 @@ std::optional<T> convert_from_string(std::string_view str, uint16_t base = 10)
                       "convert_from_string supports bool, char, integral and floating point types");
         if constexpr (std::is_signed_v<T>)
         {
-            if (const auto opt = to_signed(str, base))
-                return static_cast<T>(*opt);
+            auto parsed = to_signed(str, base);
+            SIHD_UNEXPECTED_RETURN(parsed);
+            return static_cast<T>(*parsed);
         }
         else
         {
-            if (const auto opt = to_unsigned(str, base))
-                return static_cast<T>(*opt);
+            auto parsed_2 = to_unsigned(str, base);
+            SIHD_UNEXPECTED_RETURN(parsed_2);
+            return static_cast<T>(*parsed_2);
         }
-        return std::nullopt;
     }
 }
 

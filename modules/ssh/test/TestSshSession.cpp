@@ -39,11 +39,11 @@ TEST_F(TestSshSession, test_sshsession_connect)
     ASSERT_NE(test_server, nullptr);
 
     SshSession session;
-    EXPECT_TRUE(session.new_session());
-    EXPECT_TRUE(session.set_user("testuser"));
-    EXPECT_TRUE(session.set_host("127.0.0.1"));
-    EXPECT_TRUE(session.set_port(test_server->port));
-    GTEST_ASSERT_EQ(session.connect(), true);
+    EXPECT_TRUE(session.new_session().has_value());
+    EXPECT_TRUE(session.set_user("testuser").has_value());
+    EXPECT_TRUE(session.set_host("127.0.0.1").has_value());
+    EXPECT_TRUE(session.set_port(test_server->port).has_value());
+    GTEST_ASSERT_EQ(session.connect().has_value(), true);
     EXPECT_TRUE(session.connected());
 
     auto auth = session.auth_password("testpass");
@@ -56,7 +56,7 @@ TEST_F(TestSshSession, test_sshsession_auth_key)
 {
     // Read public key to add to allowed keys
     SshKey client_pubkey;
-    ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH));
+    ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
     std::string pubkey_base64 = client_pubkey.base64();
     ASSERT_FALSE(pubkey_base64.empty());
 
@@ -70,7 +70,8 @@ TEST_F(TestSshSession, test_sshsession_auth_key)
 
     // Test auth_key_file
     SshSession session;
-    ASSERT_TRUE(session.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false}));
+    ASSERT_TRUE(session.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false})
+                    .has_value());
     EXPECT_TRUE(session.connected());
 
     auto auth = session.auth_key_file(CLIENT_KEY_PATH);
@@ -87,12 +88,17 @@ TEST_F(TestSshSession, test_sshsession_auth_key)
 TEST_F(TestSshSession, test_sshsession_connect_timeout)
 {
     SshSession session;
-    ASSERT_TRUE(session.new_session());
-    ASSERT_TRUE(session.set_user("testuser"));
+    ASSERT_TRUE(session.new_session().has_value());
+    ASSERT_TRUE(session.set_user("testuser").has_value());
 
     const auto start = std::chrono::steady_clock::now();
-    const bool connected = session.fast_connect(
-        {.user = "testuser", .host = "192.0.2.1", .port = 22, .process_config = false, .timeout_sec = 1});
+    const bool connected = session
+                               .fast_connect({.user = "testuser",
+                                              .host = "192.0.2.1",
+                                              .port = 22,
+                                              .process_config = false,
+                                              .timeout_sec = 1})
+                               .has_value();
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
     EXPECT_FALSE(connected);
@@ -115,24 +121,24 @@ TEST_F(TestSshSession, test_sshsession_process_config_ignores_proxy)
     // Config processed (libssh default): ProxyCommand /bin/false breaks connect
     {
         SshSession session;
-        ASSERT_TRUE(session.new_session());
-        ASSERT_TRUE(session.set_ssh_dir(ssh_dir.path()));
-        ASSERT_TRUE(session.set_user("testuser"));
-        ASSERT_TRUE(session.set_host("127.0.0.1"));
-        ASSERT_TRUE(session.set_port(test_server->port));
-        EXPECT_FALSE(session.connect());
+        ASSERT_TRUE(session.new_session().has_value());
+        ASSERT_TRUE(session.set_ssh_dir(ssh_dir.path()).has_value());
+        ASSERT_TRUE(session.set_user("testuser").has_value());
+        ASSERT_TRUE(session.set_host("127.0.0.1").has_value());
+        ASSERT_TRUE(session.set_port(test_server->port).has_value());
+        EXPECT_FALSE(session.connect().has_value());
     }
 
     // Config processing disabled: ProxyCommand ignored, connect succeeds
     {
         SshSession session;
-        ASSERT_TRUE(session.new_session());
-        ASSERT_TRUE(session.set_ssh_dir(ssh_dir.path()));
-        ASSERT_TRUE(session.set_user("testuser"));
-        ASSERT_TRUE(session.set_host("127.0.0.1"));
-        ASSERT_TRUE(session.set_port(test_server->port));
-        ASSERT_TRUE(session.set_process_config(false));
-        EXPECT_TRUE(session.connect());
+        ASSERT_TRUE(session.new_session().has_value());
+        ASSERT_TRUE(session.set_ssh_dir(ssh_dir.path()).has_value());
+        ASSERT_TRUE(session.set_user("testuser").has_value());
+        ASSERT_TRUE(session.set_host("127.0.0.1").has_value());
+        ASSERT_TRUE(session.set_port(test_server->port).has_value());
+        ASSERT_TRUE(session.set_process_config(false).has_value());
+        EXPECT_TRUE(session.connect().has_value());
     }
 }
 } // namespace test

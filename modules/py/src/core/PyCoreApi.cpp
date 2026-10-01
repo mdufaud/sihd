@@ -170,14 +170,20 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Device, Node, Configurable, SmartNodePtr<Device>>(m_core, "Device")
         // AChannelContainer
-        .def("find_channel",
-             static_cast<Channel *(Device::*)(const std::string &)>(&Device::find_channel),
-             pybind11::call_guard<pybind11::gil_scoped_release>(),
-             pybind11::return_value_policy::reference_internal)
-        .def("get_channel",
-             static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel),
-             pybind11::call_guard<pybind11::gil_scoped_release>(),
-             pybind11::return_value_policy::reference_internal)
+        .def(
+            "find_channel",
+            +[](Device *self, const std::string & name) -> Channel * {
+                return self->find_channel(name).value_or(nullptr);
+            },
+            pybind11::call_guard<pybind11::gil_scoped_release>(),
+            pybind11::return_value_policy::reference_internal)
+        .def(
+            "get_channel",
+            +[](Device *self, const std::string & name) -> Channel * {
+                return self->get_channel(name).value_or(nullptr);
+            },
+            pybind11::call_guard<pybind11::gil_scoped_release>(),
+            pybind11::return_value_policy::reference_internal)
         .def("add_channel",
              static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel),
              pybind11::return_value_policy::reference_internal)

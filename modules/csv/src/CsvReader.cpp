@@ -1,14 +1,17 @@
+#include <fmt/format.h>
+
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::csv
 {
 
 SIHD_NEW_LOGGER("sihd::csv");
-
-using namespace sihd::util;
 
 namespace
 {
@@ -46,32 +49,28 @@ CsvReader::CsvReader()
 
 CsvReader::CsvReader(std::string_view path): CsvReader()
 {
-    this->open(path);
+    SIHD_UNEXPECTED_LOG(this->open(path));
 }
 
 CsvReader::~CsvReader() = default;
 
-bool CsvReader::set_delimiter(int c)
+std::expected<void, Error> CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
-    {
-        SIHD_LOG(error, "CsvReader: delimiter is not a printable character");
-        return false;
-    }
+        return std::unexpected(Error(invalid_argument, "delimiter is not a printable character"));
     _delimiter = c;
     _splitter.set_delimiter_char(_delimiter);
-    return true;
+    return {};
 }
 
-bool CsvReader::set_commentary(int c)
+std::expected<void, Error> CsvReader::set_commentary(int c)
 {
     if (std::isprint(c))
     {
         _comment = c;
-        return true;
+        return {};
     }
-    SIHD_LOG(error, "CsvReader: commentary is not a printable character");
-    return false;
+    return std::unexpected(Error(invalid_argument, "commentary is not a printable character"));
 }
 
 void CsvReader::set_timestamp_col(int n)
@@ -84,7 +83,7 @@ void CsvReader::set_timestamp_format(std::string format)
     _timestamp_fmt = std::move(format);
 }
 
-bool CsvReader::open(std::string_view path)
+std::expected<void, Error> CsvReader::open(std::string_view path)
 {
     this->_reset_line();
     return _line_reader.open(path);
@@ -108,13 +107,18 @@ void CsvReader::_reset_line()
     _csv_cols.clear();
 }
 
-bool CsvReader::read_next()
+std::expected<bool, Error> CsvReader::read_next()
 {
     this->_reset_line();
     if (!this->is_open())
-        return false;
-    while (_line_reader.read_next())
+        return std::unexpected(Error(not_initialized, "CsvReader: not open"));
+    while (true)
     {
+        auto line = _line_reader.read_next();
+        SIHD_UNEXPECTED_RETURN(line);
+        if (!*line)
+            break;
+
         ArrCharView view;
         _line_reader.get_read_data(view);
 
@@ -155,47 +159,33 @@ bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-bool CsvReader::get_read_timestamp(Timestamp *nano_timestamp) const
+std::expected<Timestamp, Error> CsvReader::get_read_timestamp() const
 {
-    if (_has_data == false || _timestamp_col < 0)
-        return false;
+    if (_has_data == false)
+        return std::unexpected(Error(not_initialized, "CsvReader: no data read"));
+    if (_timestamp_col < 0)
+        return std::unexpected(Error(not_initialized, "CsvReader: no timestamp column set"));
 
     const auto & columns = this->columns();
 
     if ((int)columns.size() <= _timestamp_col)
-    {
-        return false;
-    }
+        return std::unexpected(Error(not_found, "CsvReader: no column at index {}", _timestamp_col));
 
     const auto & time_str = columns.at(_timestamp_col);
 
     if (_timestamp_fmt.empty())
     {
-        if (const auto value = sihd::util::str::convert_from_string<int64_t>(time_str))
-        {
-            *nano_timestamp = Timestamp(*value);
-            return true;
-        }
-        return false;
+        auto value = str::convert_from_string<int64_t>(time_str);
+        SIHD_UNEXPECTED_RETURN(value);
+        return Timestamp(*value);
     }
-    else
-    {
-        auto opt_timestamp = Timestamp::from_str(time_str, _timestamp_fmt);
-        if (opt_timestamp)
-        {
-            *nano_timestamp = *opt_timestamp;
-            return true;
-        }
-        else
-        {
-            SIHD_LOG(error,
-                     "CsvReader: cannot process timestamp value '{}' with format '{}'",
-                     time_str,
-                     _timestamp_fmt);
-        }
-    }
-
-    return false;
+    auto timestamp = Timestamp::from_str(time_str, _timestamp_fmt);
+    if (!timestamp)
+        return std::unexpected(Error(invalid_argument,
+                                     "CsvReader: cannot process timestamp value '{}' with format '{}'",
+                                     time_str,
+                                     _timestamp_fmt));
+    return *timestamp;
 }
 
 const std::vector<std::string> & CsvReader::columns() const

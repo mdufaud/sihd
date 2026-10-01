@@ -554,7 +554,7 @@ std::string
     if (entry->op_enter_recorded == false && window.was_open == false && window.opened)
         this->_emit_enter(entry->op_begin, name, what);
 
-    const bool success = ctrl->state() != sihd::util::ServiceController::Error;
+    const bool success = ctrl->state() != sihd::util::ServiceController::Failure;
     this->_emit_exit(this->_now(), name, what, elapsed, success);
 
     entry->op_stats[ended_op].add_sample(elapsed);

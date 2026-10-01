@@ -33,8 +33,8 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
     EXPECT_TRUE(core.init());
     EXPECT_TRUE(core.start());
 
-    Channel *activate = dev_ptr->get_channel("activate");
-    Channel *beat = dev_ptr->get_channel("heartbeat");
+    Channel *activate = dev_ptr->get_channel("activate").value_or(nullptr);
+    Channel *beat = dev_ptr->get_channel("heartbeat").value_or(nullptr);
     ASSERT_NE(activate, nullptr);
     ASSERT_NE(beat, nullptr);
 
@@ -56,8 +56,8 @@ TEST_F(TestDevPulsation, test_dev_pulsation)
     EXPECT_TRUE(core.init());
     EXPECT_TRUE(core.start());
 
-    activate = dev2_ptr->get_channel("activate");
-    beat = dev2_ptr->get_channel("heartbeat");
+    activate = dev2_ptr->get_channel("activate").value_or(nullptr);
+    beat = dev2_ptr->get_channel("heartbeat").value_or(nullptr);
     ASSERT_NE(activate, nullptr);
     ASSERT_NE(beat, nullptr);
 

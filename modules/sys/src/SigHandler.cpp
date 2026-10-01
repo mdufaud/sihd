@@ -19,17 +19,19 @@ SigHandler::SigHandler(): _sig(-1), _previous_handler(SIG_ERR) {}
 
 SigHandler::SigHandler(int sig): SigHandler()
 {
-    this->handle(sig);
+    SIHD_UNEXPECTED_LOG(this->handle(sig));
 }
 
 SigHandler::~SigHandler()
 {
-    this->unhandle();
+    (void)this->unhandle();
 }
 
-bool SigHandler::handle(int sig)
+std::expected<void, Error> SigHandler::handle(int sig)
 {
-    this->unhandle();
+    auto unhandled = this->unhandle();
+    if (!unhandled)
+        return unhandled;
 
     _sig = sig;
 
@@ -59,23 +61,25 @@ bool SigHandler::handle(int sig)
     return signal::handle(sig);
 }
 
-bool SigHandler::unhandle()
+std::expected<void, Error> SigHandler::unhandle()
 {
-    bool ret = true;
-
-    if (this->is_handling())
+    if (this->is_handling() == false)
     {
-        if (std::signal(_sig, _previous_handler) == SIG_ERR)
-        {
-            SIHD_LOG(error, "SigHandler: could not unhandle signal {}", _sig);
-            ret = false;
-        }
+        _previous_handler = SIG_ERR;
+        _sig = -1;
+        return {};
+    }
+    if (std::signal(_sig, _previous_handler) == SIG_ERR)
+    {
+        _previous_handler = SIG_ERR;
+        _sig = -1;
+        return std::unexpected(Error::from_errno("could not unhandle signal {}", _sig));
     }
 
     _previous_handler = SIG_ERR;
     _sig = -1;
 
-    return ret;
+    return {};
 }
 
 bool SigHandler::is_handling() const

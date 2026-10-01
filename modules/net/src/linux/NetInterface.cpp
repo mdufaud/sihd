@@ -1,6 +1,8 @@
 #include <ifaddrs.h>   // getifaddrs
 #include <sys/types.h> // getifaddrs
 
+#include <cstring>
+
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
@@ -11,10 +13,10 @@
 #include <linux/if_packet.h>
 #include <net/if.h> // macros
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
-
-using namespace sihd::util;
 
 // Interface is running.
 bool NetInterface::up() const
@@ -87,16 +89,14 @@ bool NetInterface::supports_multicast() const
     return _flags & IFF_MULTICAST;
 }
 
-std::optional<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
+std::expected<std::map<std::string, NetInterface>, sihd::util::Error> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 
     struct ifaddrs *first;
     struct ifaddrs *iface;
     if (getifaddrs(&iface) < 0)
-    {
-        return std::nullopt;
-    }
+        return std::unexpected(Error::from_errno("could not list interfaces"));
 
     first = iface;
     Defer d([&first] { freeifaddrs(first); });

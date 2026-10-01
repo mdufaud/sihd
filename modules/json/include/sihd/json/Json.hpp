@@ -4,6 +4,7 @@
 #include <simdjson.h>
 
 #include <cstdint>
+#include <expected>
 #include <iterator>
 #include <memory>
 #include <string>
@@ -96,9 +97,8 @@ class Json
             }
         }
 
-        static Json parse(std::string_view str);
-        static Json parse(std::string_view str, bool allow_exceptions);
-        static Json parse(const char *begin, const char *end, bool allow_exceptions);
+        static std::expected<Json, std::string> parse(std::string_view str);
+        static std::expected<Json, std::string> parse(const char *begin, const char *end);
 
         std::string dump(int indent = -1) const;
 

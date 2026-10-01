@@ -1,10 +1,12 @@
 #ifndef __SIHD_SYS_IMPERSONATION_HPP__
 #define __SIHD_SYS_IMPERSONATION_HPP__
 
+#include <expected>
 #include <memory>
 #include <string_view>
 
 #include <sihd/sys/user.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys
@@ -36,17 +38,18 @@ class Impersonation
         Impersonation & operator=(Impersonation &&) = delete;
 
         // authenticates the account then impersonates it - domain may be empty for a local account
-        bool impersonate_with_credentials(std::string_view user_name,
-                                          std::string_view password,
-                                          std::string_view domain = {});
+        std::expected<void, sihd::util::Error> impersonate_with_credentials(std::string_view user_name,
+                                                                            std::string_view password,
+                                                                            std::string_view domain = {});
 
         // switches the thread identity without authenticating - requires CAP_SETUID unless the
         // target is an identity the thread already holds
-        bool impersonate_as(const user::UserId & user_id, const user::GroupId & group_id);
+        std::expected<void, sihd::util::Error> impersonate_as(const user::UserId & user_id,
+                                                              const user::GroupId & group_id);
 
         // restores the thread identity held when impersonation started, also done by the
         // destructor - a pre-existing impersonation is not restored
-        bool revert();
+        std::expected<void, sihd::util::Error> revert();
 
         [[nodiscard]] bool impersonating() const;
 

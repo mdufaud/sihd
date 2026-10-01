@@ -7,7 +7,6 @@
 #include <list>
 #include <map>
 #include <memory>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -184,7 +183,7 @@ class Command
                 }
                 else
                 {
-                    std::optional<T> val = str::convert_from_string<T>(str);
+                    const auto val = str::convert_from_string<T>(str);
                     if (val.has_value() == false)
                         return false;
                     target = *val;
@@ -213,7 +212,7 @@ class Command
                     }
                     else
                     {
-                        std::optional<T> val = str::convert_from_string<T>(str);
+                        const auto val = str::convert_from_string<T>(str);
                         if (val.has_value() == false)
                             throw std::invalid_argument("cannot convert '" + str + "' for --" + name);
                         target = *val;

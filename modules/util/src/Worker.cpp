@@ -82,7 +82,7 @@ bool Worker::start_sync_worker(std::string_view name)
 bool Worker::pre_run()
 {
     ScopedModifier m(_running, true);
-    thread::set_name(_worker_thread_name);
+    SIHD_UNEXPECTED_LOG(thread::set_name(_worker_thread_name));
     if (_sync_start)
         _start_sync.sync();
     return this->run();

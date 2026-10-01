@@ -25,6 +25,7 @@
 namespace sihd::sys
 {
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 SIHD_LOGGER;
@@ -88,7 +89,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
         void handle(Poll *poll);
 
         void init();
-        bool add_watch(std::string_view path);
+        std::expected<void, Error> add_watch(std::string_view path);
         bool rm_watch(std::string_view path);
         bool is_watching(std::string_view path);
         void terminate();
@@ -129,28 +130,25 @@ void FileWatcher::Impl::init()
 #endif
 }
 
-bool FileWatcher::Impl::add_watch(std::string_view path)
+std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
 {
 #if defined(INOTIFY_ENABLED)
     if (this->is_watching(path))
-        return true;
+        return {};
 
     int watch_fd = inotify_add_watch(_inotify_fd, path.data(), IN_ALL_EVENTS);
     if (watch_fd < 0)
-    {
-        SIHD_LOG(error, "FileWatcher: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not watch '{}'", path));
     Watcher watcher;
     watcher.path = std::string(path);
     watcher.inotify_fd = _inotify_fd;
     watcher.watch_fd = watch_fd;
     _watchers.emplace_back(std::move(watcher));
 
-    return true;
+    return {};
 #else
     (void)path;
-    return false;
+    return std::unexpected(Error(not_supported, "no watch backend on this platform"));
 #endif
 }
 
@@ -311,10 +309,9 @@ FileWatcher::FileWatcher()
 
 FileWatcher::FileWatcher(std::string_view path): FileWatcher()
 {
-    if (!_impl->add_watch(path))
-    {
-        throw std::runtime_error(os::last_error_str());
-    }
+    auto watched = _impl->add_watch(path);
+    if (!watched)
+        throw std::runtime_error(watched.error().message);
 }
 
 FileWatcher::FileWatcher(std::string_view path, int run_timeout_milliseconds): FileWatcher(path)
@@ -333,7 +330,7 @@ bool FileWatcher::run()
     return success;
 }
 
-bool FileWatcher::watch(std::string_view path)
+std::expected<void, Error> FileWatcher::watch(std::string_view path)
 {
     return _impl->add_watch(path);
 }

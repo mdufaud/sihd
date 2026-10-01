@@ -7,6 +7,7 @@
 namespace sihd::core
 {
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 SIHD_LOGGER;
@@ -14,15 +15,12 @@ SIHD_LOGGER;
 namespace
 {
 
-bool convert_trigger_value(const std::string & str, Value & value)
+std::expected<void, Error> convert_trigger_value(const std::string & str, Value & value)
 {
     value = Value::from_any_string(str);
     if (value.empty())
-    {
-        SIHD_LOG_ERROR("ChannelMatch: cannot convert trigger value: {}", str);
-        return false;
-    }
-    return true;
+        return std::unexpected(Error(invalid_argument, "cannot convert trigger value '{}'", str));
+    return {};
 }
 
 } // namespace
@@ -69,106 +67,76 @@ ChannelMatch::Comparison ChannelMatch::comparison_from_str(std::string_view str)
     return None;
 }
 
-bool ChannelMatch::parse(std::string_view conf_str)
+std::expected<void, Error> ChannelMatch::parse(std::string_view conf_str)
 {
     StrConfiguration conf(conf_str);
     auto [key_cmp, key_idx, key_value, key_invert] = conf.find_all("cmp", "idx", "value", "invert");
 
     if (key_cmp.has_value() == false)
-    {
-        SIHD_LOG_ERROR("ChannelMatch: no comparison 'cmp' in configuration: '{}'", conf_str);
-        return false;
-    }
+        return std::unexpected(Error(not_found, "no comparison 'cmp' in configuration: '{}'", conf_str));
     const Comparison cmp = this->comparison_from_str(*key_cmp);
     if (cmp == None)
-    {
-        SIHD_LOG_ERROR("ChannelMatch: unknown comparison '{}' in configuration: '{}'", *key_cmp, conf_str);
-        return false;
-    }
+        return std::unexpected(
+            Error(invalid_argument, "unknown comparison '{}' in configuration: '{}'", *key_cmp, conf_str));
     size_t parsed_idx = this->idx;
     Value parsed_value = this->value;
     bool parsed_invert = this->invert;
     if (key_idx.has_value())
     {
         const auto idx = str::convert_from_string<size_t>(*key_idx);
-        if (idx.has_value() == false)
-        {
-            SIHD_LOG_ERROR("ChannelMatch: cannot convert idx: {}", *key_idx);
-            return false;
-        }
+        if (!idx)
+            return std::unexpected(Error(invalid_argument, "cannot convert idx: {}", *key_idx));
         parsed_idx = *idx;
     }
     if (key_value.has_value())
     {
         parsed_value = Value::from_any_string(*key_value);
         if (parsed_value.empty())
-        {
-            SIHD_LOG_ERROR("ChannelMatch: cannot convert value: {}", *key_value);
-            return false;
-        }
+            return std::unexpected(Error(invalid_argument, "cannot convert value: {}", *key_value));
     }
     if (key_invert.has_value())
     {
         const auto invert = str::convert_from_string<bool>(*key_invert);
-        if (invert.has_value() == false)
-        {
-            SIHD_LOG_ERROR("ChannelMatch: cannot convert invert: {}", *key_invert);
-            return false;
-        }
+        if (!invert)
+            return std::unexpected(Error(invalid_argument, "cannot convert invert: {}", *key_invert));
         parsed_invert = *invert;
     }
     this->comparison = cmp;
     this->idx = parsed_idx;
     this->value = parsed_value;
     this->invert = parsed_invert;
-    return true;
+    return {};
 }
 
-bool ChannelMatch::parse_trigger(std::string_view conf)
+std::expected<void, Error> ChannelMatch::parse_trigger(std::string_view conf)
 {
     Splitter splitter(":");
     splitter.set_empty_delimitations(true);
     const std::vector<std::string> split = splitter.split(conf);
 
     if (split.empty() || split.size() > 2)
-    {
-        SIHD_LOG_ERROR("ChannelMatch: trigger conf error: '{}'", conf);
-        return false;
-    }
+        return std::unexpected(Error(invalid_argument, "trigger conf error: '{}'", conf));
     if (split.size() == 1)
     {
         // trigger=value
         if (split[0].empty())
-        {
-            SIHD_LOG_ERROR("ChannelMatch: trigger value empty: '{}'", conf);
-            return false;
-        }
+            return std::unexpected(Error(invalid_argument, "trigger value empty: '{}'", conf));
         this->idx = 0;
-        if (convert_trigger_value(split[0], this->value) == false)
-            return false;
+        return convert_trigger_value(split[0], this->value);
     }
-    else
+    // trigger=index:value
+    if (split[0].empty() && split[1].empty())
+        return std::unexpected(Error(invalid_argument, "trigger idx and value empty: '{}'", conf));
+    if (split[0].empty() == false)
     {
-        // trigger=index:value
-        if (split[0].empty() && split[1].empty())
-        {
-            SIHD_LOG_ERROR("ChannelMatch: trigger idx and value empty: '{}'", conf);
-            return false;
-        }
-        if (split[0].empty() == false)
-        {
-            const auto idx = str::convert_from_string<size_t>(split[0]);
-            if (idx.has_value() == false)
-            {
-                SIHD_LOG_ERROR("ChannelMatch: cannot convert trigger idx: {}", split[0]);
-                return false;
-            }
-            this->idx = *idx;
-        }
-        if (split[1].empty() == false && convert_trigger_value(split[1], this->value) == false)
-            return false;
+        const auto idx = str::convert_from_string<size_t>(split[0]);
+        if (!idx)
+            return std::unexpected(Error(invalid_argument, "cannot convert trigger idx: {}", split[0]));
+        this->idx = *idx;
     }
-    return true;
+    if (split[1].empty() == false)
+        return convert_trigger_value(split[1], this->value);
+    return {};
 }
 
 bool ChannelMatch::match(const Channel *channel) const

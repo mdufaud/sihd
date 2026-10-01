@@ -1,4 +1,5 @@
 #include <chrono>
+#include <expected>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -30,6 +31,7 @@ namespace sihd::lua
 using namespace sihd::http;
 using sihd::util::Node;
 using sihd::util::SmartNodePtr;
+SIHD_LOGGER;
 
 namespace
 {
@@ -56,10 +58,11 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
 }
 
 // Marshal a NavigatorResponse to a Lua table so scripts never touch the
-// move-only C++ type. Returns nil when the request failed (nullopt).
-luabridge::LuaRef response_to_lua(lua_State *state, std::optional<NavigatorResponse> && resp)
+// move-only C++ type. Returns nil when the request failed; the error is
+// logged once here, at the lua nil boundary.
+luabridge::LuaRef response_to_lua(lua_State *state, std::expected<NavigatorResponse, sihd::util::Error> && resp)
 {
-    if (resp.has_value() == false)
+    if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());
 
     luabridge::LuaRef table = response_table_to_lua(state,
@@ -82,9 +85,9 @@ luabridge::LuaRef response_to_lua(lua_State *state, std::optional<NavigatorRespo
     return table;
 }
 
-luabridge::LuaRef http_response_to_lua(lua_State *state, std::optional<HttpResponse> && resp)
+luabridge::LuaRef http_response_to_lua(lua_State *state, std::expected<HttpResponse, sihd::util::Error> && resp)
 {
-    if (resp.has_value() == false)
+    if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());
 
     return response_table_to_lua(state, (int)resp->status(), resp->content().cpp_str(), resp->http_header());
@@ -201,7 +204,6 @@ void LuaHttpApi::load_base(Vm & vm)
             +[](Navigator *self, const std::string & url, const std::string & path, lua_State *state)
                 -> luabridge::LuaRef { return response_to_lua(state, self->put_file(url, path)); })
         .addFunction("new_connection_count", &Navigator::new_connection_count)
-        .addFunction("last_error", &Navigator::last_error)
         // configuration
         .addFunction("set_verbose", &Navigator::set_verbose)
         .addFunction("set_follow_redirects", &Navigator::set_follow_redirects)

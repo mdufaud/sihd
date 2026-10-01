@@ -43,6 +43,8 @@
 # endif
 #endif
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::ssh
 {
 
@@ -228,6 +230,28 @@ sftp_attributes create_sftp_attributes(const SshSubsystemSftp::SftpAttributes & 
     return sa;
 }
 
+uint32_t sftp_status_from_error(const sihd::util::Error & err)
+{
+    switch (err.code)
+    {
+        case invalid_argument:
+        case overflow:
+            return SSH_FX_BAD_MESSAGE;
+        case not_found:
+            return SSH_FX_NO_SUCH_FILE;
+        case permission_denied:
+            return SSH_FX_PERMISSION_DENIED;
+        case not_supported:
+            return SSH_FX_OP_UNSUPPORTED;
+        case already_exists:
+            return SSH_FX_FILE_ALREADY_EXISTS;
+        case closed:
+            return SSH_FX_NO_CONNECTION;
+        default:
+            return SSH_FX_FAILURE;
+    }
+}
+
 } // namespace
 
 // ============================================================================
@@ -236,7 +260,7 @@ sftp_attributes create_sftp_attributes(const SshSubsystemSftp::SftpAttributes & 
 
 SshSubsystemSftp::SshSubsystemSftp(): _impl_ptr(new Impl())
 {
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshSubsystemSftp::~SshSubsystemSftp()
@@ -244,7 +268,7 @@ SshSubsystemSftp::~SshSubsystemSftp()
     // Close if the poll loop never did (e.g. server stopped before channel EOF)
     if (!_impl_ptr->closed)
         on_close();
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 SshChannel *SshSubsystemSftp::channel() const
@@ -463,8 +487,8 @@ int SshSubsystemSftp::on_close()
     // Note: Do this BEFORE sftp_free() since sftp_free may invalidate the channel
     if (_impl_ptr->channel && _impl_ptr->channel->is_open())
     {
-        _impl_ptr->channel->send_eof();
-        _impl_ptr->channel->close();
+        SIHD_UNEXPECTED_LOG(_impl_ptr->channel->send_eof());
+        SIHD_UNEXPECTED_LOG(_impl_ptr->channel->close());
     }
 
     // Free SFTP session
@@ -720,10 +744,10 @@ void SshSubsystemSftp::Impl::handle_mkdir(sftp_client_message_struct *msg)
     SIHD_LOG(debug, "SshSubsystemSftp: MKDIR '{}' mode={:o}", path, mode);
 
     std::string resolved = resolve_path(path);
-    if (!sihd::sys::fs::make_directory(resolved, mode))
+    auto res = sihd::sys::fs::make_directory(resolved, mode);
+    if (!res)
     {
-        uint32_t error = (errno == EEXIST) ? SSH_FX_FILE_ALREADY_EXISTS : SSH_FX_PERMISSION_DENIED;
-        reply_status(msg, error);
+        reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
         return;
     }
 
@@ -738,10 +762,10 @@ void SshSubsystemSftp::Impl::handle_rmdir(sftp_client_message_struct *msg)
     SIHD_LOG(debug, "SshSubsystemSftp: RMDIR '{}'", path);
 
     std::string resolved = resolve_path(path);
-    if (!sihd::sys::fs::remove_directory(resolved))
+    auto res = sihd::sys::fs::remove_directory(resolved);
+    if (!res)
     {
-        uint32_t error = (errno == ENOENT) ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED;
-        reply_status(msg, error);
+        reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
         return;
     }
 
@@ -802,7 +826,7 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
 
     // Apply permissions only when creating a new file
     if (has_creat && (attrs && (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)))
-        sihd::sys::fs::permission_set(resolved, mode);
+        SIHD_UNEXPECTED_LOG(sihd::sys::fs::permission_set(resolved, mode));
 
     // Generate handle and store mapping
     std::string handle = generate_handle();
@@ -855,19 +879,19 @@ void SshSubsystemSftp::Impl::handle_read(sftp_client_message_struct *msg)
     }
 
     std::vector<char> buf(len);
-    ssize_t n = file.read(buf.data(), len);
-    if (n < 0)
+    auto read = file.read(buf.data(), len);
+    if (!read)
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;
     }
-    if (n == 0)
+    if (*read == 0)
     {
         reply_status(msg, SSH_FX_EOF);
         return;
     }
 
-    sftp_reply_data(msg, buf.data(), static_cast<int>(n));
+    sftp_reply_data(msg, buf.data(), static_cast<int>(*read));
 }
 
 void SshSubsystemSftp::Impl::handle_write(sftp_client_message_struct *msg)
@@ -911,10 +935,10 @@ void SshSubsystemSftp::Impl::handle_write(sftp_client_message_struct *msg)
         return;
     }
 
-    ssize_t n = file.write(data, len);
-    if (n < 0 || static_cast<size_t>(n) != len)
+    auto wrote = file.write(data, len);
+    if (!wrote || *wrote != len)
     {
-        SIHD_LOG(error, "SshSubsystemSftp: WRITE failed: wrote {} of {} bytes", n, len);
+        SIHD_LOG(error, "SshSubsystemSftp: WRITE failed");
         reply_status(msg, SSH_FX_FAILURE);
         return;
     }
@@ -930,10 +954,10 @@ void SshSubsystemSftp::Impl::handle_remove(sftp_client_message_struct *msg)
     SIHD_LOG(debug, "SshSubsystemSftp: REMOVE '{}'", path);
 
     std::string resolved = resolve_path(path);
-    if (!sihd::sys::fs::remove_file(resolved))
+    auto res = sihd::sys::fs::remove_file(resolved);
+    if (!res)
     {
-        uint32_t error = (errno == ENOENT) ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED;
-        reply_status(msg, error);
+        reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
         return;
     }
 
@@ -951,10 +975,10 @@ void SshSubsystemSftp::Impl::handle_rename(sftp_client_message_struct *msg)
 
     std::string resolved_from = resolve_path(from);
     std::string resolved_to = resolve_path(to);
-    if (!sihd::sys::fs::rename(resolved_from, resolved_to))
+    auto res = sihd::sys::fs::rename(resolved_from, resolved_to);
+    if (!res)
     {
-        uint32_t error = (errno == ENOENT) ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED;
-        reply_status(msg, error);
+        reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
         return;
     }
 
@@ -980,9 +1004,9 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
     // Apply requested attributes
     if (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
     {
-        if (!sihd::sys::fs::permission_set(resolved, attrs->permissions))
+        if (auto res = sihd::sys::fs::permission_set(resolved, attrs->permissions); !res)
         {
-            reply_status(msg, SSH_FX_PERMISSION_DENIED);
+            reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
             return;
         }
     }
@@ -1000,9 +1024,9 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
 
     if (attrs->flags & SSH_FILEXFER_ATTR_SIZE)
     {
-        if (!sihd::sys::fs::truncate(resolved, attrs->size))
+        if (auto res = sihd::sys::fs::truncate(resolved, attrs->size); !res)
         {
-            reply_status(msg, SSH_FX_PERMISSION_DENIED);
+            reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
             return;
         }
     }

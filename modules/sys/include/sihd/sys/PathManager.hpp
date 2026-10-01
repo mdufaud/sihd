@@ -1,11 +1,14 @@
 #ifndef __SIHD_SYS_PATHMANAGER_HPP__
 #define __SIHD_SYS_PATHMANAGER_HPP__
 
+#include <expected>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+
+#include <sihd/util/Error.hpp>
 
 namespace sihd::sys
 {
@@ -21,7 +24,7 @@ class PathManager
 
         void push_back(std::string_view path_item);
         void push_front(std::string_view path_item);
-        bool remove(std::string_view path_item);
+        std::expected<void, sihd::util::Error> remove(std::string_view path_item);
         void clear();
 
         const std::vector<std::string> & path_lst() const { return _path_lst; }

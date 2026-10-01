@@ -6,18 +6,33 @@
 namespace sihd::json::utils
 {
 
-std::optional<Json> find_first(std::string_view data, std::string_view key)
+namespace
+{
+
+std::string parse_error(simdjson::error_code code)
+{
+    return std::string("parse error: ") + simdjson::simdjson_error(code).what();
+}
+
+std::string key_not_found(std::string_view key)
+{
+    return "key '" + std::string(key) + "' not found";
+}
+
+} // namespace
+
+std::expected<Json, std::string> find_first(std::string_view data, std::string_view key)
 {
     simdjson::padded_string padded(data.data(), data.size());
     simdjson::ondemand::parser parser;
 
     auto doc_result = parser.iterate(padded);
     if (doc_result.error())
-        return std::nullopt;
+        return std::unexpected(parse_error(doc_result.error()));
 
     simdjson::ondemand::array arr;
     if (doc_result.value().get_array().get(arr) != simdjson::SUCCESS)
-        return std::nullopt;
+        return std::unexpected(std::string("document is not an array"));
 
     for (simdjson::ondemand::value elem : arr)
     {
@@ -34,33 +49,43 @@ std::optional<Json> find_first(std::string_view data, std::string_view key)
             break;
 
         // Json::parse copies the raw bytes into its own padded buffer
-        return Json::parse(raw, false);
+        auto parsed = Json::parse(raw);
+        if (!parsed)
+            return std::unexpected(std::move(parsed.error()));
+        return std::move(*parsed);
     }
-    return std::nullopt;
+    return std::unexpected(key_not_found(key));
 }
 
-void for_each(std::string_view data, std::function<bool(Json)> callback)
+std::expected<size_t, std::string> for_each(std::string_view data, std::function<bool(Json)> callback)
 {
     simdjson::padded_string padded(data.data(), data.size());
     simdjson::ondemand::parser parser;
 
     auto doc_result = parser.iterate(padded);
     if (doc_result.error())
-        return;
+        return std::unexpected(parse_error(doc_result.error()));
 
     simdjson::ondemand::array arr;
     if (doc_result.value().get_array().get(arr) != simdjson::SUCCESS)
-        return;
+        return std::unexpected(std::string("document is not an array"));
 
+    size_t count = 0;
     for (simdjson::ondemand::value elem : arr)
     {
-        std::string_view raw;
-        if (elem.raw_json().get(raw) != simdjson::SUCCESS)
-            break;
+        auto raw_result = elem.raw_json();
+        if (raw_result.error() != simdjson::SUCCESS)
+            return std::unexpected(parse_error(raw_result.error()));
+        std::string_view raw = raw_result.value();
 
-        if (!callback(Json::parse(raw, false)))
-            return;
+        auto parsed = Json::parse(raw);
+        if (!parsed)
+            return std::unexpected(std::move(parsed.error()));
+        ++count;
+        if (!callback(std::move(*parsed)))
+            break;
     }
+    return count;
 }
 
 } // namespace sihd::json::utils

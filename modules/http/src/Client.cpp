@@ -11,13 +11,17 @@
 
 #include <sihd/curl.hpp>
 #include <sihd/http/HttpRequest.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/tools.hpp>
+
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::http
 {
 
-using sihd::util::Url;
+SIHD_NEW_LOGGER("sihd::http");
 
 namespace
 {
@@ -30,11 +34,6 @@ std::string url_with_parameters(std::string_view url, const std::map<std::string
     for (const auto & [key, val] : parameters)
         parsed.query_params[key] = val;
     return parsed.encode();
-}
-
-std::unexpected<sihd::util::Error> err(std::string message)
-{
-    return std::unexpected(sihd::util::Error {.message = std::move(message)});
 }
 
 sihd::curl::Proxy to_curl_proxy(ProxyType type)
@@ -76,18 +75,19 @@ struct Client::Impl
                                                     !options.token.empty())
                 == false)
             {
-                return err("there can only be one authentication method");
+                return std::unexpected(Error(invalid_argument, "there can only be one authentication method"));
             }
             if ((options.username.empty() == false) != (options.password.empty() == false))
             {
-                return err("authentication needs both username and password");
+                return std::unexpected(Error(invalid_argument, "authentication needs both username and password"));
             }
 
             request.set_verbose(options.verbose);
             request.set_url(url_with_parameters(url, options.parameters));
 
             request.set_header_callback([&response](sihd::util::ArrByteView data) {
-                response.http_header().add_header_from_str(std::string_view((const char *)data.buf(), data.size()));
+                SIHD_UNEXPECTED_LOG(response.http_header().add_header_from_str(
+                    std::string_view((const char *)data.buf(), data.size())));
                 return true;
             });
 
@@ -145,17 +145,13 @@ struct Client::Impl
             sihd::curl::HeaderList new_headers;
             if (options.token.empty() == false)
             {
-                if (new_headers.append(fmt::format("Authorization: Bearer {}", options.token)) == false)
-                {
-                    return err("could not add authentication header");
-                }
+                if (!new_headers.append(fmt::format("Authorization: Bearer {}", options.token)))
+                    return std::unexpected(Error(out_of_memory, "could not add authentication header"));
             }
             for (const auto & [header_name, header_value] : options.headers)
             {
-                if (new_headers.append(fmt::format("{}: {}", header_name, header_value)) == false)
-                {
-                    return err(fmt::format("could not add header '{}'", header_name));
-                }
+                if (!new_headers.append(fmt::format("{}: {}", header_name, header_value)))
+                    return std::unexpected(Error(out_of_memory, "could not add header '{}'", header_name));
             }
             request.set_headers(new_headers);
 
@@ -241,10 +237,10 @@ struct Client::Impl
             request.set_infilesize(streams.upload_size);
             sihd::sys::File *fp = streams.upload;
             request.set_read_callback([fp](char *buffer, size_t capacity) {
-                const ssize_t read = fp->read(buffer, capacity);
+                const auto read = fp->read(buffer, capacity);
                 // a read error must abort the transfer: reporting it as an end of
                 // file would upload a truncated body
-                return read < 0 ? sihd::curl::Request::READ_ABORT : (size_t)read;
+                return read.has_value() == false ? sihd::curl::Request::READ_ABORT : read.value();
             });
         }
 };
@@ -272,13 +268,14 @@ Client::Result Client::perform(std::string_view url,
     _impl->set_content_sink(streams, options);
     _impl->set_body(streams);
 
-    if (auto configured = _impl->configure(url, type, options, response); !configured)
-        return std::unexpected(configured.error());
+    auto configured = _impl->configure(url, type, options, response);
+    SIHD_UNEXPECTED_RETURN(configured);
 
     _impl->set_multipart(options);
 
-    if (_impl->request.perform() == false && _impl->overflow == false)
-        return err(_impl->request.last_error());
+    auto performed = _impl->request.perform();
+    if (!performed && _impl->overflow == false)
+        SIHD_UNEXPECTED_RETURN(performed);
 
     response.set_status((int)_impl->request.response_code());
 
@@ -287,7 +284,7 @@ Client::Result Client::perform(std::string_view url,
         response.set_content_type(content_type);
 
     if (streams.download == nullptr)
-        response.set_content(_impl->content);
+        SIHD_UNEXPECTED_LOG(response.set_content(_impl->content));
 
     // a truncated response is still a response: overflow() tells it apart
     return {};
@@ -317,15 +314,16 @@ Client::Result Client::send_file(std::string_view url,
                                  HttpResponse & response)
 {
     sihd::sys::File file;
-    if (file.open(std::string(path), "rb") == false)
-        return err(fmt::format("could not open file: {}", path));
+    auto opened = file.open(std::string(path), "rb");
+    if (!opened)
+        return std::unexpected(Error(io_error, "could not open file: {}", path));
 
-    const int64_t size = file.file_size();
-    if (size < 0)
-        return err(fmt::format("could not read file size: {}", path));
+    const auto size = file.file_size();
+    if (!size)
+        return std::unexpected(Error(io_error, "could not read file size: {}", path));
 
     sihd::sys::File *fp = &file;
-    return this->perform(url, Streams {.upload = fp, .upload_size = size}, type, options, response);
+    return this->perform(url, Streams {.upload = fp, .upload_size = *size}, type, options, response);
 }
 
 Client::Result Client::receive_file(std::string_view url,
@@ -334,8 +332,9 @@ Client::Result Client::receive_file(std::string_view url,
                                     HttpResponse & response)
 {
     sihd::sys::File file;
-    if (file.open(std::string(path), "wb") == false)
-        return err(fmt::format("could not open file for download: {}", path));
+    auto opened = file.open(std::string(path), "wb");
+    if (!opened)
+        return std::unexpected(Error(io_error, "could not open file for download: {}", path));
 
     sihd::sys::File *fp = &file;
     return this->perform(url, Streams {.download = fp}, HttpRequest::Get, options, response);

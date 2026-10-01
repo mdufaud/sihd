@@ -2,9 +2,12 @@
 #define __SIHD_SSH_SSHKEY_HPP__
 
 #include <cstdint>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
+
+#include <sihd/util/Error.hpp>
 
 namespace sihd::ssh
 {
@@ -31,11 +34,14 @@ class SshKey
         static KeyType type_from_name(std::string_view name);
         static const char *type_str(KeyType type);
 
-        bool generate(KeyType type, int parameter);
-        bool import_pubkey_file(std::string_view path);
-        bool import_privkey_file(std::string_view path, const char *passphrase = nullptr);
-        bool import_pubkey_mem(const char *base64_key, KeyType type = KeyType::Unknown);
-        bool import_privkey_mem(const char *base64_key, const char *passphrase = nullptr);
+        std::expected<void, sihd::util::Error> generate(KeyType type, int parameter);
+        std::expected<void, sihd::util::Error> import_pubkey_file(std::string_view path);
+        std::expected<void, sihd::util::Error> import_privkey_file(std::string_view path,
+                                                                   const char *passphrase = nullptr);
+        std::expected<void, sihd::util::Error> import_pubkey_mem(const char *base64_key,
+                                                                 KeyType type = KeyType::Unknown);
+        std::expected<void, sihd::util::Error> import_privkey_mem(const char *base64_key,
+                                                                  const char *passphrase = nullptr);
 
         bool is_equal(const SshKey & sshkey);
 
@@ -47,7 +53,8 @@ class SshKey
         void *key() const;
 
         std::string base64() const;
-        bool export_privkey_file(std::string_view path, const char *passphrase = nullptr) const;
+        std::expected<void, sihd::util::Error> export_privkey_file(std::string_view path,
+                                                                   const char *passphrase = nullptr) const;
 
         // Takes ownership
         void set_key(void *key);

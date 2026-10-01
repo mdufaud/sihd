@@ -1,5 +1,7 @@
 #include <ws2tcpip.h> // CSADDR_INFO
 
+#include <expected>
+
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
@@ -12,7 +14,8 @@
 namespace sihd::net
 {
 
-using namespace sihd::util;
+using sihd::util::Error;
+using sihd::util::ErrorCode;
 
 SIHD_LOGGER;
 
@@ -39,33 +42,39 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     return found;
 }
 
-bool Socket::bind_socket_to_device(int socket, std::string_view name)
+std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     (void)socket;
     (void)name;
-    SIHD_LOG(error, "Socket: bind to device unsupported on windows");
-    return false;
+    return std::unexpected(Error(ErrorCode::not_supported, "Socket: bind to device unsupported on windows"));
 }
 
-bool Socket::set_socket_blocking(int socket, bool active)
+std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
-        throw std::runtime_error("Socket: cannot set blocking on a closed socket");
+        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set blocking on a closed socket"));
     unsigned long mode = active ? 0 : 1;
     if (!sihd::sys::os::ioctl(socket, FIONBIO, &mode))
-    {
-        SIHD_LOG(error, "Socket: could not set ioctl: {}", sihd::sys::os::last_error_str());
-        return false;
-    }
-    return true;
+        return std::unexpected(make_error("Socket: could not set ioctl"));
+    return {};
 }
 
 bool Socket::is_socket_blocking(int socket)
 {
     if (socket < 0)
-        throw std::runtime_error("Socket: check blocking on a closed socket");
+        return false;
     // winsock provides no way to read the mode back: the default is reported
     return true;
+}
+
+std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milliseconds)
+{
+    if (socket < 0)
+        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set recv timeout on a closed socket"));
+    DWORD ms = static_cast<DWORD>(milliseconds);
+    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &ms, sizeof(ms)))
+        return {};
+    return std::unexpected(make_error("Socket: could not set recv timeout"));
 }
 
 } // namespace sihd::net

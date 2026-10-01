@@ -1,12 +1,14 @@
 #ifndef __SIHD_HTTP_HTTPHEADER_HPP__
 #define __SIHD_HTTP_HTTPHEADER_HPP__
 
+#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::http
 {
@@ -31,7 +33,7 @@ class HttpHeader
 
         HttpHeader & set_headers(HeaderMap && headers);
         HttpHeader & set_header(const std::string & name, std::string_view value);
-        bool add_header_from_str(std::string_view header_str);
+        std::expected<void, sihd::util::Error> add_header_from_str(std::string_view header_str);
 
         HttpHeader & remove_header(const std::string & name);
 

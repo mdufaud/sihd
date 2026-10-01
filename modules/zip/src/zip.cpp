@@ -3,13 +3,13 @@
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 
+using namespace sihd::util;
+using namespace sihd::sys;
+
 namespace sihd::zip
 {
 
 SIHD_LOGGER;
-
-using namespace sihd::util;
-using namespace sihd::sys;
 
 std::vector<std::string> list_entries(std::string_view archive_path)
 {
@@ -22,52 +22,57 @@ std::vector<std::string> list_entries(std::string_view archive_path)
     if (!zip.is_open())
         return ret;
 
-    while (zip.read_next_entry())
+    for (;;)
     {
+        auto next = zip.read_next_entry();
+        if (SIHD_UNEXPECTED_LOG(next))
+            break;
+        if (!next.value())
+            break;
         ret.emplace_back(zip.entry_name());
     }
 
     return ret;
 }
 
-bool zip(std::string_view root_dir_path, std::string_view archive_path)
+std::expected<void, Error> zip(std::string_view root_dir_path, std::string_view archive_path)
 {
     constexpr bool read_only = false;
     constexpr bool do_strict_checks = true;
 
-    ZipFile zip(archive_path, read_only, do_strict_checks);
+    ZipFile zip;
+    auto opened = zip.open(archive_path, read_only, do_strict_checks);
+    SIHD_UNEXPECTED_RETURN(opened);
 
-    if (zip.is_open() == false)
-        return false;
+    auto added = zip.add_from_fs(fs::filename(root_dir_path), root_dir_path);
+    SIHD_UNEXPECTED_RETURN(added);
 
-    const bool success = zip.add_from_fs(fs::filename(root_dir_path), root_dir_path);
-    // commit changes
-    if (success)
-        zip.close();
-
-    return success;
+    return zip.close();
 }
 
-bool unzip(std::string_view archive_path, std::string_view unzip_file_path)
+std::expected<void, Error> unzip(std::string_view archive_path, std::string_view unzip_file_path)
 {
     constexpr bool read_only = true;
     constexpr bool do_strict_checks = true;
 
-    ZipFile zip(archive_path, read_only, do_strict_checks);
+    ZipFile zip;
+    auto opened = zip.open(archive_path, read_only, do_strict_checks);
+    SIHD_UNEXPECTED_RETURN(opened);
 
-    if (zip.is_open() == false)
-        return false;
+    auto dir = fs::make_directory(unzip_file_path, 0750);
+    SIHD_UNEXPECTED_RETURN(dir);
 
-    if (fs::make_directory(unzip_file_path, 0750) == false)
-        return false;
-
-    while (zip.read_next_entry())
+    for (;;)
     {
-        if (zip.dump_entry_to_fs(fs::combine(unzip_file_path, zip.entry_name())) == false)
-            return false;
+        auto next = zip.read_next_entry();
+        SIHD_UNEXPECTED_RETURN(next);
+        if (!next.value())
+            break;
+        auto dumped = zip.dump_entry_to_fs(fs::combine(unzip_file_path, zip.entry_name()));
+        SIHD_UNEXPECTED_RETURN(dumped);
     }
 
-    return true;
+    return {};
 }
 
 } // namespace sihd::zip

@@ -98,9 +98,9 @@ bool DeviceTcpServer::on_init()
 
 bool DeviceTcpServer::on_start()
 {
-    _channel_rx = this->get_channel("rx");
-    _channel_tx = this->get_channel("tx");
-    _channel_client_count = this->get_channel("client_count");
+    _channel_rx = this->get_channel("rx").value_or(nullptr);
+    _channel_tx = this->get_channel("tx").value_or(nullptr);
+    _channel_client_count = this->get_channel("client_count").value_or(nullptr);
 
     if (_channel_rx == nullptr || _channel_tx == nullptr || _channel_client_count == nullptr)
         return false;
@@ -111,12 +111,8 @@ bool DeviceTcpServer::on_start()
         return false;
     }
 
-    bool bound;
-    if (!_unix_path.empty())
-        bound = _tcp_server.open_unix_and_bind(_unix_path);
-    else
-        bound = _tcp_server.open_and_bind(_host, _port);
-
+    auto bound = !_unix_path.empty() ? _tcp_server.open_unix_and_bind(_unix_path) //
+                                     : _tcp_server.open_and_bind(_host, _port);
     if (!bound)
     {
         SIHD_LOG(error, "DeviceTcpServer: failed to bind");
@@ -129,7 +125,7 @@ bool DeviceTcpServer::on_start()
 
     util::Defer cleanup([this] {
         _server_handler.remove_observer(this);
-        _tcp_server.close();
+        (void)_tcp_server.close();
     });
 
     if (!_worker.start_worker("DeviceTcpServer"))
@@ -153,7 +149,7 @@ bool DeviceTcpServer::on_stop()
     _tcp_server.stop();
     _worker.stop_worker();
     _server_handler.remove_observer(this);
-    _tcp_server.close();
+    (void)_tcp_server.close();
     return true;
 }
 

@@ -69,7 +69,7 @@ bool DeviceUdpReceiver::on_init()
 
 bool DeviceUdpReceiver::on_start()
 {
-    _channel_rx = this->get_channel("rx");
+    _channel_rx = this->get_channel("rx").value_or(nullptr);
     if (_channel_rx == nullptr)
         return false;
 
@@ -95,7 +95,7 @@ bool DeviceUdpReceiver::on_stop()
     _udp_receiver.stop();
     _worker.stop_worker();
     _udp_receiver.remove_observer(this);
-    _udp_receiver.close();
+    (void)_udp_receiver.close();
     return true;
 }
 
@@ -108,9 +108,9 @@ bool DeviceUdpReceiver::on_reset()
 bool DeviceUdpReceiver::run()
 {
     IpAddr addr(_host.empty() ? "0.0.0.0" : _host, _port);
-    bool ok = _udp_receiver.open_and_bind(addr);
+    auto bound = _udp_receiver.open_and_bind(addr);
 
-    if (!ok)
+    if (!bound)
     {
         SIHD_LOG(error, "DeviceUdpReceiver: failed to bind on {}:{}", _host, _port);
         _start_ok = false;
@@ -133,10 +133,10 @@ void DeviceUdpReceiver::handle([[maybe_unused]] sihd::core::Channel *c) {}
 void DeviceUdpReceiver::handle(INetReceiver *receiver)
 {
     sihd::util::ArrByte buf(_buffer_capacity);
-    ssize_t received = receiver->receive(buf);
-    if (received > 0)
+    auto received = receiver->receive(buf);
+    if (received && received.value() > 0)
     {
-        buf.resize(static_cast<size_t>(received));
+        buf.resize(received.value());
         _channel_rx->write(buf);
     }
 }

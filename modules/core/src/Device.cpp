@@ -108,7 +108,8 @@ bool Device::do_start()
                 started_services.push_back(service);
         }
     }
-    ret = ret && this->resolve_links();
+    if (ret && SIHD_UNEXPECTED_LOG(this->resolve_links()))
+        ret = false;
     if (ret)
         ret = this->on_start();
     if (ret == false)

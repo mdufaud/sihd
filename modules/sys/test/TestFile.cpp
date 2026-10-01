@@ -29,14 +29,18 @@ TEST_F(TestFile, test_file_write_read)
     {
         File f(path, "w");
         ASSERT_TRUE(f.is_open());
-        EXPECT_EQ(f.write("hello", 5), 5);
+        auto wrote = f.write("hello", 5);
+        ASSERT_TRUE(wrote.has_value());
+        EXPECT_EQ(wrote.value(), 5u);
     }
 
     {
         File f(path, "r");
         ASSERT_TRUE(f.is_open());
         char buf[16] = {};
-        EXPECT_EQ(f.read(buf, sizeof(buf)), 5);
+        auto read = f.read(buf, sizeof(buf));
+        ASSERT_TRUE(read.has_value());
+        EXPECT_EQ(read.value(), 5u);
         EXPECT_STREQ(buf, "hello");
     }
 }
@@ -51,15 +55,18 @@ TEST_F(TestFile, test_file_write_string_view)
         File f(path, "w");
         ASSERT_TRUE(f.is_open());
         std::string_view sv = "test data";
-        EXPECT_EQ(f.write(sv), (ssize_t)sv.size());
+        auto wrote = f.write(sv);
+        ASSERT_TRUE(wrote.has_value());
+        EXPECT_EQ(wrote.value(), sv.size());
     }
 
     {
         File f(path, "r");
         ASSERT_TRUE(f.is_open());
         char buf[32] = {};
-        ssize_t n = f.read(buf, sizeof(buf));
-        EXPECT_EQ(n, 9);
+        auto read = f.read(buf, sizeof(buf));
+        ASSERT_TRUE(read.has_value());
+        EXPECT_EQ(read.value(), 9u);
         EXPECT_STREQ(buf, "test data");
     }
 }
@@ -72,18 +79,23 @@ TEST_F(TestFile, test_file_seek_tell)
     std::string path = fs::combine(tmp.path(), "seek.txt");
     {
         File f(path, "w");
-        f.write("abcdefgh", 8);
+        (void)f.write("abcdefgh", 8);
     }
 
     File f(path, "r");
     ASSERT_TRUE(f.is_open());
 
-    EXPECT_EQ(f.tell(), 0);
-    f.seek_begin(3);
-    EXPECT_EQ(f.tell(), 3);
+    auto told = f.tell();
+    ASSERT_TRUE(told.has_value());
+    EXPECT_EQ(told.value(), 0);
+    EXPECT_TRUE(f.seek_begin(3).has_value());
+    told = f.tell();
+    ASSERT_TRUE(told.has_value());
+    EXPECT_EQ(told.value(), 3);
 
     char buf[4] = {};
-    f.read(buf, 3);
+    auto read = f.read(buf, 3);
+    ASSERT_TRUE(read.has_value());
     EXPECT_STREQ(buf, "def");
 }
 
@@ -95,14 +107,18 @@ TEST_F(TestFile, test_file_size)
     std::string path = fs::combine(tmp.path(), "size.txt");
     {
         File f(path, "w");
-        f.write("12345", 5);
+        (void)f.write("12345", 5);
     }
 
     File f(path, "r");
-    EXPECT_EQ(f.file_size(), 5);
+    auto size = f.file_size();
+    ASSERT_TRUE(size.has_value());
+    EXPECT_EQ(size.value(), 5);
 
     char buf[6] = {};
-    EXPECT_EQ(f.read(buf, 5), 5);
+    auto read = f.read(buf, 5);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(read.value(), 5u);
     EXPECT_STREQ(buf, "12345");
 }
 
@@ -114,12 +130,12 @@ TEST_F(TestFile, test_file_eof)
     std::string path = fs::combine(tmp.path(), "eof.txt");
     {
         File f(path, "w");
-        f.write("ab", 2);
+        (void)f.write("ab", 2);
     }
 
     File f(path, "r");
     char buf[16] = {};
-    f.read(buf, sizeof(buf));
+    (void)f.read(buf, sizeof(buf));
     EXPECT_TRUE(f.eof());
 }
 
@@ -141,16 +157,18 @@ TEST_F(TestFile, test_file_open_nonexistent)
 {
     File f;
     EXPECT_FALSE(f.is_open());
-    EXPECT_FALSE(f.open(fs::combine(fs::tmp_path(), "sihd_nonexistent_12345/nope.txt"), "r"));
+    EXPECT_FALSE(f.open(fs::combine(fs::tmp_path(), "sihd_nonexistent_12345/nope.txt"), "r").has_value());
     EXPECT_FALSE(f.is_open());
 }
 
 TEST_F(TestFile, test_file_open_tmp)
 {
     File f;
-    EXPECT_TRUE(f.open_tmp(fs::combine(fs::tmp_path(), "sihd_test_"), true));
+    EXPECT_TRUE(f.open_tmp(fs::combine(fs::tmp_path(), "sihd_test_"), true).has_value());
     EXPECT_TRUE(f.is_open());
-    EXPECT_EQ(f.write("tmp", 3), 3);
+    auto wrote = f.write("tmp", 3);
+    ASSERT_TRUE(wrote.has_value());
+    EXPECT_EQ(wrote.value(), 3u);
 }
 
 TEST_F(TestFile, test_file_read_to_string)
@@ -161,13 +179,14 @@ TEST_F(TestFile, test_file_read_to_string)
     std::string path = fs::combine(tmp.path(), "str.txt");
     {
         File f(path, "w");
-        f.write("string_data", 11);
+        (void)f.write("string_data", 11);
     }
 
     File f(path, "r");
     std::string str;
-    ssize_t n = f.read(str, 100);
-    EXPECT_EQ(n, 11);
+    auto read = f.read(str, 100);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(read.value(), 11u);
     EXPECT_EQ(str, "string_data");
 }
 

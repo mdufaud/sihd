@@ -10,6 +10,8 @@
 // # include <processthreadsapi.h>
 #endif
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::util::thread
 {
 
@@ -19,7 +21,8 @@ namespace
 pthread_t do_init()
 {
 #if defined(__SIHD_WINDOWS__)
-    set_name("main");
+    // static init: the logger is not up yet, a failed naming stays silent
+    (void)set_name("main");
 #endif
     return pthread_self();
 }
@@ -53,36 +56,27 @@ std::string id_str(pthread_t id)
     return "0x" + str::to_hex(value);
 }
 
-void set_name(const std::string & name)
+std::expected<void, Error> set_name(const std::string & name)
 {
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     const std::string subname = name.substr(0, 15);
     if (prctl(PR_SET_NAME, subname.c_str()) != 0)
-    {
-        throw std::runtime_error("Failed to set thread name");
-    }
+        return std::unexpected(Error::from_errno("could not set thread name '{}'", name));
     l_thread_name = subname;
 #elif defined(__SIHD_WINDOWS__)
     using _SetThreadDescription = HRESULT(WINAPI *)(HANDLE, PCWSTR);
     void *ptr = (void *)GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "SetThreadDescription");
     if (ptr == nullptr)
-    {
-        throw std::runtime_error("SetThreadDescription not found");
-    }
-    _SetThreadDescription set_thread_description = reinterpret_cast<_SetThreadDescription>(ptr);
-    if (set_thread_description == nullptr)
-    {
-        throw std::runtime_error("SetThreadDescription not found");
-    }
+        return std::unexpected(Error(not_supported, "SetThreadDescription is missing"));
+    auto set_thread_description = reinterpret_cast<_SetThreadDescription>(ptr);
     HRESULT hr = set_thread_description(GetCurrentThread(), str::to_wstr(name).c_str());
     if (FAILED(hr))
-    {
-        throw std::runtime_error("Failed to set thread name");
-    }
+        return std::unexpected(Error(io_error, "could not set thread name '{}' (hr={:#x})", name, (unsigned long)hr));
     l_thread_name = name;
 #else
     l_thread_name = name;
 #endif
+    return {};
 }
 
 const std::string & name()
@@ -90,35 +84,25 @@ const std::string & name()
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     if (l_thread_name.empty())
     {
-        l_thread_name.resize(16);
-        if (prctl(PR_GET_NAME, l_thread_name.data()) != 0)
-        {
-            throw std::runtime_error("Failed to get thread name");
-        }
-        l_thread_name.resize(strlen(l_thread_name.c_str()));
+        char buf[16] = {};
+        if (prctl(PR_GET_NAME, buf) == 0)
+            l_thread_name = buf;
     }
 #elif defined(__SIHD_WINDOWS__)
     using _GetThreadDescription = HRESULT(WINAPI *)(HANDLE, PWSTR *);
     if (l_thread_name.empty())
     {
         void *ptr = (void *)GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetThreadDescription");
-        if (ptr == nullptr)
+        if (ptr != nullptr)
         {
-            throw std::runtime_error("GetThreadDescription not found");
+            auto get_thread_description = reinterpret_cast<_GetThreadDescription>(ptr);
+            PWSTR wname = nullptr;
+            if (SUCCEEDED(get_thread_description(GetCurrentThread(), &wname)))
+            {
+                l_thread_name = str::to_str(wname);
+                LocalFree(wname);
+            }
         }
-        _GetThreadDescription get_thread_description = reinterpret_cast<_GetThreadDescription>(ptr);
-        if (get_thread_description == nullptr)
-        {
-            throw std::runtime_error("GetThreadDescription not found");
-        }
-        PWSTR wname = nullptr;
-        HRESULT hr = get_thread_description(GetCurrentThread(), &wname);
-        if (FAILED(hr))
-        {
-            throw std::runtime_error("Failed to get thread name");
-        }
-        l_thread_name = str::to_str(wname);
-        LocalFree(wname);
     }
 #endif
     return l_thread_name;

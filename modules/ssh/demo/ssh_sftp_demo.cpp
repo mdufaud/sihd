@@ -17,7 +17,7 @@ void print_dir(Sftp & sftp, std::string_view path)
 {
     fmt::print("Listing directories in '{}':\n", path);
     std::vector<sihd::ssh::SftpAttribute> list;
-    if (sftp.list_dir(path, list))
+    if (sftp.list_dir(path, list).has_value())
     {
         container::sort(list, [](const SftpAttribute & attr1, const SftpAttribute & attr2) {
             if (str::starts_with(attr1.name(), ".") != str::starts_with(attr2.name(), "."))
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
         }
 
         SshSession session;
-        if (session.fast_connect({.user = user, .host = host, .port = port}) == false)
+        if (SIHD_UNEXPECTED_LOG(session.fast_connect({.user = user, .host = host, .port = port})))
             app.exit(EXIT_FAILURE);
 
         SshSession::AuthState auth_state {-1};
@@ -95,7 +95,7 @@ int main(int argc, char **argv)
             app.exit(EXIT_FAILURE);
 
         Sftp sftp = session.make_sftp();
-        if (sftp.open() == false)
+        if (SIHD_UNEXPECTED_LOG(sftp.open()))
             app.exit(EXIT_FAILURE);
         print_extensions(sftp);
         print_dir(sftp, path);

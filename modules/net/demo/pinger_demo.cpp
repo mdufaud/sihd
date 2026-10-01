@@ -61,7 +61,7 @@ int main(int argc, char **argv)
     pinger.add_observer(&ping_handler);
 
     app.root().on_run([&] {
-        if (pinger.open(false) == false)
+        if (pinger.open(false).has_value() == false)
         {
             SIHD_LOG(error, "Demo must have capabilities or be played with root perms");
             SIHD_LOG(notice,

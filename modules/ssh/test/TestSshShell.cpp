@@ -38,14 +38,14 @@ TEST_F(TestSshShell, test_sshshell_interactive)
     std::string user = getenv("USER");
     SshSession session;
 
-    if (session.fast_connect({.user = user, .host = "localhost", .port = 22}) == false)
+    if (session.fast_connect({.user = user, .host = "localhost", .port = 22}).has_value() == false)
         GTEST_SKIP_("no SSH server on localhost:22");
     if (session.auth_key_auto().success() == false)
         GTEST_SKIP_("SSH key authentication failed");
-    session.set_verbosity(2); // SSH_LOG_PROTOCOL
+    SIHD_UNEXPECTED_LOG(session.set_verbosity(2)); // SSH_LOG_PROTOCOL
 
     SshShell shell = session.make_shell();
-    ASSERT_TRUE(shell.open(true));
+    ASSERT_TRUE(shell.open(true).has_value());
     SIHD_COUT("=========================================================\n");
     SIHD_LOG(debug, "Shell opened: type 'exit' to exit session");
     SIHD_COUT("=========================================================\n");

@@ -1,8 +1,10 @@
 #ifndef __SIHD_HTTP_HTTPREQUEST_HPP__
 #define __SIHD_HTTP_HTTPREQUEST_HPP__
 
+#include <expected>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include <sihd/http/HttpHeader.hpp>
@@ -10,6 +12,7 @@
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::http
 {
@@ -35,7 +38,7 @@ class HttpRequest
         HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();
 
-        static std::optional<HttpRequest> from_string(std::string_view raw);
+        static std::expected<HttpRequest, sihd::util::Error> from_string(std::string_view raw);
         std::string to_string() const;
 
         static RequestType type_from_str(std::string_view type);
@@ -54,7 +57,7 @@ class HttpRequest
         void set_cookie(std::string_view name, std::string_view value);
         void set_multipart(Multipart && multipart);
 
-        sihd::json::Json content_as_json() const;
+        std::optional<sihd::json::Json> content_as_json() const;
 
         std::optional<std::string_view> path_param(const std::string & name) const;
         std::optional<std::string_view> query_param(const std::string & name) const;

@@ -12,6 +12,8 @@
 #include <sihd/curl.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 
@@ -75,7 +77,7 @@ TEST(TestCurl, test_request_file_transfer)
         return true;
     });
     request.set_url(url);
-    EXPECT_TRUE(request.perform());
+    EXPECT_TRUE(request.perform().has_value());
     EXPECT_EQ(received, content);
     EXPECT_TRUE(request.content_type().empty());
 }
@@ -98,7 +100,7 @@ TEST(TestCurl, test_request_upload)
     EXPECT_TRUE(request.set_upload(true));
     EXPECT_TRUE(request.set_infilesize((int64_t)content.size()));
     request.set_url(url);
-    EXPECT_TRUE(request.perform());
+    EXPECT_TRUE(request.perform().has_value());
     EXPECT_EQ(offset, content.size());
     EXPECT_EQ(read_file(dir, "upload.txt"), content);
 }
@@ -119,17 +121,19 @@ TEST(TestCurl, test_request_move)
         received.append((const char *)data.buf(), data.size());
         return true;
     });
-    EXPECT_TRUE(moved.perform());
+    EXPECT_TRUE(moved.perform().has_value());
     EXPECT_EQ(received, content);
 
     // the moved-from request fails every operation without crashing
     EXPECT_FALSE(request.set_url(url));
-    EXPECT_FALSE(request.perform());
+    auto defunct = request.perform();
+    ASSERT_FALSE(defunct.has_value());
+    EXPECT_EQ(defunct.error().code, not_initialized);
     request.reset();
 
     Request target;
     target = std::move(moved);
-    EXPECT_TRUE(target.perform());
+    EXPECT_TRUE(target.perform().has_value());
 }
 
 TEST(TestCurl, test_request_write_abort)
@@ -146,7 +150,7 @@ TEST(TestCurl, test_request_write_abort)
         return false;
     });
     request.set_url(url);
-    EXPECT_FALSE(request.perform());
+    EXPECT_FALSE(request.perform().has_value());
     EXPECT_GT(received, 0u);
 }
 
@@ -157,7 +161,9 @@ TEST(TestCurl, test_request_error)
     EXPECT_TRUE(request.set_proxy(""));
     request.set_url("http://127.0.0.1:1/");
     request.set_connect_timeout(sihd::util::Duration(std::chrono::milliseconds(500)));
-    EXPECT_FALSE(request.perform());
+    auto failed = request.perform();
+    ASSERT_FALSE(failed.has_value());
+    EXPECT_EQ(failed.error().code, io_error);
     EXPECT_FALSE(request.last_error().empty());
 }
 
@@ -239,7 +245,7 @@ TEST(TestCurl, test_mime)
     // asserted by the http module tests against a real server
     request.set_url(make_file_url(dir, "mime.txt", "unused"));
     request.set_write_callback([](sihd::util::ArrByteView) { return true; });
-    EXPECT_TRUE(request.perform());
+    EXPECT_TRUE(request.perform().has_value());
 
     // a default-constructed part has no target: its setters do not crash
     Mime::Part empty;

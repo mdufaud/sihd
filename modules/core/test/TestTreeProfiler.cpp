@@ -76,8 +76,8 @@ class ProfilingDevice: public Device
 
         bool on_start() override
         {
-            this->observe_channel("c1");
-            this->observe_channel("c2");
+            (void)this->observe_channel("c1");
+            (void)this->observe_channel("c2");
             _running = true;
             return true;
         }
@@ -185,8 +185,8 @@ class LinkingDevice: public Device
 
         bool on_start() override
         {
-            this->observe_channel("c1");
-            this->observe_channel("c2");
+            (void)this->observe_channel("c1");
+            (void)this->observe_channel("c2");
             _running = true;
             return true;
         }
@@ -260,8 +260,8 @@ TEST_F(TestTreeProfiler, test_observe_tree)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
-    Channel *c2 = dev->get_channel("c2");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
+    Channel *c2 = dev->get_channel("c2").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     ASSERT_NE(c2, nullptr);
 
@@ -315,7 +315,7 @@ TEST_F(TestTreeProfiler, test_observe_late_observer)
     ASSERT_TRUE(profiler.observe(&root));
 
     NamedObserver late("late");
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     c1->add_observer(&late);
 
@@ -379,7 +379,7 @@ TEST_F(TestTreeProfiler, test_restore_on_reset)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     int waiter_calls = 0;
@@ -416,7 +416,7 @@ TEST_F(TestTreeProfiler, test_observer_removal)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler profiler;
@@ -455,7 +455,7 @@ TEST_F(TestTreeProfiler, test_service_op_timing)
     EXPECT_TRUE(profiler.observe(&root));
     EXPECT_EQ(profiler.channels_count(), 2u);
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
@@ -490,7 +490,7 @@ TEST_F(TestTreeProfiler, test_events)
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(profiler.observe(&root));
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(c1->write<int>(0, 2));
@@ -540,7 +540,7 @@ TEST_F(TestTreeProfiler, test_event_hook)
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(profiler.observe(&root));
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
@@ -592,7 +592,7 @@ TEST_F(TestTreeProfiler, test_event_hook_reentrancy)
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(profiler.observe(&root));
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
@@ -616,7 +616,7 @@ TEST_F(TestTreeProfiler, test_event_poll)
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(profiler.observe(&root));
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
@@ -752,7 +752,7 @@ TEST_F(TestTreeProfiler, test_trace)
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(profiler.observe(&root));
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(c1->write<int>(0, 2));
@@ -781,7 +781,7 @@ TEST_F(TestTreeProfiler, test_threaded_writes)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler profiler;
@@ -982,7 +982,7 @@ TEST_F(TestTreeProfiler, test_report_stops_chain_in_op_start)
     ASSERT_TRUE(profiler.observe(&root));
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(profiler.observe(&root));
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     // the report cannot drain while the dispatcher is held: its gate stays closed
@@ -1102,7 +1102,7 @@ TEST_F(TestTreeProfiler, test_capture_start_on_service)
     EXPECT_EQ(events[1].what, "start");
     EXPECT_EQ(events[1].kind, TreeProfiler::Event::exit);
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_EQ(profiler.events().size(), 4u);
@@ -1194,7 +1194,7 @@ TEST_F(TestTreeProfiler, test_capture_stop_on_late_channel)
     ASSERT_TRUE(dev->start());
     EXPECT_TRUE(profiler.capturing());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(profiler.capturing());
@@ -1396,7 +1396,7 @@ TEST_F(TestTreeProfiler, test_reset_from_observer)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler profiler;
@@ -1509,7 +1509,7 @@ TEST_F(TestTreeProfiler, test_clear_from_observer)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
@@ -1546,7 +1546,7 @@ TEST_F(TestTreeProfiler, test_reset_and_reobserve_from_observer)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler profiler;
@@ -1589,7 +1589,7 @@ TEST_F(TestTreeProfiler, test_reentrant_write_rejected)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
@@ -1626,8 +1626,8 @@ TEST_F(TestTreeProfiler, test_cross_channel_write_profiling)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
-    Channel *c2 = dev->get_channel("c2");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
+    Channel *c2 = dev->get_channel("c2").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     ASSERT_NE(c2, nullptr);
 
@@ -1667,7 +1667,7 @@ TEST_F(TestTreeProfiler, test_two_profilers)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler first;
@@ -1702,7 +1702,7 @@ TEST_F(TestTreeProfiler, test_stop_from_observer)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
@@ -1747,7 +1747,7 @@ TEST_F(TestTreeProfiler, test_destroy_while_writing)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     int hook_calls = 0;
@@ -1782,7 +1782,7 @@ TEST_F(TestTreeProfiler, test_reset_from_dispatch_hook)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    Channel *c1 = dev->get_channel("c1");
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
     TreeProfiler profiler;

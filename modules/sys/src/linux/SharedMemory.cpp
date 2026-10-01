@@ -7,6 +7,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 namespace sihd::sys
@@ -25,134 +26,122 @@ struct Shm
         void *addr;
 };
 
-bool __open(int *fd, std::string_view id, mode_t mode, int shm_flags)
+std::expected<Shm, Error> __open(std::string_view id, mode_t mode, int shm_flags)
 {
-    *fd = shm_open(id.data(), shm_flags, mode);
-    if (*fd == -1)
-        SIHD_LOG(error, "SharedMemory: shm_open: {}", os::last_error_str());
-    return *fd >= 0;
+    int fd = shm_open(id.data(), shm_flags, mode);
+    if (fd == -1)
+        return std::unexpected(Error::from_errno("shm_open"));
+    return Shm {fd, nullptr};
 }
 
-bool __mmap(void **addr, size_t size, int fd, int mmap_flags)
+std::expected<Shm, Error> __mmap(Shm shm, size_t size, int mmap_flags)
 {
-    *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, fd, 0);
-    if (*addr == MAP_FAILED)
-        SIHD_LOG(error, "SharedMemory: mmap: {}", os::last_error_str());
-    return *addr != MAP_FAILED;
+    void *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, shm.fd, 0);
+    if (addr == MAP_FAILED)
+        return std::unexpected(Error::from_errno("mmap"));
+    shm.addr = addr;
+    return shm;
 }
 
-std::optional<Shm> create_shm(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+std::expected<Shm, Error> create_shm(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
-    int fd;
-    void *addr;
-
-    if (!__open(&fd, id, mode, shm_flags))
-        return std::nullopt;
+    auto shm = __open(id, mode, shm_flags);
+    if (!shm)
+        return shm;
 
     // ftruncate
-    if (ftruncate(fd, size) == -1)
+    if (ftruncate(shm->fd, size) == -1)
     {
-        SIHD_LOG(error, "SharedMemory: ftruncate: {}", os::last_error_str());
-        close(fd);
-        return std::nullopt;
+        auto error = Error::from_errno("ftruncate");
+        close(shm->fd);
+        return std::unexpected(std::move(error));
     }
 
-    if (!__mmap(&addr, size, fd, mmap_flags))
-    {
-        close(fd);
-        return std::nullopt;
-    }
-
-    return Shm {fd, addr};
+    auto mapped = __mmap(*shm, size, mmap_flags);
+    if (!mapped)
+        close(shm->fd);
+    return mapped;
 }
 
-std::optional<Shm> shm_attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+std::expected<Shm, Error> shm_attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
-    int fd;
-    void *addr;
+    auto shm = __open(id, mode, shm_flags);
+    if (!shm)
+        return shm;
 
-    if (!__open(&fd, id, mode, shm_flags))
-        return std::nullopt;
-
-    if (!__mmap(&addr, size, fd, mmap_flags))
-    {
-        close(fd);
-        return std::nullopt;
-    }
-
-    return Shm {fd, addr};
+    auto mapped = __mmap(*shm, size, mmap_flags);
+    if (!mapped)
+        close(shm->fd);
+    return mapped;
 }
 
 } // namespace
 
-bool SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
-    this->clear();
-    auto opt = create_shm(id, size, mode, O_RDWR | O_CREAT | O_EXCL, PROT_READ | PROT_WRITE);
-    if (opt)
-    {
-        _fd = opt->fd;
-        _addr = opt->addr;
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
+    auto shm = create_shm(id, size, mode, O_RDWR | O_CREAT | O_EXCL, PROT_READ | PROT_WRITE);
+    SIHD_UNEXPECTED_RETURN(shm);
 
-        _created = true;
-        _id = id;
-        _size = size;
-    }
-    return opt.has_value();
+    _fd = shm->fd;
+    _addr = shm->addr;
+
+    _created = true;
+    _id = id;
+    _size = size;
+    return {};
 }
 
-bool SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
 {
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
 
-    auto opt = shm_attach(id, size, mode, O_RDWR, PROT_READ | PROT_WRITE);
-    if (opt)
-    {
-        _fd = opt->fd;
-        _addr = opt->addr;
+    auto shm = shm_attach(id, size, mode, O_RDWR, PROT_READ | PROT_WRITE);
+    SIHD_UNEXPECTED_RETURN(shm);
 
-        _created = false;
-        _id = id;
-        _size = size;
-    }
-    return opt.has_value();
+    _fd = shm->fd;
+    _addr = shm->addr;
+
+    _created = false;
+    _id = id;
+    _size = size;
+    return {};
 }
 
-bool SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+std::expected<void, Error> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
 {
-    this->clear();
+    auto cleared = this->clear();
+    if (!cleared)
+        return cleared;
 
-    auto opt = shm_attach(id, size, mode, O_RDONLY, PROT_READ);
-    if (opt)
-    {
-        _fd = opt->fd;
-        _addr = opt->addr;
+    auto shm = shm_attach(id, size, mode, O_RDONLY, PROT_READ);
+    SIHD_UNEXPECTED_RETURN(shm);
 
-        _created = false;
-        _id = id;
-        _size = size;
-    }
-    return opt.has_value();
+    _fd = shm->fd;
+    _addr = shm->addr;
+
+    _created = false;
+    _id = id;
+    _size = size;
+    return {};
 }
 
-bool SharedMemory::clear()
+std::expected<void, Error> SharedMemory::clear()
 {
     bool ret = true;
     if (_addr != nullptr && _addr != MAP_FAILED)
     {
         if (munmap(_addr, _size) == -1)
-        {
-            SIHD_LOG(error, "SharedMemory: munmap: {}", os::last_error_str());
             ret = false;
-        }
     }
     if (_fd >= 0)
     {
         if (_created && shm_unlink(_id.c_str()) == -1)
-        {
-            SIHD_LOG(error, "SharedMemory: shm_unlink: {}", os::last_error_str());
             ret = false;
-        }
         close(_fd);
         _fd = -1;
         _id.clear();
@@ -160,34 +149,33 @@ bool SharedMemory::clear()
     _size = 0;
     _addr = nullptr;
     _created = false;
-    return ret;
+    if (!ret)
+        return std::unexpected(Error(io_error, "could not unmap shared memory"));
+    return {};
 }
 
 #else
 
 // no POSIX shared memory (android bionic, emscripten)
 
-bool SharedMemory::create(std::string_view, size_t, mode_t)
+std::expected<void, Error> SharedMemory::create(std::string_view, size_t, mode_t)
 {
-    SIHD_LOG(error, "SharedMemory: not supported on this platform");
-    return false;
+    return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-bool SharedMemory::attach(std::string_view, size_t, mode_t)
+std::expected<void, Error> SharedMemory::attach(std::string_view, size_t, mode_t)
 {
-    SIHD_LOG(error, "SharedMemory: not supported on this platform");
-    return false;
+    return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-bool SharedMemory::attach_read_only(std::string_view, size_t, mode_t)
+std::expected<void, Error> SharedMemory::attach_read_only(std::string_view, size_t, mode_t)
 {
-    SIHD_LOG(error, "SharedMemory: not supported on this platform");
-    return false;
+    return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-bool SharedMemory::clear()
+std::expected<void, Error> SharedMemory::clear()
 {
-    return true;
+    return {};
 }
 
 #endif

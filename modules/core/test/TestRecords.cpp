@@ -68,9 +68,9 @@ TEST_F(TestRecords, test_records_dev_player)
     EXPECT_TRUE(core.init());
     std::cout << core.tree_desc_str() << std::endl;
 
-    Channel *end = dev_replayer.get_channel("end");
+    Channel *end = dev_replayer.get_channel("end").value_or(nullptr);
     ASSERT_NE(end, nullptr);
-    Channel *play = dev_replayer.get_channel("play");
+    Channel *play = dev_replayer.get_channel("play").value_or(nullptr);
     ASSERT_NE(play, nullptr);
 
     EXPECT_TRUE(core.start());

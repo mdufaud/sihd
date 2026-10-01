@@ -4,6 +4,9 @@
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::ssh
 {
 
@@ -32,13 +35,13 @@ struct SshKey::Impl
 SshKey::SshKey(void *key): _impl_ptr(std::make_unique<Impl>())
 {
     _impl_ptr->ssh_key_ptr = static_cast<ssh_key_struct *>(key);
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshKey::~SshKey()
 {
     this->clear_key();
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 void SshKey::set_key(void *key)
@@ -61,34 +64,44 @@ void *SshKey::key() const
     return _impl_ptr->ssh_key_ptr;
 }
 
-bool SshKey::generate(KeyType type, int parameter)
+std::expected<void, Error> SshKey::generate(KeyType type, int parameter)
 {
     this->clear_key();
-    return ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    if (ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not generate key"));
+    return {};
 }
 
-bool SshKey::import_privkey_file(std::string_view path, const char *passphrase)
+std::expected<void, Error> SshKey::import_privkey_file(std::string_view path, const char *passphrase)
 {
     this->clear_key();
-    return ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    if (ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not import private key from file '{}'", path));
+    return {};
 }
 
-bool SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
+std::expected<void, Error> SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
 {
     this->clear_key();
-    return ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    if (ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not import private key from memory"));
+    return {};
 }
 
-bool SshKey::import_pubkey_file(std::string_view path)
+std::expected<void, Error> SshKey::import_pubkey_file(std::string_view path)
 {
     this->clear_key();
-    return ssh_pki_import_pubkey_file(path.data(), &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    if (ssh_pki_import_pubkey_file(path.data(), &_impl_ptr->ssh_key_ptr) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not import public key from file '{}'", path));
+    return {};
 }
 
-bool SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
+std::expected<void, Error> SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
 {
     this->clear_key();
-    return ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) == SSH_OK;
+    if (ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not import public key from memory"));
+    return {};
 }
 
 bool SshKey::is_equal(const SshKey & sshkey)
@@ -135,15 +148,14 @@ std::string SshKey::base64() const
     return result;
 }
 
-bool SshKey::export_privkey_file(std::string_view path, const char *passphrase) const
+std::expected<void, Error> SshKey::export_privkey_file(std::string_view path, const char *passphrase) const
 {
     if (_impl_ptr->ssh_key_ptr == nullptr || !this->is_private())
-    {
-        SIHD_LOG(error, "SshKey: cannot export - no private key available");
-        return false;
-    }
+        return std::unexpected(Error(not_initialized, "cannot export - no private key available"));
 
-    return ssh_pki_export_privkey_file(_impl_ptr->ssh_key_ptr, passphrase, nullptr, nullptr, path.data()) == SSH_OK;
+    if (ssh_pki_export_privkey_file(_impl_ptr->ssh_key_ptr, passphrase, nullptr, nullptr, path.data()) != SSH_OK)
+        return std::unexpected(Error(io_error, "could not export private key to '{}'", path));
+    return {};
 }
 
 KeyType SshKey::type_from_name(std::string_view name)

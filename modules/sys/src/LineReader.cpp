@@ -4,6 +4,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 namespace sihd::sys
 {
@@ -16,7 +17,6 @@ LineReader::LineReader(const LineReaderOptions & options):
     _line_size(0),
     _last_read_index(0),
     _read_size(0),
-    _error(false),
     _put_delimiter_in_line(options.delimiter_in_line),
     _delimiter(options.delimiter)
 {
@@ -24,17 +24,17 @@ LineReader::LineReader(const LineReaderOptions & options):
 
 LineReader::LineReader(std::string_view path, const LineReaderOptions & options): LineReader(options)
 {
-    this->open(path);
+    SIHD_UNEXPECTED_LOG(this->open(path));
 }
 
 LineReader::LineReader(int fd, const LineReaderOptions & options): LineReader(options)
 {
-    this->open_fd(fd);
+    SIHD_UNEXPECTED_LOG(this->open_fd(fd));
 }
 
 LineReader::LineReader(FILE *stream, bool ownership, const LineReaderOptions & options): LineReader(options)
 {
-    this->set_stream(stream, ownership);
+    SIHD_UNEXPECTED_LOG(this->set_stream(stream, ownership));
 }
 
 bool LineReader::_init()
@@ -90,19 +90,25 @@ bool LineReader::set_line_buffsize(size_t buff)
     return true;
 }
 
-bool LineReader::open(std::string_view path)
+std::expected<void, Error> LineReader::open(std::string_view path)
 {
-    return this->_init() && _file.open(path, "r");
+    if (this->_init() == false)
+        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+    return _file.open(path, "r");
 }
 
-bool LineReader::open_fd(int fd)
+std::expected<void, Error> LineReader::open_fd(int fd)
 {
-    return this->_init() && _file.open_fd(fd, "r");
+    if (this->_init() == false)
+        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+    return _file.open_fd(fd, "r");
 }
 
-bool LineReader::set_stream(FILE *stream, bool ownership)
+std::expected<void, Error> LineReader::set_stream(FILE *stream, bool ownership)
 {
-    return this->_init() && _file.set_stream(stream, ownership);
+    if (this->_init() == false)
+        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+    return _file.set_stream(stream, ownership);
 }
 
 bool LineReader::is_open() const
@@ -113,13 +119,13 @@ bool LineReader::is_open() const
 bool LineReader::close()
 {
     this->_reset();
-    return _file.close();
+    return !SIHD_UNEXPECTED_LOG(_file.close());
 }
 
-bool LineReader::read_next()
+std::expected<bool, Error> LineReader::read_next()
 {
     if (_line_buff.data() == nullptr || _read_buff.data() == nullptr)
-        return false;
+        return std::unexpected(Error(not_initialized, "LineReader: buffers not allocated"));
     _line_buff.data()[0] = 0;
     size_t fill_idx = 0;
     while (1)
@@ -138,10 +144,7 @@ bool LineReader::read_next()
             if ((fill_idx + copy_len) >= _line_buff_size)
             {
                 if (this->_reallocate_line(fill_idx + copy_len) == false)
-                {
-                    _error = true;
-                    return false;
-                }
+                    return std::unexpected(Error(out_of_memory, "LineReader: could not reallocate line buffer"));
             }
             // copy from into line either full read buffer or just matching part
             memcpy(_line_buff.data() + fill_idx, _read_buff.data() + _last_read_index, copy_len);
@@ -157,14 +160,10 @@ bool LineReader::read_next()
             }
         }
         // new read buffer
-        _read_size = _file.read(_read_buff.data(), _read_buff_size);
+        auto read = _file.read(_read_buff.data(), _read_buff_size);
+        SIHD_UNEXPECTED_RETURN(read);
+        _read_size = (ssize_t)*read;
         _last_read_index = 0;
-        // exit if read error
-        if (_read_size == -1)
-        {
-            _error = true;
-            return false;
-        }
         _read_buff.data()[_read_size] = 0;
         // end
         if (_read_size == 0)
@@ -187,7 +186,6 @@ bool LineReader::get_read_data(ArrCharView & view) const
 
 void LineReader::_reset()
 {
-    _error = false;
     _last_read_index = 0;
     _read_size = 0;
     _line_size = 0;
@@ -213,31 +211,25 @@ bool LineReader::_allocate_read_buffer()
     return _read_buff.reserve(_read_buff_size + 1);
 }
 
-bool LineReader::fast_read_line(std::string & line, FILE *stream, const LineReaderOptions & options)
+std::expected<std::string, Error> LineReader::fast_read_line(FILE *stream, const LineReaderOptions & options)
 {
-    ArrCharView view;
     LineReader reader(options);
 
-    if (reader.set_stream(stream, false) && reader.read_next() && reader.get_read_data(view))
-    {
-        line.assign(view.data(), view.size());
-        return true;
-    }
-    return false;
+    auto opened = reader.set_stream(stream, false);
+    SIHD_UNEXPECTED_RETURN(opened);
+    auto line = reader.read_next();
+    SIHD_UNEXPECTED_RETURN(line);
+    if (!*line)
+        return std::unexpected(Error(not_found, "no line to read"));
+    ArrCharView view;
+    reader.get_read_data(view);
+    return std::string(view.data(), view.size());
 }
 
-bool LineReader::fast_read_stdin(std::string & line, LineReaderOptions options)
+std::expected<std::string, Error> LineReader::fast_read_stdin(LineReaderOptions options)
 {
-    ArrCharView view;
     options.read_buffsize = 1;
-    LineReader reader(options);
-
-    if (reader.set_stream(stdin, false) && reader.read_next() && reader.get_read_data(view))
-    {
-        line.assign(view.data(), view.size());
-        return true;
-    }
-    return false;
+    return LineReader::fast_read_line(stdin, options);
 }
 
 } // namespace sihd::sys

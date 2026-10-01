@@ -51,7 +51,7 @@ TEST_F(TestTcp, test_tcp_server)
     BasicServerHandler server_handler;
     ObserverWaiter observer_count(&server_handler);
 
-    server.open_and_bind(localhost);
+    (void)server.open_and_bind(localhost);
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     server.set_queue_size(3);
@@ -83,12 +83,12 @@ TEST_F(TestTcp, test_tcp_server)
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
     SIHD_LOG(debug, "Simulating a new connection");
-    client1.open_and_connect(localhost, connect_timeout_ms);
+    (void)client1.open_and_connect(localhost, connect_timeout_ms);
 
     wait_for([&] { return server_handler.client_count() == 1u; });
 
     SIHD_LOG(debug, "Simulating a send from client: {}", hello_world_arr.str());
-    EXPECT_TRUE(client1.send_all(hello_world_arr));
+    EXPECT_TRUE(client1.send_all(hello_world_arr).has_value());
 
     wait_for([&] {
         auto all_clients = server_handler.clients();
@@ -110,14 +110,14 @@ TEST_F(TestTcp, test_tcp_server)
 
     SIHD_LOG(debug, "Simulating 3 new connections");
 
-    client2.open_and_connect(localhost, connect_timeout_ms);
-    client3.open_and_connect(localhost, connect_timeout_ms);
-    client4.open_and_connect(localhost, connect_timeout_ms);
+    (void)client2.open_and_connect(localhost, connect_timeout_ms);
+    (void)client3.open_and_connect(localhost, connect_timeout_ms);
+    (void)client4.open_and_connect(localhost, connect_timeout_ms);
 
     wait_for([&] { return server_handler.client_count() == 4u; });
 
     SIHD_LOG(debug, "Simulating a new unacceptable connection");
-    client5.open_and_connect(localhost, connect_timeout_ms);
+    (void)client5.open_and_connect(localhost, connect_timeout_ms);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -150,12 +150,12 @@ TEST_F(TestTcp, test_tcp_client)
     make_listener(server, localhost);
 
     // client connect
-    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.socket_opened());
     EXPECT_TRUE(client.connected());
 
     // server accept
-    int accepted_socket = server.accept(connect_timeout_ms);
+    int accepted_socket = server.accept(connect_timeout_ms).value_or(-1);
     Socket accepted(accepted_socket);
 
     // client send hello world
@@ -165,7 +165,7 @@ TEST_F(TestTcp, test_tcp_client)
 
     // client receive bye
     sihd::util::Handler<INetReceiver *> handler([&recv](INetReceiver *rcv) {
-        rcv->receive(recv);
+        (void)rcv->receive(recv);
         SIHD_LOG(debug, "Data received: {} - {} bytes", recv.str(), recv.byte_size());
     });
     client.add_observer(&handler);
@@ -174,12 +174,12 @@ TEST_F(TestTcp, test_tcp_client)
     EXPECT_TRUE(bye.is_equal(recv));
 
     // shutdown and close
-    accepted.shutdown();
+    (void)accepted.shutdown();
     EXPECT_EQ(client.receive(recv), 0);
     EXPECT_FALSE(client.connected());
-    EXPECT_TRUE(client.close());
-    EXPECT_TRUE(accepted.close());
-    EXPECT_TRUE(server.close());
+    EXPECT_TRUE(client.close().has_value());
+    EXPECT_TRUE(accepted.close().has_value());
+    EXPECT_TRUE(server.close().has_value());
 }
 TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
 {
@@ -188,8 +188,8 @@ TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
     Socket server;
     make_listener(server, localhost);
 
-    ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
-    Socket accepted(server.accept(connect_timeout_ms));
+    ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
+    Socket accepted(server.accept(connect_timeout_ms).value_or(-1));
     ASSERT_TRUE(accepted.is_open());
 
     const std::string payload(128 * 1024, 'x');
@@ -197,19 +197,19 @@ TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
     Handler<INetReceiver *> handler([&](INetReceiver *receiver) {
         sihd::util::ArrByte buffer(4096);
         ssize_t size;
-        while ((size = receiver->receive(buffer)) > 0)
+        while ((size = receiver->receive(buffer).value_or(-1)) > 0)
             received.append(reinterpret_cast<const char *>(buffer.buf()), static_cast<size_t>(size));
     });
     client.add_observer(&handler);
 
-    ASSERT_TRUE(accepted.send_all({payload.data(), payload.size()}));
-    ASSERT_TRUE(accepted.shutdown());
+    ASSERT_TRUE(accepted.send_all({payload.data(), payload.size()}).has_value());
+    ASSERT_TRUE(accepted.shutdown().has_value());
     ASSERT_TRUE(client.poll(1000));
 
     EXPECT_EQ(received, payload);
     EXPECT_FALSE(client.connected());
-    accepted.close();
-    server.close();
+    (void)accepted.close();
+    (void)server.close();
 }
 
 TEST_F(TestTcp, test_tcp_connect_timeout)
@@ -222,19 +222,19 @@ TEST_F(TestTcp, test_tcp_connect_timeout)
 
     make_listener(server, localhost);
 
-    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.connected());
 
-    int accepted_socket = server.accept(connect_timeout_ms);
+    int accepted_socket = server.accept(connect_timeout_ms).value_or(-1);
     Socket accepted(accepted_socket);
 
     EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
     EXPECT_EQ(accepted.receive(recv), (ssize_t)hello.size());
     EXPECT_TRUE(hello.is_equal(recv));
 
-    EXPECT_TRUE(client.close());
-    EXPECT_TRUE(accepted.close());
-    EXPECT_TRUE(server.close());
+    EXPECT_TRUE(client.close().has_value());
+    EXPECT_TRUE(accepted.close().has_value());
+    EXPECT_TRUE(server.close().has_value());
 }
 
 TEST_F(TestTcp, test_tcp_reconnect)
@@ -247,48 +247,49 @@ TEST_F(TestTcp, test_tcp_reconnect)
 
     make_listener(server, localhost);
 
-    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.connected());
 
-    int accepted_socket = server.accept(connect_timeout_ms);
+    int accepted_socket = server.accept(connect_timeout_ms).value_or(-1);
     Socket accepted(accepted_socket);
 
     EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
     EXPECT_EQ(accepted.receive(recv), (ssize_t)hello.size());
 
-    accepted.close();
-    EXPECT_TRUE(client.close());
+    (void)accepted.close();
+    EXPECT_TRUE(client.close().has_value());
     EXPECT_FALSE(client.connected());
 
-    EXPECT_TRUE(client.reconnect(connect_timeout_ms));
+    EXPECT_TRUE(client.reconnect(connect_timeout_ms).has_value());
     EXPECT_TRUE(client.connected());
 
-    int accepted_socket2 = server.accept(connect_timeout_ms);
+    int accepted_socket2 = server.accept(connect_timeout_ms).value_or(-1);
     Socket accepted2(accepted_socket2);
 
     EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
     EXPECT_EQ(accepted2.receive(recv), (ssize_t)hello.size());
     EXPECT_TRUE(hello.is_equal(recv));
 
-    EXPECT_TRUE(client.close());
-    EXPECT_TRUE(accepted2.close());
-    EXPECT_TRUE(server.close());
+    EXPECT_TRUE(client.close().has_value());
+    EXPECT_TRUE(accepted2.close().has_value());
+    EXPECT_TRUE(server.close().has_value());
 }
 
 TEST_F(TestTcp, test_tcp_terminal_connect_error_is_not_retryable)
 {
     Socket listener;
-    ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, IPPROTO_TCP));
-    ASSERT_TRUE(listener.bind(IpAddr("127.0.0.1", 0)));
+    ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(listener.bind(IpAddr("127.0.0.1", 0)).has_value());
     const int port = listener.local_port();
     ASSERT_GT(port, 0);
-    ASSERT_TRUE(listener.close());
+    ASSERT_TRUE(listener.close().has_value());
 
     TcpClient client("tcp-client");
-    EXPECT_FALSE(client.open_and_connect(IpAddr("127.0.0.1", port), connect_timeout_ms));
+    auto connected = client.open_and_connect(IpAddr("127.0.0.1", port), connect_timeout_ms);
+    EXPECT_FALSE(connected.has_value());
     EXPECT_FALSE(client.connected());
-    EXPECT_FALSE(client.socket().retryable());
-    client.close();
+    EXPECT_FALSE(connected.error().retryable());
+    (void)client.close();
 }
 
 TEST_F(TestTcp, test_tcp_connect_timeout_unreachable)
@@ -298,12 +299,12 @@ TEST_F(TestTcp, test_tcp_connect_timeout_unreachable)
     TcpClient client("tcp-client");
 
     const auto start = std::chrono::steady_clock::now();
-    EXPECT_FALSE(client.open_and_connect(unreachable, connect_timeout_ms));
+    EXPECT_FALSE(client.open_and_connect(unreachable, connect_timeout_ms).has_value());
     EXPECT_FALSE(client.connected());
     const auto elapsed = std::chrono::steady_clock::now() - start;
     EXPECT_LT(elapsed, std::chrono::milliseconds(5 * connect_timeout_ms));
 
-    client.close();
+    (void)client.close();
 }
 
 TEST_F(TestTcp, test_tcp_server_poll_limit)
@@ -317,7 +318,7 @@ TEST_F(TestTcp, test_tcp_server_poll_limit)
 
     BasicServerHandler server_handler;
 
-    server.open_and_bind(localhost);
+    (void)server.open_and_bind(localhost);
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     // the listener takes one slot, only one client can be polled
@@ -333,18 +334,18 @@ TEST_F(TestTcp, test_tcp_server_poll_limit)
     });
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
-    EXPECT_TRUE(client1.open_and_connect(localhost, connect_timeout_ms));
-    EXPECT_TRUE(client2.open_and_connect(localhost, connect_timeout_ms));
+    EXPECT_TRUE(client1.open_and_connect(localhost, connect_timeout_ms).has_value());
+    EXPECT_TRUE(client2.open_and_connect(localhost, connect_timeout_ms).has_value());
 
     wait_for([&] { return server_handler.client_count() == 1u; });
     EXPECT_EQ(server_handler.client_count(), 1u);
 
     // the second client was never polled: it gets closed instead of hanging
-    client2.socket().set_blocking(false);
+    (void)client2.socket().set_blocking(false);
     wait_for([&] { return client2.receive(recv) == 0; });
     EXPECT_EQ(client2.receive(recv), 0);
 
-    EXPECT_TRUE(client1.send_all(hello));
+    EXPECT_TRUE(client1.send_all(hello).has_value());
     wait_for([&] {
         auto all_clients = server_handler.clients();
         if (all_clients.size() != 1)
@@ -353,7 +354,7 @@ TEST_F(TestTcp, test_tcp_server_poll_limit)
         return all_clients[0]->read_array.is_bytes_equal(hello);
     });
 
-    client1.close();
+    (void)client1.close();
     wait_for([&] { return server_handler.client_count() == 0u; });
     EXPECT_EQ(server_handler.client_count(), 0u);
 
@@ -370,7 +371,7 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
     TcpClient client("tcp-client");
     BasicServerHandler server_handler;
 
-    server.open_and_bind(localhost);
+    (void)server.open_and_bind(localhost);
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     Worker worker([&server] { return server.start(); });
@@ -382,7 +383,7 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
     });
     ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
 
-    ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms));
+    ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     wait_for([&] { return server_handler.client_count() == 1u; });
     ASSERT_EQ(server_handler.client_count(), 1u);
 
@@ -398,7 +399,7 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
 
     // reads are served while the write is pending: they cannot starve each other
     const sihd::util::ArrChar ping("ping");
-    EXPECT_TRUE(client.send_all(ping));
+    EXPECT_TRUE(client.send_all(ping).has_value());
     wait_for([&] {
         auto all_clients = server_handler.clients();
         if (all_clients.size() != 1)
@@ -420,10 +421,9 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while (received < payload_size)
     {
-        ssize_t r = client.receive(recv.buf() + received, payload_size - received);
+        ssize_t r = client.receive(recv.buf() + received, payload_size - received).value_or(-1);
         if (r < 0)
         {
-            ASSERT_TRUE(client.socket().retryable());
             ASSERT_LT(std::chrono::steady_clock::now(), deadline);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;

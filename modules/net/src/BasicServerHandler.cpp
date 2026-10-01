@@ -164,7 +164,7 @@ bool BasicServerHandler::remove_client(const ClientPtr & client)
     {
         std::lock_guard lk(client->mutex);
         client->disconnected = true;
-        client->socket.close();
+        (void)client->socket.close();
     }
     _client_map.erase(it);
     return true;
@@ -206,14 +206,15 @@ void BasicServerHandler::handle_activity(INetServer *server, sihd::util::time::U
 void BasicServerHandler::handle_new_client(INetServer *server)
 {
     IpAddr addr;
-    const int socket = server->accept_client(&addr);
-    if (socket < 0)
+    auto accepted = server->accept_client(&addr);
+    if (SIHD_UNEXPECTED_LOG(accepted))
         return;
+    const int socket = accepted.value();
     {
         std::lock_guard lock(_mutex);
         if (this->_client_limit_reached())
         {
-            Socket::close_socket(socket);
+            (void)Socket::close_socket(socket);
             return;
         }
     }
@@ -319,7 +320,7 @@ BasicServerHandler::ClientMap::iterator BasicServerHandler::_drop_client(INetSer
     server->remove_client_read(it->first);
     server->remove_client_write(it->first);
     std::lock_guard lk(it->second->mutex);
-    it->second->socket.close();
+    (void)it->second->socket.close();
     return _client_map.erase(it);
 }
 
@@ -368,23 +369,23 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
         const size_t budget = total_read < max_read_per_poll ? max_read_per_poll - total_read
                                                              : client->read_array.byte_capacity() - size;
         const size_t available = std::min(client->read_array.byte_capacity() - size, budget);
-        const ssize_t more = client->socket.receive(client->read_array.buf() + size, available);
-        if (more < 0)
+        const auto more = client->socket.receive(client->read_array.buf() + size, available);
+        if (!more)
         {
-            client->error = !client->socket.retryable();
+            client->error = !more.error().retryable();
             break;
         }
-        if (more == 0)
+        if (more.value() == 0)
         {
             client->disconnected = true;
             break;
         }
-        if (!client->read_array.byte_resize(size + static_cast<size_t>(more)))
+        if (!client->read_array.byte_resize(size + more.value()))
         {
             client->error = true;
             break;
         }
-        total_read += static_cast<size_t>(more);
+        total_read += more.value();
     }
     client_lock.unlock();
 
@@ -426,13 +427,14 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
         }
         else
         {
-            ssize_t sent = client->socket.send({(char *)client->write_array.buf() + client->write_offset, remaining});
-            if (sent > 0)
-                client->write_offset += (size_t)sent;
-            else if (sent < 0 && client->socket.retryable())
+            const auto sent = client->socket.send(
+                {(char *)client->write_array.buf() + client->write_offset, remaining});
+            if (!sent && sent.error().retryable())
                 return;
+            if (sent)
+                client->write_offset += sent.value();
             // a zero send with bytes left would spin a level-triggered poll
-            client->error = (sent <= 0);
+            client->error = !sent || sent.value() == 0;
             fully_sent = !client->error && client->write_offset >= client->write_array.byte_size();
         }
     }

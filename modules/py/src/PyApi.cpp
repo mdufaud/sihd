@@ -5,6 +5,8 @@
 
 #include <sihd/py/PyApi.hpp>
 
+#include "expected_caster.hpp"
+
 namespace sihd::py
 {
 
@@ -22,6 +24,8 @@ PYBIND11_MODULE(sihd, m_sihd)
 
 void PyApi::set_api_to_module(pybind11::module & m_sihd)
 {
+    m_sihd.attr("Error") = error_type();
+
     PyModule pymodule(&m_sihd);
 
     for (const auto & pair : PyApi::api_lst())

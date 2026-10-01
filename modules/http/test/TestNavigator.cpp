@@ -801,16 +801,15 @@ TEST_F(TestNavigator, test_navigator_interceptor_cancel)
     };
 
     auto resp = nav.get("localhost:3001/api/hello");
-    EXPECT_FALSE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "request cancelled by the on_before_request interceptor");
+    ASSERT_FALSE(resp.has_value());
+    EXPECT_EQ(resp.error().message, "request cancelled by the on_before_request interceptor");
 
     nav.on_before_request = nullptr;
     resp = nav.get("localhost:3001/api/hello");
     ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "");
 }
 
-TEST_F(TestNavigator, test_navigator_last_error)
+TEST_F(TestNavigator, test_navigator_error_message)
 {
     ServerScope scope;
 
@@ -825,26 +824,24 @@ TEST_F(TestNavigator, test_navigator_last_error)
 
     auto resp = nav.get("localhost:3001/api/hello");
     ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "");
 
     // nothing listens on that port
     resp = nav.get("localhost:19999/api/hello");
-    EXPECT_FALSE(resp.has_value());
-    EXPECT_FALSE(nav.last_error().empty());
+    ASSERT_FALSE(resp.has_value());
+    EXPECT_FALSE(resp.error().message.empty());
 
     resp = nav.get("localhost:3001/api/hello");
     ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "");
 
     nav.set_ssrf_guard(true);
     resp = nav.get("http://127.0.0.1:3001/api/hello");
-    EXPECT_FALSE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "SSRF guard blocked a request to a private host");
+    ASSERT_FALSE(resp.has_value());
+    EXPECT_NE(resp.error().message.find("SSRF guard blocked a request to a private host"), std::string::npos);
 
     // curl takes a URL without scheme, the guard must see the host all the same
     resp = nav.get("127.0.0.1:3001/api/hello");
-    EXPECT_FALSE(resp.has_value());
-    EXPECT_EQ(nav.last_error(), "SSRF guard blocked a request to a private host");
+    ASSERT_FALSE(resp.has_value());
+    EXPECT_NE(resp.error().message.find("SSRF guard blocked a request to a private host"), std::string::npos);
 }
 
 TEST_F(TestNavigator, test_navigator_ws_proxy_auth)

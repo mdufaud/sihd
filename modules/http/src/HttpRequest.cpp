@@ -4,6 +4,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::http
 {
 
@@ -146,13 +148,16 @@ const Multipart *HttpRequest::multipart() const
     return _multipart.has_value() ? &_multipart.value() : nullptr;
 }
 
-sihd::json::Json HttpRequest::content_as_json() const
+std::optional<sihd::json::Json> HttpRequest::content_as_json() const
 {
     if (!_array)
-        return sihd::json::Json();
+        return std::nullopt;
     const auto *buf = reinterpret_cast<const char *>(_array.buf());
     std::string_view content(buf, _array.size());
-    return sihd::json::Json::parse(content, false);
+    auto parsed = sihd::json::Json::parse(content);
+    if (!parsed)
+        return std::nullopt;
+    return std::move(*parsed);
 }
 
 std::string HttpRequest::type_str() const
@@ -165,29 +170,29 @@ bool HttpRequest::has_content() const
     return _array;
 }
 
-std::optional<HttpRequest> HttpRequest::from_string(std::string_view raw)
+std::expected<HttpRequest, sihd::util::Error> HttpRequest::from_string(std::string_view raw)
 {
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "request has no header separator"));
 
     std::string_view header_section = raw.substr(0, header_end);
     std::string_view body = raw.substr(header_end + 4);
 
     auto lines = str::split(header_section, "\r\n");
     if (lines.empty())
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "request has no request line"));
 
     auto request_parts = str::split(lines[0], " ");
     if (request_parts.size() < 3)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "malformed request line '{}'", lines[0]));
 
     auto method = type_from_str(request_parts[0]);
     if (method == None)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "unknown request type '{}'", request_parts[0]));
 
     if (!str::starts_with(request_parts[2], "HTTP/1."))
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "unsupported protocol '{}'", request_parts[2]));
 
     std::string_view full_path = request_parts[1];
     std::string_view path = full_path;
@@ -211,7 +216,7 @@ std::optional<HttpRequest> HttpRequest::from_string(std::string_view raw)
         req.set_query_params(std::move(query_params));
 
     for (size_t i = 1; i < lines.size(); ++i)
-        req._http_header.add_header_from_str(lines[i]);
+        SIHD_UNEXPECTED_LOG(req._http_header.add_header_from_str(lines[i]));
 
     if (!body.empty())
         req.set_content({body.data(), body.size()});

@@ -7,82 +7,61 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
+#include "../lua_fixture.hpp"
+
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
 using namespace sihd::lua;
-class TestLuaUtilApi: public ::testing::Test
+class TestLuaUtilApi: public test::LuaFixture
 {
-    protected:
-        TestLuaUtilApi() { sihd::util::LoggerManager::stream(); }
-
-        virtual ~TestLuaUtilApi() { sihd::util::LoggerManager::clear_loggers(); }
-
-        virtual void SetUp()
-        {
-            _vm.new_state();
-            ASSERT_NE(_vm.lua_state(), nullptr);
-        }
-
-        virtual void TearDown() { _vm.close_state(); }
-
-        bool do_script(const std::string & path)
-        {
-            SIHD_LOG_INFO("Starting LUA test: {}", path);
-            bool ret = _vm.do_file(path);
-            if (ret == false)
-                SIHD_LOG(error, "Lua error: {}", _vm.last_string());
-            return ret;
-        }
-
-        Vm _vm;
 };
 
 TEST_F(TestLuaUtilApi, test_luautil_node)
 {
     LuaUtilApi::load_base(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_node.lua"));
+    this->do_script("test/util/lua/test_node.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_array)
 {
     LuaUtilApi::load_base(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_array.lua"));
+    this->do_script("test/util/lua/test_array.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_log)
 {
     LuaUtilApi::load_base(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_log.lua"));
+    this->do_script("test/util/lua/test_log.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_tools)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_tools.lua"));
+    this->do_script("test/util/lua/test_tools.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_timestamp)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_timestamp.lua"));
+    this->do_script("test/util/lua/test_timestamp.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_duration)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_duration.lua"));
+    this->do_script("test/util/lua/test_duration.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_splitter)
 {
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_splitter.lua"));
+    this->do_script("test/util/lua/test_splitter.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_thread)
@@ -90,7 +69,7 @@ TEST_F(TestLuaUtilApi, test_luautil_thread)
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaUtilApi::load_threading(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_thread.lua"));
+    this->do_script("test/util/lua/test_thread.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_errors)
@@ -98,7 +77,7 @@ TEST_F(TestLuaUtilApi, test_luautil_errors)
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaUtilApi::load_threading(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_errors.lua"));
+    this->do_script("test/util/lua/test_errors.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_ownership)
@@ -106,7 +85,7 @@ TEST_F(TestLuaUtilApi, test_luautil_ownership)
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaUtilApi::load_threading(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_ownership.lua"));
+    this->do_script("test/util/lua/test_ownership.lua");
 }
 
 TEST_F(TestLuaUtilApi, test_luautil_thread_stress)
@@ -114,7 +93,7 @@ TEST_F(TestLuaUtilApi, test_luautil_thread_stress)
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaUtilApi::load_threading(_vm);
-    EXPECT_TRUE(this->do_script("test/util/lua/test_thread_stress.lua"));
+    this->do_script("test/util/lua/test_thread_stress.lua");
 }
 
 } // namespace test

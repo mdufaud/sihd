@@ -70,10 +70,11 @@
 # include <mntent.h> // setmntent
 #endif
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::sys::fs
 {
-
-using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::fs");
 
@@ -84,6 +85,7 @@ enum class CopyResult
 {
     done,
     unsupported,
+    cancelled,
     stopped,
 };
 
@@ -147,7 +149,7 @@ CopyResult kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::funct
         }
         transferred += (size_t)n;
         if (progress && !progress(transferred, total))
-            return CopyResult::stopped;
+            return CopyResult::cancelled;
     }
     return CopyResult::done;
 }
@@ -173,7 +175,7 @@ CopyResult
             return CopyResult::stopped;
         transferred += (size_t)n;
         if (progress && !progress(transferred, total))
-            return CopyResult::stopped;
+            return CopyResult::cancelled;
     }
 }
 
@@ -427,27 +429,33 @@ std::string tmp_path()
     return "/tmp";
 }
 
-std::string make_tmp_directory(std::string_view prefix)
+std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
 {
     if (prefix.size() + 6 > PATH_MAX)
-        throw std::runtime_error(fmt::format("make_tmp_directory: path too long: {}", prefix));
+        return std::unexpected(Error(invalid_argument, "path too long: {}", prefix));
 
     std::string path;
     path.reserve(prefix.size() + 6 + 1);
     path += prefix;
     path += "XXXXXX";
-    if (mkdtemp(path.data()) != nullptr)
-        return path;
-    return "";
+    if (mkdtemp(path.data()) == nullptr)
+    {
+        return std::unexpected(Error::from_errno("could not make tmp directory '{}'", prefix));
+    }
+    return path;
 }
 
-bool make_directory(std::string_view path, unsigned int mode)
+std::expected<void, Error> make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
-        return true;
+        return {};
     if (path.empty())
-        return false;
-    return mkdir(path.data(), mode) == 0;
+        return std::unexpected(Error(invalid_argument, "empty path"));
+    if (mkdir(path.data(), mode) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not make directory '{}'", path));
+    }
+    return {};
 }
 
 std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth)
@@ -481,25 +489,29 @@ std::vector<std::string> children(std::string_view path)
 
 // files
 
-bool truncate(std::string_view path, int64_t size)
+std::expected<void, Error> truncate(std::string_view path, int64_t size)
 {
-    return ::truncate(path.data(), static_cast<off_t>(size)) == 0;
+    if (::truncate(path.data(), static_cast<off_t>(size)) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not truncate '{}' to {} bytes", path, size));
+    }
+    return {};
 }
 
-bool copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
+std::expected<void, Error>
+    copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
 {
     int in_fd = ::open(from.data(), O_RDONLY);
     if (in_fd < 0)
     {
-        SIHD_LOG(error, "fs: copy_file: open '{}': {}", from, os::last_error_str());
-        return false;
+        return std::unexpected(Error::from_errno("could not open '{}' for copy", from));
     }
     struct stat s;
     if (::fstat(in_fd, &s) != 0)
     {
-        SIHD_LOG(error, "fs: copy_file: fstat '{}': {}", from, os::last_error_str());
+        std::unexpected<Error> ret(Error::from_errno("could not stat '{}'", from));
         ::close(in_fd);
-        return false;
+        return ret;
     }
     const size_t total = s.st_size > 0 ? (size_t)s.st_size : 0;
 
@@ -507,51 +519,70 @@ bool copy_file(std::string_view from, std::string_view to, const std::function<b
     struct stat dst;
     if (::stat(to.data(), &dst) == 0 && dst.st_dev == s.st_dev && dst.st_ino == s.st_ino)
     {
-        SIHD_LOG(error, "fs: copy_file: '{}' and '{}' are the same file", from, to);
         ::close(in_fd);
-        return false;
+        return std::unexpected(Error(invalid_argument, "'{}' and '{}' are the same file", from, to));
     }
 
     int out_fd = ::open(to.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (out_fd < 0)
     {
-        SIHD_LOG(error, "fs: copy_file: open '{}': {}", to, os::last_error_str());
+        std::unexpected<Error> ret(Error::from_errno("could not open '{}' for copy", to));
         ::close(in_fd);
-        return false;
+        return ret;
     }
 
-    bool ret = false;
+    CopyResult r = CopyResult::stopped;
 #if defined(__linux__)
     if (total > 0)
     {
-        CopyResult r = kernel_copy(in_fd, out_fd, total, progress);
+        r = kernel_copy(in_fd, out_fd, total, progress);
         if (r == CopyResult::unsupported)
             r = read_write_copy_loop(in_fd, out_fd, total, progress);
-        ret = r == CopyResult::done;
     }
     else
 #endif
     {
         // unknown size (empty file, procfs, pipes): read/write is the only strategy reaching EOF
-        ret = read_write_copy_loop(in_fd, out_fd, total, progress) == CopyResult::done;
+        r = read_write_copy_loop(in_fd, out_fd, total, progress);
     }
 
+    if (r == CopyResult::cancelled)
+    {
+        ::close(in_fd);
+        ::close(out_fd);
+        ::unlink(to.data());
+        return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
+    }
+
+    std::expected<void, Error> res {};
+    if (r != CopyResult::done)
+        res = std::unexpected(Error(io_error, "could not copy '{}' to '{}'", from, to));
     ::close(in_fd);
-    if (ret)
+    if (res)
     {
         // CopyFile2 preserves the source metadata; mirror it for symmetry
-        ::fchmod(out_fd, s.st_mode & 07777);
+        if (::fchmod(out_fd, s.st_mode & 07777) != 0)
+        {
+            res = std::unexpected(Error::from_errno("could not preserve permissions of '{}'", to));
+        }
 #if defined(SIHD_FS_HAS_STATX)
-        const struct timespec times[2] = {s.st_atim, s.st_mtim};
-        if (::futimens(out_fd, times) != 0)
-            ret = false;
+        else
+        {
+            const struct timespec times[2] = {s.st_atim, s.st_mtim};
+            if (::futimens(out_fd, times) != 0)
+            {
+                res = std::unexpected(Error::from_errno("could not preserve times of '{}'", to));
+            }
+        }
 #endif
     }
-    if (::close(out_fd) != 0)
-        ret = false;
-    if (!ret)
+    if (::close(out_fd) != 0 && !res)
+    {
+        res = std::unexpected(Error::from_errno("could not close '{}'", to));
+    }
+    if (!res)
         ::unlink(to.data());
-    return ret;
+    return res;
 }
 
 std::string realpath(std::string_view path)
@@ -564,9 +595,13 @@ std::string realpath(std::string_view path)
     return result;
 }
 
-bool chdir(std::string_view path)
+std::expected<void, Error> chdir(std::string_view path)
 {
-    return ::chdir(path.data()) == 0;
+    if (::chdir(path.data()) != 0)
+    {
+        return std::unexpected(Error::from_errno("could not chdir to '{}'", path));
+    }
+    return {};
 }
 
 MountType mount_type([[maybe_unused]] std::string_view path)

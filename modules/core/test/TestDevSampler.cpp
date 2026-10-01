@@ -42,9 +42,9 @@ TEST_F(TestDevSampler, test_devsampler)
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
 
-    Channel *in_channel = core.get_channel("in_channel");
-    Channel *out_channel = core.get_channel("out_channel");
-    Channel *sample_channel = dev_ptr->get_channel("sample");
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
+    Channel *sample_channel = dev_ptr->get_channel("sample").value_or(nullptr);
     ASSERT_NE(in_channel, nullptr);
     ASSERT_NE(out_channel, nullptr);
     ASSERT_NE(sample_channel, nullptr);

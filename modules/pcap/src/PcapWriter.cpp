@@ -59,37 +59,38 @@ bool PcapWriter::set_snaplen(int len)
     return true;
 }
 
-bool PcapWriter::open(std::string_view path, int datalink, int snaplen)
+std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path, int datalink, int snaplen)
 {
-    if (this->set_datalink(datalink) && this->set_snaplen(snaplen))
-        return this->open(path);
-    return false;
+    if (this->set_datalink(datalink) == false || this->set_snaplen(snaplen) == false)
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot set datalink or snaplen"));
+    return this->open(path);
 }
 
-bool PcapWriter::open(std::string_view path, int datalink)
+std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path, int datalink)
 {
-    if (this->set_datalink(datalink))
-        return this->open(path);
-    return false;
+    if (this->set_datalink(datalink) == false)
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot set datalink"));
+    return this->open(path);
 }
 
-bool PcapWriter::open(std::string_view path)
+std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path)
 {
     this->close();
     _impl_ptr->pcap_ptr = pcap_open_dead(_linktype, _snaplen);
-    if (_impl_ptr->pcap_ptr != nullptr)
+    if (_impl_ptr->pcap_ptr == nullptr)
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "can not open fake pcap for writing"));
+    if ((_impl_ptr->dumper_ptr = pcap_dump_open(_impl_ptr->pcap_ptr, path.data())) == nullptr)
     {
-        if ((_impl_ptr->dumper_ptr = pcap_dump_open(_impl_ptr->pcap_ptr, path.data())) == nullptr)
-        {
-            SIHD_LOG(error, "PcapWriter: can not open pcap for writing: {}", path);
-            this->close();
-        }
+        auto error = sihd::util::Error(sihd::util::ErrorCode::io_error,
+                                       "can not open pcap for writing '{}': {}",
+                                       path,
+                                       pcap_geterr(_impl_ptr->pcap_ptr));
+        this->close();
+        return std::unexpected(std::move(error));
     }
-    else
-    {
-        SIHD_LOG(error, "PcapWriter: can not open fake pcap for writing");
-    }
-    return _impl_ptr->dumper_ptr != nullptr;
+    return {};
 }
 
 bool PcapWriter::is_open() const

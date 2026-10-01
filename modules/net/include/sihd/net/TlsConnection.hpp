@@ -4,6 +4,9 @@
 #include <sys/types.h>
 
 #include <cstddef>
+#include <expected>
+
+#include <sihd/util/Error.hpp>
 
 namespace sihd::crypto
 {
@@ -35,18 +38,18 @@ class TlsConnection
 
         operator bool() const { return _handle != nullptr; }
 
-        bool init(sihd::crypto::TlsContext & ctx, Socket & socket);
-        bool connect(int timeout_ms);
-        bool accept(int timeout_ms);
+        std::expected<void, sihd::util::Error> init(sihd::crypto::TlsContext & ctx, Socket & socket);
+        std::expected<void, sihd::util::Error> connect(int timeout_ms);
+        std::expected<void, sihd::util::Error> accept(int timeout_ms);
         TlsHandshakeStep accept_step();
 
-        ssize_t read(void *buf, size_t len);
-        ssize_t write(const void *buf, size_t len);
+        // 0 = clean close from peer
+        std::expected<size_t, sihd::util::Error> read(void *buf, size_t len);
+        std::expected<size_t, sihd::util::Error> write(const void *buf, size_t len);
 
-        bool retryable() const;
         bool pending() const;
 
-        bool shutdown() const;
+        std::expected<void, sihd::util::Error> shutdown() const;
         void clear();
 
         void *native() const { return _handle; }
@@ -54,7 +57,6 @@ class TlsConnection
     private:
         void *_handle;
         Socket *_socket = nullptr;
-        bool _retryable = false;
 };
 
 } // namespace sihd::net

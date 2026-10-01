@@ -1,13 +1,16 @@
 #ifndef __SIHD_CSV_UTILS_HPP__
 #define __SIHD_CSV_UTILS_HPP__
 
-#include <optional>
-#include <stdexcept>
+#include <expected>
+#include <string>
+#include <string_view>
 #include <tuple>
+#include <vector>
 
 #include <fmt/ranges.h>
 
 #include <sihd/csv/CsvWriter.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::csv::utils
@@ -24,7 +27,7 @@ std::string escape_str(std::string_view view);
 CsvData csv_from_string(std::string_view content, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // get rows/columns from CSV file
-std::optional<CsvData>
+std::expected<CsvData, sihd::util::Error>
     read_csv(std::string_view path, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // check if tuple size and header size is the same
@@ -53,22 +56,23 @@ std::string csv_to_str(const std::vector<std::string> & columns_tags,
 }
 
 template <typename... Args>
-void write_csv(std::string_view path,
-               const std::vector<std::string> & columns_tags,
-               const std::vector<std::tuple<Args...>> & rows,
-               int delimiter = ',')
+std::expected<void, sihd::util::Error> write_csv(std::string_view path,
+                                                 const std::vector<std::string> & columns_tags,
+                                                 const std::vector<std::tuple<Args...>> & rows,
+                                                 int delimiter = ',')
 {
-    CsvWriter writer(path);
+    CsvWriter writer;
 
-    if (!writer.is_open())
-        throw std::runtime_error(fmt::format("Failed to open CSV '{}' for writing", path));
+    auto res = writer.open(path);
+    SIHD_UNEXPECTED_RETURN(res);
 
     const std::string delim(1, static_cast<char>(delimiter));
     std::string line = fmt::format("{}", fmt::join(columns_tags, delim));
     ssize_t wrote = writer.write_row(line);
 
     if (wrote != (ssize_t)line.size() + 1)
-        throw std::runtime_error(fmt::format("Failed write on CSV '{}' on header '{}'", path, line));
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "failed write on CSV '{}' on header '{}'", path, line));
 
     for (const auto & row : rows)
     {
@@ -76,8 +80,12 @@ void write_csv(std::string_view path,
         wrote = writer.write_row(line);
 
         if (wrote != (ssize_t)line.size() + 1)
-            throw std::runtime_error(fmt::format("Failed write on CSV '{}' on line '{}'", path, line));
+            return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error,
+                                                     "failed write on CSV '{}' on line '{}'",
+                                                     path,
+                                                     line));
     }
+    return {};
 }
 
 } // namespace sihd::csv::utils

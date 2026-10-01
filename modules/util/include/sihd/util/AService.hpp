@@ -21,7 +21,7 @@ class AService
             Stop,
             Reset,
             Success = 254,
-            Error = 255,
+            Failure = 255,
         };
 
         class IServiceController

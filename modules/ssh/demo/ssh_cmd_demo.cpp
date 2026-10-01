@@ -40,7 +40,7 @@ int main(int argc, char **argv)
         }
 
         SshSession session;
-        if (session.fast_connect({.user = user, .host = host, .port = port}) == false)
+        if (SIHD_UNEXPECTED_LOG(session.fast_connect({.user = user, .host = host, .port = port})))
             app.exit(EXIT_FAILURE);
 
         SshSession::AuthState auth_state {-1};
@@ -65,8 +65,8 @@ int main(int argc, char **argv)
 
         SshCommand ssh_cmd = session.make_command();
         ssh_cmd.output_handler = &test_output_handler;
-        ssh_cmd.execute(cmd);
-        ssh_cmd.wait();
+        SIHD_UNEXPECTED_LOG(ssh_cmd.execute(cmd));
+        SIHD_UNEXPECTED_LOG(ssh_cmd.wait());
 
         if (stdout_str.empty() == false)
             fmt::print("{}", stdout_str);

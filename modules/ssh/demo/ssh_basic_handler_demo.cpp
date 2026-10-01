@@ -135,13 +135,13 @@ int main(int argc, char **argv)
         if (verbose)
             server.set_verbosity(3);
 
-        if (server.set_port(port) == false)
+        if (server.set_port(port).has_value() == false)
         {
             SIHD_LOG(error, "Failed to set port {}", port);
             app.exit(EXIT_FAILURE);
         }
 
-        if (server.set_rsa_key(key_path) == false)
+        if (server.set_rsa_key(key_path).has_value() == false)
         {
             SIHD_LOG(error, "Failed to load host key: {}", key_path);
             app.exit(EXIT_FAILURE);

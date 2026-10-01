@@ -221,7 +221,8 @@ modules = {
         ],
     },
     "usb": {
-        "exclude-platforms": ["android"],
+        # the usb test lists devices through udev, a linux-only api
+        "exclude-platforms": ["android", "windows"],
         "depends": ['util', 'sys'],
         "extlibs": ['libusb'],
         # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags

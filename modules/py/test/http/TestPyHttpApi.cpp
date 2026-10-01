@@ -36,14 +36,14 @@ class TestPyHttpApi: public ::testing::Test
 
 TEST_F(TestPyHttpApi, test_pyhttp_navigator)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_http.py"));
 }
 
 TEST_F(TestPyHttpApi, test_pyhttp_server)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_server.py"));
 }

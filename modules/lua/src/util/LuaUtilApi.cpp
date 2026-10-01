@@ -505,7 +505,12 @@ void LuaUtilApi::load_tools(Vm & vm)
         .beginNamespace("thread")
         .addFunction("id", &thread::id)
         .addFunction("id_str", thread::id_str)
-        .addFunction("set_name", &thread::set_name)
+        .addFunction(
+            "set_name",
+            +[](const std::string & name) {
+                auto res = thread::set_name(name);
+                return !SIHD_UNEXPECTED_LOG(res);
+            })
         .addFunction("name", &thread::name)
         .endNamespace() // thread
         .beginNamespace("str")
@@ -615,7 +620,7 @@ void LuaUtilApi::load_base(Vm & vm)
                     parent = *luabridge::Stack<Node *>::get(L, 3);
                 Named *node = new Named(name);
                 if (parent != nullptr)
-                    parent->add_child(node, false);
+                    SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
                 return node;
             },
             +[](Named *node) { delete node; })
@@ -649,24 +654,28 @@ void LuaUtilApi::load_base(Vm & vm)
                     parent = *luabridge::Stack<Node *>::get(L, 3);
                 Node *node = new Node(name);
                 if (parent != nullptr)
-                    parent->add_child(node, false);
+                    SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
                 return node;
             },
             +[](Node *node) { delete node; })
         .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child))
         .addFunction(
             "add_child",
-            +[](Node *self, Named *child) { return self->add_child(child, false); })
+            +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })
         .addFunction(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); })
+            +[](Node *self, const std::string & name, Named *child) {
+                return !SIHD_UNEXPECTED_LOG(self->add_child(name, child, false));
+            })
         .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .addFunction("is_link", &Node::is_link)
         .addFunction("add_link", &Node::add_link)
         .addFunction("remove_link", &Node::remove_link)
         .addFunction("resolve_link", &Node::resolve_link)
-        .addFunction("resolve_links", &Node::resolve_links)
+        .addFunction(
+            "resolve_links",
+            +[](Node *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->resolve_links()); })
         .addFunction("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .addFunction("tree_desc_str", &Node::tree_desc_str)
         .addFunction("children", &Node::children)

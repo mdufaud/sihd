@@ -8,6 +8,9 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::http
 {
 
@@ -85,7 +88,7 @@ std::optional<size_t> parse_part_headers(std::string_view body, size_t pos, Mult
         pos = eol + 2;
         if (line.empty())
             break;
-        if (headers.add_header_from_str(line) == false)
+        if (headers.add_header_from_str(line).has_value() == false)
             return std::nullopt;
     }
 
@@ -115,11 +118,11 @@ std::optional<std::string> Multipart::boundary(std::string_view content_type)
     return header_param(content_type, "boundary");
 }
 
-std::optional<Multipart> Multipart::parse(std::string_view body, std::string_view content_type)
+std::expected<Multipart, sihd::util::Error> Multipart::parse(std::string_view body, std::string_view content_type)
 {
     const std::optional<std::string> boundary = Multipart::boundary(content_type);
     if (boundary.has_value() == false)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "no boundary in content type '{}'", content_type));
 
     const std::string delimiter = "--" + *boundary;
 
@@ -128,7 +131,7 @@ std::optional<Multipart> Multipart::parse(std::string_view body, std::string_vie
     while (pos != std::string_view::npos && pos != 0 && body[pos - 1] != '\n')
         pos = body.find(delimiter, pos + 1);
     if (pos == std::string_view::npos)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "boundary '{}' not found in body", delimiter));
     pos += delimiter.size();
 
     Multipart multipart;
@@ -137,25 +140,22 @@ std::optional<Multipart> Multipart::parse(std::string_view body, std::string_vie
 
     const std::optional<size_t> headers_pos = skip_delimiter_end(body, pos);
     if (headers_pos.has_value() == false)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "malformed part headers"));
     pos = *headers_pos;
 
     while (true)
     {
         if (multipart._parts.size() >= max_parts)
-        {
-            SIHD_LOG(warning, "Multipart: more than {} parts", max_parts);
-            return std::nullopt;
-        }
+            return std::unexpected(Error(overflow, "more than {} parts", max_parts));
         Multipart::Part part;
         const std::optional<size_t> data_pos = parse_part_headers(body, pos, part);
         if (data_pos.has_value() == false)
-            return std::nullopt;
+            return std::unexpected(Error(invalid_argument, "malformed part headers at offset {}", pos));
         pos = *data_pos;
 
         const std::optional<Delimiter> next = next_delimiter(body, delimiter, pos);
         if (next.has_value() == false)
-            return std::nullopt;
+            return std::unexpected(Error(invalid_argument, "no closing delimiter found"));
         part.data.assign(body.substr(pos, next->data_end - pos));
         multipart._parts.push_back(std::move(part));
         if (next->closing)

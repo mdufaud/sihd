@@ -31,7 +31,7 @@ SharedMemory & SharedMemory::operator=(SharedMemory && other)
 {
     if (this != &other)
     {
-        this->clear();
+        (void)this->clear();
         _fd = other._fd;
         _size = other._size;
         _addr = other._addr;
@@ -48,7 +48,7 @@ SharedMemory & SharedMemory::operator=(SharedMemory && other)
 
 SharedMemory::~SharedMemory()
 {
-    this->clear();
+    (void)this->clear();
 }
 
 } // namespace sihd::sys

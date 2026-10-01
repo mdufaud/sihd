@@ -18,6 +18,7 @@ extern "C"
 #endif
 
 #include <cstdint> // need this for LuaBridge
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -25,6 +26,7 @@ extern "C"
 #include <luabridge3/LuaBridge/LuaBridge.h>
 
 #include <sihd/lua/LuaGil.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::lua
 {
@@ -65,9 +67,8 @@ class Vm: public ILuaThreadStateHandler
         bool ref_exists(std::string_view name);
         bool refs_exists(const std::initializer_list<std::string_view> & lst);
 
-        bool do_file(std::string_view path);
-        bool do_string(std::string_view str);
-        std::string last_string();
+        std::expected<void, sihd::util::Error> do_file(std::string_view path);
+        std::expected<void, sihd::util::Error> do_string(std::string_view str);
 
         std::string dump_stack(int max = -1);
         void print_stack(int max = -1, FILE *output = stdout);

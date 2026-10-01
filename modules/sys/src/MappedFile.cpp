@@ -27,7 +27,7 @@ MappedFile & MappedFile::operator=(MappedFile && other)
 {
     if (this != &other)
     {
-        this->clear();
+        (void)this->clear();
         _fd = other._fd;
         _mapping = other._mapping;
         _size = other._size;
@@ -46,7 +46,7 @@ MappedFile & MappedFile::operator=(MappedFile && other)
 
 MappedFile::~MappedFile()
 {
-    this->clear();
+    (void)this->clear();
 }
 
 } // namespace sihd::sys

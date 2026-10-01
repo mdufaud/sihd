@@ -1,12 +1,9 @@
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/csv/utils.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::csv::utils
 {
-
-SIHD_NEW_LOGGER("sihd::csv::utils");
 
 std::string escape_str(std::string_view view)
 {
@@ -60,21 +57,27 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     return ret;
 }
 
-std::optional<CsvData> read_csv(std::string_view path, bool remove_header, int delimiter, char comment_char)
+std::expected<CsvData, sihd::util::Error>
+    read_csv(std::string_view path, bool remove_header, int delimiter, char comment_char)
 {
-    CsvReader reader(path);
+    CsvReader reader;
 
-    if (!reader.is_open())
-        return std::nullopt;
-
-    reader.set_delimiter(delimiter);
-    reader.set_commentary(comment_char);
+    auto res = reader.set_delimiter(delimiter);
+    SIHD_UNEXPECTED_RETURN(res);
+    auto res_2 = reader.set_commentary(comment_char);
+    SIHD_UNEXPECTED_RETURN(res_2);
+    auto res_3 = reader.open(path);
+    SIHD_UNEXPECTED_RETURN(res_3);
 
     bool first = true;
     CsvData ret;
 
-    while (reader.read_next())
+    while (true)
     {
+        auto line = reader.read_next();
+        SIHD_UNEXPECTED_RETURN(line);
+        if (*line == false)
+            break;
         if (remove_header && first)
         {
             first = false;

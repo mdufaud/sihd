@@ -4,10 +4,12 @@
 #include <sys/types.h>
 
 #include <atomic>
+#include <expected>
 #include <optional>
 #include <span>
 #include <string>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::sys::signal
@@ -39,12 +41,12 @@ struct SigExitConfig
 void set_exit_config(const SigExitConfig & config);
 
 // set signal handling to handled
-bool handle(int sig);
+std::expected<void, sihd::util::Error> handle(int sig);
 
 // set signal handling to default
-bool unhandle(int sig);
+std::expected<void, sihd::util::Error> unhandle(int sig);
 
-bool ignore(int sig);
+std::expected<void, sihd::util::Error> ignore(int sig);
 
 bool is_category_stop(int sig);
 bool is_category_termination(int sig);
@@ -62,13 +64,13 @@ void reset_received(int sig);
 void reset_all_received();
 
 #if !defined(__SIHD_WINDOWS__)
-bool block_thread(int sig);
-bool block_thread(std::span<const int> sigs);
-bool unblock_thread(int sig);
-bool unblock_thread(std::span<const int> sigs);
+std::expected<void, sihd::util::Error> block_thread(int sig);
+std::expected<void, sihd::util::Error> block_thread(std::span<const int> sigs);
+std::expected<void, sihd::util::Error> unblock_thread(int sig);
+std::expected<void, sihd::util::Error> unblock_thread(std::span<const int> sigs);
 #endif
 
-bool kill(pid_t pid, int sig);
+std::expected<void, sihd::util::Error> kill(pid_t pid, int sig);
 
 std::string name(int sig);
 

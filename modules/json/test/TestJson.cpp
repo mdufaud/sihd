@@ -152,7 +152,9 @@ TEST_F(TestJson, test_json_copy_move)
 
 TEST_F(TestJson, test_json_parse_object)
 {
-    auto j = Json::parse(R"({"name": "test", "value": 42, "active": true})");
+    auto res = Json::parse(R"({"name": "test", "value": 42, "active": true})");
+    ASSERT_TRUE(res.has_value());
+    const Json & j = *res;
     EXPECT_TRUE(j.is_object());
     EXPECT_EQ(j["name"].get<std::string>(), "test");
     EXPECT_EQ(j["value"].get<int32_t>(), 42);
@@ -161,7 +163,9 @@ TEST_F(TestJson, test_json_parse_object)
 
 TEST_F(TestJson, test_json_parse_array)
 {
-    auto j = Json::parse("[1, 2, 3]");
+    auto res = Json::parse("[1, 2, 3]");
+    ASSERT_TRUE(res.has_value());
+    const Json & j = *res;
     EXPECT_TRUE(j.is_array());
     EXPECT_EQ(j.size(), 3u);
     EXPECT_EQ(j[0].get<int32_t>(), 1);
@@ -169,7 +173,9 @@ TEST_F(TestJson, test_json_parse_array)
 
 TEST_F(TestJson, test_json_parse_get_string_array)
 {
-    auto j = Json::parse(R"(["one", "two", "three"])");
+    auto res = Json::parse(R"(["one", "two", "three"])");
+    ASSERT_TRUE(res.has_value());
+    const Json & j = *res;
     EXPECT_TRUE(j.is_array());
     std::vector<std::string> out = j.get<std::vector<std::string>>();
     ASSERT_EQ(out.size(), 3u);
@@ -178,27 +184,31 @@ TEST_F(TestJson, test_json_parse_get_string_array)
     EXPECT_EQ(out[2], "three");
 
     // an array of strings inside a parsed object
-    auto obj = Json::parse(R"({"list": ["a", "b"]})");
-    out = obj["list"].get_or<std::vector<std::string>>({});
+    auto obj_res = Json::parse(R"({"list": ["a", "b"]})");
+    ASSERT_TRUE(obj_res.has_value());
+    out = (*obj_res)["list"].get_or<std::vector<std::string>>({});
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[1], "b");
 
     // non-string elements keep failing
-    EXPECT_THROW(Json::parse(R"(["a", 1])").get<std::vector<std::string>>(), std::runtime_error);
+    auto arr_res = Json::parse(R"(["a", 1])");
+    ASSERT_TRUE(arr_res.has_value());
+    EXPECT_THROW(arr_res->get<std::vector<std::string>>(), std::runtime_error);
 }
 
 TEST_F(TestJson, test_json_parse_error)
 {
-    auto j = Json::parse("{invalid}", false);
-    EXPECT_TRUE(j.is_discarded());
-
-    EXPECT_THROW(Json::parse("{invalid}"), std::runtime_error);
+    auto res = Json::parse("{invalid}");
+    ASSERT_FALSE(res.has_value());
+    EXPECT_FALSE(res.error().empty());
 }
 
 TEST_F(TestJson, test_json_parse_pointer_range)
 {
     std::string data = R"({"hello": "world"})";
-    auto j = Json::parse(data.data(), data.data() + data.size(), false);
+    auto res = Json::parse(data.data(), data.data() + data.size());
+    ASSERT_TRUE(res.has_value());
+    const Json & j = *res;
     EXPECT_TRUE(j.is_object());
     EXPECT_EQ(j["hello"].get<std::string>(), "world");
 }
@@ -215,7 +225,9 @@ TEST_F(TestJson, test_json_dump)
 
 TEST_F(TestJson, test_json_dump_parsed_indent)
 {
-    auto j = Json::parse(R"({"a": 1, "b": [2, 3]})");
+    auto res = Json::parse(R"({"a": 1, "b": [2, 3]})");
+    ASSERT_TRUE(res.has_value());
+    const Json & j = *res;
 
     EXPECT_EQ(j.dump(), R"({"a":1,"b":[2,3]})");
 
@@ -249,9 +261,10 @@ TEST_F(TestJson, test_json_contains)
     EXPECT_FALSE(Json().contains("x"));
 
     auto parsed = Json::parse(R"({"a": 1, "b": null})");
-    EXPECT_TRUE(parsed.contains("a"));
-    EXPECT_TRUE(parsed.contains("b"));
-    EXPECT_FALSE(parsed.contains("c"));
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_TRUE(parsed->contains("a"));
+    EXPECT_TRUE(parsed->contains("b"));
+    EXPECT_FALSE(parsed->contains("c"));
 }
 
 TEST_F(TestJson, test_json_get_or)
@@ -291,8 +304,9 @@ TEST_F(TestJson, test_json_equality)
     EXPECT_FALSE(obj1 == obj3);
 
     auto parsed = Json::parse(R"({"x": [1, 2]})");
+    ASSERT_TRUE(parsed.has_value());
     Json built = {{"x", {1, 2}}};
-    EXPECT_EQ(parsed, built);
+    EXPECT_EQ(*parsed, built);
 }
 
 TEST_F(TestJson, test_json_iteration_object)

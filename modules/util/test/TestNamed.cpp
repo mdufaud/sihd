@@ -55,11 +55,11 @@ TEST_F(TestNamed, test_named_ownership)
     Named *child = new Named("child");
 
     EXPECT_FALSE(child->is_owned_by_parent());
-    root.add_child(child, true);
+    ASSERT_TRUE(root.add_child(child, true));
     EXPECT_TRUE(child->is_owned_by_parent());
 
     Named *unowned = new Named("unowned");
-    root.add_child(unowned, false);
+    ASSERT_TRUE(root.add_child(unowned, false));
     EXPECT_FALSE(unowned->is_owned_by_parent());
     // cleanup: unowned is not deleted by root
     root.remove_child(unowned);

@@ -2,12 +2,14 @@
 #define __SIHD_SSH_SSHSERVER_HPP__
 
 #include <atomic>
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Named.hpp>
 
 namespace sihd::ssh
@@ -28,16 +30,16 @@ class SshServer: public sihd::util::Named,
         static constexpr int default_kex_timeout_sec = 10;
 
         // Configuration methods (call before start)
-        bool set_port(int port);
-        bool set_bind_address(std::string_view addr);
-        bool set_rsa_key(std::string_view key_path);
-        bool set_ecdsa_key(std::string_view key_path);
-        bool set_authorized_keys_file(std::string_view path);
+        std::expected<void, sihd::util::Error> set_port(int port);
+        std::expected<void, sihd::util::Error> set_bind_address(std::string_view addr);
+        std::expected<void, sihd::util::Error> set_rsa_key(std::string_view key_path);
+        std::expected<void, sihd::util::Error> set_ecdsa_key(std::string_view key_path);
+        std::expected<void, sihd::util::Error> set_authorized_keys_file(std::string_view path);
         // Pre-auth issue banner (MOTD) sent to clients before authentication
-        bool set_banner(std::string_view banner);
+        std::expected<void, sihd::util::Error> set_banner(std::string_view banner);
         bool set_verbosity(int level);
         // Bound the blocking key exchange (seconds) to defuse connect-and-stall DoS
-        bool set_kex_timeout(int seconds);
+        std::expected<void, sihd::util::Error> set_kex_timeout(int seconds);
 
         // Handler
         void set_server_handler(ISshServerHandler *handler);

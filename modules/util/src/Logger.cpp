@@ -54,4 +54,19 @@ void Logger::log(LogLevel level, std::string_view msg)
     LoggerManager::log(name, level, msg);
 }
 
+void log_unexpected_error(Logger & logger, const Error & err, const std::source_location & loc)
+{
+    std::string_view file = loc.file_name();
+    if (file.empty())
+    {
+        logger.log(LogLevel::error, err.message);
+        return;
+    }
+    file.remove_prefix(file.find_last_of("/\\") + 1);
+    const size_t dot = file.find_last_of('.');
+    if (dot != std::string_view::npos)
+        file.remove_suffix(file.size() - dot);
+    logger.log(LogLevel::error, fmt::format("{}:{}: {}", file, loc.line(), err.message));
+}
+
 } // namespace sihd::util

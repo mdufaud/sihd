@@ -25,7 +25,7 @@ class TestPyNetApi: public ::testing::Test
 
 TEST_F(TestPyNetApi, test_pynet_base)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/net/py/test_net.py"));
 }

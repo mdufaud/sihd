@@ -7,6 +7,8 @@
 # define SIHD_NODE_MAX_LINK_RECURSION 20
 #endif
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::util
 {
 
@@ -82,35 +84,37 @@ Node::~Node()
 
 void Node::add_child_unsafe(Named *child, bool ownership)
 {
-    if (this->add_child(child->name(), child, ownership) == false)
-        throw std::invalid_argument(fmt::format("Node '{}' already has child '{}'", this->full_name(), child->name()));
+    auto res = this->add_child(child->name(), child, ownership);
+    if (!res)
+        throw std::invalid_argument(std::move(res).error().message);
 }
 
-bool Node::add_child(Named *child, bool ownership)
+void Node::_log_add_child_error(const Error & error)
+{
+    SIHD_LOG(error, "{}", error.message);
+}
+
+std::expected<void, Error> Node::add_child(Named *child, bool ownership)
 {
     return this->add_child(child->name(), child, ownership);
 }
 
-bool Node::add_child(const std::string & name, Named *child, bool ownership)
+std::expected<void, Error> Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
-    {
-        SIHD_LOG_WARN("Node: '{}' child '{}' already exists", this->full_name(), name);
-        return false;
-    }
-    bool do_add = this->on_add_child(name, child);
-    if (do_add)
-    {
-        if (child->parent() == nullptr)
-            child->set_parent(this);
-        ChildEntry *entry = new ChildEntry();
-        entry->name = name;
-        entry->obj = child;
-        entry->ownership = ownership;
-        _children_map[name] = entry;
-        _children_keys.push_back(name);
-    }
-    return do_add;
+        return std::unexpected(Error(already_exists, "child '{}' already exists in '{}'", name, this->full_name()));
+    if (!this->on_add_child(name, child))
+        return std::unexpected(
+            Error(permission_denied, "'{}' refused child '{}' from '{}'", this->full_name(), name, child->name()));
+    if (child->parent() == nullptr)
+        child->set_parent(this);
+    ChildEntry *entry = new ChildEntry();
+    entry->name = name;
+    entry->obj = child;
+    entry->ownership = ownership;
+    _children_map[name] = entry;
+    _children_keys.push_back(name);
+    return {};
 }
 
 Node::ChildEntry *Node::_get_child_entry(const Named *child) const
@@ -257,7 +261,7 @@ Named *Node::resolve_link(const std::string & path, size_t recursion)
         Node *parent = dynamic_cast<Node *>(named);
         if (parent != nullptr)
         {
-            parent->resolve_links(recursion + 1);
+            SIHD_UNEXPECTED_LOG(parent->resolve_links(recursion + 1));
             child = this->find(path);
         }
     }
@@ -284,24 +288,35 @@ void Node::on_remove_child(const std::string & name, Named *child)
     (void)child;
 }
 
-bool Node::resolve_links(size_t recursion)
+std::expected<void, Error> Node::resolve_links(size_t recursion)
 {
-    Named *child;
-
-    bool ret = true;
+    std::expected<void, Error> ret;
     for (const auto & link : _link_keys)
     {
         const auto & path = _link_map.at(link);
-        child = this->resolve_link(path, recursion);
+        Named *child = this->resolve_link(path, recursion);
         if (child == nullptr)
         {
-            SIHD_LOG_ERROR("Node: '{}' could not resolve link '{}' => '{}'", this->full_name(), link, path);
-            return false;
+            ret = std::unexpected(
+                Error(not_found, "'{}' could not resolve link '{}' => '{}'", this->full_name(), link, path));
+            SIHD_UNEXPECTED_LOG(ret);
         }
-        if (this->on_check_link(link, child))
-            this->add_child(link, child, false);
+        else if (this->on_check_link(link, child))
+        {
+            auto res = this->add_child(link, child, false);
+            // a repeat resolve_links finds the link already a child: same target is a no-op
+            if (!res && !(res.error().code == already_exists && this->get_child(link) == child))
+            {
+                SIHD_UNEXPECTED_LOG(res);
+                ret = std::unexpected(std::move(res).error());
+            }
+        }
         else
-            ret = false;
+        {
+            ret = std::unexpected(
+                Error(permission_denied, "'{}' refused link '{}' => '{}'", this->full_name(), link, path));
+            SIHD_UNEXPECTED_LOG(ret);
+        }
     }
     return ret;
 }

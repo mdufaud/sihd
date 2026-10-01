@@ -80,7 +80,7 @@ bool SigWatcher::add_signal(int sig)
     std::lock_guard l(_mutex);
     auto & sig_controller = _sig_controllers.emplace_back();
 
-    bool success = sig_controller.sig_handler.handle(sig);
+    bool success = !SIHD_UNEXPECTED_LOG(sig_controller.sig_handler.handle(sig));
     if (success)
     {
         const auto status = signal::status(sig);
@@ -160,7 +160,7 @@ bool SigWatcher::start()
     if (_signalfd == -1)
     {
         SIHD_LOG(error, "SigWatcher: signalfd creation failed");
-        signal::unblock_thread(_signals);
+        (void)signal::unblock_thread(_signals);
         _running.store(false, std::memory_order_relaxed);
         return false;
     }
@@ -200,7 +200,7 @@ bool SigWatcher::stop()
 #endif
 
 #if defined(SIHD_HAS_SIGSET)
-    signal::unblock_thread(_signals);
+    (void)signal::unblock_thread(_signals);
 #endif
 
     return ret;
@@ -224,7 +224,7 @@ void SigWatcher::_notify_signals()
 
 void SigWatcher::_run_signalfd_loop()
 {
-    thread::set_name("sigwatcher");
+    SIHD_UNEXPECTED_LOG(thread::set_name("sigwatcher"));
 
     _poll.set_limit(1);
     _poll.set_read_fd(_signalfd);
@@ -292,7 +292,7 @@ void SigWatcher::_run_signalfd_loop()
 
 void SigWatcher::_run_sigwait_loop()
 {
-    thread::set_name("sigwatcher");
+    SIHD_UNEXPECTED_LOG(thread::set_name("sigwatcher"));
 
     while (_running.load(std::memory_order_relaxed))
     {
@@ -336,7 +336,7 @@ void SigWatcher::_run_sigwait_loop()
 
 void SigWatcher::_run_polling_loop()
 {
-    thread::set_name("sigwatcher");
+    SIHD_UNEXPECTED_LOG(thread::set_name("sigwatcher"));
 
     while (_running.load(std::memory_order_relaxed))
     {

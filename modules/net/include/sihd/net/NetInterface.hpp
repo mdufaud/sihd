@@ -2,12 +2,14 @@
 #define __SIHD_NET_NETINTERFACE_HPP__
 
 #include <cstdint>
+#include <expected>
 #include <map>
 #include <optional>
 #include <string>
 #include <string_view>
 
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::net
 {
@@ -18,7 +20,7 @@ class NetInterface
         NetInterface();
         ~NetInterface();
 
-        static std::optional<std::map<std::string, NetInterface>> get_all_interfaces();
+        static std::expected<std::map<std::string, NetInterface>, sihd::util::Error> get_all_interfaces();
 
         const std::string & name() const { return _name; }
         const std::string & mac_addr() const { return _mac_address; }

@@ -281,7 +281,7 @@ void Poll::process_poll_results(int poll_return, int saved_errno)
     // A signal interrupt is not a polling error: callers may just retry.
     _error = poll_return < 0 && saved_errno != EINTR;
     if (_error)
-        SIHD_LOG(error, "Poll: {}", os::last_error_str());
+        SIHD_LOG(error, "Poll: {}", os::error_str(saved_errno));
     if (poll_return > 0)
     {
         size_t i = 0;

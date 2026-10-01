@@ -36,6 +36,14 @@ assert(reader:open(archive, true))
 assert(reader:is_open())
 assert(reader:archive_comment() == "lua archive")
 
+-- read_next_entry walks every original entry
+local walked = {}
+while reader:read_next_entry() do
+    walked[reader:entry_name()] = true
+end
+assert(walked["data/"] ~= nil)
+assert(walked["data/hello.txt"] ~= nil)
+
 assert(reader:load_entry("data/"))
 assert(reader:is_entry_directory())
 

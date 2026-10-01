@@ -24,7 +24,7 @@ class TestThread: public ::testing::Test
         void test()
         {
             this->other_id = thread::id();
-            thread::set_name("another-thread");
+            EXPECT_TRUE(thread::set_name("another-thread").has_value());
             this->other_name = thread::name();
         }
 };

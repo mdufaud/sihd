@@ -24,18 +24,18 @@ class TestChannelMatch: public ::testing::Test
 TEST_F(TestChannelMatch, test_parse_trigger)
 {
     ChannelMatch match;
-    EXPECT_TRUE(match.parse_trigger("15"));
+    EXPECT_TRUE(match.parse_trigger("15").has_value());
     EXPECT_EQ(match.idx, 0u);
     EXPECT_TRUE(match.value == 15);
 
-    EXPECT_TRUE(match.parse_trigger("2:0x10"));
+    EXPECT_TRUE(match.parse_trigger("2:0x10").has_value());
     EXPECT_EQ(match.idx, 2u);
     EXPECT_TRUE(match.value == 16);
 
-    EXPECT_TRUE(match.parse_trigger("false"));
+    EXPECT_TRUE(match.parse_trigger("false").has_value());
     EXPECT_TRUE(match.value == Value(false));
 
-    EXPECT_TRUE(match.parse_trigger("1:"));
+    EXPECT_TRUE(match.parse_trigger("1:").has_value());
     EXPECT_EQ(match.idx, 1u);
 
     EXPECT_FALSE(match.parse_trigger(""));
@@ -48,13 +48,13 @@ TEST_F(TestChannelMatch, test_parse_trigger)
 TEST_F(TestChannelMatch, test_parse)
 {
     ChannelMatch match;
-    EXPECT_TRUE(match.parse("cmp=superior;idx=3;value=10"));
+    EXPECT_TRUE(match.parse("cmp=superior;idx=3;value=10").has_value());
     EXPECT_EQ(match.comparison, ChannelMatch::Superior);
     EXPECT_EQ(match.idx, 3u);
     EXPECT_TRUE(match.value == 10);
     EXPECT_FALSE(match.invert);
 
-    EXPECT_TRUE(match.parse("cmp=equal;value=false;invert=true"));
+    EXPECT_TRUE(match.parse("cmp=equal;value=false;invert=true").has_value());
     EXPECT_EQ(match.comparison, ChannelMatch::Equal);
     EXPECT_TRUE(match.value == Value(false));
     EXPECT_TRUE(match.invert);

@@ -36,11 +36,11 @@ TEST_F(TestIpAddr, test_ipaddr_ip_valid)
 TEST_F(TestIpAddr, test_ipaddr_ip_name)
 {
     IpAddr localhost("127.0.0.1");
-    localhost.fetch_hostname();
+    (void)localhost.fetch_hostname();
     EXPECT_EQ(localhost.hostname(), "localhost");
 
     // no valid ip inside
-    EXPECT_THROW(IpAddr("google.com").fetch_hostname(), std::invalid_argument);
+    EXPECT_THROW((void)IpAddr("google.com").fetch_hostname(), std::invalid_argument);
 
     // requires internet
     IpAddr addr1("216.58.215.46");
@@ -124,7 +124,7 @@ TEST_F(TestIpAddr, test_ipaddr_subnet)
     EXPECT_FALSE(addr.is_same_subnet(test2));
 
     IpAddr same_addr("192.168.10.0");
-    same_addr.set_subnet_mask("255.255.255.0");
+    (void)same_addr.set_subnet_mask("255.255.255.0");
     EXPECT_EQ(same_addr.subnet_value(), 24u);
 
     EXPECT_TRUE(same_addr.is_same_subnet(test1));

@@ -1,10 +1,13 @@
 #include <gtest/gtest.h>
 
+#include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/PluginLoader.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/build.hpp>
+
+using enum sihd::util::ErrorCode;
 
 namespace test
 {
@@ -28,19 +31,32 @@ TEST_F(TestPluginLoader, test_pluginloader)
     if (sihd::util::build::is_run_with_sanitizer)
         GTEST_SKIP() << "test does not work with sanitizers";
 
-    EXPECT_EQ(PluginLoader::load("unknown_lib", "symbol", "err"), nullptr);
-    EXPECT_EQ(PluginLoader::load("sihd_util", "unknown_symbol", "err"), nullptr);
+    auto unknown_lib = PluginLoader::load("unknown_lib", "symbol", "err");
+    ASSERT_FALSE(unknown_lib.has_value());
+    if constexpr (DynLib::supported)
+    {
+        EXPECT_NE(unknown_lib.error().code, none);
+    }
+
+    auto unknown_factory = PluginLoader::load("sihd_util", "unknown_symbol", "err");
+    ASSERT_FALSE(unknown_factory.has_value());
+    if constexpr (DynLib::supported)
+    {
+        EXPECT_NE(unknown_factory.error().code, none);
+    }
 
     if constexpr (!sihd::util::build::is_statically_linked)
     {
         // plugin loading needs a dynamic build — static links have no loadable module
-        Named *node = PluginLoader::load("sihd_sys", "Node", "test_node");
-        ASSERT_NE(node, nullptr);
+        auto loaded = PluginLoader::load("sihd_sys", "Node", "test_node");
+        ASSERT_TRUE(loaded.has_value());
+        Named *node = loaded.value();
         EXPECT_EQ(node->name(), "test_node");
         Node *casted = dynamic_cast<Node *>(node);
         ASSERT_NE(casted, nullptr);
-        Named *child = PluginLoader::load("sihd_sys", "Node", "child_node", casted);
-        ASSERT_NE(child, nullptr);
+        auto loaded_child = PluginLoader::load("sihd_sys", "Node", "child_node", casted);
+        ASSERT_TRUE(loaded_child.has_value());
+        Named *child = loaded_child.value();
         EXPECT_EQ(child->parent(), casted);
         if (child->parent() != casted)
             delete child;

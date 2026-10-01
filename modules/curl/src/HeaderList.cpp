@@ -4,6 +4,9 @@
 
 #include "impl.hpp"
 
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::curl
 {
 
@@ -31,16 +34,16 @@ HeaderList & HeaderList::operator=(HeaderList && other)
     return *this;
 }
 
-bool HeaderList::append(std::string_view line)
+std::expected<void, sihd::util::Error> HeaderList::append(std::string_view line)
 {
     // curl_slist_append takes a null-terminated string and copies it
     std::string str(line);
     curl_slist *list = curl_slist_append(_impl->list, str.c_str());
     if (list == nullptr)
-        return false;
+        return std::unexpected(Error(out_of_memory, "could not append header line"));
     _impl->list = list;
     ++_impl->size;
-    return true;
+    return {};
 }
 
 bool HeaderList::empty() const

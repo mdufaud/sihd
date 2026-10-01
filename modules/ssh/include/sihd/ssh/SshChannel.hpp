@@ -1,9 +1,12 @@
 #ifndef __SIHD_SSH_SSHCHANNEL_HPP__
 #define __SIHD_SSH_SSHCHANNEL_HPP__
 
+#include <expected>
 #include <memory>
+#include <string_view>
 
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IArray.hpp>
 
 namespace sihd::ssh
@@ -20,28 +23,30 @@ class SshChannel
 
         void set_blocking(bool active);
 
-        bool open_session();
-        bool open_agent();
-        bool open_x11(std::string_view addr, int port);
-        bool open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport);
-        bool open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport);
+        std::expected<void, sihd::util::Error> open_session();
+        std::expected<void, sihd::util::Error> open_agent();
+        std::expected<void, sihd::util::Error> open_x11(std::string_view addr, int port);
+        std::expected<void, sihd::util::Error>
+            open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport);
+        std::expected<void, sihd::util::Error>
+            open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport);
 
         bool is_open();
-        bool close();
+        std::expected<void, sihd::util::Error> close();
 
-        bool request_subsystem(std::string_view subsys);
-        bool request_sftp();
-        bool request_x11(std::string_view protocol,
-                         std::string_view cookie,
-                         int screen_number = 0,
-                         bool single_connection = false);
-        bool request_pty();
-        bool change_pty_size(int cols, int rows);
-        bool request_shell();
-        bool request_exec(std::string_view cmd);
+        std::expected<void, sihd::util::Error> request_subsystem(std::string_view subsys);
+        std::expected<void, sihd::util::Error> request_sftp();
+        std::expected<void, sihd::util::Error> request_x11(std::string_view protocol,
+                                                           std::string_view cookie,
+                                                           int screen_number = 0,
+                                                           bool single_connection = false);
+        std::expected<void, sihd::util::Error> request_pty();
+        std::expected<void, sihd::util::Error> change_pty_size(int cols, int rows);
+        std::expected<void, sihd::util::Error> request_shell();
+        std::expected<void, sihd::util::Error> request_exec(std::string_view cmd);
 
-        bool cancel_forward(std::string_view addr, int port);
-        bool set_env(std::string_view name, std::string_view value);
+        std::expected<void, sihd::util::Error> cancel_forward(std::string_view addr, int port);
+        std::expected<void, sihd::util::Error> set_env(std::string_view name, std::string_view value);
 
         int poll();
         int poll_stderr();
@@ -58,18 +63,18 @@ class SshChannel
         int write(sihd::util::ArrCharView view);
         int write_stderr(sihd::util::ArrCharView view);
 
-        bool send_eof();
+        std::expected<void, sihd::util::Error> send_eof();
         bool is_eof();
 
         // Server-side methods
-        bool request_send_exit_status(int exit_status);
-        bool request_send_exit_signal(std::string_view signum,
-                                      bool core_dumped,
-                                      std::string_view errmsg,
-                                      std::string_view lang);
+        std::expected<void, sihd::util::Error> request_send_exit_status(int exit_status);
+        std::expected<void, sihd::util::Error> request_send_exit_signal(std::string_view signum,
+                                                                        bool core_dumped,
+                                                                        std::string_view errmsg,
+                                                                        std::string_view lang);
 
         // ABRT - ALRM - FPE - HUP - ILL - INT - KILL - PIPE - QUIT - SEGV - TERM - USR1 - USR2
-        bool send_signal(std::string_view sig);
+        std::expected<void, sihd::util::Error> send_signal(std::string_view sig);
 
         int exit_status();
 

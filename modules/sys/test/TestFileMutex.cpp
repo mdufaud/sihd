@@ -73,8 +73,8 @@ TEST_F(TestFileMutex, test_filemutex_unique)
 
         return ret;
     });
-    proc.execute();
-    proc.wait_any();
+    (void)proc.execute();
+    (void)proc.wait_any();
 
     EXPECT_TRUE(proc.return_code() & (1 << 1));
     EXPECT_TRUE(proc.return_code() & (1 << 2));
@@ -129,8 +129,8 @@ TEST_F(TestFileMutex, test_filemutex_shared)
 
         return ret;
     });
-    proc.execute();
-    proc.wait_any();
+    (void)proc.execute();
+    (void)proc.wait_any();
 
     EXPECT_TRUE(proc.return_code() & (1 << 1));
     EXPECT_TRUE(proc.return_code() & (1 << 2));

@@ -2,14 +2,17 @@
 #include <libloaderapi.h>
 #include <windows.h>
 
+#include <iterator>
+
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::sys
 {
-
-using namespace sihd::util;
 
 namespace
 {
@@ -25,6 +28,20 @@ std::string get_error()
 
 #if !defined(SIHD_STATIC)
 
+// GetLastError codes share mingw errno numbers (ERROR_MOD_NOT_FOUND == ECONNRESET):
+// error_errno cannot classify them, the errno meaning would win
+bool is_not_found_error(int code)
+{
+    return code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND || code == ERROR_MOD_NOT_FOUND
+           || code == ERROR_DLL_NOT_FOUND || code == ERROR_PROC_NOT_FOUND;
+}
+
+std::unexpected<Error> lib_error()
+{
+    const int code = os::last_error();
+    return std::unexpected(Error(is_not_found_error(code) ? not_found : io_error, get_error()));
+}
+
 bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 {
     *handle = LoadLibrary(lib_name.c_str());
@@ -39,35 +56,36 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-bool DynLib::open(std::string_view lib_name)
+std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_name)
 {
 #if !defined(SIHD_STATIC)
     this->close();
-    std::string test_lib_name;
-
-    try_load_lib(fmt::format("lib{}.dll", lib_name), &_handle, _name)
-        || try_load_lib(fmt::format("{}.dll", lib_name), &_handle, _name)
-        || try_load_lib(fmt::format("{}", lib_name), &_handle, _name);
-    if (_handle == nullptr)
-        SIHD_LOG(error, "DynLib: {}", get_error());
-    return _handle != nullptr;
+    constexpr std::string_view patterns[] = {"lib{}.dll", "{}.dll", "{}"};
+    for (size_t i = 0; i < std::size(patterns); ++i)
+    {
+        if (try_load_lib(fmt::format(fmt::runtime(patterns[i]), lib_name), &_handle, _name))
+            return {};
+        if (i + 1 < std::size(patterns))
+            SIHD_LOG(debug, "DynLib: {}", get_error());
+    }
+    return lib_error();
 #else
-    (void)lib_name;
-    return false;
+    return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
 #endif
 }
 
-void *DynLib::load(std::string_view symbol_name)
+std::expected<void *, Error> DynLib::load([[maybe_unused]] std::string_view symbol_name)
 {
-    void *ret = nullptr;
-
-    if (this->is_open())
-    {
-        ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.data());
-        if (ret == nullptr)
-            SIHD_LOG(error, "DynLib: {}", get_error());
-    }
+#if !defined(SIHD_STATIC)
+    if (this->is_open() == false)
+        return std::unexpected(Error(not_initialized, "no library open"));
+    void *ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.data());
+    if (ret == nullptr)
+        return lib_error();
     return ret;
+#else
+    return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
+#endif
 }
 
 bool DynLib::close()

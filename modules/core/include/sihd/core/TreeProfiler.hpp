@@ -97,7 +97,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
                 sihd::util::AService *service = nullptr;
                 sihd::util::ServiceController *ctrl = nullptr;
                 sihd::util::Timestamp op_begin {0};
-                Operation pending_op = sihd::util::AService::Error;
+                Operation pending_op = sihd::util::AService::Failure;
                 bool op_pending = false;
                 bool op_enter_recorded = false;
                 std::map<Operation, sihd::util::Stat<sihd::util::time::UnixTime>> op_stats;

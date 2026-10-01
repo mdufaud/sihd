@@ -90,7 +90,7 @@ class LogCheckApp: public sihd::sys::App
 TEST_F(TestApp, test_conf_file)
 {
     std::string path = tmp_path("conf.json");
-    ASSERT_TRUE(fs::write(path, R"({"serve": {"host": "confhost", "port": 1234}})"));
+    ASSERT_TRUE(fs::write(path, R"({"serve": {"host": "confhost", "port": 1234}})").has_value());
 
     struct
     {
@@ -106,7 +106,7 @@ TEST_F(TestApp, test_conf_file)
 
     ASSERT_EQ(run_app(app, {"--conf", path, "serve"}), 0);
     EXPECT_EQ(result, "confhost:1234");
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 
 TEST_F(TestApp, test_conf_file_missing)
@@ -130,8 +130,8 @@ TEST_F(TestApp, test_golden_conf)
     const std::string log_path = tmp_path("golden.log");
     const std::string conf_path = tmp_path("golden.json");
     conf = str::replace(conf, "/tmp/sihd_app.log", log_path);
-    ASSERT_TRUE(fs::write(conf_path, conf));
-    fs::remove_file(log_path);
+    ASSERT_TRUE(fs::write(conf_path, conf).has_value());
+    (void)fs::remove_file(log_path);
 
     struct
     {
@@ -152,9 +152,9 @@ TEST_F(TestApp, test_golden_conf)
         serve.bind("host", opts.host, "");
         serve.bind("port", opts.port, "");
         serve.on_run([&] {
-            signal::kill(os::pid(), SIGUSR1);
-            signal::kill(os::pid(), SIGPIPE);
-            signal::kill(os::pid(), SIGHUP);
+            (void)signal::kill(os::pid(), SIGUSR1);
+            (void)signal::kill(os::pid(), SIGPIPE);
+            (void)signal::kill(os::pid(), SIGHUP);
             Duration waited(0);
             while ((signaled == 0 || reloads == 0) && waited < Duration(time::sec(2)))
             {
@@ -176,8 +176,8 @@ TEST_F(TestApp, test_golden_conf)
     std::optional<std::string> content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("GOLDENMSG"), std::string::npos);
-    fs::remove_file(log_path);
-    fs::remove_file(conf_path);
+    (void)fs::remove_file(log_path);
+    (void)fs::remove_file(conf_path);
 }
 #endif
 
@@ -185,7 +185,7 @@ TEST_F(TestApp, test_golden_conf)
 TEST_F(TestApp, test_signal_unknown_conf)
 {
     std::string path = tmp_path("badsig.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"ignore": ["NOPE"]}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"ignore": ["NOPE"]}}})").has_value());
 
     sihd::sys::App app({.name = "badsig", .setup_logging = false});
     bool ran = false;
@@ -193,7 +193,7 @@ TEST_F(TestApp, test_signal_unknown_conf)
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), EXIT_FAILURE);
     EXPECT_FALSE(ran);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 #endif
 
@@ -205,7 +205,7 @@ TEST_F(TestApp, test_signal_stop)
 
     sihd::sys::App app({.name = "stop", .setup_logging = false});
     app.root().add_command("run", "run").on_run([&] {
-        signal::kill(os::pid(), SIGINT);
+        (void)signal::kill(os::pid(), SIGINT);
         app.wait_for_termination(Duration(time::milli(2000)));
         if (app.should_stop() == false)
             app.exit(EXIT_FAILURE);
@@ -220,7 +220,7 @@ TEST_F(TestApp, test_signal_stop)
 TEST_F(TestApp, test_signal_reload)
 {
     std::string path = tmp_path("reload.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"]}}, "serve": {"port": 9}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"]}}, "serve": {"port": 9}})").has_value());
 
     struct
     {
@@ -230,7 +230,7 @@ TEST_F(TestApp, test_signal_reload)
     int reloads = 0;
     app.on_reload([&](void) { reloads++; });
     app.root().add_command("serve", "serve").bind("port", opts.port, "").on_run([&] {
-        signal::kill(os::pid(), SIGHUP);
+        (void)signal::kill(os::pid(), SIGHUP);
         app.wait_for_termination(Duration(time::milli(500)));
         if (reloads == 0 || app.should_stop())
             app.exit(EXIT_FAILURE);
@@ -238,20 +238,20 @@ TEST_F(TestApp, test_signal_reload)
 
     ASSERT_EQ(run_app(app, {"--conf", path, "serve"}), 0);
     EXPECT_EQ(reloads, 1);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 
 # if defined(SIGUSR2)
 TEST_F(TestApp, test_signal_reload_custom)
 {
     std::string path = tmp_path("customreload.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["USR2"]}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["USR2"]}}})").has_value());
 
     sihd::sys::App app({.name = "customreload", .setup_logging = false});
     int reloads = 0;
     app.on_reload([&](void) { reloads++; });
     app.root().add_command("run", "run").on_run([&] {
-        signal::kill(os::pid(), SIGUSR2);
+        (void)signal::kill(os::pid(), SIGUSR2);
         app.wait_for_termination(Duration(time::milli(300)));
         if (reloads == 0 || app.should_stop())
             app.exit(EXIT_FAILURE);
@@ -259,7 +259,7 @@ TEST_F(TestApp, test_signal_reload_custom)
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
     EXPECT_EQ(reloads, 1);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 # endif
 
@@ -269,20 +269,20 @@ TEST_F(TestApp, test_signal_reload_custom)
 TEST_F(TestApp, test_signal_added_on_reload)
 {
     std::string path = tmp_path("sigreload.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"]}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"]}}})").has_value());
 
     sihd::sys::App app({.name = "sigreload", .setup_logging = false});
     app.root().add_command("run", "run").on_run([&] {
-        ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"], "ignore": ["USR1"]}}})"));
+        ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"], "ignore": ["USR1"]}}})").has_value());
         ASSERT_TRUE(app.reload());
-        signal::kill(os::pid(), SIGUSR1);
+        (void)signal::kill(os::pid(), SIGUSR1);
         app.wait_for_termination(Duration(time::milli(300)));
         if (app.should_stop())
             app.exit(EXIT_FAILURE);
     });
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 #endif
 
@@ -291,18 +291,18 @@ TEST_F(TestApp, test_signal_ignore)
 {
     std::string path = tmp_path("ignore.json");
     // the conf accepts raw signal numbers too
-    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"signals": {{"ignore": [{}]}}}}}})", SIGUSR1)));
+    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"signals": {{"ignore": [{}]}}}}}})", SIGUSR1)).has_value());
 
     sihd::sys::App app({.name = "ignore", .setup_logging = false});
     app.root().add_command("run", "run").on_run([&] {
-        signal::kill(os::pid(), SIGUSR1);
+        (void)signal::kill(os::pid(), SIGUSR1);
         app.wait_for_termination(Duration(time::milli(300)));
         if (app.should_stop())
             app.exit(EXIT_FAILURE);
     });
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 #endif
 
@@ -311,7 +311,7 @@ TEST_F(TestApp, test_signal_float_conf_rejected)
 {
     std::string path = tmp_path("floatsig.json");
     // 2.5 must not silently become signal 2
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"ignore": [2.5]}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"ignore": [2.5]}}})").has_value());
 
     sihd::sys::App app({.name = "floatsig", .setup_logging = false});
     bool ran = false;
@@ -319,7 +319,7 @@ TEST_F(TestApp, test_signal_float_conf_rejected)
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), EXIT_FAILURE);
     EXPECT_FALSE(ran);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 #endif
 
@@ -327,7 +327,7 @@ TEST_F(TestApp, test_signal_float_conf_rejected)
 TEST_F(TestApp, test_signal_callback)
 {
     std::string path = tmp_path("callback.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"callback": ["USR2"]}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"callback": ["USR2"]}}})").has_value());
 
     sihd::sys::App app({.name = "callback", .setup_logging = false});
     int signaled = 0;
@@ -336,14 +336,14 @@ TEST_F(TestApp, test_signal_callback)
             signaled++;
     });
     app.root().add_command("run", "run").on_run([&] {
-        signal::kill(os::pid(), SIGUSR2);
+        (void)signal::kill(os::pid(), SIGUSR2);
         app.wait_for_termination(Duration(time::milli(300)));
         if (signaled == 0)
             app.exit(EXIT_FAILURE);
     });
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 
 #endif
@@ -351,7 +351,7 @@ TEST_F(TestApp, test_signal_callback)
 TEST_F(TestApp, test_daemon_keys)
 {
     std::string path = tmp_path("daemon.json");
-    ASSERT_TRUE(fs::write(path, R"({"sihd": {"daemon": {"working_dir": "/tmp"}}})"));
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"daemon": {"working_dir": "/tmp"}}})").has_value());
 
     sihd::sys::App app({.name = "daemon", .setup_logging = false});
     app.root().add_command("run", "run").on_run([] {});
@@ -363,7 +363,7 @@ TEST_F(TestApp, test_daemon_keys)
         EXPECT_TRUE(app.daemon().supported);
     }
     EXPECT_EQ(app.daemon().working_dir(), "/tmp");
-    fs::remove_file(path);
+    (void)fs::remove_file(path);
 }
 
 TEST_F(TestApp, test_service_loop)
@@ -385,7 +385,7 @@ TEST_F(TestApp, test_log_file)
 {
     std::string log_path = tmp_path("app.log");
     std::string path = tmp_path("logconf.json");
-    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path)));
+    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path)).has_value());
 
     // the file logger flushes on destruction
     {
@@ -397,8 +397,8 @@ TEST_F(TestApp, test_log_file)
     std::optional<std::string> content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("FILEMSG"), std::string::npos);
-    fs::remove_file(path);
-    fs::remove_file(log_path);
+    (void)fs::remove_file(path);
+    (void)fs::remove_file(log_path);
 }
 
 TEST_F(TestApp, test_log_file_level)
@@ -423,8 +423,8 @@ TEST_F(TestApp, test_log_file_level)
     // the level filter applies to the file logger
     EXPECT_NE(content->find("INFOMSG"), std::string::npos);
     EXPECT_EQ(content->find("DEBUGMSG"), std::string::npos);
-    fs::remove_file(path);
-    fs::remove_file(log_path);
+    (void)fs::remove_file(path);
+    (void)fs::remove_file(log_path);
 }
 
 TEST_F(TestApp, test_log_file_reload)
@@ -432,7 +432,7 @@ TEST_F(TestApp, test_log_file_reload)
     std::string log_path1 = tmp_path("reload1.log");
     std::string log_path2 = tmp_path("reload2.log");
     std::string path = tmp_path("logreload.json");
-    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path1)));
+    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path1)).has_value());
 
     // the file loggers flush on destruction
     {
@@ -441,7 +441,8 @@ TEST_F(TestApp, test_log_file_reload)
         app.root().add_command("emit", "emit").on_run([&] { SIHD_LOG(info, "{}", msg); });
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
-        ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path2)));
+        ASSERT_TRUE(
+            fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path2)).has_value());
         msg = "SECONDMSG";
         ASSERT_TRUE(app.reload());
         EXPECT_EQ(app.evaluate(std::vector<std::string> {"emit"}), 0);
@@ -453,9 +454,9 @@ TEST_F(TestApp, test_log_file_reload)
     std::optional<std::string> second = fs::read_all(log_path2);
     ASSERT_TRUE(second.has_value());
     EXPECT_NE(second->find("SECONDMSG"), std::string::npos);
-    fs::remove_file(path);
-    fs::remove_file(log_path1);
-    fs::remove_file(log_path2);
+    (void)fs::remove_file(path);
+    (void)fs::remove_file(log_path1);
+    (void)fs::remove_file(log_path2);
 }
 
 TEST_F(TestApp, test_log_console_opt_out)
@@ -477,8 +478,8 @@ TEST_F(TestApp, test_log_console_opt_out)
     std::optional<std::string> content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("NOCONSOLEMSG"), std::string::npos);
-    fs::remove_file(path);
-    fs::remove_file(log_path);
+    (void)fs::remove_file(path);
+    (void)fs::remove_file(log_path);
 }
 
 TEST_F(TestApp, test_log_console_option)

@@ -34,8 +34,8 @@ TEST_F(TestSftp, test_sftp)
     TmpDir tmp_dir;
 
     std::string test_dir = sihd::sys::fs::combine(tmp_dir.path(), "mkdir");
-    sihd::sys::fs::remove_directories(test_dir);
-    sihd::sys::fs::make_directories(test_dir);
+    SIHD_UNEXPECTED_LOG(sihd::sys::fs::remove_directories(test_dir));
+    SIHD_UNEXPECTED_LOG(sihd::sys::fs::make_directories(test_dir));
 
     // Start test server with SFTP enabled, using tmp_dir as root
     auto test_server = make_test_server_with_sftp("test-sftp", "/");
@@ -46,18 +46,18 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(session.connected());
 
     Sftp sftp = session.make_sftp();
-    ASSERT_TRUE(sftp.open());
-    EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir"));
+    ASSERT_TRUE(sftp.open().has_value());
+    EXPECT_TRUE(sftp.mkdir(test_dir + "/new_dir").has_value());
     EXPECT_TRUE(fs::is_dir(test_dir + "/new_dir"));
 
-    EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt"));
-    EXPECT_TRUE(sftp.get_file(fs::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt"));
+    EXPECT_TRUE(sftp.send_file("test/resources/file.txt", test_dir + "/sent_file.txt").has_value());
+    EXPECT_TRUE(sftp.get_file(fs::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt").has_value());
     EXPECT_TRUE(fs::is_file(test_dir + "/sent_file.txt"));
     EXPECT_TRUE(fs::is_file(test_dir + "/recv_file.txt"));
     EXPECT_EQ(fs::file_size(test_dir + "/sent_file.txt"), fs::file_size("test/resources/file.txt"));
 
     std::vector<std::string> list;
-    EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list));
+    EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list).has_value());
     EXPECT_EQ(list.size(), 3u);
     EXPECT_TRUE(std::find(list.begin(), list.end(), "recv_file.txt") != list.end());
     EXPECT_TRUE(std::find(list.begin(), list.end(), "sent_file.txt") != list.end());
@@ -68,7 +68,7 @@ TEST_F(TestSftp, test_sftp)
     }
 
     std::vector<SftpAttribute> attrs;
-    EXPECT_TRUE(sftp.list_dir(test_dir, attrs));
+    EXPECT_TRUE(sftp.list_dir(test_dir, attrs).has_value());
     EXPECT_EQ(attrs.size(), 3u);
     int nlink = 0;
     int nregular = 0;
@@ -107,7 +107,7 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     ASSERT_TRUE(connect_to_test_server(*test_server, session));
 
     Sftp sftp = session.make_sftp();
-    ASSERT_TRUE(sftp.open());
+    ASSERT_TRUE(sftp.open().has_value());
 
     TmpDir out;
     std::string leaked = fs::combine(out.path(), "leaked.txt");
@@ -115,7 +115,7 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     // Traversal read must fail and must not retrieve the secret.
     // get_file opens the local sink before the remote file, so an empty local
     // file may remain; the security guarantee is that no secret bytes leak.
-    EXPECT_FALSE(sftp.get_file("../secret.txt", leaked));
+    EXPECT_FALSE(sftp.get_file("../secret.txt", leaked).has_value());
     if (fs::is_file(leaked))
     {
         EXPECT_EQ(fs::file_size(leaked), 0u);
@@ -123,11 +123,11 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
 
     // Legit read inside the jail still works
     std::string got = fs::combine(out.path(), "got.txt");
-    EXPECT_TRUE(sftp.get_file("ok.txt", got));
+    EXPECT_TRUE(sftp.get_file("ok.txt", got).has_value());
     EXPECT_TRUE(fs::is_file(got));
 
     // Traversal write must not escape the jail
-    EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt"));
+    EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt").has_value());
     EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
 }
 } // namespace test

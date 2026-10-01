@@ -14,24 +14,24 @@ const SM & default_statemachine()
         m.set_transitions_map({
             // none -> setup -> configured
             {SM::pack_key(St::None, Op::Setup), St::Configuring},
-            {SM::pack_key(St::Configuring, Op::Error), St::Error},
+            {SM::pack_key(St::Configuring, Op::Failure), St::Failure},
             {SM::pack_key(St::Configuring, Op::Success), St::Configured},
             // configured -> init -> stopped
             {SM::pack_key(St::Configured, Op::Init), St::Initializing},
-            {SM::pack_key(St::Initializing, Op::Error), St::Error},
+            {SM::pack_key(St::Initializing, Op::Failure), St::Failure},
             {SM::pack_key(St::Initializing, Op::Success), St::Stopped},
             // stopped -> start -> running
             {SM::pack_key(St::Stopped, Op::Start), St::Starting},
-            {SM::pack_key(St::Starting, Op::Error), St::Error},
+            {SM::pack_key(St::Starting, Op::Failure), St::Failure},
             {SM::pack_key(St::Starting, Op::Success), St::Running},
             // running -> stop -> stopped
             {SM::pack_key(St::Running, Op::Stop), St::Stopping},
-            {SM::pack_key(St::Stopping, Op::Error), St::Error},
+            {SM::pack_key(St::Stopping, Op::Failure), St::Failure},
             {SM::pack_key(St::Stopping, Op::Success), St::Stopped},
             // configured/stopped -> reset -> none
             {SM::pack_key(St::Configured, Op::Reset), St::Resetting},
             {SM::pack_key(St::Stopped, Op::Reset), St::Resetting},
-            {SM::pack_key(St::Resetting, Op::Error), St::Error},
+            {SM::pack_key(St::Resetting, Op::Failure), St::Failure},
             {SM::pack_key(St::Resetting, Op::Success), St::None},
         });
         m.set_states_names_map({
@@ -52,7 +52,7 @@ const SM & default_statemachine()
             {Op::Stop, "stop"},
             {Op::Reset, "reset"},
             {Op::Success, "success"},
-            {Op::Error, "error"},
+            {Op::Failure, "error"},
         });
         return m;
     }();
@@ -98,7 +98,7 @@ bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool sta
     bool ret;
     {
         std::lock_guard l(_state_mutex);
-        ret = statemachine.transition(status ? AService::Success : AService::Error);
+        ret = statemachine.transition(status ? AService::Success : AService::Failure);
     }
     this->notify_observers(this);
     return ret;
@@ -136,7 +136,7 @@ const char *ServiceController::state_str(State state)
             return "stopped";
         case Resetting:
             return "resetting";
-        case Error:
+        case Failure:
             return "error";
         default:
             return "none";

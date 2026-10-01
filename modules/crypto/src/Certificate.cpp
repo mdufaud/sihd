@@ -1,6 +1,6 @@
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
-#include <sihd/util/Logger.hpp>
+#include <sihd/crypto/error.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
@@ -11,18 +11,22 @@
 # include <ws2tcpip.h>
 #endif
 
+#include <sihd/util/Error.hpp>
+
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::crypto
 {
-
-SIHD_LOGGER;
 
 namespace
 {
@@ -127,7 +131,8 @@ Certificate & Certificate::operator=(Certificate && other) noexcept
     return *this;
 }
 
-bool Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
+std::expected<void, sihd::util::Error>
+    Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
 {
     CertOptions opts;
     opts.common_name = std::string(common_name);
@@ -135,17 +140,16 @@ bool Certificate::generate_self_signed(const PrivateKey & key, std::string_view 
     return this->generate_self_signed(key, opts);
 }
 
-bool Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
+std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const PrivateKey & key,
+                                                                         const CertOptions & opts)
 {
+    ERR_clear_error();
     this->clear();
     if (!key)
-    {
-        SIHD_LOG(error, "Certificate: key is empty");
-        return false;
-    }
+        return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
     X509 *cert = X509_new();
     if (!cert)
-        return false;
+        return make_error("Certificate: X509_new");
 
     X509_set_version(cert, 2); // X509 v3
 
@@ -192,7 +196,10 @@ bool Certificate::generate_self_signed(const PrivateKey & key, const CertOptions
         }
         else
         {
-            SIHD_LOG(error, "Certificate: invalid subject alt names: {}", san);
+            X509_free(cert);
+            // conf failure left the openssl queue dirty for the next make_error
+            ERR_clear_error();
+            return std::unexpected(Error(invalid_argument, "invalid subject alt names: {}", san));
         }
     }
 
@@ -207,82 +214,77 @@ bool Certificate::generate_self_signed(const PrivateKey & key, const CertOptions
             X509_add_ext(cert, ext, -1);
             X509_EXTENSION_free(ext);
         }
+        else
+        {
+            // ignored failure: drain the queue, it must not leak into the next make_error
+            ERR_clear_error();
+        }
     }
 
     if (X509_sign(cert, as_key(key.native()), EVP_sha256()) <= 0)
     {
-        SIHD_LOG(error, "Certificate: signing failed");
         X509_free(cert);
-        return false;
+        return make_error("Certificate: X509_sign");
     }
     _handle = cert;
-    return true;
+    return {};
 }
 
-bool Certificate::load_pem(std::string_view path)
+std::expected<void, sihd::util::Error> Certificate::load_pem(std::string_view path)
 {
+    ERR_clear_error();
     this->clear();
     FILE *fp = fopen(std::string(path).c_str(), "r");
     if (!fp)
-    {
-        SIHD_LOG(error, "Certificate: cannot open file: {}", path);
-        return false;
-    }
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
     X509 *cert = PEM_read_X509(fp, nullptr, nullptr, nullptr);
     fclose(fp);
     if (!cert)
-    {
-        SIHD_LOG(error, "Certificate: failed to read PEM from: {}", path);
-        return false;
-    }
+        return make_error("Certificate: read PEM from '{}'", path);
     _handle = cert;
-    return true;
+    return {};
 }
 
-bool Certificate::save_pem(std::string_view path) const
+std::expected<void, sihd::util::Error> Certificate::save_pem(std::string_view path) const
 {
+    ERR_clear_error();
     if (!_handle)
-        return false;
+        return std::unexpected(Error(not_initialized, "Certificate: no certificate loaded"));
     FILE *fp = fopen(std::string(path).c_str(), "w");
     if (!fp)
-    {
-        SIHD_LOG(error, "Certificate: cannot open file for writing: {}", path);
-        return false;
-    }
-    bool ok = PEM_write_X509(fp, as_cert(_handle)) > 0;
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    const bool ok = PEM_write_X509(fp, as_cert(_handle)) > 0;
     fclose(fp);
-    return ok;
+    if (!ok)
+        return make_error("Certificate: write PEM to '{}'", path);
+    return {};
 }
 
-bool Certificate::load_der(const uint8_t *data, size_t len)
+std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data, size_t len)
 {
+    ERR_clear_error();
     this->clear();
     const unsigned char *p = data;
     X509 *cert = d2i_X509(nullptr, &p, static_cast<long>(len));
     if (!cert)
-    {
-        SIHD_LOG(error, "Certificate: failed to read DER data");
-        return false;
-    }
+        return std::unexpected(make_error("Certificate: read DER data"));
     _handle = cert;
-    return true;
+    return {};
 }
 
-bool Certificate::load_pem_string(std::string_view pem)
+std::expected<void, sihd::util::Error> Certificate::load_pem_string(std::string_view pem)
 {
+    ERR_clear_error();
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
-        return false;
+        return std::unexpected(make_error("Certificate: BIO_new_mem_buf"));
     X509 *cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
     BIO_free(bio);
     if (!cert)
-    {
-        SIHD_LOG(error, "Certificate: failed to read PEM from string");
-        return false;
-    }
+        return std::unexpected(make_error("Certificate: read PEM from string"));
     _handle = cert;
-    return true;
+    return {};
 }
 
 std::string Certificate::to_pem_string() const

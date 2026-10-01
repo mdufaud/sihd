@@ -127,16 +127,13 @@ local nowhere = http.options("localhost:3011/api/nope", opt)
 assert(nowhere ~= nil)
 assert(nowhere.status == 404)
 
--- Navigator:last_error is the reason of the last failed request, cleared by the next one
-assert(nav:last_error() == "")
+-- a failed request yields nil; the error is logged once at the binding boundary
 local failed = nav:get("localhost:19999/api/hello")
 assert(failed == nil)
-assert(#nav:last_error() > 0)
 
 local recovered = nav:get("localhost:3011/api/hello")
 assert(recovered ~= nil)
 assert(recovered.status == 200)
-assert(nav:last_error() == "")
 
 -- an unknown proxy type is refused instead of silently defaulting
 local proxy_ok = pcall(function()

@@ -75,12 +75,16 @@ bool DevPulsation::on_start()
         SIHD_LOG(error, "DevPulsation: cannot start without a frequency configured");
         return false;
     }
-    if (!this->get_channel(CHANNEL_HEART, &_channel_heartbeat_ptr))
-        return false;
+    auto heartbeat = this->get_channel(CHANNEL_HEART);
+    if (!heartbeat)
+        return !SIHD_UNEXPECTED_LOG(heartbeat);
+    _channel_heartbeat_ptr = *heartbeat;
     _beats = _channel_heartbeat_ptr->read<uint32_t>(0);
 
-    if (!this->get_channel(CHANNEL_ACTIVATE, &_channel_activate_ptr))
-        return false;
+    auto activate = this->get_channel(CHANNEL_ACTIVATE);
+    if (!activate)
+        return !SIHD_UNEXPECTED_LOG(activate);
+    _channel_activate_ptr = *activate;
     this->observe_channel(_channel_activate_ptr);
     if (_channel_activate_ptr->read<bool>(0) == false)
         _step_worker.pause_worker();

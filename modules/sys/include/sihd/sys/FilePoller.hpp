@@ -1,11 +1,13 @@
 #ifndef __SIHD_SYS_FILEPOLLER_HPP__
 #define __SIHD_SYS_FILEPOLLER_HPP__
 
+#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
 
@@ -20,7 +22,7 @@ class FilePoller: public sihd::util::Observable<FilePoller>,
         FilePoller(std::string_view path, size_t max_depth);
         virtual ~FilePoller();
 
-        bool watch(std::string_view path, size_t max_depth);
+        std::expected<void, sihd::util::Error> watch(std::string_view path, size_t max_depth);
         void unwatch();
 
         bool run() override;

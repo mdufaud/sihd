@@ -31,13 +31,13 @@ TEST_F(TestUdp, test_udp_receiver_run)
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
-    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
-    EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}));
+    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}).has_value());
+    EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}).has_value());
 
     sihd::util::Synchronizer start_sync(2);
     ssize_t receive_ret = -1;
     sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv, &start_sync](INetReceiver *rcv) {
-        receive_ret = rcv->receive(array_rcv);
+        receive_ret = (ssize_t)rcv->receive(array_rcv).value_or(-1);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(' '), array_rcv.byte_size());
         (void)start_sync.sync(std::chrono::milliseconds(500));
     });
@@ -65,15 +65,15 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
-    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}));
-    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4242)));
+    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}).has_value());
+    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4242)).has_value());
 
     EXPECT_TRUE(receiver.socket_opened());
     EXPECT_TRUE(receiver.socket().set_blocking(false));
     EXPECT_TRUE(sender.socket_opened());
 
     sihd::util::Handler<INetReceiver *> handler([&array_rcv](INetReceiver *rcv) {
-        rcv->receive(array_rcv);
+        (void)rcv->receive(array_rcv);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(), array_rcv.byte_size());
     });
     receiver.add_observer(&handler);
@@ -99,20 +99,20 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     sihd::util::ArrChar array_rcv(40);
 
     UdpSender sender("udp-sender");
-    EXPECT_TRUE(sender.open_socket());
+    EXPECT_TRUE(sender.open_socket().has_value());
     EXPECT_TRUE(sender.socket_opened());
     EXPECT_TRUE(sender.socket().set_broadcast(true));
 
     IpAddr any_ip(4242);
     UdpReceiver receiver("udp-receiver");
-    EXPECT_TRUE(receiver.open_and_bind(any_ip));
+    EXPECT_TRUE(receiver.open_and_bind(any_ip).has_value());
     EXPECT_TRUE(receiver.socket_opened());
 
     // send to broadcast ip
     EXPECT_EQ(sender.send_to({"127.255.255.255", 4242}, helloworld), (ssize_t)strlen(helloworld));
 
     IpAddr iprcv;
-    receiver.receive(iprcv, array_rcv);
+    (void)receiver.receive(iprcv, array_rcv);
     EXPECT_EQ(iprcv.str(), "127.0.0.1");
 
     EXPECT_TRUE(array_rcv.is_equal(helloworld));

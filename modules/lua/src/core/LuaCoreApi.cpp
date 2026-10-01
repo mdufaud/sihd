@@ -56,8 +56,16 @@ void LuaCoreApi::load(Vm & vm)
         // Configurable
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Device>)
         // AChannelContainer
-        .addFunction("find_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::find_channel))
-        .addFunction("get_channel", static_cast<Channel *(Device::*)(const std::string &)>(&Device::get_channel))
+        .addFunction(
+            "find_channel",
+            +[](Device *self, const std::string & name) -> Channel * {
+                return self->find_channel(name).value_or(nullptr);
+            })
+        .addFunction(
+            "get_channel",
+            +[](Device *self, const std::string & name) -> Channel * {
+                return self->get_channel(name).value_or(nullptr);
+            })
         .addFunction(
             "add_channel",
             static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel))

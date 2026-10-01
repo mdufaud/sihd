@@ -54,8 +54,8 @@ TEST_F(TestSharedMemory, test_sharedmemory)
 
     // another process attaches, reads our writes and writes back its own
     Process proc({helper_path(), "shm", "/id"});
-    proc.execute();
-    proc.wait_any();
+    (void)proc.execute();
+    (void)proc.wait_any();
 
     EXPECT_TRUE(proc.return_code() & (1 << 1));
     EXPECT_TRUE(proc.return_code() & (1 << 2));

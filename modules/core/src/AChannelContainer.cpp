@@ -6,47 +6,28 @@ namespace sihd::core
 
 SIHD_LOGGER;
 
+using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
 AChannelContainer::AChannelContainer(const std::string & name, Node *parent): Node(name, parent) {}
 
 AChannelContainer::~AChannelContainer() = default;
 
-Channel *AChannelContainer::find_channel(const std::string & path)
+std::expected<Channel *, Error> AChannelContainer::find_channel(const std::string & path)
 {
-    return this->find<Channel>(path);
-}
-
-bool AChannelContainer::find_channel(const std::string & path, Channel **to_fill)
-{
-    Channel *c = this->find_channel(path);
+    Channel *c = this->find<Channel>(path);
     if (c == nullptr)
-    {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' no such channel '{}'", this->full_name(), path);
-        return false;
-    }
-    *to_fill = c;
-    return true;
+        return std::unexpected(Error(not_found, "no such channel '{}' in '{}'", path, this->full_name()));
+    return c;
 }
 
-Channel *AChannelContainer::get_channel(const std::string & name)
+std::expected<Channel *, Error> AChannelContainer::get_channel(const std::string & name)
 {
     Named *child = this->get_child(name);
-    if (child)
-        return dynamic_cast<Channel *>(child);
-    return nullptr;
-}
-
-bool AChannelContainer::get_channel(const std::string & name, Channel **to_fill)
-{
-    Channel *c = this->get_channel(name);
+    Channel *c = child != nullptr ? dynamic_cast<Channel *>(child) : nullptr;
     if (c == nullptr)
-    {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' no such channel '{}'", this->full_name(), name);
-        return false;
-    }
-    *to_fill = c;
-    return true;
+        return std::unexpected(Error(not_found, "no such channel '{}' in '{}'", name, this->full_name()));
+    return c;
 }
 
 Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
@@ -103,9 +84,13 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
         SIHD_LOG_ERROR("ChannelContainer: '{}' memory error for channel '{}'", this->full_name(), name);
         return nullptr;
     }
-    if (this->add_child(c, true) == false)
+    auto added = this->add_child(c, true);
+    if (added.has_value() == false)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' cannot add channel '{}'", this->full_name(), name);
+        SIHD_LOG_ERROR("ChannelContainer: '{}' cannot add channel '{}': {}",
+                       this->full_name(),
+                       name,
+                       added.error().message);
         delete c;
         return nullptr;
     }
@@ -179,13 +164,12 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
     return ret;
 }
 
-bool AChannelContainer::observe_channel(const std::string & channel_name)
+std::expected<void, Error> AChannelContainer::observe_channel(const std::string & channel_name)
 {
-    Channel *c = this->get_channel(channel_name);
-    if (c != nullptr)
-        return this->observe_channel(c);
-    SIHD_LOG_ERROR("ChannelContainer: '{}' cannot find channel '{}' to observe", this->full_name(), channel_name);
-    return false;
+    auto c = this->get_channel(channel_name);
+    SIHD_UNEXPECTED_RETURN(c);
+    this->observe_channel(*c);
+    return {};
 }
 
 bool AChannelContainer::observe_channel(Channel *c)

@@ -169,12 +169,12 @@ TEST_F(TestFS, test_fs_jail)
     TmpDir root_dir;
     ASSERT_TRUE(static_cast<bool>(root_dir));
     const std::string & root = root_dir.path();
-    ASSERT_TRUE(fs::make_file_link("/etc/passwd", fs::combine(root, "escape")));
+    ASSERT_TRUE(fs::make_file_link("/etc/passwd", fs::combine(root, "escape")).has_value());
     EXPECT_EQ(fs::jail(root, "escape"), root);
 
     // A real file inside the jail resolves to itself
     const std::string inside = fs::combine(root, "inside.txt");
-    ASSERT_TRUE(fs::write(inside, "data"));
+    ASSERT_TRUE(fs::write(inside, "data").has_value());
     EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
 #endif
 }
@@ -226,19 +226,19 @@ TEST_F(TestFS, test_fs_creation)
     EXPECT_FALSE(fs::is_dir(dirname));
     EXPECT_TRUE(log_make_dirs(dirname));
     EXPECT_TRUE(fs::is_dir(dirname));
-    EXPECT_TRUE(fs::remove_directory(dirname));
-    EXPECT_TRUE(fs::make_directory(dirname));
-    EXPECT_TRUE(fs::remove_directory(dirname));
+    EXPECT_TRUE(fs::remove_directory(dirname).has_value());
+    EXPECT_TRUE(fs::make_directory(dirname).has_value());
+    EXPECT_TRUE(fs::remove_directory(dirname).has_value());
     EXPECT_FALSE(fs::is_dir(dirname));
 
 #if !defined(__SIHD_WINDOWS__)
     const std::string link_target = fs::combine({sandbox_path, "path", "file1.txt"});
     const std::string link_path = fs::combine({sandbox_path, "path", "file_link"});
-    EXPECT_TRUE(fs::make_file_link(link_target, link_path));
+    EXPECT_TRUE(fs::make_file_link(link_target, link_path).has_value());
     EXPECT_TRUE(fs::is_symlink(link_path));
 #endif
 
-    EXPECT_TRUE(fs::remove_directories(sandbox_path));
+    EXPECT_TRUE(fs::remove_directories(sandbox_path).has_value());
     EXPECT_FALSE(fs::is_dir(path_to_test));
     EXPECT_TRUE(fs::is_dir(sandbox_path));
 }
@@ -252,7 +252,7 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_TRUE(str::ends_with(path, fs::combine("io", "test.txt")));
     EXPECT_TRUE(this->log_make_dirs(fs::parent(path)));
     SIHD_LOG(info, "Writing file to: {}", path);
-    EXPECT_TRUE(fs::write(path, file_content));
+    EXPECT_TRUE(fs::write(path, file_content).has_value());
     EXPECT_EQ(fs::read_all(path).value_or(""), file_content);
     EXPECT_EQ(fs::read(path, {0, 4}).value_or(""), "hello");
     char data[10];
@@ -261,7 +261,7 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_STREQ(data, "hello");
 
     std::string content_z = "bin\032ary";
-    EXPECT_TRUE(fs::write(path, content_z, false, true));
+    EXPECT_TRUE(fs::write(path, content_z, false, true).has_value());
     EXPECT_EQ(fs::read_all(path, true).value_or(""), content_z);
 #if defined(__SIHD_WINDOWS__)
     // the default text mode stops at ^Z
@@ -269,7 +269,7 @@ TEST_F(TestFS, test_fs_fast_io)
 #endif
 
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
-    EXPECT_FALSE(fs::write("/there/is/no/path.txt", "none"));
+    EXPECT_FALSE(fs::write("/there/is/no/path.txt", "none").has_value());
     EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
 }
 
@@ -280,7 +280,7 @@ TEST_F(TestFS, test_fs_read_lines)
 
     EXPECT_FALSE(fs::read_lines(path).has_value());
 
-    ASSERT_TRUE(fs::write(path, "first\n\nsecond\n"));
+    ASSERT_TRUE(fs::write(path, "first\n\nsecond\n").has_value());
     const auto lines = fs::read_lines(path);
     ASSERT_TRUE(lines.has_value());
     ASSERT_EQ(lines->size(), 2u);
@@ -301,25 +301,25 @@ TEST_F(TestFS, test_fs_permission)
 #if !defined(__SIHD_WINDOWS__)
     EXPECT_FALSE(fs::is_executable(path));
 
-    EXPECT_TRUE(fs::permission_set(path, 0700));
+    EXPECT_TRUE(fs::permission_set(path, 0700).has_value());
     EXPECT_TRUE(fs::is_executable(path));
     EXPECT_EQ(fs::permission_get(path), 0700U);
 
-    EXPECT_TRUE(fs::permission_rm(path, fs::permission_from_str("r--")));
+    EXPECT_TRUE(fs::permission_rm(path, fs::permission_from_str("r--")).has_value());
     EXPECT_EQ(fs::permission_get(path), 0300U);
-    EXPECT_TRUE(fs::permission_add(path, fs::permission_from_str("---r---w-")));
+    EXPECT_TRUE(fs::permission_add(path, fs::permission_from_str("---r---w-")).has_value());
     EXPECT_EQ(fs::permission_get(path), 0342U);
 
     EXPECT_EQ(fs::permission_to_str(0750), "rwxr-x---");
     EXPECT_EQ(fs::permission_from_str("rwxr-x"), 0750U);
 
-    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")));
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rwxr-x-w-")).has_value());
     EXPECT_EQ(fs::permission_get(path), 0752U);
 #else
     // windows only models the read-only attribute (no rwx/owner-group-other bits)
-    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("r--r--r--")));
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("r--r--r--")).has_value());
     EXPECT_FALSE(fs::is_writable(path));
-    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rw-rw-rw-")));
+    EXPECT_TRUE(fs::permission_set(path, fs::permission_from_str("rw-rw-rw-")).has_value());
     EXPECT_TRUE(fs::is_writable(path));
 #endif
 }
@@ -418,7 +418,7 @@ TEST_F(TestFS, test_fs_times)
 
     EXPECT_FALSE(fs::times(path).has_value());
 
-    ASSERT_TRUE(fs::write(path, "times"));
+    ASSERT_TRUE(fs::write(path, "times").has_value());
     const auto times = fs::times(path);
     ASSERT_TRUE(times.has_value());
     EXPECT_NE(times->write.get(), 0);
@@ -433,7 +433,7 @@ TEST_F(TestFS, test_fs_times)
 
     // timestamps have a coarse granularity on some filesystems
     time::msleep(20);
-    ASSERT_TRUE(fs::write(path, "times again"));
+    ASSERT_TRUE(fs::write(path, "times again").has_value());
     const auto times2 = fs::times(path);
     ASSERT_TRUE(times2.has_value());
     EXPECT_GT(times2->write.get(), times->write.get());
@@ -451,18 +451,18 @@ TEST_F(TestFS, test_fs_copy_file)
     std::string content(5 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(src, content, false, true));
+    ASSERT_TRUE(fs::write(src, content, false, true).has_value());
 
     // Wine does not implement the CopyFile2 progress callback ("PCOPYFILE2_PROGRESS_ROUTINE
     // is not supported" in its kernelbase/file.c): the callback never runs there, so
     // progress counting and cancellation cannot be verified
     size_t transferred = 0;
     EXPECT_TRUE(fs::copy_file(src, dst, [&](size_t progress, size_t total) {
-        EXPECT_EQ(total, content.size());
-        EXPECT_GE(progress, transferred);
-        transferred = progress;
-        return true;
-    }));
+                    EXPECT_EQ(total, content.size());
+                    EXPECT_GE(progress, transferred);
+                    transferred = progress;
+                    return true;
+                }).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
     if (!running_under_wine())
     {
@@ -476,18 +476,18 @@ TEST_F(TestFS, test_fs_copy_file)
     EXPECT_EQ(dst_times->write.get(), src_times->write.get());
 
     // overwrite without progress callback
-    EXPECT_TRUE(fs::copy_file(src, dst));
+    EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
 
     // same size, different content
-    ASSERT_TRUE(fs::write(dst, std::string(content.size(), 'z'), false, true));
+    ASSERT_TRUE(fs::write(dst, std::string(content.size(), 'z'), false, true).has_value());
     EXPECT_FALSE(fs::are_equals(src, dst));
-    EXPECT_TRUE(fs::copy_file(src, dst));
+    EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
 
     // copying a file onto itself is refused and keeps it intact
-    ASSERT_TRUE(fs::copy_file(src, same));
-    EXPECT_FALSE(fs::copy_file(same, same));
+    ASSERT_TRUE(fs::copy_file(src, same).has_value());
+    EXPECT_FALSE(fs::copy_file(same, same).has_value());
     EXPECT_EQ(fs::file_size(same).value_or(0), content.size());
 
     if (!running_under_wine())
@@ -495,13 +495,13 @@ TEST_F(TestFS, test_fs_copy_file)
         // cancellation removes the partial destination
         bool cancelled = false;
         EXPECT_FALSE(fs::copy_file(src, dst_cancel, [&](size_t progress, size_t total) {
-            if (progress >= total / 2)
-            {
-                cancelled = true;
-                return false;
-            }
-            return true;
-        }));
+                         if (progress >= total / 2)
+                         {
+                             cancelled = true;
+                             return false;
+                         }
+                         return true;
+                     }).has_value());
         EXPECT_TRUE(cancelled);
         EXPECT_FALSE(fs::is_file(dst_cancel));
     }
@@ -509,12 +509,12 @@ TEST_F(TestFS, test_fs_copy_file)
     // empty files copy fine
     const std::string empty_src = fs::combine({tmp_path.path(), "empty_src.bin"});
     const std::string empty_dst = fs::combine({tmp_path.path(), "empty_dst.bin"});
-    ASSERT_TRUE(fs::write(empty_src, ""));
-    EXPECT_TRUE(fs::copy_file(empty_src, empty_dst));
+    ASSERT_TRUE(fs::write(empty_src, "").has_value());
+    EXPECT_TRUE(fs::copy_file(empty_src, empty_dst).has_value());
     EXPECT_TRUE(fs::are_equals(empty_src, empty_dst));
 
     // missing source
-    EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.path(), "nope.bin"}), dst));
+    EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.path(), "nope.bin"}), dst).has_value());
 }
 
 TEST_F(TestFS, test_fs_platform_paths)
@@ -566,19 +566,19 @@ TEST_F(TestFS, test_fs_download_path)
     EXPECT_EQ(fs::download_path(), fallback);
 
     // $HOME is expanded
-    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"$HOME/Telechargements\"\n"));
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"$HOME/Telechargements\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fs::combine(fs::home_path(), "Telechargements"));
 
     // absolute values are used as-is
-    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"/data/downloads\"\n"));
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"/data/downloads\"\n").has_value());
     EXPECT_EQ(fs::download_path(), "/data/downloads");
 
     // an unusable value falls back to ~/Downloads
-    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"relative/dir\"\n"));
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"relative/dir\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fallback);
 
     // other keys are ignored
-    ASSERT_TRUE(fs::write(dirs_file, "XDG_MUSIC_DIR=\"$HOME/Music\"\n"));
+    ASSERT_TRUE(fs::write(dirs_file, "XDG_MUSIC_DIR=\"$HOME/Music\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fallback);
 }
 

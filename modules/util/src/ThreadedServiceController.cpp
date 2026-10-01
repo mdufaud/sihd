@@ -14,7 +14,7 @@ bool ThreadedServiceController::op_start(AService::Operation op)
     switch (op)
     {
         case AService::Operation::Start:
-            if (current_state == Stopped || current_state == Error)
+            if (current_state == Stopped || current_state == Failure)
             {
                 current_state = Starting;
                 return true;
@@ -39,10 +39,10 @@ bool ThreadedServiceController::op_end(AService::Operation op, bool status)
     switch (op)
     {
         case AService::Operation::Start:
-            current_state = status ? Running : Error;
+            current_state = status ? Running : Failure;
             break;
         case AService::Operation::Stop:
-            current_state = status ? Stopped : Error;
+            current_state = status ? Stopped : Failure;
             break;
         default:
             break;

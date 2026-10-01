@@ -1,7 +1,12 @@
 #ifndef __SIHD_CSV_CSVREADER_HPP__
 #define __SIHD_CSV_CSVREADER_HPP__
 
+#include <expected>
+#include <string>
+#include <string_view>
+
 #include <sihd/sys/LineReader.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/Splitter.hpp>
 
@@ -15,18 +20,18 @@ class CsvReader: public sihd::util::IReaderTimestamp
         CsvReader(std::string_view path);
         virtual ~CsvReader();
 
-        bool set_delimiter(int c);
-        bool set_commentary(int c);
+        std::expected<void, sihd::util::Error> set_delimiter(int c);
+        std::expected<void, sihd::util::Error> set_commentary(int c);
         void set_timestamp_col(int n);
         void set_timestamp_format(std::string format);
 
-        bool open(std::string_view path);
+        std::expected<void, sihd::util::Error> open(std::string_view path);
         bool is_open() const;
         bool close();
 
-        bool read_next() override;
+        std::expected<bool, sihd::util::Error> read_next() override;
         bool get_read_data(sihd::util::ArrCharView & view) const override;
-        bool get_read_timestamp(sihd::util::Timestamp *nano_timestamp) const override;
+        std::expected<sihd::util::Timestamp, sihd::util::Error> get_read_timestamp() const override;
 
         const std::vector<std::string> & columns() const;
 

@@ -1,12 +1,15 @@
 #ifndef __SIHD_UTIL_LOGGER_HPP__
 #define __SIHD_UTIL_LOGGER_HPP__
 
+#include <expected>
+#include <source_location>
 #include <string>
 #include <string_view>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/macro.hpp>
 
@@ -20,6 +23,9 @@
 # define SIHD_LOG_LVL_FORMAT(level, message, ...)
 # define SIHD_LOG_FORMAT(level, message, ...)
 # define SIHD_LOG(logger, level, message)
+
+// returns true when the expected holds an error
+# define SIHD_UNEXPECTED_LOG(expected_value) ((expected_value).has_value() == false)
 
 # define SIHD_NEW_LOGGER(name)
 # define SIHD_LOGGER
@@ -47,6 +53,15 @@
 # define SIHD_LOG_NOTICE(message, ...) SIHD_LOG(notice, message, ##__VA_ARGS__)
 # define SIHD_LOG_INFO(message, ...) SIHD_LOG(info, message, ##__VA_ARGS__)
 # define SIHD_LOG_DEBUG(message, ...) SIHD_LOG(debug, message, ##__VA_ARGS__)
+
+// logs the error of a std::expected<..., sihd::util::Error> with the call site, returns true when it was an error
+// SIHD_UNEXPECTED_LOG_NOLOC drops the call site from logs
+# if SIHD_UNEXPECTED_LOG_NOLOC
+#  define SIHD_UNEXPECTED_LOG(expected_value)                                                                          \
+      ::sihd::util::log_unexpected(__sihd_logger__, expected_value, std::source_location {})
+# else
+#  define SIHD_UNEXPECTED_LOG(expected_value) ::sihd::util::log_unexpected(__sihd_logger__, expected_value)
+# endif
 
 // Declare a new logger into the namespace (use in CPP files)
 # define SIHD_NEW_LOGGER(name) inline sihd::util::Logger __sihd_logger__(name);
@@ -93,6 +108,19 @@ class Logger
 
         std::string name;
 };
+
+void log_unexpected_error(Logger & logger, const Error & err, const std::source_location & loc);
+
+template <typename T>
+bool log_unexpected(Logger & logger,
+                    const std::expected<T, Error> & res,
+                    const std::source_location & loc = std::source_location::current())
+{
+    if (res.has_value())
+        return false;
+    log_unexpected_error(logger, res.error(), loc);
+    return true;
+}
 
 } // namespace sihd::util
 

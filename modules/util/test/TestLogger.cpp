@@ -5,6 +5,8 @@
 #include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerStream.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace test
 {
 SIHD_NEW_LOGGER("test");
@@ -56,7 +58,7 @@ class TestLogger: public ::testing::Test
         virtual void SetUp()
         {
             _old_thread_name = thread::name();
-            thread::set_name("main");
+            (void)thread::set_name("main");
 
             this->log_counter = new LogCounter();
             LoggerManager::add(this->log_counter);
@@ -64,7 +66,7 @@ class TestLogger: public ::testing::Test
 
         virtual void TearDown()
         {
-            thread::set_name(_old_thread_name);
+            (void)thread::set_name(_old_thread_name);
 
             LoggerManager::clear_loggers();
             LoggerManager::clear_filters();
@@ -121,6 +123,22 @@ TEST_F(TestLogger, test_logger_macros)
     SIHD_LOG_INFO("int test: {:02} - {}", 2, "world");
     ASSERT_EQ(log_counter->msg, "int test: 02 - world");
     ASSERT_EQ(log_counter->info, 3);
+}
+
+TEST_F(TestLogger, test_logger_expected)
+{
+    std::expected<int, Error> ok = 42;
+    ASSERT_FALSE(SIHD_UNEXPECTED_LOG(ok));
+
+    std::expected<int, Error> err = std::unexpected(Error(invalid_argument, "oops"));
+    ASSERT_TRUE(SIHD_UNEXPECTED_LOG(err));
+    ASSERT_EQ(log_counter->src, "test");
+    ASSERT_TRUE(log_counter->msg.starts_with("TestLogger:"));
+    ASSERT_TRUE(log_counter->msg.ends_with(": oops"));
+
+    Logger local_logger("test");
+    log_unexpected_error(local_logger, err.error(), std::source_location {});
+    ASSERT_EQ(log_counter->msg, "oops");
 }
 
 TEST_F(TestLogger, test_logger_filter_message)
@@ -181,9 +199,9 @@ TEST_F(TestLogger, test_logger_filter_thread)
     EXPECT_EQ(log_counter->debug, 0);
 
     std::jthread thread3([]() {
-        thread::set_name("toto");
+        (void)thread::set_name("toto");
         SIHD_LOG(debug, "Should count");
-        thread::set_name("titi");
+        (void)thread::set_name("titi");
         SIHD_LOG(debug, "Should not count");
     });
     thread3.join();

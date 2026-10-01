@@ -13,12 +13,12 @@ SshSubsystemFunction::SshSubsystemFunction(std::string_view command):
     _command(command),
     _exit_code(0)
 {
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 SshSubsystemFunction::~SshSubsystemFunction()
 {
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 void SshSubsystemFunction::set_callback(Callback callback)

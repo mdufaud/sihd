@@ -119,13 +119,17 @@ bool DevPlayer::on_start()
     _collector.set_provider(provider);
 
     // channel play
-    if (this->get_channel(CHANNEL_PLAY, &_channel_play_ptr) == false)
-        return false;
+    auto play = this->get_channel(CHANNEL_PLAY);
+    if (!play)
+        return !SIHD_UNEXPECTED_LOG(play);
+    _channel_play_ptr = *play;
     this->observe_channel(_channel_play_ptr);
 
     // channel end
-    if (this->get_channel(CHANNEL_END, &_channel_end_ptr) == false)
-        return false;
+    auto end = this->get_channel(CHANNEL_END);
+    if (!end)
+        return !SIHD_UNEXPECTED_LOG(end);
+    _channel_end_ptr = *end;
     _channel_end_ptr->write<bool>(0, false);
 
     // channels to play to

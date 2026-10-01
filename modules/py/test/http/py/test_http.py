@@ -121,13 +121,10 @@ assert(r3 is not None)
 assert(r3.text() == "hello reuse")
 assert(reuse.new_connection_count() == 0)
 
-# Navigator.last_error: the reason of the last failed request, cleared by the next one
-assert(reuse.last_error() == "")
+# a failed request yields None; the error is logged once at the binding boundary
 failed = reuse.get("localhost:19999/api/hello")
 assert(failed is None)
-assert(len(reuse.last_error()) > 0)
 
 recovered = reuse.get("localhost:3012/api/hello")
 assert(recovered is not None)
 assert(recovered.status() == 200)
-assert(reuse.last_error() == "")

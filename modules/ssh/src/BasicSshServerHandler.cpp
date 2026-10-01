@@ -15,13 +15,13 @@ SIHD_LOGGER;
 
 BasicSshServerHandler::BasicSshServerHandler(): _default_exec_fork_mode(false), _next_session_id(1)
 {
-    utils::init();
+    SIHD_UNEXPECTED_LOG(utils::init());
 }
 
 BasicSshServerHandler::~BasicSshServerHandler()
 {
     _sessions.clear();
-    utils::finalize();
+    SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
 // ===== Authentication Configuration =====
@@ -473,12 +473,12 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
                     // Send exit status if available
                     if (exit_code >= 0)
                     {
-                        channel->request_send_exit_status(exit_code);
+                        SIHD_UNEXPECTED_LOG(channel->request_send_exit_status(exit_code));
                     }
 
                     // Send EOF and close channel to notify client
-                    channel->send_eof();
-                    channel->close();
+                    SIHD_UNEXPECTED_LOG(channel->send_eof());
+                    SIHD_UNEXPECTED_LOG(channel->close());
                 }
 
                 channels_to_cleanup.push_back(channel);

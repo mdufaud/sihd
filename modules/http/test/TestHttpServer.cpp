@@ -67,7 +67,7 @@ TEST_F(TestHttpServer, test_httpserver_auto)
 
     TmpDir tmpdir;
     std::string tmpfile_path = fs::combine(tmpdir.path(), "test_file.txt");
-    fs::write(tmpfile_path, "hello put world");
+    ASSERT_TRUE(fs::write(tmpfile_path, "hello put world").has_value());
 
     RequestOptions options;
     options.proxy = "";
@@ -138,7 +138,7 @@ class SimpleWsClient
     public:
         SimpleWsClient() { _client.set_poll_timeout(2000); }
 
-        bool connect(int port) { return _client.open_and_connect("127.0.0.1", port); }
+        bool connect(int port) { return _client.open_and_connect("127.0.0.1", port).has_value(); }
 
         // Perform the HTTP -> WebSocket upgrade handshake.
         bool handshake(const char *protocol)
@@ -156,7 +156,7 @@ class SimpleWsClient
             req += protocol;
             req += "\r\n\r\n";
 
-            if (_client.send_all(sihd::util::ArrCharView(req.data(), req.size())) == false)
+            if (_client.send_all(sihd::util::ArrCharView(req.data(), req.size())).has_value() == false)
                 return false;
 
             std::string response;
@@ -180,7 +180,7 @@ class SimpleWsClient
             frame.insert(frame.end(), mask, mask + 4);
             for (size_t i = 0; i < text.size(); ++i)
                 frame.push_back((uint8_t)text[i] ^ mask[i % 4]);
-            return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size()));
+            return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size())).has_value();
         }
 
         // Receive one unmasked text frame from the server.
@@ -213,7 +213,7 @@ class SimpleWsClient
         void send_close()
         {
             const uint8_t frame[] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00};
-            _client.send_all(sihd::util::ArrCharView((const char *)frame, sizeof(frame)));
+            (void)_client.send_all(sihd::util::ArrCharView((const char *)frame, sizeof(frame)));
         }
 
     private:
@@ -224,10 +224,10 @@ class SimpleWsClient
             {
                 if (_client.poll() == false)
                     return false;
-                const ssize_t r = _client.receive(buf + received, n - received);
-                if (r <= 0)
+                const auto r = _client.receive(buf + received, n - received);
+                if (!r || r.value() == 0)
                     return false;
-                received += (size_t)r;
+                received += r.value();
             }
             return true;
         }
@@ -518,10 +518,10 @@ TEST_F(TestHttpServer, test_streaming_file_response)
     std::string content(4 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(path, content, false, true));
+    ASSERT_TRUE(fs::write(path, content, false, true).has_value());
 
     const std::string empty_path = fs::combine(tmp.path(), "empty.bin");
-    ASSERT_TRUE(fs::write(empty_path, "", false, true));
+    ASSERT_TRUE(fs::write(empty_path, "", false, true).has_value());
 
     scope.server._webservice->set_entry_point("file", [&path](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_file_content(path));
@@ -681,7 +681,7 @@ TEST_F(TestHttpServer, test_streaming_upload_multipart)
     std::string content(2 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 13 % 251);
-    ASSERT_TRUE(fs::write(file_path, content, false, true));
+    ASSERT_TRUE(fs::write(file_path, content, false, true).has_value());
 
     std::string seen_field;
     std::string seen_filename;
@@ -794,10 +794,13 @@ class RawHttpClient
         bool connect(int port = 3001)
         {
             _client.set_poll_timeout(2000);
-            return _client.open_and_connect("127.0.0.1", port);
+            return _client.open_and_connect("127.0.0.1", port).has_value();
         }
 
-        bool send(std::string_view request) { return _client.send_all(ArrCharView(request.data(), request.size())); }
+        bool send(std::string_view request)
+        {
+            return _client.send_all(ArrCharView(request.data(), request.size())).has_value();
+        }
 
         bool connected() const { return _client.connected(); }
 
@@ -814,7 +817,9 @@ class RawHttpClient
             }
             auto response = HttpResponse::from_string(_buffer.substr(0, head_size + body_size));
             _buffer.erase(0, head_size + body_size);
-            return response;
+            if (!response)
+                return std::nullopt;
+            return std::move(*response);
         }
 
         bool wait_closed()
@@ -824,7 +829,7 @@ class RawHttpClient
             return _client.connected() == false;
         }
 
-        void close() { _client.close(); }
+        void close() { (void)_client.close(); }
 
     private:
         size_t _read_head()
@@ -844,10 +849,10 @@ class RawHttpClient
             if (_client.poll() == false)
                 return false;
             char buf[4096];
-            const ssize_t read = _client.receive(buf, sizeof(buf));
-            if (read <= 0)
+            const auto read = _client.receive(buf, sizeof(buf));
+            if (!read || read.value() == 0)
                 return false;
-            _buffer.append(buf, (size_t)read);
+            _buffer.append(buf, read.value());
             return true;
         }
 
@@ -973,7 +978,7 @@ TEST_F(TestHttpServer, test_streaming_response_keeps_connection)
     std::string content(4 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(path, content, false, true));
+    ASSERT_TRUE(fs::write(path, content, false, true).has_value());
 
     scope.server._webservice->set_entry_point("file", [&path](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_file_content(path));
@@ -1037,7 +1042,7 @@ TEST_F(TestHttpServer, test_custom_404_page)
     ASSERT_TRUE(tmp);
 
     const std::string page = fs::combine(tmp.path(), "404.html");
-    ASSERT_TRUE(fs::write(page, "<html>custom not found</html>"));
+    ASSERT_TRUE(fs::write(page, "<html>custom not found</html>").has_value());
     scope.server.set_404_path(page);
 
     int hits = 0;

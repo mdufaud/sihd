@@ -1,11 +1,14 @@
 #include <fmt/format.h>
 
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/ThreadPool.hpp>
 #include <sihd/util/thread.hpp>
 
 namespace sihd::util
 {
+
+SIHD_LOGGER;
 
 ThreadPool::ThreadPool(std::string_view name, size_t number_of_threads): _name(name)
 {
@@ -56,7 +59,7 @@ std::vector<Stat<Duration>> ThreadPool::stats() const
 ThreadPool::Thread::Thread(const std::string & name, SafeQueue<Job> & jobs): _jobs(jobs), _stop(false)
 {
     _thread = std::thread([name, this] {
-        thread::set_name(name);
+        SIHD_UNEXPECTED_LOG(thread::set_name(name));
         this->_loop();
     });
 }

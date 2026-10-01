@@ -238,7 +238,8 @@ bool Bitmap::save_bmp(std::string_view path) const
     if (bmp_data.empty())
         return false;
 
-    return file.write(bmp_data.data(), bmp_data.size()) == static_cast<ssize_t>(bmp_data.size());
+    const auto wrote = file.write(bmp_data.data(), bmp_data.size());
+    return wrote && *wrote == bmp_data.size();
 }
 
 bool Bitmap::read_bmp(std::string_view path)
@@ -249,16 +250,17 @@ bool Bitmap::read_bmp(std::string_view path)
         return false;
 
     // Get file size
-    file.seek_end(0);
-    const ssize_t file_size = file.tell();
-    if (file_size <= 0)
+    (void)file.seek_end(0);
+    const auto file_size = file.tell();
+    if (!file_size || *file_size <= 0)
         return false;
 
-    file.seek_begin(0);
+    (void)file.seek_begin(0);
 
     // Read entire file into memory
-    PixelBuffer data(file_size);
-    if (file.read(data.data(), file_size) != file_size)
+    PixelBuffer data(*file_size);
+    const auto read = file.read(data.data(), *file_size);
+    if (!read || *read != (size_t)*file_size)
         return false;
 
     // Parse BMP from memory

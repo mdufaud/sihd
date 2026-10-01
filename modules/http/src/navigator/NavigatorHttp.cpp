@@ -7,6 +7,9 @@
 
 #include "NavigatorImpl.hpp"
 
+using sihd::util::Error;
+using enum sihd::util::ErrorCode;
+
 namespace sihd::http
 {
 
@@ -178,10 +181,7 @@ Navigator::Impl::SingleResponse Navigator::Impl::perform_single(const std::strin
     result.overflow = client.overflow();
 
     if (!result.ok && !result.overflow)
-    {
-        result.error = request_result.error().message;
-        last_error = result.error;
-    }
+        result.error = std::move(request_result).error();
 
     if (result.ok || result.overflow)
     {
@@ -214,10 +214,10 @@ bool Navigator::Impl::check_redirect_policy(const std::string & original_url, co
     return reg_domain(orig.host) == reg_domain(tgt.host);
 }
 
-std::optional<Navigator::Impl::SingleResponse> Navigator::Impl::try_perform(const std::string & url,
-                                                                            HttpRequest::RequestType type,
-                                                                            const RequestOptions & options,
-                                                                            const Navigation & navigation)
+std::expected<Navigator::Impl::SingleResponse, Error> Navigator::Impl::try_perform(const std::string & url,
+                                                                                   HttpRequest::RequestType type,
+                                                                                   const RequestOptions & options,
+                                                                                   const Navigation & navigation)
 {
     long backoff = rate.retry_initial_backoff_ms;
     for (int attempt = 0; attempt <= rate.retry_max; ++attempt)
@@ -230,14 +230,15 @@ std::optional<Navigator::Impl::SingleResponse> Navigator::Impl::try_perform(cons
         }
         if (!sr.ok)
         {
-            SIHD_LOG(error, "Navigator: request failed: {}", sr.error);
             if (attempt < rate.retry_max)
             {
+                SIHD_LOG(warning, "Navigator: request failed, retrying: {}", sr.error.message);
                 std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
                 backoff *= 2;
                 continue;
             }
-            return std::nullopt;
+            SIHD_LOG(error, "Navigator: request failed: {}", sr.error.message);
+            return std::unexpected(std::move(sr.error));
         }
         if (HttpStatus::is_rate_limit(sr.http_status) && attempt < rate.retry_max)
         {
@@ -258,18 +259,17 @@ std::optional<Navigator::Impl::SingleResponse> Navigator::Impl::try_perform(cons
         }
         return sr;
     }
-    return std::nullopt;
+    SIHD_LOG(error, "Navigator: retry loop exited without a response");
+    return std::unexpected(Error(unknown, "retry loop exited without a response"));
 }
 
-std::optional<NavigatorResponse> Navigator::Impl::perform(const Navigation & navigation)
+std::expected<NavigatorResponse, Error> Navigator::Impl::perform(const Navigation & navigation)
 {
-    last_error.clear();
-
     if (ssrf_guard && sihd::net::ip::is_private_host(parse_navigator_url(navigation.url).host))
     {
-        SIHD_LOG(error, "Navigator: SSRF guard blocked request to private host: {}", navigation.url);
-        last_error = "SSRF guard blocked a request to a private host";
-        return std::nullopt;
+        Error err(permission_denied, "SSRF guard blocked a request to a private host: {}", navigation.url);
+        SIHD_LOG(error, "Navigator: {}", err.message);
+        return std::unexpected(std::move(err));
     }
 
     HttpRequest::RequestType type = navigation.type;
@@ -287,8 +287,9 @@ std::optional<NavigatorResponse> Navigator::Impl::perform(const Navigation & nav
         info.headers = options.headers;
         if (!owner->on_before_request(info))
         {
-            last_error = "request cancelled by the on_before_request interceptor";
-            return std::nullopt;
+            Error err(interrupted, "request cancelled by the on_before_request interceptor");
+            SIHD_LOG(error, "Navigator: {}", err.message);
+            return std::unexpected(std::move(err));
         }
         current_url = info.url;
         options.headers = std::move(info.headers);
@@ -315,11 +316,10 @@ std::optional<NavigatorResponse> Navigator::Impl::perform(const Navigation & nav
     {
         options.multipart = attempt.multipart;
 
-        auto sr_opt = try_perform(current_url, type, options, attempt);
-        if (!sr_opt)
-            return std::nullopt;
+        auto sr_res = try_perform(current_url, type, options, attempt);
+        SIHD_UNEXPECTED_RETURN(sr_res);
 
-        auto & sr = *sr_opt;
+        auto & sr = *sr_res;
 
         if (sr.http_status == 401 && owner->on_auth_required)
         {

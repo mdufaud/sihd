@@ -173,7 +173,9 @@ TEST_F(TestProcess, test_process_simple)
 {
     Process proc(cmd_list());
 
-    EXPECT_FALSE(proc.wait_any());
+    const auto not_started = proc.wait_any();
+    ASSERT_TRUE(not_started.has_value());
+    EXPECT_FALSE(not_started.value());
     EXPECT_TRUE(proc.execute());
     EXPECT_TRUE(proc.wait_any());
     EXPECT_TRUE(proc.has_exited());
@@ -242,7 +244,7 @@ TEST_F(TestProcess, test_process_in_cat)
     // sort only flushes at stdin EOF
     proc.stdin_from("3");
     proc.stdin_close();
-    proc.wait_any();
+    (void)proc.wait_any();
     proc.read_pipes(ms_timeout);
     EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, "hello world123");
@@ -281,7 +283,7 @@ TEST_F(TestProcess, test_process_in_wc)
     proc.stdin_close();
 
     // wait for the child to process the pipe closing and quit
-    proc.wait_any();
+    (void)proc.wait_any();
 
     EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(result, expected_result);
@@ -297,7 +299,7 @@ TEST_F(TestProcess, test_process_file_in)
     std::string test_file = fs::combine(_tmp_dir.path(), "file_in_hello.txt");
 
     SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file);
-    EXPECT_TRUE(fs::write(test_file, "hello world"));
+    EXPECT_TRUE(fs::write(test_file, "hello world").has_value());
 
     if (term::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
@@ -369,8 +371,8 @@ TEST_F(TestProcess, test_process_close)
 {
     Process proc(cmd_list());
     proc.stdout_close().stderr_close();
-    EXPECT_TRUE(proc.execute());
-    proc.wait_exit();
+    EXPECT_TRUE(proc.execute().has_value());
+    (void)proc.wait_exit();
     EXPECT_TRUE(proc.terminate());
     EXPECT_TRUE(proc.has_exited());
 #if !defined(__SIHD_WINDOWS__)
@@ -452,8 +454,8 @@ TEST_F(TestProcess, test_process_stderr)
     Process proc(cmd_bad_path());
 
     proc.stderr_to(output);
-    EXPECT_TRUE(proc.execute());
-    proc.wait_exit();
+    EXPECT_TRUE(proc.execute().has_value());
+    (void)proc.wait_exit();
     EXPECT_TRUE(proc.terminate());
     EXPECT_TRUE(proc.terminate());
     EXPECT_TRUE(proc.terminate());
@@ -477,10 +479,10 @@ TEST_F(TestProcess, test_process_signal_kill)
         GTEST_SKIP() << "Is an interactive test";
     Process cat {"cat"};
 
-    EXPECT_TRUE(cat.execute());
+    EXPECT_TRUE(cat.execute().has_value());
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    EXPECT_TRUE(cat.kill(SIGTERM));
-    cat.wait_exit();
+    EXPECT_TRUE(cat.kill(SIGTERM).has_value());
+    (void)cat.wait_exit();
     EXPECT_FALSE(cat.has_exited());
     EXPECT_TRUE(cat.has_exited_by_signal());
     SIHD_TRACE("Signal exit number: {}", cat.signal_exit_number());
@@ -494,19 +496,19 @@ TEST_F(TestProcess, test_process_signal_stop)
         GTEST_SKIP() << "Is an interactive test";
     Process cat {"cat"};
 
-    EXPECT_TRUE(cat.execute());
+    EXPECT_TRUE(cat.execute().has_value());
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    EXPECT_TRUE(cat.kill(SIGSTOP));
-    cat.wait_stop();
+    EXPECT_TRUE(cat.kill(SIGSTOP).has_value());
+    (void)cat.wait_stop();
     EXPECT_TRUE(cat.has_stopped_by_signal());
     SIHD_TRACE("Signal stop number: {}", cat.signal_stop_number());
     EXPECT_EQ(cat.signal_stop_number(), SIGSTOP);
 
-    EXPECT_TRUE(cat.kill(SIGCONT));
-    cat.wait_continue();
+    EXPECT_TRUE(cat.kill(SIGCONT).has_value());
+    (void)cat.wait_continue();
 
-    EXPECT_TRUE(cat.kill(SIGTERM));
-    cat.wait_exit();
+    EXPECT_TRUE(cat.kill(SIGTERM).has_value());
+    (void)cat.wait_exit();
     EXPECT_TRUE(cat.has_exited_by_signal());
     EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
 }
@@ -569,8 +571,10 @@ TEST_F(TestProcess, test_process_bad_cmd)
     }
     else
     {
-        EXPECT_FALSE(proc.execute());
-        EXPECT_FALSE(proc.wait_any());
+        EXPECT_FALSE(proc.execute().has_value());
+        const auto not_started = proc.wait_any();
+        ASSERT_TRUE(not_started.has_value());
+        EXPECT_FALSE(not_started.value());
         EXPECT_EQ((int)proc.return_code(), 255);
     }
 

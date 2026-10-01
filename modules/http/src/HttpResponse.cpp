@@ -6,6 +6,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using enum sihd::util::ErrorCode;
+
 namespace sihd::http
 {
 
@@ -42,30 +44,30 @@ bool HttpResponse::set_json_content(const sihd::json::Json & data)
 {
     this->_set_mime_type_if_not_set(MimeTypes::MIME_APPLICATION_JSON);
     std::string json_string = data.dump();
-    return this->set_content({json_string.c_str(), json_string.size()});
+    return !SIHD_UNEXPECTED_LOG(this->set_content({json_string.c_str(), json_string.size()}));
 }
 
 bool HttpResponse::set_file_content(std::string_view path)
 {
     sihd::sys::File file;
-    if (file.open(std::string(path), "rb") == false)
+    if (file.open(std::string(path), "rb").has_value() == false)
     {
         SIHD_LOG(error, "HttpResponse: cannot open file: {}", path);
         return false;
     }
-    const long size = file.file_size();
-    if (size < 0)
+    const auto size = file.file_size();
+    if (size.has_value() == false)
     {
         SIHD_LOG(error, "HttpResponse: cannot read file size: {}", path);
         return false;
     }
 
     this->set_content_type_from_extension(sihd::sys::fs::extension(path));
-    _http_header.set_content_length(size);
+    _http_header.set_content_length(*size);
     this->set_stream_provider([file = std::move(file)](sihd::util::ArrByte & chunk) mutable {
         chunk.resize(stream_chunk_size);
-        const ssize_t read = file.read(chunk.data(), chunk.size());
-        const size_t read_size = read > 0 ? (size_t)read : 0;
+        const auto read = file.read(chunk.data(), chunk.size());
+        const size_t read_size = read && read.value() > 0 ? read.value() : 0;
         chunk.resize(read_size);
         return read_size == stream_chunk_size;
     });
@@ -75,13 +77,13 @@ bool HttpResponse::set_file_content(std::string_view path)
 bool HttpResponse::set_plain_content(std::string_view str)
 {
     this->_set_mime_type_if_not_set(MimeTypes::MIME_TEXT_PLAIN);
-    return this->set_content(str);
+    return !SIHD_UNEXPECTED_LOG(this->set_content(str));
 }
 
 bool HttpResponse::set_byte_content(sihd::util::ArrByteView data)
 {
     this->_set_mime_type_if_not_set(MimeTypes::MIME_APPLICATION_OCTET);
-    return this->set_content(data);
+    return !SIHD_UNEXPECTED_LOG(this->set_content(data));
 }
 
 void HttpResponse::set_status(uint32_t status)
@@ -89,12 +91,14 @@ void HttpResponse::set_status(uint32_t status)
     _status = status;
 }
 
-bool HttpResponse::set_content(sihd::util::ArrCharView data)
+std::expected<void, sihd::util::Error> HttpResponse::set_content(sihd::util::ArrCharView data)
 {
     if (_array.resize(data.byte_size()) == false)
-        return false;
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::out_of_memory,
+                                                 "could not resize content to {} bytes",
+                                                 data.byte_size()));
     _array.copy_from_bytes(data.buf(), data.byte_size());
-    return true;
+    return {};
 }
 
 void HttpResponse::_set_mime_type_if_not_set(const char *type)
@@ -119,31 +123,31 @@ void HttpResponse::set_cookie(std::string_view name, std::string_view value, std
     _cookies.emplace_back(std::move(cookie_str));
 }
 
-std::optional<HttpResponse> HttpResponse::from_string(std::string_view raw)
+std::expected<HttpResponse, sihd::util::Error> HttpResponse::from_string(std::string_view raw)
 {
     using namespace sihd::util;
 
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "response has no header separator"));
 
     std::string_view header_section = raw.substr(0, header_end);
     std::string_view body = raw.substr(header_end + 4);
 
     auto lines = str::split(header_section, "\r\n");
     if (lines.empty())
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "response has no status line"));
 
     auto status_parts = str::split(lines[0], " ");
     if (status_parts.size() < 2)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "malformed status line '{}'", lines[0]));
 
     if (!str::starts_with(status_parts[0], "HTTP/1."))
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "unsupported protocol '{}'", status_parts[0]));
 
     const auto status = str::convert_from_string<uint32_t>(status_parts[1]);
     if (status.has_value() == false)
-        return std::nullopt;
+        return std::unexpected(Error(invalid_argument, "invalid status '{}'", status_parts[1]));
 
     HttpResponse resp;
     resp.set_status(*status);
@@ -157,7 +161,7 @@ std::optional<HttpResponse> HttpResponse::from_string(std::string_view raw)
         }
         else
         {
-            resp._http_header.add_header_from_str(lines[i]);
+            SIHD_UNEXPECTED_LOG(resp._http_header.add_header_from_str(lines[i]));
         }
     }
 

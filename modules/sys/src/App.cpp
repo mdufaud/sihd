@@ -81,7 +81,7 @@ App::~App()
     for (int sig = 1; sig < signal::max_signal; ++sig)
     {
         if (_sig_actions[sig] != SigAction::none)
-            signal::unhandle(sig);
+            (void)signal::unhandle(sig);
     }
     this->uninstall_logging();
 }
@@ -322,7 +322,8 @@ void App::_install_signals()
     {
         if (_sig_actions[sig] == SigAction::none)
             continue;
-        bool done = _sig_actions[sig] == SigAction::ignore ? signal::ignore(sig) : signal::handle(sig);
+        const bool done = !SIHD_UNEXPECTED_LOG(_sig_actions[sig] == SigAction::ignore ? signal::ignore(sig)
+                                                                                      : signal::handle(sig));
         if (done == false)
             SIHD_LOG(error, "App: cannot set action for signal {}", sig);
     }

@@ -10,7 +10,7 @@ namespace sihd::lua
 
 using namespace sihd::json;
 using namespace sihd::util;
-SIHD_NEW_LOGGER("sihd::lua::json");
+SIHD_LOGGER;
 
 namespace
 {
@@ -106,13 +106,13 @@ Json lua_to_json(const luabridge::LuaRef & ref)
 
 luabridge::LuaRef json_decode(const std::string & str, lua_State *state)
 {
-    Json json = Json::parse(str, false);
-    if (json.is_discarded())
+    auto parsed = Json::parse(str);
+    if (!parsed)
     {
-        SIHD_LOG(error, "LuaJsonApi: failed to parse JSON string");
+        SIHD_LOG(error, "LuaJsonApi: failed to parse JSON string: {}", parsed.error());
         return luabridge::LuaRef(state, luabridge::LuaNil());
     }
-    return json_to_lua(state, json);
+    return json_to_lua(state, *parsed);
 }
 
 std::string json_encode(luabridge::LuaRef value, luabridge::LuaRef indent)

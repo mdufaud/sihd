@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <expected>
 #include <map>
 #include <optional>
 #include <queue>
@@ -29,7 +30,6 @@ struct Navigator::Impl
 {
         Client client;
         Navigator *owner = nullptr;
-        std::string last_error;
 
         // every request starts from these and overrides what it needs
         RequestOptions options;
@@ -113,7 +113,7 @@ struct Navigator::Impl
                 HttpResponse response;
                 bool overflow = false;
                 bool ok = true;
-                std::string error;
+                sihd::util::Error error;
                 int http_status = 0;
                 std::string redirect_location;
         };
@@ -131,11 +131,11 @@ struct Navigator::Impl
                                       const RequestOptions & options,
                                       const Navigation & navigation);
         bool check_redirect_policy(const std::string & original_url, const std::string & target_url) const;
-        std::optional<SingleResponse> try_perform(const std::string & url,
-                                                  HttpRequest::RequestType type,
-                                                  const RequestOptions & options,
-                                                  const Navigation & navigation);
-        std::optional<NavigatorResponse> perform(const Navigation & navigation);
+        std::expected<SingleResponse, sihd::util::Error> try_perform(const std::string & url,
+                                                                     HttpRequest::RequestType type,
+                                                                     const RequestOptions & options,
+                                                                     const Navigation & navigation);
+        std::expected<NavigatorResponse, sihd::util::Error> perform(const Navigation & navigation);
         std::map<std::string, std::string> extract_cookies();
         std::vector<std::string> extract_raw_cookies();
 

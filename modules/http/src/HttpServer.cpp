@@ -223,7 +223,7 @@ bool HttpServer::on_start()
     return true;
 }
 
-bool HttpServer::get_resource_path(std::string_view path, std::string & res)
+std::expected<std::string, sihd::util::Error> HttpServer::get_resource_path(std::string_view path)
 {
     if (path.size() > 0 && path[0] == '/')
         path = path.substr(1);
@@ -232,18 +232,12 @@ bool HttpServer::get_resource_path(std::string_view path, std::string & res)
     {
         std::string full_path = fs::combine(_impl->root_dir, path);
         if (fs::is_file(full_path))
-        {
-            res = std::move(full_path);
-            return true;
-        }
+            return full_path;
         if (path.empty() || fs::is_dir(full_path))
         {
             std::string index_path = fs::combine(full_path, "index.html");
             if (fs::is_file(index_path))
-            {
-                res = std::move(index_path);
-                return true;
-            }
+                return index_path;
         }
     }
 
@@ -251,13 +245,10 @@ bool HttpServer::get_resource_path(std::string_view path, std::string & res)
     {
         std::string tmp_path = fs::combine(resource_path, path);
         if (fs::is_file(tmp_path))
-        {
-            res = std::move(tmp_path);
-            return true;
-        }
+            return tmp_path;
     }
 
-    return false;
+    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_found, "no resource for '{}'", path));
 }
 
 bool HttpServer::add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)

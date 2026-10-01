@@ -2,11 +2,12 @@
 #define __SIHD_SYS_FILE_HPP__
 
 #include <cstdio> // FILE
-#include <optional>
+#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/ArrayView.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/IArray.hpp>
 
 namespace sihd::sys
@@ -33,19 +34,20 @@ class File
         operator FILE *() const { return _file_ptr; }
 
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
-        bool open(std::string_view path, std::string_view mode);
+        std::expected<void, sihd::util::Error> open(std::string_view path, std::string_view mode);
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
-        bool open_fd(int fd, std::string_view mode);
-        bool set_stream(FILE *stream, bool ownership);
-        bool open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
+        std::expected<void, sihd::util::Error> open_fd(int fd, std::string_view mode);
+        std::expected<void, sihd::util::Error> set_stream(FILE *stream, bool ownership);
+        std::expected<void, sihd::util::Error>
+            open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
         // open with setted buffer_size
-        bool open_mem(std::string_view mode, std::string_view put_in_buffer = "");
-        bool open_tmpfile();
+        std::expected<void, sihd::util::Error> open_mem(std::string_view mode, std::string_view put_in_buffer = "");
+        std::expected<void, sihd::util::Error> open_tmpfile();
         bool is_open() const;
-        bool close();
+        std::expected<void, sihd::util::Error> close();
 
         // if size == 0 -> buffer is null
-        bool set_buffer_size(size_t size);
+        std::expected<void, sihd::util::Error> set_buffer_size(size_t size);
         // no buffering, immediately write change to disk
         void set_no_buffering();
         // full buffering (until flush)
@@ -53,11 +55,11 @@ class File
         // line buffering (flush when newline)
         void set_buffering_full();
         // apply buff mode to current stream
-        bool buff_stream();
+        std::expected<void, sihd::util::Error> buff_stream();
 
         // write changes to disk
-        bool flush();
-        bool flush_unlocked();
+        std::expected<void, sihd::util::Error> flush();
+        std::expected<void, sihd::util::Error> flush_unlocked();
 
         // internal file descriptor
         int fd() const;
@@ -70,28 +72,30 @@ class File
         int error_unlocked() const;
         void clear_errors();
 
-        ssize_t write(const void *data, size_t size);
-        ssize_t write(sihd::util::ArrCharView view);
-        bool write_char(int c);
+        std::expected<size_t, sihd::util::Error> write(const void *data, size_t size);
+        std::expected<size_t, sihd::util::Error> write(sihd::util::ArrCharView view);
+        std::expected<void, sihd::util::Error> write_char(int c);
 
-        ssize_t write_unlocked(const void *data, size_t size);
-        ssize_t write_unlocked(sihd::util::ArrCharView view);
-        bool write_char_unlocked(int c);
+        std::expected<size_t, sihd::util::Error> write_unlocked(const void *data, size_t size);
+        std::expected<size_t, sihd::util::Error> write_unlocked(sihd::util::ArrCharView view);
+        std::expected<void, sihd::util::Error> write_char_unlocked(int c);
 
-        ssize_t read(void *buf, size_t size);
+        // 0 means end of file
+        std::expected<size_t, sihd::util::Error> read(void *buf, size_t size);
         // read to string, because of short string optimization we can't use capacity()
-        ssize_t read(std::string & str, size_t size);
+        std::expected<size_t, sihd::util::Error> read(std::string & str, size_t size);
         // read into Array using it's capacity()
-        ssize_t read(sihd::util::IArray & array);
+        std::expected<size_t, sihd::util::Error> read(sihd::util::IArray & array);
 
-        ssize_t read_line(char **line, size_t *size);
-        ssize_t read_line_delim(char **line, size_t *size, int delim);
+        // 0 means end of file
+        std::expected<size_t, sihd::util::Error> read_line(char **line, size_t *size);
+        std::expected<size_t, sihd::util::Error> read_line_delim(char **line, size_t *size, int delim);
 
-        bool seek(long offset);
-        bool seek_begin(long offset);
-        bool seek_end(long offset);
-        long tell();
-        long file_size();
+        std::expected<void, sihd::util::Error> seek(long offset);
+        std::expected<void, sihd::util::Error> seek_begin(long offset);
+        std::expected<void, sihd::util::Error> seek_end(long offset);
+        std::expected<long, sihd::util::Error> tell();
+        std::expected<long, sihd::util::Error> file_size();
 
         void lock();
         bool trylock();
@@ -109,7 +113,7 @@ class File
     protected:
 
     private:
-        bool _seek(long offset, int origin);
+        std::expected<void, sihd::util::Error> _seek(long offset, int origin);
         void _delete_buffer();
         bool _allocate_buffer_if_not_exists();
 

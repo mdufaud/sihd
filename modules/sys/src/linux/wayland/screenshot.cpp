@@ -542,7 +542,7 @@ bool run_tool(const ToolCall & tool, Bitmap & bm)
         SIHD_LOG(debug, "wayland: screenshot tool '{}' wrote no file", tool.args.front());
         return false;
     }
-    Defer remove_file([&] { fs::remove_file(tool.path); });
+    Defer remove_file([&] { SIHD_UNEXPECTED_LOG(fs::remove_file(tool.path)); });
     return tool.ppm_output ? read_ppm_into(tool.path, bm) : bm.read_bmp(tool.path);
 }
 

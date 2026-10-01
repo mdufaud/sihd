@@ -6,6 +6,9 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
+using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
 namespace sihd::sys
 {
 
@@ -52,27 +55,28 @@ Impersonation::Impersonation(): _impl(std::make_unique<Impl>()) {}
 
 Impersonation::~Impersonation()
 {
-    if (_impl->active && !this->revert())
-        SIHD_LOG(critical, "Impersonation: thread is left impersonating another account");
+    if (_impl->active)
+    {
+        auto reverted = this->revert();
+        if (!reverted)
+            SIHD_LOG(critical, "Impersonation: thread is left impersonating another account");
+    }
     _impl->close();
 }
 
-bool Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
-                                   [[maybe_unused]] const user::GroupId & group_id)
+std::expected<void, Error> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
+                                                         [[maybe_unused]] const user::GroupId & group_id)
 {
     // a token for an arbitrary account cannot be obtained without its credentials
-    return false;
+    return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-bool Impersonation::impersonate_with_credentials(std::string_view user_name,
-                                                 std::string_view password,
-                                                 std::string_view domain)
+std::expected<void, Error> Impersonation::impersonate_with_credentials(std::string_view user_name,
+                                                                       std::string_view password,
+                                                                       std::string_view domain)
 {
     if (_impl->active)
-    {
-        SIHD_LOG(error, "Impersonation: already impersonating");
-        return false;
-    }
+        return std::unexpected(Error(not_initialized, "already impersonating"));
 
     const std::string user_str(user_name);
     const ScrubbedString password_str(password);
@@ -87,34 +91,30 @@ bool Impersonation::impersonate_with_credentials(std::string_view user_name,
                    &_impl->token)
         == 0)
     {
-        SIHD_LOG(error, "Impersonation: LogonUser failed for '{}': {}", user_str, os::last_error_str());
         _impl->token = nullptr;
-        return false;
+        return std::unexpected(Error(permission_denied, "could not log user '{}': {}", user_str, os::last_error_str()));
     }
 
     if (ImpersonateLoggedOnUser(_impl->token) == 0)
     {
-        SIHD_LOG(error, "Impersonation: ImpersonateLoggedOnUser failed: {}", os::last_error_str());
+        auto error = Error(io_error, "could not impersonate: {}", os::last_error_str());
         _impl->close();
-        return false;
+        return std::unexpected(std::move(error));
     }
 
     _impl->active = true;
-    return true;
+    return {};
 }
 
-bool Impersonation::revert()
+std::expected<void, Error> Impersonation::revert()
 {
     if (!_impl->active)
-        return false;
+        return std::unexpected(Error(not_initialized, "not impersonating"));
     if (RevertToSelf() == 0)
-    {
-        SIHD_LOG(error, "Impersonation: RevertToSelf failed: {}", os::last_error_str());
-        return false;
-    }
+        return std::unexpected(Error(io_error, "could not revert: {}", os::last_error_str()));
     _impl->active = false;
     _impl->close();
-    return true;
+    return {};
 }
 
 bool Impersonation::impersonating() const

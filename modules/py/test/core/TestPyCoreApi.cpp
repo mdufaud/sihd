@@ -30,21 +30,21 @@ class TestPyCoreApi: public ::testing::Test
 
 TEST_F(TestPyCoreApi, test_pycore_channel)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_channel.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_devpulsation)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_devpulsation.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_observer)
 {
-    DirectorySwitcher d(getenv("LIB_PATH"));
+    DirectorySwitcher d(lib_path());
     pybind11::scoped_interpreter guard {};
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer.py"));
 }

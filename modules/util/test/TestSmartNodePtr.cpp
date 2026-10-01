@@ -40,7 +40,7 @@ TEST_F(TestSmartNodePtr, test_smart_node_ptr_skips_owned)
 {
     Node parent("parent");
     Named *child = new Named("child");
-    parent.add_child(child, true); // parent takes ownership
+    ASSERT_TRUE(parent.add_child(child, true)); // parent takes ownership
 
     EXPECT_TRUE(child->is_owned_by_parent());
 
