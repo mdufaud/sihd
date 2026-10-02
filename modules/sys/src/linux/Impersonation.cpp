@@ -76,7 +76,7 @@ Impersonation::~Impersonation()
     if (_impl->active)
     {
         auto reverted = this->revert();
-        if (!reverted)
+        if (SIHD_UNEXPECTED_LOG(reverted))
             SIHD_LOG(critical, "Impersonation: thread is left impersonating uid {}", geteuid());
     }
 }
@@ -98,7 +98,8 @@ std::expected<void, Error> Impersonation::impersonate_as(const user::UserId & us
     {
         auto error = Error::from_errno("could not set user {}", user_id.native());
         // put the group back, the switch is aborted
-        set_thread_egid(previous_gid);
+        if (!set_thread_egid(previous_gid))
+            SIHD_LOG(error, "could not restore group {}", previous_gid);
         return std::unexpected(std::move(error));
     }
 

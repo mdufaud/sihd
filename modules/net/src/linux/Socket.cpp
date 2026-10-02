@@ -37,7 +37,7 @@ std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string
         return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: device name too long: {}", name));
     char device_name[IFNAMSIZ] = {0};
     memcpy(device_name, name.data(), name.size());
-    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name), true))
+    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name)))
         return {};
     return std::unexpected(make_error("Socket: bind to device error"));
 }

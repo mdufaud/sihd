@@ -86,8 +86,11 @@ struct Client::Impl
             request.set_url(url_with_parameters(url, options.parameters));
 
             request.set_header_callback([&response](sihd::util::ArrByteView data) {
-                SIHD_UNEXPECTED_LOG(response.http_header().add_header_from_str(
-                    std::string_view((const char *)data.buf(), data.size())));
+                const std::string_view line = str::rtrim(std::string_view((const char *)data.buf(), data.size()));
+                // the status line and final empty line are protocol, not headers
+                if (line.empty() || line.starts_with("HTTP/"))
+                    return true;
+                SIHD_UNEXPECTED_LOG(response.http_header().add_header_from_str(line));
                 return true;
             });
 
@@ -183,7 +186,10 @@ struct Client::Impl
             {
                 sihd::sys::File *fp = streams.download;
                 request.set_write_callback([fp](sihd::util::ArrByteView data) {
-                    return fp->write(data.buf(), data.size()) == (ssize_t)data.size();
+                    auto wrote = fp->write(data.buf(), data.size());
+                    if (SIHD_UNEXPECTED_LOG(wrote))
+                        return false;
+                    return *wrote == data.size();
                 });
                 return;
             }
@@ -240,7 +246,9 @@ struct Client::Impl
                 const auto read = fp->read(buffer, capacity);
                 // a read error must abort the transfer: reporting it as an end of
                 // file would upload a truncated body
-                return read.has_value() == false ? sihd::curl::Request::READ_ABORT : read.value();
+                if (SIHD_UNEXPECTED_LOG(read))
+                    return sihd::curl::Request::READ_ABORT;
+                return read.value();
             });
         }
 };
@@ -284,7 +292,10 @@ Client::Result Client::perform(std::string_view url,
         response.set_content_type(content_type);
 
     if (streams.download == nullptr)
-        SIHD_UNEXPECTED_LOG(response.set_content(_impl->content));
+    {
+        auto content = response.set_content(_impl->content);
+        SIHD_UNEXPECTED_RETURN(content);
+    }
 
     // a truncated response is still a response: overflow() tells it apart
     return {};
@@ -315,12 +326,10 @@ Client::Result Client::send_file(std::string_view url,
 {
     sihd::sys::File file;
     auto opened = file.open(std::string(path), "rb");
-    if (!opened)
-        return std::unexpected(Error(io_error, "could not open file: {}", path));
+    SIHD_UNEXPECTED_RETURN(opened);
 
     const auto size = file.file_size();
-    if (!size)
-        return std::unexpected(Error(io_error, "could not read file size: {}", path));
+    SIHD_UNEXPECTED_RETURN(size);
 
     sihd::sys::File *fp = &file;
     return this->perform(url, Streams {.upload = fp, .upload_size = *size}, type, options, response);
@@ -333,8 +342,7 @@ Client::Result Client::receive_file(std::string_view url,
 {
     sihd::sys::File file;
     auto opened = file.open(std::string(path), "wb");
-    if (!opened)
-        return std::unexpected(Error(io_error, "could not open file for download: {}", path));
+    SIHD_UNEXPECTED_RETURN(opened);
 
     sihd::sys::File *fp = &file;
     return this->perform(url, Streams {.download = fp}, HttpRequest::Get, options, response);

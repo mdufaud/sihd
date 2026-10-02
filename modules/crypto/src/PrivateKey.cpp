@@ -145,11 +145,11 @@ std::expected<void, sihd::util::Error> PrivateKey::load_pem_string(std::string_v
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
-        return std::unexpected(make_error("PrivateKey: BIO_new_mem_buf"));
+        return make_error("PrivateKey: BIO_new_mem_buf");
     EVP_PKEY *key = PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr);
     BIO_free(bio);
     if (!key)
-        return std::unexpected(make_error("PrivateKey: read PEM from string"));
+        return make_error("PrivateKey: read PEM from string");
     _handle = key;
     return {};
 }

@@ -127,12 +127,15 @@ FILE *PcapReader::file()
 
 std::expected<bool, Error> PcapReader::read_next()
 {
+    if (this->is_open() == false)
+        return std::unexpected(Error(not_initialized, "PcapReader: not open"));
     int ret = pcap_next_ex(_impl_ptr->pcap_ptr,
                            &_impl_ptr->pkt_hdr_ptr,
                            const_cast<const u_char **>(&_impl_ptr->pkt_data_ptr));
     if (ret == PCAP_ERROR)
         return std::unexpected(Error(io_error, "PcapReader: {}", this->error()));
-    return ret >= 0;
+    // 0 is a live-capture timeout: no packet, the data pointers are stale
+    return ret > 0;
 }
 
 bool PcapReader::get_read_data(sihd::util::ArrCharView & view) const

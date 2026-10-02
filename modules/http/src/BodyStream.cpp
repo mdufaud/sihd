@@ -64,14 +64,13 @@ bool BodyStreamFile::on_chunk(const HttpRequest & request, sihd::util::ArrCharVi
     if (_file.is_open() == false)
     {
         auto opened = _file.open(_path_provider(request), "wb");
-        if (!opened)
-        {
-            SIHD_LOG(error, "BodyStream: cannot open '{}' for writing", _path_provider(request));
+        if (SIHD_UNEXPECTED_LOG(opened))
             return false;
-        }
     }
     const auto wrote = _file.write(chunk);
-    return wrote && *wrote == chunk.size();
+    if (SIHD_UNEXPECTED_LOG(wrote))
+        return false;
+    return *wrote == chunk.size();
 }
 
 } // namespace sihd::http

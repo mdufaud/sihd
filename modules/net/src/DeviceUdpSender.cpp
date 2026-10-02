@@ -53,9 +53,10 @@ bool DeviceUdpSender::on_init()
 
 bool DeviceUdpSender::on_start()
 {
-    _channel_tx = this->get_channel("tx").value_or(nullptr);
-    if (_channel_tx == nullptr)
+    auto tx = this->get_channel("tx");
+    if (SIHD_UNEXPECTED_LOG(tx))
         return false;
+    _channel_tx = *tx;
 
     if (_unix_path.empty() && (_host.empty() || _port <= 0))
     {
@@ -70,11 +71,8 @@ bool DeviceUdpSender::on_start()
 
     auto connected = !_unix_path.empty() ? _udp_sender.open_unix_and_connect(_unix_path) //
                                          : _udp_sender.open_and_connect(_host, _port);
-    if (!connected)
-    {
-        SIHD_LOG(error, "DeviceUdpSender: failed to connect");
+    if (SIHD_UNEXPECTED_LOG(connected))
         return false;
-    }
 
     return true;
 }

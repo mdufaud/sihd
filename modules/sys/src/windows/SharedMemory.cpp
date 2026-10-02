@@ -27,12 +27,12 @@ std::expected<void, Error> SharedMemory::create(std::string_view id, size_t size
                                        static_cast<DWORD>(size & 0xFFFFFFFF),
                                        id.data());
     if (handle == nullptr)
-        return std::unexpected(Error(io_error, "could not create file mapping: {}", os::last_error_str()));
+        return std::unexpected(Error(io_error, "could not create file mapping '{}': {}", id, os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
-        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of '{}': {}", id, os::last_error_str());
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
@@ -57,13 +57,14 @@ std::expected<void, Error> SharedMemory::attach(std::string_view id, size_t size
 
     HANDLE handle = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, id.data());
     if (handle == nullptr)
-        return std::unexpected(Error(not_found, "could not open file mapping: {}", os::last_error_str()));
+        return std::unexpected(Error(not_found, "could not open file mapping '{}': {}", id, os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
+        auto error = Error(io_error, "could not map view of '{}': {}", id, os::last_error_str());
         CloseHandle(handle);
-        return std::unexpected(Error(io_error, "could not map view of file: {}", os::last_error_str()));
+        return std::unexpected(std::move(error));
     }
 
     _fd = reinterpret_cast<intptr_t>(handle);
@@ -85,13 +86,14 @@ std::expected<void, Error> SharedMemory::attach_read_only(std::string_view id, s
 
     HANDLE handle = OpenFileMappingA(FILE_MAP_READ, FALSE, id.data());
     if (handle == nullptr)
-        return std::unexpected(Error(not_found, "could not open file mapping: {}", os::last_error_str()));
+        return std::unexpected(Error(not_found, "could not open file mapping '{}': {}", id, os::last_error_str()));
 
     void *addr = MapViewOfFile(handle, FILE_MAP_READ, 0, 0, size);
     if (addr == nullptr)
     {
+        auto error = Error(io_error, "could not map view of '{}': {}", id, os::last_error_str());
         CloseHandle(handle);
-        return std::unexpected(Error(io_error, "could not map view of file: {}", os::last_error_str()));
+        return std::unexpected(std::move(error));
     }
     _fd = reinterpret_cast<intptr_t>(handle);
     _addr = addr;

@@ -78,7 +78,8 @@ void FileMutex::lock()
     if (!_file.is_open())
         throw std::runtime_error("File is not opened");
 #if !defined(__SIHD_WINDOWS__)
-    flock(_file.fd(), LOCK_EX);
+    if (flock(_file.fd(), LOCK_EX) != 0)
+        throw std::runtime_error(os::last_error_str());
 #else
     // https://stackoverflow.com/questions/70812957/what-is-the-windows-equivalent-of-unixs-flockh-lock-sh
 
@@ -119,7 +120,8 @@ void FileMutex::unlock()
     if (!_file.is_open())
         throw std::runtime_error("File is not opened");
 #if !defined(__SIHD_WINDOWS__)
-    flock(_file.fd(), LOCK_UN);
+    if (flock(_file.fd(), LOCK_UN) != 0)
+        throw std::runtime_error(os::last_error_str());
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);
@@ -137,7 +139,8 @@ void FileMutex::lock_shared()
     if (!_file.is_open())
         throw std::runtime_error("File is not opened");
 #if !defined(__SIHD_WINDOWS__)
-    flock(_file.fd(), LOCK_SH);
+    if (flock(_file.fd(), LOCK_SH) != 0)
+        throw std::runtime_error(os::last_error_str());
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);

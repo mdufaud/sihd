@@ -25,10 +25,7 @@ class UdpSender: public INetSender,
         bool socket_opened() { return _socket.is_open(); }
 
         std::expected<void, sihd::util::Error> connect(const IpAddr & addr);
-        std::expected<void, sihd::util::Error> connect_unix(std::string_view path)
-        {
-            return _socket.connect_unix(path);
-        }
+        std::expected<void, sihd::util::Error> connect_unix(std::string_view path);
 
         std::expected<void, sihd::util::Error> open_and_connect(const IpAddr & ip);
         std::expected<void, sihd::util::Error> open_and_connect(std::string_view ip, int port);

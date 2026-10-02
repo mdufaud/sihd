@@ -98,12 +98,14 @@ bool DeviceTcpServer::on_init()
 
 bool DeviceTcpServer::on_start()
 {
-    _channel_rx = this->get_channel("rx").value_or(nullptr);
-    _channel_tx = this->get_channel("tx").value_or(nullptr);
-    _channel_client_count = this->get_channel("client_count").value_or(nullptr);
-
-    if (_channel_rx == nullptr || _channel_tx == nullptr || _channel_client_count == nullptr)
+    auto rx = this->get_channel("rx");
+    auto tx = this->get_channel("tx");
+    auto client_count = this->get_channel("client_count");
+    if (SIHD_UNEXPECTED_LOG(rx) || SIHD_UNEXPECTED_LOG(tx) || SIHD_UNEXPECTED_LOG(client_count))
         return false;
+    _channel_rx = *rx;
+    _channel_tx = *tx;
+    _channel_client_count = *client_count;
 
     if (_unix_path.empty() && (_host.empty() || _port <= 0))
     {
@@ -113,11 +115,8 @@ bool DeviceTcpServer::on_start()
 
     auto bound = !_unix_path.empty() ? _tcp_server.open_unix_and_bind(_unix_path) //
                                      : _tcp_server.open_and_bind(_host, _port);
-    if (!bound)
-    {
-        SIHD_LOG(error, "DeviceTcpServer: failed to bind");
+    if (SIHD_UNEXPECTED_LOG(bound))
         return false;
-    }
 
     this->observe_channel(_channel_tx);
     _server_handler.add_observer(this);
@@ -163,7 +162,11 @@ bool DeviceTcpServer::on_reset()
 
 bool DeviceTcpServer::run()
 {
-    _tcp_server.start();
+    if (_tcp_server.start() == false)
+    {
+        SIHD_LOG(error, "DeviceTcpServer: could not start the server");
+        return false;
+    }
     return true;
 }
 
@@ -174,7 +177,8 @@ void DeviceTcpServer::handle(sihd::core::Channel *c)
         auto clients = _server_handler.clients();
         for (const auto & client : clients)
         {
-            _server_handler.send_to_client(client, *c->array());
+            if (_server_handler.send_to_client(client, *c->array()) == false)
+                SIHD_LOG(warning, "DeviceTcpServer: could not send to a client");
         }
     }
 }

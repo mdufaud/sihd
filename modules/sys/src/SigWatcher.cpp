@@ -1,4 +1,5 @@
 #include <sihd/sys/SigWatcher.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/container.hpp>
@@ -147,9 +148,8 @@ bool SigWatcher::start()
     _running.store(true, std::memory_order_relaxed);
 
 #if defined(SIHD_HAS_SIGSET)
-    if (!signal::block_thread(_signals))
+    if (SIHD_UNEXPECTED_LOG(signal::block_thread(_signals)))
     {
-        SIHD_LOG(error, "SigWatcher: blocking signals failed");
         _running.store(false, std::memory_order_relaxed);
         return false;
     }
@@ -159,7 +159,7 @@ bool SigWatcher::start()
     _signalfd = signalfd(-1, &_sigset, SFD_NONBLOCK | SFD_CLOEXEC);
     if (_signalfd == -1)
     {
-        SIHD_LOG(error, "SigWatcher: signalfd creation failed");
+        SIHD_LOG(error, "SigWatcher: signalfd creation failed: {}", os::last_error_str());
         (void)signal::unblock_thread(_signals);
         _running.store(false, std::memory_order_relaxed);
         return false;
@@ -237,7 +237,7 @@ void SigWatcher::_run_signalfd_loop()
         {
             if (_poll.polling_error())
             {
-                SIHD_LOG(error, "SigWatcher: poll failed");
+                SIHD_LOG(error, "SigWatcher: poll failed: {}", os::last_error_str());
                 break;
             }
             continue;
@@ -257,7 +257,7 @@ void SigWatcher::_run_signalfd_loop()
                 {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                         continue;
-                    SIHD_LOG(error, "SigWatcher: signalfd read failed");
+                    SIHD_LOG(error, "SigWatcher: signalfd read failed: {}", os::last_error_str());
                     break;
                 }
 
@@ -309,7 +309,7 @@ void SigWatcher::_run_sigwait_loop()
         {
             if (errno == EAGAIN || errno == EINTR)
                 continue; // timeout or interrupted, re-check _running flag
-            SIHD_LOG(error, "SigWatcher: sigtimedwait failed");
+            SIHD_LOG(error, "SigWatcher: sigtimedwait failed: {}", os::last_error_str());
             break;
         }
 

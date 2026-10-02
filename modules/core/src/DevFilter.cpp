@@ -241,17 +241,11 @@ bool DevFilter::on_start()
     for (const Rule & conf : _rules_lst)
     {
         auto channel_in = this->find_channel(conf.channel_in);
-        if (!channel_in)
-        {
-            SIHD_LOG(error, "input channel '{}' not found", conf.channel_in);
+        if (SIHD_UNEXPECTED_LOG(channel_in))
             return false;
-        }
         auto channel_out = this->find_channel(conf.channel_out);
-        if (!channel_out)
-        {
-            SIHD_LOG(error, "output channel '{}' not found", conf.channel_out);
+        if (SIHD_UNEXPECTED_LOG(channel_out))
             return false;
-        }
         std::unique_ptr<InternalRule> rule(new InternalRule());
         auto res = rule->set(&conf, *channel_in, *channel_out);
         if (!res)
@@ -370,9 +364,7 @@ std::expected<void, sihd::util::Error> DevFilter::Rule::parse(std::string_view c
     this->channel_in = *channel_in_name;
     this->channel_out = *channel_out_name;
     auto trigger = this->channel_match.parse_trigger(*channel_key_trigger);
-    if (!trigger)
-        return std::unexpected(
-            util::Error(invalid_argument, "invalid trigger '{}' in configuration: {}", *channel_key_trigger, conf_str));
+    SIHD_UNEXPECTED_RETURN(trigger);
     auto res = parse_write_config(*this, conf);
     if (res.has_value() == false)
         return res;

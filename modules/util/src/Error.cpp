@@ -17,6 +17,8 @@ ErrorCode errc_to_error_code(std::errc ec)
     switch (ec)
     {
         case std::errc::invalid_argument:
+        case std::errc::address_not_available:
+        case std::errc::destination_address_required:
             return ErrorCode::invalid_argument;
         case std::errc::no_such_file_or_directory:
         case std::errc::no_such_device:
@@ -36,15 +38,19 @@ ErrorCode errc_to_error_code(std::errc ec)
         case std::errc::operation_would_block:
 #endif
         case std::errc::operation_in_progress:
+        case std::errc::connection_already_in_progress:
             return ErrorCode::would_block;
         case std::errc::interrupted:
             return ErrorCode::interrupted;
         case std::errc::not_enough_memory:
         case std::errc::no_buffer_space:
+        case std::errc::too_many_files_open:
             return ErrorCode::out_of_memory;
         case std::errc::io_error:
         case std::errc::bad_message:
         case std::errc::illegal_byte_sequence:
+        case std::errc::already_connected:
+        case std::errc::protocol_error:
             return ErrorCode::io_error;
 #if defined(ENOTSUP) && ENOTSUP != EOPNOTSUPP // mingw: own errno, posix aliases EOPNOTSUPP
         case std::errc::operation_not_supported:
@@ -61,10 +67,17 @@ ErrorCode errc_to_error_code(std::errc ec)
         case std::errc::file_too_large:
         case std::errc::filename_too_long:
         case std::errc::argument_list_too_long:
+        case std::errc::message_size:
+        case std::errc::value_too_large:
             return ErrorCode::overflow;
         case std::errc::broken_pipe:
         case std::errc::connection_aborted:
         case std::errc::connection_reset:
+        case std::errc::connection_refused:
+        case std::errc::network_down:
+        case std::errc::network_reset:
+        case std::errc::network_unreachable:
+        case std::errc::host_unreachable:
         case std::errc::not_connected:
         case std::errc::bad_file_descriptor:
             return ErrorCode::closed;
@@ -80,6 +93,7 @@ ErrorCode errno_to_error_code(int errno_value)
         case 0:
             return ErrorCode::none;
         case EINVAL:
+        case ENOTSOCK:
             return ErrorCode::invalid_argument;
         case ENOENT:
         case ENOTDIR:
@@ -108,6 +122,7 @@ ErrorCode errno_to_error_code(int errno_value)
         case EIO:
         case EILSEQ:
         case EBADMSG:
+        case EPROTO:
             return ErrorCode::io_error;
         case ENOSYS:
 #if defined(ENOTSUP)
@@ -166,13 +181,20 @@ ErrorCode errno_to_error_code(int errno_value)
         case EPFNOSUPPORT:
 #endif
             return ErrorCode::not_supported;
+        default:
+            break;
+    }
 #if defined(_WIN32)
+    switch (errno_value)
+    {
         case WSAEWOULDBLOCK:
         case WSAEINPROGRESS:
         case WSAEALREADY:
             return ErrorCode::would_block;
         case WSAETIMEDOUT:
             return ErrorCode::timeout;
+        case WSAEINTR:
+            return ErrorCode::interrupted;
         case WSAEBADF:
         case WSAECONNRESET:
         case WSAECONNABORTED:
@@ -182,6 +204,7 @@ ErrorCode errno_to_error_code(int errno_value)
         case WSAENETRESET:
         case WSAENETUNREACH:
         case WSAEHOSTUNREACH:
+        case WSAEHOSTDOWN:
         case WSAESHUTDOWN:
         case WSAEDISCON:
             return ErrorCode::closed;
@@ -190,9 +213,12 @@ ErrorCode errno_to_error_code(int errno_value)
         case WSAEACCES:
             return ErrorCode::permission_denied;
         case WSAEINVAL:
+        case WSAENOTSOCK:
         case WSAEDESTADDRREQ:
         case WSAEADDRNOTAVAIL:
             return ErrorCode::invalid_argument;
+        case WSAEADDRINUSE:
+            return ErrorCode::already_exists;
         case WSAEMSGSIZE:
             return ErrorCode::overflow;
         case WSAEMFILE:
@@ -205,10 +231,15 @@ ErrorCode errno_to_error_code(int errno_value)
         case WSAESOCKTNOSUPPORT:
         case WSAEPFNOSUPPORT:
             return ErrorCode::not_supported;
-#endif
-        default:
-            return ErrorCode::unknown;
+        case WSAELOOP:
+            return ErrorCode::not_found;
+        case WSAENAMETOOLONG:
+            return ErrorCode::overflow;
+        case WSANOTINITIALISED:
+            return ErrorCode::not_initialized;
     }
+#endif
+    return ErrorCode::unknown;
 }
 
 } // namespace

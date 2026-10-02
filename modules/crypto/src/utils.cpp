@@ -120,7 +120,10 @@ bool verify_data(const Certificate & cert,
 
     EVP_MD_CTX *ctx = EVP_MD_CTX_new();
     if (!ctx)
+    {
+        ERR_clear_error();
         return false;
+    }
 
     if (EVP_DigestVerifyInit(ctx, nullptr, EVP_sha256(), nullptr, pkey) != 1)
     {

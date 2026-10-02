@@ -44,7 +44,7 @@ class BasicServerHandler: public INetServerHandler,
                 IpAddr addr;
 
                 State state = State::ready;
-                TlsHandshakeStep handshake_step;
+                TlsHandshakeStep handshake_step = TlsHandshakeStep::complete;
                 sihd::util::Timestamp handshake_deadline;
 
                 sihd::util::Timestamp time_connected;

@@ -15,6 +15,18 @@
     if ((res).has_value() == false)                                                                                    \
         return std::unexpected(std::move(res).error());
 
+// same bail out, rebuilding the Error with the caller context appended: the code is kept, the old message
+// comes first, fmt must be a string literal — `res` is named twice and args are evaluated on error only
+#define SIHD_UNEXPECTED_RETURN_CTX(res, fmt, ...)                                                                      \
+    if ((res).has_value() == false)                                                                                    \
+    {                                                                                                                  \
+        ::sihd::util::Error __sihd_unexpected_error__ = std::move(res).error();                                        \
+        return std::unexpected(::sihd::util::Error(__sihd_unexpected_error__.code,                                     \
+                                                   "{}: " fmt,                                                         \
+                                                   std::move(__sihd_unexpected_error__.message) __VA_OPT__(, )         \
+                                                       __VA_ARGS__));                                                  \
+    }
+
 namespace sihd::util
 {
 
@@ -86,6 +98,10 @@ struct Error
         static Error from_errno(fmt::format_string<Args...> format, Args &&...args)
         {
             const int errno_value = errno;
+            // a failure that left errno at 0 was mis-sourced: an error must never carry the success code
+            if (errno_value == 0)
+                return Error(ErrorCode::unknown,
+                             fmt::format(format, std::forward<Args>(args)...).append(": errno was not set"));
             return Error(error_errno(errno_value),
                          fmt::format(format, std::forward<Args>(args)...)
                              .append(": ")

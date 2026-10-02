@@ -233,14 +233,16 @@ std::expected<void, Error> ignore(int sig)
     return {};
 }
 
-std::expected<void, Error> handle(int sig)
+std::expected<void, Error> handle(int sig, sig_handler *previous_handler)
 {
 #if defined(__SIHD_WINDOWS__)
     // Install console control handler for better CTRL+C/BREAK handling
     _install_console_handler();
 
-    sighandler_t previous_handler = ::signal(sig, _signal_callback);
-    if (previous_handler == SIG_ERR)
+    sighandler_t previous = ::signal(sig, _signal_callback);
+    if (previous_handler != nullptr)
+        *previous_handler = previous;
+    if (previous == SIG_ERR)
         return std::unexpected(Error::from_errno("could not handle signal {}", sig));
 #else
     struct sigaction sa;
@@ -250,8 +252,11 @@ std::expected<void, Error> handle(int sig)
     sa.sa_handler = _signal_callback;
     sigemptyset(&sa.sa_mask);
 
-    if (sigaction(sig, &sa, nullptr) != 0)
+    struct sigaction old_sa;
+    if (sigaction(sig, &sa, &old_sa) != 0)
         return std::unexpected(Error::from_errno("could not handle signal {}", sig));
+    if (previous_handler != nullptr)
+        *previous_handler = old_sa.sa_handler;
 #endif
     return {};
 }

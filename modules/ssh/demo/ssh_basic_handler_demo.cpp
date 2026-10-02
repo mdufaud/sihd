@@ -133,7 +133,7 @@ int main(int argc, char **argv)
             });
 
         if (verbose)
-            server.set_verbosity(3);
+            SIHD_UNEXPECTED_LOG(server.set_verbosity(3));
 
         if (server.set_port(port).has_value() == false)
         {

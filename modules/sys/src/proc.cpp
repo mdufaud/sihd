@@ -59,7 +59,8 @@ int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)
     SteadyClock clock;
 
     // if process failed to execute return the POSIX-like failure code
-    if (proc_ptr->execute().has_value() == false)
+    auto executed = proc_ptr->execute();
+    if (SIHD_UNEXPECTED_LOG(executed))
         return Process::failure_return_code;
 
     const bool has_to_poll = proc_ptr->can_read_pipes();

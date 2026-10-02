@@ -29,7 +29,7 @@ std::expected<uint64_t, Error> read_uint(std::string_view path)
     if (!content_opt)
         return std::unexpected(Error(io_error, "could not read '{}'", path));
     auto parsed = str::convert_from_string<uint64_t>(str::trim(*content_opt));
-    SIHD_UNEXPECTED_RETURN(parsed);
+    SIHD_UNEXPECTED_RETURN_CTX(parsed, "reading '{}'", path);
     return parsed;
 }
 
@@ -47,7 +47,7 @@ std::expected<uint64_t, Error> read_meminfo_kib(std::string_view key)
         std::string_view kib = str::trim(value);
         kib = kib.substr(0, kib.find(' '));
         auto parsed = str::convert_from_string<uint64_t>(kib);
-        SIHD_UNEXPECTED_RETURN(parsed);
+        SIHD_UNEXPECTED_RETURN_CTX(parsed, "reading meminfo key '{}'", key);
         return *parsed * 1024;
     }
     return std::unexpected(Error(not_found, "key '{}' not found in /proc/meminfo", key));

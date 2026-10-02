@@ -177,7 +177,7 @@ std::expected<void, sihd::util::Error> IcmpSender::open_socket(bool ipv6)
                             (ipv6 ? (int)IPPROTO_ICMPV6 : (int)IPPROTO_ICMP));
     if (res)
     {
-        (void)_socket.set_reuseaddr(true);
+        SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
     }
     return res;
 }
@@ -246,7 +246,7 @@ void IcmpSender::_apply_config()
 
     // Apply TTL
     if (_ttl >= 0)
-        (void)_socket.set_ttl(_ttl);
+        SIHD_UNEXPECTED_LOG(_socket.set_ttl(_ttl));
 
     // Apply echo mode or explicit type/code
     if (_echo_mode)
@@ -391,7 +391,13 @@ void IcmpSender::_read_socket()
                                           &addr_len,
                                           _array_rcv_ptr->buf(),
                                           _array_rcv_ptr->byte_capacity());
-    if (ret && ret.value() > 0)
+    if (!ret)
+    {
+        if (!ret.error().retryable())
+            SIHD_UNEXPECTED_LOG(ret);
+        return;
+    }
+    if (ret.value() > 0)
     {
         _array_rcv_ptr->byte_resize(ret.value());
 

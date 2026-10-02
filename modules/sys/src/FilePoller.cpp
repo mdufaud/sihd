@@ -25,7 +25,10 @@ struct FileStat
         Timestamp last_accessed;
 };
 
-void map_path_into(std::vector<FileStat> & file_stats, const std::string & path, uint32_t max_depth)
+void map_path_into(std::vector<FileStat> & file_stats,
+                   const std::string & path,
+                   uint32_t max_depth,
+                   const std::vector<FileStat> *previous)
 {
     file_stats.clear();
 
@@ -35,13 +38,42 @@ void map_path_into(std::vector<FileStat> & file_stats, const std::string & path,
     auto files = fs::recursive_children(path, max_depth);
     std::sort(files.begin(), files.end());
 
-    sihd::util::Timestamp last_write;
     file_stats.reserve(files.size());
     for (std::string & file : files)
     {
-        last_write = fs::last_write(file);
-        file_stats.emplace_back(FileStat {.path = std::move(file), .last_accessed = last_write});
+        Timestamp last_modif;
+        auto times = fs::times(file);
+        if (times)
+        {
+            last_modif = times->write;
+        }
+        else
+        {
+            SIHD_LOG(error, "FilePoller: could not stat '{}'", file);
+            if (previous)
+            {
+                // a transient stat failure must not read as a change: keep the previous timestamp
+                auto it = std::lower_bound(previous->begin(),
+                                           previous->end(),
+                                           file,
+                                           [](const FileStat & stat, const std::string & p) { return stat.path < p; });
+                if (it != previous->end() && it->path == file)
+                    last_modif = it->last_accessed;
+            }
+        }
+        file_stats.emplace_back(FileStat {.path = std::move(file), .last_accessed = last_modif});
     }
+}
+
+Timestamp last_write_or(std::string_view path, Timestamp fallback)
+{
+    auto times = fs::times(path);
+    if (!times)
+    {
+        SIHD_LOG(error, "FilePoller: could not stat '{}'", path);
+        return fallback;
+    }
+    return times->write;
 }
 
 void put_intersections_into(std::vector<FileStat> & intersections,
@@ -154,9 +186,9 @@ std::expected<void, Error> FilePoller::watch(std::string_view path, size_t max_d
     _impl->max_depth = max_depth;
 
     _impl->path_exists = fs::exists(path);
-    _impl->last_modif = _impl->path_exists ? fs::last_write(path) : Timestamp {};
+    _impl->last_modif = _impl->path_exists ? last_write_or(path, Timestamp {}) : Timestamp {};
 
-    map_path_into(_impl->last, _impl->watch_path, max_depth);
+    map_path_into(_impl->last, _impl->watch_path, max_depth, nullptr);
 
     return {};
 }
@@ -167,11 +199,11 @@ bool FilePoller::run()
         return false;
 
     const bool new_path_exists = fs::exists(_impl->watch_path);
-    const sihd::util::Timestamp new_last_modif = fs::last_write(_impl->watch_path);
+    const sihd::util::Timestamp new_last_modif = last_write_or(_impl->watch_path, _impl->last_modif);
 
     std::vector<FileStat> new_files;
     new_files.reserve(_impl->last.size());
-    map_path_into(new_files, _impl->watch_path, _impl->max_depth);
+    map_path_into(new_files, _impl->watch_path, _impl->max_depth, &_impl->last);
 
     _impl->created.clear();
     _impl->removed.clear();
@@ -188,13 +220,13 @@ bool FilePoller::run()
         const auto same_files_end = _impl->__same_files.end();
         while (same_files_it != same_files_end)
         {
-            while (old_files_it->path != same_files_it->path && old_files_it != old_files_end)
+            while (old_files_it != old_files_end && old_files_it->path != same_files_it->path)
                 ++old_files_it;
 
             if (old_files_it == old_files_end)
                 break;
 
-            if (old_files_it->last_accessed != fs::last_write(same_files_it->path))
+            if (old_files_it->last_accessed != last_write_or(same_files_it->path, old_files_it->last_accessed))
                 _impl->changed.emplace_back(old_files_it->path);
 
             ++same_files_it;

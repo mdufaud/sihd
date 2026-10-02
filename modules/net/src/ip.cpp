@@ -1,6 +1,5 @@
 #include <strings.h>
 
-#include <cerrno>
 #include <cstring>
 #include <map>
 

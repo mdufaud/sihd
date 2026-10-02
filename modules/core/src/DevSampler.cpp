@@ -101,7 +101,11 @@ bool DevSampler::on_start()
             _channels_map[channel_in] = channel_out;
         }
         else
+        {
+            SIHD_UNEXPECTED_LOG(channel_in_res);
+            SIHD_UNEXPECTED_LOG(channel_out_res);
             ret = false;
+        }
     }
     if (ret && _step_worker.start_sync_worker(this->name()) == false)
     {

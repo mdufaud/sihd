@@ -58,7 +58,7 @@ Impersonation::~Impersonation()
     if (_impl->active)
     {
         auto reverted = this->revert();
-        if (!reverted)
+        if (SIHD_UNEXPECTED_LOG(reverted))
             SIHD_LOG(critical, "Impersonation: thread is left impersonating another account");
     }
     _impl->close();

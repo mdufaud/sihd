@@ -579,7 +579,8 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
 
     if (rc < 0)
     {
-        reply_status(msg, errno == ENOENT ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED);
+        auto err = sihd::util::Error::from_errno("could not stat '{}'", resolved);
+        reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
 
@@ -607,7 +608,8 @@ void SshSubsystemSftp::Impl::handle_opendir(sftp_client_message_struct *msg)
     DIR *dir = opendir(resolved.c_str());
     if (!dir)
     {
-        reply_status(msg, errno == ENOENT ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED);
+        auto err = sihd::util::Error::from_errno("could not open directory '{}'", resolved);
+        reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
     closedir(dir);
@@ -817,10 +819,10 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
 
     std::string resolved = resolve_path(path);
     sihd::sys::File file;
-    if (!file.open(resolved, open_mode))
+    auto opened = file.open(resolved, open_mode);
+    if (!opened)
     {
-        uint32_t error = (errno == ENOENT) ? SSH_FX_NO_SUCH_FILE : SSH_FX_PERMISSION_DENIED;
-        reply_status(msg, error);
+        reply_status(msg, sftp_status_from_error(opened.error()), opened.error().message);
         return;
     }
 
@@ -872,7 +874,7 @@ void SshSubsystemSftp::Impl::handle_read(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: READ '{}' offset={} len={}", path, offset, len);
 
-    if (!file.seek_begin(static_cast<long>(offset)))
+    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<long>(offset))))
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;
@@ -880,7 +882,7 @@ void SshSubsystemSftp::Impl::handle_read(sftp_client_message_struct *msg)
 
     std::vector<char> buf(len);
     auto read = file.read(buf.data(), len);
-    if (!read)
+    if (SIHD_UNEXPECTED_LOG(read))
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;
@@ -929,16 +931,17 @@ void SshSubsystemSftp::Impl::handle_write(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: WRITE '{}' offset={} len={}", path, offset, len);
 
-    if (!file.seek_begin(static_cast<long>(offset)))
+    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<long>(offset))))
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;
     }
 
     auto wrote = file.write(data, len);
-    if (!wrote || *wrote != len)
+    if (SIHD_UNEXPECTED_LOG(wrote) || *wrote != len)
     {
-        SIHD_LOG(error, "SshSubsystemSftp: WRITE failed");
+        if (wrote)
+            SIHD_LOG(error, "SshSubsystemSftp: WRITE '{}' short write: {}/{}", path, *wrote, len);
         reply_status(msg, SSH_FX_FAILURE);
         return;
     }

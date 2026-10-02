@@ -248,7 +248,6 @@ SshSession::AuthState SshSession::auth_key_file(std::string_view private_key_pat
     if (!imported)
     {
         SIHD_UNEXPECTED_LOG(imported);
-        SIHD_LOG(error, "could not get private key from: {}", private_key_path);
         return AuthState(SSH_AUTH_ERROR);
     }
     return this->auth_key(key);
@@ -262,7 +261,6 @@ SshSession::AuthState SshSession::auth_key_try_file(std::string_view public_key_
     if (imported)
         return this->auth_key_try(key);
     SIHD_UNEXPECTED_LOG(imported);
-    SIHD_LOG(error, "could not get public key from: {}", public_key_path);
     return AuthState(SSH_AUTH_ERROR);
 }
 
@@ -299,7 +297,7 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             {
                 fmt::print("{}", prompt);
                 auto answer = sihd::sys::LineReader::fast_read_stdin();
-                if (!answer)
+                if (SIHD_UNEXPECTED_LOG(answer))
                     return AuthState(SSH_AUTH_ERROR);
                 if (ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, answer->c_str()) < 0)
                     return AuthState(SSH_AUTH_ERROR);

@@ -38,11 +38,11 @@ std::expected<Mapping, Error> open_map(std::string_view path, DWORD desired_acce
                                 FILE_ATTRIBUTE_NORMAL,
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
-        return std::unexpected(Error::from_errno("could not open '{}'", path));
+        return std::unexpected(Error(io_error, "could not open '{}': {}", path, os::last_error_str()));
     LARGE_INTEGER li;
     if (!GetFileSizeEx(handle, &li))
     {
-        auto error = Error::from_errno("could not get size of '{}'", path);
+        auto error = Error(io_error, "could not get size of '{}': {}", path, os::last_error_str());
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
@@ -55,14 +55,14 @@ std::expected<Mapping, Error> open_map(std::string_view path, DWORD desired_acce
     HANDLE mapping = CreateFileMappingA(handle, nullptr, protect, 0, 0, nullptr);
     if (mapping == nullptr)
     {
-        auto error = Error(io_error, "could not create file mapping: {}", os::last_error_str());
+        auto error = Error(io_error, "could not create file mapping of '{}': {}", path, os::last_error_str());
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
     void *addr = MapViewOfFile(mapping, view_access, 0, 0, 0);
     if (addr == nullptr)
     {
-        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of '{}': {}", path, os::last_error_str());
         CloseHandle(mapping);
         CloseHandle(handle);
         return std::unexpected(std::move(error));
@@ -91,13 +91,13 @@ std::expected<void, Error> MappedFile::create(std::string_view path, size_t size
                                 FILE_ATTRIBUTE_NORMAL,
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
-        return std::unexpected(Error::from_errno("could not create '{}'", path));
+        return std::unexpected(Error(io_error, "could not create '{}': {}", path, os::last_error_str()));
     // commit the file size now, a bare mapping would extend it lazily
     LARGE_INTEGER offset {};
     offset.QuadPart = static_cast<LONGLONG>(size);
     if (SetFilePointerEx(handle, offset, nullptr, FILE_BEGIN) == 0 || SetEndOfFile(handle) == 0)
     {
-        auto error = Error::from_errno("could not size '{}'", path);
+        auto error = Error(io_error, "could not size '{}': {}", path, os::last_error_str());
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
@@ -109,14 +109,14 @@ std::expected<void, Error> MappedFile::create(std::string_view path, size_t size
                                         nullptr);
     if (mapping == nullptr)
     {
-        auto error = Error(io_error, "could not create file mapping: {}", os::last_error_str());
+        auto error = Error(io_error, "could not create file mapping of '{}': {}", path, os::last_error_str());
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
     void *addr = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size);
     if (addr == nullptr)
     {
-        auto error = Error(io_error, "could not map view of file: {}", os::last_error_str());
+        auto error = Error(io_error, "could not map view of '{}': {}", path, os::last_error_str());
         CloseHandle(mapping);
         CloseHandle(handle);
         return std::unexpected(std::move(error));

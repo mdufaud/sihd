@@ -164,45 +164,65 @@ bool DevMessage::on_start()
     {
         std::string suffix_name = name + IN_SUFFIX;
 
-        if (auto found = this->find_channel(suffix_name))
+        auto found_in = this->find_channel(suffix_name);
+        if (found_in)
         {
-            c = *found;
+            c = *found_in;
             _channels_in_to_field[c] = field;
             this->observe_channel(c);
         }
         else
+        {
+            SIHD_UNEXPECTED_LOG(found_in);
             ret = false;
+        }
 
         suffix_name = name + OUT_SUFFIX;
 
-        if (auto found = this->find_channel(suffix_name))
-            _fields_to_channel_out[field] = *found;
+        auto found_out = this->find_channel(suffix_name);
+        if (found_out)
+            _fields_to_channel_out[field] = *found_out;
         else
+        {
+            SIHD_UNEXPECTED_LOG(found_out);
             ret = false;
+        }
     }
 
-    if (auto found = this->find_channel(CHANNEL_MSG_IN))
+    auto found_msg_in = this->find_channel(CHANNEL_MSG_IN);
+    if (found_msg_in)
     {
-        c = *found;
+        c = *found_msg_in;
         _channel_msg_in = c;
         this->observe_channel(c);
     }
     else
-        ret = false;
-
-    if (auto found = this->find_channel(CHANNEL_MSG_OUT))
-        _channel_msg_out = *found;
-    else
-        ret = false;
-
-    if (auto found = this->find_channel(CHANNEL_TRIGGER))
     {
-        c = *found;
+        SIHD_UNEXPECTED_LOG(found_msg_in);
+        ret = false;
+    }
+
+    auto found_msg_out = this->find_channel(CHANNEL_MSG_OUT);
+    if (found_msg_out)
+        _channel_msg_out = *found_msg_out;
+    else
+    {
+        SIHD_UNEXPECTED_LOG(found_msg_out);
+        ret = false;
+    }
+
+    auto found_trigger = this->find_channel(CHANNEL_TRIGGER);
+    if (found_trigger)
+    {
+        c = *found_trigger;
         _channel_trigger = c;
         this->observe_channel(c);
     }
     else
+    {
+        SIHD_UNEXPECTED_LOG(found_trigger);
         ret = false;
+    }
 
     _running = ret;
     return ret;

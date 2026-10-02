@@ -597,6 +597,7 @@ void LuaSysApi::load_files(Vm & vm)
                     return luabridge::LuaRef(state, array);
                 }
                 free(line);
+                SIHD_UNEXPECTED_LOG(ret);
                 return luabridge::LuaRef(state);
             })
         // write
@@ -631,7 +632,12 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction("path", &File::path)
         .addFunction(
             "filesize",
-            +[](File *self) -> long { return self->file_size().value_or(-1); })
+            +[](File *self) -> long {
+                auto size = self->file_size();
+                if (SIHD_UNEXPECTED_LOG(size))
+                    return -1;
+                return (long)*size;
+            })
         // lock
         .addFunction("lock", &File::lock)
         .addFunction("trylock", &File::trylock)
@@ -677,6 +683,8 @@ void LuaSysApi::load_tools(Vm & vm)
                 auto line = LineReader::fast_read_line(stdin);
                 if (line)
                     ret = line.value();
+                else
+                    SIHD_UNEXPECTED_LOG(line);
                 return ret;
             })
         .beginNamespace("signal")

@@ -110,9 +110,8 @@ bool DeviceUdpReceiver::run()
     IpAddr addr(_host.empty() ? "0.0.0.0" : _host, _port);
     auto bound = _udp_receiver.open_and_bind(addr);
 
-    if (!bound)
+    if (SIHD_UNEXPECTED_LOG(bound))
     {
-        SIHD_LOG(error, "DeviceUdpReceiver: failed to bind on {}:{}", _host, _port);
         _start_ok = false;
         _start_sync.sync();
         return false;
@@ -134,7 +133,9 @@ void DeviceUdpReceiver::handle(INetReceiver *receiver)
 {
     sihd::util::ArrByte buf(_buffer_capacity);
     auto received = receiver->receive(buf);
-    if (received && received.value() > 0)
+    if (SIHD_UNEXPECTED_LOG(received))
+        return;
+    if (received.value() > 0)
     {
         buf.resize(received.value());
         _channel_rx->write(buf);

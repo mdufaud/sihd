@@ -119,7 +119,7 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
 
     EXPECT_TRUE(client.poll(500));
     ArrChar recv_arr(64);
-    ssize_t rcv = client.receive(recv_arr).value_or(-1);
+    ssize_t rcv = client.receive(recv_arr).value_or(0);
     ASSERT_GT(rcv, 0);
     EXPECT_EQ(std::string(recv_arr.data(), static_cast<size_t>(rcv)), "hello tls");
 

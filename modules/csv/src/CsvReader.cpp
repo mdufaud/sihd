@@ -57,7 +57,7 @@ CsvReader::~CsvReader() = default;
 std::expected<void, Error> CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
-        return std::unexpected(Error(invalid_argument, "delimiter is not a printable character"));
+        return std::unexpected(Error(invalid_argument, "delimiter {} is not a printable character", c));
     _delimiter = c;
     _splitter.set_delimiter_char(_delimiter);
     return {};
@@ -70,7 +70,7 @@ std::expected<void, Error> CsvReader::set_commentary(int c)
         _comment = c;
         return {};
     }
-    return std::unexpected(Error(invalid_argument, "commentary is not a printable character"));
+    return std::unexpected(Error(invalid_argument, "commentary {} is not a printable character", c));
 }
 
 void CsvReader::set_timestamp_col(int n)

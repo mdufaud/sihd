@@ -35,30 +35,13 @@ std::expected<void, Error> SigHandler::handle(int sig)
 
     _sig = sig;
 
-#if defined(__SIHD_WINDOWS__)
-    // On Windows, we must use std::signal which installs and returns previous handler
-    // We temporarily install SIG_DFL just to get the previous handler, then immediately
-    // install our custom handler via signal::handle()
-    _previous_handler = std::signal(sig, SIG_DFL);
-    if (_previous_handler == SIG_ERR)
+    auto handled = signal::handle(sig, &_previous_handler);
+    if (!handled)
     {
-        SIHD_LOG(warning, "SigHandler: could not get previous handler for signal '{}'", _sig);
-    }
-#else
-    // On POSIX, use sigaction to query previous handler without installing anything
-    struct sigaction old_sa;
-    if (sigaction(sig, nullptr, &old_sa) == 0)
-    {
-        _previous_handler = old_sa.sa_handler;
-    }
-    else
-    {
-        SIHD_LOG(warning, "SigHandler: could not get previous handler for signal '{}'", _sig);
         _previous_handler = SIG_ERR;
+        _sig = -1;
     }
-#endif
-
-    return signal::handle(sig);
+    return handled;
 }
 
 std::expected<void, Error> SigHandler::unhandle()
@@ -71,9 +54,10 @@ std::expected<void, Error> SigHandler::unhandle()
     }
     if (std::signal(_sig, _previous_handler) == SIG_ERR)
     {
+        const int sig = _sig;
         _previous_handler = SIG_ERR;
         _sig = -1;
-        return std::unexpected(Error::from_errno("could not unhandle signal {}", _sig));
+        return std::unexpected(Error::from_errno("could not unhandle signal {}", sig));
     }
 
     _previous_handler = SIG_ERR;

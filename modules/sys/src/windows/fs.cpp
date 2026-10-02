@@ -321,8 +321,11 @@ std::expected<void, Error> truncate(std::string_view path, int64_t size)
     errno_t rc = _chsize_s(fd, size);
     _close(fd);
     if (rc != 0)
-        return std::unexpected(
-            Error(error_errno(rc), "could not truncate '{}' to {} bytes: {}", path, size, strerror(rc)));
+        return std::unexpected(Error(error_errno(rc),
+                                     "could not truncate '{}' to {} bytes: {}",
+                                     path,
+                                     size,
+                                     std::generic_category().message(rc)));
     return {};
 }
 

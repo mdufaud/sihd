@@ -101,12 +101,11 @@ std::expected<void, sihd::util::Error> Sniffer::activate()
         this->close();
         return std::unexpected(std::move(error));
     }
-    if (ret == PCAP_WARNING)
-        SIHD_LOG(warning, "Sniffer: {}", this->error());
-    else if (ret != 0)
-        SIHD_LOG(error, "Sniffer: {}", utils::status_str(ret));
+    // positive return: activation succeeded with a warning (promisc not supported, ...)
+    if (ret > 0)
+        SIHD_LOG(warning, "Sniffer: {}", utils::status_str(ret));
     _active = ret == 0;
-    if (ret != 0)
+    if (ret < 0)
     {
         this->close();
         return std::unexpected(
@@ -152,6 +151,8 @@ bool Sniffer::sniff()
 
 std::expected<bool, sihd::util::Error> Sniffer::read_next()
 {
+    if (this->is_open() == false)
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "Sniffer: not open"));
     struct pcap_pkthdr *hdr;
     u_char *data;
     int ret = pcap_next_ex(_impl_ptr->pcap_ptr, &hdr, (const u_char **)(&data));

@@ -41,7 +41,7 @@ class TlsConnection
         std::expected<void, sihd::util::Error> init(sihd::crypto::TlsContext & ctx, Socket & socket);
         std::expected<void, sihd::util::Error> connect(int timeout_ms);
         std::expected<void, sihd::util::Error> accept(int timeout_ms);
-        TlsHandshakeStep accept_step();
+        std::expected<TlsHandshakeStep, sihd::util::Error> accept_step();
 
         // 0 = clean close from peer
         std::expected<size_t, sihd::util::Error> read(void *buf, size_t len);

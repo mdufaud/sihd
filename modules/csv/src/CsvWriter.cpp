@@ -81,8 +81,7 @@ bool CsvWriter::close()
 std::expected<void, Error> CsvWriter::new_row()
 {
     auto fed = _file.write_char(_line_feed);
-    if (!fed)
-        return std::unexpected(Error(io_error, "could not write new line"));
+    SIHD_UNEXPECTED_RETURN_CTX(fed, "writing new row");
     _row += 1;
     _col = 0;
     return {};
@@ -92,7 +91,7 @@ ssize_t CsvWriter::write_commentary(std::string_view comment)
 {
     if (_col > 0)
     {
-        if (!this->new_row())
+        if (SIHD_UNEXPECTED_LOG(this->new_row()))
             return -1;
     }
     auto fed = _file.write_char(_comment);
@@ -104,10 +103,10 @@ ssize_t CsvWriter::write_commentary(std::string_view comment)
     const auto wrote = _file.write(comment);
     if (!wrote || *wrote < comment.size())
     {
-        SIHD_LOG(error, "CsvWriter: commentary write failed");
+        SIHD_LOG(error, "CsvWriter: commentary write failed '{}' < '{}'", wrote.value_or(0), comment.size());
         return -1;
     }
-    if (!this->new_row())
+    if (SIHD_UNEXPECTED_LOG(this->new_row()))
         return -1;
     // 1 for comment char + comment size + 1 for newline
     return 1 + (ssize_t)*wrote + 1;
@@ -130,7 +129,7 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
     const auto wrote = _file.write(view);
     if (!wrote || *wrote < view.size())
     {
-        SIHD_LOG(error, "CsvWriter: write failed");
+        SIHD_LOG(error, "CsvWriter: write failed '{}' < '{}'", wrote.value_or(0), view.size());
         return -1;
     }
     ret += (ssize_t)*wrote;
@@ -141,7 +140,12 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
 
 ssize_t CsvWriter::write_row(sihd::util::ArrCharView view)
 {
-    return this->write(view) + (this->new_row().has_value() ? 1 : 0);
+    const ssize_t wrote = this->write(view);
+    if (wrote < 0)
+        return wrote;
+    if (SIHD_UNEXPECTED_LOG(this->new_row()))
+        return -1;
+    return wrote + 1;
 }
 
 ssize_t CsvWriter::write(const std::vector<std::string> & values)
@@ -160,7 +164,12 @@ ssize_t CsvWriter::write(const std::vector<std::string> & values)
 
 ssize_t CsvWriter::write_row(const std::vector<std::string> & values)
 {
-    return this->write(values) + (this->new_row().has_value() ? 1 : 0);
+    const ssize_t wrote = this->write(values);
+    if (wrote < 0)
+        return wrote;
+    if (this->new_row().has_value() == false)
+        return -1;
+    return wrote + 1;
 }
 
 } // namespace sihd::csv

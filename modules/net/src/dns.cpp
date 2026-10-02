@@ -1,7 +1,6 @@
 #include <strings.h>
 
 #include <functional>
-#include <stdexcept>
 
 #include <sihd/net/dns.hpp>
 #include <sihd/net/ip.hpp>
@@ -25,11 +24,12 @@ namespace sihd::net::dns
 SIHD_NEW_LOGGER("sihd::net::dns");
 
 using namespace sihd::util;
+using enum sihd::util::ErrorCode;
 
 namespace
 {
 
-bool ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)> && callback)
+std::expected<bool, Error> ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)> && callback)
 {
     int ret;
     struct addrinfo hints;
@@ -43,15 +43,13 @@ bool ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)
     hints.ai_flags = AI_CANONNAME;
 
     if ((ret = getaddrinfo(host.data(), NULL, &hints, &results)) != 0)
-    {
-        SIHD_LOG(error, "'{}': {}", host, gai_strerror(ret));
-        return false;
-    }
+        return std::unexpected(Error(not_found, "'{}': {}", host, gai_strerror(ret)));
 
     first_result = results;
     Defer d([&first_result] { freeaddrinfo(first_result); });
 
     std::string hostname;
+    bool found = false;
     while (results)
     {
         // cannoname is only in first result
@@ -69,40 +67,45 @@ bool ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)
 
         if (ipaddr.has_ip() && callback(ipaddr, socktype, protocol))
         {
+            found = true;
             break;
         }
 
         results = results->ai_next;
     }
-    return true;
+    return found;
 }
 
 } // namespace
 
-IpAddr find(std::string_view host, bool ipv6, int socktype, int protocol)
+std::expected<IpAddr, Error> find(std::string_view host, bool ipv6, int socktype, int protocol)
 {
-    IpAddr ret;
-
     if (host.empty())
-        throw std::invalid_argument("dns::find: empty host");
+        return std::unexpected(Error(invalid_argument, "dns::find: empty host"));
 
     if (protocol == IPPROTO_ICMP || protocol == IPPROTO_ICMPV6)
     {
-        throw std::invalid_argument(fmt::format("dns::find: invalid protocol {}", ip::protocol_str(protocol)));
+        return std::unexpected(Error(invalid_argument, "dns::find: invalid protocol {}", ip::protocol_str(protocol)));
     }
 
-    ask_dns(host, [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
-        const bool good_socktype = socktype < 0 || socktype == addr_socktype;
-        const bool good_protocol = protocol < 0 || protocol == addr_protocol;
-        const bool good_iptype = ipv6 == addr.is_ipv6();
+    IpAddr ret;
+    auto asked = ask_dns(
+        host,
+        [&ret, &ipv6, &socktype, &protocol](const IpAddr & addr, int addr_socktype, int addr_protocol) {
+            const bool good_socktype = socktype < 0 || socktype == addr_socktype;
+            const bool good_protocol = protocol < 0 || protocol == addr_protocol;
+            const bool good_iptype = ipv6 == addr.is_ipv6();
 
-        const bool found = good_iptype && good_protocol && good_socktype;
+            const bool found = good_iptype && good_protocol && good_socktype;
 
-        if (found)
-            ret = addr;
+            if (found)
+                ret = addr;
 
-        return found;
-    });
+            return found;
+        });
+    SIHD_UNEXPECTED_RETURN(asked);
+    if (*asked == false)
+        return std::unexpected(Error(not_found, "dns::find: no matching address for '{}'", host));
 
     return ret;
 }
@@ -112,7 +115,7 @@ DnsLookup lookup(std::string_view host)
     DnsLookup ret;
 
     ret.host = host;
-    ret.success = ask_dns(host, [&ret](const IpAddr & addr, int addr_socktype, int addr_protocol) {
+    auto asked = ask_dns(host, [&ret](const IpAddr & addr, int addr_socktype, int addr_protocol) {
         if (ret.hostname.empty())
             ret.hostname = addr.hostname();
 
@@ -124,6 +127,8 @@ DnsLookup lookup(std::string_view host)
         // get all results by sending false
         return false;
     });
+    SIHD_UNEXPECTED_LOG(asked);
+    ret.success = asked.has_value();
 
     return ret;
 }

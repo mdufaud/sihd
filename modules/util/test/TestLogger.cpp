@@ -103,6 +103,20 @@ TEST_F(TestLogger, test_logger_basic)
     ASSERT_TRUE(this->has_logged_every_levels());
 }
 
+TEST_F(TestLogger, test_logger_variadic)
+{
+    Logger log("test::logger");
+    LoggerManager::add(new LoggerStream());
+    log.log(LogLevel::info, "int: {} - str: {}", 42, "hello");
+    ASSERT_EQ(log_counter->msg, "int: 42 - str: hello");
+    log.debug("fmt: {:02}", 3);
+    ASSERT_EQ(log_counter->msg, "fmt: 03");
+    log.warning("no arg");
+    ASSERT_EQ(log_counter->msg, "no arg");
+    log.emergency("{}", "emergency");
+    ASSERT_EQ(log_counter->msg, "emergency");
+}
+
 TEST_F(TestLogger, test_logger_macros)
 {
     LoggerManager::add(new LoggerStream());

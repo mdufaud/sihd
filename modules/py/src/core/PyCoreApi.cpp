@@ -173,14 +173,20 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def(
             "find_channel",
             +[](Device *self, const std::string & name) -> Channel * {
-                return self->find_channel(name).value_or(nullptr);
+                auto found = self->find_channel(name);
+                if (SIHD_UNEXPECTED_LOG(found))
+                    return nullptr;
+                return *found;
             },
             pybind11::call_guard<pybind11::gil_scoped_release>(),
             pybind11::return_value_policy::reference_internal)
         .def(
             "get_channel",
             +[](Device *self, const std::string & name) -> Channel * {
-                return self->get_channel(name).value_or(nullptr);
+                auto found = self->get_channel(name);
+                if (SIHD_UNEXPECTED_LOG(found))
+                    return nullptr;
+                return *found;
             },
             pybind11::call_guard<pybind11::gil_scoped_release>(),
             pybind11::return_value_policy::reference_internal)

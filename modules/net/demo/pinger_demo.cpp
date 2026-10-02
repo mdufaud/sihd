@@ -70,12 +70,14 @@ int main(int argc, char **argv)
             app.exit(EXIT_FAILURE);
         }
 
-        const IpAddr hostaddr = dns::find(host);
-        if (hostaddr.empty())
+        const auto hostaddr_res = dns::find(host);
+        if (SIHD_UNEXPECTED_LOG(hostaddr_res))
         {
             SIHD_LOG(error, "Cannot resolve: {}", host);
             app.exit(EXIT_FAILURE);
+            return;
         }
+        const IpAddr hostaddr = *hostaddr_res;
 
         SIHD_LOG(notice, "Sending {} pings to {} ({})", npings, host, hostaddr.str());
         SIHD_LOG(notice, "Press ctrl+C to stop or wait until all pings are done");

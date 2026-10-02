@@ -34,8 +34,10 @@ FileCache::~FileCache() {}
 void FileCache::add(const std::string & file_path, bool lazy)
 {
     constexpr Timestamp max_age(-1);
+    auto watched = _file_watcher.watch(file_path);
+    if (SIHD_UNEXPECTED_LOG(watched))
+        return;
     _cache.set(file_path, [internal_file_path = file_path]() { return read_file(internal_file_path); }, max_age, lazy);
-    SIHD_UNEXPECTED_LOG(_file_watcher.watch(file_path));
 }
 
 void FileCache::remove(const std::string & file_path)

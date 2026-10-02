@@ -84,8 +84,7 @@ std::expected<void, Error> ChannelMatch::parse(std::string_view conf_str)
     if (key_idx.has_value())
     {
         const auto idx = str::convert_from_string<size_t>(*key_idx);
-        if (!idx)
-            return std::unexpected(Error(invalid_argument, "cannot convert idx: {}", *key_idx));
+        SIHD_UNEXPECTED_RETURN(idx);
         parsed_idx = *idx;
     }
     if (key_value.has_value())
@@ -97,8 +96,7 @@ std::expected<void, Error> ChannelMatch::parse(std::string_view conf_str)
     if (key_invert.has_value())
     {
         const auto invert = str::convert_from_string<bool>(*key_invert);
-        if (!invert)
-            return std::unexpected(Error(invalid_argument, "cannot convert invert: {}", *key_invert));
+        SIHD_UNEXPECTED_RETURN(invert);
         parsed_invert = *invert;
     }
     this->comparison = cmp;
@@ -130,8 +128,7 @@ std::expected<void, Error> ChannelMatch::parse_trigger(std::string_view conf)
     if (split[0].empty() == false)
     {
         const auto idx = str::convert_from_string<size_t>(split[0]);
-        if (!idx)
-            return std::unexpected(Error(invalid_argument, "cannot convert trigger idx: {}", split[0]));
+        SIHD_UNEXPECTED_RETURN(idx);
         this->idx = *idx;
     }
     if (split[1].empty() == false)

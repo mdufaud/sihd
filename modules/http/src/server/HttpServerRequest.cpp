@@ -221,6 +221,7 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
                                   (enum lws_write_protocol)write_proto)
                         < (int)chunk.size())
                     {
+                        SIHD_LOG(error, "HttpServer: could not write the full stream chunk to the client");
                         rc = -1;
                         break;
                     }
@@ -821,7 +822,9 @@ HttpServer::Impl::AuthResult HttpServer::Impl::parse_authorization(std::string_v
     else if (auth_header_value.starts_with(basic_prefix))
     {
         const auto decoded = sihd::util::str::from_base64(auth_header_value.substr(basic_prefix.size()));
-        if (decoded)
+        if (!decoded)
+            SIHD_LOG(warning, "HttpServer: could not decode the basic authorization header");
+        else
         {
             std::string_view credentials((const char *)decoded->data(), decoded->size());
             auto sep = credentials.find(':');

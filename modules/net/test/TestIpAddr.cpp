@@ -40,7 +40,7 @@ TEST_F(TestIpAddr, test_ipaddr_ip_name)
     EXPECT_EQ(localhost.hostname(), "localhost");
 
     // no valid ip inside
-    EXPECT_THROW((void)IpAddr("google.com").fetch_hostname(), std::invalid_argument);
+    EXPECT_FALSE(IpAddr("google.com").fetch_hostname().has_value());
 
     // requires internet
     IpAddr addr1("216.58.215.46");
@@ -277,9 +277,9 @@ TEST_F(TestIpAddr, test_ipaddr_assign_empty)
 
     fallback = IpAddr("10.0.0.1", 80);
     EXPECT_TRUE(fallback.has_ip());
-    // requires internet
-    fallback = dns::find("unresolvable-host-sihd-test");
-    EXPECT_TRUE(fallback.empty());
+    // requires internet: an unresolvable host is an error, not an empty address
+    auto unresolved = dns::find("unresolvable-host-sihd-test");
+    EXPECT_FALSE(unresolved.has_value());
 }
 
 TEST_F(TestIpAddr, test_ipaddr_subnet_edges)

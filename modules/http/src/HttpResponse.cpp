@@ -50,26 +50,26 @@ bool HttpResponse::set_json_content(const sihd::json::Json & data)
 bool HttpResponse::set_file_content(std::string_view path)
 {
     sihd::sys::File file;
-    if (file.open(std::string(path), "rb").has_value() == false)
-    {
-        SIHD_LOG(error, "HttpResponse: cannot open file: {}", path);
+    auto opened = file.open(std::string(path), "rb");
+    if (SIHD_UNEXPECTED_LOG(opened))
         return false;
-    }
     const auto size = file.file_size();
-    if (size.has_value() == false)
-    {
-        SIHD_LOG(error, "HttpResponse: cannot read file size: {}", path);
+    if (SIHD_UNEXPECTED_LOG(size))
         return false;
-    }
 
     this->set_content_type_from_extension(sihd::sys::fs::extension(path));
     _http_header.set_content_length(*size);
     this->set_stream_provider([file = std::move(file)](sihd::util::ArrByte & chunk) mutable {
         chunk.resize(stream_chunk_size);
         const auto read = file.read(chunk.data(), chunk.size());
-        const size_t read_size = read && read.value() > 0 ? read.value() : 0;
-        chunk.resize(read_size);
-        return read_size == stream_chunk_size;
+        if (!read)
+        {
+            SIHD_LOG(error, "HttpResponse: stream read error: {}", read.error().message);
+            chunk.resize(0);
+            return false;
+        }
+        chunk.resize(read.value());
+        return read.value() == stream_chunk_size;
     });
     return true;
 }

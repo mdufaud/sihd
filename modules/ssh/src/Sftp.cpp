@@ -184,12 +184,13 @@ std::expected<void, Error> Sftp::get_file(std::string_view remote_path, std::str
         if (nread == 0)
             break;
         const auto nwritten = local_file.write(buf, nread);
-        if (!nwritten || *nwritten != (size_t)nread)
+        SIHD_UNEXPECTED_RETURN(nwritten);
+        if (*nwritten != (size_t)nread)
         {
             return std::unexpected(Error(io_error,
                                          "could not write local file '{}' : wrote {} of {} bytes",
                                          local_path,
-                                         nwritten.value_or(0),
+                                         *nwritten,
                                          nread));
         }
     }

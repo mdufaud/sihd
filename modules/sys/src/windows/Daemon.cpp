@@ -55,7 +55,7 @@ bool Daemon::run()
         DWORD err = GetLastError();
         if (err != ERROR_INVALID_PARAMETER) // ERROR_INVALID_PARAMETER = no console
         {
-            SIHD_LOG(warning, "Daemon: FreeConsole failed: {}", os::last_error_str());
+            SIHD_LOG(warning, "Daemon: FreeConsole failed: {}", os::error_str(err));
         }
     }
 

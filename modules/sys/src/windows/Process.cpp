@@ -135,7 +135,7 @@ bool read_pipe_into_file(HANDLE fd, const std::string & path, bool append)
         return false;
 
     auto fun = [&file](std::string_view buffer) {
-        (void)file.write(buffer.data(), buffer.size());
+        SIHD_UNEXPECTED_LOG(file.write(buffer.data(), buffer.size()));
     };
     return read_pipe_into_callback(fd, fun);
 }
@@ -292,11 +292,11 @@ struct ProcessWatcher
 
         void reset();
         bool has_terminated();
-        void check_status(int options);
+        bool check_status(int options);
         Process::ReturnCodeType return_code();
 };
 
-void ProcessWatcher::check_status(int options)
+bool ProcessWatcher::check_status(int options)
 {
     std::lock_guard l(this->mutex);
     const DWORD timeout_ms = options == 0 ? INFINITE : options;
@@ -316,21 +316,19 @@ void ProcessWatcher::check_status(int options)
             if (this->procinfo.hThread != nullptr)
                 CloseHandle(this->procinfo.hThread);
             this->procinfo.hThread = nullptr;
+            return true;
         }
-        else
-        {
-            SIHD_LOG_ERROR("Process: GetExitCodeProcess: {}", os::last_error_str());
-        }
+        this->exited = false;
+        return false;
     }
-    else if (result == WAIT_TIMEOUT)
+    if (result == WAIT_TIMEOUT)
     {
         // The child process is still running
         this->exited = false;
+        return true;
     }
-    else
-    {
-        SIHD_LOG_ERROR("Process: WaitForSingleObject: {}", os::last_error_str());
-    }
+    this->exited = false;
+    return false;
 }
 
 bool ProcessWatcher::has_terminated()
@@ -780,22 +778,21 @@ void Process::handle(Poll *poll)
 
 bool Process::on_start()
 {
-    const bool ret = this->execute().has_value();
+    auto executed = this->execute();
+    if (SIHD_UNEXPECTED_LOG(executed))
+        return false;
 
-    if (ret)
+    this->service_set_ready();
+    // exits when the child terminates (reaped by wait_no_hang) or when on_stop's
+    // reset_proc terminates the process, mirroring the unix poll loop in handle()
+    while (this->is_running() && this->is_process_running())
     {
-        this->service_set_ready();
-        // exits when the child terminates (reaped by wait_no_hang) or when on_stop's
-        // reset_proc terminates the process, mirroring the unix poll loop in handle()
-        while (this->is_running() && this->is_process_running())
-        {
-            constexpr DWORD timeout_ms = 50;
-            this->read_pipes(timeout_ms);
-            (void)this->wait_no_hang();
-        }
+        constexpr DWORD timeout_ms = 50;
+        this->read_pipes(timeout_ms);
+        (void)this->wait_no_hang();
     }
 
-    return ret;
+    return true;
 }
 
 bool Process::on_stop()
@@ -821,7 +818,8 @@ std::expected<bool, Error> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
-    _impl->process_watcher.check_status(options);
+    if (_impl->process_watcher.check_status(options) == false)
+        return std::unexpected(Error(io_error, "Process: wait: {}", os::last_error_str()));
     const bool terminated = _impl->process_watcher.has_terminated();
     if (terminated)
     {

@@ -42,9 +42,9 @@ namespace sihd::util::str
 namespace
 {
 
-Error errc_to_error(std::errc ec)
+Error parse_error(std::errc ec, std::string_view value, std::string_view type)
 {
-    return Error(ec, std::make_error_code(ec).message());
+    return Error(ec, "cannot parse '{}' as {}: {}", value, type, std::make_error_code(ec).message());
 }
 
 // base64 alphabet value by byte, -1 otherwise
@@ -553,19 +553,17 @@ std::expected<T, std::errc> from_chars_to(std::string_view str, Args... args)
 
 #if !(defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L)
 
-std::optional<double> strtod_fallback(std::string_view str)
+std::expected<double, std::errc> strtod_fallback(std::string_view str)
 {
     // string_view is not guaranteed null-terminated, copy before strtod
     const std::string tmp(str);
     errno = 0;
     char *endptr = nullptr;
     const double val = strtod(tmp.c_str(), &endptr);
-    if (endptr == tmp.c_str())
-        return std::nullopt;
-    if (val == 0 && errno == EINVAL)
-        return std::nullopt;
+    if (endptr == tmp.c_str() || (val == 0 && errno == EINVAL))
+        return std::unexpected(std::errc::invalid_argument);
     if ((val == HUGE_VAL || val == -HUGE_VAL) && errno == ERANGE)
-        return std::nullopt;
+        return std::unexpected(std::errc::result_out_of_range);
     return val;
 }
 
@@ -1245,6 +1243,7 @@ bool is_number(std::string_view s, uint16_t base)
 
 std::expected<long long, Error> to_signed(std::string_view str, uint16_t base)
 {
+    const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
         return std::unexpected(Error(invalid_argument, "base must be 0 or in [2, 36]"));
     // std::from_chars handles neither a leading '+' nor a base prefix, strtol did
@@ -1257,12 +1256,13 @@ std::expected<long long, Error> to_signed(std::string_view str, uint16_t base)
     base = resolve_base_prefix(str, base);
     const auto parsed = from_chars_to<long long>(str, static_cast<int>(base));
     if (!parsed)
-        return std::unexpected(errc_to_error(parsed.error()));
+        return std::unexpected(parse_error(parsed.error(), input, "signed"));
     return negate ? -*parsed : *parsed;
 }
 
 std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint16_t base)
 {
+    const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
         return std::unexpected(Error(invalid_argument, "base must be 0 or in [2, 36]"));
     // std::from_chars rejects a sign for unsigned, strtoul wrapped a negative input around
@@ -1275,7 +1275,7 @@ std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint1
     base = resolve_base_prefix(str, base);
     const auto parsed = from_chars_to<unsigned long long>(str, static_cast<int>(base));
     if (!parsed)
-        return std::unexpected(errc_to_error(parsed.error()));
+        return std::unexpected(parse_error(parsed.error(), input, "unsigned"));
     return negate ? static_cast<unsigned long long>(0) - *parsed : *parsed;
 }
 
@@ -1309,30 +1309,36 @@ std::expected<char, Error> to_char(std::string_view str)
 
 std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt)
 {
-    return from_chars_to<float>(str, fmt).transform_error(errc_to_error);
+    const auto parsed = from_chars_to<float>(str, fmt);
+    if (!parsed)
+        return std::unexpected(parse_error(parsed.error(), str, "float"));
+    return *parsed;
 }
 
 std::expected<double, Error> to_double(std::string_view str, std::chars_format fmt)
 {
-    return from_chars_to<double>(str, fmt).transform_error(errc_to_error);
+    const auto parsed = from_chars_to<double>(str, fmt);
+    if (!parsed)
+        return std::unexpected(parse_error(parsed.error(), str, "double"));
+    return *parsed;
 }
 
 #else
 
 std::expected<float, Error> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
-    const auto opt = strtod_fallback(str);
-    if (!opt)
-        return std::unexpected(errc_to_error(std::errc::invalid_argument));
-    return static_cast<float>(*opt);
+    const auto parsed = strtod_fallback(str);
+    if (!parsed)
+        return std::unexpected(parse_error(parsed.error(), str, "float"));
+    return static_cast<float>(*parsed);
 }
 
 std::expected<double, Error> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
-    const auto opt = strtod_fallback(str);
-    if (!opt)
-        return std::unexpected(errc_to_error(std::errc::invalid_argument));
-    return *opt;
+    const auto parsed = strtod_fallback(str);
+    if (!parsed)
+        return std::unexpected(parse_error(parsed.error(), str, "double"));
+    return *parsed;
 }
 
 #endif

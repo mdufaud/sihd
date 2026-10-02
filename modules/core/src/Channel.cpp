@@ -65,13 +65,8 @@ Channel *Channel::build(std::string_view configuration)
         return nullptr;
 
     const auto val = str::convert_from_string<unsigned long>(*size);
-    if (val.has_value() == false)
-    {
-        SIHD_LOG(error,
-                 "Channel: cannot build from configuration '{}' size is either overflow or invalid",
-                 configuration);
+    if (SIHD_UNEXPECTED_LOG(val))
         return nullptr;
-    }
 
     Channel *channel = new Channel(*name, *type, *val);
 
@@ -79,10 +74,14 @@ Channel *Channel::build(std::string_view configuration)
     if (capacity.has_value())
     {
         const auto cap = str::convert_from_string<unsigned long>(*capacity);
-        if (cap.has_value() && *cap > *val)
+        if (cap && *cap > *val)
         {
             channel->reserve(*cap);
             channel->set_resizable(true);
+        }
+        else
+        {
+            SIHD_UNEXPECTED_LOG(cap);
         }
     }
 

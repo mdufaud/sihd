@@ -37,7 +37,7 @@ class SshServer: public sihd::util::Named,
         std::expected<void, sihd::util::Error> set_authorized_keys_file(std::string_view path);
         // Pre-auth issue banner (MOTD) sent to clients before authentication
         std::expected<void, sihd::util::Error> set_banner(std::string_view banner);
-        bool set_verbosity(int level);
+        std::expected<void, sihd::util::Error> set_verbosity(int level);
         // Bound the blocking key exchange (seconds) to defuse connect-and-stall DoS
         std::expected<void, sihd::util::Error> set_kex_timeout(int seconds);
 

@@ -29,7 +29,10 @@ DeviceTcpClient::DeviceTcpClient(const std::string & name, sihd::util::Node *par
     // windows shutdown does not wake a blocking recv (linux does): bound the
     // rx drain or the stop join parks forever on a quiet socket
     if constexpr (sihd::util::build::is_windows)
-        _tcp_client.set_recv_timeout(100);
+    {
+        if (_tcp_client.set_recv_timeout(100) == false)
+            SIHD_LOG(error, "DeviceTcpClient: could not set the windows recv drain timeout");
+    }
     _worker.set_runnable(this);
     this->add_conf("host", &DeviceTcpClient::set_host);
     this->add_conf("port", &DeviceTcpClient::set_port);
@@ -102,12 +105,14 @@ bool DeviceTcpClient::on_init()
 
 bool DeviceTcpClient::on_start()
 {
-    _channel_rx = this->get_channel("rx").value_or(nullptr);
-    _channel_tx = this->get_channel("tx").value_or(nullptr);
-    _channel_connected = this->get_channel("connected").value_or(nullptr);
-
-    if (_channel_rx == nullptr || _channel_tx == nullptr || _channel_connected == nullptr)
+    auto rx = this->get_channel("rx");
+    auto tx = this->get_channel("tx");
+    auto connected_channel = this->get_channel("connected");
+    if (SIHD_UNEXPECTED_LOG(rx) || SIHD_UNEXPECTED_LOG(tx) || SIHD_UNEXPECTED_LOG(connected_channel))
         return false;
+    _channel_rx = *rx;
+    _channel_tx = *tx;
+    _channel_connected = *connected_channel;
 
     if (_unix_path.empty() && (_host.empty() || _port <= 0))
     {
@@ -172,9 +177,7 @@ bool DeviceTcpClient::run()
         _tcp_client.add_observer(this);
     }
     else
-    {
-        SIHD_LOG(error, "DeviceTcpClient: failed to connect");
-    }
+        SIHD_UNEXPECTED_LOG(connected);
 
     _start_ok = connected.has_value();
     _start_sync.sync();
@@ -207,13 +210,15 @@ bool DeviceTcpClient::run()
             if (_stop_requested)
                 break;
 
-            if (this->_connect())
+            auto reconnected = this->_connect();
+            if (reconnected)
             {
                 SIHD_LOG(info, "DeviceTcpClient: reconnected");
                 this->_set_connected(true);
                 _tcp_client.add_observer(this);
                 break;
             }
+            SIHD_UNEXPECTED_LOG(reconnected);
             // a failed connect leaves the socket open: the next attempt would fail on open
             (void)_tcp_client.close();
         }
@@ -243,7 +248,7 @@ void DeviceTcpClient::handle(INetReceiver *receiver)
     while (true)
     {
         auto received = receiver->receive(buf);
-        if (!received || received.value() <= 0)
+        if (SIHD_UNEXPECTED_LOG(received) || received.value() <= 0)
             break;
         _channel_rx->write(buf);
     }

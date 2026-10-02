@@ -39,7 +39,7 @@ bool is_not_found_error(int code)
 std::unexpected<Error> lib_error()
 {
     const int code = os::last_error();
-    return std::unexpected(Error(is_not_found_error(code) ? not_found : io_error, get_error()));
+    return std::unexpected(Error(is_not_found_error(code) ? not_found : io_error, os::error_str(code)));
 }
 
 bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)

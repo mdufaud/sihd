@@ -220,7 +220,9 @@ std::string error_str(int error_code)
         0,
         NULL);
 
-    std::string message(messageBuffer, size);
+    std::string message;
+    if (messageBuffer != nullptr)
+        message.assign(messageBuffer, size);
     LocalFree(messageBuffer);
     return message;
 }

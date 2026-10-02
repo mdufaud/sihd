@@ -224,7 +224,11 @@ void LuaHttpApi::load_base(Vm & vm)
             +[](Navigator *self, const std::string & agent) { self->set_user_agent(agent); })
         .addFunction(
             "set_max_response_size",
-            +[](Navigator *self, int bytes) { self->set_max_response_size(static_cast<size_t>(bytes)); })
+            +[](Navigator *self, int bytes) {
+                if (bytes < 0)
+                    throw std::invalid_argument("http: max response size must be positive");
+                self->set_max_response_size(static_cast<size_t>(bytes));
+            })
         .addFunction("set_ssrf_guard", &Navigator::set_ssrf_guard)
         // authentication
         .addFunction(

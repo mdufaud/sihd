@@ -322,10 +322,10 @@ void App::_install_signals()
     {
         if (_sig_actions[sig] == SigAction::none)
             continue;
-        const bool done = !SIHD_UNEXPECTED_LOG(_sig_actions[sig] == SigAction::ignore ? signal::ignore(sig)
-                                                                                      : signal::handle(sig));
-        if (done == false)
-            SIHD_LOG(error, "App: cannot set action for signal {}", sig);
+        if (_sig_actions[sig] == SigAction::ignore)
+            SIHD_UNEXPECTED_LOG(signal::ignore(sig));
+        else
+            SIHD_UNEXPECTED_LOG(signal::handle(sig));
     }
 }
 

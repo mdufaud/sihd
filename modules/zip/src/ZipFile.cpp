@@ -7,7 +7,6 @@
 # pragma clang diagnostic pop
 #endif
 
-#include <cerrno>
 #include <cstring>
 #include <optional>
 #include <utility>
@@ -493,7 +492,8 @@ std::expected<ssize_t, Error> ZipFile::read_entry(std::string_view password)
         return std::unexpected(std::move(error));
     }
     _buf.resize((size_t)ret);
-    _buf[ret] = 0;
+    if (ret > 0)
+        _buf[ret] = 0;
     if (ret == 0)
         close_zip_file_and_null(&_zip_handle->file_handle_ptr);
     return ret;
@@ -530,7 +530,10 @@ std::expected<void, Error> ZipFile::rename_entry(std::string_view new_name)
                                           "could not rename entry '{}'",
                                           ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry)));
     auto reloaded = this->load_entry(_current_zip_entry.index);
-    SIHD_UNEXPECTED_RETURN(reloaded);
+    SIHD_UNEXPECTED_RETURN_CTX(reloaded,
+                               "renaming entry '{}' to '{}'",
+                               ZIP_ENTRY_NAME_OR_INDEX(_current_zip_entry),
+                               new_name);
     return {};
 }
 
@@ -685,7 +688,14 @@ std::expected<void, Error> ZipFile::dump_entry_to_fs(std::string_view path, std:
         if (*read == 0)
             break;
         auto wrote = file.write(_buf.data(), (size_t)*read);
-        SIHD_UNEXPECTED_RETURN(wrote);
+        // a failed write leaves the entry half-read: drop the handle so a retry restarts it
+        if (!wrote)
+            close_zip_file_and_null(&_zip_handle->file_handle_ptr);
+        SIHD_UNEXPECTED_RETURN_CTX(wrote,
+                                   "writing {} bytes of entry '{}' to '{}'",
+                                   *read,
+                                   _current_zip_entry.name,
+                                   path);
         if (*wrote == 0)
             break;
     }

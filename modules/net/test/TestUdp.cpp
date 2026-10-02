@@ -37,7 +37,7 @@ TEST_F(TestUdp, test_udp_receiver_run)
     sihd::util::Synchronizer start_sync(2);
     ssize_t receive_ret = -1;
     sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv, &start_sync](INetReceiver *rcv) {
-        receive_ret = (ssize_t)rcv->receive(array_rcv).value_or(-1);
+        receive_ret = (ssize_t)rcv->receive(array_rcv).value_or(0);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(' '), array_rcv.byte_size());
         (void)start_sync.sync(std::chrono::milliseconds(500));
     });

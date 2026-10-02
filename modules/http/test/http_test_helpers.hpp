@@ -449,7 +449,7 @@ class SimpleConnectProxy
             auto colon = target.rfind(':');
             std::string host = target.substr(0, colon);
             int port = std::stoi(target.substr(colon + 1));
-            sihd::net::IpAddr resolved = sihd::net::dns::find(host);
+            sihd::net::IpAddr resolved = sihd::net::dns::find(host).value();
             sihd::net::IpAddr up_addr(resolved.empty() ? host : resolved.str(), port);
             sihd::net::Socket upstream;
             if (!upstream.open(AF_INET, SOCK_STREAM, IPPROTO_TCP) || !upstream.connect(up_addr))

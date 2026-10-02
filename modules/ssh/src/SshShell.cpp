@@ -79,7 +79,6 @@ std::expected<void, Error> SshShell::open(bool x11)
         res = _impl_ptr->channel.request_shell();
     if (!res)
     {
-        SIHD_UNEXPECTED_LOG(res);
         _impl_ptr->channel.clear_channel();
         return res;
     }
@@ -139,7 +138,6 @@ bool SshShell::read_loop()
                 }
                 if (nbytes > 0)
                 {
-                    std::string_view view(buf.data(), nbytes);
                     fmt::print(stdout, "{}", buf);
                     fflush(stdout);
                 }
@@ -154,7 +152,6 @@ bool SshShell::read_loop()
                 }
                 if (nbytes > 0)
                 {
-                    std::string_view view(buf.data(), nbytes);
                     fmt::print(stderr, "{}", buf);
                     fflush(stderr);
                 }

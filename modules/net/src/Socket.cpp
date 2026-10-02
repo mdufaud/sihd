@@ -250,7 +250,7 @@ std::expected<void, Error> Socket::set_socket_tcp_nodelay(int socket, bool activ
 {
     int opt = (active ? 1 : 0);
     return opt_result("set tcp nodelay",
-                      sihd::sys::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt), true));
+                      sihd::sys::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)));
 }
 
 bool Socket::is_socket_tcp_nodelay(int socket)
@@ -576,7 +576,10 @@ std::expected<void, Error> Socket::connect(const sockaddr *addr, socklen_t addr_
     {
         was_blocking = this->is_blocking();
         if (was_blocking)
-            (void)this->set_blocking(false);
+        {
+            auto blocking = this->set_blocking(false);
+            SIHD_UNEXPECTED_RETURN_CTX(blocking, "preparing non-blocking connect, timeout {}ms", timeout_ms);
+        }
     }
     // the slot is clobbered by any win32 call, message formatting included: read once per syscall
     std::expected<void, Error> res = {};
@@ -622,7 +625,7 @@ std::expected<void, Error> Socket::connect(const sockaddr *addr, socklen_t addr_
                 Error(sihd::util::error_errno(err), "Socket: connect error: {}", sihd::sys::os::error_str(err)));
     }
     if (use_timeout && was_blocking)
-        (void)this->set_blocking(true);
+        SIHD_UNEXPECTED_LOG(this->set_blocking(true));
     return res;
 }
 
@@ -678,7 +681,7 @@ std::expected<void, Error> Socket::send_all(sihd::util::ArrCharView view)
     if (atomic_datagram_type(_type))
     {
         auto sent = this->send(view);
-        SIHD_UNEXPECTED_RETURN(sent);
+        SIHD_UNEXPECTED_RETURN_CTX(sent, "sending {} bytes", view.size());
         if (*sent != view.size())
             return std::unexpected(Error(ErrorCode::io_error, "Socket: datagram sent partially"));
         return {};
@@ -687,7 +690,7 @@ std::expected<void, Error> Socket::send_all(sihd::util::ArrCharView view)
     while (sent < view.size())
     {
         auto ret = this->send({view.data() + sent, view.size() - sent});
-        SIHD_UNEXPECTED_RETURN(ret);
+        SIHD_UNEXPECTED_RETURN_CTX(ret, "sending {} of {} bytes", sent, view.size());
         if (*ret == 0)
             return std::unexpected(Error(ErrorCode::io_error, "Socket: send made no progress"));
         sent += *ret;
@@ -735,7 +738,7 @@ std::expected<void, Error> Socket::send_all_to(const sockaddr *addr, socklen_t a
     if (atomic_datagram_type(_type))
     {
         auto sent = this->send_to(addr, addr_len, view);
-        SIHD_UNEXPECTED_RETURN(sent);
+        SIHD_UNEXPECTED_RETURN_CTX(sent, "sending {} bytes to {}", view.size(), ip::to_str(addr));
         if (*sent != view.size())
             return std::unexpected(Error(ErrorCode::io_error, "Socket: datagram sent partially"));
         return {};
@@ -744,7 +747,7 @@ std::expected<void, Error> Socket::send_all_to(const sockaddr *addr, socklen_t a
     while (sent < view.size())
     {
         auto ret = this->send_to(addr, addr_len, {view.data() + sent, view.size() - sent});
-        SIHD_UNEXPECTED_RETURN(ret);
+        SIHD_UNEXPECTED_RETURN_CTX(ret, "sending {} of {} bytes to {}", sent, view.size(), ip::to_str(addr));
         if (*ret == 0)
             return std::unexpected(Error(ErrorCode::io_error, "Socket: send made no progress"));
         sent += *ret;

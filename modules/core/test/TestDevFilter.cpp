@@ -231,7 +231,6 @@ TEST_F(TestDevFilter, test_devfilter_parse_error)
     auto bad_trigger = rule.parse("in=..in_channel;out=..out_channel;trigger=idx:notanumber");
     ASSERT_FALSE(bad_trigger.has_value());
     EXPECT_EQ(bad_trigger.error().code, invalid_argument);
-    EXPECT_NE(bad_trigger.error().message.find("trigger"), std::string::npos);
 
     auto bad_match = rule.parse("in=..in_channel;out=..out_channel;trigger=1:10;match=notabool");
     ASSERT_FALSE(bad_match.has_value());

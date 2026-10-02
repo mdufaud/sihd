@@ -266,7 +266,7 @@ int Poll::poll(int milliseconds_timeout)
 #else
         ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
 #endif
-        saved_errno = errno;
+        saved_errno = os::last_socket_error();
         _last_poll_time = _clock.now() - before;
         this->process_poll_results(ret, saved_errno);
     }
@@ -279,7 +279,7 @@ void Poll::process_poll_results(int poll_return, int saved_errno)
     _lst_events.clear();
     _timedout = poll_return == 0;
     // A signal interrupt is not a polling error: callers may just retry.
-    _error = poll_return < 0 && saved_errno != EINTR;
+    _error = poll_return < 0 && error_errno(saved_errno) != ErrorCode::interrupted;
     if (_error)
         SIHD_LOG(error, "Poll: {}", os::error_str(saved_errno));
     if (poll_return > 0)

@@ -718,7 +718,8 @@ struct SshServer::Impl
                     this->accept_session(server);
 
                 // Non-blocking dispatch of all ready session traffic.
-                ssh_event_dopoll(event, 0);
+                if (ssh_event_dopoll(event, 0) == SSH_ERROR)
+                    SIHD_LOG(error, "SshServer: session dispatch failed");
 
                 // Allow handler to poll child FDs
                 if (server->server_handler())
@@ -806,10 +807,10 @@ std::expected<void, sihd::util::Error> SshServer::set_banner(std::string_view ba
     return {};
 }
 
-bool SshServer::set_verbosity(int level)
+std::expected<void, sihd::util::Error> SshServer::set_verbosity(int level)
 {
     _impl_ptr->verbosity = level;
-    return true;
+    return {};
 }
 
 std::expected<void, sihd::util::Error> SshServer::set_kex_timeout(int seconds)

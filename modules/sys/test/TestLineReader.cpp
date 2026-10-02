@@ -17,6 +17,24 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::sys;
+
+namespace
+{
+
+// asserts no read error and returns whether a line was read
+bool read_next_ok(LineReader & reader)
+{
+    auto res = reader.read_next();
+    if (!res.has_value())
+    {
+        ADD_FAILURE() << res.error().message;
+        return false;
+    }
+    return res.value();
+}
+
+} // namespace
+
 class TestLineReader: public ::testing::Test
 {
     protected:
@@ -47,11 +65,11 @@ TEST_F(TestLineReader, test_linereader_one_line)
 
     EXPECT_TRUE(reader.open(path).has_value());
     SIHD_LOG(info, "Reading");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
     // testing with a line feed at the end
@@ -60,11 +78,11 @@ TEST_F(TestLineReader, test_linereader_one_line)
 
     EXPECT_TRUE(reader.open(path).has_value());
     SIHD_LOG(info, "Reading");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -81,18 +99,18 @@ TEST_F(TestLineReader, test_linereader_two_lines)
     EXPECT_TRUE(reader.open(path).has_value());
 
     SIHD_LOG(info, "First read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "how are you");
-    EXPECT_FALSE(reader.read_next().value_or(true));
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
     // testing with a line feed at the end
@@ -102,18 +120,18 @@ TEST_F(TestLineReader, test_linereader_two_lines)
     EXPECT_TRUE(reader.open(path).has_value());
 
     SIHD_LOG(info, "First read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "how are you");
-    EXPECT_FALSE(reader.read_next().value_or(true));
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -130,30 +148,30 @@ TEST_F(TestLineReader, test_linereader_multiple_feeds)
     EXPECT_TRUE(reader.open(path).has_value());
 
     SIHD_LOG(info, "First read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
 
     SIHD_LOG(info, "Second read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "!");
 
     SIHD_LOG(info, "Third read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "");
 
     SIHD_LOG(info, "Fourth read");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "");
-    EXPECT_FALSE(reader.read_next().value_or(true));
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -166,7 +184,7 @@ TEST_F(TestLineReader, test_linereader_none)
     EXPECT_TRUE(fs::write(path, "").has_value());
 
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -182,14 +200,14 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
 
     EXPECT_TRUE(reader.set_read_buffsize(1));
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     // test read
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
-    EXPECT_TRUE(reader.read_next().value_or(false));
-    EXPECT_TRUE(reader.read_next().value_or(false));
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_TRUE(read_next_ok(reader));
+    EXPECT_TRUE(read_next_ok(reader));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -202,13 +220,13 @@ TEST_F(TestLineReader, test_linereader_delimiter_in_line)
     EXPECT_TRUE(fs::write(path, "hello world\nbye\n").has_value());
 
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "hello world\n");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "bye\n");
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -221,16 +239,16 @@ TEST_F(TestLineReader, test_linereader_custom_delimiter)
     EXPECT_TRUE(fs::write(path, "a;b;c"));
 
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "a");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "b");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "c");
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -244,10 +262,10 @@ TEST_F(TestLineReader, test_linereader_long_line)
     EXPECT_TRUE(fs::write(path, long_line).has_value());
 
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, long_line);
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 
@@ -264,7 +282,7 @@ TEST_F(TestLineReader, test_linereader_errors)
     std::string path = fs::combine(_tmp_dir.path(), "clean_eof.txt");
     EXPECT_TRUE(fs::write(path, "one line\n").has_value());
     EXPECT_TRUE(reader.open(path).has_value());
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_FALSE(reader.read_next().value());
     EXPECT_TRUE(reader.close());
 }
@@ -282,13 +300,13 @@ TEST_F(TestLineReader, test_linereader_open_fd)
     ASSERT_GE(fd, 0);
 
     EXPECT_TRUE(reader.open_fd(fd));
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "first");
-    EXPECT_TRUE(reader.read_next().value_or(false));
+    EXPECT_TRUE(read_next_ok(reader));
     EXPECT_TRUE(reader.get_read_data(view));
     EXPECT_EQ(view, "second");
-    EXPECT_FALSE(reader.read_next().value_or(true));
+    EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 }
 

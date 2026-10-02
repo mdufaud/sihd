@@ -79,11 +79,6 @@ Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & n
 Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
 {
     Channel *c = new Channel(name, type, size);
-    if (c == nullptr)
-    {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' memory error for channel '{}'", this->full_name(), name);
-        return nullptr;
-    }
     auto added = this->add_child(c, true);
     if (added.has_value() == false)
     {

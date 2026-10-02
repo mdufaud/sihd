@@ -72,7 +72,7 @@ std::expected<void, sihd::util::Error> TcpServer::open_socket(bool ipv6)
             sihd::util::Error(sihd::util::ErrorCode::already_exists, "TcpServer: socket already open"));
     auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (res)
-        (void)_socket.set_reuseaddr(true);
+        SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
     return res;
 }
 

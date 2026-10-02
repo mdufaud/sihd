@@ -24,7 +24,7 @@ class TlsSocket: public Socket
         TlsSocket & operator=(const TlsSocket &) = delete;
 
         void set_tls_context(sihd::crypto::TlsContext ctx);
-        bool tls_accept(int timeout_ms = blocking_timeout);
+        std::expected<void, sihd::util::Error> tls_accept(int timeout_ms = blocking_timeout);
         TlsHandshakeStep tls_accept_step();
         bool tls_active() const;
         bool tls_pending() const;

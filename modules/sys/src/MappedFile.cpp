@@ -1,9 +1,14 @@
 #include <sihd/sys/MappedFile.hpp>
+#include <sihd/util/Logger.hpp>
 
 // create()/open_read_only()/open_read_write()/clear()/sync() live in src/linux|windows/MappedFile.cpp
 
+using namespace sihd::util;
+
 namespace sihd::sys
 {
+
+SIHD_LOGGER;
 
 MappedFile::MappedFile(): _fd(-1), _mapping(-1), _size(0), _addr(nullptr), _read_only(false) {}
 
@@ -27,7 +32,7 @@ MappedFile & MappedFile::operator=(MappedFile && other)
 {
     if (this != &other)
     {
-        (void)this->clear();
+        SIHD_UNEXPECTED_LOG(this->clear());
         _fd = other._fd;
         _mapping = other._mapping;
         _size = other._size;

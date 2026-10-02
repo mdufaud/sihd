@@ -30,7 +30,7 @@ std::expected<Shm, Error> __open(std::string_view id, mode_t mode, int shm_flags
 {
     int fd = shm_open(id.data(), shm_flags, mode);
     if (fd == -1)
-        return std::unexpected(Error::from_errno("shm_open"));
+        return std::unexpected(Error::from_errno("could not shm_open '{}'", id));
     return Shm {fd, nullptr};
 }
 
@@ -38,7 +38,7 @@ std::expected<Shm, Error> __mmap(Shm shm, size_t size, int mmap_flags)
 {
     void *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, shm.fd, 0);
     if (addr == MAP_FAILED)
-        return std::unexpected(Error::from_errno("mmap"));
+        return std::unexpected(Error::from_errno("could not mmap {} bytes", size));
     shm.addr = addr;
     return shm;
 }
@@ -49,10 +49,9 @@ std::expected<Shm, Error> create_shm(std::string_view id, size_t size, mode_t mo
     if (!shm)
         return shm;
 
-    // ftruncate
     if (ftruncate(shm->fd, size) == -1)
     {
-        auto error = Error::from_errno("ftruncate");
+        auto error = Error::from_errno("could not truncate '{}' to {} bytes", id, size);
         close(shm->fd);
         return std::unexpected(std::move(error));
     }

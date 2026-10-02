@@ -72,7 +72,7 @@ std::expected<void, sihd::util::Error> TcpClient::connect(const IpAddr & addr, i
     auto res = _socket.connect(addr, timeout_ms);
     _connected = res.has_value();
     if (_connected)
-        (void)_socket.set_recv_timeout(_recv_timeout);
+        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
     return res;
 }
 
@@ -81,7 +81,7 @@ std::expected<void, sihd::util::Error> TcpClient::connect(std::string_view path)
     auto res = _socket.connect_unix(path);
     _connected = res.has_value();
     if (_connected)
-        (void)_socket.set_recv_timeout(_recv_timeout);
+        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
     return res;
 }
 
@@ -90,7 +90,7 @@ std::expected<void, sihd::util::Error> TcpClient::reconnect(int timeout_ms)
     auto res = _socket.reconnect(timeout_ms);
     _connected = res.has_value();
     if (_connected)
-        (void)_socket.set_recv_timeout(_recv_timeout);
+        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
     return res;
 }
 

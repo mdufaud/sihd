@@ -225,9 +225,10 @@ std::expected<void, Error> SshCommand::input(sihd::util::ArrCharView view)
 {
     if (_impl->channel.is_open() == false)
         return std::unexpected(Error(closed, "could not write command input: channel is not open"));
-    if (_impl->channel.write(view) > 0)
-        return {};
-    return std::unexpected(Error(io_error, "could not write command input"));
+    const int wrote = _impl->channel.write(view);
+    if (wrote < 0 || static_cast<size_t>(wrote) != view.size())
+        return std::unexpected(Error(io_error, "could not write command input"));
+    return {};
 }
 
 int SshCommand::exit_status()

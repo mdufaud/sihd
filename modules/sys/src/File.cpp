@@ -378,7 +378,7 @@ std::expected<long, Error> File::file_size()
     auto seek_res = this->seek_end(0);
     SIHD_UNEXPECTED_RETURN(seek_res);
     auto size = this->tell();
-    (void)this->seek_begin(*current_offset);
+    SIHD_UNEXPECTED_LOG(this->seek_begin(*current_offset));
     SIHD_UNEXPECTED_RETURN(size);
     return *size;
 }
@@ -441,9 +441,9 @@ std::expected<void, Error> File::open_mem(std::string_view mode, std::string_vie
     int retner = -1;
     char tfname[] = "MemTF_";
     if (!GetTempPathA(sizeof(tp), tp))
-        return std::unexpected(Error(io_error, "could not get temporary path"));
+        return std::unexpected(Error(io_error, "could not get temporary path: {}", os::last_error_str()));
     if (!GetTempFileNameA(tp, tfname, 0, fn))
-        return std::unexpected(Error(io_error, "could not get temporary file name"));
+        return std::unexpected(Error(io_error, "could not get temporary file name: {}", os::last_error_str()));
     retner = _sopen_s(pfd,
                       fn,
                       _O_CREAT | _O_SHORT_LIVED | _O_TEMPORARY | _O_RDWR | _O_BINARY | _O_NOINHERIT,
@@ -480,7 +480,7 @@ std::expected<long, Error> File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
-        return std::unexpected(Error::from_errno("could not tell position"));
+        return std::unexpected(Error::from_errno("could not tell position of '{}'", _path));
     return ret;
 }
 
@@ -503,7 +503,7 @@ std::expected<void, Error> File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
-        return std::unexpected(Error::from_errno("could not seek"));
+        return std::unexpected(Error::from_errno("could not seek in '{}'", _path));
     return {};
 }
 
@@ -513,7 +513,7 @@ std::expected<size_t, Error> File::read(void *buf, size_t size)
         return 0;
     size_t ret = fread(buf, sizeof(char), size, _file_ptr);
     if (this->error())
-        return std::unexpected(Error(io_error, "could not read"));
+        return std::unexpected(Error(io_error, "could not read '{}'", _path));
     return ret;
 }
 
@@ -547,7 +547,7 @@ std::expected<size_t, Error> File::write(const void *data, size_t size)
 {
     size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
-        return std::unexpected(Error(io_error, "could not write"));
+        return std::unexpected(Error(io_error, "could not write into '{}'", _path));
     return ret;
 }
 
@@ -559,7 +559,7 @@ std::expected<size_t, Error> File::write(ArrCharView view)
 std::expected<void, Error> File::write_char(int c)
 {
     if (fputc(c, _file_ptr) != c)
-        return std::unexpected(Error::from_errno("could not write char"));
+        return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
@@ -567,7 +567,7 @@ std::expected<size_t, Error> File::write_unlocked(const void *data, size_t size)
 {
     size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
-        return std::unexpected(Error(io_error, "could not write"));
+        return std::unexpected(Error(io_error, "could not write into '{}'", _path));
     return ret;
 }
 
@@ -579,7 +579,7 @@ std::expected<size_t, Error> File::write_unlocked(ArrCharView view)
 std::expected<void, Error> File::write_char_unlocked(int c)
 {
     if (fputc_unlocked(c, _file_ptr) != c)
-        return std::unexpected(Error::from_errno("could not write char"));
+        return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
@@ -600,7 +600,7 @@ std::expected<size_t, Error> File::read_line_delim(char **line, size_t *size, in
         // getdelim conflates end of file and error
         if (this->eof())
             return 0;
-        return std::unexpected(Error::from_errno("could not read line"));
+        return std::unexpected(Error::from_errno("could not read line from '{}'", _path));
     }
     return (size_t)ret;
 }

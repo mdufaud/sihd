@@ -1,4 +1,3 @@
-#include <cerrno>
 #include <cstring>
 
 #include <sihd/ssh/SshChannel.hpp>
@@ -123,11 +122,9 @@ bool SshSubsystemExec::start_sync_mode()
     _process.stdout_to(_sync_out);
     _process.stderr_to(_sync_err);
 
-    if (_process.execute().has_value() == false)
-    {
-        SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
+    auto executed = _process.execute();
+    if (SIHD_UNEXPECTED_LOG(executed))
         return false;
-    }
 
     _started = true;
     SIHD_LOG(debug, "SshSubsystemExec: process started (buffered)");
@@ -141,19 +138,25 @@ bool SshSubsystemExec::start_process_mode()
     // Stream stdout/stderr to the channel incrementally
     _process.stdout_to([this](std::string_view data) {
         if (_channel)
-            _channel->write(sihd::util::ArrCharView(data.data(), data.size()));
+        {
+            const int wrote = _channel->write(sihd::util::ArrCharView(data.data(), data.size()));
+            if (wrote < 0)
+                SIHD_LOG(error, "SshSubsystemExec: could not write stdout to channel");
+        }
     });
 
     _process.stderr_to([this](std::string_view data) {
         if (_channel)
-            _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
+        {
+            const int wrote = _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
+            if (wrote < 0)
+                SIHD_LOG(error, "SshSubsystemExec: could not write stderr to channel");
+        }
     });
 
-    if (_process.execute().has_value() == false)
-    {
-        SIHD_LOG(error, "SshSubsystemExec: failed to execute command");
+    auto executed = _process.execute();
+    if (SIHD_UNEXPECTED_LOG(executed))
         return false;
-    }
 
     _started = true;
     SIHD_LOG(debug, "SshSubsystemExec: process started");

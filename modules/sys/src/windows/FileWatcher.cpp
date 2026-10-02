@@ -163,7 +163,6 @@ std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
 bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
 {
     std::list<std::string> watchers_to_remove;
-    DWORD bytes_transferred;
 
     for (auto & watcher : _watchers)
     {
@@ -173,7 +172,12 @@ bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
             continue;
         }
 
-        GetOverlappedResult(watcher.handle, &watcher.overlapped, &bytes_transferred, FALSE);
+        DWORD bytes_transferred = 0;
+        if (GetOverlappedResult(watcher.handle, &watcher.overlapped, &bytes_transferred, FALSE) == 0)
+        {
+            SIHD_LOG(error, "FileWatcher: could not get overlapped result: {}", os::last_error_str());
+            continue;
+        }
 
         std::string old_filename;
         FILE_NOTIFY_INFORMATION *event = (FILE_NOTIFY_INFORMATION *)_buffer.data();

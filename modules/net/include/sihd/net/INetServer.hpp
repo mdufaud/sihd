@@ -4,6 +4,7 @@
 #include <expected>
 
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/net/Socket.hpp>
 #include <sihd/util/Error.hpp>
 
 namespace sihd::net
@@ -15,7 +16,7 @@ class INetServer
         virtual ~INetServer() = default;
 
         virtual std::expected<int, sihd::util::Error> accept_client(IpAddr *client_ip = nullptr,
-                                                                    int timeout_ms = -1) = 0;
+                                                                    int timeout_ms = Socket::blocking_timeout) = 0;
         virtual bool add_client_read(int socket) = 0;
         virtual bool add_client_write(int socket) = 0;
         virtual bool remove_client_read(int socket) = 0;

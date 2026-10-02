@@ -66,7 +66,7 @@ void log_unexpected_error(Logger & logger, const Error & err, const std::source_
     const size_t dot = file.find_last_of('.');
     if (dot != std::string_view::npos)
         file.remove_suffix(file.size() - dot);
-    logger.log(LogLevel::error, fmt::format("{}:{}: {}", file, loc.line(), err.message));
+    logger.log(LogLevel::error, "{}:{}: {}", file, loc.line(), err.message);
 }
 
 } // namespace sihd::util

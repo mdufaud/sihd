@@ -179,7 +179,7 @@ bool Pinger::on_start()
         auto sent = _sender.send_to(_client);
         if (!sent)
         {
-            SIHD_LOG_ERROR("Pinger: failed sending to client {}", _client.hostname());
+            SIHD_LOG_ERROR("Pinger: failed sending to client {}: {}", _client.hostname(), sent.error().message);
             ret = false;
             break;
         }

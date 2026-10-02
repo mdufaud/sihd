@@ -230,14 +230,13 @@ std::expected<Navigator::Impl::SingleResponse, Error> Navigator::Impl::try_perfo
         }
         if (!sr.ok)
         {
-            if (attempt < rate.retry_max)
+            if (sr.error.retryable() && attempt < rate.retry_max)
             {
                 SIHD_LOG(warning, "Navigator: request failed, retrying: {}", sr.error.message);
                 std::this_thread::sleep_for(std::chrono::milliseconds(backoff));
                 backoff *= 2;
                 continue;
             }
-            SIHD_LOG(error, "Navigator: request failed: {}", sr.error.message);
             return std::unexpected(std::move(sr.error));
         }
         if (HttpStatus::is_rate_limit(sr.http_status) && attempt < rate.retry_max)
@@ -267,9 +266,8 @@ std::expected<NavigatorResponse, Error> Navigator::Impl::perform(const Navigatio
 {
     if (ssrf_guard && sihd::net::ip::is_private_host(parse_navigator_url(navigation.url).host))
     {
-        Error err(permission_denied, "SSRF guard blocked a request to a private host: {}", navigation.url);
-        SIHD_LOG(error, "Navigator: {}", err.message);
-        return std::unexpected(std::move(err));
+        return std::unexpected(
+            Error(permission_denied, "SSRF guard blocked a request to a private host: {}", navigation.url));
     }
 
     HttpRequest::RequestType type = navigation.type;
@@ -286,11 +284,7 @@ std::expected<NavigatorResponse, Error> Navigator::Impl::perform(const Navigatio
         info.method = HttpRequest::type_str(type);
         info.headers = options.headers;
         if (!owner->on_before_request(info))
-        {
-            Error err(interrupted, "request cancelled by the on_before_request interceptor");
-            SIHD_LOG(error, "Navigator: {}", err.message);
-            return std::unexpected(std::move(err));
-        }
+            return std::unexpected(Error(interrupted, "request cancelled by the on_before_request interceptor"));
         current_url = info.url;
         options.headers = std::move(info.headers);
         if (HttpRequest::RequestType requested = HttpRequest::type_from_str(info.method);
@@ -331,6 +325,8 @@ std::expected<NavigatorResponse, Error> Navigator::Impl::perform(const Navigatio
                 auto retry_sr = perform_single(current_url, type, retry_options, attempt);
                 if (retry_sr.ok)
                     sr = std::move(retry_sr);
+                else
+                    SIHD_LOG(error, "Navigator: auth retry failed: {}", retry_sr.error.message);
             }
         }
 

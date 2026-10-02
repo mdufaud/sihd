@@ -299,7 +299,6 @@ std::expected<void, Error> Node::resolve_links(size_t recursion)
         {
             ret = std::unexpected(
                 Error(not_found, "'{}' could not resolve link '{}' => '{}'", this->full_name(), link, path));
-            SIHD_UNEXPECTED_LOG(ret);
         }
         else if (this->on_check_link(link, child))
         {
@@ -307,7 +306,6 @@ std::expected<void, Error> Node::resolve_links(size_t recursion)
             // a repeat resolve_links finds the link already a child: same target is a no-op
             if (!res && !(res.error().code == already_exists && this->get_child(link) == child))
             {
-                SIHD_UNEXPECTED_LOG(res);
                 ret = std::unexpected(std::move(res).error());
             }
         }
@@ -315,7 +313,6 @@ std::expected<void, Error> Node::resolve_links(size_t recursion)
         {
             ret = std::unexpected(
                 Error(permission_denied, "'{}' refused link '{}' => '{}'", this->full_name(), link, path));
-            SIHD_UNEXPECTED_LOG(ret);
         }
     }
     return ret;

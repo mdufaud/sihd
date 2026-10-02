@@ -197,7 +197,7 @@ TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
     Handler<INetReceiver *> handler([&](INetReceiver *receiver) {
         sihd::util::ArrByte buffer(4096);
         ssize_t size;
-        while ((size = receiver->receive(buffer).value_or(-1)) > 0)
+        while ((size = receiver->receive(buffer).value_or(0)) > 0)
             received.append(reinterpret_cast<const char *>(buffer.buf()), static_cast<size_t>(size));
     });
     client.add_observer(&handler);
@@ -421,13 +421,14 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
     while (received < payload_size)
     {
-        ssize_t r = client.receive(recv.buf() + received, payload_size - received).value_or(-1);
-        if (r < 0)
+        auto res = client.receive(recv.buf() + received, payload_size - received);
+        if (!res)
         {
             ASSERT_LT(std::chrono::steady_clock::now(), deadline);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
             continue;
         }
+        const ssize_t r = (ssize_t)*res;
         ASSERT_GT(r, 0);
         received += (size_t)r;
     }

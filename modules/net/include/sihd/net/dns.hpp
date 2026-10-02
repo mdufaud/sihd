@@ -1,14 +1,17 @@
 #ifndef __SIHD_NET_DNS_HPP__
 #define __SIHD_NET_DNS_HPP__
 
+#include <expected>
 #include <future>
 
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/util/Error.hpp>
 
 namespace sihd::net::dns
 {
 
-IpAddr find(std::string_view host, bool ipv6 = false, int socktype = -1, int protocol = -1);
+std::expected<IpAddr, sihd::util::Error>
+    find(std::string_view host, bool ipv6 = false, int socktype = -1, int protocol = -1);
 
 struct DnsEntry
 {

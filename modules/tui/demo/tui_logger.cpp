@@ -46,7 +46,7 @@ void randomize_log()
                 "Quisque malesuada eros quis imperdiet molestie. Curabitur dui nunc, lacinia nec molestie vitae, vulputate vitae ligula");
             break;
         case 6:
-            logger.info(fmt::format("Current memory: {}", str::bytes_str(sihd::sys::os::current_rss())));
+            logger.info("Current memory: {}", str::bytes_str(sihd::sys::os::current_rss()));
             break;
         case 7:
             logger.debug("Lorem ipsum dolor sit amet, consectetur adipiscing elit");

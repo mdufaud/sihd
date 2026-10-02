@@ -191,7 +191,14 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
                                                   const_cast<char *>(san.c_str()));
         if (ext)
         {
-            X509_add_ext(cert, ext, -1);
+            if (X509_add_ext(cert, ext, -1) != 1)
+            {
+                X509_EXTENSION_free(ext);
+                X509_free(cert);
+                // add failure left the openssl queue dirty for the next make_error
+                ERR_clear_error();
+                return make_error("Certificate: could not add subject alt names");
+            }
             X509_EXTENSION_free(ext);
         }
         else
@@ -211,7 +218,14 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
                                                   const_cast<char *>("critical,CA:TRUE"));
         if (ext)
         {
-            X509_add_ext(cert, ext, -1);
+            if (X509_add_ext(cert, ext, -1) != 1)
+            {
+                X509_EXTENSION_free(ext);
+                X509_free(cert);
+                // add failure left the openssl queue dirty for the next make_error
+                ERR_clear_error();
+                return make_error("Certificate: could not add basic constraints");
+            }
             X509_EXTENSION_free(ext);
         }
         else
@@ -267,7 +281,7 @@ std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data
     const unsigned char *p = data;
     X509 *cert = d2i_X509(nullptr, &p, static_cast<long>(len));
     if (!cert)
-        return std::unexpected(make_error("Certificate: read DER data"));
+        return make_error("Certificate: read DER data");
     _handle = cert;
     return {};
 }
@@ -278,11 +292,11 @@ std::expected<void, sihd::util::Error> Certificate::load_pem_string(std::string_
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
-        return std::unexpected(make_error("Certificate: BIO_new_mem_buf"));
+        return make_error("Certificate: BIO_new_mem_buf");
     X509 *cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
     BIO_free(bio);
     if (!cert)
-        return std::unexpected(make_error("Certificate: read PEM from string"));
+        return make_error("Certificate: read PEM from string");
     _handle = cert;
     return {};
 }

@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <string>
 
 // clang-format off
@@ -80,7 +81,12 @@ void LuaZipApi::load_base(Vm & vm)
             "load_entry",
             +[](ZipFile *self, luabridge::LuaRef key) -> bool {
                 if (key.isNumber())
-                    return !SIHD_UNEXPECTED_LOG(self->load_entry(static_cast<size_t>(static_cast<int>(key) - 1)));
+                {
+                    const int index = static_cast<int>(key) - 1;
+                    if (index < 0)
+                        throw std::invalid_argument("zip: entry index is 1-based");
+                    return !SIHD_UNEXPECTED_LOG(self->load_entry(static_cast<size_t>(index)));
+                }
                 return !SIHD_UNEXPECTED_LOG(self->load_entry(std::string(key.tostring())));
             })
         .addFunction(

@@ -5,6 +5,7 @@
 #include <source_location>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include <fmt/core.h>
 #include <fmt/printf.h>
@@ -38,7 +39,7 @@
 # define SIHD_COUTV(message, ...) fmt::print(#message " = {}\n", message)
 # define SIHD_CERR(message, ...) fmt::print(stderr, message, ##__VA_ARGS__)
 
-# define SIHD_LOG_LVL(level, message, ...) __sihd_logger__.log(level, fmt::format(message, ##__VA_ARGS__))
+# define SIHD_LOG_LVL(level, message, ...) __sihd_logger__.log(level, message, ##__VA_ARGS__)
 // Log with printf like format
 # define SIHD_LOG_LVL_FORMAT(level, message, ...) __sihd_logger__.log(level, fmt::sprintf(message, ##__VA_ARGS__))
 # define SIHD_LOG(level, message, ...) SIHD_LOG_LVL(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
@@ -96,15 +97,85 @@ class Logger
         virtual ~Logger();
 
         void emergency(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void emergency(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->emergency(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void alert(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void alert(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->alert(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void critical(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void critical(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->critical(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void error(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void error(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->error(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void warning(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void warning(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->warning(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void notice(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void notice(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->notice(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void info(std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void info(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->info(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void debug(std::string_view msg);
 
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void debug(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->debug(fmt::format(format, std::forward<Args>(args)...));
+        }
+
         void log(LogLevel level, std::string_view msg);
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void log(LogLevel level, fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(level, fmt::format(format, std::forward<Args>(args)...));
+        }
 
         std::string name;
 };

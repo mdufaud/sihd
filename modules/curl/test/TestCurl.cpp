@@ -238,7 +238,12 @@ TEST(TestCurl, test_mime)
     std::vector<uint8_t> binary = {0, 1, 2, 255};
     mime.add_part().name("field").data("value");
     mime.add_part().name("bin").data(binary);
-    mime.add_part().name("file").file("/no/such/file/here").filename("renamed.txt").content_type("text/plain");
+    const std::filesystem::path part_file = dir.path() / "part.txt";
+    {
+        std::ofstream out(part_file);
+        out << "mime file";
+    }
+    mime.add_part().name("file").file(part_file.string()).filename("renamed.txt").content_type("text/plain");
 
     EXPECT_TRUE(request.set_mime(mime));
     // a file:// transfer never produces the mime body: the wire format is

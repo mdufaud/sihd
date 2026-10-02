@@ -177,7 +177,7 @@ TEST_F(TestProcess, test_process_simple)
     ASSERT_TRUE(not_started.has_value());
     EXPECT_FALSE(not_started.value());
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.has_exited());
     EXPECT_EQ((int)proc.return_code(), 0);
 }
@@ -191,7 +191,7 @@ TEST_F(TestProcess, test_process_out)
     EXPECT_EQ(output, "");
     EXPECT_TRUE(proc.execute());
     EXPECT_EQ(output, "");
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, expected_hello_world);
 
@@ -199,7 +199,7 @@ TEST_F(TestProcess, test_process_out)
     proc.clear();
     proc.stdout_to(output);
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, expected_hello_world);
 
@@ -309,7 +309,7 @@ TEST_F(TestProcess, test_process_file_in)
     EXPECT_TRUE(proc.stdin_from_file(test_file));
     proc.stdout_to(output);
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
     EXPECT_EQ(output, "hello world");
     EXPECT_TRUE(proc.has_exited());
@@ -325,7 +325,7 @@ TEST_F(TestProcess, test_process_file_out)
     EXPECT_TRUE(proc.stdout_to_file(test_file));
     EXPECT_EQ(fs::read_all(test_file).value(), "");
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
     // fs::read_all opens in text mode by default, so CRLF is normalized to LF
     EXPECT_EQ(fs::read_all(test_file).value(), "hello world\n");
@@ -356,7 +356,7 @@ TEST_F(TestProcess, test_process_file_out_err)
     SIHD_TRACE("Redirecting stderr to: {}", stderr_path);
 
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
 
     EXPECT_TRUE(proc.has_exited());
@@ -426,13 +426,13 @@ TEST_F(TestProcess, test_process_chain)
     EXPECT_TRUE(wc.execute());
     EXPECT_TRUE(cat.execute());
 
-    EXPECT_TRUE(echo.wait_any());
+    EXPECT_TRUE(echo.wait_any().value_or(false));
     EXPECT_TRUE(echo.terminate());
 
     // wait for wc to process the pipe closing
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
-    EXPECT_TRUE(wc.wait_any());
+    EXPECT_TRUE(wc.wait_any().value_or(false));
     EXPECT_TRUE(wc.terminate());
     EXPECT_TRUE(cat.terminate());
 
@@ -545,7 +545,7 @@ TEST_F(TestProcess, test_process_fun)
     proc.stderr_to(err);
 
     EXPECT_TRUE(proc.execute());
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     EXPECT_TRUE(proc.terminate());
 
     EXPECT_TRUE(proc.has_exited());
@@ -566,7 +566,7 @@ TEST_F(TestProcess, test_process_bad_cmd)
         // qemu breaks posix_spawn's synchronous exec-failure report: the spawn "succeeds",
         // the child execve fails and _exit(127), same as the fork path below
         EXPECT_TRUE(proc.execute());
-        EXPECT_TRUE(proc.wait_any());
+        EXPECT_TRUE(proc.wait_any().value_or(false));
         EXPECT_EQ((int)proc.return_code(), 127);
     }
     else
@@ -588,7 +588,7 @@ TEST_F(TestProcess, test_process_bad_cmd)
     // fork succeeded
     EXPECT_TRUE(proc.execute());
     // wait for child process fork to end
-    EXPECT_TRUE(proc.wait_any());
+    EXPECT_TRUE(proc.wait_any().value_or(false));
     // the exit status
     EXPECT_EQ((int)proc.return_code(), 255);
 #endif

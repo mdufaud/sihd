@@ -17,6 +17,8 @@ namespace sihd::sys::signal
 
 inline constexpr int max_signal = 64;
 
+typedef void (*sig_handler)(int);
+
 struct SigStatus
 {
         std::atomic<size_t> received = 0;
@@ -40,8 +42,8 @@ struct SigExitConfig
 };
 void set_exit_config(const SigExitConfig & config);
 
-// set signal handling to handled
-std::expected<void, sihd::util::Error> handle(int sig);
+// set signal handling to handled, previous handler written when asked
+std::expected<void, sihd::util::Error> handle(int sig, sig_handler *previous_handler = nullptr);
 
 // set signal handling to default
 std::expected<void, sihd::util::Error> unhandle(int sig);

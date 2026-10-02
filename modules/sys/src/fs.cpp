@@ -227,7 +227,7 @@ std::expected<void, Error> remove_directories(std::string_view path)
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
         auto removed = is_dir(*it) ? remove_directory(*it) : remove_file(*it);
-        if (SIHD_UNEXPECTED_LOG(removed) && !res)
+        if (!removed && !res)
             res = std::move(removed);
     }
     return res;
@@ -546,8 +546,10 @@ std::expected<void, Error> write(std::string_view path, std::string_view view, b
     auto opened = file.open(path, mode);
     if (!opened)
         return opened;
-    const auto wrote = file.write(view);
-    if (!wrote || *wrote != view.size())
+    auto wrote = file.write(view);
+    if (!wrote)
+        SIHD_UNEXPECTED_RETURN(wrote);
+    if (*wrote != view.size())
         return std::unexpected(Error(io_error, "short write to '{}'", path));
     return {};
 }

@@ -528,10 +528,22 @@ PyUtilApi::PyTask::~PyTask()
 bool PyUtilApi::PyTask::run()
 {
     pybind11::gil_scoped_acquire acquire;
-    pybind11::object ret = _fun();
-    if (ret.is_none())
-        return true;
-    return ret.cast<bool>();
+    try
+    {
+        pybind11::object ret = _fun();
+        if (ret.is_none())
+            return true;
+        return ret.cast<bool>();
+    }
+    catch (pybind11::error_already_set & e)
+    {
+        SIHD_LOG(error, "PyTask: {}", e.what());
+    }
+    catch (const std::exception & e)
+    {
+        SIHD_LOG(error, "PyTask: {}", e.what());
+    }
+    return false;
 }
 
 } // namespace sihd::py

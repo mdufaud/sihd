@@ -182,7 +182,7 @@ TEST_F(TestSocket, test_socket_multicast)
     if (poll.poll(500) <= 0)
         GTEST_SKIP() << "Multicast loopback not available";
     sihd::util::ArrChar recv(32);
-    ssize_t received = sock.receive(recv).value_or(-1);
+    ssize_t received = sock.receive(recv).value_or(0);
     EXPECT_EQ(received, (ssize_t)strlen(msg));
     EXPECT_EQ(strncmp(recv.data(), msg, strlen(msg)), 0);
 

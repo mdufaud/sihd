@@ -143,7 +143,7 @@ bool read_pipe_into_file(int fd, const std::string & path, bool append)
         return false;
 
     auto fun = [&file](std::string_view buffer) {
-        (void)file.write(buffer.data(), buffer.size());
+        SIHD_UNEXPECTED_LOG(file.write(buffer.data(), buffer.size()));
     };
     return read_pipe_into_callback(fd, fun);
 }
@@ -299,31 +299,33 @@ struct ProcessWatcher
 
         void reset();
         bool has_terminated();
-        void check_status(int options);
+        bool check_status(int options);
         Process::ReturnCodeType return_code();
 };
 
-void ProcessWatcher::check_status(int options)
+bool ProcessWatcher::check_status(int options)
 {
     std::lock_guard l(this->mutex);
     siginfo_t info;
     int ret = waitid(P_PID, this->pid, &info, options);
-    this->code = info.si_code;
-    this->status = info.si_status;
     if (ret >= 0)
     {
+        // WNOHANG with a live child leaves the siginfo unspecified
+        if (info.si_pid == 0)
+            return false;
+        this->code = info.si_code;
+        this->status = info.si_status;
         if (this->code == CLD_EXITED || this->code == CLD_KILLED)
             this->pid = -1;
+        return true;
     }
-    else if (errno == ECHILD)
+    if (errno == ECHILD)
     {
         // child has exited
         this->pid = -1;
+        return true;
     }
-    else if (errno == EINVAL)
-    {
-        SIHD_LOG_ERROR("Process: wait error: {}", os::last_error_str());
-    }
+    return false;
 }
 
 bool ProcessWatcher::has_terminated()
@@ -436,7 +438,8 @@ Process & Process::stdin_close()
 Process & Process::stdin_from(const std::string & input)
 {
     _impl->pipe.std_in.add_pipe();
-    write_into_pipe(_impl->pipe.std_in.fd_write, input);
+    if (write_into_pipe(_impl->pipe.std_in.fd_write, input) == false)
+        SIHD_LOG(error, "Process: could not write stdin ({} bytes)", input.size());
     return *this;
 }
 
@@ -651,8 +654,9 @@ std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> & 
                            const_cast<char *const *>(&(argv[0])),
                            const_cast<char *const *>(&(exec_env.array[0])));
     posix_spawn_file_actions_destroy(&actions);
+    // posix_spawnp returns the error itself: errno is unrelated
     if (err != 0)
-        return std::unexpected(Error::from_errno("could not spawn '{}'", argv[0]));
+        return std::unexpected(Error(error_errno(err), "could not spawn '{}'", argv[0]));
     _impl->process_watcher.pid = pid;
     return {};
 }
@@ -833,18 +837,15 @@ void Process::handle(Poll *poll)
 
 bool Process::on_start()
 {
-    const bool ret = this->execute().has_value();
+    auto executed = this->execute();
+    if (SIHD_UNEXPECTED_LOG(executed))
+        return false;
 
-    if (ret)
-    {
-        this->service_set_ready();
-        if (_poll.max_fds() > 0)
-        {
-            _poll.start();
-        }
-    }
+    this->service_set_ready();
+    if (_poll.max_fds() > 0)
+        _poll.start();
 
-    return ret;
+    return true;
 }
 
 bool Process::on_stop()
@@ -870,7 +871,8 @@ std::expected<bool, Error> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
-    _impl->process_watcher.check_status(options);
+    if (_impl->process_watcher.check_status(options) == false)
+        return std::unexpected(Error::from_errno("Process: wait"));
     const bool terminated = _impl->process_watcher.has_terminated();
     if (terminated)
     {

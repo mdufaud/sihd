@@ -107,7 +107,7 @@ TEST_F(TestDevices, test_tcp_client_device)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     sihd::util::ArrChar recv_buf(64);
-    ssize_t received = accepted.receive(recv_buf).value_or(-1);
+    ssize_t received = accepted.receive(recv_buf).value_or(0);
     EXPECT_EQ(received, (ssize_t)strlen(hello));
     EXPECT_EQ(memcmp(recv_buf.buf(), hello, strlen(hello)), 0);
 
@@ -175,7 +175,7 @@ TEST_F(TestDevices, test_tcp_server_device)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     ASSERT_TRUE(client.set_blocking(false).has_value());
-    ssize_t received = client.receive(recv_buf).value_or(-1);
+    ssize_t received = client.receive(recv_buf).value_or(0);
     EXPECT_EQ(received, (ssize_t)strlen(broadcast));
     EXPECT_EQ(memcmp(recv_buf.buf(), broadcast, strlen(broadcast)), 0);
 
@@ -245,7 +245,7 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     ssize_t tx_received = 0;
     ASSERT_TRUE(accepted2.set_blocking(false).has_value());
     wait_for([&] {
-        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf)).value_or(-1);
+        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf)).value_or(0);
         return tx_received > 0;
     });
     EXPECT_EQ(tx_received, (ssize_t)strlen(tx_msg));

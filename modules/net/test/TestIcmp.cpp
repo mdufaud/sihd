@@ -157,7 +157,7 @@ class TestIcmp: public ::testing::Test
 
 TEST_F(TestIcmp, test_icmp_ipv4)
 {
-    _host_ipaddr = dns::find("google.com", false);
+    _host_ipaddr = dns::find("google.com", false).value();
     IcmpSender sender("icmp-sender");
     sender.set_echo();
     if (sender.open_socket(false).has_value() == false)
@@ -174,7 +174,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
 
 TEST_F(TestIcmp, test_icmp_ipv6)
 {
-    _host_ipaddr = dns::find("google.com", true);
+    _host_ipaddr = dns::find("google.com", true).value();
     IcmpSender sender("icmp-sender");
     sender.set_echo(); // to open SOCK_DGRAM on IPv6 thus avoiding raw socket requirement
     ASSERT_TRUE(sender.open_socket(true).has_value());

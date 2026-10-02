@@ -249,11 +249,8 @@ void BasicServerHandler::handle_new_client(INetServer *server)
             return;
         }
     }
-    if (!client->socket.set_blocking(false))
-    {
-        SIHD_LOG(error, "BasicServerHandler: cannot set client socket non-blocking");
+    if (SIHD_UNEXPECTED_LOG(client->socket.set_blocking(false)))
         return;
-    }
     std::lock_guard lock(_mutex);
     if (this->_client_limit_reached())
         return;
@@ -373,6 +370,8 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
         if (!more)
         {
             client->error = !more.error().retryable();
+            if (client->error)
+                SIHD_UNEXPECTED_LOG(more);
             break;
         }
         if (more.value() == 0)
@@ -431,10 +430,14 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
                 {(char *)client->write_array.buf() + client->write_offset, remaining});
             if (!sent && sent.error().retryable())
                 return;
-            if (sent)
+            if (SIHD_UNEXPECTED_LOG(sent))
+                client->error = true;
+            else
+            {
                 client->write_offset += sent.value();
-            // a zero send with bytes left would spin a level-triggered poll
-            client->error = !sent || sent.value() == 0;
+                // a zero send with bytes left would spin a level-triggered poll
+                client->error = sent.value() == 0;
+            }
             fully_sent = !client->error && client->write_offset >= client->write_array.byte_size();
         }
     }

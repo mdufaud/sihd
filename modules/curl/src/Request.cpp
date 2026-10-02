@@ -7,6 +7,7 @@
 #include <sihd/curl/Mime.hpp>
 #include <sihd/curl/Request.hpp>
 #include <sihd/util/AtExit.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include "impl.hpp"
@@ -373,29 +374,36 @@ bool Request::set_mime(const Mime & mime)
         SIHD_LOG(error, "Request: could not init mime");
         return false;
     }
+    sihd::util::Defer free_mime([&handle] { curl_mime_free(handle); });
     for (const MimePart & part : mime.parts())
     {
         curl_mimepart *mime_part = curl_mime_addpart(handle);
         if (mime_part == nullptr)
         {
             SIHD_LOG(error, "Request: could not add mime part");
-            curl_mime_free(handle);
             return false;
         }
-        if (part.name.empty() == false)
-            mime_check(curl_mime_name(mime_part, part.name.c_str()), "set part name");
-        if (part.data.empty() == false)
-            mime_check(curl_mime_data(mime_part, (const char *)part.data.data(), part.data.size()), "set part data");
-        if (part.path.empty() == false)
-            mime_check(curl_mime_filedata(mime_part, part.path.c_str()), "set part file");
-        if (part.filename.empty() == false)
-            mime_check(curl_mime_filename(mime_part, part.filename.c_str()), "set part filename");
-        if (part.content_type.empty() == false)
-            mime_check(curl_mime_type(mime_part, part.content_type.c_str()), "set part content type");
+        if (part.name.empty() == false
+            && mime_check(curl_mime_name(mime_part, part.name.c_str()), "set part name") == false)
+            return false;
+        if (part.data.empty() == false
+            && mime_check(curl_mime_data(mime_part, (const char *)part.data.data(), part.data.size()), "set part data")
+                   == false)
+            return false;
+        if (part.path.empty() == false
+            && mime_check(curl_mime_filedata(mime_part, part.path.c_str()), "set part file") == false)
+            return false;
+        if (part.filename.empty() == false
+            && mime_check(curl_mime_filename(mime_part, part.filename.c_str()), "set part filename") == false)
+            return false;
+        if (part.content_type.empty() == false
+            && mime_check(curl_mime_type(mime_part, part.content_type.c_str()), "set part content type") == false)
+            return false;
     }
     if (_impl->mime != nullptr)
         curl_mime_free(_impl->mime);
     _impl->mime = handle;
+    free_mime.cancel();
     return set_opt(*_impl, CURLOPT_MIMEPOST, handle);
 }
 
@@ -582,7 +590,7 @@ std::expected<void, sihd::util::Error> Request::perform()
         return err(not_initialized, _impl->init_error.empty() ? "no curl handle" : _impl->init_error);
     _impl->code = curl_easy_perform(_impl->curl);
     if (_impl->code != CURLE_OK)
-        return err(error_from(_impl->code), "perform: {}", curl_easy_strerror(_impl->code));
+        return err(error_from(_impl->code), "perform '{}': {}", _impl->url, curl_easy_strerror(_impl->code));
     return {};
 }
 

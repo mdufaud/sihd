@@ -1,4 +1,6 @@
+#include <chrono>
 #include <cstdio>
+#include <filesystem>
 
 #include <gtest/gtest.h>
 
@@ -51,7 +53,9 @@ TEST_F(TestPrivateKey, pem_roundtrip)
 
 TEST_F(TestPrivateKey, pem_file_roundtrip)
 {
-    std::string path = "/tmp/sihd_test_key.pem";
+    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string
+        path = (std::filesystem::temp_directory_path() / ("sihd_test_key_" + std::to_string(unique) + ".pem")).string();
 
     PrivateKey key;
     EXPECT_TRUE(key.generate_rsa(2048));
@@ -67,7 +71,10 @@ TEST_F(TestPrivateKey, pem_file_roundtrip)
 TEST_F(TestPrivateKey, load_pem_not_found)
 {
     PrivateKey key;
-    const auto res = key.load_pem("/tmp/sihd_test_key_does_not_exist.pem");
+    const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto path = (std::filesystem::temp_directory_path() / ("sihd_test_no_key_" + std::to_string(unique) + ".pem"))
+                          .string();
+    const auto res = key.load_pem(path);
     ASSERT_FALSE(res.has_value());
     EXPECT_EQ(res.error().code, not_found);
 

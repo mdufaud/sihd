@@ -45,20 +45,23 @@ TlsHandshakeStep TlsSocket::tls_accept_step()
         if (SIHD_UNEXPECTED_LOG(this->set_blocking(false)) || SIHD_UNEXPECTED_LOG(_tls_conn.init(*_tls_ctx, *this)))
             return TlsHandshakeStep::failed;
     }
-    const TlsHandshakeStep step = _tls_conn.accept_step();
-    if (step == TlsHandshakeStep::failed)
+    auto stepped = _tls_conn.accept_step();
+    if (SIHD_UNEXPECTED_LOG(stepped))
+    {
         _tls_conn.clear();
-    return step;
+        return TlsHandshakeStep::failed;
+    }
+    return *stepped;
 }
 
-bool TlsSocket::tls_accept(int timeout_ms)
+std::expected<void, sihd::util::Error> TlsSocket::tls_accept(int timeout_ms)
 {
     if (!_tls_ctx || !this->is_open())
     {
-        SIHD_LOG(error, "TlsSocket: cannot tls_accept without context and open socket");
-        return false;
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized,
+                                                 "TlsSocket: cannot tls_accept without context and open socket"));
     }
-    return this->_handshake(true, timeout_ms).has_value();
+    return this->_handshake(true, timeout_ms);
 }
 
 std::expected<void, sihd::util::Error> TlsSocket::_handshake(bool is_accept, int timeout_ms)

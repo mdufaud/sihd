@@ -37,7 +37,7 @@ std::expected<void, Error> set(std::string_view key, std::string_view value)
         const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
                                : err == ERROR_INVALID_PARAMETER ? invalid_argument
                                                                 : io_error;
-        return std::unexpected(Error(code, "could not set environment variable '{}': {}", key, os::last_error_str()));
+        return std::unexpected(Error(code, "could not set environment variable '{}': {}", key, os::error_str(err)));
     }
     return {};
 }
@@ -50,7 +50,7 @@ std::expected<void, Error> unset(std::string_view key)
         const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
                                : err == ERROR_INVALID_PARAMETER ? invalid_argument
                                                                 : io_error;
-        return std::unexpected(Error(code, "could not unset environment variable '{}': {}", key, os::last_error_str()));
+        return std::unexpected(Error(code, "could not unset environment variable '{}': {}", key, os::error_str(err)));
     }
     return {};
 }

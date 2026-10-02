@@ -27,11 +27,11 @@ struct Mapping
         size_t size = 0;
 };
 
-std::expected<Mapping, Error> map_fd(int fd, size_t size, int prot)
+std::expected<Mapping, Error> map_fd(int fd, size_t size, int prot, std::string_view path)
 {
     void *addr = mmap(nullptr, size, prot, MAP_SHARED, fd, 0);
     if (addr == MAP_FAILED)
-        return std::unexpected(Error::from_errno("mmap"));
+        return std::unexpected(Error::from_errno("could not mmap '{}' ({} bytes)", path, size));
     return Mapping {fd, addr, size};
 }
 
@@ -52,7 +52,7 @@ std::expected<Mapping, Error> open_map(std::string_view path, int open_flags, in
         ::close(fd);
         return std::unexpected(Error(invalid_argument, "cannot map an empty file '{}'", path));
     }
-    return map_fd(fd, (size_t)s.st_size, prot);
+    return map_fd(fd, (size_t)s.st_size, prot, path);
 }
 
 } // namespace
@@ -73,7 +73,7 @@ std::expected<void, Error> MappedFile::create(std::string_view path, size_t size
         ::close(fd);
         return std::unexpected(std::move(error));
     }
-    auto mapped = map_fd(fd, size, PROT_READ | PROT_WRITE);
+    auto mapped = map_fd(fd, size, PROT_READ | PROT_WRITE, path);
     if (!mapped)
     {
         ::close(fd);

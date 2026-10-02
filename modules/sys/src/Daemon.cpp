@@ -1,3 +1,5 @@
+#include <csignal>
+
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/fs.hpp>
@@ -88,7 +90,13 @@ bool Daemon::_handle_signals()
     int sig = 1;
     while (sig < 65)
     {
-        if (signal::handle(sig).has_value() == false)
+        if (sig == SIGKILL || sig == SIGSTOP)
+        {
+            ++sig;
+            continue;
+        }
+        auto handled = signal::handle(sig);
+        if (SIHD_UNEXPECTED_LOG(handled))
             ret = false;
         ++sig;
     }
@@ -137,11 +145,16 @@ bool Daemon::_write_pid_file()
         return false;
 
     std::string towrite = str::to_dec(os::pid()) + "\n";
-    bool ret = file.write(towrite) == (ssize_t)towrite.size();
-    if (ret == false)
-        SIHD_LOG(error, "Daemon: failed to write pid file");
+    auto wrote = file.write(towrite);
+    if (SIHD_UNEXPECTED_LOG(wrote))
+        return false;
+    if (*wrote != towrite.size())
+    {
+        SIHD_LOG(error, "Daemon: pid file short write: {}/{}", *wrote, towrite.size());
+        return false;
+    }
 
-    return ret;
+    return true;
 }
 
 } // namespace sihd::sys

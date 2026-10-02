@@ -100,7 +100,6 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
             {
                 return obj->set_conf_int(key, static_cast<int64_t>(ref));
             }
-            return false;
         }
         case LUA_TSTRING:
         {
@@ -108,7 +107,7 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
         }
         default:
         {
-            g_lua_logger.error(fmt::format("Configuration key '{}' type error", key));
+            g_lua_logger.error("Configuration key '{}' type error", key);
         }
     }
     return false;
@@ -620,7 +619,14 @@ void LuaUtilApi::load_base(Vm & vm)
                     parent = *luabridge::Stack<Node *>::get(L, 3);
                 Named *node = new Named(name);
                 if (parent != nullptr)
-                    SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
+                {
+                    auto added = parent->add_child(node, false);
+                    if (SIHD_UNEXPECTED_LOG(added))
+                    {
+                        delete node;
+                        luaL_error(L, "could not add child '%s' to parent", name.c_str());
+                    }
+                }
                 return node;
             },
             +[](Named *node) { delete node; })
@@ -654,7 +660,14 @@ void LuaUtilApi::load_base(Vm & vm)
                     parent = *luabridge::Stack<Node *>::get(L, 3);
                 Node *node = new Node(name);
                 if (parent != nullptr)
-                    SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
+                {
+                    auto added = parent->add_child(node, false);
+                    if (SIHD_UNEXPECTED_LOG(added))
+                    {
+                        delete node;
+                        luaL_error(L, "could not add child '%s' to parent", name.c_str());
+                    }
+                }
                 return node;
             },
             +[](Node *node) { delete node; })

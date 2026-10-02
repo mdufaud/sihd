@@ -75,6 +75,11 @@ std::expected<void, sihd::util::Error> UdpSender::send_all(sihd::util::ArrCharVi
     return _socket.send_all(view);
 }
 
+std::expected<void, sihd::util::Error> UdpSender::connect_unix(std::string_view path)
+{
+    return _socket.connect_unix(path);
+}
+
 std::expected<size_t, sihd::util::Error> UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_to(addr, view);

@@ -2,7 +2,6 @@
 #include <strings.h>
 
 #include <bitset>
-#include <cerrno>
 #include <cstring>
 #include <stdexcept>
 
@@ -386,7 +385,8 @@ const std::string & IpAddr::hostname() const
 std::expected<void, sihd::util::Error> IpAddr::fetch_hostname()
 {
     if (!this->has_ip())
-        throw std::invalid_argument("cannot fetch name of IpAddr with no ip");
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot fetch name of IpAddr with no ip"));
 
     const size_t addr_len = this->is_ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
 

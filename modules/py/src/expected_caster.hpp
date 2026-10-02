@@ -21,9 +21,14 @@ inline pybind11::object & error_type()
 
 [[noreturn]] inline void raise_error(const sihd::util::Error & error)
 {
-    pybind11::object instance = error_type()(error.message);
+    // callers may release the GIL for the I/O (call_guard): raising touches the interpreter
+    pybind11::gil_scoped_acquire acquire;
+    // fetch the type from the module, not from a C++ static: inline statics are not
+    // deduplicated across the shared libraries that instantiate this header
+    pybind11::object type = pybind11::module_::import("sihd").attr("Error");
+    pybind11::object instance = type(error.message);
     instance.attr("code") = static_cast<int>(error.code);
-    PyErr_SetObject(error_type().ptr(), instance.ptr());
+    PyErr_SetObject(type.ptr(), instance.ptr());
     throw pybind11::error_already_set();
 }
 
@@ -38,6 +43,13 @@ struct type_caster<std::expected<T, sihd::util::Error>>
 {
     public:
         static constexpr auto name = const_name("sihd.Expected[") + make_caster<T>::name + const_name("]");
+
+        static handle cast(std::expected<T, sihd::util::Error> && src, return_value_policy policy, handle parent)
+        {
+            if (!src)
+                sihd::py::raise_error(src.error());
+            return make_caster<T>::cast(std::move(*src), policy, parent);
+        }
 
         static handle cast(const std::expected<T, sihd::util::Error> & src, return_value_policy policy, handle parent)
         {
