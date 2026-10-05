@@ -15,8 +15,6 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 
-SIHD_NEW_LOGGER("sihd::lua");
-
 namespace sihd::lua
 {
 
@@ -24,6 +22,8 @@ using namespace sihd::net;
 using sihd::core::Device;
 using sihd::util::Node;
 using sihd::util::SmartNodePtr;
+
+SIHD_LOGGER;
 
 void LuaNetApi::load_all(Vm & vm)
 {

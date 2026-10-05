@@ -11,6 +11,7 @@ sihd_util_libname = env.module_format_name()
 
 env.build_demo("demo/util_demo.cpp", name = "util_demo", libs = [sihd_util_libname])
 env.build_demo("demo/scheduler_bench.cpp", name = "scheduler_bench", libs = [sihd_util_libname])
+env.build_demo("demo/logger_bench.cpp", name = "logger_bench", libs = [sihd_util_libname])
 
 test_srcs = [f for f in Glob('test/*.cpp') if 'CppModules' not in str(f)]
 test_kwargs = {}

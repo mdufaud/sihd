@@ -125,9 +125,9 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(timestamp.days(), 0);
 
     // format
-    SIHD_LOG_DEBUG("Time offset");
-    SIHD_LOG_DEBUG("{}", timestamp.timeoffset_str());
-    SIHD_LOG_DEBUG("{}", timestamp.localtimeoffset_str());
+    SIHD_LOG(debug, "Time offset");
+    SIHD_LOG(debug, "{}", timestamp.timeoffset_str());
+    SIHD_LOG(debug, "{}", timestamp.localtimeoffset_str());
 
     // test conversion
     auto fun = [](std::chrono::seconds sec) {
@@ -143,7 +143,7 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(tclock, timepoint.time_since_epoch());
 
     // calendar and clocktime
-    SIHD_LOG_DEBUG("From clocktime - flat time");
+    SIHD_LOG(debug, "From clocktime - flat time");
     Timestamp ts({
         .hour = 10,
         .minute = 5,
@@ -155,7 +155,7 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
     EXPECT_EQ(clo.millisecond, 300);
-    SIHD_LOG_DEBUG("Should be hour=10 min=5 sec=1 ms=300: {}", ts.str());
+    SIHD_LOG(debug, "Should be hour=10 min=5 sec=1 ms=300: {}", ts.str());
 
     ts = Timestamp({
         .second = 0,
@@ -167,15 +167,15 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(clo.second, 0);
     EXPECT_EQ(clo.millisecond, 1);
 
-    SIHD_LOG_DEBUG("From calendar - local time");
+    SIHD_LOG(debug, "From calendar - local time");
     ts = Timestamp({.day = 1, .month = 10, .year = 2022});
     Calendar cal = ts.local_calendar();
     EXPECT_EQ(cal.year, 2022);
     EXPECT_EQ(cal.month, 10);
     EXPECT_EQ(cal.day, 1);
-    SIHD_LOG_DEBUG("Should be year=2022 mon=10 day=1: {}", ts.local_str());
+    SIHD_LOG(debug, "Should be year=2022 mon=10 day=1: {}", ts.local_str());
 
-    SIHD_LOG_DEBUG("From calendar and clocktime - local time");
+    SIHD_LOG(debug, "From calendar and clocktime - local time");
     ts = Timestamp({.day = 1, .month = 10, .year = 2022},
                    {
                        .hour = 10,
@@ -190,7 +190,7 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(clo.hour, 10);
     EXPECT_EQ(clo.minute, 5);
     EXPECT_EQ(clo.second, 1);
-    SIHD_LOG_DEBUG("Should be year=2022 mon=10 day=1 hour=10 min=5 sec=1: {}", ts.local_str());
+    SIHD_LOG(debug, "Should be year=2022 mon=10 day=1 hour=10 min=5 sec=1: {}", ts.local_str());
 
     // interval
     ts = Timestamp({

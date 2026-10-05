@@ -60,10 +60,11 @@ bool Message::_assign_field_array(IMessageField *field)
         __assign_arr_at += field->field_byte_size();
         if (__assign_arr_at > _total_size)
         {
-            SIHD_LOG_ERROR("Message: for {} total size {} is inferior to calculated size {}",
-                           this->name(),
-                           _total_size,
-                           __assign_arr_at);
+            SIHD_LOG(error,
+                     "Message: for {} total size {} is inferior to calculated size {}",
+                     this->name(),
+                     _total_size,
+                     __assign_arr_at);
             return false;
         }
     }
@@ -80,7 +81,7 @@ bool Message::field_assign_buffer(void *buffer)
         IMessageField *field = _fields.at(name);
         if (this->_assign_field_array(field) == false)
         {
-            SIHD_LOG_ERROR("Message: cannot assign buffer to field '{}'", name);
+            SIHD_LOG(error, "Message: cannot assign buffer to field '{}'", name);
             return false;
         }
     }

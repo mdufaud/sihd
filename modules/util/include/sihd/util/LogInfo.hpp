@@ -42,6 +42,7 @@ struct LogInfo
         static const char *level_str(LogLevel level);
         static LogLevel level_from_str(std::string_view level);
         Timestamp timestamp() const;
+        std::string format(std::string_view msg, bool print_thread_id = false) const;
 };
 
 } // namespace sihd::util

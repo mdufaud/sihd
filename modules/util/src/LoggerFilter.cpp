@@ -1,20 +1,30 @@
 #include <sihd/util/LoggerFilter.hpp>
-#include <sihd/util/str.hpp>
 
 namespace sihd::util
 {
 
-LoggerFilter::LoggerFilter(const Options & options): _options(options) {}
+LoggerFilter::LoggerFilter(const Options & options): _options(options)
+{
+    if (_options.message_regex.empty() == false)
+        _message_regex = std::regex(_options.message_regex);
+    if (_options.source_regex.empty() == false)
+        _source_regex = std::regex(_options.source_regex);
+    if (_options.thread_regex.empty() == false)
+        _thread_regex = std::regex(_options.thread_regex);
+}
 
 LoggerFilter::~LoggerFilter() = default;
 
-bool LoggerFilter::filter(const LogInfo & info, [[maybe_unused]] std::string_view msg)
+const LoggerFilter::Options & LoggerFilter::options() const
 {
-    if (!_options.message_regex.empty() && str::regex_match(msg, _options.message_regex))
+    return _options;
+}
+
+bool LoggerFilter::filter(const LogInfo & info)
+{
+    if (_source_regex && std::regex_match(info.source.begin(), info.source.end(), *_source_regex))
         return true;
-    if (!_options.source_regex.empty() && str::regex_match(info.source, _options.source_regex))
-        return true;
-    if (!_options.thread_regex.empty() && str::regex_match(info.thread_name, _options.thread_regex))
+    if (_thread_regex && std::regex_match(info.thread_name.begin(), info.thread_name.end(), *_thread_regex))
         return true;
 
     if (_options.thread_eq != 0 && info.thread_id == _options.thread_eq)
@@ -29,6 +39,14 @@ bool LoggerFilter::filter(const LogInfo & info, [[maybe_unused]] std::string_vie
     if (_options.level_lower != LogLevel::none && info.level > _options.level_lower)
         return true;
 
+    return false;
+}
+
+bool LoggerFilter::filter(const LogInfo & info, std::string_view msg)
+{
+    (void)info;
+    if (_message_regex && std::regex_match(msg.begin(), msg.end(), *_message_regex))
+        return true;
     return false;
 }
 

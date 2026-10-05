@@ -30,6 +30,15 @@ pthread_t do_init()
 pthread_t g_main_thread_id = do_init();
 thread_local std::string l_thread_name;
 
+std::string to_id_str(const pthread_t & id)
+{
+    // pthread_t is opaque: an integer on glibc/musl/mingw, a pointer under Fil-C.
+    static_assert(sizeof(pthread_t) <= sizeof(uint64_t));
+    uint64_t value = 0;
+    memcpy(&value, &id, sizeof(id));
+    return "0x" + str::to_hex(value);
+}
+
 } // namespace
 
 pthread_t main()
@@ -49,11 +58,12 @@ pthread_t id()
 
 std::string id_str(pthread_t id)
 {
-    // pthread_t is opaque: an integer on glibc/musl/mingw, a pointer under Fil-C.
-    static_assert(sizeof(pthread_t) <= sizeof(uint64_t));
-    uint64_t value = 0;
-    memcpy(&value, &id, sizeof(id));
-    return "0x" + str::to_hex(value);
+    if (equals(id, pthread_self()))
+    {
+        static thread_local std::string l_id_str = to_id_str(id);
+        return l_id_str;
+    }
+    return to_id_str(id);
 }
 
 std::expected<void, Error> set_name(const std::string & name)

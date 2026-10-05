@@ -1,6 +1,8 @@
 #include <array>
 #include <map>
 
+#include <fmt/core.h>
+
 #include <sihd/util/LogInfo.hpp>
 
 namespace sihd::util
@@ -20,6 +22,28 @@ LogInfo::~LogInfo() = default;
 Timestamp LogInfo::timestamp() const
 {
     return Timestamp(this->timespec);
+}
+
+std::string LogInfo::format(std::string_view msg, bool print_thread_id) const
+{
+    if (print_thread_id)
+    {
+        return fmt::format("{0}.{1:09}\t{2}\t[{3}]\t{4:<9} {5}\t{6}\n",
+                           timespec.tv_sec,
+                           timespec.tv_nsec,
+                           thread_id_str,
+                           thread_name,
+                           strlevel,
+                           source,
+                           msg);
+    }
+    return fmt::format("{0}.{1:09}\t[{2}]\t{3:<9} {4}\t{5}\n",
+                       timespec.tv_sec,
+                       timespec.tv_nsec,
+                       thread_name,
+                       strlevel,
+                       source,
+                       msg);
 }
 
 const char *LogInfo::level_str(LogLevel level)

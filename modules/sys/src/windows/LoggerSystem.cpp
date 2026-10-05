@@ -59,13 +59,7 @@ void LoggerSystem::log(const LogInfo & info, std::string_view msg)
             type = EVENTLOG_AUDIT_SUCCESS;
     }
     WORD category = static_cast<WORD>(info.level);
-    const std::string report_str = fmt::format("{0}.{1}\t[{2}]\t{3:<9} {4}\t{5}\n",
-                                               info.timespec.tv_sec,
-                                               info.timespec.tv_nsec,
-                                               info.thread_name.data(),
-                                               info.strlevel,
-                                               info.source.data(),
-                                               msg.data());
+    const std::string report_str = info.format(msg);
     if (!ReportEvent(_impl->handle,                  // Event log handle
                      type,                           // Event type
                      category,                       // Event category

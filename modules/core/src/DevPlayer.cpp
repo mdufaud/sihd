@@ -1,3 +1,5 @@
+#include <optional>
+
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
@@ -165,8 +167,10 @@ bool DevPlayer::run()
     if (_running == false)
         return false;
 
-    PlayableRecord record = _safe_queue.front();
-    _safe_queue.pop();
+    std::optional<PlayableRecord> next_record = _safe_queue.try_pop();
+    if (next_record.has_value() == false)
+        return false;
+    PlayableRecord record = std::move(*next_record);
 
     auto it = _map_channels.find(record.name);
     if (it != _map_channels.end())

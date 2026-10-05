@@ -214,11 +214,11 @@ void Scheduler::_play_task(Task *task, Timestamp now)
     }
     catch (const std::exception & err)
     {
-        SIHD_LOG_ERROR("Scheduler '{}': task raised exception: {}", this->name(), err.what());
+        SIHD_LOG(error, "Scheduler '{}': task raised exception: {}", this->name(), err.what());
     }
     catch (...)
     {
-        SIHD_LOG_ERROR("Scheduler '{}': task raised unknown exception", this->name());
+        SIHD_LOG(error, "Scheduler '{}': task raised unknown exception", this->name());
     }
 
     auto l = _waitable_task.guard();

@@ -76,8 +76,8 @@ void LoggerConsole::log(const LogInfo & info, std::string_view msg)
     const std::string fmt_msg = fmt::format("{}{} [{}] <{}> {}{}\n",
                                             beg,
                                             level_str(info.level),
-                                            info.thread_name.data(),
-                                            info.source.data(),
+                                            info.thread_name,
+                                            info.source,
                                             msg,
                                             end);
 

@@ -49,8 +49,25 @@ class LoggerBase: public ComponentBase,
     private:
         struct SavedLog
         {
+                SavedLog(const sihd::util::LogInfo & log_info, std::string_view log_msg, std::string searched):
+                    info(log_info),
+                    msg(log_msg),
+                    source(log_info.source),
+                    thread_name(log_info.thread_name),
+                    search_str(std::move(searched))
+                {
+                    info.source = source;
+                    info.thread_name = thread_name;
+                }
+
+                // the LogInfo views point at this instance's strings: copies and moves are refused
+                SavedLog(const SavedLog &) = delete;
+                SavedLog & operator=(const SavedLog &) = delete;
+
                 sihd::util::LogInfo info;
                 std::string msg;
+                std::string source;
+                std::string thread_name;
                 // message + source + thread name, lowercased once for case insensitive search
                 std::string search_str;
         };
@@ -275,9 +292,9 @@ class LoggerBase: public ComponentBase,
             const std::string log_str = fmt::format("{} {} [{}] <{}> {}",
                                                     log.info.timestamp().local_format("%H:%M:%S"),
                                                     level,
-                                                    log.info.thread_name.data(),
-                                                    log.info.source.data(),
-                                                    log.msg.data());
+                                                    log.thread_name,
+                                                    log.info.source,
+                                                    log.msg);
 
             return make_searched_paragraph(log_str) | color;
         }
@@ -324,11 +341,7 @@ class LoggerBase: public ComponentBase,
             std::lock_guard<std::mutex> lock(_log_mutex);
             if (_pending_logs.size() >= _options.max_logs)
                 _pending_logs.pop_front();
-            _pending_logs.emplace_back(SavedLog {
-                .info = info,
-                .msg = std::string(msg),
-                .search_str = std::move(search_str),
-            });
+            _pending_logs.emplace_back(info, msg, std::move(search_str));
         }
 
         ssize_t _focused_log = 0;

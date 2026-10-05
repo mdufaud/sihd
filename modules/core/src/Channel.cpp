@@ -250,10 +250,11 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
         {
             if (!_resizable || needed > _array_ptr->byte_capacity())
             {
-                SIHD_LOG_ERROR("Channel: cannot write {} bytes at {} offset into {} bytes",
-                               arr_view.byte_size(),
-                               byte_offset,
-                               _array_ptr->byte_size());
+                SIHD_LOG(error,
+                         "Channel: cannot write {} bytes at {} offset into {} bytes",
+                         arr_view.byte_size(),
+                         byte_offset,
+                         _array_ptr->byte_size());
                 return false;
             }
             _array_ptr->byte_resize(needed);

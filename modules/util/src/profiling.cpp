@@ -63,14 +63,15 @@ void Perf::log() const
     const bool show_variance_nano = variance < time::micro(1);
     const bool show_standard_deviation_nano = standard_deviation < time::micro(1);
 
-    SIHD_LOG_DEBUG("Perf<{}>: [samples: {}] [min: {}] [max: {}] [avg/var/dev: {} / {} / {}]",
-                   _label,
-                   _stat.samples,
-                   Duration(_stat.min).str(show_total, show_min_nano),
-                   Duration(_stat.max).str(show_total, show_max_nano),
-                   Duration(average).str(show_total, show_average_nano),
-                   Duration(variance).str(show_total, show_variance_nano),
-                   Duration(standard_deviation).str(show_total, show_standard_deviation_nano));
+    SIHD_LOG(debug,
+             "Perf<{}>: [samples: {}] [min: {}] [max: {}] [avg/var/dev: {} / {} / {}]",
+             _label,
+             _stat.samples,
+             Duration(_stat.min).str(show_total, show_min_nano),
+             Duration(_stat.max).str(show_total, show_max_nano),
+             Duration(average).str(show_total, show_average_nano),
+             Duration(variance).str(show_total, show_variance_nano),
+             Duration(standard_deviation).str(show_total, show_standard_deviation_nano));
 }
 
 } // namespace sihd::util

@@ -189,22 +189,23 @@ bool ChannelMatch::verify(const Channel *channel) const
         return false;
     if (this->comparison == None)
     {
-        SIHD_LOG_ERROR("ChannelMatch: no comparison set");
+        SIHD_LOG(error, "ChannelMatch: no comparison set");
         return false;
     }
     const IArray *array = channel->array();
     if (this->idx >= array->size())
     {
-        SIHD_LOG_ERROR("ChannelMatch: index {} is out of range of channel '{}' size {}",
-                       this->idx,
-                       channel->full_name(),
-                       array->size());
+        SIHD_LOG(error,
+                 "ChannelMatch: index {} is out of range of channel '{}' size {}",
+                 this->idx,
+                 channel->full_name(),
+                 array->size());
         return false;
     }
     const bool array_is_float = array->data_type() == TYPE_FLOAT || array->data_type() == TYPE_DOUBLE;
     if (this->value.is_float() && array_is_float == false)
     {
-        SIHD_LOG_ERROR("ChannelMatch: value is float and channel '{}' is not a floating type", channel->full_name());
+        SIHD_LOG(error, "ChannelMatch: value is float and channel '{}' is not a floating type", channel->full_name());
         return false;
     }
     return true;

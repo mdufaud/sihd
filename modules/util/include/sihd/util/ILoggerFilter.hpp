@@ -10,6 +10,9 @@ class ILoggerFilter
 {
     public:
         virtual ~ILoggerFilter() = default;
+        // phase 1: drop conditions computable without the formatted message
+        virtual bool filter(const LogInfo & info) = 0;
+        // phase 2: drop conditions that need the formatted message
         virtual bool filter(const LogInfo & info, std::string_view msg) = 0;
 };
 

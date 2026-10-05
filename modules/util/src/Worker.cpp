@@ -51,7 +51,7 @@ bool Worker::start_worker(std::string_view name)
     if (!_run_method)
     {
         _started = false;
-        SIHD_LOG_ERROR("Worker: cannot start worker '{}': nothing to run", name);
+        SIHD_LOG(error, "Worker: cannot start worker '{}': nothing to run", name);
         return false;
     }
 

@@ -1,9 +1,11 @@
 #ifndef __SIHD_UTIL_LOGGERMANAGER_HPP__
 #define __SIHD_UTIL_LOGGERMANAGER_HPP__
 
+#include <atomic>
 #include <cstdio>
 #include <mutex>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #include <sihd/util/ALogFilterer.hpp>
@@ -28,34 +30,53 @@ class LoggerManager: public ALogFilterer
         template <typename T>
         bool delete_loggers_type()
         {
-            std::lock_guard<std::mutex> l(_mutex);
-            T *logcast;
-            bool found = false;
-            auto it = _loggers_lst.begin();
-            while (it != _loggers_lst.end())
+            std::vector<ALogger *> loggers;
             {
-                logcast = dynamic_cast<T *>(*it);
-                if (logcast != nullptr)
+                const Lock lock(*this);
+                if (!lock)
+                    return false;
+                auto it = _loggers_lst.begin();
+                while (it != _loggers_lst.end())
                 {
-                    delete logcast;
-                    it = _loggers_lst.erase(it);
-                    found = true;
+                    T *logcast = dynamic_cast<T *>(*it);
+                    if (logcast != nullptr)
+                    {
+                        loggers.push_back(*it);
+                        it = _loggers_lst.erase(it);
+                    }
+                    else
+                    {
+                        ++it;
+                    }
                 }
             }
-            return found;
+            // sinks may remove themselves on destruction: delete outside the lock
+            for (ALogger *logger : loggers)
+            {
+                delete logger;
+            }
+            return loggers.empty() == false;
         }
 
         static LoggerManager *get();
 
         static void log(const std::string & src, LogLevel level, std::string_view msg);
+        static void log(const LogInfo & info, std::string_view msg);
+
+        // phase 1: false when no sink can receive the message - callers skip formatting
+        static bool should_log(const std::string & src, LogLevel level);
+        static bool should_log(const LogInfo & info);
 
         static void stream(FILE *output = stderr,
                            bool print_thread_id = false,
                            std::optional<LoggerFilter::Options> options = std::nullopt);
         static void console(std::optional<LoggerFilter::Options> options = std::nullopt);
         static void thrower(std::optional<LoggerFilter::Options> options = std::nullopt);
+        static void async(ALogger *target,
+                          size_t max_queue_size = 8192,
+                          std::optional<LoggerFilter::Options> options = std::nullopt,
+                          std::string source = "sihd::util::logger_async");
 
-        // TODO add/rm/clear ILoggerFormat
         static bool add(ALogger *logger);
         static bool rm(ALogger *logger);
         static bool filter(ILoggerFilter *filter);
@@ -64,12 +85,37 @@ class LoggerManager: public ALogFilterer
         static void clear_filters();
 
     protected:
-        void _filter_and_log(const std::string & src, LogLevel level, std::string_view msg);
+        void _filter_and_log(const LogInfo & info, std::string_view msg);
+
+        bool _filter_no_format(const LogInfo & info);
+
+        void _warn_no_sink(const LogInfo & info);
 
     private:
+        // the only entry to _mutex: a logger or filter logging back from the same thread
+        // is dropped and reported instead of deadlocking
+        class Lock
+        {
+            public:
+                Lock(const LoggerManager & manager);
+                ~Lock();
+
+                explicit operator bool() const;
+
+            private:
+                const LoggerManager & _manager;
+                bool _locked;
+        };
+
         static LoggerManager _g_singleton;
         std::vector<ALogger *> _loggers_lst;
+        bool _warned_no_sink = false;
+        mutable std::atomic<std::thread::id> _owner {};
+        mutable std::atomic<bool> _warned_reentrant {false};
         mutable std::mutex _mutex;
+
+        bool _enter() const;
+        void _leave() const;
 };
 
 class TmpLoggerAdder

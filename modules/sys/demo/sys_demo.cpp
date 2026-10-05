@@ -90,11 +90,11 @@ void dynlib()
 
     if (lib.open("sihd_sys"))
     {
-        SIHD_LOG_INFO("Opened DLL sihd_sys");
+        SIHD_LOG(info, "Opened DLL sihd_sys");
 
         auto handle = lib.load("sihd_factory_Node");
         if (handle.has_value())
-            SIHD_LOG_INFO("Handle found in DLL");
+            SIHD_LOG(info, "Handle found in DLL");
 
         lib.close();
     }
@@ -151,7 +151,7 @@ void clipboard()
 {
     for (const auto & raw : clipboard::get_raw())
     {
-        SIHD_LOG_INFO("Clipboard offers '{}' ({} bytes)", raw.mime, raw.data.size());
+        SIHD_LOG(info, "Clipboard offers '{}' ({} bytes)", raw.mime, raw.data.size());
     }
 
     for (const auto & raw : clipboard::get_raw({sihd::util::mime::bmp_image}))
@@ -160,10 +160,11 @@ void clipboard()
         if (!bitmap.has_value())
             continue;
 
-        SIHD_LOG_INFO("You have an image in your clipboard: {}x{} ({}bpp)",
-                      bitmap->width(),
-                      bitmap->height(),
-                      bitmap->byte_per_pixel() * 8);
+        SIHD_LOG(info,
+                 "You have an image in your clipboard: {}x{} ({}bpp)",
+                 bitmap->width(),
+                 bitmap->height(),
+                 bitmap->byte_per_pixel() * 8);
         std::string path = fs::combine(fs::tmp_path(), "clipboard_image.bmp");
         if (bitmap->save_bmp(path))
             SIHD_LOG(notice, "Saved clipboard image to: {}", path);
@@ -177,17 +178,17 @@ void clipboard()
     {
         auto text = clipboard::to_text(raw);
         if (text.has_value())
-            SIHD_LOG_INFO("You have text in your clipboard: '{}'", *text);
+            SIHD_LOG(info, "You have text in your clipboard: '{}'", *text);
         break;
     }
 
     if (clipboard::set("love you"))
     {
-        SIHD_LOG_INFO("Set 'love you' in your clipboard");
+        SIHD_LOG(info, "Set 'love you' in your clipboard");
     }
     else
     {
-        SIHD_LOG_ERROR("Could not set clipboard");
+        SIHD_LOG(error, "Could not set clipboard");
     }
 
     fmt::print("\n");
@@ -195,7 +196,7 @@ void clipboard()
 
 void bitmap()
 {
-    SIHD_LOG_INFO("Testing bitmaps");
+    SIHD_LOG(info, "Testing bitmaps");
 
     constexpr size_t width = 1024;
     constexpr size_t height = 1024;
@@ -230,7 +231,7 @@ void screenshot()
 {
     Bitmap bitmap;
 
-    SIHD_LOG_INFO("Trying to take a screenshot of the window under your cursor");
+    SIHD_LOG(info, "Trying to take a screenshot of the window under your cursor");
     if (screenshot::take_under_cursor(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_under_cursor.bmp");
@@ -238,7 +239,7 @@ void screenshot()
             SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
-    SIHD_LOG_INFO("Trying to take a screenshot of the focused window");
+    SIHD_LOG(info, "Trying to take a screenshot of the focused window");
     if (screenshot::take_focused(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_focused.bmp");
@@ -246,7 +247,7 @@ void screenshot()
             SIHD_LOG(notice, "Saved bitmap to: {}", path);
     }
 
-    SIHD_LOG_INFO("Trying to take a screenshot of the window under your entire screen");
+    SIHD_LOG(info, "Trying to take a screenshot of the window under your entire screen");
     if (screenshot::take_screen(bitmap))
     {
         std::string path = fs::combine(fs::tmp_path(), "take_screen.bmp");

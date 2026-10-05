@@ -46,13 +46,13 @@ TEST_F(TestThreadPool, test_threadpool_spam)
     pool.wait_all_jobs();
     pool.stop();
 
-    SIHD_LOG_INFO("Total: {}", count.load());
+    SIHD_LOG(info, "Total: {}", count.load());
     EXPECT_EQ(count.load(), (int)total_jobs);
 
     auto stats = pool.stats();
     for (size_t i = 0; i < stats.size(); i++)
     {
-        SIHD_LOG_INFO("Thread[{}]: {}", i + 1, stats[i].samples);
+        SIHD_LOG(info, "Thread[{}]: {}", i + 1, stats[i].samples);
     }
 
     const auto samples = container::sum(stats, [](const auto & stat) { return stat.samples; });

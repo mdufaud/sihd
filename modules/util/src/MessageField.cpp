@@ -47,7 +47,7 @@ bool MessageField::field_assign_buffer(void *buffer)
 {
     if (_size == 0 || _dt == TYPE_NONE || _array_ptr == nullptr)
     {
-        SIHD_LOG_ERROR("MessageField: for {} cannot assign array before it is built", this->name());
+        SIHD_LOG(error, "MessageField: for {} cannot assign array before it is built", this->name());
         return false;
     }
     return _array_ptr->assign_bytes(buffer, this->field_byte_size());

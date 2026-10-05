@@ -218,7 +218,7 @@ void FileWatcher::Impl::handle(Poll *poll)
 
                 if (it == _watchers.end())
                 {
-                    SIHD_LOG_WARN("FileWatcher: watch not found {}", event->wd);
+                    SIHD_LOG(warning, "FileWatcher: watch not found {}", event->wd);
                     offset += EVENT_SIZE + event->len;
                     continue;
                 }

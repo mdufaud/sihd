@@ -451,8 +451,6 @@ TEST_F(TestCsv, test_csv_timestamp_numeric)
     ASSERT_TRUE(reader.open(path));
     reader.set_timestamp_col(0);
 
-    sihd::util::Timestamp ts(0);
-
     ASSERT_TRUE(read_next_ok(reader));
     EXPECT_EQ(reader.columns(), (std::vector<std::string> {"1000000000", "hello"}));
     auto ts_res = reader.get_read_timestamp();

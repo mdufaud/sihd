@@ -20,6 +20,19 @@ class TestSafeQueue: public ::testing::Test
         virtual void TearDown() {}
 };
 
+struct MoveCounter
+{
+        int moves = 0;
+
+        MoveCounter() = default;
+        MoveCounter(MoveCounter && other): moves(other.moves + 1) {}
+        MoveCounter & operator=(MoveCounter && other)
+        {
+            moves = other.moves + 1;
+            return *this;
+        }
+};
+
 void write_number(SafeQueue<int> & queue, int number, int times)
 {
     for (int i = 0; i < times; ++i)
@@ -42,14 +55,80 @@ TEST_F(TestSafeQueue, test_safequeue_terminate)
 
     std::thread t1([&] {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        fmt::print("Infinite pop\n");
-        EXPECT_THROW(queue.pop(), std::invalid_argument);
+        fmt::print("Closed pop\n");
+        EXPECT_FALSE(queue.pop().has_value());
     });
 
     fmt::print("Terminating queue\n");
     queue.terminate();
 
     t1.join();
+}
+
+TEST_F(TestSafeQueue, test_safequeue_push_terminated)
+{
+    SafeQueue<int> queue;
+
+    queue.terminate();
+
+    EXPECT_FALSE(queue.push(1));
+    EXPECT_TRUE(queue.empty());
+}
+
+TEST_F(TestSafeQueue, test_safequeue_terminate_drains)
+{
+    SafeQueue<int> queue;
+
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+    queue.terminate();
+
+    // pop_wait drains what a termination left behind
+    EXPECT_EQ(queue.pop_wait().value(), 1);
+    EXPECT_EQ(queue.pop_wait().value(), 2);
+    EXPECT_EQ(queue.pop_wait().value(), 3);
+    EXPECT_FALSE(queue.pop_wait().has_value());
+}
+
+TEST_F(TestSafeQueue, test_safequeue_terminate_try_pop_drains)
+{
+    SafeQueue<int> queue;
+
+    queue.push(1);
+    queue.push(2);
+    queue.terminate();
+
+    EXPECT_EQ(queue.try_pop().value(), 1);
+    EXPECT_EQ(queue.try_pop().value(), 2);
+    EXPECT_FALSE(queue.try_pop().has_value());
+}
+
+TEST_F(TestSafeQueue, test_safequeue_clear)
+{
+    SafeQueue<int> queue;
+
+    queue.push(1);
+    queue.push(2);
+    queue.clear();
+
+    EXPECT_TRUE(queue.empty());
+    EXPECT_FALSE(queue.try_pop().has_value());
+}
+
+TEST_F(TestSafeQueue, test_safequeue_push_no_move_on_refusal)
+{
+    SafeQueue<MoveCounter> queue;
+
+    MoveCounter accepted;
+    EXPECT_TRUE(queue.push(std::move(accepted), 1));
+
+    MoveCounter refused;
+    EXPECT_FALSE(queue.push(std::move(refused), 1));
+    // make is not called on refusal: the source is left intact
+    EXPECT_EQ(refused.moves, 0);
+
+    EXPECT_GE(queue.try_pop()->moves, 1);
 }
 
 TEST_F(TestSafeQueue, test_safequeue_space)
@@ -82,7 +161,7 @@ TEST_F(TestSafeQueue, test_safequeue_space)
 
     fmt::print("Popping queue to make enough room\n");
 
-    queue.pop();
+    EXPECT_EQ(queue.pop().value(), 1);
 
     t1.join();
 
@@ -93,13 +172,32 @@ TEST_F(TestSafeQueue, test_safequeue_space)
     EXPECT_EQ(queue.back(), 42);
 }
 
+TEST_F(TestSafeQueue, test_safequeue_peek)
+{
+    SafeQueue<int> queue;
+
+    EXPECT_FALSE(queue.peek_front([](const int &) {}));
+    EXPECT_FALSE(queue.peek_back([](const int &) {}));
+
+    queue.push(1);
+    queue.push(2);
+    queue.push(3);
+
+    EXPECT_TRUE(queue.peek_front([](const int & v) { EXPECT_EQ(v, 1); }));
+    EXPECT_TRUE(queue.peek_back([](const int & v) { EXPECT_EQ(v, 3); }));
+    EXPECT_EQ(queue.size(), 3u);
+
+    EXPECT_EQ(queue.pop().value(), 1);
+    EXPECT_TRUE(queue.peek_front([](const int & v) { EXPECT_EQ(v, 2); }));
+}
+
 TEST_F(TestSafeQueue, test_safequeue_pushpop)
 {
     SafeQueue<int> queue;
 
     std::thread t1(write_number, std::ref(queue), 42, 1);
 
-    int number = queue.pop();
+    int number = queue.pop().value();
 
     EXPECT_EQ(number, 42);
 
@@ -137,7 +235,7 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
 
     while (!queue.empty())
     {
-        int number = queue.pop();
+        int number = queue.pop().value();
         if (number == 42)
             ft_count++;
         else if (number == 1337)

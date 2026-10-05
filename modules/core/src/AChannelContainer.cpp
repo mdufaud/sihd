@@ -82,10 +82,11 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
     auto added = this->add_child(c, true);
     if (added.has_value() == false)
     {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' cannot add channel '{}': {}",
-                       this->full_name(),
-                       name,
-                       added.error().message);
+        SIHD_LOG(error,
+                 "ChannelContainer: '{}' cannot add channel '{}': {}",
+                 this->full_name(),
+                 name,
+                 added.error().message);
         delete c;
         return nullptr;
     }
@@ -131,29 +132,32 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
     ChannelConfiguration conf = _channels_link[name];
     if (conf.resizable != chan->resizable())
     {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' channel link resizable mismatch '{}': expected {} got {}",
-                       this->full_name(),
-                       name,
-                       conf.resizable,
-                       chan->resizable());
+        SIHD_LOG(error,
+                 "ChannelContainer: '{}' channel link resizable mismatch '{}': expected {} got {}",
+                 this->full_name(),
+                 name,
+                 conf.resizable,
+                 chan->resizable());
         ret = false;
     }
     if (conf.match && conf.type != chan->array()->data_type())
     {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' channel link size not same type '{}': '{}' != '{}'",
-                       this->full_name(),
-                       name,
-                       sihd::util::type::str(conf.type),
-                       chan->array()->data_type_str());
+        SIHD_LOG(error,
+                 "ChannelContainer: '{}' channel link size not same type '{}': '{}' != '{}'",
+                 this->full_name(),
+                 name,
+                 sihd::util::type::str(conf.type),
+                 chan->array()->data_type_str());
         ret = false;
     }
     if (conf.match && conf.size != chan->array()->size())
     {
-        SIHD_LOG_ERROR("ChannelContainer: '{}' channel link size not equal '{}': '{}' != '{}'",
-                       this->full_name(),
-                       name,
-                       conf.size,
-                       chan->array()->size());
+        SIHD_LOG(error,
+                 "ChannelContainer: '{}' channel link size not equal '{}': '{}' != '{}'",
+                 this->full_name(),
+                 name,
+                 conf.size,
+                 chan->array()->size());
         ret = false;
     }
     return ret;

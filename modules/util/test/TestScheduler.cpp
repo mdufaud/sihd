@@ -142,10 +142,11 @@ TEST_F(TestScheduler, test_sched_perf)
     // 10% miss maximum
     const int expected_overruns = this->ran / 10;
 
-    SIHD_LOG_INFO("Scheduler ran on time {} times, expected {}, percent success: {}%",
-                  this->ran - overruns,
-                  expected_run,
-                  ((this->ran - overruns) / (float)expected_run) * 100);
+    SIHD_LOG(info,
+             "Scheduler ran on time {} times, expected {}, percent success: {}%",
+             this->ran - overruns,
+             expected_run,
+             ((this->ran - overruns) / (float)expected_run) * 100);
 
     SIHD_LOG_LVL(level,
                  "Scheduler overruns: total={} test_calculated={} (expected less than {})",
@@ -323,7 +324,7 @@ TEST_F(TestScheduler, test_sched_burst)
         {
             Task *t = new Task(
                 [] {
-                    SIHD_LOG_ERROR("Should not be played ever");
+                    SIHD_LOG(error, "Should not be played ever");
                     return false;
                 },
                 {.run_in = Duration(time::seconds(303))});

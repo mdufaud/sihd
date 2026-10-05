@@ -233,7 +233,7 @@ bool Node::add_link(const std::string & link, const std::string & path)
 {
     if (_link_map.try_emplace(link, path).second == false)
     {
-        SIHD_LOG_WARN("Node: '{}' link '{}' already exists", this->full_name(), link);
+        SIHD_LOG(warning, "Node: '{}' link '{}' already exists", this->full_name(), link);
         return false;
     }
     _link_keys.push_back(link);

@@ -269,16 +269,18 @@ void TreeProfiler::_dispatch(Event && event)
     }
     if (errored)
     {
-        SIHD_LOG_ERROR("TreeProfiler: dispatch queue full, events from '{}' are lost ({} dropped so far)",
-                       source,
-                       _dropped_events_total.load());
+        SIHD_LOG(error,
+                 "TreeProfiler: dispatch queue full, events from '{}' are lost ({} dropped so far)",
+                 source,
+                 _dropped_events_total.load());
         return;
     }
     if (warned)
-        SIHD_LOG_WARN("TreeProfiler: dispatch queue almost full ({}/{}), events from '{}' stack up",
-                      queue_size,
-                      _queue_max.load(),
-                      source);
+        SIHD_LOG(warning,
+                 "TreeProfiler: dispatch queue almost full ({}/{}), events from '{}' stack up",
+                 queue_size,
+                 _queue_max.load(),
+                 source);
     _dispatch_queue.waitable.notify_all();
 }
 
@@ -611,7 +613,7 @@ bool TreeProfiler::_observe_channel(Channel *channel)
     }
     if (channel->watcher() != nullptr)
     {
-        SIHD_LOG_WARN("TreeProfiler: channel '{}' is already watched, it is not observed", channel->full_name());
+        SIHD_LOG(warning, "TreeProfiler: channel '{}' is already watched, it is not observed", channel->full_name());
         auto l = _waitable.guard();
         _channels.erase(channel);
         return false;
@@ -971,9 +973,10 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
             channel = dynamic_cast<Channel *>(named);
             if (channel == nullptr)
             {
-                SIHD_LOG_WARN("TreeProfiler: '{}' is a '{}' and not a channel, condition dropped",
-                              cond->path,
-                              named->class_name());
+                SIHD_LOG(warning,
+                         "TreeProfiler: '{}' is a '{}' and not a channel, condition dropped",
+                         cond->path,
+                         named->class_name());
                 cond->dropped = true;
                 return false;
             }
@@ -987,7 +990,7 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
     }
     if (this->_observe_channel(channel) == false)
     {
-        SIHD_LOG_WARN("TreeProfiler: cannot observe channel '{}', condition dropped", channel->full_name());
+        SIHD_LOG(warning, "TreeProfiler: cannot observe channel '{}', condition dropped", channel->full_name());
         auto l = _waitable.guard();
         cond->dropped = true;
         return false;
@@ -1015,9 +1018,10 @@ bool TreeProfiler::_resolve_service_condition(const std::shared_ptr<CaptureCondi
             service = dynamic_cast<sihd::util::AService *>(named);
             if (service == nullptr)
             {
-                SIHD_LOG_WARN("TreeProfiler: '{}' is a '{}' and not a service, condition dropped",
-                              cond->path,
-                              named->class_name());
+                SIHD_LOG(warning,
+                         "TreeProfiler: '{}' is a '{}' and not a service, condition dropped",
+                         cond->path,
+                         named->class_name());
                 cond->dropped = true;
                 return false;
             }
@@ -1026,14 +1030,16 @@ bool TreeProfiler::_resolve_service_condition(const std::shared_ptr<CaptureCondi
     auto *ctrl = dynamic_cast<sihd::util::ServiceController *>(service->service_ctrl());
     if (ctrl == nullptr)
     {
-        SIHD_LOG_WARN("TreeProfiler: service '{}' has no service controller, condition dropped", service_name(service));
+        SIHD_LOG(warning,
+                 "TreeProfiler: service '{}' has no service controller, condition dropped",
+                 service_name(service));
         auto l = _waitable.guard();
         cond->dropped = true;
         return false;
     }
     if (this->_observe_service(service) == false)
     {
-        SIHD_LOG_WARN("TreeProfiler: cannot observe service '{}', condition dropped", service_name(service));
+        SIHD_LOG(warning, "TreeProfiler: cannot observe service '{}', condition dropped", service_name(service));
         auto l = _waitable.guard();
         cond->dropped = true;
         return false;

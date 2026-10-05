@@ -30,7 +30,7 @@ class LuaFixture: public ::testing::Test
 
         void do_script(const std::string & path)
         {
-            SIHD_LOG_INFO("Starting LUA test: {}", path);
+            SIHD_LOG(info, "Starting LUA test: {}", path);
             auto res = _vm.do_file(path);
             ASSERT_TRUE(res) << res.error().message;
         }

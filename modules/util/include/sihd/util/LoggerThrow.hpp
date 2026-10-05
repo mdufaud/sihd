@@ -16,11 +16,21 @@ class LoggerThrow: public ALogger
             public:
                 Exception(const LogInfo & info, std::string_view msg);
 
+                // copies reseat onto their own strings: assignment is refused rather than dangling
+                Exception(const Exception & other);
+                Exception(Exception && other);
+                Exception & operator=(const Exception &) = delete;
+
                 const LogInfo & log_info() const;
                 const char *what() const noexcept;
 
             private:
+                // the LogInfo views dangle once the emitter's thread_local is gone: point them at owned strings
+                void _reseat();
+
                 LogInfo _log_info;
+                std::string _source;
+                std::string _thread_name;
                 std::string _msg;
         };
 

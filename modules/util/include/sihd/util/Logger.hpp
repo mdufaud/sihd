@@ -16,14 +16,14 @@
 
 #if SIHD_LOGGING_OFF
 
-# define SIHD_CERR(message)
-# define SIHD_COUTV(message)
-# define SIHD_COUT(message)
+# define SIHD_CERR(message, ...)
+# define SIHD_COUTV(message, ...)
+# define SIHD_COUT(message, ...)
 
 # define SIHD_LOG_LVL(level, message, ...)
 # define SIHD_LOG_LVL_FORMAT(level, message, ...)
 # define SIHD_LOG_FORMAT(level, message, ...)
-# define SIHD_LOG(logger, level, message)
+# define SIHD_LOG(level, message, ...)
 
 // returns true when the expected holds an error
 # define SIHD_UNEXPECTED_LOG(expected_value) ((expected_value).has_value() == false)
@@ -31,7 +31,10 @@
 # define SIHD_NEW_LOGGER(name)
 # define SIHD_LOGGER
 
-# define SIHD_TRACE(message)
+# define SIHD_TRACE(message, ...)
+# define SIHD_TRACEL(message, ...)
+# define SIHD_TRACEV(message)
+# define SIHD_TRACE_FORMAT(message, ...)
 
 #else
 
@@ -45,15 +48,6 @@
 # define SIHD_LOG(level, message, ...) SIHD_LOG_LVL(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
 // Log with printf like format
 # define SIHD_LOG_FORMAT(level, message, ...) SIHD_LOG_LVL_FORMAT(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
-
-# define SIHD_LOG_EMERG(message, ...) SIHD_LOG(emergency, message, ##__VA_ARGS__)
-# define SIHD_LOG_ALERT(message, ...) SIHD_LOG(alert, message, ##__VA_ARGS__)
-# define SIHD_LOG_CRIT(message, ...) SIHD_LOG(critical, message, ##__VA_ARGS__)
-# define SIHD_LOG_ERROR(message, ...) SIHD_LOG(error, message, ##__VA_ARGS__)
-# define SIHD_LOG_WARN(message, ...) SIHD_LOG(warning, message, ##__VA_ARGS__)
-# define SIHD_LOG_NOTICE(message, ...) SIHD_LOG(notice, message, ##__VA_ARGS__)
-# define SIHD_LOG_INFO(message, ...) SIHD_LOG(info, message, ##__VA_ARGS__)
-# define SIHD_LOG_DEBUG(message, ...) SIHD_LOG(debug, message, ##__VA_ARGS__)
 
 // logs the error of a std::expected<..., sihd::util::Error> with the call site, returns true when it was an error
 // SIHD_UNEXPECTED_LOG_NOLOC drops the call site from logs
@@ -70,9 +64,10 @@
 # define SIHD_LOGGER extern sihd::util::Logger __sihd_logger__;
 
 # if SIHD_TRACE_OFF
-#  define SIHD_TRACE(message)
-#  define SIHD_TRACEL(message)
-#  define SIHD_TRACE_FORMAT(message)
+#  define SIHD_TRACE(message, ...)
+#  define SIHD_TRACEL(message, ...)
+#  define SIHD_TRACEV(message)
+#  define SIHD_TRACE_FORMAT(message, ...)
 # else
 // Log into debug the file location
 #  define SIHD_TRACE(message, ...) SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__)
@@ -97,76 +92,13 @@ class Logger
         virtual ~Logger();
 
         void emergency(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void emergency(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->emergency(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void alert(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void alert(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->alert(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void critical(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void critical(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->critical(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void error(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void error(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->error(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void warning(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void warning(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->warning(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void notice(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void notice(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->notice(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void info(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void info(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->info(fmt::format(format, std::forward<Args>(args)...));
-        }
-
         void debug(std::string_view msg);
-
-        template <typename... Args>
-            requires(sizeof...(Args) != 0)
-        void debug(fmt::format_string<Args...> format, Args &&...args)
-        {
-            this->debug(fmt::format(format, std::forward<Args>(args)...));
-        }
 
         void log(LogLevel level, std::string_view msg);
 
@@ -174,7 +106,65 @@ class Logger
             requires(sizeof...(Args) != 0)
         void log(LogLevel level, fmt::format_string<Args...> format, Args &&...args)
         {
-            this->log(level, fmt::format(format, std::forward<Args>(args)...));
+            LogInfo info(name, level);
+            if (LoggerManager::should_log(info))
+                LoggerManager::log(info, fmt::format(format, std::forward<Args>(args)...));
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void emergency(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::emergency, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void alert(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::alert, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void critical(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::critical, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void error(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::error, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void warning(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::warning, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void notice(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::notice, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void info(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::info, format, std::forward<Args>(args)...);
+        }
+
+        template <typename... Args>
+            requires(sizeof...(Args) != 0)
+        void debug(fmt::format_string<Args...> format, Args &&...args)
+        {
+            this->log(LogLevel::debug, format, std::forward<Args>(args)...);
         }
 
         std::string name;

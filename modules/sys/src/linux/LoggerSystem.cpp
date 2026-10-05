@@ -27,14 +27,7 @@ LoggerSystem::~LoggerSystem()
 void LoggerSystem::log(const LogInfo & info, std::string_view msg)
 {
     // loglevel is done same as syslog
-    syslog(static_cast<int>(info.level),
-           "%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
-           info.timespec.tv_sec,
-           info.timespec.tv_nsec,
-           info.thread_name.data(),
-           info.strlevel,
-           info.source.data(),
-           msg.data());
+    syslog(static_cast<int>(info.level), "%s", info.format(msg).c_str());
 }
 
 } // namespace sihd::sys

@@ -172,7 +172,7 @@ bool SshShell::read_loop()
                 nwritten = _impl_ptr->channel.write(view);
                 if (nwritten != (int)view.size())
                 {
-                    SIHD_LOG_ERROR("error writing to channel '{}' != '{}'", nwritten, view.size());
+                    SIHD_LOG(error, "error writing to channel '{}' != '{}'", nwritten, view.size());
                     ret = false;
                     break;
                 }

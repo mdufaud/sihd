@@ -1,5 +1,3 @@
-#include <fmt/printf.h>
-
 #include <sihd/sys/LoggerFile.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -21,23 +19,7 @@ void LoggerFile::log(const LogInfo & info, std::string_view msg)
 {
     if (!_file.is_open())
         return;
-
-    std::string fmt_msg;
-
-// SEC.NANO [THREAD] LEVEL SRC MSG
-#if defined(__SIHD_WINDOWS__)
-    fmt_msg = fmt::sprintf("%lld.%09ld\t[%s]\t%s\t%s\t%s\n",
-#else
-    fmt_msg = fmt::sprintf("%ld.%09ld\t[%s]\t%s\t%s\t%s\n",
-#endif
-                           info.timespec.tv_sec,
-                           info.timespec.tv_nsec,
-                           info.thread_name.data(),
-                           info.strlevel,
-                           info.source.data(),
-                           msg);
-
-    (void)_file.write_unlocked(fmt_msg);
+    (void)_file.write_unlocked(info.format(msg));
 }
 
 } // namespace sihd::sys

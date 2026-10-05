@@ -1,5 +1,8 @@
+#include <expected>
+
 #include <fmt/format.h>
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/ThreadPool.hpp>
@@ -28,6 +31,8 @@ ThreadPool::~ThreadPool()
 void ThreadPool::stop()
 {
     _jobs.terminate();
+    // pending jobs are discarded: their futures report a broken promise
+    _jobs.clear();
     for (const auto & thread_ptr : _threads)
     {
         thread_ptr->stop();
@@ -73,16 +78,10 @@ void ThreadPool::Thread::_loop()
 {
     while (!_stop)
     {
-        Job job;
-
-        try
-        {
-            job = _jobs.pop();
-        }
-        catch (const std::invalid_argument & err)
-        {
+        std::expected<Job, Error> expected_job = _jobs.pop();
+        if (expected_job.has_value() == false)
             break;
-        }
+        Job job = std::move(*expected_job);
 
         _stopwatch.reset();
         job();

@@ -90,11 +90,14 @@ bool Daemon::_handle_signals()
     int sig = 1;
     while (sig < 65)
     {
+#ifdef SIGKILL
+        // the two unhandleable signals - platforms without them expose fewer numbers
         if (sig == SIGKILL || sig == SIGSTOP)
         {
             ++sig;
             continue;
         }
+#endif
         auto handled = signal::handle(sig);
         if (SIHD_UNEXPECTED_LOG(handled))
             ret = false;
