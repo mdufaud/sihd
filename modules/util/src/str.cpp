@@ -116,7 +116,7 @@ size_t levenshtein_distance(std::string_view source,
 }
 
 std::string format_time(Timestamp timestamp,
-                        std::string_view format,
+                        const std::string & format,
                         bool localtime,
                         [[maybe_unused]] const std::locale *loc = nullptr)
 {
@@ -126,7 +126,7 @@ std::string format_time(Timestamp timestamp,
         std::ostringstream oss;
         oss.imbue(*loc);
         const struct tm tm_val = localtime ? timestamp.local_tm() : timestamp.tm();
-        oss << std::put_time(&tm_val, format.data());
+        oss << std::put_time(&tm_val, format.c_str());
         return oss.str();
     }
     else
@@ -136,7 +136,7 @@ std::string format_time(Timestamp timestamp,
         thread_local char buffer[buffer_size];
 
         const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
-        const size_t ret = strftime(buffer, buffer_size, format.data(), &tm);
+        const size_t ret = strftime(buffer, buffer_size, format.c_str(), &tm);
         return std::string(buffer, ret);
     }
 }
@@ -1560,22 +1560,22 @@ std::string localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, boo
     return timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, true);
 }
 
-std::string format_time(Timestamp t, std::string_view format)
+std::string format_time(Timestamp t, const std::string & format)
 {
     return format_time(t, format, false, nullptr);
 }
 
-std::string format_localtime(Timestamp t, std::string_view format)
+std::string format_localtime(Timestamp t, const std::string & format)
 {
     return format_time(t, format, true, nullptr);
 }
 
-std::string format_time(Timestamp t, std::string_view format, const std::locale & loc)
+std::string format_time(Timestamp t, const std::string & format, const std::locale & loc)
 {
     return format_time(t, format, false, &loc);
 }
 
-std::string format_localtime(Timestamp t, std::string_view format, const std::locale & loc)
+std::string format_localtime(Timestamp t, const std::string & format, const std::locale & loc)
 {
     return format_time(t, format, true, &loc);
 }

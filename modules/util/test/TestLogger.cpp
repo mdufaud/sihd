@@ -1,10 +1,10 @@
 #include <atomic>
-#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include <fmt/core.h>
 #include <gtest/gtest.h>
 
 #include <sihd/util/ALogger.hpp>
@@ -77,7 +77,6 @@ class LogCounter: public ALogger
         };
 };
 
-// filter dropping everything, of a distinct type than LoggerFilter
 class AlwaysFilter: public ILoggerFilter
 {
     public:
@@ -95,7 +94,6 @@ class AlwaysFilter: public ILoggerFilter
         }
 };
 
-// filter refusing warnings only
 class RefuseWarnings: public ILoggerFilter
 {
     public:
@@ -142,7 +140,6 @@ class BlockingSink: public ALogger
 
         void log(const LogInfo & info, std::string_view msg) override
         {
-            // the drain reports drops with its own source: kept apart from the counted messages
             if (info.source != "test::async")
             {
                 if (info.level == LogLevel::warning)
@@ -175,7 +172,7 @@ class LoggingBackSink: public ALogger
         {
             (void)msg;
             ++logged;
-            // the re-entry is dropped at the manager gate: this cannot recurse
+            // the log-back is dropped at the manager gate: no recursion
             SIHD_LOG_LVL(info.level, "logs back from a sink");
         }
 };
@@ -203,6 +200,7 @@ class TestLogger: public ::testing::Test
         {
             (void)thread::set_name(_old_thread_name);
 
+            LoggerManager::set_level(LogLevel::debug);
             LoggerManager::clear_loggers();
             LoggerManager::clear_filters();
         }
@@ -328,19 +326,29 @@ TEST_F(TestLogger, test_logger_format)
     LogInfo info(source, LogLevel::warning);
 
     const std::string line = info.format("the message");
-    ASSERT_NE(line.find("test::format"), std::string::npos);
-    ASSERT_NE(line.find("WARNING"), std::string::npos);
-    ASSERT_NE(line.find("the message"), std::string::npos);
-    ASSERT_EQ(line.back(), '\n');
+    ASSERT_EQ(line,
+              fmt::format("{}.{:09}\t[{}]\t{:<9} {}\t{}\n",
+                          info.timespec.tv_sec,
+                          info.timespec.tv_nsec,
+                          info.thread_name,
+                          info.strlevel,
+                          source,
+                          "the message"));
 
     const std::string line_tid = info.format("the message", true);
-    ASSERT_NE(line_tid.find(info.thread_id_str), std::string::npos);
-    ASSERT_GT(line_tid.size(), line.size());
+    ASSERT_EQ(line_tid,
+              fmt::format("{}.{:09}\t{}\t[{}]\t{:<9} {}\t{}\n",
+                          info.timespec.tv_sec,
+                          info.timespec.tv_nsec,
+                          info.thread_id_str,
+                          info.thread_name,
+                          info.strlevel,
+                          source,
+                          "the message"));
 }
 
 TEST_F(TestLogger, test_logger_should_log)
 {
-    // a global level filter holds logs before formatting: phase 1
     LoggerManager::filter(new LoggerFilter({.level_lower = LogLevel::warning}));
     ASSERT_FALSE(LoggerManager::should_log("test", LogLevel::info));
     SIHD_LOG(info, "dropped before formatting");
@@ -349,7 +357,6 @@ TEST_F(TestLogger, test_logger_should_log)
     ASSERT_EQ(log_counter->warning, 1);
     LoggerManager::clear_filters();
 
-    // a per-sink filter drops in phase 1 only while a loose sink alongside accepts
     log_counter->add_filter(new LoggerFilter({.level_lower = LogLevel::error}));
     ASSERT_FALSE(LoggerManager::should_log("test", LogLevel::info));
     LogCounter *loose = new LogCounter();
@@ -363,7 +370,6 @@ TEST_F(TestLogger, test_logger_should_log)
     ASSERT_FALSE(LoggerManager::should_log("test", LogLevel::info));
     log_counter->delete_filters();
 
-    // message filters are phase 2: phase 1 cannot rule, the drop happens after formatting
     LoggerManager::filter(new LoggerFilter({.message_regex = ".*not.*"}));
     ASSERT_TRUE(LoggerManager::should_log("test", LogLevel::info));
     SIHD_LOG(info, "Should not count");
@@ -504,7 +510,6 @@ TEST_F(TestLogger, test_logger_remove_filter_type)
 {
     log_counter->add_filter(new LoggerFilter({.level_lower = LogLevel::warning}));
     log_counter->add_filter(new AlwaysFilter());
-    // a non matching entry in the list must be skipped, not stop the removal
     ASSERT_TRUE(log_counter->remove_filter_type<LoggerFilter>());
     ASSERT_FALSE(log_counter->remove_filter_type<LoggerFilter>());
 
@@ -564,7 +569,7 @@ TEST_F(TestLogger, test_logger_async)
     Logger log("test::async");
     for (int i = 0; i < 100; ++i)
         log.info("{}", i);
-    LoggerManager::clear_loggers(); // flushes what is queued
+    LoggerManager::clear_loggers();
     ASSERT_EQ(state.count.load(), 100);
     ASSERT_EQ(state.last, "99");
 }
@@ -600,10 +605,9 @@ TEST_F(TestLogger, test_logger_async_max_queue)
         log.info("{}", i);
     sink->release();
     LoggerManager::clear_loggers();
-    // one message blocked in the target, at most the queue capacity waiting behind it
+    // one blocked in the target, at most the queue capacity waiting behind it
     ASSERT_GE(logged.load(), 2);
     ASSERT_LE(logged.load(), 3);
-    // pushes refused while the target was blocked are counted and reported once the backlog empties
     ASSERT_NE(drop_reports.find("messages dropped"), std::string::npos);
 }
 
@@ -621,7 +625,6 @@ TEST_F(TestLogger, test_logger_async_options)
 
 TEST_F(TestLogger, test_logger_async_target_bound)
 {
-    // the counter would accept infos: only the async wrapper and its target remain
     ASSERT_TRUE(LoggerManager::get()->delete_loggers_type<LogCounter>());
     this->log_counter = nullptr;
 
@@ -629,7 +632,6 @@ TEST_F(TestLogger, test_logger_async_target_bound)
     SharedStateSink *target = new SharedStateSink(&state);
     target->add_filter(new LoggerFilter({.level_lower = LogLevel::error}));
     LoggerManager::async(target);
-    // the target refuses infos at drain time: the wrapper defers, it does not see through
     SIHD_LOG(info, "refused by the target");
     LoggerManager::clear_loggers();
     ASSERT_EQ(state.count.load(), 0);
@@ -644,10 +646,9 @@ TEST_F(TestLogger, test_logger_async_target_filter_change)
         LoggerAsync async(target);
         const std::string source = "test::async";
         async.log(LogInfo(source, LogLevel::info), "refused by the target");
-    } // the destructor flushes: the drain drops it
+    }
     ASSERT_EQ(state.count.load(), 0);
 
-    // the same drain delivers once the target has no filter
     {
         SharedStateSink *target = new SharedStateSink(&state);
         LoggerAsync async(target);
@@ -666,7 +667,7 @@ TEST_F(TestLogger, test_logger_async_direct_flush)
         LogInfo info(source, LogLevel::info);
         for (int i = 0; i < 10; ++i)
             async.log(info, std::to_string(i));
-    } // the destructor flushes the queue
+    }
     ASSERT_EQ(state.count.load(), 10);
     ASSERT_EQ(state.last, "9");
 }
@@ -677,7 +678,6 @@ TEST_F(TestLogger, test_logger_async_drop_report_unfiltered)
     std::string drop_reports;
     {
         BlockingSink *sink = new BlockingSink(&logged, &drop_reports);
-        // the target refuses warnings: only a report bypassing its filters can get through
         sink->add_filter(new RefuseWarnings());
         LoggerAsync async(sink, 1, "test::async-drops");
         const std::string source = "test::async";
@@ -685,7 +685,7 @@ TEST_F(TestLogger, test_logger_async_drop_report_unfiltered)
         while (async.dropped() == 0)
             async.log(info, "overflow");
         sink->release();
-    } // flushes the backlog then reports the drops
+    }
     ASSERT_GE(logged.load(), 1);
     ASSERT_NE(drop_reports.find("messages dropped"), std::string::npos);
 }
@@ -695,8 +695,25 @@ TEST_F(TestLogger, test_logger_reentrant_dropped)
     LoggingBackSink *sink = new LoggingBackSink();
     LoggerManager::add(sink);
     SIHD_LOG(info, "outer message");
-    // the log-back never reaches a sink: only the outer message went through
     ASSERT_EQ(sink->logged.load(), 1);
+    ASSERT_EQ(log_counter->info, 1);
+}
+
+TEST_F(TestLogger, test_logger_set_level)
+{
+    LoggerManager::set_level(LogLevel::warning);
+
+    ASSERT_FALSE(LoggerManager::should_log_level(LogLevel::info));
+    ASSERT_TRUE(LoggerManager::should_log_level(LogLevel::warning));
+    ASSERT_FALSE(LoggerManager::should_log("test::level", LogLevel::debug));
+
+    SIHD_LOG(info, "dropped before formatting");
+    SIHD_LOG(warning, "at the bound");
+    ASSERT_EQ(log_counter->info, 0);
+    ASSERT_EQ(log_counter->warning, 1);
+
+    LoggerManager::set_level(LogLevel::debug);
+    SIHD_LOG(info, "level restored");
     ASSERT_EQ(log_counter->info, 1);
 }
 

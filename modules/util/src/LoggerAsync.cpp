@@ -68,7 +68,7 @@ void LoggerAsync::_drain()
     while (const std::optional<Item> item = _queue.pop_wait())
     {
         this->_process(item->info, item->msg);
-        // empty the backlog before blocking again: one wakeup per burst, not per message
+        // one wakeup per burst, not per message
         while (const std::optional<Item> next = _queue.try_pop())
             this->_process(next->info, next->msg);
         this->_report_drops();
@@ -85,7 +85,7 @@ void LoggerAsync::_report_drops()
 
 void LoggerAsync::_process(const LogInfo & info, std::string_view msg)
 {
-    // the target filters are checked in the drain's thread: the emitter only queues
+    // the target filters are checked in the drain's thread
     try
     {
         if (_target->should_filter(info, msg) == false)

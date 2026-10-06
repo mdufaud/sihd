@@ -106,6 +106,8 @@ class Logger
             requires(sizeof...(Args) != 0)
         void log(LogLevel level, fmt::format_string<Args...> format, Args &&...args)
         {
+            if (LoggerManager::should_log_level(level) == false)
+                return;
             LogInfo info(name, level);
             if (LoggerManager::should_log(info))
                 LoggerManager::log(info, fmt::format(format, std::forward<Args>(args)...));

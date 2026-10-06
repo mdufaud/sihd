@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <sihd/util/LoggerThrow.hpp>
 
 namespace sihd::util
@@ -14,7 +16,14 @@ LoggerThrow::Exception::Exception(const LogInfo & info, std::string_view msg):
 
 LoggerThrow::Exception::Exception(const Exception & other): Exception(other._log_info, other._msg) {}
 
-LoggerThrow::Exception::Exception(Exception && other): Exception(other._log_info, other._msg) {}
+LoggerThrow::Exception::Exception(Exception && other):
+    _log_info(other._log_info),
+    _source(std::move(other._source)),
+    _thread_name(std::move(other._thread_name)),
+    _msg(std::move(other._msg))
+{
+    this->_reseat();
+}
 
 void LoggerThrow::Exception::_reseat()
 {

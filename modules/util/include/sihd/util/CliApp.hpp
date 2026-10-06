@@ -5,6 +5,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -93,9 +94,19 @@ class CliApp: public Observable<CliApp>,
         virtual void on_terminate();
         virtual void on_halt();
         virtual void on_fail();
-        // the "sihd" conf section; the base reads logging.level and logging.console and leaves
-        // unknown keys to overriders; returning false fails the conf loading
+        // the "sihd" conf section; the base reads logging.level, logging.console and
+        // logging.sinks and leaves unknown keys to overriders; returning false fails the
+        // conf loading
         virtual bool apply_sihd_conf(const sihd::json::Json & conf);
+        // the logging conf this app accepts: the logging section keys and the sink
+        // types this app installs; overriders extend both
+        struct LoggingSchema
+        {
+                std::span<const std::string_view> keys;
+                std::span<const std::string_view> sink_types;
+        };
+
+        virtual LoggingSchema logging_schema() const;
         // between the conf application and the logging setup; nonzero aborts the boot
         virtual int on_conf_loaded();
         // after a conf reload was applied
@@ -104,7 +115,7 @@ class CliApp: public Observable<CliApp>,
         // terminal, the dated stream otherwise
         virtual ALogger *create_default_logger();
         virtual void install_logging();
-        void apply_log_level(ALogger *logger);
+        void apply_sink_filters(ALogger *logger, std::string_view logger_type) const;
         virtual void poll_events();
 
         bool apply_conf(const sihd::json::Json & conf);
@@ -116,12 +127,15 @@ class CliApp: public Observable<CliApp>,
 
         void _transition(Event evt);
         bool _apply_entry(Command *node, const std::string & key, const sihd::json::Json & value);
+        static bool _check_logging_conf(const sihd::json::Json & logging, const LoggingSchema & schema);
+        static bool _check_sinks_conf(const sihd::json::Json & sinks, const LoggingSchema & schema);
         std::optional<LogLevel> _log_level() const;
 
         Options _options;
         std::function<std::string()> _conf_loader;
         std::function<void()> _on_reload;
         ALogger *_logger = nullptr;
+        sihd::json::Json _log_filters_conf;
         StateMachine<State, Event> _statemachine;
         std::atomic<bool> _stop_requested {false};
 };

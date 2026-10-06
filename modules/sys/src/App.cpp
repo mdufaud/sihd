@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <csignal>
 #include <cstdlib>
 #include <optional>
@@ -67,6 +68,21 @@ std::optional<int> sig_from_conf_value(const std::string & name)
     return std::nullopt;
 }
 
+bool check_conf_keys(const sihd::json::Json & object,
+                     std::initializer_list<std::string_view> keys,
+                     std::string_view section)
+{
+    for (auto it = object.begin(); it != object.end(); ++it)
+    {
+        if (std::find(keys.begin(), keys.end(), std::string_view(it.key())) == keys.end())
+        {
+            SIHD_LOG(error, "App: unknown conf key '{}.{}'", section, it.key());
+            return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 App::App(const Options & options): CliApp(options), _daemon("daemon")
@@ -91,6 +107,13 @@ void App::on_signal(std::function<void(int)> fn)
     _on_signal = std::move(fn);
 }
 
+CliApp::LoggingSchema App::logging_schema() const
+{
+    static constexpr std::string_view keys[] = {"console", "level", "sinks", "file", "system"};
+    static constexpr std::string_view sink_types[] = {"console", "file", "system"};
+    return {keys, sink_types};
+}
+
 bool App::apply_sihd_conf(const sihd::json::Json & conf)
 {
     // each conf application recomputes the whole signal policy from the defaults
@@ -102,71 +125,118 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
     if (conf.contains("logging"))
     {
         const sihd::json::Json logging = conf["logging"];
-        if (logging.is_object())
+        if (logging.contains("file"))
         {
-            if (logging.contains("file"))
+            const sihd::json::Json file = logging["file"];
+            if (file.is_string())
             {
-                const sihd::json::Json file = logging["file"];
-                if (file.is_object())
-                {
-                    _log_file_path = file["path"].get_or<std::string>("");
-                    _log_file_append = file["append"].get_or<bool>(true);
-                }
-                else
-                {
-                    _log_file_path = file.get_or<std::string>("");
-                }
+                _log_file_path = file.get_or<std::string>("");
             }
-            if (logging.contains("system"))
+            else if (file.is_object())
             {
-                const sihd::json::Json system = logging["system"];
-                if (system.is_bool())
+                if (check_conf_keys(file, {"path", "append"}, "logging.file") == false)
+                    return false;
+                if (file.contains("path") && file["path"].is_string() == false)
                 {
-                    _log_system = system.get<bool>();
+                    SIHD_LOG(error, "App: conf 'logging.file.path' must be a string");
+                    return false;
                 }
-                else
+                if (file.contains("append") && file["append"].is_bool() == false)
                 {
-                    _log_system = true;
-                    _log_system_facility = system["facility"].get_or<int>(LoggerSystem::default_facility);
+                    SIHD_LOG(error, "App: conf 'logging.file.append' must be a boolean");
+                    return false;
                 }
+                _log_file_path = file["path"].get_or<std::string>("");
+                _log_file_append = file["append"].get_or<bool>(true);
+            }
+            else
+            {
+                SIHD_LOG(error, "App: conf 'logging.file' must be a string or an object");
+                return false;
+            }
+        }
+        if (logging.contains("system"))
+        {
+            const sihd::json::Json system = logging["system"];
+            if (system.is_bool())
+            {
+                _log_system = system.get<bool>();
+            }
+            else if (system.is_object())
+            {
+                if (check_conf_keys(system, {"facility"}, "logging.system") == false)
+                    return false;
+                if (system.contains("facility") && system["facility"].is_number() == false)
+                {
+                    SIHD_LOG(error, "App: conf 'logging.system.facility' must be a number");
+                    return false;
+                }
+                _log_system = true;
+                _log_system_facility = system["facility"].get_or<int>(LoggerSystem::default_facility);
+            }
+            else
+            {
+                SIHD_LOG(error, "App: conf 'logging.system' must be a boolean or an object");
+                return false;
             }
         }
     }
     if (conf.contains("signals"))
     {
         const sihd::json::Json signals = conf["signals"];
-        if (signals.is_object())
+        if (signals.is_object() == false)
         {
-            constexpr std::pair<std::string_view, SigAction> conf_actions[] = {
-                {"stop", SigAction::stop},
-                {"ignore", SigAction::ignore},
-                {"reload", SigAction::reload},
-                {"callback", SigAction::callback},
-            };
-            for (const auto & [name, action] : conf_actions)
-            {
-                if (signals.contains(name) && this->_signal_actions_from_json(signals[name], action) == false)
-                    return false;
-            }
+            SIHD_LOG(error, "App: conf 'signals' must be an object");
+            return false;
+        }
+        if (check_conf_keys(signals, {"stop", "ignore", "reload", "callback"}, "signals") == false)
+            return false;
+        constexpr std::pair<std::string_view, SigAction> conf_actions[] = {
+            {"stop", SigAction::stop},
+            {"ignore", SigAction::ignore},
+            {"reload", SigAction::reload},
+            {"callback", SigAction::callback},
+        };
+        for (const auto & [name, action] : conf_actions)
+        {
+            if (signals.contains(name) && this->_signal_actions_from_json(signals[name], action) == false)
+                return false;
         }
     }
     if (conf.contains("daemon"))
     {
         const sihd::json::Json daemon = conf["daemon"];
-        if (daemon.is_object())
+        if (daemon.is_object() == false)
         {
-            if (daemon.contains("user"))
-                _daemon.set_user(daemon["user"].get_or<std::string>(""));
-            if (daemon.contains("group"))
-                _daemon.set_group(daemon["group"].get_or<std::string>(""));
-            if (daemon.contains("pid_file"))
-                _daemon.set_pid_file_path(daemon["pid_file"].get_or<std::string>(""));
-            if (daemon.contains("working_dir"))
-                _daemon.set_working_dir_path(daemon["working_dir"].get_or<std::string>(""));
-            // daemonizing is explicit: the other keys only configure
-            if (daemon.contains("run"))
-                _daemon_run = daemon["run"].get_or<bool>(false);
+            SIHD_LOG(error, "App: conf 'daemon' must be an object");
+            return false;
         }
+        if (check_conf_keys(daemon, {"user", "group", "pid_file", "working_dir", "run"}, "daemon") == false)
+            return false;
+        for (const std::string_view key : {"user", "group", "pid_file", "working_dir"})
+        {
+            if (daemon.contains(key) && daemon[key].is_string() == false)
+            {
+                SIHD_LOG(error, "App: conf 'daemon.{}' must be a string", key);
+                return false;
+            }
+        }
+        if (daemon.contains("run") && daemon["run"].is_bool() == false)
+        {
+            SIHD_LOG(error, "App: conf 'daemon.run' must be a boolean");
+            return false;
+        }
+        if (daemon.contains("user"))
+            _daemon.set_user(daemon["user"].get_or<std::string>(""));
+        if (daemon.contains("group"))
+            _daemon.set_group(daemon["group"].get_or<std::string>(""));
+        if (daemon.contains("pid_file"))
+            _daemon.set_pid_file_path(daemon["pid_file"].get_or<std::string>(""));
+        if (daemon.contains("working_dir"))
+            _daemon.set_working_dir_path(daemon["working_dir"].get_or<std::string>(""));
+        // daemonizing is explicit: the other keys only configure
+        if (daemon.contains("run"))
+            _daemon_run = daemon["run"].get_or<bool>(false);
     }
     return true;
 }
@@ -203,13 +273,13 @@ void App::install_logging()
     if (_log_file_path.empty() == false)
     {
         _file_logger = new LoggerFile(_log_file_path, _log_file_append);
-        this->apply_log_level(_file_logger);
+        this->apply_sink_filters(_file_logger, "file");
         LoggerManager::add(_file_logger);
     }
     if (_log_system)
     {
         _system_logger = new LoggerSystem(this->name(), _log_system_facility);
-        this->apply_log_level(_system_logger);
+        this->apply_sink_filters(_system_logger, "system");
         LoggerManager::add(_system_logger);
     }
     CliApp::install_logging();

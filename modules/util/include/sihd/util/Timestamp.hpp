@@ -78,12 +78,12 @@ class Timestamp: public TimeBase<Timestamp>
         std::string timeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
         std::string localtimeoffset_str(bool total_parenthesis = false, bool nano_resolution = false) const;
 
-        // UTC format
-        std::string format(std::string_view format) const;
-        std::string local_format(std::string_view format) const;
+        // UTC format - the strftime spec must be a std::string: strftime reads a C string
+        std::string format(const std::string & format) const;
+        std::string local_format(const std::string & format) const;
         // UTC format with explicit locale (default: C locale)
-        std::string format(std::string_view format, const std::locale & loc) const;
-        std::string local_format(std::string_view format, const std::locale & loc) const;
+        std::string format(const std::string & format, const std::locale & loc) const;
+        std::string local_format(const std::string & format, const std::locale & loc) const;
 
         // uses UTC with default_format
         std::string str() const;
@@ -93,14 +93,14 @@ class Timestamp: public TimeBase<Timestamp>
         std::string zone_str() const;
 
         // UTC floored to second value
-        std::string sec_str(std::string_view format = default_format) const;
+        std::string sec_str(const std::string & format = default_format) const;
         // floored to second value
-        std::string local_sec_str(std::string_view format = default_format) const;
+        std::string local_sec_str(const std::string & format = default_format) const;
 
         // UTC used default_day_format + floored value
-        std::string day_str(std::string_view format = default_day_format) const;
+        std::string day_str(const std::string & format = default_day_format) const;
         // default_day_format + floored value
-        std::string local_day_str(std::string_view format = default_day_format) const;
+        std::string local_day_str(const std::string & format = default_day_format) const;
 
         bool is_leap_year() const;
 

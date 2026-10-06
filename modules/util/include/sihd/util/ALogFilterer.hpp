@@ -50,9 +50,7 @@ class ALogFilterer
 
         void delete_filters();
 
-        // phase 1: true when a filter drops for sure without the formatted message
         bool should_filter(const LogInfo & info) const;
-        // both phases: true when any filter drops
         bool should_filter(const LogInfo & info, std::string_view msg) const;
 
     private:

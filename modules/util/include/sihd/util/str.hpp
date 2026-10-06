@@ -54,12 +54,12 @@ void append_sep(std::string & str, std::string_view append, std::string_view sep
 
 std::string timeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
 std::string localtimeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
-// fmt strftime -> "%Y-%m-%d %H:%M:%S" - the format string must be null-terminated
-std::string format_time(Timestamp t, std::string_view format);
-std::string format_localtime(Timestamp t, std::string_view format);
+// fmt strftime -> "%Y-%m-%d %H:%M:%S" - a std::string because strftime reads a C string
+std::string format_time(Timestamp t, const std::string & format);
+std::string format_localtime(Timestamp t, const std::string & format);
 // With explicit locale (default: C locale) - note: strftime uses C locale unless setlocale called
-std::string format_time(Timestamp t, std::string_view format, const std::locale & loc);
-std::string format_localtime(Timestamp t, std::string_view format, const std::locale & loc);
+std::string format_time(Timestamp t, const std::string & format, const std::locale & loc);
+std::string format_localtime(Timestamp t, const std::string & format, const std::locale & loc);
 
 std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen = true);
 std::string wrap(std::string_view s, size_t max_width, std::string_view end_with = "...");

@@ -12,10 +12,8 @@
 namespace sihd::util
 {
 
-// dispatches to a target sink from a dedicated thread: the emitter never blocks, messages
-// above max_queue_size are dropped and counted - destruction flushes the queue and must not
-// race log() (LoggerManager serializes both), the target's exceptions are swallowed, and a
-// target that logs back into this wrapper live-locks the drain
+// destruction must not race log() (LoggerManager serializes both), and a target that
+// logs back into this wrapper live-locks the drain
 class LoggerAsync: public ALogger
 {
     public:
@@ -39,7 +37,7 @@ class LoggerAsync: public ALogger
                 std::string msg;
 
             private:
-                // the LogInfo views dangle once the emitter's thread_local is gone: point them at owned strings
+                // the LogInfo views dangle once the emitter's thread_local is gone
                 void _reseat();
         };
 

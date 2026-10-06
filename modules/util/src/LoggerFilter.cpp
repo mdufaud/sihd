@@ -15,11 +15,6 @@ LoggerFilter::LoggerFilter(const Options & options): _options(options)
 
 LoggerFilter::~LoggerFilter() = default;
 
-const LoggerFilter::Options & LoggerFilter::options() const
-{
-    return _options;
-}
-
 bool LoggerFilter::filter(const LogInfo & info)
 {
     if (_source_regex && std::regex_match(info.source.begin(), info.source.end(), *_source_regex))

@@ -1,4 +1,6 @@
+#include <algorithm>
 #include <cstdlib>
+#include <iterator>
 
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/LogInfo.hpp>
@@ -21,9 +23,27 @@ namespace
 
 constexpr int poll_step_ms = 50;
 
+constexpr std::string_view sink_entry_keys[] =
+    {"logger", "source_regex", "thread_regex", "message_regex", "level_lower", "level_higher", "level_eq"};
+
 constexpr uint64_t key(CliApp::State state, CliApp::Event evt)
 {
     return StateMachine<CliApp::State, CliApp::Event>::pack_key(state, evt);
+}
+
+// level_from_str yields none for unknown names
+LogLevel conf_level(std::string_view name)
+{
+    std::string upper(name);
+    str::to_upper(upper);
+    return LogInfo::level_from_str(upper);
+}
+
+std::optional<LogLevel> level_from_conf(const sihd::json::Json & entry, std::string_view key)
+{
+    if (entry.contains(key) == false)
+        return std::nullopt;
+    return conf_level(entry[key].get_or<std::string>(""));
 }
 
 } // namespace
@@ -290,17 +310,113 @@ void CliApp::_transition(Event evt)
     this->notify_observers(this);
 }
 
+CliApp::LoggingSchema CliApp::logging_schema() const
+{
+    static constexpr std::string_view keys[] = {"console", "level", "sinks"};
+    static constexpr std::string_view sink_types[] = {"console"};
+    return {keys, sink_types};
+}
+
+bool CliApp::_check_logging_conf(const sihd::json::Json & logging, const LoggingSchema & schema)
+{
+    if (logging.is_object() == false)
+    {
+        SIHD_LOG(error, "CliApp: conf 'logging' must be an object");
+        return false;
+    }
+    for (auto it = logging.begin(); it != logging.end(); ++it)
+    {
+        const std::string_view conf_key = it.key();
+        if (std::find(schema.keys.begin(), schema.keys.end(), conf_key) == schema.keys.end())
+        {
+            SIHD_LOG(error, "CliApp: unknown conf key 'logging.{}'", conf_key);
+            return false;
+        }
+        if (conf_key == "console" && logging["console"].is_bool() == false)
+        {
+            SIHD_LOG(error, "CliApp: conf 'logging.console' must be a boolean");
+            return false;
+        }
+        if (conf_key == "level")
+        {
+            const sihd::json::Json & level = logging["level"];
+            if (level.is_string() == false || conf_level(level.get_or<std::string>("")) == LogLevel::none)
+            {
+                SIHD_LOG(error, "CliApp: unknown log level '{}'", level.dump());
+                return false;
+            }
+        }
+        if (conf_key == "sinks" && _check_sinks_conf(logging["sinks"], schema) == false)
+            return false;
+    }
+    return true;
+}
+
+bool CliApp::_check_sinks_conf(const sihd::json::Json & sinks, const LoggingSchema & schema)
+{
+    if (sinks.is_array() == false)
+    {
+        SIHD_LOG(error, "CliApp: conf 'logging.sinks' must be an array");
+        return false;
+    }
+    for (auto it = sinks.begin(); it != sinks.end(); ++it)
+    {
+        const sihd::json::Json & entry = *it;
+        if (entry.is_object() == false)
+        {
+            SIHD_LOG(error, "CliApp: conf 'logging.sinks' entries must be objects");
+            return false;
+        }
+        if (entry.contains("logger") == false || entry["logger"].is_string() == false)
+        {
+            SIHD_LOG(error, "CliApp: conf 'logging.sinks' entries must name a string 'logger'");
+            return false;
+        }
+        const std::string type = entry["logger"].get_or<std::string>("");
+        if (std::find(schema.sink_types.begin(), schema.sink_types.end(), std::string_view(type))
+            == schema.sink_types.end())
+        {
+            SIHD_LOG(error, "CliApp: unknown logger type '{}'", type);
+            return false;
+        }
+        for (auto entry_it = entry.begin(); entry_it != entry.end(); ++entry_it)
+        {
+            const std::string_view entry_key = entry_it.key();
+            if (std::find(std::begin(sink_entry_keys), std::end(sink_entry_keys), entry_key)
+                == std::end(sink_entry_keys))
+            {
+                SIHD_LOG(error, "CliApp: unknown conf key 'logging.sinks.{}'", entry_key);
+                return false;
+            }
+            if (entry_it.value().is_string() == false)
+            {
+                SIHD_LOG(error, "CliApp: conf 'logging.sinks.{}' must be a string", entry_key);
+                return false;
+            }
+            if (entry_key.starts_with("level_")
+                && conf_level(entry_it.value().get_or<std::string>("")) == LogLevel::none)
+            {
+                SIHD_LOG(error, "CliApp: unknown log level '{}'", entry_it.value().dump());
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 bool CliApp::apply_sihd_conf(const sihd::json::Json & conf)
 {
     if (conf.is_object() == false || conf.contains("logging") == false)
         return true;
     const sihd::json::Json logging = conf["logging"];
-    if (logging.is_object() == false)
-        return true;
+    if (_check_logging_conf(logging, this->logging_schema()) == false)
+        return false;
     if (logging.contains("console"))
         _options.default_logger = logging["console"].get_or<bool>(_options.default_logger);
     if (logging.contains("level"))
         this->set_log_level_conf(logging["level"].get_or<std::string>(this->log_level_conf()));
+    if (logging.contains("sinks"))
+        _log_filters_conf = logging["sinks"];
     return true;
 }
 
@@ -319,24 +435,38 @@ ALogger *CliApp::create_default_logger()
     return new LoggerStream(stderr);
 }
 
-void CliApp::apply_log_level(ALogger *logger)
+void CliApp::apply_sink_filters(ALogger *logger, std::string_view logger_type) const
 {
-    std::optional<LogLevel> level = this->_log_level();
-    if (level.has_value() == false)
+    if (_log_filters_conf.is_array() == false)
         return;
-    LoggerFilter::Options opts;
-    opts.level_lower = *level;
-    logger->add_filter(new LoggerFilter(opts));
+    for (const sihd::json::Json & entry : _log_filters_conf)
+    {
+        if (entry["logger"].get_or<std::string>("") != logger_type)
+            continue;
+        LoggerFilter::Options opts;
+        opts.source_regex = entry["source_regex"].get_or<std::string>("");
+        opts.thread_regex = entry["thread_regex"].get_or<std::string>("");
+        opts.message_regex = entry["message_regex"].get_or<std::string>("");
+        if (const std::optional<LogLevel> level = level_from_conf(entry, "level_lower"))
+            opts.level_lower = *level;
+        if (const std::optional<LogLevel> level = level_from_conf(entry, "level_higher"))
+            opts.level_higher = *level;
+        if (const std::optional<LogLevel> level = level_from_conf(entry, "level_eq"))
+            opts.level_eq = *level;
+        logger->add_filter(new LoggerFilter(opts));
+    }
 }
 
 void CliApp::install_logging()
 {
     // base scope: a derived uninstall_logging would remove the loggers it installed itself
     this->CliApp::uninstall_logging();
+    // the level is global state: an install always stamps it, absent config resets to default
+    LoggerManager::set_level(this->_log_level().value_or(LogLevel::debug));
     if (_options.default_logger)
     {
         _logger = this->create_default_logger();
-        this->apply_log_level(_logger);
+        this->apply_sink_filters(_logger, "console");
         LoggerManager::add(_logger);
     }
     if (this->_log_level().has_value() == false && this->log_level_conf().empty() == false)
@@ -405,10 +535,8 @@ std::optional<LogLevel> CliApp::_log_level() const
 {
     if (this->log_level_conf().empty())
         return std::nullopt;
-    std::string upper = this->log_level_conf();
-    str::to_upper(upper);
-    LogLevel level = LogInfo::level_from_str(upper);
     // level_from_str yields none for unknown names
+    const LogLevel level = conf_level(this->log_level_conf());
     if (level == LogLevel::none)
         return std::nullopt;
     return level;

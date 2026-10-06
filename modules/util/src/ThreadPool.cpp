@@ -30,9 +30,9 @@ ThreadPool::~ThreadPool()
 
 void ThreadPool::stop()
 {
-    _jobs.terminate();
     // pending jobs are discarded: their futures report a broken promise
     _jobs.clear();
+    _jobs.terminate();
     for (const auto & thread_ptr : _threads)
     {
         thread_ptr->stop();

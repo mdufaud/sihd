@@ -91,7 +91,7 @@ bool Daemon::_handle_signals()
     while (sig < 65)
     {
 #ifdef SIGKILL
-        // the two unhandleable signals - platforms without them expose fewer numbers
+        // the two unhandleable signals
         if (sig == SIGKILL || sig == SIGSTOP)
         {
             ++sig;

@@ -27,8 +27,6 @@ class LoggerFilter: public ILoggerFilter
         LoggerFilter(const Options & options);
         virtual ~LoggerFilter();
 
-        const Options & options() const;
-
     protected:
         bool filter(const LogInfo & info) override;
         bool filter(const LogInfo & info, std::string_view msg) override;

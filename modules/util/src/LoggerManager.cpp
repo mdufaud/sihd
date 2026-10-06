@@ -113,6 +113,8 @@ void LoggerManager::delete_loggers()
 
 bool LoggerManager::_filter_no_format(const LogInfo & info)
 {
+    if (should_log_level(info.level) == false)
+        return false;
     const Lock lock(*this);
     if (!lock)
         return false;
@@ -133,6 +135,8 @@ bool LoggerManager::_filter_no_format(const LogInfo & info)
 
 void LoggerManager::_filter_and_log(const LogInfo & info, std::string_view msg)
 {
+    if (should_log_level(info.level) == false)
+        return;
     const Lock lock(*this);
     if (!lock)
         return;
@@ -179,6 +183,16 @@ void LoggerManager::log(const LogInfo & info, std::string_view msg)
     _g_singleton._filter_and_log(info, msg);
 }
 
+void LoggerManager::set_level(LogLevel level)
+{
+    _g_singleton._level.store(level, std::memory_order_relaxed);
+}
+
+bool LoggerManager::should_log_level(LogLevel level)
+{
+    return _g_singleton._level.load(std::memory_order_relaxed) >= level;
+}
+
 bool LoggerManager::should_log(const std::string & src, LogLevel level)
 {
     LogInfo info(src, level);
@@ -220,9 +234,9 @@ void LoggerManager::clear_filters()
     _g_singleton.delete_filters();
 }
 
-void LoggerManager::stream(FILE *output, bool print_thread_id, std::optional<LoggerFilter::Options> options)
+void LoggerManager::stream(FILE *output, std::string pattern, std::optional<LoggerFilter::Options> options)
 {
-    install(new LoggerStream(output, print_thread_id), options);
+    install(new LoggerStream(output, std::move(pattern)), options);
 }
 
 void LoggerManager::console(std::optional<LoggerFilter::Options> options)

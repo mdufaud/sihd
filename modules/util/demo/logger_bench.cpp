@@ -28,7 +28,6 @@ class NullSink: public ALogger
         }
 };
 
-// stands for a slow io sink: one write syscall to a disk or a socket
 class SlowSink: public ALogger
 {
     public:
@@ -45,11 +44,12 @@ class SlowSink: public ALogger
 
 void reset_loggers()
 {
+    LoggerManager::set_level(LogLevel::debug);
     LoggerManager::clear_loggers();
     LoggerManager::clear_filters();
 }
 
-// emits from the threads and returns the emission rate - the async rows include the queue flush
+// async rows include the queue flush
 double emit_messages_per_second(int threads, int msgs_per_thread)
 {
     const auto start = std::chrono::steady_clock::now();
@@ -83,7 +83,7 @@ int main()
 
         reset_loggers();
         LoggerManager::add(new NullSink());
-        LoggerManager::filter(new LoggerFilter({.level_lower = LogLevel::notice}));
+        LoggerManager::set_level(LogLevel::notice);
         fmt::print("{:>2} threads {:>12.0f} msgs/s filtered out (level)\n",
                    threads,
                    emit_messages_per_second(threads, 100000));

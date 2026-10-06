@@ -62,6 +62,7 @@ class TestLogApp: public CliApp
 {
     public:
         using CliApp::CliApp;
+        using CliApp::logger;
 
     protected:
         ALogger *create_default_logger() override { return new LoggerStream(stdout); }
@@ -97,9 +98,18 @@ class LogSpyApp: public CliApp
 class TestCliApp: public ::testing::Test
 {
     protected:
-        TestCliApp() { sihd::util::LoggerManager::stream(); }
+        TestCliApp()
+        {
+            sihd::util::LoggerManager::set_level(sihd::util::LogLevel::debug);
+            sihd::util::LoggerManager::stream();
+        }
 
-        virtual ~TestCliApp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCliApp()
+        {
+            // a --log-level app leaves the global gate tightened: reset it for the next suite
+            sihd::util::LoggerManager::set_level(sihd::util::LogLevel::debug);
+            sihd::util::LoggerManager::clear_loggers();
+        }
 
         virtual void SetUp() {}
 
@@ -828,6 +838,62 @@ TEST_F(TestCliApp, test_logging_conf)
     EXPECT_TRUE(app.reload());
     ASSERT_NE(app.logger(), nullptr);
     EXPECT_TRUE(LoggerManager::get()->has_logger(app.logger()));
+}
+
+TEST_F(TestCliApp, test_log_sinks_conf)
+{
+    TestLogApp app({.name = "sinks", .setup_logging = true});
+    app.set_conf_loader([] {
+        return std::string(R"({"sihd": {"logging": {"sinks": [)"
+                           R"({"logger": "console", "level_lower": "error"},)"
+                           R"({"logger": "console", "source_regex": "^quiet::.*"})"
+                           R"(]}}})");
+    });
+    app.root().add_command("emit", "emit").on_run([] {});
+
+    ASSERT_EQ(run_app(app, {"emit"}), 0);
+    const std::string quiet_source = "quiet::src";
+    const std::string any_source = "any::src";
+    ASSERT_TRUE(app.logger()->should_filter(LogInfo(quiet_source, LogLevel::error)));
+    ASSERT_TRUE(app.logger()->should_filter(LogInfo(any_source, LogLevel::info)));
+    ASSERT_FALSE(app.logger()->should_filter(LogInfo(any_source, LogLevel::error)));
+}
+
+TEST_F(TestCliApp, test_log_conf_refused)
+{
+    const std::vector<std::string> bad_confs = {
+        // unknown logging key
+        R"({"sihd": {"logging": {"nope": true}}})",
+        // console must be a boolean
+        R"({"sihd": {"logging": {"console": "yes"}}})",
+        // unknown level name
+        R"({"sihd": {"logging": {"level": "errro"}}})",
+        // logging must be an object
+        R"({"sihd": {"logging": "debug"}})",
+        // a bare CliApp installs no file sink
+        R"({"sihd": {"logging": {"sinks": [{"logger": "file"}]}}})",
+        // a sink entry must name its logger
+        R"({"sihd": {"logging": {"sinks": [{"level_lower": "error"}]}}})",
+        // unknown sink filter key
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "nope": "x"}]}}})",
+        // sink filter values are strings
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": 3}]}}})",
+        // unknown level in a sink filter
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": "errro"}]}}})",
+    };
+    for (const std::string & conf : bad_confs)
+    {
+        CliApp app({.name = "badlog", .setup_logging = false});
+        app.set_conf_loader([&conf]() { return conf; });
+        app.root().add_command("run", "run").on_run([] {});
+        EXPECT_EQ(run_app(app, {"run"}), EXIT_FAILURE) << conf;
+    }
+
+    // the same conf with a clean logging section boots
+    CliApp app({.name = "goodlog", .setup_logging = false});
+    app.set_conf_loader([]() { return std::string(R"({"sihd": {"logging": {"level": "error"}}})"); });
+    app.root().add_command("run", "run").on_run([] {});
+    EXPECT_EQ(run_app(app, {"run"}), 0);
 }
 
 } // namespace test

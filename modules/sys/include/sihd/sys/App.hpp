@@ -30,6 +30,7 @@ class App: public sihd::util::CliApp
 
     protected:
         bool apply_sihd_conf(const sihd::json::Json & conf) override;
+        CliApp::LoggingSchema logging_schema() const override;
         int on_conf_loaded() override;
         void on_conf_reloaded() override;
         void install_logging() override;

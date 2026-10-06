@@ -84,7 +84,6 @@ TEST_F(TestSafeQueue, test_safequeue_terminate_drains)
     queue.push(3);
     queue.terminate();
 
-    // pop_wait drains what a termination left behind
     EXPECT_EQ(queue.pop_wait().value(), 1);
     EXPECT_EQ(queue.pop_wait().value(), 2);
     EXPECT_EQ(queue.pop_wait().value(), 3);
@@ -125,7 +124,6 @@ TEST_F(TestSafeQueue, test_safequeue_push_no_move_on_refusal)
 
     MoveCounter refused;
     EXPECT_FALSE(queue.push(std::move(refused), 1));
-    // make is not called on refusal: the source is left intact
     EXPECT_EQ(refused.moves, 0);
 
     EXPECT_GE(queue.try_pop()->moves, 1);

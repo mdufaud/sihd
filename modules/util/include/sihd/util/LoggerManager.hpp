@@ -63,12 +63,14 @@ class LoggerManager: public ALogFilterer
         static void log(const std::string & src, LogLevel level, std::string_view msg);
         static void log(const LogInfo & info, std::string_view msg);
 
-        // phase 1: false when no sink can receive the message - callers skip formatting
+        // global level gate: messages above it (less severe) are dropped before formatting
+        static void set_level(LogLevel level);
+        static bool should_log_level(LogLevel level);
         static bool should_log(const std::string & src, LogLevel level);
         static bool should_log(const LogInfo & info);
 
         static void stream(FILE *output = stderr,
-                           bool print_thread_id = false,
+                           std::string pattern = "",
                            std::optional<LoggerFilter::Options> options = std::nullopt);
         static void console(std::optional<LoggerFilter::Options> options = std::nullopt);
         static void thrower(std::optional<LoggerFilter::Options> options = std::nullopt);
@@ -92,8 +94,7 @@ class LoggerManager: public ALogFilterer
         void _warn_no_sink(const LogInfo & info);
 
     private:
-        // the only entry to _mutex: a logger or filter logging back from the same thread
-        // is dropped and reported instead of deadlocking
+        // the only entry to _mutex: a log-back from the same thread is dropped, not deadlocked
         class Lock
         {
             public:
@@ -109,6 +110,7 @@ class LoggerManager: public ALogFilterer
 
         static LoggerManager _g_singleton;
         std::vector<ALogger *> _loggers_lst;
+        std::atomic<LogLevel> _level {LogLevel::debug};
         bool _warned_no_sink = false;
         mutable std::atomic<std::thread::id> _owner {};
         mutable std::atomic<bool> _warned_reentrant {false};

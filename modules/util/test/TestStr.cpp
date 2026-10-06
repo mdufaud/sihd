@@ -1141,6 +1141,13 @@ TEST_F(TestStr, test_str_time_format)
 {
     std::string fmt = str::format_time(Timestamp(time::seconds(1) + time::minutes(2) + time::hours(3)), "%X");
     EXPECT_EQ(fmt, "03:02:01");
+
+    const std::string dynamic = std::string("%Y|%F|%u|%t|end");
+    const std::string out = str::format_localtime(Timestamp(0), dynamic);
+    EXPECT_EQ(out, str::format_localtime(Timestamp(0), "%Y|%F|%u|%t|end"));
+    EXPECT_NE(out.find("1970"), std::string::npos);
+    // epoch is a Thursday: %u is the ISO weekday, 1 = Monday .. 7 = Sunday
+    EXPECT_NE(out.find("|4|"), std::string::npos);
 }
 
 TEST_F(TestStr, test_str_wrap)

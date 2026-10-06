@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include <sihd/util/ALogFilterer.hpp>
 #include <sihd/util/container.hpp>
 

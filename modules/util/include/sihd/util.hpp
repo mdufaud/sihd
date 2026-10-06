@@ -38,6 +38,7 @@
 #include <sihd/util/ISteppable.hpp>
 #include <sihd/util/IWriter.hpp>
 #include <sihd/util/LoadingBar.hpp>
+#include <sihd/util/LogFormatter.hpp>
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerAsync.hpp>
@@ -79,6 +80,7 @@
 #include <sihd/util/Timer.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/TokenBucket.hpp>
+#include <sihd/util/TokenPattern.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>

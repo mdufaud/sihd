@@ -12,7 +12,7 @@ using enum sihd::util::ErrorCode;
 namespace test
 {
 
-// compile-check: with logging off every macro exists, expands to nothing, and SIHD_UNEXPECTED_LOG keeps its answer
+// compile-check: with logging off, every macro exists and expands to nothing
 TEST(TestLoggerOff, test_logging_off)
 {
     SIHD_NEW_LOGGER("test::off");
@@ -32,7 +32,7 @@ TEST(TestLoggerOff, test_logging_off)
     SIHD_COUT("invisible");
     SIHD_COUTV(invisible);
     SIHD_CERR("invisible {}", 42);
-    // expands to nothing: an invalid format string must not even be instantiated with logging off
+    // an invalid format string must not even be instantiated
     SIHD_LOG(info, "bad {");
 }
 

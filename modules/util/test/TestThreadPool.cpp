@@ -82,15 +82,17 @@ TEST_F(TestThreadPool, test_threadpool_future)
 
 TEST_F(TestThreadPool, test_threadpool_error)
 {
+    std::atomic<int> executed = 0;
     ThreadPool pool("thread_pool", 1);
 
     pool.add_job([]() { std::this_thread::sleep_for(std::chrono::milliseconds(10)); });
 
-    auto future = pool.add_job([]() { return 42; });
+    auto discarded = pool.add_job([&]() { ++executed; });
 
     pool.stop();
 
-    ASSERT_THROW(future.get(), std::future_error);
+    ASSERT_THROW(discarded.get(), std::future_error);
+    EXPECT_EQ(executed.load(), 0);
 }
 
 } // namespace test

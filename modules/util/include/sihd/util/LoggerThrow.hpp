@@ -25,7 +25,7 @@ class LoggerThrow: public ALogger
                 const char *what() const noexcept;
 
             private:
-                // the LogInfo views dangle once the emitter's thread_local is gone: point them at owned strings
+                // the LogInfo views dangle once the emitter's thread_local is gone
                 void _reseat();
 
                 LogInfo _log_info;

@@ -46,8 +46,7 @@ class SafeQueue
                 wake_consumers = _queue.empty();
                 _queue.push(make());
             }
-            // consumers recheck the predicate under the lock before sleeping: only the empty
-            // to non empty transition can leave a sleeping one behind
+            // only the empty to non empty transition can leave a sleeping consumer behind
             if (wake_consumers)
                 _waitable.notify_all();
             return true;
@@ -68,7 +67,6 @@ class SafeQueue
             return ret;
         }
 
-        // a closed and drained queue reports ErrorCode::closed
         std::expected<T, Error> pop()
         {
             auto l = _waitable.wait_guard([this] { return _terminated || _queue.empty() == false; });
@@ -81,17 +79,12 @@ class SafeQueue
             return ret;
         }
 
-        // nullopt once terminated and drained, the drain loop pop
         std::optional<T> pop_wait()
         {
-            auto l = _waitable.wait_guard([this] { return _terminated || _queue.empty() == false; });
-            if (_queue.empty())
+            std::expected<T, Error> ret = this->pop();
+            if (ret.has_value() == false)
                 return std::nullopt;
-            std::optional<T> ret = std::move(_queue.front());
-            _queue.pop();
-            l.unlock();
-            _waitable.notify_all();
-            return ret;
+            return std::move(*ret);
         }
 
         bool wait_for_space(size_t max_size) const
@@ -100,7 +93,6 @@ class SafeQueue
             return _queue.size() < max_size;
         }
 
-        // pops drain what is left, pop reports closed once drained
         void terminate()
         {
             {

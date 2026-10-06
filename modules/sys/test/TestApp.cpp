@@ -120,6 +120,37 @@ TEST_F(TestApp, test_conf_file_missing)
     EXPECT_FALSE(ran);
 }
 
+TEST_F(TestApp, test_log_sinks_file_conf)
+{
+    const std::string log_path = tmp_path("sinks.log");
+    const std::string conf_path = tmp_path("sinks.json");
+    (void)fs::remove_file(log_path);
+    ASSERT_TRUE(fs::write(conf_path,
+                          R"({"sihd": {"logging": {"file": ")" + log_path
+                              + R"(",)"
+                                R"("sinks": [{"logger": "file", "source_regex": "^dropped::.*$"}]}}})")
+                    .has_value());
+
+    const std::string kept_source = "kept::src";
+    const std::string dropped_source = "dropped::src";
+    // the file logger flushes on destruction
+    {
+        LogCheckApp app({.name = "sinks", .default_logger = false});
+        app.root().add_command("emit", "emit").on_run([&] {
+            LoggerManager::log(LogInfo(kept_source, LogLevel::info), "KEPTMSG");
+            LoggerManager::log(LogInfo(dropped_source, LogLevel::info), "DROPPEDMSG");
+        });
+        ASSERT_EQ(run_app(app, {"--conf", conf_path, "emit"}), 0);
+    }
+
+    const std::optional<std::string> content = fs::read_all(log_path);
+    ASSERT_TRUE(content.has_value());
+    EXPECT_NE(content->find("KEPTMSG"), std::string::npos);
+    EXPECT_EQ(content->find("DROPPEDMSG"), std::string::npos);
+    (void)fs::remove_file(log_path);
+    (void)fs::remove_file(conf_path);
+}
+
 #if defined(SIGHUP) && defined(SIGUSR1) && defined(SIGPIPE)
 TEST_F(TestApp, test_golden_conf)
 {
