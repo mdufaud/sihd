@@ -18,13 +18,25 @@ namespace sihd::util::thread
 namespace
 {
 
+#if defined(__SIHD_WINDOWS__)
+pthread_t do_self()
+{
+    return (pthread_t)GetCurrentThreadId();
+}
+#else
+pthread_t do_self()
+{
+    return pthread_self();
+}
+#endif
+
 pthread_t do_init()
 {
 #if defined(__SIHD_WINDOWS__)
     // static init: the logger is not up yet, a failed naming stays silent
     (void)set_name("main");
 #endif
-    return pthread_self();
+    return do_self();
 }
 
 pthread_t g_main_thread_id = do_init();
@@ -53,12 +65,12 @@ bool equals(const pthread_t & id1, const pthread_t & id2)
 
 pthread_t id()
 {
-    return pthread_self();
+    return do_self();
 }
 
 std::string id_str(pthread_t id)
 {
-    if (equals(id, pthread_self()))
+    if (equals(id, do_self()))
     {
         static thread_local std::string l_id_str = to_id_str(id);
         return l_id_str;

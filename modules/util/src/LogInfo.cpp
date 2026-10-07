@@ -4,6 +4,7 @@
 #include <fmt/core.h>
 
 #include <sihd/util/LogInfo.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::util
 {
@@ -14,7 +15,7 @@ LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
     this->thread_id_str = thread::id_str(thread_id);
     this->thread_name = thread::name();
     this->strlevel = this->level_str(this->level);
-    ::clock_gettime(CLOCK_REALTIME, &timespec);
+    this->timespec = time::to_ts(Timestamp::now().get());
 }
 
 LogInfo::~LogInfo() = default;
