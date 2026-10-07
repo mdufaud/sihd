@@ -5,10 +5,6 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
-# include <SDL3/SDL_opengles2.h>
-#endif
-
 #define SDL_MAIN_HANDLED
 #include <sihd/imgui/ImguiBackendSDL.hpp>
 

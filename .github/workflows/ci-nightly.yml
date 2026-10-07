@@ -52,6 +52,7 @@ jobs:
           - id: x64-linux-zig-musl
             dep-args: compiler=zig demo=1
             make-args: compiler=zig mode=size demo=1
+            apt: autoconf autoconf-archive automake libtool libltdl-dev
             zig: true
             experimental: true
           # static-only arm32 entry (arm-linux is the static vcpkg triplet);

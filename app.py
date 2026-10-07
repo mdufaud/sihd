@@ -14,6 +14,9 @@ includes = [
     "addon/test.py",
 ]
 
+# mingw gcc-13: libstdc++ tinfo.o clashes with TU comdats of type_info::operator==
+windows_static_link = ['-Wl,--allow-multiple-definition']
+
 ###############################################################################
 # modules
 ###############################################################################
@@ -101,9 +104,10 @@ modules = {
         # vcpkg builds libcurl shared on every triplet used here: its transitive
         # deps resolve inside the library itself, except for static libtype
         "linux-libs": ["curl"],
-        # linux static libtype links vcpkg's libcurl.a: ssl/z deps must be explicit
-        "linux-native-static-libs": ["z", "ssl", "crypto"],
-        "linux-cross-libs": ["z", "ssl", "crypto"],
+        "linux-static-libs": ["ssl", "crypto", "z"],
+        # static archives carry no deps: consumers need libcurl then ssl/crypto/z
+        "export-linux-libs": ["curl"],
+        "export-linux-static-libs": ["ssl", "crypto", "z"],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after; ssl/crypto last
         "windows-static-libs": [
@@ -129,8 +133,9 @@ modules = {
     },
     "http": {
         # depends net (web-excluded) + libwebsockets has no emscripten port
+        # curl exports must resolve before net's: dedup keeps first occurrence
         "exclude-platforms": ["web", "android"],
-        "depends": ['net', 'curl'],
+        "depends": ['curl', 'net'],
         "extlibs": [
             'libwebsockets',
             'zlib',
@@ -138,9 +143,7 @@ modules = {
             'openssl', # TLS for libwebsockets
         ],
         "linux-extlibs": ["libcap"],
-        # all libs are platform-specific due to different names and link order requirements
-        # ssl/crypto last: openssl provides symbols used by websockets
-        "linux-libs": ["websockets", "z", "uv", "cap", "ssl", "crypto"],
+        "linux-libs": ["websockets", "uv", "cap"],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after; ssl/crypto last
         "windows-static-libs": [
@@ -206,10 +209,7 @@ modules = {
         "depends": ['util', 'sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
-        # libssh.a depends on OpenSSL (needed for cross static linking)
-        "linux-cross-libs": ['ssl', 'crypto'],
-        # native static: libssh.a needs system OpenSSL archives after it
-        "linux-native-static-libs": ['ssl', 'crypto'],
+        "linux-static-libs": ['ssl', 'crypto'],
         # static: libssh.a's transitive deps must be explicit
         # (dynamic build resolves them inside libssh.dll via the plain 'ssh' lib)
         "windows-static-libs": [
