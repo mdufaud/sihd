@@ -207,7 +207,7 @@ std::optional<FileTimes> times(std::string_view path)
 
 Timestamp last_write(std::string_view path)
 {
-    return times(path).value_or(FileTimes {}).write;
+    return times(path).value_or(FileTimes()).write;
 }
 
 std::optional<size_t> file_size(std::string_view path)
