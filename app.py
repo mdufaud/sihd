@@ -108,6 +108,7 @@ modules = {
         # static archives carry no deps: consumers need libcurl then ssl/crypto/z
         "export-linux-libs": ["curl"],
         "export-linux-static-libs": ["ssl", "crypto", "z"],
+        "export-windows-static-libs": ['curl', 'zlib', 'winmm', 'advapi32', 'ssl', 'crypto', 'crypt32', 'bcrypt'],
         # Windows static linking: all transitive deps must be explicit
         # order matters: higher-level libs first, their deps after; ssl/crypto last
         "windows-static-libs": [
@@ -148,6 +149,7 @@ modules = {
         # order matters: higher-level libs first, their deps after; ssl/crypto last
         "windows-static-libs": [
             'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
+            'pthread',           # PThreads4W (libwebsockets SMP)
             'uv',                # libuv (libwebsockets uses it)
             'zlib',              # vcpkg zlib installs libzlib.a on mingw
             'winmm',             # Multimedia (libuv)
@@ -200,6 +202,7 @@ modules = {
         "linux-static-libs": ['z', 'bz2', 'crypto'],
         "export-linux-libs": ['zip'],
         "export-linux-static-libs": ['z', 'bz2', 'crypto'],
+        "export-windows-static-libs": ['zip', 'zlib', 'bz2', 'bcrypt'],
     },
     "tui": {
         "exclude-platforms": ["android"],
