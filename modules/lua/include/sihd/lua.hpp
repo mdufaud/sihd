@@ -1,9 +1,8 @@
 #ifndef __SIHD_LUA_HPP__
 #define __SIHD_LUA_HPP__
 
-// A binding is only compiled when its module is in the build, so each api header
-// is guarded by the matching define from the generated config header. Calling an
-// api that was not built is then a compile error instead of a link error.
+// A binding is only compiled when its module is in the build, so each api header is guarded by
+// the matching define from the generated config header: an unbuilt api is a compile error
 
 // clang-format off
 #include <sihd/lua/config.hpp>

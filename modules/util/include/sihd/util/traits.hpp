@@ -99,26 +99,8 @@ concept CanConcatWithLiteral = requires(T t) {
  * Uses in std methods
  */
 
-// template <typename T>
-// concept ToStringable = requires(T t) {
-//     { std::to_string(t) } -> std::convertible_to<std::string>;
-// };
-
 template <typename T>
 concept Swappable = requires(T a, T b) { std::swap(a, b); };
-
-// template <typename T>
-// concept Hashable = requires(T a) {
-//     { std::hash<T> {}(a) } -> std::convertible_to<std::size_t>;
-// };
-
-// template <typename T>
-// concept Streamable = requires(T a, std::ostream & os)
-// {
-//     {
-//         os << a
-//     } -> std::convertible_to<std::ostream &>;
-// };
 
 template <typename T>
 concept Callable = requires(T f) {
@@ -192,13 +174,6 @@ concept Duration = requires(T t) { typename T::period; };
 
 template <typename T>
 concept StdFunction = requires(T t) { typename T::result_type; };
-
-// template <typename T>
-// concept HasRange = requires(T t)
-// {
-//     std::ranges::begin(t);
-//     std::ranges::end(t);
-// };
 
 template <typename T>
 concept IsSpan = HasDataSize<T> && requires(T t, size_t offset) {

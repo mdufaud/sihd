@@ -150,14 +150,6 @@ std::string download_path()
     return path;
 }
 
-std::string executable_path()
-{
-    char path[MAX_PATH];
-    if (GetModuleFileName(NULL, path, MAX_PATH) != 0)
-        return path;
-    return ".";
-}
-
 // stat
 
 bool exists(std::string_view path)

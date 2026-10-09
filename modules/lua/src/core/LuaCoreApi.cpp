@@ -245,9 +245,8 @@ void LuaCoreApi::load(Vm & vm)
                 LuaGilRelease release(state);
                 return self->wait_for(dur, notifications);
             })
-        // prev_* count notifications from the last wait instead of from this call:
-        // use them when the same thread writes then waits, otherwise a notification
-        // that lands before the wait is missed and the wait times out
+        // prev_* count notifications from the last wait instead of this call: use them when the same
+        // thread writes then waits, else a notification landing before the wait is missed
         .addFunction(
             "prev_wait",
             +[](ChannelWaiter *self, uint32_t notifications, lua_State *state) {

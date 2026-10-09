@@ -1,11 +1,11 @@
 #include <csignal>
 
 #include <sihd/sys/Daemon.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 // run(), set_user()/set_group() account resolution live in src/linux|windows/Daemon.cpp
 
@@ -91,7 +91,6 @@ bool Daemon::_handle_signals()
     while (sig < 65)
     {
 #ifdef SIGKILL
-        // the two unhandleable signals
         if (sig == SIGKILL || sig == SIGSTOP)
         {
             ++sig;

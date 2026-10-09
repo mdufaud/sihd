@@ -246,9 +246,8 @@ bool drop_privileges(const UserId & user_id, const GroupId & group_id)
             SIHD_LOG(error, "user: setuid({}) failed: {}", uid, os::last_error_str());
             return false;
         }
-        // the drop must not be reversible: the process must no longer hold the capabilities that
-        // would let it setuid()/setgid() back. Heuristic, not absolute proof, so the id checks
-        // below remain authoritative; cap::has() is a no-op (false) where the API is unavailable.
+        // the drop must be irreversible: no capabilities left to setuid()/setgid() back. Heuristic only,
+        // the id checks below stay authoritative; cap::has() is a no-op (false) where unavailable
         if (uid != 0 && cap::supported && (cap::has(Cap::setuid) || cap::has(Cap::setgid)))
         {
             SIHD_LOG(error, "user: privileges could be restored after dropping to uid {}", uid);

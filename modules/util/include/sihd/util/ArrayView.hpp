@@ -33,18 +33,16 @@ class ArrayView: public IArrayView
         ArrayView(const T & val): ArrayView(&val, 1) {}
         ArrayView(const ArrayView<T> & arr): ArrayView(arr.data(), arr.size()) {}
 
-        // container specialization
-        // make sure Container::value_type size is divisible by type size.
-        // ex: vector<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
+        // container specialization: Container::value_type size must be divisible by type size, else the
+        // view would be empty (e.g. vector<int8_t> of size 3 into ArrayView<int32_t>)
         template <traits::HasConstDataSize Container, typename ValueType = typename Container::value_type>
         ArrayView(const Container & container):
             ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T))
         {
         }
 
-        // fundamental & struct specializations
-        // make sure the fundamental type size is divisible by type size.
-        // ex: int8_t may not go into an ArrayView<int32_t> which will be size 0
+        // fundamental & struct specializations: the value size must be divisible by type size, else the
+        // view would be empty (e.g. int8_t into ArrayView<int32_t>)
         template <traits::TriviallyCopyable Fundamental>
             requires(!traits::Pointer<Fundamental> && !traits::HasConstDataSize<Fundamental>)
         ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T))

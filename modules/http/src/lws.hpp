@@ -1,6 +1,5 @@
-// Wrapper for libwebsockets.h to suppress clang-21 module-import-in-extern-C warnings.
-// libwebsockets.h wraps everything in extern "C" and then includes <stdint.h>/<limits.h>
-// which clang 21 maps to built-in C++ module imports — forbidden inside extern "C".
+// Wrapper for libwebsockets.h: it wraps everything in extern "C" then includes <stdint.h>,
+// which clang-21 maps to built-in C++ module imports - forbidden inside extern "C"
 #pragma once
 
 #ifdef __clang__

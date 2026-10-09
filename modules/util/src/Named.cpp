@@ -1,5 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
@@ -151,5 +152,7 @@ const Named *Named::cfind(const std::string & path) const
     }
     return Named::cfind_from(current, path);
 }
+
+SIHD_REGISTER_FACTORY(Named);
 
 } // namespace sihd::util

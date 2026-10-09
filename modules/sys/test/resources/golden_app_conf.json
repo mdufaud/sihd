@@ -3,13 +3,19 @@
         "logging": {
             "level": "info",
             "console": true,
-            "file": {
-                "path": "/tmp/sihd_app.log",
-                "append": true
-            },
-            "system": {
-                "facility": 1
-            }
+            "sinks": [
+                {
+                    "logger": "LoggerFile",
+                    "name": "app_log",
+                    "path": "/tmp/sihd_app.log",
+                    "append": true
+                },
+                {
+                    "logger": "LoggerSystem",
+                    "name": "syslog",
+                    "facility": 1
+                }
+            ]
         },
         "signals": {
             "stop": ["INT", "TERM"],

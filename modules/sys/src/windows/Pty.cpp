@@ -251,9 +251,8 @@ bool ConPty::spawn()
         return false;
     }
 
-    // Create pipes for PTY input/output
-    // Input pipe: we write to _pipe_in_write, PTY reads from _pipe_in_read
-    // Output pipe: PTY writes to _pipe_out_write, we read from _pipe_out_read
+    // pipes for PTY i/o: input - we write _pipe_in_write, PTY reads _pipe_in_read
+    // output - PTY writes _pipe_out_write, we read _pipe_out_read
     if (!CreatePipe(&_pipe_in_read, &_pipe_in_write, nullptr, 0))
     {
         SIHD_LOG(error, "ConPty: failed to create input pipe");
@@ -333,9 +332,7 @@ bool ConPty::spawn()
         }
     }
 
-    // Build environment block (optional)
-    // For simplicity, we'll inherit the parent's environment and just set TERM
-    // A full implementation would build a complete environment block
+    // inherit the parent environment and just set TERM; a full environment block would be more
 
     // Create the process
     STARTUPINFOEXA si;
@@ -414,9 +411,7 @@ void ConPty::terminate()
 
 int ConPty::read_fd() const
 {
-    // On Windows, we return -1 since the HANDLE can't be used with select()
-    // Callers should use WaitForSingleObject with the actual handle
-    // For now, we return a placeholder (this would need platform-specific handling)
+    // windows HANDLE is no select() fd: callers use WaitForSingleObject, we return a placeholder
     return _pipe_out_read != INVALID_HANDLE_VALUE ? 1 : -1;
 }
 
@@ -480,10 +475,6 @@ void ConPty::send_eof()
         _pipe_in_write = INVALID_HANDLE_VALUE;
     }
 }
-
-// ============================================================================
-// Factory functions for Windows
-// ============================================================================
 
 bool Pty::is_supported()
 {

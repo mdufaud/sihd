@@ -380,12 +380,8 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &>())
         .def(
             "set_entry_point",
-            // The handler runs on a server worker thread and the route table COPIES
-            // the std::function on every dispatch. Hold the python callable through a
-            // shared_ptr so those copies never touch its refcount without the GIL; the
-            // deleter re-takes the GIL so the final release is also safe. At call time
-            // acquire the GIL and pass request/response as non-owning references (they
-            // are move-only C++ objects owned by the server; a copy policy would fail).
+            // Handler on a server worker thread, route table copies the std::function per dispatch: hold the
+            // callable via shared_ptr so refcounts never move without the GIL (deleter re-takes it)
             [](WebService & self, const std::string & path, pybind11::function fun, HttpRequest::RequestType type) {
                 auto fun_ptr = std::shared_ptr<pybind11::function>(new pybind11::function(std::move(fun)),
                                                                    [](pybind11::function *p) {

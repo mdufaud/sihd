@@ -81,10 +81,8 @@ TEST_F(TestSshSession, test_sshsession_auth_key)
     session.disconnect();
 }
 
-// A connect to an unresponsive host must not hang: the default timeout (set by
-// new_session) bounds the attempt. 192.0.2.1 is RFC 5737 TEST-NET-1, guaranteed
-// non-routable, so the SYN is dropped or instantly rejected; either way connect
-// returns false quickly instead of blocking forever.
+// A connect to an unresponsive host must not hang: the default timeout bounds the attempt.
+// 192.0.2.1 is RFC 5737 TEST-NET-1, guaranteed non-routable, so connect returns false quickly
 TEST_F(TestSshSession, test_sshsession_connect_timeout)
 {
     SshSession session;
@@ -105,9 +103,8 @@ TEST_F(TestSshSession, test_sshsession_connect_timeout)
     EXPECT_LT(std::chrono::duration_cast<std::chrono::seconds>(elapsed).count(), 5);
 }
 
-// Regression: process_config must control whether libssh parses ssh_config.
-// A broken ProxyCommand in the config dir breaks the connection only when
-// config processing is enabled; disabling it must ignore the config entirely.
+// Regression: process_config must control whether libssh parses ssh_config - a broken
+// ProxyCommand breaks the connection only when config processing is enabled
 TEST_F(TestSshSession, test_sshsession_process_config_ignores_proxy)
 {
     auto test_server = make_test_server("test-sshsession-process-config");

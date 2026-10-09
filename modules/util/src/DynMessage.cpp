@@ -2,6 +2,7 @@
 
 #include <sihd/util/DynMessage.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {
@@ -186,5 +187,7 @@ IMessageField *DynMessage::clone() const
     }
     return cloned;
 }
+
+SIHD_REGISTER_FACTORY(DynMessage);
 
 } // namespace sihd::util

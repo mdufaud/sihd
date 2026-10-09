@@ -3,9 +3,9 @@
 
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/utils.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>     // inet_ntop
@@ -427,9 +427,8 @@ void IcmpSender::_process_ipv6()
     size_t offset = 0;
     uint8_t ttl = 0;
 
-    // On Linux with SOCK_DGRAM, kernel strips IPv6 header
-    // With SOCK_RAW, IPv6 header might be present
-    // Check if first byte looks like IPv6 version (0x6X)
+    // On Linux with SOCK_DGRAM the kernel strips the IPv6 header, with SOCK_RAW it may be present:
+    // check the first byte for an IPv6 version nibble (0x6X)
     if (_socket_type == SOCK_RAW && total >= sizeof(struct ip6_hdr) && ((base[0] >> 4) & 0x0F) == 6)
     {
         const struct ip6_hdr *ip6hdr = (const struct ip6_hdr *)base;

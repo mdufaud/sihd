@@ -30,9 +30,8 @@
 #include "../internal/deadline.hpp"
 #include "protocols/wlr-screencopy-unstable-v1-client-protocol.h"
 
-// Native wlr-screencopy capture, with grim / spectacle / gnome-screenshot as
-// the tools fallback: compositors exposing no capture protocol (KWin, Mutter)
-// only serve screenshots through their own tools.
+// Native wlr-screencopy capture, grim / spectacle / gnome-screenshot as the tools fallback:
+// compositors without a capture protocol (KWin, Mutter) only serve screenshots through tools
 
 // linux/memfd.h is a kernel uapi header some libcs do not ship.
 #ifndef MFD_CLOEXEC
@@ -171,9 +170,8 @@ Connection::Connection(Timestamp deadline)
     _fd = wl_display_get_fd(_display);
     _registry = wl_display_get_registry(_display);
     wl_registry_add_listener(_registry, &_registry_listener, this);
-    // The first roundtrip binds the globals, the second lets the outputs
-    // announce their names - bounded: a wedged compositor must not hang the
-    // call.
+    // First roundtrip binds the globals, the second lets the outputs announce their names - bounded:
+    // a wedged compositor must not hang the call
     if (!roundtrip_bounded(*this, deadline) || !roundtrip_bounded(*this, deadline))
         return;
     _ok = manager != nullptr && shm != nullptr;
@@ -241,9 +239,8 @@ bool roundtrip_bounded(Connection & conn, Timestamp deadline)
 
 // Capture
 
-// One capture_output round: the frame announces the shm parameters, the
-// matching buffer is created and copied into - `ready` means the pixels are
-// in the mapping, `failed` gives up.
+// One capture_output round: the frame announces the shm parameters, the matching buffer is
+// created and copied into - `ready` means the pixels are in, `failed` gives up
 class Capture
 {
     public:

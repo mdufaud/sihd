@@ -9,6 +9,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -163,7 +164,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
     if (sender.open_socket(false).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
-                     << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'";
+                     << "execute command: 'sudo setcap cap_net_raw=pe " << program::path() << "'";
     }
 #if defined(__SIHD_WINDOWS__)
     GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";

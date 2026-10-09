@@ -47,7 +47,7 @@ TEST_F(TestDevMessage, test_devmessage)
             char str[20];
     } __attribute__((packed));
 
-    dev->set_conf_str("message", "..msg");
+    (void)dev->set_conf_str("message", "..msg");
     // immediate compute mode
     dev->set_trigger_mode(false);
 

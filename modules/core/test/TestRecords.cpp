@@ -131,7 +131,7 @@ TEST_F(TestRecords, test_records_dev_recorder)
                                             "double=..double_channel",
                                         }}}));
     // or this
-    dev_recorder.set_conf_str("record", "char=..char_channel");
+    (void)dev_recorder.set_conf_str("record", "char=..char_channel");
 
     std::cout << core.tree_desc_str() << std::endl;
     EXPECT_TRUE(core.init());

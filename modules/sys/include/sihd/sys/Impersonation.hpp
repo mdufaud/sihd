@@ -12,15 +12,8 @@
 namespace sihd::sys
 {
 
-// Runs the CALLING THREAD as another account, reversibly - on both platforms only the thread
-// switches (unlike user::drop_privileges: permanent, process-wide, unix only). Undone by revert()
-// or the destructor. While impersonating, user::effective_user() reports the target account and
-// user::real_user() the original identity; supplementary groups are not switched.
-//
-// The platforms differ, so each has its own entry point: windows = impersonate_with_credentials()
-// (LogonUser, needs a password); linux = impersonate_as() (raw setresuid/setresgid on the thread,
-// needs CAP_SETUID/CAP_SETGID); the other one is a no-op. Select on supports_credentials /
-// supports_privileged.
+// Runs the CALLING THREAD as another account, reversibly (revert()/dtor); drop_privileges stays
+// permanent process-wide. While impersonating, effective_user() = target, real_user() = original
 class Impersonation
 {
     public:

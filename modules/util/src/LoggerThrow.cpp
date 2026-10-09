@@ -1,9 +1,14 @@
 #include <utility>
 
 #include <sihd/util/LoggerThrow.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {
+
+LoggerThrow::LoggerThrow(const std::string & name, Node *parent): ALogger(name, parent) {}
+
+LoggerThrow::LoggerThrow(): ALogger("throw") {}
 
 LoggerThrow::Exception::Exception(const LogInfo & info, std::string_view msg):
     _log_info(info),
@@ -45,5 +50,7 @@ void LoggerThrow::log([[maybe_unused]] const LogInfo & info, std::string_view ms
 {
     throw Exception(info, msg);
 }
+
+SIHD_REGISTER_FACTORY(LoggerThrow);
 
 } // namespace sihd::util

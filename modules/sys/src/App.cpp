@@ -7,10 +7,10 @@
 #include <vector>
 
 #include <sihd/sys/App.hpp>
+#include <sihd/sys/PluginLoader.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::sys
@@ -107,11 +107,35 @@ void App::on_signal(std::function<void(int)> fn)
     _on_signal = std::move(fn);
 }
 
-CliApp::LoggingSchema App::logging_schema() const
+sihd::util::ALogger *App::create_logger_sink(const std::string & plugin,
+                                             const std::string & type,
+                                             const std::string & name,
+                                             sihd::util::Node *parent)
 {
-    static constexpr std::string_view keys[] = {"console", "level", "sinks", "file", "system"};
-    static constexpr std::string_view sink_types[] = {"console", "file", "system"};
-    return {keys, sink_types};
+    if (plugin.empty() == false)
+    {
+        auto created = PluginLoader::create_from_library(plugin, type, name, parent);
+        if (SIHD_UNEXPECTED_LOG(created))
+            return nullptr;
+        sihd::util::ALogger *sink = dynamic_cast<sihd::util::ALogger *>(created.value());
+        if (sink == nullptr)
+        {
+            SIHD_LOG(error, "App: plugin '{}' factory did not create a logger sink", plugin);
+            this->sinks().remove_child(created.value());
+        }
+        return sink;
+    }
+    auto linked = PluginLoader::create_from_linked(type, name, parent);
+    if (SIHD_UNEXPECTED_LOG(linked))
+        return nullptr;
+    ALogger *sink = dynamic_cast<ALogger *>(linked.value());
+    if (sink == nullptr)
+    {
+        SIHD_LOG(error, "App: factory of '{}' did not create a logger sink", type);
+        this->sinks().remove_child(linked.value());
+        return nullptr;
+    }
+    return sink;
 }
 
 bool App::apply_sihd_conf(const sihd::json::Json & conf)
@@ -122,65 +146,6 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
         return false;
     if (conf.is_object() == false)
         return true;
-    if (conf.contains("logging"))
-    {
-        const sihd::json::Json logging = conf["logging"];
-        if (logging.contains("file"))
-        {
-            const sihd::json::Json file = logging["file"];
-            if (file.is_string())
-            {
-                _log_file_path = file.get_or<std::string>("");
-            }
-            else if (file.is_object())
-            {
-                if (check_conf_keys(file, {"path", "append"}, "logging.file") == false)
-                    return false;
-                if (file.contains("path") && file["path"].is_string() == false)
-                {
-                    SIHD_LOG(error, "App: conf 'logging.file.path' must be a string");
-                    return false;
-                }
-                if (file.contains("append") && file["append"].is_bool() == false)
-                {
-                    SIHD_LOG(error, "App: conf 'logging.file.append' must be a boolean");
-                    return false;
-                }
-                _log_file_path = file["path"].get_or<std::string>("");
-                _log_file_append = file["append"].get_or<bool>(true);
-            }
-            else
-            {
-                SIHD_LOG(error, "App: conf 'logging.file' must be a string or an object");
-                return false;
-            }
-        }
-        if (logging.contains("system"))
-        {
-            const sihd::json::Json system = logging["system"];
-            if (system.is_bool())
-            {
-                _log_system = system.get<bool>();
-            }
-            else if (system.is_object())
-            {
-                if (check_conf_keys(system, {"facility"}, "logging.system") == false)
-                    return false;
-                if (system.contains("facility") && system["facility"].is_number() == false)
-                {
-                    SIHD_LOG(error, "App: conf 'logging.system.facility' must be a number");
-                    return false;
-                }
-                _log_system = true;
-                _log_system_facility = system["facility"].get_or<int>(LoggerSystem::default_facility);
-            }
-            else
-            {
-                SIHD_LOG(error, "App: conf 'logging.system' must be a boolean or an object");
-                return false;
-            }
-        }
-    }
     if (conf.contains("signals"))
     {
         const sihd::json::Json signals = conf["signals"];
@@ -264,42 +229,6 @@ void App::on_conf_reloaded()
 {
     // the reload may add, remove or change signal actions: handlers must follow
     this->_install_signals();
-}
-
-void App::install_logging()
-{
-    // loggers are replaced so that a reload applies logging changes
-    this->uninstall_logging();
-    if (_log_file_path.empty() == false)
-    {
-        _file_logger = new LoggerFile(_log_file_path, _log_file_append);
-        this->apply_sink_filters(_file_logger, "file");
-        LoggerManager::add(_file_logger);
-    }
-    if (_log_system)
-    {
-        _system_logger = new LoggerSystem(this->name(), _log_system_facility);
-        this->apply_sink_filters(_system_logger, "system");
-        LoggerManager::add(_system_logger);
-    }
-    CliApp::install_logging();
-}
-
-void App::uninstall_logging()
-{
-    if (_file_logger)
-    {
-        LoggerManager::rm(_file_logger);
-        delete _file_logger;
-        _file_logger = nullptr;
-    }
-    if (_system_logger)
-    {
-        LoggerManager::rm(_system_logger);
-        delete _system_logger;
-        _system_logger = nullptr;
-    }
-    CliApp::uninstall_logging();
 }
 
 void App::poll_events()

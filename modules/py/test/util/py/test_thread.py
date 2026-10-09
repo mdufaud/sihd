@@ -23,3 +23,13 @@ assert(sched.stop())
 sleep(0.1)
 
 assert(i > 10)
+
+# a refused conf key raises sihd.Error
+refused = sihd.util.Scheduler("conf_refused")
+try:
+    refused.set_conf(nope=1)
+    assert(False)
+except sihd.Error:
+    pass
+
+print("thread tests passed")

@@ -1,5 +1,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/MessageField.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/array_utils.hpp>
 
 namespace sihd::util
@@ -85,5 +86,7 @@ std::string MessageField::description() const
 {
     return fmt::format("{}[{}]", type::str(_dt), this->field_size());
 }
+
+SIHD_REGISTER_FACTORY(MessageField);
 
 } // namespace sihd::util

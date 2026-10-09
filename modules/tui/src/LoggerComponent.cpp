@@ -27,7 +27,7 @@ class LoggerBase: public ComponentBase,
                   public sihd::util::ALogger
 {
     public:
-        LoggerBase(LoggerOptions && options): _options(std::move(options))
+        LoggerBase(LoggerOptions && options): ALogger("logger"), _options(std::move(options))
         {
             sihd::util::LoggerManager::get()->add_logger(this);
             if (_options.add_bar)
@@ -140,14 +140,14 @@ class LoggerBase: public ComponentBase,
                                 | reflect(_scroll_btn_box);
             auto bar = hbox({
                            _filter_input->Render() | flex_grow,
-                           separator(),
+                           ftxui::separator(),
                            level_label,
-                           separator(),
+                           ftxui::separator(),
                            scroll_label,
                        })
                        | size(HEIGHT, EQUAL, 1);
 
-            auto main_content = vbox({bar, separator(), log_element});
+            auto main_content = vbox({bar, ftxui::separator(), log_element});
 
             if (!_show_level_menu)
                 return main_content;

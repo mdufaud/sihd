@@ -242,9 +242,8 @@ StorageMedium read_rotational(const std::string & sysfs_dir)
 
 StorageMedium storage_medium_from_devnum(dev_t st_dev)
 {
-    // /sys/dev/block/<major>:<minor> symlinks to the block device's sysfs dir.
-    // A whole disk exposes queue/rotational directly; a partition does not, but
-    // its parent disk (..) does (best-effort for dm/LVM via the same parent walk).
+    // /sys/dev/block/<major>:<minor> symlinks to the device's sysfs dir: a whole disk exposes
+    // queue/rotational directly, a partition through its parent disk (best-effort for dm/LVM)
     const std::string base = fmt::format("/sys/dev/block/{}:{}", major(st_dev), minor(st_dev));
     StorageMedium ret = read_rotational(base);
     if (ret == StorageMedium::unknown)
@@ -326,36 +325,6 @@ std::string download_path()
 {
     const std::string dir = user_dirs_path("XDG_DOWNLOAD_DIR");
     return dir.empty() ? home_subpath("Downloads") : dir;
-}
-
-std::string executable_path()
-{
-#if defined(__SIHD_EMSCRIPTEN__)
-    return "";
-#else
-    std::string path;
-    try
-    {
-        path = std::filesystem::canonical("/proc/self/exe");
-        if (path.empty() == false)
-            return path;
-    }
-    catch ([[maybe_unused]] const std::filesystem::filesystem_error & e)
-    {
-    }
-    std::ifstream mapf("/proc/self/maps");
-    std::string line;
-    if (std::getline(mapf, line))
-    {
-        size_t idx = line.find("/");
-        if (idx != std::string::npos)
-        {
-            path = line.substr(idx);
-            return path;
-        }
-    }
-#endif
-    return ".";
 }
 
 // stat

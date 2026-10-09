@@ -90,10 +90,7 @@ static constexpr auto to_frequency = to_freq;
 template <traits::Duration Duration>
 constexpr Duration to_duration(UnixTime nano)
 {
-    // seconds -> nano / 1E9        = nano / (1E9 / 1) / 1
-    // milliseconds -> nano / 1E6   = nano / (1E9 / 1E3) / 1
-    // nano -> nano / 1             = nano / (1E9 / 1E9) / 1
-    // min -> (nano / 1E9) / 60     = nano / (1E9 / 1) / 60
+    // unit divisor: (1E9 / unit); minutes additionally divide by 60
     return Duration((nano / (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
                     / Duration::period::num);
 }
@@ -151,9 +148,7 @@ UnixTime from_double_milliseconds(double milli_micro);
 template <traits::Duration Duration>
 constexpr UnixTime duration(Duration duration)
 {
-    // seconds -> count() * 1E9     == count() * (1E9 / 1) * 1
-    // nano -> count() * 1          == count() * (1E9 / 1E9) * 1
-    // min -> count() * 1E9 * 60    == count() * (1E9 / 1) * 60
+    // unit multiplier: (1E9 / unit); minutes additionally multiply by 60
     return (duration.count() * (std::chrono::duration<int64_t, std::nano>::period::den / Duration::period::den))
            * Duration::period::num;
 }

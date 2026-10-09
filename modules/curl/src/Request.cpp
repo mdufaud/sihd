@@ -45,9 +45,8 @@ std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, fmt::format_s
     return err(code, fmt::format(format, std::forward<Args>(args)...));
 }
 
-// curl_global_init() is not thread-safe and must be called before any other
-// curl function from a single thread: funnel every request creation here.
-// a failed init is not sticky: the next request retries it
+// curl_global_init() is not thread-safe and must run before any other curl call, from a single
+// thread: funnel every request creation here. A failed init is not sticky, the next one retries
 std::expected<void, sihd::util::Error> global_init()
 {
     static std::mutex mutex;

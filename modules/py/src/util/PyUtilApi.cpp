@@ -19,6 +19,8 @@
 #include <sihd/util/type.hpp>
 #include <sihd/util/version.hpp>
 
+#include "../expected_caster.hpp"
+
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
     pybind11::class_<ArrType, IArray>(m_util, #ArrType)                                                                \
         .def(pybind11::init<>())                                                                                       \
@@ -53,9 +55,8 @@ namespace
 // logger used by python code
 Logger g_py_logger("sihd::py");
 
-// Bridges an Observable<ServiceController> notification to a python callback.
-// The notify may fire on a service thread, so acquire the GIL and hold the
-// callable through a shared_ptr (GIL-safe copies/teardown), like http routes.
+// Bridges an Observable<ServiceController> notification to a python callback; the notify may fire
+// on a service thread, so acquire the GIL and hold the callable via shared_ptr (GIL-safe teardown)
 class PyServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
 {
     public:
@@ -324,14 +325,6 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<>())
         .def("notify", &Waitable::notify)
         .def("notify_all", &Waitable::notify_all);
-    // .def("wait", &Waitable::wait, pybind11::call_guard<pybind11::gil_scoped_release>())
-    // .def("wait_elapsed",
-    //      &Waitable::wait_elapsed,
-    //      pybind11::call_guard<pybind11::gil_scoped_release>())
-    // .def("wait_until", &Waitable::wait_until, pybind11::call_guard<pybind11::gil_scoped_release>())
-    // .def("wait_for", &Waitable::wait_for, pybind11::call_guard<pybind11::gil_scoped_release>())
-    // .def("wait_for_elapsed", &Waitable::wait_for_elapsed,
-    // pybind11::call_guard<pybind11::gil_scoped_release>());
 
     pybind11::enum_<LatenessPolicy>(m_util, "LatenessPolicy")
         .value("replay_missed", LatenessPolicy::replay_missed)
@@ -485,19 +478,37 @@ bool PyUtilApi::_configurable_set_single_conf(sihd::util::Configurable *self,
 {
     try
     {
-        return self->set_conf_str(key, handle.cast<std::string>());
+        auto res = self->set_conf_str(key, handle.cast<std::string>());
+        if (SIHD_UNEXPECTED_LOG(res))
+            raise_error(res.error());
+        return true;
     }
-    catch (const pybind11::cast_error & e)
+    catch (const pybind11::cast_error &)
     {
     }
     PyObject *val = handle.ptr();
     if (PyBool_Check(val))
-        return self->set_conf<bool>(key, handle.cast<bool>());
-    else if (PyLong_Check(val))
-        return self->set_conf_int(key, handle.cast<int64_t>());
-    else if (PyFloat_Check(val))
-        return self->set_conf_float(key, handle.cast<double>());
-    throw std::runtime_error(fmt::format("configuration '{}' type error", key));
+    {
+        auto res = self->set_conf<bool>(key, handle.cast<bool>());
+        if (SIHD_UNEXPECTED_LOG(res))
+            raise_error(res.error());
+        return true;
+    }
+    if (PyLong_Check(val))
+    {
+        auto res = self->set_conf_int(key, handle.cast<int64_t>());
+        if (SIHD_UNEXPECTED_LOG(res))
+            raise_error(res.error());
+        return true;
+    }
+    if (PyFloat_Check(val))
+    {
+        auto res = self->set_conf_float(key, handle.cast<double>());
+        if (SIHD_UNEXPECTED_LOG(res))
+            raise_error(res.error());
+        return true;
+    }
+    return false;
 }
 
 static void __attribute__((constructor)) premain()

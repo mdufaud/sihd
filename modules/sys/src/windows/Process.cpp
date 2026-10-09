@@ -59,9 +59,8 @@ std::pair<HANDLE, HANDLE> make_pipe()
     HANDLE rw;
     SECURITY_ATTRIBUTES saAttr;
 
-    // locked-down default: neither end is inherited by a child and the read end is
-    // non-blocking (the parent peeks it). Each call site opts a specific end into
-    // inheritance / blocking when it actually needs it.
+    // locked-down default: neither end inherited by a child, read end non-blocking (parent peeks);
+    // each call site opts a specific end into inheritance / blocking when it needs it
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = FALSE;
     saAttr.lpSecurityDescriptor = NULL;

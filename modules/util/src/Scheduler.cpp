@@ -1,4 +1,5 @@
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/container.hpp>
@@ -468,5 +469,7 @@ void Scheduler::_delete_trashed_tasks()
     }
     _trash_task_list.clear();
 }
+
+SIHD_REGISTER_FACTORY(Scheduler);
 
 } // namespace sihd::util

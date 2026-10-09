@@ -302,9 +302,8 @@ void TreeProfiler::_dispatch_loop()
         }
         for (Event & event : batch)
         {
-            // snapshot per event: hooks may add or remove observers, and they run
-            // without holding the observable lock so producers never stall on a
-            // slow observer
+            // snapshot per event: hooks may add or remove observers, and run without holding the observable
+            // lock so producers never stall on a slow observer
             std::vector<sihd::util::IHandler<Event *> *> observers;
             this->for_each_observer([&observers](sihd::util::IHandler<Event *> *obs) { observers.push_back(obs); });
             for (sihd::util::IHandler<Event *> *obs : observers)
@@ -370,9 +369,8 @@ void TreeProfiler::_add_root(sihd::util::Named *root)
 
 void TreeProfiler::reset()
 {
-    // liveness comes from a walk of the roots: children destroyed by a service
-    // state change are not in it anymore, their stale entries are dropped
-    // without dereferencing them
+    // liveness comes from a walk of the roots: children destroyed by a service state change are not
+    // in it anymore, their stale entries are dropped without dereferencing them
     std::set<const sihd::util::Named *> nameds;
     std::set<const sihd::util::AService *> services;
     std::vector<Channel *> channels;
@@ -597,9 +595,8 @@ void TreeProfiler::_observe_node(sihd::util::Node *node,
 
 bool TreeProfiler::_observe_channel(Channel *channel)
 {
-    // the map entry is claimed first: a concurrent observe finds it and never
-    // installs its own entry, so the watcher slot is never stolen from an entry
-    // that is about to be destroyed
+    // the map entry is claimed first: a concurrent observe finds it and never installs its own, so
+    // the watcher slot is never stolen from an entry that is about to be destroyed
     ChannelEntry *entry_ptr = nullptr;
     {
         auto l = _waitable.guard();

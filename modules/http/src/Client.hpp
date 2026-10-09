@@ -19,10 +19,8 @@
 namespace sihd::http
 {
 
-// One transfer at a time on a single curl handle: its connection pool survives
-// reset(), which is what reuses connections from one send() to the next.
-// perform() states the method, body and callbacks of each send() again, and
-// clears the previous transfer's proxy, auth, user agent, encoding and mime.
+// One transfer at a time on a single curl handle: its connection pool survives reset(), which is
+// what reuses connections; perform() re-states each send() and clears the previous transfer
 class Client
 {
     public:

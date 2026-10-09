@@ -6,6 +6,7 @@
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/sys/user.hpp>
@@ -20,7 +21,7 @@ SIHD_LOGGER;
 namespace
 {
 // from path/bin/script.py -> path/bin -> path
-std::string g_exe_dir = fs::parent(fs::parent(fs::executable_path()));
+std::string g_exe_dir = fs::parent(fs::parent(program::path()));
 } // namespace
 
 void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
@@ -79,7 +80,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
              })
         .def("are_equals", &fs::are_equals)
         .def("home_path", &fs::home_path)
-        .def("executable_path", &fs::executable_path)
+        .def("executable_path", &program::path)
         .def("cwd", &fs::cwd);
 
     m_sys.def_submodule("os", "sihd::sys::os")
@@ -150,9 +151,8 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
             "creation_time",
             +[](const ProcessInfo & self) -> int64_t { return self.creation_time(); })
         .def_static("get_all_process_from_name", &ProcessInfo::get_all_process_from_name);
-    // NOTE: no Process binding for Python on purpose - the stdlib `subprocess`
-    // module already launches and manages processes. Bindings only cover what the
-    // host language lacks (see the Lua Process binding for the no-stdlib case).
+    // No Process binding for Python on purpose: the stdlib subprocess module covers it - bindings
+    // only cover what the host language lacks (see the Lua Process binding)
 
     pybind11::class_<Color>(m_sys, "Color")
         .def(pybind11::init<>())

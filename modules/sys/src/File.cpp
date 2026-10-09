@@ -260,9 +260,8 @@ std::expected<void, Error> File::open_tmp(std::string_view prefix, bool write_bi
         _path = path;
     return opened;
 #else
-    // _mktemp_s only derives 5 digits from the PID and varies a single letter (max 26 names,
-    // and is broken under wine where it returns EEXIST on the first call). Generate the random
-    // XXXXXX part ourselves and create the file exclusively ("x"), retrying on collision.
+    // _mktemp_s derives 5 digits from the PID plus one letter (26 names max) and is broken under wine
+    // (EEXIST on first call): generate the XXXXXX part ourselves, create with "x", retry on collision
     static constexpr std::string_view charset = "abcdefghijklmnopqrstuvwxyz0123456789";
     thread_local std::mt19937 gen(std::random_device {}());
     std::uniform_int_distribution<size_t> dist(0, charset.size() - 1);

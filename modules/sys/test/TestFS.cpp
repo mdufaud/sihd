@@ -453,9 +453,8 @@ TEST_F(TestFS, test_fs_copy_file)
         content[i] = (char)(i * 31 % 251);
     ASSERT_TRUE(fs::write(src, content, false, true).has_value());
 
-    // Wine does not implement the CopyFile2 progress callback ("PCOPYFILE2_PROGRESS_ROUTINE
-    // is not supported" in its kernelbase/file.c): the callback never runs there, so
-    // progress counting and cancellation cannot be verified
+    // Wine does not implement the CopyFile2 progress callback ("not supported" in kernelbase/file.c):
+    // the callback never runs there, so progress counting and cancellation cannot be verified
     size_t transferred = 0;
     EXPECT_TRUE(fs::copy_file(src, dst, [&](size_t progress, size_t total) {
                     EXPECT_EQ(total, content.size());

@@ -9,9 +9,8 @@
 namespace sihd::sys
 {
 
-// Snapshot of the caller's privileges. linux: libcap permitted/effective sets, held PER THREAD.
-// windows: PROCESS token privileges. refresh() loads, raise()/drop() mutate, apply() commits;
-// is_enabled()/permitted()/enabled() read the snapshot. cap::has() reads the live state.
+// Snapshot of the caller's privileges (linux: libcap permitted/effective sets, per thread;
+// windows: process token privileges). refresh/raise/drop/apply mutate, cap::has() reads live
 class CapabilitySet
 {
     public:

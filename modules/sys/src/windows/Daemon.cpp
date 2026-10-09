@@ -37,9 +37,8 @@ bool Daemon::set_group(const user::GroupId &)
 
 bool Daemon::run()
 {
-    // Note: Windows doesn't have fork/setsid like Unix.
-    // For a true Windows daemon, use Windows Services (SC API).
-    // This implementation provides a simple "detached console" mode.
+    // Windows has no fork/setsid: a true daemon is a Windows Service (SC API); this is a simple
+    // detached-console mode
 
     // Lock file
     if (_lock_pid_file() == false)

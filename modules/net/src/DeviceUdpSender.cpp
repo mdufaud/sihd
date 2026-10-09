@@ -1,6 +1,6 @@
 #include <sihd/net/DeviceUdpSender.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {

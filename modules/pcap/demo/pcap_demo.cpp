@@ -16,9 +16,8 @@
 #include <sihd/util/term.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-// prevents error: previous declaration as 'typedef long int suseconds_t'
-// windows libwebsockets - contrary to libpcap
-// have a way to not typedef based on this define
+// prevents: previous declaration as 'typedef long int suseconds_t' - windows libwebsockets
+// typedefs it, contrary to libpcap, with no way to not typedef based on this define
 # define LWS_HAVE_SUSECONDS_T
 #endif
 

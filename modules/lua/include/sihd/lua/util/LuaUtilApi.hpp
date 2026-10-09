@@ -156,15 +156,15 @@ class LuaUtilApi
             static_assert(std::is_base_of<sihd::util::Configurable, T>::value);
             if (tbl.isTable() == false)
                 luaL_error(state, "set_conf argument must be a table");
-            bool ret = true;
             for (const auto & pair : luabridge::pairs(tbl))
             {
                 if (pair.first.isString() == false)
                     luaL_error(state, "set_conf keys must be strings");
                 std::string key = std::string(pair.first);
-                ret = LuaUtilApi::_configurable_recursive_set(self, key, pair.second) && ret;
+                if (LuaUtilApi::_configurable_recursive_set(self, key, pair.second) == false)
+                    luaL_error(state, "set_conf refused the key '%s'", key.c_str());
             }
-            return ret;
+            return true;
         }
 
         template <typename T>

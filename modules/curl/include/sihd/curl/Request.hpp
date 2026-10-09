@@ -42,10 +42,8 @@ enum class Proxy
 class HeaderList;
 class Mime;
 
-// One transfer to or from an url. Reusing a request keeps its connection
-// pool alive: keep this object around instead of recreating it per transfer.
-// A request must not outlive process exit: curl global cleanup runs in the
-// exit chain, so no instance at static storage duration.
+// One transfer to or from an url. Reusing a request keeps its connection pool alive: keep it
+// around, do not recreate per transfer, and never at static storage duration (curl exits early)
 class Request
 {
     public:

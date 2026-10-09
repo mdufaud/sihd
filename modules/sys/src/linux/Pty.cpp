@@ -21,10 +21,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
-// ============================================================================
-// Platform detection
-// ============================================================================
-
 #if defined(__SIHD_EMSCRIPTEN__)
 # define SIHD_PTY_UNSUPPORTED 1
 #else
@@ -188,8 +184,7 @@ bool PosixPty::spawn()
     ws.ws_ypixel = _size.ypixel;
 
     // forkpty() creates the PTY pair and forks in one call
-    // - Parent: _master_fd is set, _pid is the child's PID
-    // - Child: _pid is 0, stdin/stdout/stderr are connected to the slave
+    // parent: _master_fd set, _pid = child; child: std streams on the slave, _pid == 0
     _pid = forkpty(&_master_fd, nullptr, nullptr, &ws);
 
     if (_pid < 0)
@@ -200,10 +195,6 @@ bool PosixPty::spawn()
 
     if (_pid == 0)
     {
-        // ============================================
-        // CHILD PROCESS - This code runs in the child
-        // ============================================
-
         // Change working directory if specified
         if (!_working_dir.empty())
         {
@@ -224,10 +215,6 @@ bool PosixPty::spawn()
             SIHD_UNEXPECTED_LOG(env::set("TERM", "xterm-256color"));
         }
 
-        // Build argv for execvp
-        // argv[0] = shell name (basename for conventional shells)
-        // argv[1..n] = arguments
-        // argv[n+1] = nullptr (terminator)
         std::vector<char *> argv;
 
         // Use the shell path as argv[0]
@@ -251,13 +238,7 @@ bool PosixPty::spawn()
         _exit(127); // Standard exit code for command not found
     }
 
-    // ============================================
-    // PARENT PROCESS - Continue here
-    // ============================================
-
-    // Set master fd to non-blocking mode
-    // This allows read() to return immediately if no data is available,
-    // which is essential for integration with poll()/select() event loops
+    // master fd non-blocking: read() returns immediately with no data, required by poll() loops
     int flags = fcntl(_master_fd, F_GETFL, 0);
     if (flags != -1)
     {
@@ -273,11 +254,7 @@ bool PosixPty::is_running() const
     if (_pid <= 0 || _exited)
         return false;
 
-    // Use waitpid with WNOHANG for non-blocking check
-    // Returns:
-    // - 0: Child is still running
-    // - _pid: Child has exited (status contains exit info)
-    // - -1: Error
+    // waitpid(WNOHANG): 0 = still running, _pid = exited (status set), -1 = error
     int status;
     pid_t result = waitpid(_pid, &status, WNOHANG);
 
@@ -337,10 +314,7 @@ void PosixPty::terminate()
     if (_pid <= 0 || _exited)
         return;
 
-    // Graceful termination sequence:
-    // 1. SIGHUP - "Hangup" signal, shells handle this gracefully
-    // 2. SIGTERM - Standard termination request
-    // 3. SIGKILL - Force kill (cannot be caught or ignored)
+    // graceful termination: SIGHUP (shells handle it), then SIGTERM, then SIGKILL
 
     // Try SIGHUP first (what happens when terminal is closed)
     kill(_pid, SIGHUP);
@@ -439,10 +413,6 @@ void PosixPty::send_eof()
     }
 }
 
-// ============================================================================
-// Factory functions for POSIX
-// ============================================================================
-
 bool Pty::is_supported()
 {
     // POSIX systems always support PTY
@@ -457,10 +427,6 @@ std::unique_ptr<Pty> Pty::create()
 } // namespace sihd::sys
 
 #endif // SIHD_PTY_POSIX
-
-// ============================================================================
-// Unsupported platform (emscripten/web: no processes, no forkpty)
-// ============================================================================
 
 #if defined(SIHD_PTY_UNSUPPORTED)
 

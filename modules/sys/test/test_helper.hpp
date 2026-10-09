@@ -8,6 +8,7 @@
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/program.hpp>
 
 namespace test
 {
@@ -16,8 +17,8 @@ namespace test
 inline std::string helper_path()
 {
     namespace fs = sihd::sys::fs;
-    // executable_path() -> <build>/test/bin/sihd_sys[.exe], helper -> <build>/bin/sihd_sys_test_helper
-    const std::string build_dir = fs::parent(fs::parent(fs::parent(fs::executable_path())));
+    // program::path() -> <build>/test/bin/sihd_sys[.exe], helper -> <build>/bin/sihd_sys_test_helper
+    const std::string build_dir = fs::parent(fs::parent(fs::parent(sihd::sys::program::path())));
 #if defined(__SIHD_WINDOWS__)
     return fs::combine(build_dir, "bin/sihd_sys_test_helper.exe");
 #else

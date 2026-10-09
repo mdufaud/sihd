@@ -1,7 +1,5 @@
 #include <windows.h>
 
-#include <stdexcept>
-
 #include <fmt/format.h>
 
 #include <sihd/sys/LoggerSystem.hpp>
@@ -17,23 +15,32 @@ SIHD_LOGGER;
 
 struct LoggerSystem::Impl
 {
-        HANDLE handle;
+        HANDLE handle = nullptr;
 };
-
-LoggerSystem::LoggerSystem(std::string_view progname, int facility, int options): _impl(std::make_unique<Impl>())
-{
-    _impl->handle = RegisterEventSource(NULL, progname.data());
-    if (_impl->handle == nullptr)
-    {
-        throw std::runtime_error(fmt::format("Syslogger could not RegisterEventSource: {}", os::last_error_str()));
-    }
-    (void)options;
-    (void)facility;
-}
 
 LoggerSystem::~LoggerSystem()
 {
-    DeregisterEventSource(_impl->handle);
+    if (_impl != nullptr)
+    {
+        if (_impl->handle != nullptr)
+            DeregisterEventSource(_impl->handle);
+        delete _impl;
+    }
+}
+
+std::expected<void, Error> LoggerSystem::_open_source()
+{
+    _impl = new Impl();
+    _impl->handle = RegisterEventSource(NULL, _progname.c_str());
+    if (_impl->handle == nullptr)
+    {
+        // the ctor throws on this return: the destructor never runs
+        delete _impl;
+        _impl = nullptr;
+        return std::unexpected(
+            Error(ErrorCode::io_error, "cannot RegisterEventSource '{}': {}", _progname, os::last_error_str()));
+    }
+    return {};
 }
 
 void LoggerSystem::log(const LogInfo & info, std::string_view msg)
@@ -60,18 +67,18 @@ void LoggerSystem::log(const LogInfo & info, std::string_view msg)
     }
     WORD category = static_cast<WORD>(info.level);
     const std::string report_str = info.format(msg);
-    if (!ReportEvent(_impl->handle,                  // Event log handle
-                     type,                           // Event type
-                     category,                       // Event category
-                     0x1000,                         // Event identifier
-                     NULL,                           // No security identifier
-                     1,                              // Number of strings
-                     0,                              // No binary data
-                     (LPCSTR *)(report_str.c_str()), // Array of strings
-                     NULL))                          // No binary data
-    {
-        throw std::runtime_error(fmt::format("Syslogger could not register event: {}", os::last_error_str()));
-    }
+    // a failing ReportEvent (a full event log) must log nothing back: the manager
+    // would re-enter this sink and recurse
+    LPCSTR strings[] = {report_str.c_str()};
+    (void)ReportEvent(_impl->handle, // Event log handle
+                      type,          // Event type
+                      category,      // Event category
+                      0x1000,        // Event identifier
+                      NULL,          // No security identifier
+                      1,             // Number of strings
+                      0,             // No binary data
+                      strings,       // Array of strings
+                      NULL);         // No binary data
 }
 
 } // namespace sihd::sys

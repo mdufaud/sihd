@@ -1,8 +1,8 @@
 #include <optional>
 
 #include <sihd/core/DevPlayer.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Task.hpp>
 

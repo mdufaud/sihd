@@ -185,7 +185,7 @@ TEST_F(TestConfigurable, test_configurable_json)
         {"list", {1, 0, 2}},
     };
     ConfigurableObj obj;
-    EXPECT_EQ(obj.set_conf(json), true);
+    EXPECT_TRUE(obj.set_conf(json).has_value());
 
     EXPECT_EQ(obj.bool_val, true);
     EXPECT_EQ(obj.int_val, 1234);
@@ -198,7 +198,7 @@ TEST_F(TestConfigurable, test_configurable_json)
     EXPECT_EQ(obj.list_val.at(1), 0);
     EXPECT_EQ(obj.list_val.at(2), 2);
 
-    EXPECT_EQ(obj.set_conf("list", json["list"]), true);
+    EXPECT_TRUE(obj.set_conf("list", json["list"]).has_value());
     EXPECT_EQ(obj.list_val.size(), 6u);
     EXPECT_EQ(obj.list_val.at(3), 1);
     EXPECT_EQ(obj.list_val.at(4), 0);
@@ -206,11 +206,11 @@ TEST_F(TestConfigurable, test_configurable_json)
 
     sihd::json::Json null;
     null = {{"nothing", nullptr}};
-    EXPECT_EQ(obj.set_conf(null), false);
-    EXPECT_EQ(obj.set_conf("json-null", null["nothing"]), false);
+    EXPECT_FALSE(obj.set_conf(null).has_value());
+    EXPECT_FALSE(obj.set_conf("json-null", null["nothing"]).has_value());
 
     sihd::json::Json json_conf = {{"str", "hello world"}};
-    EXPECT_EQ(obj.set_conf("json", json_conf), true);
+    EXPECT_TRUE(obj.set_conf("json", json_conf).has_value());
     EXPECT_EQ(obj.inside_json_val, "hello world");
 }
 
@@ -218,91 +218,92 @@ TEST_F(TestConfigurable, test_configurable_class)
 {
     EmptyConfigurableObj empty_obj;
 
-    EXPECT_THROW(empty_obj.set_conf("no-existo", false), std::out_of_range);
+    EXPECT_FALSE(empty_obj.set_conf("no-existo", false).has_value());
 
     ConfigurableObj obj;
 
-    EXPECT_THROW(obj.set_conf("no-existo", false), std::out_of_range);
+    EXPECT_FALSE(obj.set_conf("no-existo", false).has_value());
 
-    EXPECT_TRUE(obj.set_conf("dual", false, 10));
+    EXPECT_TRUE(obj.set_conf("dual", false, 10).has_value());
 
     EXPECT_EQ(obj.bool_val, false);
-    EXPECT_TRUE(obj.set_conf("bool", true));
+    EXPECT_TRUE(obj.set_conf("bool", true).has_value());
     EXPECT_EQ(obj.bool_val, true);
 
     // Default template is int
     EXPECT_EQ(obj.int_val, 0);
-    EXPECT_TRUE(obj.set_conf("int", 20));
+    EXPECT_TRUE(obj.set_conf("int", 20).has_value());
     EXPECT_EQ(obj.int_val, 20);
 
     // Try catch for good type
     EXPECT_EQ(obj.char_val, 0);
-    EXPECT_TRUE(obj.set_conf_int("char", 'a'));
+    EXPECT_TRUE(obj.set_conf_int("char", 'a').has_value());
     EXPECT_EQ(obj.char_val, 'a');
 
     EXPECT_EQ(obj.uchar_val, 0);
-    EXPECT_TRUE(obj.set_conf_int("uchar", -1));
+    EXPECT_TRUE(obj.set_conf_int("uchar", -1).has_value());
     EXPECT_EQ(obj.uchar_val, 255);
 
     EXPECT_EQ(obj.short_val, 0);
-    EXPECT_TRUE(obj.set_conf_int("short", -32769));
+    EXPECT_TRUE(obj.set_conf_int("short", -32769).has_value());
     EXPECT_EQ(obj.short_val, 32767);
 
     EXPECT_EQ(obj.ushort_val, 0);
-    EXPECT_TRUE(obj.set_conf_int("ushort", -1));
+    EXPECT_TRUE(obj.set_conf_int("ushort", -1).has_value());
     EXPECT_EQ(obj.ushort_val, 65535);
 
     EXPECT_EQ(obj.int_val, 20);
-    EXPECT_TRUE(obj.set_conf_int("int", -123));
+    EXPECT_TRUE(obj.set_conf_int("int", -123).has_value());
     EXPECT_EQ(obj.int_val, -123);
 
     EXPECT_EQ(obj.uint_val, 0u);
-    EXPECT_TRUE(obj.set_conf_int("uint", -1));
+    EXPECT_TRUE(obj.set_conf_int("uint", -1).has_value());
     EXPECT_EQ(obj.uint_val, 4294967295);
 
     EXPECT_EQ(obj.long_val, 0l);
-    EXPECT_TRUE(obj.set_conf_int("long", __LONG_LONG_MAX__));
+    EXPECT_TRUE(obj.set_conf_int("long", __LONG_LONG_MAX__).has_value());
     EXPECT_EQ(obj.long_val, __LONG_LONG_MAX__);
 
     EXPECT_EQ(obj.ulong_val, 0ul);
-    EXPECT_TRUE(obj.set_conf_int("ulong", -1));
+    EXPECT_TRUE(obj.set_conf_int("ulong", -1).has_value());
     EXPECT_EQ(obj.ulong_val, 18446744073709551615ul);
 
     // Floats
 
     // double is default type
     EXPECT_EQ(obj.double_val, 0.0);
-    obj.set_conf("double", 11.11);
+    EXPECT_TRUE(obj.set_conf("double", 11.11).has_value());
     EXPECT_FLOAT_EQ(obj.double_val, 11.11);
 
     EXPECT_EQ(obj.float_val, 0.0);
-    obj.set_conf_float("float", 123.11);
+    EXPECT_TRUE(obj.set_conf_float("float", 123.11).has_value());
     EXPECT_FLOAT_EQ(obj.float_val, 123.11);
 
     EXPECT_FLOAT_EQ(obj.double_val, 11.11);
-    obj.set_conf_float("double", 12345.678);
+    EXPECT_TRUE(obj.set_conf_float("double", 12345.678).has_value());
     EXPECT_FLOAT_EQ(obj.double_val, 12345.678);
 
     // Strings
 
     // default is const char
     EXPECT_EQ(obj.str_val, "");
-    obj.set_conf("cstr", "hello");
+    EXPECT_TRUE(obj.set_conf("cstr", "hello").has_value());
     EXPECT_EQ(obj.str_val, "hello");
-    obj.set_conf<const std::string &>("str", "world");
+    EXPECT_TRUE(obj.set_conf<const std::string &>("str", "world").has_value());
     EXPECT_EQ(obj.str_val, "world");
 
-    obj.set_conf_str("str", "hello world");
+    EXPECT_TRUE(obj.set_conf_str("str", "hello world").has_value());
     EXPECT_EQ(obj.str_val, "hello world");
-    obj.set_conf_str("cstr", "hello world sup");
+    EXPECT_TRUE(obj.set_conf_str("cstr", "hello world sup").has_value());
     EXPECT_EQ(obj.str_val, "hello world sup");
 }
 
 TEST_F(TestConfigurable, test_configurable_unknown_key)
 {
     ConfigurableObj obj;
-    EXPECT_THROW(obj.set_conf_int("nonexistent", 42), std::exception);
-    EXPECT_THROW(obj.set_conf_float("nonexistent", 3.14), std::exception);
-    EXPECT_THROW(obj.set_conf_str("nonexistent", "value"), std::exception);
+    EXPECT_FALSE(obj.set_conf_int("nonexistent", 42).has_value());
+    EXPECT_FALSE(obj.set_conf_float("nonexistent", 3.14).has_value());
+    EXPECT_FALSE(obj.set_conf_str("nonexistent", "value").has_value());
+    EXPECT_EQ(obj.set_conf_int("nonexistent", 42).error().code, ErrorCode::not_found);
 }
 } // namespace test

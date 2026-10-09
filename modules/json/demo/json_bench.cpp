@@ -20,10 +20,8 @@ double to_ms(Ns ns)
     return static_cast<double>(ns.count()) / 1'000'000.0;
 }
 
-// ─── Full Traversals (visit every node) ───
-// DOM is expected to be faster here: it pre-parses everything in a single SIMD pass,
-// then pointer-chasing is cheap.
-// On-Demand parses token-by-token, so for full traversals it has more overhead.
+// DOM is expected to win full traversals: one SIMD parse pass then cheap pointer-chasing;
+// On-Demand pays per-token overhead
 
 size_t traverse_json(const sihd::json::Json & j)
 {
@@ -117,9 +115,8 @@ size_t traverse_dom(simdjson::dom::element elem)
     }
 }
 
-// ─── Partial access: extract one field per object in a top-level array ───
-// This still walks the whole top-level array, so it is only a moderate fit for
-// On-Demand. The real sweet spot for On-Demand is early exit, benchmarked below.
+// Still walks the whole top-level array (moderate On-Demand fit); its sweet spot is early exit,
+// benchmarked below
 
 size_t partial_ondemand(simdjson::ondemand::document & doc, std::string_view field_name)
 {

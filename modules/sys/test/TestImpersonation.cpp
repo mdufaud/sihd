@@ -39,10 +39,8 @@ TEST_F(TestImpersonation, test_impersonation_credentials)
     }
     else
     {
-        // impersonating an account that cannot be logged on must leave the thread untouched.
-        // note this asserts the outcome, not which win32 call rejected it: under wine LogonUser
-        // is a stub returning success and a fake token, and ImpersonateLoggedOnUser is what
-        // fails (ERROR_INVALID_HANDLE) - which is exactly the cleanup path being covered here
+        // impersonating an account that cannot be logged on must leave the thread untouched; asserts the
+        // outcome, not which call rejects it: wine's LogonUser is a stub, ImpersonateLoggedOnUser fails
         EXPECT_FALSE(impersonation.impersonate_with_credentials("sihd_no_such_user", "sihd_no_such_password"));
         EXPECT_FALSE(impersonation.impersonating());
     }

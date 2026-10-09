@@ -5,7 +5,6 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerAsync.hpp>
-#include <sihd/util/thread.hpp>
 
 namespace sihd::util
 {
@@ -37,18 +36,18 @@ void LoggerAsync::Item::_reseat()
 }
 
 LoggerAsync::LoggerAsync(ALogger *target, size_t max_queue_size, std::string source):
+    ALogger("async"),
     _source(std::move(source)),
     _target(target),
     _max_queue_size(max_queue_size)
 {
-    _thread = std::jthread([this] { this->_drain(); });
+    _worker.set_method([this] { return this->_drain(); });
+    (void)_worker.start_worker("logger-async");
 }
 
 LoggerAsync::~LoggerAsync()
 {
     _queue.terminate();
-    if (_thread.joinable())
-        _thread.join();
 }
 
 void LoggerAsync::log(const LogInfo & info, std::string_view msg)
@@ -62,9 +61,8 @@ size_t LoggerAsync::dropped() const
     return _dropped.load(std::memory_order_relaxed);
 }
 
-void LoggerAsync::_drain()
+bool LoggerAsync::_drain()
 {
-    SIHD_UNEXPECTED_LOG(thread::set_name("logger-async"));
     while (const std::optional<Item> item = _queue.pop_wait())
     {
         this->_process(item->info, item->msg);
@@ -74,6 +72,7 @@ void LoggerAsync::_drain()
         this->_report_drops();
     }
     this->_report_drops();
+    return false;
 }
 
 void LoggerAsync::_report_drops()
@@ -85,7 +84,6 @@ void LoggerAsync::_report_drops()
 
 void LoggerAsync::_process(const LogInfo & info, std::string_view msg)
 {
-    // the target filters are checked in the drain's thread
     try
     {
         if (_target->should_filter(info, msg) == false)

@@ -1,9 +1,9 @@
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/WriteProtocol.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 #include "server/HttpServerImpl.hpp"
 
@@ -218,6 +218,8 @@ bool HttpServer::on_start()
     while (!_impl->stop)
         lws_service_tsi(_impl->lws_context_ptr, 0, 0);
 
+    for (std::thread & t : _impl->service_threads)
+        t.join();
     _impl->service_threads.clear();
     _impl->stepworker.stop_worker();
     return true;

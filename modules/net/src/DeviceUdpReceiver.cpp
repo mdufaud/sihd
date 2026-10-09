@@ -1,7 +1,7 @@
 #include <sihd/net/DeviceUdpReceiver.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {

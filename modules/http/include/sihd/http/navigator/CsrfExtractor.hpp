@@ -14,10 +14,8 @@ struct CsrfResult
         std::string value;
 };
 
-// Scan an HTML body for a CSRF hidden input field.
-// If hint is provided, looks for that field name specifically.
-// Otherwise tries common names: _csrf, authenticity_token,
-// __RequestVerificationToken, _token, csrf_token, csrfmiddlewaretoken.
+// Scan an HTML body for a CSRF hidden input field: the hint field name when provided, otherwise
+// common names (_csrf, authenticity_token, __RequestVerificationToken, _token, csrf_token...)
 CsrfResult csrf_extract_from_html(std::string_view html, std::optional<std::string_view> hint = std::nullopt);
 
 } // namespace sihd::http

@@ -2,6 +2,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
@@ -367,6 +368,8 @@ void SigWatcher::_run_polling_loop()
         std::this_thread::sleep_for(std::chrono::nanoseconds(_polling_interval_ns.load(std::memory_order_relaxed)));
     }
 }
+
+SIHD_REGISTER_FACTORY(SigWatcher);
 
 } // namespace sihd::sys
 

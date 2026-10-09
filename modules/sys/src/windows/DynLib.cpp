@@ -74,7 +74,7 @@ std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_na
 #endif
 }
 
-std::expected<void *, Error> DynLib::load([[maybe_unused]] std::string_view symbol_name)
+std::expected<void *, Error> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
 {
 #if !defined(SIHD_STATIC)
     if (this->is_open() == false)

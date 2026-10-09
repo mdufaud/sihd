@@ -2,6 +2,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerConsole.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/term.hpp>
 
 namespace sihd::util
@@ -64,9 +65,22 @@ const char *level_color(LogLevel level)
 
 } // namespace
 
-LoggerConsole::LoggerConsole(bool colors): _colors(colors) {}
+LoggerConsole::LoggerConsole(const std::string & name, Node *parent):
+    ALogger(name, parent),
+    _colors(term::supports_color(stderr))
+{
+    this->add_conf("colors", &LoggerConsole::set_colors);
+}
+
+LoggerConsole::LoggerConsole(bool colors): ALogger("console"), _colors(colors) {}
 
 LoggerConsole::~LoggerConsole() = default;
+
+bool LoggerConsole::set_colors(bool colors)
+{
+    _colors = colors;
+    return true;
+}
 
 void LoggerConsole::log(const LogInfo & info, std::string_view msg)
 {
@@ -83,5 +97,7 @@ void LoggerConsole::log(const LogInfo & info, std::string_view msg)
 
     fwrite(fmt_msg.c_str(), sizeof(char), fmt_msg.size(), stderr);
 }
+
+SIHD_REGISTER_FACTORY(LoggerConsole);
 
 } // namespace sihd::util

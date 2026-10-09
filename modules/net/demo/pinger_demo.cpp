@@ -4,6 +4,7 @@
 #include <sihd/net/dns.hpp>
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -66,7 +67,7 @@ int main(int argc, char **argv)
             SIHD_LOG(error, "Demo must have capabilities or be played with root perms");
             SIHD_LOG(notice,
                      "For capabilities, execute linux command: 'sudo setcap cap_net_raw=pe {}'\n",
-                     fs::executable_path());
+                     program::path());
             app.exit(EXIT_FAILURE);
         }
 

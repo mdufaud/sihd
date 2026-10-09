@@ -131,9 +131,8 @@ std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
     if (handle == INVALID_HANDLE_VALUE)
         return std::unexpected(Error(io_error, "could not watch '{}': {}", path, os::last_error_str()));
 
-    // ReadDirectoryChangesW is asynchronous: the OVERLAPPED it is given must keep a stable address
-    // until the operation completes. Store the Watcher first (std::list nodes never move) so the OS
-    // never ends up writing the completion result into freed/moved memory.
+    // ReadDirectoryChangesW is asynchronous: the OVERLAPPED address must stay stable until completion.
+    // Watcher is stored first (std::list nodes never move) so the OS never writes into freed memory
     Watcher & watcher = _watchers.emplace_back();
     watcher.path = std::string(path);
     watcher.filename_filter = std::move(filename_filter);

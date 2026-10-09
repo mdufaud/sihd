@@ -35,9 +35,8 @@ class TlsSocket: public Socket
 
         std::expected<void, sihd::util::Error>
             connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms = blocking_timeout) override;
-        // TLS writes go through SSL_write: there is no MSG_NOSIGNAL to pass,
-        // unlike plain sockets - a dead connection raises SIGPIPE, which the
-        // process must ignore or handle itself.
+        // TLS writes go through SSL_write: no MSG_NOSIGNAL to pass, unlike plain sockets - a dead
+        // connection raises SIGPIPE, which the process must ignore or handle itself
         std::expected<size_t, sihd::util::Error> send(sihd::util::ArrCharView view) override;
         std::expected<size_t, sihd::util::Error> receive(void *data, size_t size) override;
         std::expected<void, sihd::util::Error> shutdown() const override;

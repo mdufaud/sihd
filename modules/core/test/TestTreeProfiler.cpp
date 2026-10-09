@@ -495,9 +495,8 @@ TEST_F(TestTreeProfiler, test_events)
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(c1->write<int>(0, 2));
 
-    // strace-like trace: an enter event per action then its exit carrying the
-    // duration, prefixed with the producer thread id; the ring kept the four
-    // events of the two writes
+    // strace-like trace: an enter event per action then its exit carrying the duration, prefixed
+    // with the producer thread id; the ring kept the four events of the two writes
     const std::string tid = thread::id_str();
     const std::string expected = "[" + tid + "] root.device.c1 write ...\n" + "[" + tid
                                  + "] root.device.c1 write = +3ms:0us\n" + "[" + tid + "] root.device.c1 write ...\n"
@@ -652,6 +651,8 @@ TEST_F(TestTreeProfiler, test_event_poll)
 class CapturingLogger: public sihd::util::ALogger
 {
     public:
+        CapturingLogger(): ALogger("capturing") {}
+
         void log(const sihd::util::LogInfo & info, std::string_view msg) override
         {
             entries.emplace_back(info.level, std::string(msg));
@@ -1552,9 +1553,8 @@ TEST_F(TestTreeProfiler, test_reset_and_reobserve_from_observer)
     TreeProfiler profiler;
     ASSERT_TRUE(profiler.observe(&root));
 
-    // an observer resetting then re-observing mid-notification hands the
-    // remaining hooks to fresh entries: they hold no state of the notification
-    // in flight and must ignore them
+    // an observer resetting then re-observing mid-notification hands the remaining hooks to fresh
+    // entries: they hold no state of the notification in flight and must ignore them
     bool rebuilt = false;
     LambdaObserver rebuilder("rebuilder", [&](Channel *) {
         if (rebuilt)
@@ -1710,9 +1710,8 @@ TEST_F(TestTreeProfiler, test_stop_from_observer)
     profiler.set_clock(&clock);
     ASSERT_TRUE(profiler.observe(&root));
 
-    // an observer stopping the device mid-notification unsubscribes it from
-    // the next ones; the service operation nests inside the channel
-    // notification
+    // an observer stopping the device mid-notification unsubscribes it from the next ones; the
+    // service operation nests inside the channel notification
     bool stopped = false;
     LambdaObserver stopper("stopper", [&](Channel *) {
         if (stopped == false)

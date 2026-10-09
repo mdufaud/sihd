@@ -56,11 +56,11 @@ TEST_F(TestDynLib, test_dynlib_load_symbol)
     DynLib lib(SIHD_TEST_LIBC);
     ASSERT_TRUE(lib.is_open());
 
-    auto sym = lib.load("printf");
+    auto sym = lib.load_symbol("printf");
     ASSERT_TRUE(sym.has_value());
     EXPECT_NE(*sym, nullptr);
 
-    auto missing = lib.load("nonexistent_symbol_12345");
+    auto missing = lib.load_symbol("nonexistent_symbol_12345");
     ASSERT_FALSE(missing.has_value());
     EXPECT_EQ(missing.error().code, not_found);
     EXPECT_FALSE(missing.error().message.empty());

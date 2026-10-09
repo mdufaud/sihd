@@ -1,9 +1,9 @@
 #include <chrono>
 
 #include <sihd/net/DeviceTcpServer.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {

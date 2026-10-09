@@ -38,9 +38,8 @@ std::string fmt(std::string_view str, const char *attr1, const char *attr2)
 bool is_interactive()
 {
 #if defined(__ANDROID__)
-    // On Android the terminal bridge connects stdin to a pipe from the UI.
-    // isatty() returns 0 for pipes even though the user can type via the UI,
-    // so also return true when stdin is a FIFO/pipe.
+    // On Android the terminal bridge connects stdin to a pipe from the UI: isatty() is 0 even though
+    // the user can type via the UI, so also return true when stdin is a FIFO/pipe
     struct stat st;
     if (fstat(fileno(stdin), &st) == 0 && S_ISFIFO(st.st_mode))
         return true;

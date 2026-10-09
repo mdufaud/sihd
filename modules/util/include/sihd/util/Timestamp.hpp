@@ -113,13 +113,8 @@ class Timestamp: public TimeBase<Timestamp>
         Calendar local_calendar() const;
 };
 
-// Strict time algebra (chrono-like). The cross-type operators are constrained to the *exact*
-// peer type via std::same_as: template deduction ignores implicit conversions, so chrono/UnixTime
-// operands fall through to the TimeBase chrono operators (back-compat) instead of being absorbed here.
-//
-//   Timestamp - Timestamp -> Duration (elapsed)   Timestamp +/- Duration -> Timestamp
-//   Duration +/- Duration -> Duration             Duration * / scalar -> Duration
-//   Timestamp + Timestamp is intentionally ill-formed.
+// Strict chrono-like algebra: cross-type operators are constrained to the exact peer type via
+// std::same_as, chrono/UnixTime fall through to the TimeBase ops; Timestamp + Timestamp ill-formed
 
 template <std::same_as<Duration> D>
 constexpr Timestamp operator+(Timestamp ts, D offset)

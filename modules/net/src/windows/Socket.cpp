@@ -21,9 +21,8 @@ SIHD_LOGGER;
 
 bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
-    // SO_BSP_STATE returns a CSADDR_INFO whose LocalAddr/RemoteAddr point into the
-    // same buffer right after the struct; the buffer must be large enough for both
-    // appended sockaddrs or getsockopt fails with WSAEFAULT.
+    // SO_BSP_STATE returns a CSADDR_INFO whose LocalAddr/RemoteAddr point into the same buffer right
+    // after the struct: it must fit both appended sockaddrs or getsockopt fails with WSAEFAULT
     char buffer[sizeof(CSADDR_INFO) + 2 * sizeof(SOCKADDR_STORAGE)];
     CSADDR_INFO *addrinfo = reinterpret_cast<CSADDR_INFO *>(buffer);
     socklen_t length = sizeof(buffer);

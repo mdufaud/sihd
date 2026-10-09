@@ -514,9 +514,8 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     if (!clean_path.empty() && clean_path[0] == '/')
         clean_path.erase(0, 1);
 
-    // Lexically resolve '.'/'..' before touching the filesystem so create/write
-    // targets (which don't exist yet, so realpath fails) are jailed too.
-    // Avoid building a '//' prefix when root is "/" (normalize does not collapse it)
+    // Lexically resolve '.'/'..' before touching the filesystem so not-yet-existing create/write
+    // targets are jailed too; avoid a '//' prefix when root is "/" (normalize does not collapse it)
     std::string joined = (root == "/") ? ("/" + clean_path) : (root + "/" + clean_path);
     std::string candidate = normalize(joined);
 

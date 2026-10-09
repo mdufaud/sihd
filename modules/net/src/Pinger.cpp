@@ -11,10 +11,10 @@
 #endif
 
 #include <sihd/net/Pinger.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56

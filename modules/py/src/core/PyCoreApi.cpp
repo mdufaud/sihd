@@ -250,9 +250,8 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def("wait_for",
              &sihd::util::ObserverWaiter<Channel>::wait_for,
              pybind11::call_guard<pybind11::gil_scoped_release>())
-        // prev_* count notifications from the last wait instead of from this call:
-        // use them when the same thread writes then waits, otherwise a notification
-        // that lands before the wait is missed and the wait times out
+        // prev_* count notifications from the last wait instead of this call: use them when the same
+        // thread writes then waits, else a notification landing before the wait is missed
         .def("prev_wait",
              &sihd::util::ObserverWaiter<Channel>::prev_wait,
              pybind11::call_guard<pybind11::gil_scoped_release>())

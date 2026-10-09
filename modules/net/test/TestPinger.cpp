@@ -3,6 +3,7 @@
 #include <sihd/net/Pinger.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/term.hpp>
 
@@ -34,7 +35,7 @@ TEST_F(TestPinger, test_pinger)
     if (pinger.open(false).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
-                     << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'\n";
+                     << "execute command: 'sudo setcap cap_net_raw=pe " << program::path() << "'\n";
     }
 
     pinger.set_interval(200);
@@ -58,7 +59,7 @@ TEST_F(TestPinger, test_pinger_ipv6)
     if (pinger.open(true).has_value() == false)
     {
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
-                     << "execute command: 'sudo setcap cap_net_raw=pe " << fs::executable_path() << "'\n";
+                     << "execute command: 'sudo setcap cap_net_raw=pe " << program::path() << "'\n";
     }
 
     pinger.set_interval(200);

@@ -10,12 +10,15 @@ namespace sihd::util
 class LoggerConsole: public ALogger
 {
     public:
-        LoggerConsole(bool colors = term::supports_color(stderr));
+        LoggerConsole(const std::string & name, Node *parent = nullptr);
+        // explicit: a string literal would otherwise rank const char*->bool above ->std::string
+        explicit LoggerConsole(bool colors = term::supports_color(stderr));
         virtual ~LoggerConsole();
 
         virtual void log(const LogInfo & info, std::string_view msg) override;
 
         bool colors() const { return _colors; }
+        bool set_colors(bool colors);
 
     private:
         bool _colors;

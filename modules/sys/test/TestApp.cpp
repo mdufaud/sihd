@@ -13,6 +13,7 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -126,9 +127,8 @@ TEST_F(TestApp, test_log_sinks_file_conf)
     const std::string conf_path = tmp_path("sinks.json");
     (void)fs::remove_file(log_path);
     ASSERT_TRUE(fs::write(conf_path,
-                          R"({"sihd": {"logging": {"file": ")" + log_path
-                              + R"(",)"
-                                R"("sinks": [{"logger": "file", "source_regex": "^dropped::.*$"}]}}})")
+                          R"({"sihd": {"logging": {"sinks": [{"logger": "LoggerFile", "name": "app_log", "path": ")"
+                              + log_path + R"(", "source_regex": "^dropped::.*$"}]}}})")
                     .has_value());
 
     const std::string kept_source = "kept::src";
@@ -154,6 +154,9 @@ TEST_F(TestApp, test_log_sinks_file_conf)
 #if defined(SIGHUP) && defined(SIGUSR1) && defined(SIGPIPE)
 TEST_F(TestApp, test_golden_conf)
 {
+    if constexpr (sihd::util::build::is_statically_linked)
+        GTEST_SKIP() << "the daemon user/group conf resolves through NSS, unavailable in static binaries";
+
     // the golden sample documents every conf key and must keep applying as a whole;
     // its log path is rewritten so concurrent test runs never share the file
     std::string conf = fs::read_all("test/resources/golden_app_conf.json").value_or("");
@@ -416,7 +419,13 @@ TEST_F(TestApp, test_log_file)
 {
     std::string log_path = tmp_path("app.log");
     std::string path = tmp_path("logconf.json");
-    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path)).has_value());
+    ASSERT_TRUE(
+        fs::write(
+            path,
+            fmt::format(
+                R"({{"sihd": {{"logging": {{"sinks": [{{"logger": "LoggerFile", "name": "app_log", "path": "{}"}}]}}}}}})",
+                log_path))
+            .has_value());
 
     // the file logger flushes on destruction
     {
@@ -436,8 +445,11 @@ TEST_F(TestApp, test_log_file_level)
 {
     std::string log_path = tmp_path("filevel.log");
     std::string path = tmp_path("filevel.json");
-    ASSERT_TRUE(
-        fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"level": "info", "file": "{}"}}}}}})", log_path)));
+    ASSERT_TRUE(fs::write(
+        path,
+        fmt::format(
+            R"({{"sihd": {{"logging": {{"level": "info", "sinks": [{{"logger": "LoggerFile", "name": "app_log", "path": "{}"}}]}}}}}})",
+            log_path)));
 
     // the file logger flushes on destruction
     {
@@ -463,7 +475,13 @@ TEST_F(TestApp, test_log_file_reload)
     std::string log_path1 = tmp_path("reload1.log");
     std::string log_path2 = tmp_path("reload2.log");
     std::string path = tmp_path("logreload.json");
-    ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path1)).has_value());
+    ASSERT_TRUE(
+        fs::write(
+            path,
+            fmt::format(
+                R"({{"sihd": {{"logging": {{"sinks": [{{"logger": "LoggerFile", "name": "first", "path": "{}"}}]}}}}}})",
+                log_path1))
+            .has_value());
 
     // the file loggers flush on destruction
     {
@@ -473,7 +491,12 @@ TEST_F(TestApp, test_log_file_reload)
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
         ASSERT_TRUE(
-            fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"file": "{}"}}}}}})", log_path2)).has_value());
+            fs::write(
+                path,
+                fmt::format(
+                    R"({{"sihd": {{"logging": {{"sinks": [{{"logger": "LoggerFile", "name": "second", "path": "{}"}}]}}}}}})",
+                    log_path2))
+                .has_value());
         msg = "SECONDMSG";
         ASSERT_TRUE(app.reload());
         EXPECT_EQ(app.evaluate(std::vector<std::string> {"emit"}), 0);
@@ -494,8 +517,11 @@ TEST_F(TestApp, test_log_console_opt_out)
 {
     std::string log_path = tmp_path("noconsole.log");
     std::string path = tmp_path("noconsole.json");
-    ASSERT_TRUE(
-        fs::write(path, fmt::format(R"({{"sihd": {{"logging": {{"console": false, "file": "{}"}}}}}})", log_path)));
+    ASSERT_TRUE(fs::write(
+        path,
+        fmt::format(
+            R"({{"sihd": {{"logging": {{"sinks": [{{"logger": "LoggerFile", "name": "app_log", "path": "{}"}}]}}}}}})",
+            log_path)));
 
     // the file logger flushes on destruction
     {
@@ -503,7 +529,7 @@ TEST_F(TestApp, test_log_console_opt_out)
         app.root().add_command("emit", "emit").on_run([] { SIHD_LOG(info, "NOCONSOLEMSG"); });
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
-        // the conf opted out of the console, the file logger stayed
+        // the sinks conf replaces the default logger, the file logger stayed
         EXPECT_EQ(app.logger(), nullptr);
     }
     std::optional<std::string> content = fs::read_all(log_path);
@@ -522,6 +548,28 @@ TEST_F(TestApp, test_log_console_option)
     ASSERT_EQ(run_app(app, {"run"}), 0);
     EXPECT_TRUE(ran);
     EXPECT_EQ(app.logger(), nullptr);
+}
+
+TEST_F(TestApp, test_log_sink_refused)
+{
+    {
+        sihd::sys::App app({.name = "badlinked"});
+        app.set_conf_loader(
+            []() { return std::string(R"({"sihd": {"logging": {"sinks": [{"logger": "Nope", "name": "nope"}]}}})"); });
+        app.root().add_command("run", "run").on_run([] {});
+        EXPECT_EQ(run_app(app, {"run"}), EXIT_FAILURE);
+        EXPECT_EQ(app.state(), CliApp::State::error);
+    }
+    {
+        sihd::sys::App app({.name = "badplugin"});
+        app.set_conf_loader([]() {
+            return std::string(
+                R"({"sihd": {"logging": {"sinks": [{"logger": "Nope", "name": "nope", "plugin": "nope_lib"}]}}})");
+        });
+        app.root().add_command("run", "run").on_run([] {});
+        EXPECT_EQ(run_app(app, {"run"}), EXIT_FAILURE);
+        EXPECT_EQ(app.state(), CliApp::State::error);
+    }
 }
 
 } // namespace test

@@ -24,10 +24,9 @@ using namespace sihd::util;
 class LogCounter: public ALogger
 {
     public:
-        LogCounter() = default;
-        ;
+        LogCounter(): ALogger("counter") {}
+
         ~LogCounter() = default;
-        ;
 
         int emergency = 0;
         int alert = 0;
@@ -117,7 +116,7 @@ class SharedStateSink: public ALogger
                 std::mutex mutex;
         };
 
-        SharedStateSink(State *state): _state(state) {}
+        SharedStateSink(State *state): ALogger("shared-state"), _state(state) {}
 
         void log(const LogInfo & info, std::string_view msg) override
         {
@@ -134,7 +133,10 @@ class SharedStateSink: public ALogger
 class BlockingSink: public ALogger
 {
     public:
-        BlockingSink(std::atomic<int> *logged, std::string *drop_reports): _logged(logged), _drop_reports(drop_reports)
+        BlockingSink(std::atomic<int> *logged, std::string *drop_reports):
+            ALogger("blocking"),
+            _logged(logged),
+            _drop_reports(drop_reports)
         {
         }
 
@@ -166,6 +168,8 @@ class BlockingSink: public ALogger
 class LoggingBackSink: public ALogger
 {
     public:
+        LoggingBackSink(): ALogger("logging-back") {}
+
         std::atomic<int> logged = 0;
 
         void log(const LogInfo & info, std::string_view msg) override

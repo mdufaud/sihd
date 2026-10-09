@@ -112,9 +112,8 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     TmpDir out;
     std::string leaked = fs::combine(out.path(), "leaked.txt");
 
-    // Traversal read must fail and must not retrieve the secret.
-    // get_file opens the local sink before the remote file, so an empty local
-    // file may remain; the security guarantee is that no secret bytes leak.
+    // Traversal read must fail without leaking the secret; get_file opens the local sink before the
+    // remote file so an empty local file may remain - the guarantee is no secret bytes leak
     EXPECT_FALSE(sftp.get_file("../secret.txt", leaked).has_value());
     if (fs::is_file(leaked))
     {

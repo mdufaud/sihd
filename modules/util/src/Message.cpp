@@ -1,6 +1,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::util
 {
@@ -178,5 +179,7 @@ bool Message::from_bytes(std::span<const uint8_t> data)
 {
     return this->field_read_from(data.data(), data.size());
 }
+
+SIHD_REGISTER_FACTORY(Message);
 
 } // namespace sihd::util

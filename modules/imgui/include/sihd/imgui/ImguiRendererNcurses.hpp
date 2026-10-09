@@ -49,9 +49,8 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         // Rasterise real ImDrawData into the cell buffer without flushing to ncurses.
         // Lets headless tests feed geometry built by a real ImGui frame.
         void rasterize_headless(ImDrawData *draw_data);
-        // Cache widget colours (CheckMark, SliderGrab) from the active ImGui style.
-        // Called by _apply_terminal_style; exposed so headless tests can populate the
-        // colour gates after creating a context + StyleColorsDark.
+        // Caches widget colours (CheckMark, SliderGrab) from the active ImGui style; called by
+        // _apply_terminal_style, exposed so headless tests can populate the colour gates
         void cache_style_colors();
 
         // ── Draw methods (public for unit testing) ──────────────────────────────
@@ -100,9 +99,8 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
                                        unsigned int i,
                                        const ImDrawVert & v0,
                                        const ImVec4 & clip);
-        // Checkmark detection: 2 consecutive CheckMark-colour non-glyph triangles
-        // (imgui RenderCheckMark polyline). Writes 'x' at the centroid cell, preserving
-        // frame bg. Returns 3 on success, 0 otherwise.
+        // Checkmark detection: 2 consecutive CheckMark-colour non-glyph triangles (imgui RenderCheckMark
+        // polyline). Writes 'x' at the centroid cell, preserving frame bg. Returns 3 on success, 0 else
         unsigned int _try_detect_check(const ImDrawList *dl,
                                        const ImDrawCmd & cmd,
                                        unsigned int i,
@@ -127,9 +125,8 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
                                            const ImDrawVert & v2,
                                            const ImVec4 & clip);
 
-        // Text glyph: consume the two-triangle quad imgui emits per character.
-        // tri1_base is the index of the first triangle's first element.
-        // last_x/last_y deduplicate overlapping quads.
+        // Text glyph: consume the two-triangle quad imgui emits per character; tri1_base is the first
+        // triangle's first element; last_x/last_y deduplicate overlapping quads
         void _draw_glyph_quad(const ImDrawVert & v0, const ImDrawVert & v1, const ImDrawVert & v2, const ImVec4 & clip);
 
         void _draw_rect(float xmin, float ymin, float xmax, float ymax, ImU32 col, const ImVec4 & clip);

@@ -1,6 +1,6 @@
 #include <sihd/core/DevMessage.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 #define CHANNEL_TRIGGER "trigger"
 #define IN_SUFFIX "_in"

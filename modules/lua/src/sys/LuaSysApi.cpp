@@ -20,6 +20,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/sys/user.hpp>
@@ -47,7 +48,7 @@ SIHD_LOGGER;
 namespace
 {
 // from path/bin/exe.lua -> path/bin -> path
-std::string g_exe_dir = fs::parent(fs::parent(fs::executable_path()));
+std::string g_exe_dir = fs::parent(fs::parent(program::path()));
 } // namespace
 
 /**
@@ -536,7 +537,7 @@ void LuaSysApi::load_files(Vm & vm)
             })
         .addFunction("are_equals", &fs::are_equals)
         .addFunction("home_path", &fs::home_path)
-        .addFunction("executable_path", &fs::executable_path)
+        .addFunction("executable_path", &program::path)
         .addFunction("cwd", &fs::cwd)
         .addFunction("tmp_path", &fs::tmp_path)
         .addFunction(

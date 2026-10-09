@@ -21,6 +21,8 @@ namespace
 class NullSink: public ALogger
 {
     public:
+        NullSink(): ALogger("null") {}
+
         void log(const LogInfo & info, std::string_view msg) override
         {
             (void)info;
@@ -31,6 +33,8 @@ class NullSink: public ALogger
 class SlowSink: public ALogger
 {
     public:
+        SlowSink(): ALogger("slow") {}
+
         void log(const LogInfo & info, std::string_view msg) override
         {
             (void)info;
@@ -53,7 +57,7 @@ void reset_loggers()
 double emit_messages_per_second(int threads, int msgs_per_thread)
 {
     const auto start = std::chrono::steady_clock::now();
-    std::vector<std::jthread> pool;
+    std::vector<std::thread> pool;
     for (int t = 0; t < threads; ++t)
     {
         pool.emplace_back([msgs_per_thread] {
@@ -63,7 +67,7 @@ double emit_messages_per_second(int threads, int msgs_per_thread)
             }
         });
     }
-    for (std::jthread & t : pool)
+    for (std::thread & t : pool)
         t.join();
     LoggerManager::clear_loggers();
     const std::chrono::duration<double> secs = std::chrono::steady_clock::now() - start;

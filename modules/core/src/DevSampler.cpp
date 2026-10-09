@@ -1,6 +1,6 @@
 #include <sihd/core/DevSampler.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Splitter.hpp>
 
 #define CHANNEL_SAMPLE "sample"

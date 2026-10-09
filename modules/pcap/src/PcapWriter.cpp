@@ -2,8 +2,8 @@
 
 #include <sihd/pcap/PcapWriter.hpp>
 #include <sihd/pcap/utils.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::pcap
 {

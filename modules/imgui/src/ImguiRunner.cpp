@@ -1,7 +1,7 @@
 #include <sihd/imgui/ImguiRunner.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # include <emscripten.h>
@@ -110,9 +110,8 @@ void ImguiRunner::_loop_once()
     if (_running && _gui_running)
     {
         this->_new_frame();
-        // _render() must always be called when _new_frame() was called:
-        // every ImGui::NewFrame() must be matched by ImGui::Render() or
-        // imgui's internal state (frame counter, draw lists) gets corrupted.
+        // _render() must always follow _new_frame(): every ImGui::NewFrame() needs ImGui::Render() or
+        // imgui's internal state (frame counter, draw lists) gets corrupted
         _gui_running = this->_build_frame();
         this->_render();
     }

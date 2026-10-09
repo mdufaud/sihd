@@ -21,11 +21,11 @@
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/utils.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::ssh
 {
@@ -399,10 +399,8 @@ struct SshServer::Impl
                 }
                 if (data)
                 {
-                    // Destroy subsystem handlers before their channel wrappers:
-                    // mirrors cleanup_closed_sessions ordering. Without this,
-                    // handlers surviving until the server handler destruction
-                    // dereference already-deleted SshChannel wrappers.
+                    // Destroy subsystem handlers before their channel wrappers (mirrors cleanup_closed_sessions):
+                    // otherwise handlers outliving the server handler dereference deleted SshChannel wrappers
                     if (data->server && data->session && data->server->server_handler())
                     {
                         data->server->server_handler()->on_session_closed(data->server, data->session);
@@ -531,9 +529,8 @@ struct SshServer::Impl
             // Create session wrapper (session is still in blocking mode)
             auto session_wrapper = std::make_unique<SshSession>(session);
 
-            // Bound the blocking key-exchange so a connect-and-stall client cannot
-            // hang the single-threaded loop (pre-auth DoS). libssh applies this
-            // timeout to the blocking handshake read below.
+            // Bound the blocking key exchange so a connect-and-stall client cannot hang the single-threaded
+            // loop (pre-auth DoS): libssh applies this timeout to the blocking handshake read below
             SIHD_UNEXPECTED_LOG(session_wrapper->set_timeout(kex_timeout_sec));
 
             // Setup session data for callbacks
@@ -682,13 +679,8 @@ struct SshServer::Impl
 
             server->service_set_ready();
 
-            // ssh_event_dopoll() with a non-zero timeout blocks indefinitely once a
-            // session is registered (it honours the session's own timeout, not the
-            // one passed in), so delivery only works with a 0 timeout. To avoid the
-            // resulting busy-spin we block on a sys::Poll over the bind fd plus every
-            // session fd, then drive ssh_event_dopoll(event, 0) once data is ready.
-            // The 100 ms cap bounds latency for handlers without an fd in the event
-            // (Sftp, buffered Exec) and for is_running/deadline polling.
+            // ssh_event_dopoll() blocks indefinitely once a session is registered (it honours the session's
+            // own timeout, not the argument): poll bind + session fds, then dopoll(event, 0), 100ms cap
             constexpr int wait_timeout_ms = 100;
             poll.set_limit(-1);
             while (!server->should_stop())

@@ -137,10 +137,8 @@ TEST_F(TestUser, test_user_primary_group)
 
 TEST_F(TestUser, test_user_groups)
 {
-    // a minimal environment may expose no supplementary group: only the content of what is
-    // returned can be asserted on
-    // note duplicates are legitimate: in a user namespace every unmapped group is reported as the
-    // same overflow gid
+    // a minimal environment may expose no supplementary group: only the returned content is asserted.
+    // duplicates are legitimate: in a user namespace every unmapped group reports the overflow gid
     const auto groups = user::groups();
     for (const user::GroupId & group : groups)
     {

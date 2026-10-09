@@ -5,7 +5,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -13,6 +12,7 @@
 #include <sihd/util/CliInterpreter.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/LogInfo.hpp>
+#include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/StateMachine.hpp>
 
@@ -95,28 +95,26 @@ class CliApp: public Observable<CliApp>,
         virtual void on_halt();
         virtual void on_fail();
         // the "sihd" conf section; the base reads logging.level, logging.console and
-        // logging.sinks and leaves unknown keys to overriders; returning false fails the
-        // conf loading
+        // logging.sinks, leaves unknown keys to overriders; returning false fails the conf loading
         virtual bool apply_sihd_conf(const sihd::json::Json & conf);
-        // the logging conf this app accepts: the logging section keys and the sink
-        // types this app installs; overriders extend both
-        struct LoggingSchema
-        {
-                std::span<const std::string_view> keys;
-                std::span<const std::string_view> sink_types;
-        };
-
-        virtual LoggingSchema logging_schema() const;
         // between the conf application and the logging setup; nonzero aborts the boot
         virtual int on_conf_loaded();
         // after a conf reload was applied
         virtual void on_conf_reloaded();
-        // the logger installed by install_logging unless opted out: a color console on a
-        // terminal, the dated stream otherwise
+        // the default logger: a color console on a terminal, the dated stream otherwise; installed
+        // only when the conf names no sinks
         virtual ALogger *create_default_logger();
-        virtual void install_logging();
-        void apply_sink_filters(ALogger *logger, std::string_view logger_type) const;
+        // the conf "sinks" entries: the base creates nothing, the overriders create sinks by name; nullptr on a refusal
+        virtual ALogger *create_logger_sink(const std::string & plugin,
+                                            const std::string & type,
+                                            const std::string & name,
+                                            Node *parent);
+        // false on a sink the app cannot create or configure
+        virtual bool install_logging();
+        bool apply_sink_filters(ALogger *logger) const;
         virtual void poll_events();
+
+        Node & sinks();
 
         bool apply_conf(const sihd::json::Json & conf);
         // null when opted out or uninstalled
@@ -127,15 +125,17 @@ class CliApp: public Observable<CliApp>,
 
         void _transition(Event evt);
         bool _apply_entry(Command *node, const std::string & key, const sihd::json::Json & value);
-        static bool _check_logging_conf(const sihd::json::Json & logging, const LoggingSchema & schema);
-        static bool _check_sinks_conf(const sihd::json::Json & sinks, const LoggingSchema & schema);
+        static bool _check_logging_conf(const sihd::json::Json & logging);
+        static bool _check_sinks_conf(const sihd::json::Json & sinks);
+        bool _install_sinks();
         std::optional<LogLevel> _log_level() const;
 
         Options _options;
         std::function<std::string()> _conf_loader;
         std::function<void()> _on_reload;
         ALogger *_logger = nullptr;
-        sihd::json::Json _log_filters_conf;
+        Node _sinks_node {"sinks"};
+        sihd::json::Json _log_sinks_conf;
         StateMachine<State, Event> _statemachine;
         std::atomic<bool> _stop_requested {false};
 };

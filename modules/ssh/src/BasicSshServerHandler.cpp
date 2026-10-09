@@ -465,9 +465,8 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
                 // Handler finished, cleanup
                 int exit_code = ch_state.handler->on_close();
 
-                // For handlers that manage their own I/O (like SFTP),
-                // libssh handles the channel close internally (via sftp_free).
-                // For other handlers, we need to close the channel ourselves.
+                // Handlers managing their own I/O (like SFTP) get the channel closed internally (via sftp_free);
+                // other handlers close the channel themselves
                 if (!ch_state.handler->manages_channel_io())
                 {
                     // Send exit status if available

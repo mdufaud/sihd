@@ -26,10 +26,7 @@ class TestSshShell: public ::testing::Test
 
 TEST_F(TestSshShell, test_sshshell_interactive)
 {
-    // This test requires:
-    // 1. An interactive terminal
-    // 2. A running SSH server on localhost:22
-    // 3. Valid SSH key authentication
+    // requires an interactive terminal, a running SSH server on localhost:22 and valid key auth
     if (sihd::util::term::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
     if (sihd::sys::os::is_run_by_valgrind())

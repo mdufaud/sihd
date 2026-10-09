@@ -48,9 +48,8 @@ namespace
 // logger used by lua code
 Logger g_lua_logger("sihd::lua");
 
-// Bridges an Observable<ServiceController> notification to a Lua callback.
-// The notify may fire on a service thread, so run the Lua call through a
-// LuaThreadRunner (own coroutine + universe GIL), exactly like a channel observer.
+// Bridges an Observable<ServiceController> notification to a Lua callback; the notify may fire on
+// a service thread, so run through a LuaThreadRunner (own coroutine + universe GIL)
 class LuaServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
 {
     public:
@@ -81,7 +80,7 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
     {
         case LUA_TBOOLEAN:
         {
-            return obj->set_conf<bool>(key, static_cast<bool>(ref));
+            return obj->set_conf<bool>(key, static_cast<bool>(ref)).has_value();
         }
         case LUA_TTABLE:
         {
@@ -92,18 +91,14 @@ bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::strin
         }
         case LUA_TNUMBER:
         {
-            try
-            {
-                return obj->set_conf_float(key, static_cast<double>(ref));
-            }
-            catch (const std::invalid_argument & e)
-            {
-                return obj->set_conf_int(key, static_cast<int64_t>(ref));
-            }
+            auto floated = obj->set_conf_float(key, static_cast<double>(ref));
+            if (floated.has_value() || floated.error().code != ErrorCode::not_supported)
+                return floated.has_value();
+            return obj->set_conf_int(key, static_cast<int64_t>(ref)).has_value();
         }
         case LUA_TSTRING:
         {
-            return obj->set_conf_str(key, std::string(ref));
+            return obj->set_conf_str(key, std::string(ref)).has_value();
         }
         default:
         {
@@ -700,22 +695,6 @@ void LuaUtilApi::load_base(Vm & vm)
         /**
          * Array
          */
-        // .beginNamespace("Type")
-        // .addVariable("NONE", Type::TYPE_NONE)
-        // .addVariable("BOOL", Type::TYPE_BOOL)
-        // .addVariable("CHAR", Type::TYPE_CHAR)
-        // .addVariable("BYTE", Type::TYPE_BYTE)
-        // .addVariable("UBYTE", Type::TYPE_UBYTE)
-        // .addVariable("SHORT", Type::TYPE_SHORT)
-        // .addVariable("USHORT", Type::TYPE_USHORT)
-        // .addVariable("INT", Type::TYPE_INT)
-        // .addVariable("UINT", Type::TYPE_UINT)
-        // .addVariable("LONG", Type::TYPE_LONG)
-        // .addVariable("ULONG", Type::TYPE_ULONG)
-        // .addVariable("FLOAT", Type::TYPE_FLOAT)
-        // .addVariable("DOUBLE", Type::TYPE_DOUBLE)
-        // .addVariable("OBJECT", Type::TYPE_OBJECT)
-        // .endNamespace()
         .beginNamespace("types")
         .addFunction("type_size", static_cast<size_t (*)(Type)>(&type::size))
         .addFunction("type_str", static_cast<const char *(*)(Type)>(&type::str))
@@ -865,9 +844,8 @@ bool LuaUtilApi::LuaScheduler::start()
 
     {
         auto l = _waitable_task.guard();
-        // point every lua task at the freshly created worker coroutine; tasks that
-        // survived a previous stop() (rescheduling ones) live in _task_map and would
-        // otherwise keep a dangling _exec_state to the already closed coroutine
+        // Point every lua task at the freshly created worker coroutine: tasks that survived a previous
+        // stop() (rescheduling ones) live in _task_map and would keep a dangling _exec_state
         const auto set_state = [state_ptr](sihd::util::Task *task) {
             LuaTask *lua_task = dynamic_cast<LuaTask *>(task);
             if (lua_task != nullptr)
@@ -935,10 +913,8 @@ LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _fun(lu
 
 LuaUtilApi::LuaThreadRunner::~LuaThreadRunner()
 {
-    // the shared function is anchored in the parent universe registry; releasing it is a
-    // luaL_unref on the parent state. A run-once task/runnable can be deleted on its
-    // scheduler/worker thread, so serialize the unref through the universe GIL. Reset to a
-    // nil ref under the GIL; the trailing member dtor then unrefs LUA_REFNIL (no-op).
+    // The shared function anchors in the parent universe registry (luaL_unref on the parent state);
+    // run-once tasks can die on their worker thread, so serialize the unref through the universe GIL
     LuaGilGuard guard(_fun.state());
     _fun = luabridge::LuaRef(_fun.state());
 }

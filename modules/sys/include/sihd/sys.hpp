@@ -13,7 +13,6 @@
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/LoggerFile.hpp>
 #include <sihd/sys/LoggerSystem.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/PluginLoader.hpp>
 #include <sihd/sys/Poll.hpp>
@@ -33,6 +32,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/services.hpp>
 #include <sihd/sys/signal.hpp>

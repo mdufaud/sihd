@@ -155,9 +155,8 @@ TEST_F(TestSignal, test_signal_watcher)
 }
 
 #if !defined(__SIHD_WINDOWS__)
-// unix-only: this test relies on the signal's default action being "ignore"
-// (SIGWINCH) so that an unhandled raise() does not terminate the process - no
-// windows signal (SIGINT/SIGTERM/SIGABRT) has an ignore-by-default action
+// unix-only: relies on SIGWINCH's default action being ignore so an unhandled raise() does not
+// terminate - no windows signal (SIGINT/SIGTERM/SIGABRT) is ignored by default
 TEST_F(TestSignal, test_signal_tmp)
 {
     if (os::is_run_by_valgrind())

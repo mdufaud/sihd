@@ -4,10 +4,10 @@
 #include <atomic>
 #include <memory>
 #include <string>
-#include <thread>
 
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/SafeQueue.hpp>
+#include <sihd/util/Worker.hpp>
 
 namespace sihd::util
 {
@@ -41,7 +41,7 @@ class LoggerAsync: public ALogger
                 void _reseat();
         };
 
-        void _drain();
+        bool _drain();
         void _process(const LogInfo & info, std::string_view msg);
         void _report_drops();
         void _report_dropped(size_t count);
@@ -51,7 +51,7 @@ class LoggerAsync: public ALogger
         const size_t _max_queue_size;
         SafeQueue<Item> _queue;
         std::atomic<size_t> _dropped {0};
-        std::jthread _thread;
+        Worker _worker;
 };
 
 } // namespace sihd::util

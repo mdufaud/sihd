@@ -48,9 +48,8 @@ struct RequestOptions
         std::string token = {};
         std::string user_agent = {};
 
-        // nullopt: use environment proxy (default)
-        // empty string: disable any proxy (overrides environment)
-        // non-empty: use given proxy url
+        // nullopt: use environment proxy (default) - empty string: disable any proxy (overrides
+        // environment) - non-empty: use given proxy url
         std::optional<std::string> proxy = {};
         ProxyType proxy_type = ProxyType::Http;
         std::string proxy_username = {};

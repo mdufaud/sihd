@@ -12,6 +12,7 @@
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -136,7 +137,7 @@ static void http_test(sihd::util::CliApp & app)
 {
     SimpleHttpServer server;
 
-    std::string root_path = fs::parent(fs::parent(fs::executable_path()));
+    std::string root_path = fs::parent(fs::parent(sihd::sys::program::path()));
     std::string res_path = fs::combine({root_path, "etc", "sihd", "demo", "http_demo"});
     SIHD_LOG(info, "Root dir: {}", res_path);
     server.set_root_dir(res_path);

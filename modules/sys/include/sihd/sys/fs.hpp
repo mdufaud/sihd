@@ -56,11 +56,8 @@ void set_sep(char c);
 std::string tmp_path();
 std::string home_path();
 std::string cwd();
-std::string executable_path();
 
-// XDG base-dir spec on linux
-// SHGetKnownFolders on windows
-// no directory is created
+// XDG base-dir spec on linux, SHGetKnownFolders on windows; no directory is created
 std::string config_path();
 std::string data_path();
 std::string cache_path();
@@ -154,12 +151,8 @@ std::expected<void, sihd::util::Error>
 // resolve
 std::string realpath(std::string_view path);
 
-// Confine 'path' (treated as relative to 'root', a leading '/' is stripped)
-// inside the jail 'root'. Lexically collapses '.'/'..' before touching the
-// filesystem so create targets that don't exist yet are jailed too, then
-// resolves symlinks to catch links escaping the jail. Returns an absolute path
-// guaranteed to be 'root' itself or a descendant; escape attempts clamp to
-// 'root'. If 'root' is empty, returns 'path' unchanged (no jail).
+// Confines 'path' (relative to 'root') inside the jail: collapses '.'/'..' lexically before
+// touching the filesystem, then resolves symlinks; escapes clamp to 'root'; empty root = unchanged
 std::string jail(std::string_view root, std::string_view path);
 
 // links
@@ -170,9 +163,7 @@ std::optional<std::string> read_link(std::string_view path);
 
 // fast read from file
 ssize_t read_binary(std::string_view path, char *buf, size_t size);
-// fast string read from file
-// offset > 0 : seek from beginning
-// offset < 0 : seek from end
+// fast string read: offset > 0 seeks from the beginning, offset < 0 from the end
 std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary = true);
 // text mode only: reads lines
 std::optional<std::string> read_line(std::string_view path, size_t line_number);

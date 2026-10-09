@@ -77,9 +77,8 @@ TEST_F(TestStat, test_stat_single_sample)
     EXPECT_DOUBLE_EQ(stat.variance(), 0.0);
 }
 
-// Stat uses inverse-normal (z-score) approximation for percentiles.
-// Symmetric uniform distribution [1..200]: mean=100.5, stddev~57.7
-// p95 = mean + 1.645*stddev ~ 195, p99 = mean + 2.326*stddev ~ 235 (capped by distribution)
+// inverse-normal (z-score) percentile approximation on symmetric uniform [1..200]: mean=100.5,
+// stddev ~57.7; p95 ~ 195, p99 ~ 235 (capped by distribution)
 TEST_F(TestStat, test_gaussian_stat_percentiles)
 {
     Stat<double> stat;

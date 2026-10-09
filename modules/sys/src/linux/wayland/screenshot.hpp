@@ -1,9 +1,8 @@
 #ifndef __SIHD_SYS_WAYLAND_SCREENSHOT_HPP__
 #define __SIHD_SYS_WAYLAND_SCREENSHOT_HPP__
 
-// Wayland screenshot backend of the dispatcher in src/linux/screenshot.cpp:
-// native wlr-screencopy capture, grim / spectacle / gnome-screenshot when the
-// compositor exposes no capture protocol (KWin, Mutter).
+// Wayland screenshot backend of the dispatcher in src/linux/screenshot.cpp: native wlr-screencopy,
+// grim / spectacle / gnome-screenshot when the compositor exposes no capture protocol
 
 #include <string>
 #include <string_view>

@@ -52,10 +52,6 @@ using namespace sihd::sys;
 
 SIHD_LOGGER;
 
-// ============================================================================
-// Impl definition
-// ============================================================================
-
 struct SshSubsystemSftp::Impl
 {
         SshChannel *channel = nullptr;
@@ -89,10 +85,6 @@ struct SshSubsystemSftp::Impl
         std::string generate_handle();
         void reply_status(sftp_client_message_struct *msg, uint32_t status, const std::string & message = "");
 };
-
-// ============================================================================
-// SftpAttributes implementation
-// ============================================================================
 
 SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(const std::string & name,
                                                                              const struct stat & st)
@@ -148,10 +140,6 @@ SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(con
     return attrs;
 }
 
-// ============================================================================
-// Result types implementation
-// ============================================================================
-
 SshSubsystemSftp::StatResult SshSubsystemSftp::StatResult::ok(const SftpAttributes & attrs)
 {
     return {true, SSH_FX_OK, attrs};
@@ -202,10 +190,6 @@ SshSubsystemSftp::OpResult SshSubsystemSftp::OpResult::error(uint32_t code, cons
     return {false, code, msg};
 }
 
-// ============================================================================
-// Helper to create sftp_attributes from our SftpAttributes
-// ============================================================================
-
 namespace
 {
 
@@ -253,10 +237,6 @@ uint32_t sftp_status_from_error(const sihd::util::Error & err)
 }
 
 } // namespace
-
-// ============================================================================
-// SshSubsystemSftp implementation
-// ============================================================================
 
 SshSubsystemSftp::SshSubsystemSftp(): _impl_ptr(new Impl())
 {
@@ -328,9 +308,7 @@ bool SshSubsystemSftp::on_start(SshChannel *channel, bool has_pty, [[maybe_unuse
         return false;
     }
 
-    // Note: sftp_server_init is NOT called here because it needs to read SSH_FXP_INIT
-    // from the client, which may not be available yet. We defer it to do_init()
-    // which is called from on_data when data is available.
+    // sftp_server_init is NOT called here: it reads SSH_FXP_INIT from the client, deferred to do_init()
 
     _impl_ptr->running = true;
     _impl_ptr->initialized = false;
@@ -387,9 +365,8 @@ int SshSubsystemSftp::on_data([[maybe_unused]] const void *data, [[maybe_unused]
         }
     }
 
-    // One message per callback: sftp_get_client_message blocks when the
-    // channel buffer is empty, so draining in a loop would stall the single
-    // -threaded server. libssh re-invokes this callback for each packet.
+    // One message per callback: sftp_get_client_message blocks on an empty channel buffer, a drain
+    // loop would stall the single-threaded server - libssh re-invokes this callback per packet
     sftp_client_message msg = sftp_get_client_message(_impl_ptr->sftp);
     if (msg == nullptr)
         return static_cast<int>(len);
@@ -499,10 +476,6 @@ int SshSubsystemSftp::on_close()
     }
     return 0;
 }
-
-// ============================================================================
-// Message handlers
-// ============================================================================
 
 void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
 {
@@ -1098,10 +1071,6 @@ void SshSubsystemSftp::Impl::handle_symlink(sftp_client_message_struct *msg)
     reply_status(msg, SSH_FX_OK);
 #endif
 }
-
-// ============================================================================
-// Utility methods
-// ============================================================================
 
 std::string SshSubsystemSftp::Impl::resolve_path(const std::string & path)
 {

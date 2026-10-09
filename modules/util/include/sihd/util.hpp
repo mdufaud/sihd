@@ -50,6 +50,7 @@
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/ObservableDelegate.hpp>

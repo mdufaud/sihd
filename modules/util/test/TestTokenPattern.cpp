@@ -135,4 +135,100 @@ TEST_F(TestTokenPattern, test_tokenpattern_refused_patterns)
     EXPECT_FALSE(pattern.compile("{a:4097}").has_value());
 }
 
+TEST_F(TestTokenPattern, test_tokenpattern_escapes)
+{
+    TokenPattern pattern;
+    ASSERT_TRUE(pattern.compile("{{").has_value());
+    ASSERT_EQ(pattern.tokens().size(), 1u);
+    EXPECT_EQ(pattern.tokens()[0].text, "{");
+
+    ASSERT_TRUE(pattern.compile("}}").has_value());
+    ASSERT_EQ(pattern.tokens().size(), 1u);
+    EXPECT_EQ(pattern.tokens()[0].text, "}");
+
+    ASSERT_TRUE(pattern.compile("{{{{").has_value());
+    ASSERT_EQ(pattern.tokens().size(), 2u);
+    EXPECT_EQ(pattern.tokens()[0].text, "{");
+    EXPECT_EQ(pattern.tokens()[1].text, "{");
+
+    ASSERT_TRUE(pattern.compile("{a}{{").has_value());
+    ASSERT_EQ(pattern.tokens().size(), 2u);
+    EXPECT_EQ(pattern.tokens()[0].name, "a");
+    EXPECT_EQ(pattern.tokens()[1].text, "{");
+
+    std::string out;
+    pattern.render(out, [](const TokenPattern::Token &) -> std::string_view { return {}; });
+    EXPECT_EQ(out, "{");
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_field_name_boundary)
+{
+    TokenPattern pattern;
+    const std::expected<void, Error> res = pattern.compile("{a-b}");
+    ASSERT_FALSE(res.has_value());
+    EXPECT_NE(res.error().message.find("at "), std::string::npos);
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_empty_spec)
+{
+    TokenPattern pattern;
+    ASSERT_TRUE(pattern.compile("{a:}").has_value());
+
+    const TokenPattern::Token & token = pattern.tokens()[0];
+    EXPECT_EQ(token.name, "a");
+    EXPECT_TRUE(token.raw_spec.empty());
+    EXPECT_TRUE(token.classical);
+    EXPECT_EQ(token.options.width, 0u);
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_raw_specs)
+{
+    TokenPattern pattern;
+    ASSERT_TRUE(pattern.compile("{a:.}|{a:-1}|{a:99999999999999999999}").has_value());
+
+    const std::span<const TokenPattern::Token> tokens = pattern.tokens();
+    EXPECT_FALSE(tokens[0].classical);
+    EXPECT_EQ(tokens[0].raw_spec, ".");
+    EXPECT_EQ(tokens[0].options.width, 0u);
+
+    EXPECT_FALSE(tokens[2].classical);
+    EXPECT_EQ(tokens[2].raw_spec, "-1");
+    EXPECT_EQ(tokens[2].options.width, 0u);
+
+    EXPECT_FALSE(tokens[4].classical);
+    EXPECT_EQ(tokens[4].raw_spec, "99999999999999999999");
+    EXPECT_EQ(tokens[4].options.width, 0u);
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_reserve_hint)
+{
+    TokenPattern pattern;
+    ASSERT_TRUE(pattern.compile("{level:<9} x {msg}").has_value());
+    EXPECT_EQ(pattern.reserve_hint(), 12u);
+
+    ASSERT_FALSE(pattern.compile("{nope").has_value());
+    EXPECT_EQ(pattern.reserve_hint(), 12u);
+
+    ASSERT_TRUE(pattern.compile("{a:3}").has_value());
+    EXPECT_EQ(pattern.reserve_hint(), 3u);
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_render_edges)
+{
+    TokenPattern pattern;
+    ASSERT_TRUE(pattern.compile("[{x:>5}]{x:.0}").has_value());
+
+    std::string out = "pre ";
+    pattern.render(out, [](const TokenPattern::Token &) -> std::string_view { return {}; });
+    EXPECT_EQ(out, "pre [     ]");
+
+    out.clear();
+    pattern.render(out, [](const TokenPattern::Token & token) -> std::string_view {
+        if (token.name == "x")
+            return "abcdef";
+        return {};
+    });
+    EXPECT_EQ(out, "[abcdef]abcdef");
+}
+
 } // namespace test

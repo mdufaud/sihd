@@ -200,9 +200,8 @@ struct PSquareEstimator
 
 } // namespace detail
 
-// Percentiles via P-Square streaming algorithm (Jain & Chlamtac, 1985).
-// Accurate on asymmetric and heavy-tailed distributions (e.g. network latency).
-// Extra memory: 3 estimators × ~200 bytes = ~600 bytes.
+// Percentiles via the P-Square streaming algorithm (Jain & Chlamtac, 1985): accurate on
+// asymmetric, heavy-tailed distributions (network latency); 3 estimators x ~200 bytes
 template <typename SampleType>
 struct PSquareStat: public Stat<SampleType>
 {

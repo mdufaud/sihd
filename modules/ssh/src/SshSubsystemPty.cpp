@@ -128,10 +128,8 @@ int SshSubsystemPty::on_data(const void *data, size_t len)
     if (data == nullptr || len == 0)
         return 0;
 
-    // Preserve ordering: if a previous partial write left bytes buffered, append
-    // the new data behind them and drain in order. libssh's data callback always
-    // reports all bytes consumed, so unwritten bytes must be kept locally to
-    // avoid data loss.
+    // If a previous partial write left bytes buffered, append behind them and drain in order:
+    // libssh's data callback always reports all bytes consumed, so unwritten bytes stay local
     if (!_pending_in.empty())
     {
         _pending_in.append(static_cast<const char *>(data), len);

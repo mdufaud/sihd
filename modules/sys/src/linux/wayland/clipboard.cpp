@@ -224,9 +224,8 @@ Connection::Connection(Timestamp deadline)
     _fd = wl_display_get_fd(_display);
     _registry = wl_display_get_registry(_display);
     wl_registry_add_listener(_registry, &_registry_listener, this);
-    // First roundtrip binds the globals, the second lets them emit their
-    // initial events (seat capabilities) - bounded like the rest of the flows:
-    // a wedged compositor must not hang the call.
+    // First roundtrip binds the globals, the second lets them emit initial events (seat capabilities)
+    // - bounded like the rest of the flows: a wedged compositor must not hang the call
     if (!roundtrip_bounded(*this, deadline) || !roundtrip_bounded(*this, deadline))
         return;
     _ok = seat != nullptr;
@@ -299,9 +298,8 @@ struct SelectionState
         bool selection_seen = false;
         bool finished = false;
 
-        // set: the representations to serve, the completion flags, and the serve
-        // deadline shared by the whole set operation. Views over the caller
-        // buffers, which outlive the blocking dispatch.
+        // the representations to serve, the completion flags and the serve deadline shared by the set
+        // operation; views over the caller buffers, which outlive the blocking dispatch
         std::vector<RawContentView> offered;
         Timestamp deadline = {};
         bool served = false;
@@ -375,9 +373,8 @@ std::optional<ArrByte> receive_offer_data(Connection & conn, Timestamp deadline,
     int fds[2];
     if (pipe(fds) != 0)
         return std::nullopt;
-    // FD_CLOEXEC keeps the ends out of exec'd children, O_NONBLOCK makes the
-    // reads below poll-guarded: both must hold or the deadline cannot be
-    // enforced.
+    // FD_CLOEXEC keeps the ends out of exec'd children, O_NONBLOCK makes the reads poll-guarded:
+    // both must hold or the deadline cannot be enforced
     if (fcntl(fds[0], F_SETFD, FD_CLOEXEC) != 0 || fcntl(fds[1], F_SETFD, FD_CLOEXEC) != 0
         || fcntl(fds[0], F_SETFL, O_NONBLOCK) != 0)
     {
@@ -400,10 +397,8 @@ std::optional<ArrByte> receive_offer_data(Connection & conn, Timestamp deadline,
 
 // Protocol classes
 
-// The ext, wlr and core protocols share the same get and set flows: only their
-// types, requests and listener structs differ. The flows are written once here
-// over the Derived protocol surface - static request functions - while each
-// class keeps its listeners, whose C structs cannot be unified.
+// The ext, wlr and core protocols share the get and set flows, written once over the Derived
+// protocol surface (static request functions); each class keeps its C listener structs
 template <typename Derived>
 class DataControl
 {
@@ -444,9 +439,7 @@ class DataControl
             return contents;
         }
 
-        // Offers the representations, then serves requests until the first
-        // consumer is fulfilled, the deadline expires or the source is
-        // cancelled.
+        // offers the representations, then serves until first consumer, deadline or cancellation
         bool write(const std::vector<RawContentView> & contents, Timestamp deadline)
         {
             _state.offered = contents;

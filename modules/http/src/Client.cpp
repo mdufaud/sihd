@@ -161,9 +161,8 @@ struct Client::Impl
             // only HEAD has no response body: an OPTIONS response carries one
             request.set_nobody(type == HttpRequest::Head);
 
-            // the handle keeps the previous transfer's method and upload flag:
-            // every send() states its own, and the custom request resets the one
-            // a previous transfer left on the dedicated setters
+            // the handle keeps the previous transfer's method and upload flag: every send() states its own,
+            // and the custom request resets the one a previous transfer left on the dedicated setters
             switch (type)
             {
                 case HttpRequest::Get:

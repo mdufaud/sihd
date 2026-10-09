@@ -12,114 +12,8 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::imgui;
 
-// ════════════════════════════════════════════════════════════════════════════════
-//
-//  IMGUI → NCURSES KNOWLEDGE BASE
-//
-//  This test file validates the ncurses renderer's interpretation of imgui draw
-//  primitives. Each section documents WHAT imgui emits and WHAT the expected
-//  terminal representation should be.
-//
-//  ── IMGUI DRAW PRIMITIVES (imgui 1.91.9) ──────────────────────────────────────
-//
-//  All imgui rendering decomposes into indexed triangle lists in ImDrawList.
-//  Key functions and their triangle output:
-//
-//  AddRectFilled(p_min, p_max, col)   [imgui_draw.cpp:1466]
-//    Non-rounded: PrimRect → 6 indices, 4 vertices = 2 axis-aligned triangles.
-//    Rounded: PathRect + PathFillConvex → fan triangles from centroid.
-//    All 6 vertices lie on the rect corners (±epsilon).
-//    UVs are uniform (white pixel) → is_glyph_triangle = false.
-//
-//  AddTriangleFilled(p1, p2, p3, col) [imgui_draw.cpp:1541]
-//    3 vertices, 3 indices = 1 triangle. Used by RenderArrow.
-//
-//  AddLine(p1, p2, col, thickness)    [imgui_draw.cpp:1444]
-//    Adds 0.5 to both endpoints, then PathStroke with given thickness.
-//    PathStroke produces a quad (2 triangles) with perpendicular offset:
-//      normal = (-dy, dx) / length * thickness * 0.5
-//      vertices: p1±normal, p2±normal
-//    UVs are uniform → is_glyph_triangle = false.
-//
-//  AddText / PrimRectUV (glyphs)      [imgui_draw.cpp:1718]
-//    Each character = 1 quad = 2 triangles with VARYING UVs mapping into
-//    the font atlas. is_glyph_triangle = true (UVs differ between vertices).
-//
-//  PathFillConvex(col)                [imgui_draw.cpp:1408]
-//    Fan triangulation from first vertex. Used by AddCircleFilled,
-//    rounded AddRectFilled. Produces N-2 triangles for N-vertex path.
-//
-//  ── IMGUI WIDGETS → DRAW CALLS ────────────────────────────────────────────────
-//
-//  RenderArrow(pos, col, dir, scale)  [imgui_draw.cpp:4327]
-//    h = FontSize * 1.0, r = h * 0.40 * scale
-//    center = pos + (h * 0.5, h * 0.5 * scale)
-//    Right: a=(+0.750r, 0), b=(-0.750r, +0.866r), c=(-0.750r, -0.866r)
-//    Down:  a=(0, +0.750r), b=(-0.866r, -0.750r), c=(+0.866r, -0.750r)
-//    Left:  negate r → a=(-0.750r, 0), b=(+0.750r, -0.866r), c=(+0.750r, +0.866r)
-//    Up:    negate r → a=(0, -0.750r), b=(+0.866r, +0.750r), c=(-0.866r, +0.750r)
-//    Emits AddTriangleFilled. Aspect ratio: xspan/yspan ≈ 0.87 (right/left)
-//    or 1.15 (down/up). Always within [0.5, 2.0].
-//    With FontSize=1 (terminal), triangle spans ~0.6 cells each axis.
-//    Used by: TreeNode (collapsed=right, expanded=down), Combo (down),
-//             Scrollbar buttons (up/down), Menu submenu indicator (right).
-//
-//  SliderScalar grab                  [imgui_widgets.cpp:3174,3223]
-//    Track: RenderFrame → AddRectFilled (wide rect, full slider width).
-//    Grab: AddRectFilled(grab_bb) where grab_bb is:
-//      horizontal: (grab_pos - grab_sz*0.5, bb.Min.y + pad, grab_pos + grab_sz*0.5, bb.Max.y - pad)
-//      grab_sz = max(style.GrabMinSize, slider_sz / (v_range + 1))
-//    With GrabMinSize=0.1 and terminal scale, grab width ≈ 0.1–0.5 cells.
-//    → PrimRect produces thin vertical rect (width < 0.6, height ≥ 1.0).
-//    EXPECTED: render as 'I' character at center cell (slider grab indicator).
-//
-//  PlotLines                          [imgui_widgets.cpp:7750+]
-//    One AddLine per data segment between consecutive points.
-//    Each AddLine → 2 triangles forming a thin quad along the line direction.
-//    Line thickness = 1.0 (default), but at terminal scale with FontSize=1,
-//    the perpendicular offset ≈ 0.5 cells → very thin slivers.
-//    EXPECTED: bg fill only. NO arrows, NO '+', NO dashes.
-//
-//  PlotHistogram                      [imgui_widgets.cpp:7800+]
-//    One AddRectFilled per bar. Bar width depends on count and plot width.
-//    → PrimRect = 2 axis-aligned triangles per bar.
-//    EXPECTED: bg fill. Thin bars (< 1.5 cell width) must not expand into
-//    adjacent cells — skip rect-pair detection, use per-triangle scanline fill.
-//
-//  Close button (X)                   [imgui.cpp:5640]
-//    Two AddLine calls forming a diagonal cross (\ and /).
-//    Each AddLine → 2 triangles → 4 triangles total, same color.
-//    EXPECTED: detect cross pattern → render 'X' at center cell.
-//
-//  RenderBullet                       [imgui_draw.cpp:4358]
-//    AddCircleFilled(radius=FontSize*0.20, 8 segments) → 8 fan triangles.
-//    Small triangles, all within ~0.4 cells of center.
-//    EXPECTED: bg fill (too small for meaningful character).
-//
-//  RenderCheckMark                    [imgui_draw.cpp:4364]
-//    PathStroke with 3 points → 2 line segments → 4 triangles.
-//    EXPECTED: bg fill (check mark geometry doesn't match arrow/cross patterns).
-//
-//  Resize grip                        [imgui.cpp:5100+]
-//    PathFillConvex producing small fan triangles at window corner.
-//    Currently: falls through to scanline fill (no special detection).
-//    TODO: may need '+' or corner indicator in future.
-//
-//  ── NCURSES RENDERER PIPELINE ──────────────────────────────────────────────────
-//
-//  For each triangle in the draw list:
-//  1. is_glyph_triangle? → _draw_glyph_quad (UV lookup → character)
-//  2. _try_detect_cross (4 non-glyph same-color triangles → 'X')
-//  3. _try_detect_rect_pair (2 triangles → axis-aligned rect → _draw_rect)
-//     - Skip if rect width < 1.5 (let thin rects use scanline for tighter bounds)
-//  4. _draw_nonglyph_triangle:
-//     a. Small triangle (spans ≤ 1.2, area ratio ≥ 0.5) → classify_arrow
-//     b. Otherwise → _draw_fill_triangle (scanline, space + bg color)
-//  5. _draw_rect:
-//     a. Thin vertical (width < 0.6, height ≥ 1.0) → 'I' at center (slider grab)
-//     b. Otherwise → space + bg fill
-//
-// ════════════════════════════════════════════════════════════════════════════════
+// Knowledge base: imgui emits indexed triangles - rects/lines (uniform UVs), glyphs (atlas UVs),
+// PathFillConvex fans; per triangle: glyph -> cross -> rect pair -> arrow or scanline fill
 
 class TestNcursesRenderer: public ::testing::Test
 {
@@ -128,13 +22,7 @@ class TestNcursesRenderer: public ::testing::Test
         virtual ~TestNcursesRenderer() { sihd::util::LoggerManager::clear_loggers(); }
 };
 
-// ════════════════════════════════════════════════════════════════════════════
-// rgb_to_ansi256
-//
-// Core color mapping: RGB → ANSI-256 palette.
-// Grayscale (r==g==b): maps to ramp 232–255 (24 shades).
-// Color: maps to 6×6×6 cube at indices 16–231.
-// ════════════════════════════════════════════════════════════════════════════
+// rgb_to_ansi256: grayscale -> ramp 232-255, color -> 6x6x6 cube at 16-231
 
 TEST_F(TestNcursesRenderer, rgb_black)
 {
@@ -202,13 +90,7 @@ TEST_F(TestNcursesRenderer, rgb_magenta)
     EXPECT_EQ(ImguiRendererNcurses::rgb_to_ansi256(255, 0, 255), 201);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// col_to_ansi256 / col_to_ansi256_premul
-//
-// ImU32 color (ABGR packed) → ANSI-256.
-// col_to_ansi256: ignores alpha (used for foreground/glyph color).
-// col_to_ansi256_premul: premultiplies by alpha (used for background fills).
-// ════════════════════════════════════════════════════════════════════════════
+// col_to_ansi256 ignores alpha (foreground); col_to_ansi256_premul premultiplies by alpha (background)
 
 TEST_F(TestNcursesRenderer, col_ignores_alpha)
 {
@@ -250,24 +132,8 @@ TEST_F(TestNcursesRenderer, col_black)
     EXPECT_EQ(ImguiRendererNcurses::col_to_ansi256(black), ImguiRendererNcurses::rgb_to_ansi256(0, 0, 0));
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// classify_arrow — RenderArrow triangle detection
-//
-// imgui RenderArrow [imgui_draw.cpp:4327] emits AddTriangleFilled with:
-//   h = FontSize, r = h * 0.40 * scale, center = pos + (h/2, h/2*scale)
-//   Right: vertices at (+0.750r, 0), (-0.750r, +0.866r), (-0.750r, -0.866r)
-//   → xspan = 1.5r = 0.6, yspan = 1.732r = 0.693, ratio ≈ 0.87
-//   Down: vertices at (0, +0.750r), (-0.866r, -0.750r), (+0.866r, -0.750r)
-//   → xspan = 1.732r = 0.693, yspan = 1.5r = 0.6, ratio ≈ 1.15
-//
-// Detection criteria:
-//   1. Both spans > 0.01 (not degenerate)
-//   2. Aspect ratio in [0.4, 2.5] (rejects thin line slivers)
-//   3. Base edge: two vertices aligned on one axis (gap < 0.05)
-//   4. Not a corner (both axes have base edge → right-angle, not arrow)
-//
-// EXPECTED: return '>', '<', 'v', '^' for real arrows, 0 for everything else.
-// ════════════════════════════════════════════════════════════════════════════
+// classify_arrow - RenderArrow [imgui_draw.cpp:4327]: h=FontSize, r=0.40*scale; xspan/yspan ratio
+// 0.87 (right/left) or 1.15 (down/up); gates: spans > 0.01, ratio [0.4, 2.5], base edge, not corner
 
 TEST_F(TestNcursesRenderer, arrow_right)
 {
@@ -379,10 +245,8 @@ TEST_F(TestNcursesRenderer, arrow_degenerate_point_not_arrow)
 
 TEST_F(TestNcursesRenderer, arrow_plotlines_diagonal_quad_half_not_arrow)
 {
-    // PlotLines diagonal: (10,5)→(12,3), thickness ~0.3
-    // One triangle half of the AddLine quad — thin sliver, NOT an arrow.
-    // classify_arrow alone may not reject all slivers — the area ratio
-    // check in _draw_nonglyph_triangle provides additional filtering.
+    // PlotLines diagonal (10,5)->(12,3): thin sliver, NOT an arrow - classify_arrow alone may not
+    // reject all slivers, the area ratio check in _draw_nonglyph_triangle filters the rest
     ImVec2 p0(10.0f, 5.15f);
     ImVec2 p1(12.0f, 3.15f);
     ImVec2 p2(10.0f, 4.85f);
@@ -409,16 +273,8 @@ TEST_F(TestNcursesRenderer, arrow_symmetric_down_triangle)
     EXPECT_EQ(ImguiRendererNcurses::classify_arrow(p0, p1, p2), (uint32_t)'v');
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// is_glyph_triangle
-//
-// imgui text rendering: each character = PrimRectUV → 2 triangles with
-// VARYING UVs mapping into the font atlas texture.
-// Non-glyph geometry (AddRectFilled, AddTriangleFilled, AddLine) uses
-// UNIFORM UVs (white pixel at atlas corner).
-//
-// Detection: if any vertex UV differs from others → glyph triangle.
-// ════════════════════════════════════════════════════════════════════════════
+// is_glyph_triangle: glyphs = PrimRectUV with VARYING atlas UVs; non-glyph geometry uses the
+// uniform white pixel - any vertex UV differing from the others means glyph
 
 TEST_F(TestNcursesRenderer, glyph_uniform_uv_not_glyph)
 {
@@ -473,13 +329,7 @@ TEST_F(TestNcursesRenderer, glyph_all_zero_uv_not_glyph)
     EXPECT_FALSE(ImguiRendererNcurses::is_glyph_triangle(v0, v1, v2));
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// compute_clip_rect
-//
-// Transforms ImDrawCmd::ClipRect from imgui display-space to framebuffer-space
-// using the draw data's DisplayPos (offset) and FramebufferScale.
-// Formula: result = (ClipRect - offset) * scale
-// ════════════════════════════════════════════════════════════════════════════
+// compute_clip_rect: framebuffer-space = (ClipRect - DisplayPos) * FramebufferScale
 
 TEST_F(TestNcursesRenderer, clip_rect_identity)
 {
@@ -533,24 +383,8 @@ TEST_F(TestNcursesRenderer, clip_rect_negative_offset)
     EXPECT_FLOAT_EQ(clip.w, 55.0f);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// is_cross_pattern — close button X detection
-//
-// imgui close button [imgui.cpp:5640] draws 2 AddLine calls forming an X:
-//   Line 1: top-left → bottom-right (\ diagonal)
-//   Line 2: top-right → bottom-left (/ diagonal)
-// Each AddLine → 2 triangles with perpendicular thickness offset ≈ ±0.15.
-// Total: 4 consecutive non-glyph same-color triangles.
-//
-// Detection criteria:
-//   1. Bounding box: span ≥ 0.5 and ≤ 3.0 on each axis (1-2 cell X)
-//   2. Roughly square aspect ratio (0.35 to 2.85)
-//   3. Enough distinct positions on both axes (≥ 3 unique X and Y values)
-//   4. Centroid overlap: both diagonal pairs must center near the same point
-//
-// EXPECTED: return true for real X patterns, false for sequential PlotLines
-// segments, parallel lines, V-shapes, and other 4-triangle groups.
-// ════════════════════════════════════════════════════════════════════════════
+// is_cross_pattern - close button X [imgui.cpp:5640]: 2 AddLine calls -> 4 same-color triangles.
+// Gates: span 0.5-3.0 per axis, aspect 0.35-2.85, >=3 unique positions per axis, centroid overlap
 
 TEST_F(TestNcursesRenderer, cross_real_x_shape)
 {
@@ -611,9 +445,8 @@ TEST_F(TestNcursesRenderer, cross_offset_position)
     EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts));
 }
 
-// ── is_cross_pattern: false positives that MUST be rejected ────────────────
-// These patterns appear in real imgui rendering and look superficially
-// like crosses but aren't.
+// False positives that MUST be rejected: patterns from real imgui rendering that look
+// superficially like crosses but aren't
 
 TEST_F(TestNcursesRenderer, cross_sequential_segments_rejected)
 {
@@ -850,12 +683,8 @@ TEST_F(TestNcursesRenderer, cross_collinear_points_rejected)
     EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// classify_arrow — real imgui widget arrows
-//
-// These test with geometry that matches actual imgui widget rendering:
-// Combo dropdown, TreeNode collapse/expand, Scrollbar buttons, Menu submenu.
-// ════════════════════════════════════════════════════════════════════════════
+// classify_arrow - real widget arrows: Combo dropdown, TreeNode collapse/expand, Scrollbar
+// buttons, Menu submenu
 
 TEST_F(TestNcursesRenderer, arrow_combo_dropdown_right)
 {
@@ -947,14 +776,8 @@ TEST_F(TestNcursesRenderer, arrow_resize_grip_not_arrow)
     EXPECT_EQ(ImguiRendererNcurses::classify_arrow(p0, p1, p2), 0u);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// PlotLines + cross detection integration
-//
-// PlotLines emits AddLine per data segment → 2 triangles per segment.
-// 4 consecutive segments = 8 triangles; cross detector groups 4 at a time.
-// Sequential PlotLines segments have OFFSET centroids (not overlapping)
-// so they must NOT match cross pattern.
-// ════════════════════════════════════════════════════════════════════════════
+// PlotLines + cross detection: PlotLines emits AddLine per segment, the cross detector groups 4
+// triangles at a time - sequential segments have OFFSET centroids, they must not match
 
 TEST_F(TestNcursesRenderer, plotlines_flat_segment_no_arrow)
 {
@@ -1023,14 +846,8 @@ TEST_F(TestNcursesRenderer, plotlines_horizontal_segments_cross_rejected)
     EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Area ratio: arrows vs line slivers
-//
-// Real arrows (RenderArrow): area/bbox ≈ 0.5 (half the bounding box).
-// AddLine slivers: area/bbox < 0.25 (thin parallelogram in large bbox).
-// The area ratio check in _draw_nonglyph_triangle uses this to gate arrow
-// classification — only triangles with area/bbox ≥ 0.5 reach classify_arrow.
-// ════════════════════════════════════════════════════════════════════════════
+// Area ratio gates arrows vs slivers: real arrows area/bbox ≈ 0.5, AddLine slivers < 0.25 -
+// only triangles with area/bbox >= 0.5 reach classify_arrow
 
 TEST_F(TestNcursesRenderer, sliver_ratio_real_arrow)
 {
@@ -1092,16 +909,8 @@ TEST_F(TestNcursesRenderer, sliver_ratio_narrow_down_arrow)
     EXPECT_GE(cross2 / bbox, 0.5f);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// PlotHistogram bar geometry — rect pair detection
-//
-// PlotHistogram [imgui_widgets.cpp:7800+] calls AddRectFilled per bar.
-// AddRectFilled → PrimRect = 2 axis-aligned triangles.
-// _try_detect_rect_pair detects these and calls _draw_rect.
-// IMPORTANT: thin rects (width < 1.5) are NOT consumed by rect-pair
-// detection — they fall through to per-triangle scanline fill for
-// tighter bounds (prevents adjacent thin bars from merging).
-// ════════════════════════════════════════════════════════════════════════════
+// PlotHistogram bars: AddRectFilled per bar -> rect-pair detection; thin rects (width < 1.5)
+// fall through to per-triangle scanline for tighter bounds so thin bars never merge
 
 TEST_F(TestNcursesRenderer, histogram_bar_is_axis_aligned)
 {
@@ -1140,14 +949,8 @@ TEST_F(TestNcursesRenderer, histogram_near_zero_bar_not_arrow)
     EXPECT_EQ(ImguiRendererNcurses::classify_arrow(p0, p1, p2), 0u);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Diagonal AddLine slivers — area ratio filtering
-//
-// AddLine [imgui_draw.cpp:1444] at various angles produces thin quads.
-// Each triangle half has low area/bbox ratio (< 0.5) compared to real
-// arrows (≈ 0.5–1.0). This is the secondary filter that prevents line
-// segments from being misclassified as arrows.
-// ════════════════════════════════════════════════════════════════════════════
+// Diagonal AddLine slivers: area/bbox < 0.5 vs real arrows 0.5-1.0 - the secondary filter keeping
+// line segments from being misclassified as arrows
 
 TEST_F(TestNcursesRenderer, diagonal_line_30deg_sliver)
 {
@@ -1182,12 +985,7 @@ TEST_F(TestNcursesRenderer, diagonal_line_negative_slope_sliver)
     EXPECT_LT(cross2 / (xspan * yspan), 0.5f);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Headless renderer — draw method tests
-//
-// These test the actual screen buffer output for various draw primitives.
-// Uses init_headless(W, H) for ncurses-free testing.
-// ════════════════════════════════════════════════════════════════════════════
+// Headless draw-method tests: assert the actual screen buffer via init_headless(W, H)
 
 class TestNcursesRendererDraw: public ::testing::Test
 {
@@ -1226,9 +1024,7 @@ class TestNcursesRendererDraw: public ::testing::Test
         }
 };
 
-// ── _draw_rect: AddRectFilled → space + bg fill ────────────────────────────
-// Non-rounded AddRectFilled produces PrimRect (2 triangles). When detected
-// as rect pair, _draw_rect fills with space + bg color. No other characters.
+// _draw_rect: AddRectFilled detected as rect pair -> space + bg fill, no other characters
 
 TEST_F(TestNcursesRendererDraw, rect_normal_fill)
 {
@@ -1279,9 +1075,7 @@ TEST_F(TestNcursesRendererDraw, nonglyph_real_down_arrow)
     EXPECT_EQ(renderer.get_cell(10, 10).ch, (uint32_t)'v');
 }
 
-// ── AddLine slivers (PlotLines) must NOT produce arrows ────────────────────
-// Each PlotLines data point pair → AddLine → quad (2 triangles).
-// Thickness slivers have low area ratio → must fall through to scanline fill.
+// AddLine slivers (PlotLines): low area ratio -> must fall through to scanline fill, never arrows
 
 TEST_F(TestNcursesRendererDraw, nonglyph_plotlines_diagonal_sliver_no_arrow)
 {
@@ -1447,10 +1241,7 @@ TEST_F(TestNcursesRendererDraw, medium_triangle_not_suppressed)
     EXPECT_TRUE(any_filled) << "medium triangle must not be suppressed";
 }
 
-// ── Slider grab: thin vertical rect → 'I' at center ───────────────────────
-// SliderScalar [imgui_widgets.cpp:3223] calls AddRectFilled(grab_bb).
-// With terminal GrabMinSize=0.1, grab width ≈ 0.1–0.5 cells, height ≈ 1–5.
-// EXPECTED: 'I' character at center cell (visual slider grab indicator).
+// Slider grab: thin vertical rect (width 0.1-0.5 cells) -> 'I' at the center cell
 
 TEST_F(TestNcursesRendererDraw, rect_thin_vertical_slider_grab_I)
 {
@@ -1571,10 +1362,7 @@ TEST_F(TestNcursesRendererDraw, arrow_reject_vertical_sliver_aspect_ratio)
     EXPECT_EQ(ch, (uint32_t)0);
 }
 
-// ── Fill triangle Y bounds ─────────────────────────────────────────────────
-// ydelta = ceil(max_y) - (int)min_y.
-// Vertex at exact integer Y (e.g. 8.0): ceil(8.0)=8, so row 8 is the
-// boundary row. A vertex AT y=8.0 is start of row 8, not end of row 7.
+// ydelta = ceil(max_y) - (int)min_y: a vertex at exact integer Y (8.0) starts row 8, not row 7
 
 TEST_F(TestNcursesRendererDraw, fill_triangle_ydelta_integer_max)
 {
@@ -1606,16 +1394,8 @@ TEST_F(TestNcursesRendererDraw, small_triangle_no_plus_anywhere)
     EXPECT_NE(renderer.get_cell(10, 10).ch, (uint32_t)'+');
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Guard-rail tests: end-to-end behavioral invariants
-//
-// These simulate COMPLETE imgui widget drawing patterns (not single triangles)
-// and assert the EXPECTED terminal interpretation. They define the contract
-// between imgui draw output and ncurses character rendering.
-//
-// If a guard-rail fails, it means a code change broke a user-visible behavior.
-// Fix the renderer, not the test.
-// ════════════════════════════════════════════════════════════════════════════
+// Guard-rail tests: complete widget patterns asserting the imgui -> terminal contract; a failure
+// means a code change broke user-visible behavior - fix the renderer, not the test
 
 class TestNcursesGuardRails: public ::testing::Test
 {
@@ -1637,10 +1417,8 @@ class TestNcursesGuardRails: public ::testing::Test
         }
         virtual ~TestNcursesGuardRails() { sihd::util::LoggerManager::clear_loggers(); }
 
-        // Simulate AddLine: quad = 2 triangles with perpendicular thickness offset.
-        // imgui AddLine [imgui_draw.cpp:1444] adds 0.5 to endpoints then PathStroke.
-        // We skip the +0.5 offset here since test coordinates are already in
-        // framebuffer space (post-transform).
+        // Simulate AddLine: quad = 2 triangles with perpendicular thickness offset, skipping the +0.5
+        // endpoint offset (test coordinates are already framebuffer space)
         void draw_line_segment(float x0, float y0, float x1, float y1, float thickness, ImU32 col)
         {
             float dx = x1 - x0;
@@ -1698,11 +1476,8 @@ class TestNcursesGuardRails: public ::testing::Test
         }
 };
 
-// ── GUARD: PlotLines → bg fill ONLY ────────────────────────────────────────
-// PlotLines [imgui_widgets.cpp:7750] emits AddLine per segment.
-// Each AddLine → PathStroke → 2-triangle quad with perpendicular thickness.
-// At terminal scale (FontSize=1), line thickness ≈ 0.3 cells.
-// INVARIANT: PlotLines output must NEVER contain arrows, '+', 'I', or dashes.
+// GUARD: PlotLines -> bg fill ONLY (thickness ~0.3 cells at terminal scale): never arrows,
+// '+', 'I' or dashes
 
 TEST_F(TestNcursesGuardRails, plotlines_zigzag_only_bg_fill)
 {
@@ -1737,11 +1512,7 @@ TEST_F(TestNcursesGuardRails, plotlines_shallow_segments_no_arrows)
     assert_no_char_in_region('+', 4, 13, 36, 17, "PlotLines shallow");
 }
 
-// ── GUARD: PlotHistogram → bg fill, gaps preserved ─────────────────────────
-// PlotHistogram [imgui_widgets.cpp:7800] emits AddRectFilled per bar.
-// Wide bars (≥ 1.5 cells): rect-pair detection → _draw_rect → bg fill.
-// Thin bars (< 1.5 cells): skip rect-pair → per-triangle scanline fill.
-// INVARIANT: bars are bg fill only, thin bars have visible gaps.
+// GUARD: PlotHistogram -> bg fill, gaps preserved: wide bars rect-pair, thin bars scanline
 
 TEST_F(TestNcursesGuardRails, histogram_bars_are_bg_fill_only)
 {
@@ -1771,9 +1542,7 @@ TEST_F(TestNcursesGuardRails, histogram_thin_bars_have_gaps)
     }
 }
 
-// ── GUARD: Window background → pure bg fill ────────────────────────────────
-// Window background: large AddRectFilled covering entire window area.
-// INVARIANT: only space/0 + bg color, no stray characters.
+// GUARD: window background -> pure bg fill, no stray characters
 
 TEST_F(TestNcursesGuardRails, window_background_pure_bg)
 {
@@ -1781,10 +1550,7 @@ TEST_F(TestNcursesGuardRails, window_background_pure_bg)
     assert_only_bg_fill(1, 1, 59, 29, "Window background");
 }
 
-// ── GUARD: RenderArrow → correct arrow character ───────────────────────────
-// imgui RenderArrow [imgui_draw.cpp:4327]: AddTriangleFilled with exact vertex
-// formula. With FontSize=1 and scale=1: r=0.40, spans ≈ 0.6 cells.
-// INVARIANT: exact RenderArrow geometry → correct '>', 'v', '<', '^'.
+// GUARD: RenderArrow exact geometry (r=0.40, spans ~0.6 cells) -> correct '>', 'v', '<', '^'
 
 TEST_F(TestNcursesGuardRails, renderarrow_right_produces_arrow)
 {
@@ -1834,11 +1600,7 @@ TEST_F(TestNcursesGuardRails, renderarrow_up_produces_arrow)
     EXPECT_EQ(renderer.get_cell(20, 15).ch, (uint32_t)'^');
 }
 
-// ── GUARD: Slider grab → 'I', slider track → bg fill ──────────────────────
-// SliderScalar [imgui_widgets.cpp:3174]: grab = thin AddRectFilled,
-// track = wide AddRectFilled.
-// INVARIANT: thin vertical rect (width < 0.6, height ≥ 1) → 'I' at center.
-// INVARIANT: wide rect → space + bg only.
+// GUARD: slider grab = thin AddRectFilled -> 'I' at center; wide track -> space + bg only
 
 TEST_F(TestNcursesGuardRails, slider_grab_thin_vertical_shows_I)
 {
@@ -1853,9 +1615,7 @@ TEST_F(TestNcursesGuardRails, slider_track_wide_rect_no_I)
         EXPECT_NE(renderer.get_cell(x, 10).ch, (uint32_t)'I') << "slider track should not have 'I' at x=" << x;
 }
 
-// ── GUARD: Fill triangle bounds — no leak outside bounding box ─────────────
-// _draw_fill_triangle scanline rasteriser must not write cells outside the
-// triangle's vertex bounding box.
+// GUARD: the scanline rasteriser never writes outside the triangle's vertex bounding box
 
 TEST_F(TestNcursesGuardRails, fill_triangle_no_leak_below)
 {
@@ -1884,9 +1644,7 @@ TEST_F(TestNcursesRendererDraw, fill_triangle_no_leak_sideways)
     }
 }
 
-// ── GUARD: Arrow adjacent to fill — no cross-contamination ─────────────────
-// When an arrow triangle and a fill rect occupy adjacent cells, neither
-// should corrupt the other's output.
+// GUARD: adjacent arrow + fill cells never corrupt each other
 
 TEST_F(TestNcursesGuardRails, arrow_adjacent_to_fill_no_bleed)
 {
@@ -1914,11 +1672,8 @@ TEST_F(TestNcursesGuardRails, rect_fill_complete_interior)
             EXPECT_EQ(renderer.get_cell(x, y).bg, expected_bg) << "cell(" << x << "," << y << ")";
 }
 
-// ── GUARD: Slider grab handle → single 'I', never a coverage block ─────────
-// imgui draws the slider grab as AddRectFilled in ImGuiCol_SliderGrab. Sliders
-// with a wide handle (SliderInt, slider enum) produce a rect several cells wide;
-// it must collapse to one 'I' at the centre, not fill the whole handle as a
-// light-blue block. Needs an ImGui context so the SliderGrab colour gate is set.
+// GUARD: a wide grab handle (SliderInt/enum, several cells) collapses to one 'I', never a block.
+// Needs an ImGui context so the SliderGrab colour gate is set
 
 class TestNcursesSliderGrab: public ::testing::Test
 {
@@ -2010,14 +1765,8 @@ TEST_F(TestNcursesSliderGrab, non_grab_wide_rect_still_fills)
         }
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// PlotHistogram — real ImGui geometry through the full rasteriser.
-//
-// Builds a real ImGui frame (headless: no GL, alpha8 atlas) containing a
-// PlotHistogram, renders the resulting ImDrawData through the classifier, and
-// inspects the cell grid. Guards against the "histogram breaks at a specific
-// sample count" regression (bars rendered as scattered fragments).
-// ════════════════════════════════════════════════════════════════════════════
+// PlotHistogram - real ImGui frame through the full rasteriser; guards the 'histogram breaks at
+// a specific sample count' regression (bars rendered as scattered fragments)
 class TestNcursesHistogram: public ::testing::Test
 {
     protected:
@@ -2134,11 +1883,8 @@ TEST_F(TestNcursesHistogram, DISABLED_debug_dump_195_vs_200)
     dump_grid("count=200");
 }
 
-// Histogram bars are PrimRect pairs. When the sample count exceeds the plot's inner
-// pixel width imgui clamps each bar to ~1px wide. The renderer must still paint a
-// 1-cell column per bar instead of dropping it via the sub-cell sliver skip — else
-// every tall bar vanishes and only baseline fragments remain. A sine spans the full
-// -1..1 range so its peaks must reach both the top and bottom plot rows.
+// Bars clamped to ~1px by sample count must still paint a 1-cell column (not dropped by the
+// sliver skip); the sine spans full -1..1 so peaks reach both plot rows
 TEST_F(TestNcursesHistogram, high_sample_count_paints_full_height_bars)
 {
     const uint8_t bar_bg = ImguiRendererNcurses::col_to_ansi256_premul(ImGui::GetColorU32(ImGuiCol_PlotHistogram));
@@ -2164,15 +1910,8 @@ TEST_F(TestNcursesHistogram, high_sample_count_paints_full_height_bars)
     EXPECT_GT(total_bar_cells(), 300);  // solid coverage, not scattered fragments
 }
 
-// ════════════════════════════════════════════════════════════════════════════════
-//
-//  CHECKBOX TICK ('x')
-//
-//  imgui RenderCheckMark emits the tick as a CheckMark-coloured polyline of two
-//  triangles. The classifier (_try_detect_check) must collapse it to a single 'x'
-//  glyph at the box centre. Guard-rail: a checked Checkbox must produce an 'x'.
-//
-// ════════════════════════════════════════════════════════════════════════════════
+// CHECKBOX TICK: RenderCheckMark = CheckMark-coloured 2-triangle polyline -> _try_detect_check
+// collapses it to a single 'x' at the box centre; a checked Checkbox must produce an 'x'
 
 class TestNcursesCheckbox: public ::testing::Test
 {
@@ -2259,9 +1998,7 @@ TEST_F(TestNcursesCheckbox, unchecked_box_has_no_x)
     EXPECT_EQ(count_char('x'), 0);
 }
 
-// ════════════════════════════════════════════════════════════════════════════
-// Button (full-width, hovered) — real ImGui geometry through the classifier.
-// ════════════════════════════════════════════════════════════════════════════
+// Button (full-width, hovered) - real ImGui geometry through the classifier
 class TestNcursesButton: public ::testing::Test
 {
     protected:
@@ -2338,9 +2075,8 @@ class TestNcursesButton: public ::testing::Test
         }
 };
 
-// A hovered full-width button fills its bar; it must NOT collapse to a single 'I'.
-// Regression guard: ButtonHovered shares the accent colour with SliderGrabActive in
-// the dark theme, so the wide button bg must not be misdetected as a slider grab.
+// A hovered full-width button fills its bar and must NOT collapse to a single 'I': ButtonHovered
+// shares the SliderGrabActive accent colour, the wide bg must not misdetect as a grab
 TEST_F(TestNcursesButton, hovered_button_fills_bar_no_I)
 {
     render_button(true);

@@ -23,7 +23,7 @@ class DynLib
 
         std::expected<void, sihd::util::Error> open(std::string_view lib_name);
 
-        std::expected<void *, sihd::util::Error> load(std::string_view symbol_name);
+        std::expected<void *, sihd::util::Error> load_symbol(std::string_view symbol_name);
 
         bool close();
 

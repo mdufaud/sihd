@@ -13,13 +13,16 @@ namespace sihd::util
 class LoggerStream: public ALogger
 {
     public:
+        LoggerStream(const std::string & name, Node *parent = nullptr);
         LoggerStream(FILE *output = stderr, const std::string & pattern = "");
         ~LoggerStream();
 
         void log(const LogInfo & info, std::string_view msg) override;
 
+        bool set_pattern(const std::string & pattern);
+
     private:
-        FILE *_output;
+        FILE *_output = stderr;
         LogFormatter _formatter;
 };
 

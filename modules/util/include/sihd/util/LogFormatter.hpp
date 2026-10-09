@@ -23,7 +23,6 @@ class LogFormatter
 
         LogFormatter();
 
-        // a refused pattern keeps the previous one
         std::expected<void, Error> set_pattern(std::string_view pattern);
         std::string format(const LogInfo & info, std::string_view msg) const;
 
@@ -46,11 +45,10 @@ class LogFormatter
                 };
 
                 Kind kind = Kind::literal;
-                // the literal bytes, a view into the template's owned pattern
+                // a view into the template's owned pattern
                 std::string_view literal;
                 TokenPattern::Options options;
-                // a time field's strftime spec, defaulted at compile: a std::string because
-                // strftime reads a C string
+                // a time field's strftime spec: a std::string, strftime reads a C string
                 std::string time_format;
         };
 

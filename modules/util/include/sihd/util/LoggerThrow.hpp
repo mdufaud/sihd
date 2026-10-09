@@ -34,7 +34,8 @@ class LoggerThrow: public ALogger
                 std::string _msg;
         };
 
-        LoggerThrow() = default;
+        LoggerThrow(const std::string & name, Node *parent = nullptr);
+        LoggerThrow();
         ~LoggerThrow() = default;
 
         void log(const LogInfo & info, std::string_view msg) override;

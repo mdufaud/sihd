@@ -63,9 +63,20 @@ class TestLogApp: public CliApp
     public:
         using CliApp::CliApp;
         using CliApp::logger;
+        using CliApp::sinks;
 
     protected:
         ALogger *create_default_logger() override { return new LoggerStream(stdout); }
+
+        ALogger *create_logger_sink(const std::string & plugin,
+                                    const std::string & type,
+                                    const std::string & name,
+                                    Node *parent) override
+        {
+            if (!plugin.empty() || type != "console")
+                return nullptr;
+            return new LoggerConsole(name, parent);
+        }
 };
 
 // records every lifecycle hook with the state it ran in
@@ -845,41 +856,40 @@ TEST_F(TestCliApp, test_log_sinks_conf)
     TestLogApp app({.name = "sinks", .setup_logging = true});
     app.set_conf_loader([] {
         return std::string(R"({"sihd": {"logging": {"sinks": [)"
-                           R"({"logger": "console", "level_lower": "error"},)"
-                           R"({"logger": "console", "source_regex": "^quiet::.*"})"
+                           R"({"logger": "console", "name": "errors", "level_lower": "error"},)"
+                           R"({"logger": "console", "name": "quiet", "source_regex": "^quiet::.*"})"
                            R"(]}}})");
     });
     app.root().add_command("emit", "emit").on_run([] {});
 
     ASSERT_EQ(run_app(app, {"emit"}), 0);
+    // the sinks conf replaces the default logger
+    EXPECT_EQ(app.logger(), nullptr);
     const std::string quiet_source = "quiet::src";
     const std::string any_source = "any::src";
-    ASSERT_TRUE(app.logger()->should_filter(LogInfo(quiet_source, LogLevel::error)));
-    ASSERT_TRUE(app.logger()->should_filter(LogInfo(any_source, LogLevel::info)));
-    ASSERT_FALSE(app.logger()->should_filter(LogInfo(any_source, LogLevel::error)));
+    ALogger *errors = app.sinks().get_child<ALogger>("errors");
+    ALogger *quiet = app.sinks().get_child<ALogger>("quiet");
+    ASSERT_NE(errors, nullptr);
+    ASSERT_NE(quiet, nullptr);
+    EXPECT_TRUE(errors->should_filter(LogInfo(any_source, LogLevel::info)));
+    EXPECT_FALSE(errors->should_filter(LogInfo(any_source, LogLevel::error)));
+    EXPECT_FALSE(errors->should_filter(LogInfo(quiet_source, LogLevel::error)));
+    EXPECT_TRUE(quiet->should_filter(LogInfo(quiet_source, LogLevel::error)));
+    EXPECT_FALSE(quiet->should_filter(LogInfo(any_source, LogLevel::error)));
+    EXPECT_FALSE(quiet->should_filter(LogInfo(any_source, LogLevel::info)));
 }
 
 TEST_F(TestCliApp, test_log_conf_refused)
 {
     const std::vector<std::string> bad_confs = {
-        // unknown logging key
         R"({"sihd": {"logging": {"nope": true}}})",
-        // console must be a boolean
         R"({"sihd": {"logging": {"console": "yes"}}})",
-        // unknown level name
         R"({"sihd": {"logging": {"level": "errro"}}})",
-        // logging must be an object
         R"({"sihd": {"logging": "debug"}})",
-        // a bare CliApp installs no file sink
-        R"({"sihd": {"logging": {"sinks": [{"logger": "file"}]}}})",
-        // a sink entry must name its logger
         R"({"sihd": {"logging": {"sinks": [{"level_lower": "error"}]}}})",
-        // unknown sink filter key
-        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "nope": "x"}]}}})",
-        // sink filter values are strings
-        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": 3}]}}})",
-        // unknown level in a sink filter
-        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": "errro"}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": "error"}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "level_lower": 3}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "level_lower": "errro"}]}}})",
     };
     for (const std::string & conf : bad_confs)
     {
@@ -888,6 +898,37 @@ TEST_F(TestCliApp, test_log_conf_refused)
         app.root().add_command("run", "run").on_run([] {});
         EXPECT_EQ(run_app(app, {"run"}), EXIT_FAILURE) << conf;
     }
+
+    // a sink the app cannot create or configure is refused at install time
+    const std::vector<std::string> bad_sink_confs = {
+        // a bare CliApp installs no file sink
+        R"({"sihd": {"logging": {"sinks": [{"logger": "file", "name": "f"}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "nope": "x"}]}}})",
+    };
+    for (const std::string & conf : bad_sink_confs)
+    {
+        CliApp app({.name = "badlog", .setup_logging = true});
+        app.set_conf_loader([&conf]() { return conf; });
+        app.root().add_command("run", "run").on_run([] {});
+        EXPECT_EQ(run_app(app, {"run"}), EXIT_FAILURE) << conf;
+    }
+
+    TestLogApp bad_sink_app({.name = "badsink", .setup_logging = true});
+    bad_sink_app.set_conf_loader(
+        []() { return std::string(R"({"sihd": {"logging": {"sinks": [{"logger": "file", "name": "f"}]}}})"); });
+    bad_sink_app.root().add_command("run", "run").on_run([] {});
+    EXPECT_EQ(run_app(bad_sink_app, {"run"}), EXIT_FAILURE);
+
+    TestLogApp colors_app({.name = "sinkcolors", .setup_logging = true});
+    colors_app.set_conf_loader([]() {
+        return std::string(
+            R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "console", "colors": false}]}}})");
+    });
+    colors_app.root().add_command("run", "run").on_run([] {});
+    EXPECT_EQ(run_app(colors_app, {"run"}), 0);
+    LoggerConsole *sink = dynamic_cast<LoggerConsole *>(colors_app.sinks().get_child("console"));
+    ASSERT_NE(sink, nullptr);
+    EXPECT_FALSE(sink->colors());
 
     // the same conf with a clean logging section boots
     CliApp app({.name = "goodlog", .setup_logging = false});

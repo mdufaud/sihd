@@ -197,6 +197,9 @@ modules = {
             'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
             'crypto', # openssl crypto for AES/HMAC (zip_crypto_openssl.c, zip_winzip_aes.c)
         ],
+        "linux-static-libs": ['z', 'bz2', 'crypto'],
+        "export-linux-libs": ['zip'],
+        "export-linux-static-libs": ['z', 'bz2', 'crypto'],
     },
     "tui": {
         "exclude-platforms": ["android"],

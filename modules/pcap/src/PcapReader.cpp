@@ -2,8 +2,8 @@
 
 #include <sihd/pcap/PcapReader.hpp>
 #include <sihd/pcap/utils.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/time.hpp>
 
 using enum sihd::util::ErrorCode;

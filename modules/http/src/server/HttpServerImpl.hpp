@@ -245,7 +245,7 @@ struct HttpServer::Impl
         sihd::util::StepWorker stepworker;
 
         size_t service_thread_count = 1;
-        std::vector<std::jthread> service_threads;
+        std::vector<std::thread> service_threads;
 
         std::mutex sessions_mutex;
         std::unordered_set<HttpSession *> active_sessions;

@@ -32,9 +32,7 @@ int main()
 {
     auto screen = ScreenInteractive::Fullscreen();
 
-    // ---------------------------------------------------------------------------
     // HTOP
-    // ---------------------------------------------------------------------------
     int shift = 0;
 
     auto my_graph = [&shift](int width, int height) {
@@ -106,9 +104,7 @@ int main()
                | flex;
     });
 
-    // ---------------------------------------------------------------------------
     // Compiler
-    // ---------------------------------------------------------------------------
 
     const std::vector<std::string> compiler_entries = {
         "gcc",
@@ -273,9 +269,7 @@ int main()
                | flex_grow;
     });
 
-    // ---------------------------------------------------------------------------
     // Spiner
-    // ---------------------------------------------------------------------------
     auto spinner_tab_renderer = Renderer([&] {
         Elements entries;
         for (int i = 0; i < 22; ++i)
@@ -285,9 +279,7 @@ int main()
         return hflow(std::move(entries));
     });
 
-    // ---------------------------------------------------------------------------
     // Colors
-    // ---------------------------------------------------------------------------
     auto color_tab_renderer = Renderer([] {
         auto basic_color_display = vbox({
                                        text("16 color palette:"),
@@ -389,9 +381,7 @@ int main()
             FlexboxConfig().SetGap(1, 1));
     });
 
-    // ---------------------------------------------------------------------------
     // Gauges
-    // ---------------------------------------------------------------------------
     auto render_gauge = [&shift](int delta) {
         float progress = (shift + delta) % 500 / 500.f;
         return hbox({
@@ -422,9 +412,7 @@ int main()
         });
     });
 
-    // ---------------------------------------------------------------------------
     // Paragraph
-    // ---------------------------------------------------------------------------
     auto make_box = [](size_t dimx, size_t dimy) {
         std::string title = std::to_string(dimx) + "x" + std::to_string(dimy);
         return window(text(title) | hcenter | bold, text("content") | hcenter | dim) | size(WIDTH, EQUAL, dimx)
@@ -476,9 +464,7 @@ int main()
     auto paragraph_renderer_group_renderer = Renderer(paragraph_renderer_group,
                                                       [&] { return paragraph_renderer_group->Render(); });
 
-    // ---------------------------------------------------------------------------
     // Tabs
-    // ---------------------------------------------------------------------------
 
     int tab_index = 0;
     std::vector<std::string> tab_entries = {
@@ -520,9 +506,7 @@ int main()
         {
             using namespace std::chrono_literals;
             std::this_thread::sleep_for(0.05s);
-            // The |shift| variable belong to the main thread. `screen.Post(task)`
-            // will execute the update on the thread where |screen| lives (e.g. the
-            // main thread). Using `screen.Post(task)` is threadsafe.
+            // |shift| belongs to the main thread: screen.Post(task) runs it on |screen|'s thread, threadsafe
             screen.Post([&] { shift++; });
             // After updating the state, request a new frame to be drawn. This is done
             // by simulating a new "custom" event to be handled.

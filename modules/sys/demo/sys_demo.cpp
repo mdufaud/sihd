@@ -6,7 +6,6 @@
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/LineReader.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>
@@ -14,6 +13,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/sys/program.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/sys/user.hpp>
@@ -21,6 +21,7 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/str.hpp>
@@ -56,7 +57,7 @@ void fs()
     SIHD_LOG(info, "tmp_path: {}", fs::tmp_path());
     SIHD_LOG(info, "home_path: {}", fs::home_path());
     SIHD_LOG(info, "cwd: {}", fs::cwd());
-    SIHD_LOG(info, "executable_path: {}", fs::executable_path());
+    SIHD_LOG(info, "program_path: {}", program::path());
 
     {
         TmpDir tmp;
@@ -88,11 +89,11 @@ void dynlib()
 {
     DynLib lib;
 
-    if (lib.open("sihd_sys"))
+    if (lib.open("sihd_util"))
     {
-        SIHD_LOG(info, "Opened DLL sihd_sys");
+        SIHD_LOG(info, "Opened DLL sihd_util");
 
-        auto handle = lib.load("sihd_factory_Node");
+        auto handle = lib.load_symbol("sihd_factory_Node");
         if (handle.has_value())
             SIHD_LOG(info, "Handle found in DLL");
 

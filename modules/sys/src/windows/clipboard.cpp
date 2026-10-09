@@ -309,9 +309,8 @@ std::optional<std::vector<uint8_t>> dib_from_bmp_file(ArrByteView bmp)
         return std::nullopt;
     if (info->biCompression != BI_RGB || (info->biBitCount != 24 && info->biBitCount != 32))
         return std::nullopt;
-    // The pixel array may sit after a color table: any offset past the info
-    // header works, the DIB handed to win32 keeps everything after the file
-    // header (info header + color table + pixels).
+    // The pixel array may sit after a color table: any offset past the info header works, the DIB
+    // handed to win32 keeps everything after the file header (info header + color table + pixels)
     if (header->bfOffBits < sizeof(BITMAPFILEHEADER) + info->biSize || header->bfOffBits >= bmp.size())
         return std::nullopt;
 
@@ -345,9 +344,8 @@ HANDLE hdrop_from_uri_list(ArrByteView data)
         if (line.compare(0, file_scheme.size(), file_scheme) != 0)
             continue;
         line.remove_prefix(file_scheme.size());
-        // file://authority/path: an authority gives a UNC path, an empty one a
-        // local path - and only local windows drives convert, other absolute
-        // paths have no windows equivalent.
+        // file://authority/path: an authority gives a UNC path, an empty one a local path - only local
+        // windows drives convert, other absolute paths have no windows equivalent
         const size_t path_slash = line.find('/');
         if (path_slash == std::string_view::npos)
             continue;
@@ -358,9 +356,8 @@ HANDLE hdrop_from_uri_list(ArrByteView data)
         if (authority.empty())
         {
             windows_path = Url::str_decode(path);
-            // Only local windows drives convert: other absolute paths have no
-            // windows equivalent. Checked decoded: some producers escape the
-            // drive colon.
+            // Only local windows drives convert, other absolute paths have no windows equivalent; decoded
+            // first, some producers escape the drive colon
             if (windows_path.size() < 2 || windows_path[1] != ':')
                 continue;
         }

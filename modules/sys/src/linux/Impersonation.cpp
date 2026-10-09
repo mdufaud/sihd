@@ -5,9 +5,8 @@
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
-// the per-thread identity switch is a linux kernel behaviour: emscripten has no syscall() and
-// apple/bsd have no setresuid at all - Impersonation::supports_privileged is false there and the
-// identity switch is a no-op
+// per-thread identity switch is a linux kernel behaviour: emscripten has no syscall(), apple/bsd
+// no setresuid - supports_privileged is false there and the identity switch is a no-op
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 
 # define SIHD_IMPERSONATION_SETRES
@@ -15,16 +14,8 @@ using namespace sihd::util;
 # include <sys/syscall.h>
 # include <unistd.h>
 
-// The libc wrappers for setresuid()/setresgid() are process wide: POSIX requires the change to
-// apply to the whole process, so both glibc (NPTL "setxid" broadcast) and musl (__synccall)
-// replay the syscall on every thread. Verified on both libcs. The raw syscall keeps the kernel
-// behaviour, which is per-thread - that is what thread scoped impersonation needs.
-//
-// Calling the syscall directly carries no licensing constraint: the kernel COPYING file
-// excludes "user programs that use kernel services by normal system calls" from its GPL, and
-// the kernel headers carry the matching Linux-syscall-note exception.
-//
-// 32 bit architectures keep the old 16 bit uid syscall under the unsuffixed name.
+// libc setresuid/setresgid wrappers broadcast process-wide (glibc setxid, musl __synccall); the
+// raw syscall keeps the kernel per-thread behaviour (kernel COPYING exempts normal syscalls)
 # if defined(SYS_setresuid32)
 #  define SIHD_SYS_SETRESUID SYS_setresuid32
 #  define SIHD_SYS_SETRESGID SYS_setresgid32

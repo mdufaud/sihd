@@ -55,7 +55,6 @@ std::expected<void, Error> LogFormatter::set_pattern(std::string_view pattern)
                 return std::unexpected(
                     Error(ErrorCode::invalid_argument, "unknown field '{}' at {}", token.name, token.offset));
             const bool time_field = *kind == Token::Kind::time_local || *kind == Token::Kind::time_utc;
-            // a time field takes a strftime spec, any other field the classical grammar
             const bool spec_ok = token.raw_spec.empty()
                                  || (time_field ? token.raw_spec.find('%') != std::string_view::npos : token.classical);
             if (spec_ok == false)

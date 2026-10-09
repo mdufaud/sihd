@@ -8,19 +8,8 @@
 namespace sihd::util
 {
 
-// Syntactic parser/builder for a URI (RFC 3986). No protocol semantics here
-// (no notion of SSL or default port) — that belongs to the consuming module.
-//
-//   foo://user:pass@example.com:8042/over/there?name=ferret#nose
-//   \_/   \_______/ \_________/ \__/\_________/ \_________/ \__/
-//    |        |          |       |      |           |        |
-//  scheme  userinfo     host    port   path       query   fragment
-//          \__________________________/
-//                    authority
-//
-// Two ways to use it:
-//   - decode: turn a string into a filled Url      -> Url u = Url::decode(str);
-//   - encode: turn a filled Url back into a string -> std::string s = u.encode();
+// Syntactic URI parser/builder (RFC 3986), no protocol semantics here (SSL, default ports):
+// that belongs to the consumer. decode: string -> Url, encode: Url -> string
 struct Url
 {
         Url() = default;

@@ -113,9 +113,8 @@ class Socket
         virtual std::expected<void, sihd::util::Error> shutdown() const;
         bool is_open() const { return _socket >= 0; }
 
-        // A dead peer raises SIGPIPE: the process must ignore or handle it,
-        // or pass MSG_NOSIGNAL through set_send_flags - the library never
-        // touches signal dispositions.
+        // A dead peer raises SIGPIPE: the process must ignore or handle it, or pass MSG_NOSIGNAL through
+        // set_send_flags - the library never touches signal dispositions
         virtual std::expected<size_t, sihd::util::Error> send(sihd::util::ArrCharView view);
         std::expected<void, sihd::util::Error> send_all(sihd::util::ArrCharView view);
 

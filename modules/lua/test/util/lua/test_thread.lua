@@ -206,4 +206,13 @@ do
     assert(steps >= 20, "StepWorker should have stepped many times")
 end
 
+log.info("Scheduler:set_conf refuses unknown keys")
+do
+    local sched = util.Scheduler("conf_refused", nil)
+    local ok = pcall(function()
+        sched:set_conf({ nope = 1 })
+    end)
+    assert(ok == false, "refused conf key must raise")
+end
+
 log.info("all threading mechanisms passed")

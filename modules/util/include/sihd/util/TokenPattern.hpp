@@ -14,11 +14,8 @@
 namespace sihd::util
 {
 
-// a compiled {name} token pattern: fields interleaved with literals, {{ and }} escaping
-// braces, an optional std::format-like spec after ':' - [[fill]align][width][.precision]
-// is parsed into Options and applied by render, anything else (a strftime spec for
-// instance) stays in raw_spec for the consumer - tokens hold views into the owned pattern:
-// move-only, a refused compile keeps the previous one
+// a compiled {name} token pattern: {{ }} escapes, optional [[fill]align][width][.precision] spec,
+// else raw_spec; views into the owned pattern, move-only, a refused compile keeps the previous
 class TokenPattern
 {
     public:
@@ -33,7 +30,6 @@ class TokenPattern
 
         struct Token
         {
-                // empty name = literal, its text carries the bytes
                 std::string_view name;
                 std::string_view text;
                 std::string_view raw_spec;

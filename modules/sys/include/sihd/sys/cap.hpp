@@ -90,9 +90,8 @@ bool available(Cap cap);
 // live state: the capability is effective right now, without building a snapshot
 bool has(Cap cap);
 
-// linux only, no-op returning false elsewhere. Both sets act immediately on the live process,
-// not on a CapabilitySet snapshot - they need no apply(). ambient is per-thread (kept across
-// execve), bounding is process-wide (irreversible).
+// linux only, no-op returning false elsewhere; acts on the live process, no snapshot nor apply().
+// ambient is per-thread (kept across execve), bounding is process-wide (irreversible)
 bool set_ambient(Cap cap, bool active);
 bool ambient(Cap cap);
 bool drop_bounding(Cap cap);

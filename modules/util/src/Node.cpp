@@ -1,6 +1,7 @@
 #include <algorithm>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
 
 #ifndef SIHD_NODE_MAX_LINK_RECURSION
@@ -347,5 +348,7 @@ std::string Node::tree_str(TreeOpts opts) const
     add_node_informations(this, s, opts);
     return s;
 }
+
+SIHD_REGISTER_FACTORY(Node);
 
 } // namespace sihd::util

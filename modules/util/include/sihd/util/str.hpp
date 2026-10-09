@@ -192,13 +192,8 @@ bool is_escaped_char(const char *str, int index, int escape = escape_char());
 // stopping_enclose_of('[') -> ']'
 int stopping_enclose_of(int starting_enclose);
 
-// returns the index of the next char after the enclose
-// stopping_enclose_index("[hello] world", 0, "[")
-//   -> 7  ---------------------^
-// stopping_enclose_index("hello", 0, "[")
-//   -> -1 (s[0] is not a closing escape)
-// stopping_enclose_index("[hello", 0, "[")
-//   -> -2 (s[0] has no end to an enclose)
+// returns the index of the next char after the enclose: ("[hello] world", 0, "[") -> 7;
+// ("hello", 0, "[") -> -1 (s[0] not a closing escape); ("[hello", 0, "[") -> -2 (no end)
 int stopping_enclose_index(std::string_view view,
                            int index,
                            const char *authorized_start_enclose = encloses_start(),

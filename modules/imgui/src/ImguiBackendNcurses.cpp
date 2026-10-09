@@ -1,9 +1,8 @@
 #include <imgui.h>
 
 #include <ncursesw/ncurses.h>
-// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++
-// builtin-bool probe fails (e.g. musl cross) - undef it so it cannot poison
-// the C++ standard headers / imgui types included below
+// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++ builtin-bool probe
+// fails (e.g. musl cross) - undef it so it cannot poison the standard headers / imgui types
 #undef bool
 #include <sys/stat.h>
 
@@ -117,11 +116,8 @@ bool ImguiBackendNcurses::init()
     if (_is_init)
         return true;
 
-    // When loaded via vcpkg's ncurses (which is a transitive dep of SDL3 etc.),
-    // the compiled-in terminfo prefix points to the vcpkg install dir which is
-    // not populated with terminfo data at runtime.
-    // If no TERMINFO override is set by the user, append known system terminfo
-    // directories to TERMINFO_DIRS so ncurses can fall back to them.
+    // vcpkg's ncurses compiles in a terminfo prefix pointing at its install dir, empty at runtime;
+    // without a user TERMINFO override, append the system terminfo dirs to TERMINFO_DIRS
     if (!sihd::sys::env::get("TERMINFO").has_value())
     {
         static const char *candidates[] = {
@@ -171,10 +167,8 @@ bool ImguiBackendNcurses::init()
     // Key repeat: imtui sets both to 50ms for snappy keyboard navigation
     io.KeyRepeatDelay = 0.050f;
     io.KeyRepeatRate = 0.050f;
-    // Apply the whole input queue every frame instead of trickling events across
-    // frames. Mode-1003 floods motion events; trickling would grow the deferred
-    // queue unbounded under that flood, causing progressive hover/click lag.
-    // Same-poll press+release is handled by the manual release-latch below.
+    // Apply the whole input queue every frame: mode-1003 motion floods would grow the deferred queue
+    // unbounded across frames; same-poll press+release is handled by the release-latch below
     io.ConfigInputTrickleEventQueue = false;
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
@@ -202,10 +196,8 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     _mstate = ev.bstate;
     _mouse_seen = true;
 
-    // Left button. On press, mark it down and record that a press happened this
-    // poll. On release: if a press landed in the same poll, defer the release one
-    // poll (_pending_lrelease) so imgui sees the button down for a full NewFrame
-    // and registers the click; otherwise release immediately.
+    // On release after a same-poll press, defer one poll (_pending_lrelease) so imgui sees the button
+    // down for a full NewFrame and registers the click; otherwise release immediately
     if (_mstate & BUTTON1_PRESSED)
     {
         pressed_l = true;
@@ -384,13 +376,8 @@ void ImguiBackendNcurses::new_frame()
     io.DeltaTime = (delta > 0.0f) ? delta : (1.0f / 60.0f);
     _last_time = _frame_start;
 
-    // Update display size every frame (imtui: getmaxyx in NewFrame every time).
-    // On KEY_RESIZE ncurses' own SIGWINCH handler already resized stdscr, so
-    // getmaxyx reports the new size and LINES/COLS are up to date. The renderer
-    // detects the size change and performs its own full redraw (werase + reset
-    // shadow buffer); the backend must NOT call clear() here, as that erases
-    // ncurses' stdscr buffer behind the renderer's differential update and
-    // leaves the screen permanently blank after a resize.
+    // Update display size every frame; on KEY_RESIZE ncurses already resized stdscr and the renderer
+    // redraws itself - do NOT clear() here, it erases stdscr and blanks the screen after a resize
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
     io.DisplaySize = {(float)sx, (float)sy};

@@ -1,8 +1,8 @@
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
-#include <sihd/sys/NamedFactory.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 
 namespace sihd::net
 {

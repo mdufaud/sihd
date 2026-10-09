@@ -44,9 +44,8 @@ struct TargetData
 // operation.
 struct ClipboardSession;
 
-// The server's current time: selection requests want a real timestamp, not
-// CurrentTime (ICCCM). Changing a property on our own window hands it back
-// through its PropertyNotify.
+// The server's current time: selection requests want a real timestamp, not CurrentTime (ICCCM);
+// changing a property on our own window hands it back through PropertyNotify
 Time server_timestamp(ClipboardSession & session);
 
 struct ClipboardSession
@@ -274,9 +273,8 @@ std::optional<std::vector<std::string>> read_targets(ClipboardSession & session,
     return targets;
 }
 
-// Owns the selection and serves requests until the first data target is
-// fulfilled, within the deadline set by the platform dispatcher; false when
-// another client takes it or nothing requests in time.
+// Owns the selection and serves requests until the first data target is fulfilled, within the
+// dispatcher's deadline; false when another client takes it or nothing requests in time
 bool serve_selection_once(ClipboardSession & session,
                           const std::vector<Atom> & offered_targets,
                           const std::vector<TargetData> & data_targets,

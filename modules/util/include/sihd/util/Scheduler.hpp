@@ -14,13 +14,8 @@
 namespace sihd::util
 {
 
-// how the worker thread waits for the next task's deadline:
-// - sleep: blocks on a condition variable until the deadline - costs no cpu but wakes tens of
-//   microseconds late (kernel wakeup latency)
-// - sleep_then_spin: sleeps most of the wait, then busy-polls the clock over the last
-//   spin_window so the task starts right on time - costs cpu during that window; a clock that
-//   does not advance on its own (virtual clock) would spin forever, so 128 identical reads give
-//   up polling and go back to the condition variable
+// worker wait: sleep = condition variable (no cpu, wakes tens of us late); sleep_then_spin =
+// sleep, then poll the clock over spin_window (a non-advancing clock gives up after 128 reads)
 enum class IdlePolicy
 {
     sleep,

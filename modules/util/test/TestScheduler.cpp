@@ -361,10 +361,8 @@ class CountingSteadyClock: public sihd::util::IClock
         std::chrono::steady_clock _clock;
 };
 
-// Classifies scheduler wakeups with a decade-wide chasm instead of latency tolerances:
-// a queue change while sleeping must wake the worker (urgent plays at ~400ms), a scheduler
-// sleeping until the stale far deadline cannot play it before ~900ms - cpu load moves both
-// sides by milliseconds, not by the 250ms+ that separate the two classes.
+// Classifies wakeups with a decade-wide chasm instead of latency tolerances: a queue change while
+// sleeping must wake the worker (~400ms) and the stale far deadline cannot play before ~900ms
 TEST_F(TestScheduler, test_sched_wakeups_qualifying)
 {
     if (test::is_run_by_valgrind())
@@ -579,9 +577,8 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
 
         sched.set_start_synchronised(true);
         sched.start();
-        // start_synchronised only syncs at thread entry: the worker's first clock read captures
-        // _begin_run (T), the second is the post-prepare deadline check - wait for both instead of
-        // sleeping a guessed duration, so the skip jump below uses T whatever the machine load
+        // start_synchronised syncs only at thread entry: wait for the worker's first clock read
+        // (_begin_run) and the post-prepare deadline check, so the skip jump below uses T under any load
         for (int i = 0; i < 10000 && clock.calls.load() < 2; ++i)
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         ASSERT_GE(clock.calls.load(), 2);
@@ -594,11 +591,8 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
     }
 }
 
-// sleep_then_spin must sleep most of the wait on the condition variable, then poll the clock over
-// the last spin_window: a 100ms poll costs hundreds of thousands of clock reads against the handful
-// a pure cv sleep spends on the whole 500ms wait - the old short-waits-only behavior would spin
-// nothing at all here. The window is wide enough that coarse timers (windows, wine) cannot
-// overshoot the sleep past the whole spin window.
+// sleep_then_spin must spend most of the wait on the cv, then poll over spin_window: a 100ms poll
+// costs hundreds of thousands of clock reads vs a pure cv sleep; wide enough for coarse timers
 TEST_F(TestScheduler, test_sched_spin_sleep_classification)
 {
     if (test::is_run_by_valgrind())

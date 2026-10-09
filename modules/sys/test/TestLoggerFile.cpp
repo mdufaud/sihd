@@ -28,7 +28,7 @@ TEST_F(TestLoggerFile, test_loggerfile_write)
     std::string path = fs::combine(tmp.path(), "test.log");
 
     {
-        auto *logger = new LoggerFile(path);
+        auto *logger = new LoggerFile(path, true, "");
         ASSERT_TRUE(logger->is_open());
         sihd::util::LoggerManager::add(logger);
 

@@ -11,12 +11,8 @@
 namespace sihd::tui
 {
 
-// Single line input: a ftxui Input kept for its event handling, drawn here.
-//
-// ftxui draws no cursor when the Input content is empty: it wraps the placeholder into a focus node
-// which overrides the cursor node, sending the terminal cursor to the right edge of the field. The
-// line is drawn here instead, the terminal cursor sitting on the cell left of the caret - hence the
-// prompt, which gives that cell a place to be when the content is empty.
+// A ftxui Input kept for its event handling, drawn here: ftxui draws no cursor for empty content
+// (the placeholder's focus node overrides it), so the prompt gives the cursor cell a place
 class InputLine: public ftxui::ComponentBase
 {
     public:

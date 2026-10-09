@@ -1,7 +1,6 @@
 #include <ncursesw/ncurses.h>
-// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++
-// builtin-bool probe fails (e.g. musl cross) - undef it so it cannot poison
-// the C++ standard headers / imgui types included below
+// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++ builtin-bool probe
+// fails (e.g. musl cross) - undef it so it cannot poison the standard headers / imgui types
 #undef bool
 
 #include <imgui_internal.h>
@@ -230,13 +229,8 @@ bool ImguiRendererNcurses::init()
     return true;
 }
 
-// ── _apply_terminal_style() ───────────────────────────────────────────────────
-// Port of ImTui_ImplText_Init() style block. Call AFTER ImGui::StyleColorsDark().
-//
-// COLOR POLICY: ImTui only overrides 4 colors explicitly. All other colors,
-// including TitleBgActive (blue) and Header/HeaderHovered (blue), are kept at
-// their StyleColorsDark() defaults. That is exactly what makes the active window
-// title and hovered rows blue in ImTui — do NOT override them here.
+// _apply_terminal_style(): port of ImTui_ImplText_Init() style block, call AFTER StyleColorsDark().
+// Only 4 colors overridden: TitleBgActive/Header blues stay default - that is the ImTui look
 
 void ImguiRendererNcurses::_apply_terminal_style()
 {
@@ -307,14 +301,11 @@ void ImguiRendererNcurses::_apply_terminal_style()
     s.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
     s.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
-    // Default is 4.0f (meant for pixel-density displays). At our scale
-    // (1 font-unit = 1 cell), 4 cells of hover padding above every window
-    // captures clicks meant for other widgets (e.g., main menu bar).
+    // 4.0f default is for pixel displays: at 1 cell per font-unit it captures clicks meant for others
     s.WindowBorderHoverPadding = 0.5f;
 
-    // SeparatorText: defaults (BorderSize=3, Padding=(20,3)) are for pixel
-    // rendering. At terminal scale they produce 7-cell-tall separators with
-    // 40 cells of horizontal padding — breaks popup menu layout completely.
+    // SeparatorText defaults (BorderSize=3, Padding=(20,3)) are for pixel rendering: at terminal
+    // scale they make 7-cell separators with 40-cell padding, breaking popup layout
     s.SeparatorTextBorderSize = 1.0f;
     s.SeparatorTextPadding = ImVec2(1.0f, 0.0f);
     s.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
@@ -328,15 +319,13 @@ void ImguiRendererNcurses::cache_style_colors()
     // detected and rendered as a single 'x' glyph instead of a coverage blob.
     _check_col = ImGui::GetColorU32(ImGuiCol_CheckMark);
 
-    // Cache slider grab colours so the grab handle (a rect of arbitrary width) is
-    // rendered as a single 'I' instead of a coverage block, matching the thin-grab
-    // case for sliders with a wide handle (int/enum).
+    // Cache slider grab colours so the grab handle renders as a single 'I' instead of a coverage
+    // block, matching the thin-grab case of sliders with a wide handle (int/enum)
     _slider_grab_col = ImGui::GetColorU32(ImGuiCol_SliderGrab);
     _slider_grab_col_active = ImGui::GetColorU32(ImGuiCol_SliderGrabActive);
 
-    // Cache plot histogram colour so a 1px-wide bar (high sample count clamps bar
-    // width below a cell) is rendered as a 1-cell column instead of being dropped
-    // by the sub-cell vertical sliver skip.
+    // Cache plot histogram colour so a 1px-wide bar renders as a 1-cell column instead of being
+    // dropped by the sub-cell vertical sliver skip
     _plot_histogram_col = ImGui::GetColorU32(ImGuiCol_PlotHistogram);
 }
 
@@ -350,11 +339,8 @@ void ImguiRendererNcurses::_build_uv_map()
         {
             if (!g.Visible)
                 continue;
-            // Populate every texel in the glyph's atlas footprint, not just U0.
-            // ImGui can clip text quads at fractional cell boundaries (e.g. tree
-            // text region starts at x=8.5), which yields vertices whose UV falls
-            // inside [U0,U1] rather than exactly at U0. A single-key map misses
-            // those.
+            // Populate every texel in the glyph's atlas footprint: clipped text quads can yield UVs inside
+            // [U0,U1] rather than exactly at U0, which a single-key map would miss
             const long pu0 = std::lroundf(g.U0 * (float)_tex_w);
             const long pu1 = std::lroundf(g.U1 * (float)_tex_w);
             const long pv0 = std::lroundf(g.V0 * (float)_tex_h);
@@ -433,9 +419,8 @@ void ImguiRendererNcurses::_inject_resize_grips()
         if (occluded)
             continue;
 
-        // Erase resize-grip triangle fill (stock imgui emits PathFillConvex at corner).
-        // Triangle covers 1-2 cells just inside the bottom-right corner: (gx-1, gy-1).
-        // Restore by copying bg from a clean neighbor 3 cells left.
+        // Erase resize-grip triangle fill (stock imgui PathFillConvex at the corner, 1-2 cells inside
+        // bottom-right): restore by copying bg from a clean neighbor 3 cells left
         auto clear_block = [&](int cx, int cy) {
             if (cx < 0 || cx >= _screen_w || cy < 0 || cy >= _screen_h)
                 return;
@@ -478,11 +463,8 @@ void ImguiRendererNcurses::_inject_resize_grips()
     }
 }
 
-// ── Fill triangle (scanline, ported from imtui drawTriangle) ─────────────────
-// Top-bias Y boundary: ymin = floor(min_y), ydelta = floor(max_y) - ymin.
-// Rect y=5..6 → ydelta=1 (row 5 only). AddLine quad y=M±0.5 → ydelta=1
-// (row M-1 only), prevents 1-row leak past frame at PlotLines bottom edge.
-// Tiny intra-row triangles (height < 1 cell) still get 1 row so they render.
+// Fill triangle (scanline, imtui port). Top-bias bounds: ydelta = floor(max_y) - floor(min_y):
+// 1 row for y=5..6 and AddLine quads y=M±0.5 - no 1-row leak at PlotLines edges
 
 void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, uint8_t bg_col, const ImVec4 & clip)
 {
@@ -495,11 +477,8 @@ void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, 
     if (ydelta <= 0)
         return;
 
-    // ydelta=1: pick row containing triangle centroid, not floor(min_y).
-    // Diagonal AddLine half-quads have top vertex barely below integer row
-    // boundary; top-bias would fill the wrong row (above the line center).
-    // For axis-aligned thin lines (plot edges, y=N±0.5), centroid stays at
-    // line center row — same as top-bias modulo clip behavior.
+    // ydelta=1: pick the centroid row, not floor(min_y) - diagonal AddLine half-quads have their top
+    // vertex barely below an integer row boundary, top-bias would fill the wrong row
     if (ydelta == 1)
     {
         const float cy = (p0.y + p1.y + p2.y) * (1.0f / 3.0f);
@@ -547,9 +526,8 @@ void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, 
     }
 }
 
-// ── classify_arrow() ─────────────────────────────────────────────────────────
-// Returns '>', '<', '^', 'v' if p0/p1/p2 match stock imgui RenderArrow geometry.
-// Two vertices share one coordinate (the base edge); the third is the apex.
+// classify_arrow(): returns '>', '<', '^', 'v' if p0/p1/p2 match stock imgui RenderArrow geometry.
+// Two vertices share one coordinate (the base edge); the third is the apex
 
 uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
 {
@@ -585,20 +563,16 @@ uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
     return (uint32_t)((yg_hi > yg_lo) ? 'v' : '^');
 }
 
-// ── _draw_glyph_quad() ────────────────────────────────────────────────────────
-// Renders one imgui text character. v0 is the top-left vertex of the quad
-// (PrimRectUV vertex a) — contains the glyph position and atlas UV.
+// _draw_glyph_quad(): renders one imgui text character; v0 is the quad's top-left vertex
+// (PrimRectUV vertex a), carrying the glyph position and atlas UV
 
 void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0,
                                             const ImDrawVert & v1,
                                             [[maybe_unused]] const ImDrawVert & v2,
                                             const ImVec4 & clip)
 {
-    // Use horizontal quad midpoint (TL.x + TR.x) / 2 to map glyph to its cell.
-    // Variable-width glyphs (e.g. 'L') have a quad whose top-left is offset by
-    // the font bearing — top-left round mis-mapped those into the next cell.
-    // Row stays at the top edge (pen y) so descender glyphs (g, y, p, q, j)
-    // whose quad extends one row below stay on the baseline row.
+    // Map the glyph by the horizontal quad midpoint: variable-width quads are offset by the font
+    // bearing, rounding at top-left mis-maps them; the row stays at pen y so descenders hold the row
     const float mid_x = (v0.pos.x + v1.pos.x) * 0.5f;
     const int col = (int)std::floor(mid_x);
     const int row = (int)std::floor(v0.pos.y);
@@ -620,9 +594,8 @@ void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0,
     }
 }
 
-// ── _draw_rect() ─────────────────────────────────────────────────────────────
-// Handles a detected rect pair (2 triangles forming axis-aligned rectangle).
-// Classifies based on FULL rect dimensions to avoid split-triangle artifacts.
+// _draw_rect(): handles a detected rect pair (2 triangles forming an axis-aligned rectangle),
+// classified on FULL rect dimensions to avoid split-triangle artifacts
 
 void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float ymax, ImU32 col, const ImVec4 & clip)
 {
@@ -639,19 +612,13 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
     const float width = xmax - xmin;
     const float height = ymax - ymin;
 
-    // Modal/nav dim background: imgui fills the whole viewport with a translucent
-    // overlay to dim windows behind a modal. The terminal has no alpha, so this
-    // paints the entire screen solid gray and hides everything underneath. Skip it;
-    // the modal still renders on top, which reads correctly without the dimming.
+    // Modal/nav dim background fills the viewport with a translucent overlay: the terminal has no
+    // alpha so it would paint everything solid gray - skip it, the modal renders on top anyway
     if ((col >> 24) < 255 && width >= (float)_screen_w * 0.6f && height >= (float)_screen_h * 0.6f)
         return;
 
-    // Slider grab handle: a SliderGrab-coloured rect. Render as a single 'I' at
-    // the centre instead of a coverage block (matches thin grabs).
-    // The inactive grab colour is unique; the active grab colour is shared with
-    // ButtonHovered/CheckMark in the dark theme, so only collapse it when the rect
-    // is handle-shaped (not a wide-flat button bar). Real grabs are ~w/h<=4; a
-    // full-width button is ~w/h>=29.
+    // Slider grab: a SliderGrab-coloured rect renders as a single 'I' at the centre, not a block.
+    // Inactive colour unique, active shared with ButtonHovered: only handle-shaped rects collapse
     const bool is_grab_active = (col == _slider_grab_col_active);
     const bool is_slider_grab = (col == _slider_grab_col) || (is_grab_active && width <= height * 8.0f);
     if (is_slider_grab && height >= 1.0f)
@@ -679,9 +646,8 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
         }
         return;
     }
-    // Sub-cell vertical sliver — window border, no cell-level equivalent.
-    // Histogram bars excepted: a tall 1px bar must render as a 1-cell column,
-    // otherwise high sample counts (bar width < 1px) drop every tall bar.
+    // Sub-cell vertical sliver (window border) has no cell equivalent; histogram bars excepted:
+    // a tall 1px bar must render as a 1-cell column or high sample counts drop every bar
     if (width < 1.0f && height > 1.0f && col != _plot_histogram_col)
         return;
 
@@ -725,9 +691,8 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
     }
 }
 
-// ── _draw_nonglyph_triangle() ─────────────────────────────────────────────────
-// Handles standalone non-rect triangles (PathFillConvex fans: arrows, circles,
-// resize grip). Most rects go through _draw_rect now.
+// _draw_nonglyph_triangle(): standalone non-rect triangles (PathFillConvex fans: arrows,
+// circles, resize grip). Most rects go through _draw_rect now
 
 void ImguiRendererNcurses::_draw_nonglyph_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, ImU32 col, const ImVec4 & clip)
 {
@@ -773,10 +738,8 @@ void ImguiRendererNcurses::_draw_nonglyph_triangle(ImVec2 p0, ImVec2 p1, ImVec2 
     _draw_fill_triangle(p0, p1, p2, col_to_ansi256_premul(col), clip);
 }
 
-// ── is_cross_pattern() ───────────────────────────────────────────────────────
-// Given 12 vertices (4 triangles × 3 verts), return true if they form two
-// crossing line segments (an X shape).  False for sequential line segments
-// (PlotLines), parallel lines, or patterns that don't span enough area.
+// is_cross_pattern(): 12 vertices (4 triangles × 3 verts) forming two crossing segments (an X).
+// False for sequential segments (PlotLines), parallel lines, or too little area
 
 bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
 {
@@ -819,9 +782,8 @@ bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
     if (nx <= 2 || ny <= 2)
         return false;
 
-    // Centroid overlap: the two triangle pairs must have centroids close together.
-    // A real X has both diagonals passing through the center.
-    // Sequential line segments have offset centroids.
+    // Centroid overlap: both triangle pairs must center close together - a real X has both diagonals
+    // through the center, sequential segments have offset centroids
     float cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
     for (int vi = 0; vi < 6; ++vi)
     {
@@ -844,18 +806,11 @@ bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
     return true;
 }
 
-// ── _try_detect_cross() ──────────────────────────────────────────────────────
-// Two AddLine calls (close button X) produce 4 consecutive non-glyph
-// same-color triangles forming a diagonal cross. Returns 9 (extra elements
-// consumed) on success, 0 otherwise.
+// _try_detect_cross(): two AddLine calls (close button X) produce 4 consecutive non-glyph
+// same-color triangles forming a diagonal cross; returns 9 (elements consumed) or 0
 
-// ── _try_detect_check() ──────────────────────────────────────────────────────
-// imgui RenderCheckMark emits a 2-segment thick polyline in ImGuiCol_CheckMark
-// colour — 4 triangles at our font scale. Fed to the fill path they smear a
-// multi-cell blob over the 1-cell frame. Cluster the run of consecutive
-// same-colour non-glyph triangles, write a single 'x' at the centroid cell
-// (preserving the frame bg), and consume the whole run. Returns extra element
-// count consumed, or 0 if the first triangle is not a checkmark.
+// _try_detect_check(): RenderCheckMark emits a 2-segment thick polyline = 4 triangles at font
+// scale, smearing a blob over the 1-cell frame; collapse the run to one 'x' at the centroid
 
 unsigned int ImguiRendererNcurses::_try_detect_check(const ImDrawList *dl,
                                                      const ImDrawCmd & cmd,
@@ -940,10 +895,8 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     if (!cross_ok)
         return 0;
 
-    // Real X = 2 AddLine quads crossing at center → quad centroids coincide.
-    // Polyline = connected segments → quad centroids offset by ~segment length.
-    // Also reject if any vertex position shared (AA polyline emits dup verts
-    // with different indices but matching positions at segment joints).
+    // Real X = 2 AddLine quads crossing at center, centroids coincide; polyline = offset centroids.
+    // Reject shared vertex positions (AA polyline dups verts at segment joints)
     {
         ImVec2 c0 {0, 0}, c1 {0, 0};
         for (int k = 0; k < 6; ++k)
@@ -994,10 +947,8 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     return 9;
 }
 
-// ── _try_detect_rect_pair() ──────────────────────────────────────────────────
-// Peek at next triangle: if same color, non-glyph, and combined 6 vertices
-// form an axis-aligned rect, handle as single rect. Returns 3 on success, 0
-// otherwise.
+// _try_detect_rect_pair(): peek at next triangle - same color, non-glyph, combined 6 vertices
+// forming an axis-aligned rect; returns 3 on success, 0 otherwise
 
 unsigned int ImguiRendererNcurses::_try_detect_rect_pair(const ImDrawList *dl,
                                                          const ImDrawCmd & cmd,
@@ -1041,11 +992,8 @@ unsigned int ImguiRendererNcurses::_try_detect_rect_pair(const ImDrawList *dl,
     return 3;
 }
 
-// ── _try_detect_line_quad() ──────────────────────────────────────────────────
-// AddLine emits 2 tris with idx [0,1,2] and [0,2,3] sharing 2 verts. The 4 verts
-// form a thin quad. Without this, sloped slivers in PlotLines hit arrow gate and
-// render as '>' '<' '^' 'v'. Detection: index pair (i0==j0 && i2==j1). Fills
-// both tris and returns 3 to skip the second.
+// _try_detect_line_quad(): AddLine emits 2 tris [0,1,2]/[0,2,3] sharing 2 verts; without this,
+// sloped PlotLines slivers hit the arrow gate. Detect i0==j0 && i2==j1, fill both, return 3
 
 unsigned int ImguiRendererNcurses::_try_detect_line_quad(const ImDrawList *dl,
                                                          const ImDrawCmd & cmd,
@@ -1078,9 +1026,8 @@ unsigned int ImguiRendererNcurses::_try_detect_line_quad(const ImDrawList *dl,
     return 3;
 }
 
-// ── _rasterize_cmd() ─────────────────────────────────────────────────────────
-// Process one ImDrawCmd: handle optional user callback, then walk its triangle
-// list and dispatch each element to the glyph or geometry renderer.
+// _rasterize_cmd(): process one ImDrawCmd - optional user callback, then walk its triangle list
+// and dispatch each element to the glyph or geometry renderer
 
 void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl,
                                           const ImDrawCmd & cmd,
@@ -1177,10 +1124,8 @@ void ImguiRendererNcurses::_rasterize(ImDrawData *draw_data)
         _rasterize_draw_list(draw_data->CmdLists[n], fb_w, fb_h, draw_data->DisplayPos, draw_data->FramebufferScale);
 }
 
-// ── _get_or_alloc_color_pair() ────────────────────────────────────────────────
-// Returns the ncurses color pair id for (fg, bg), allocating a new one if
-// needed. Evicts the entire cache when the 256-pair limit is reached and forces
-// a full redraw so no stale colors remain on screen.
+// _get_or_alloc_color_pair(): ncurses color pair for (fg, bg), allocating as needed; evicts the
+// whole cache at the 256-pair limit and forces a full redraw so no stale colors remain
 
 short ImguiRendererNcurses::_get_or_alloc_color_pair(uint8_t fg, uint8_t bg)
 {
@@ -1202,9 +1147,8 @@ short ImguiRendererNcurses::_get_or_alloc_color_pair(uint8_t fg, uint8_t bg)
     return pid;
 }
 
-// ── _flush_row() ──────────────────────────────────────────────────────────────
-// Writes one screen row to stdscr, batching consecutive cells with the same
-// color pair to minimize attron() calls. Copies the row into _screen_prev.
+// _flush_row(): writes one row to stdscr, batching same color-pair cells to minimize attron()
+// calls; copies the row into _screen_prev
 
 void ImguiRendererNcurses::_flush_row(int y)
 {
@@ -1248,9 +1192,8 @@ void ImguiRendererNcurses::_flush_row(int y)
                 (size_t)_screen_w * sizeof(TCell));
 }
 
-// ── _flush_to_ncurses() ───────────────────────────────────────────────────────
-// Differential screen update: skips rows that did not change, then delegates
-// each changed row to _flush_row(). Matches imtui DrawScreen() behavior.
+// _flush_to_ncurses(): differential update - skip unchanged rows, delegate changed ones to
+// _flush_row(); matches imtui DrawScreen() behavior
 
 void ImguiRendererNcurses::_flush_to_ncurses()
 {

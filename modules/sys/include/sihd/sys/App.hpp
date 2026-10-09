@@ -7,8 +7,6 @@
 
 #include <sihd/json/Json.hpp>
 #include <sihd/sys/Daemon.hpp>
-#include <sihd/sys/LoggerFile.hpp>
-#include <sihd/sys/LoggerSystem.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/CliApp.hpp>
 
@@ -30,11 +28,12 @@ class App: public sihd::util::CliApp
 
     protected:
         bool apply_sihd_conf(const sihd::json::Json & conf) override;
-        CliApp::LoggingSchema logging_schema() const override;
+        sihd::util::ALogger *create_logger_sink(const std::string & plugin,
+                                                const std::string & type,
+                                                const std::string & name,
+                                                sihd::util::Node *parent) override;
         int on_conf_loaded() override;
         void on_conf_reloaded() override;
-        void install_logging() override;
-        void uninstall_logging() override;
         void poll_events() override;
 
     private:
@@ -56,14 +55,8 @@ class App: public sihd::util::CliApp
         std::array<SigAction, signal::max_signal> _sig_actions {};
         std::function<void(int)> _on_signal;
         std::string _conf_path;
-        std::string _log_file_path;
-        bool _log_file_append = true;
-        bool _log_system = false;
-        int _log_system_facility = LoggerSystem::default_facility;
         bool _daemon_run = false;
         Daemon _daemon;
-        LoggerFile *_file_logger = nullptr;
-        LoggerSystem *_system_logger = nullptr;
 };
 
 } // namespace sihd::sys

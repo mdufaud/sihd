@@ -57,9 +57,8 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
     return table;
 }
 
-// Marshal a NavigatorResponse to a Lua table so scripts never touch the
-// move-only C++ type. Returns nil when the request failed; the error is
-// logged once here, at the lua nil boundary.
+// Marshals a NavigatorResponse to a Lua table so scripts never touch the move-only C++ type;
+// returns nil on failure, the error logged once here at the lua nil boundary
 luabridge::LuaRef response_to_lua(lua_State *state, std::expected<NavigatorResponse, sihd::util::Error> && resp)
 {
     if (SIHD_UNEXPECTED_LOG(resp))
@@ -469,10 +468,8 @@ void LuaHttpApi::load_base(Vm & vm)
         .beginClass<WebService>("WebService")
         .addFunction(
             "set_entry_point",
-            // The handler fires on a server worker thread; give it its own Lua
-            // coroutine + universe-GIL guard via LuaThreadRunner (as channel
-            // observers do), stored in a shared_ptr so route-table copies of the
-            // std::function do not touch the Lua ref off-thread.
+            // The handler fires on a server worker thread: give it its own LuaThreadRunner (coroutine +
+            // universe-GIL guard, like channel observers) in a shared_ptr, safe across route-table copies
             +[](WebService *self,
                 const std::string & path,
                 luabridge::LuaRef fun,
