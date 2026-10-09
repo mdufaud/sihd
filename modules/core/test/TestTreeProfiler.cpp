@@ -822,14 +822,23 @@ TEST_F(TestTreeProfiler, test_concurrent_observe)
     profiler.add_observer(&hook);
 
     std::atomic<bool> stop = false;
+    std::atomic<int> observes = 0;
     std::thread observer1([&] {
         while (stop == false)
+        {
             EXPECT_TRUE(profiler.observe(&root));
+            ++observes;
+        }
     });
     std::thread observer2([&] {
         while (stop == false)
+        {
             EXPECT_TRUE(profiler.observe(&root));
+            ++observes;
+        }
     });
+    // wait for a first observe: CI descheduling can start them past the write loop, making every count vacuous
+    ASSERT_TRUE(wait_for([&] { return observes >= 2; }));
     // every channel must stay usable while two threads race to observe them
     for (int i = 0; i < 50; ++i)
     {
