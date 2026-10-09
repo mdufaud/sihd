@@ -220,6 +220,7 @@ modules = {
         # (dynamic build resolves them inside libssh.dll via the plain 'ssh' lib)
         "windows-static-libs": [
             'ssh',               # libssh
+            'pthread',           # PThreads4W (libssh threads)
             'ssl', 'crypto',     # OpenSSL (libssh dep)
             'crypt32',           # CryptoAPI (OpenSSL)
             'bcrypt',            # BCrypt (OpenSSL)
