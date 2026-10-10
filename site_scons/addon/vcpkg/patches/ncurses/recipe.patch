@@ -2,6 +2,16 @@ diff --git a/portfile.cmake b/portfile.cmake
 index b43eedd..3b255bf 100644
 --- a/portfile.cmake
 +++ b/portfile.cmake
+@@ -11,6 +11,9 @@
+ vcpkg_extract_source_archive(
+     SOURCE_PATH
+     ARCHIVE "${ARCHIVE_PATH}"
+ )
+ 
++# zig cc: -Wl,-stats is a GNU ld abbreviation, -Wl,-lc is not forwardable (libc links implicitly)
++vcpkg_replace_string("${SOURCE_PATH}/configure" ",-stats,-lc" "" REGEX)
++
+ vcpkg_list(SET OPTIONS)
 @@ -48,11 +48,15 @@ include("${cmake_vars_file}")
  
  # There are compilation errors on gcc 15. adding `-std=c17` to CFLAGS for workaround.

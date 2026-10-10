@@ -11,12 +11,14 @@ index 677d7b4..a8dacb6 100644
      HEAD_REF master
      PATCHES
          fix-dependency-libuv.patch
-@@ -154,6 +154,8 @@ vcpkg_cmake_configure(
+@@ -154,6 +154,10 @@ vcpkg_cmake_configure(
          -DLWS_WITH_HTTP2=ON
          -DLWS_WITH_HTTP_STREAM_COMPRESSION=ON # Since zlib is already a dependency
          -DLWS_WITH_EXTERNAL_POLL=ON
 +        -DLWS_MAX_SMP=32
 +        -DDISABLE_WERROR=ON
++        # zig cc link probes false-positive; openssl 3.1 has no RSA_verify_pss_mgf1 (added 3.2)
++        -DLWS_HAVE_RSA_verify_pss_mgf1=OFF
      # OPTIONS_RELEASE -DOPTIMIZE=1
      # OPTIONS_DEBUG -DDEBUGGABLE=1
  )

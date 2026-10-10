@@ -145,6 +145,20 @@ vcpkg_ports = {
         # version-script symbols LIBXSLT_WITH_DEBUGGER=OFF compiles out
         "recipe_patches": ["patches/libxslt/recipe.patch"],
     },
+    "curl": {
+        # zig triplets: the HAVE_LIBSOCKET probe false-positives (test exe links static)
+        # and the real shared link dies on libsocket, which no linux target ships
+        "recipe_patches": ["patches/curl/recipe.patch"],
+    },
+    "libssh": {
+        # zig triplets: the FIPS_mode probe false-positives and OpenSSL 3's deprecated
+        # declaration stays hidden under clang; the EVP branch is the right one there
+        "recipe_patches": ["patches/libssh/recipe.patch"],
+    },
+    "libzip": {
+        # zig triplets: clonefile/arc4random probes false-positive (macOS api, musl declaration)
+        "recipe_patches": ["patches/libzip/recipe.patch"],
+    },
     # glfw3/sdl3 probe X11/Wayland headers with cmake FindX11 at configure time
     # without declaring them: on cross-linux the two-phase foundation install can
     # be torn down mid-plan before they configure. Declaring the deps here pins

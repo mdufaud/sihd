@@ -52,7 +52,7 @@ jobs:
           # experimental: autotools ports probe gnu-ld specifics that lld rejects
           # (ncurses -Wl,-stats...), fixed port by port via overlays
           - id: x64-linux-zig-musl
-            dep-args: compiler=zig demo=1
+            dep-args: compiler=zig mode=size demo=1
             make-args: compiler=zig mode=size demo=1
             apt: autoconf autoconf-archive automake libtool libltdl-dev
             zig: true

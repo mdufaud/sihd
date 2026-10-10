@@ -1,0 +1,14 @@
+diff --git a/portfile.cmake b/portfile.cmake
+--- a/portfile.cmake
++++ b/portfile.cmake
+@@ -22,6 +22,10 @@
+ vcpkg_cmake_configure(
+     SOURCE_PATH "${SOURCE_PATH}"
+     OPTIONS
++        # FIPS_mode probe false-positives under zig cc; OpenSSL 3 must take the EVP default-properties branch
++        -DHAVE_OPENSSL_FIPS_MODE=OFF
++        # memset_explicit probe false-positives too and zig's musl headers lack it; explicit_bzero is declared there
++        -DHAVE_MEMSET_EXPLICIT=OFF
+         ${FEATURE_OPTIONS}
+         -DCMAKE_REQUIRE_FIND_PACKAGE_OpenSSL=ON
+         -DWITH_EXAMPLES=OFF
