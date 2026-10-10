@@ -49,6 +49,7 @@
 #include <sihd/util/LoggerThrow.hpp>
 #include <sihd/util/Message.hpp>
 #include <sihd/util/MessageField.hpp>
+#include <sihd/util/MoveOnlyFunction.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
@@ -82,7 +83,6 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/TokenBucket.hpp>
 #include <sihd/util/TokenPattern.hpp>
-#include <sihd/util/UniqueFunction.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>

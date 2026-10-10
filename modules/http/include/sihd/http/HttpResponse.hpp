@@ -12,7 +12,7 @@
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Error.hpp>
-#include <sihd/util/UniqueFunction.hpp>
+#include <sihd/util/MoveOnlyFunction.hpp>
 
 namespace sihd::http
 {
@@ -21,7 +21,7 @@ class HttpResponse
 {
     public:
         // returns true while there is more data to send, false when done
-        using StreamProvider = sihd::util::UniqueFunction<bool(sihd::util::ArrByte & chunk)>;
+        using StreamProvider = sihd::util::MoveOnlyFunction<bool(sihd::util::ArrByte & chunk)>;
 
         HttpResponse(MimeTypes *mimes = nullptr);
         HttpResponse(HttpResponse &&) = default;
