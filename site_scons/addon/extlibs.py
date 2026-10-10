@@ -150,6 +150,16 @@ vcpkg_ports = {
         # and the real shared link dies on libsocket, which no linux target ships
         "recipe_patches": ["patches/curl/recipe.patch"],
     },
+    "libssh": {
+        # zig only: fresh gcc builds under cmake 4.4.3 regress (ProxyCommand probe)
+        "compilers": ["zig"],
+        "recipe_patches": ["patches/libssh/recipe.patch"],
+    },
+    "libzip": {
+        # zig only: fresh gcc builds under cmake 4.4.3 regress (arm64-dynamic shared link)
+        "compilers": ["zig"],
+        "recipe_patches": ["patches/libzip/recipe.patch"],
+    },
     # glfw3/sdl3 probe X11/Wayland headers with cmake FindX11 at configure time
     # without declaring them: on cross-linux the two-phase foundation install can
     # be torn down mid-plan before they configure. Declaring the deps here pins

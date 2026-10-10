@@ -2,7 +2,6 @@
 #define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
 #include <expected>
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -13,6 +12,7 @@
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Error.hpp>
+#include <sihd/util/UniqueFunction.hpp>
 
 namespace sihd::http
 {
@@ -21,7 +21,7 @@ class HttpResponse
 {
     public:
         // returns true while there is more data to send, false when done
-        using StreamProvider = std::move_only_function<bool(sihd::util::ArrByte & chunk)>;
+        using StreamProvider = sihd::util::UniqueFunction<bool(sihd::util::ArrByte & chunk)>;
 
         HttpResponse(MimeTypes *mimes = nullptr);
         HttpResponse(HttpResponse &&) = default;

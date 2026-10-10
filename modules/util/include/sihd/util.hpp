@@ -82,6 +82,7 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/TokenBucket.hpp>
 #include <sihd/util/TokenPattern.hpp>
+#include <sihd/util/UniqueFunction.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>
