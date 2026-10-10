@@ -1,7 +1,9 @@
 #ifndef __SIHD_UTIL_HANDLER_HPP__
 #define __SIHD_UTIL_HANDLER_HPP__
 
+#include <concepts>
 #include <functional>
+#include <type_traits>
 
 #include <sihd/util/IHandler.hpp>
 
@@ -15,6 +17,7 @@ class Handler: public IHandler<T...>
         Handler() = default;
 
         template <typename Function>
+            requires(!std::convertible_to<std::decay_t<Function>, IHandler<T...> *>)
         Handler(Function && fun)
         {
             this->set_method(std::move(fun));

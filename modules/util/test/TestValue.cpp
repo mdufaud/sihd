@@ -247,4 +247,25 @@ TEST_F(TestValue, test_value_compare_mixed_float)
     EXPECT_TRUE(Value(5.0) < vf);
 }
 
+TEST_F(TestValue, test_value_from_bool_char_float_strings)
+{
+    Value val = Value::from_bool_string("true");
+    EXPECT_FALSE(val.empty());
+    EXPECT_EQ(val.compare<bool>(true), 0);
+    EXPECT_EQ(Value::from_bool_string("0").compare<bool>(false), 0);
+    EXPECT_TRUE(Value::from_bool_string("nope").empty());
+
+    val = Value::from_char_string("x");
+    EXPECT_FALSE(val.empty());
+    EXPECT_EQ(val.compare<char>('x'), 0);
+    EXPECT_EQ(Value::from_char_string("'y'").compare<char>('y'), 0);
+    EXPECT_TRUE(Value::from_char_string("ab").empty());
+
+    val = Value::from_float_string("2.5f");
+    EXPECT_EQ(val.type, TYPE_FLOAT);
+    val = Value::from_float_string("2.5");
+    EXPECT_EQ(val.type, TYPE_DOUBLE);
+    EXPECT_TRUE(Value::from_float_string("25").empty());
+}
+
 } // namespace test

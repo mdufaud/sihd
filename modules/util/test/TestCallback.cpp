@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Callback.hpp>
+#include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace test
@@ -132,4 +133,55 @@ TEST_F(TestCallback, test_callback_lambda)
 
     cbm.remove("no_such_key");
 }
+
+TEST_F(TestCallback, test_callback_check_call_type)
+{
+    CallbackManager cbm;
+
+    cbm.set<void, int>("test_void_args", [](int) {});
+    cbm.set<int>("test_ret", []() { return 42; });
+
+    EXPECT_TRUE((cbm.check_call_type<void, int>("test_void_args")));
+    EXPECT_FALSE(cbm.check_call_type<void>("test_void_args"));
+    EXPECT_FALSE((cbm.check_call_type<int, int>("test_void_args")));
+    EXPECT_TRUE(cbm.check_call_type<int>("test_ret"));
+    EXPECT_FALSE(cbm.check_call_type<int>("no_such_key"));
+}
+
+TEST(TestHandler, test_handler_method)
+{
+    Handler<int> handler;
+    EXPECT_FALSE(handler.has_method());
+
+    int received = 0;
+    handler.set_method([&received](int v) { received = v; });
+    EXPECT_TRUE(handler.has_method());
+
+    handler.handle(21);
+    EXPECT_EQ(received, 21);
+    handler(42);
+    EXPECT_EQ(received, 42);
+}
+
+TEST(TestHandler, test_handler_member_and_delegate)
+{
+    class Receiver
+    {
+        public:
+            void set(int v) { value = v; }
+
+            int value = 0;
+    };
+    Receiver receiver;
+
+    Handler<int> member_handler(&receiver, &Receiver::set);
+    EXPECT_TRUE(member_handler.has_method());
+    member_handler.handle(7);
+    EXPECT_EQ(receiver.value, 7);
+
+    Handler<int> delegating(&member_handler);
+    delegating.handle(9);
+    EXPECT_EQ(receiver.value, 9);
+}
+
 } // namespace test

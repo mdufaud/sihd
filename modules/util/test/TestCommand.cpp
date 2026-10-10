@@ -207,4 +207,25 @@ TEST_F(TestCommand, test_mount_recursion_refused)
     EXPECT_THROW(inner.add_command(outer), std::logic_error);
 }
 
+TEST_F(TestCommand, test_parsed_child_and_find_binding)
+{
+    CliApp app({.name = "parsed"});
+    int port = 0;
+
+    Command & port_cmd = app.root().add_command("port", "port to use");
+    port_cmd.bind_positional("value", port, "port value");
+    port_cmd.on_run([&] { app.exit(port); });
+
+    EXPECT_EQ(app.root().parsed_child(), nullptr);
+    EXPECT_EQ(app.root().find_binding("value"), nullptr);
+
+    EXPECT_NE(port_cmd.find_binding("value"), nullptr);
+    EXPECT_EQ(port_cmd.find_binding("nope"), nullptr);
+
+    EXPECT_EQ(eval(app, {"port", "1234"}), 1234);
+    EXPECT_EQ(port, 1234);
+    EXPECT_EQ(app.root().parsed_child(), &port_cmd);
+    EXPECT_EQ(port_cmd.parsed_child(), nullptr);
+}
+
 } // namespace test

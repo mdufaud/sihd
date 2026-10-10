@@ -120,4 +120,57 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
     t.join();
 }
 
+TEST_F(TestWaitable, test_waitable_elapsed_timeouts)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    Waitable waitable;
+    SystemClock clock;
+
+    Duration waited_for = waitable.wait_for_elapsed(std::chrono::milliseconds(20), [] { return false; });
+    EXPECT_GE(waited_for.milliseconds(), 15);
+
+    const Timestamp deadline(clock.now() + time::ms(20));
+    Duration waited_until = waitable.wait_until_elapsed(deadline, [] { return false; });
+    EXPECT_GE(waited_until.milliseconds(), 15);
+}
+
+TEST_F(TestWaitable, test_waitable_guard_timeout)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    Waitable waitable;
+
+    auto guard = waitable.wait_for_guard(std::chrono::milliseconds(10), [] { return false; });
+    EXPECT_TRUE(guard.timed_out);
+}
+
+TEST_F(TestWaitable, test_waitable_notify_all_wakes_every_waiter)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    Waitable waitable;
+    std::atomic<int> awakened = 0;
+    std::vector<std::thread> waiters;
+
+    for (size_t i = 0; i < 3; ++i)
+    {
+        waiters.emplace_back([&] {
+            if (waitable.wait_for(std::chrono::milliseconds(100)) == false)
+                ++awakened;
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    waitable.notify_all();
+
+    for (std::thread & t : waiters)
+        t.join();
+
+    EXPECT_EQ(awakened.load(), 3);
+}
+
 } // namespace test

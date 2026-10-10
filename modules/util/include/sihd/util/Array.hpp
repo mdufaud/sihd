@@ -884,7 +884,7 @@ class Array: public IArray,
             size_t copy_idx = 0;
             for (const IArray *array : arrays)
             {
-                if (ret->copy_from_bytes(*array, copy_idx) == false)
+                if (ret->copy_from_bytes(*array, {(ssize_t)copy_idx}) == false)
                 {
                     delete ret;
                     return nullptr;

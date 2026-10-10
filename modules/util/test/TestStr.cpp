@@ -1308,4 +1308,30 @@ TEST_F(TestStr, test_str_csub_clamp)
     delete[] result;
 }
 
+TEST_F(TestStr, test_str_localtimeoffset)
+{
+    const Timestamp epoch(0);
+
+    const std::string offset = str::localtimeoffset_str(epoch);
+    EXPECT_FALSE(offset.empty());
+    EXPECT_EQ(offset[0], '+');
+    EXPECT_EQ(offset, epoch.localtimeoffset_str());
+}
+
+TEST_F(TestStr, test_str_to_signed_unsigned_float)
+{
+    EXPECT_EQ(str::to_signed("42", 10).value_or(-1), 42);
+    EXPECT_EQ(str::to_signed("-42", 10).value_or(0), -42);
+    EXPECT_EQ(str::to_signed("0x2a", 16).value_or(0), 42);
+    EXPECT_FALSE(str::to_signed("nope", 10).has_value());
+
+    EXPECT_EQ(str::to_unsigned("42", 10).value_or(0), 42u);
+    EXPECT_EQ(str::to_unsigned("0xff", 16).value_or(0), 255u);
+    EXPECT_EQ(str::to_unsigned("-1", 10).value_or(0), ULLONG_MAX);
+
+    EXPECT_FLOAT_EQ(str::to_float("2.5").value_or(0.f), 2.5f);
+    EXPECT_FLOAT_EQ(str::to_float("-2.5e2").value_or(0.f), -250.f);
+    EXPECT_FALSE(str::to_float("nope").has_value());
+}
+
 } // namespace test

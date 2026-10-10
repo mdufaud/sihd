@@ -106,4 +106,16 @@ TEST_F(TestTime, test_time_tm)
     EXPECT_EQ(tm.tm_min, 37);
     EXPECT_EQ(tm.tm_sec, 10);
 }
+
+TEST_F(TestTime, test_time_local_tm)
+{
+    const time::UnixTime t = time::sec(1700000000);
+
+    struct tm local = time::to_tm(t, true);
+    EXPECT_EQ(time::local_tm(local), t);
+
+    const time_t tz = time::get_timezone();
+    EXPECT_GE(tz, -12 * 3600);
+    EXPECT_LE(tz, 14 * 3600);
+}
 } // namespace test

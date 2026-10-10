@@ -55,4 +55,17 @@ TEST_F(TestClocks, test_clocks_elapsed)
     EXPECT_GT(after - before, five_ms_ns);
 }
 
+TEST_F(TestClocks, test_clocks_start_stop)
+{
+    SteadyClock steady;
+    SystemClock system;
+
+    EXPECT_TRUE(steady.start());
+    EXPECT_TRUE(steady.stop());
+    EXPECT_TRUE(system.start());
+    EXPECT_TRUE(system.stop());
+
+    EXPECT_GT(Clock::default_clock.now(), 0);
+}
+
 } // namespace test

@@ -294,4 +294,28 @@ TEST(TestArrayViewSlice, test_arrayview_subview_slice_clamp)
     EXPECT_EQ(sub2[0], 10);
 }
 
+TEST_F(TestArrayView, test_arrayview_aliasing)
+{
+    Array<char> arr = {'h', 'e', 'l', 'l', 'o'};
+
+    ArrayView<char> view(arr);
+    ASSERT_EQ(view.size(), 5u);
+
+    arr[0] = 'J';
+    EXPECT_EQ(view[0], 'J');
+    EXPECT_TRUE(view.is_equal("Jello"));
+}
+
+TEST_F(TestArrayView, test_arrayview_access_out_of_range)
+{
+    Array<int> arr;
+    arr.from({1, 2, 3});
+
+    ArrayView<int> view(arr);
+    EXPECT_EQ(view.front(), 1);
+    EXPECT_EQ(view.back(), 3);
+
+    EXPECT_THROW(view.at(3), std::out_of_range);
+}
+
 } // namespace test

@@ -248,7 +248,7 @@ UnixTime tm(struct tm & tm)
 
 UnixTime local_tm(struct tm & tm)
 {
-    return (mktime(&tm) - get_timezone()) * 1E9;
+    return mktime(&tm) * 1E9;
 }
 
 bool is_leap_year(int year)

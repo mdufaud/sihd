@@ -1,8 +1,11 @@
+#include <memory>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/profiling.hpp>
@@ -883,6 +886,65 @@ TEST_F(TestArray, test_array_copy_from_bytes_slice)
     ArrayView<uint8_t> src_view(src_arr);
     EXPECT_TRUE(dst_view_target.copy_from_bytes(src_view, {(ssize_t)2}));
     EXPECT_TRUE(dst_view_target.is_bytes_equal((const uint8_t *)"\x00\x00\x44\x55", 4));
+}
+
+TEST_F(TestArray, test_array_set_get)
+{
+    Array<int> arr = {1, 2, 3};
+
+    arr.set(1, 20);
+    EXPECT_EQ(arr.get(1), 20);
+    EXPECT_EQ(arr[1], 20);
+
+    EXPECT_THROW(arr.set(3, 0), std::out_of_range);
+    EXPECT_THROW((void)arr.get(3), std::out_of_range);
+
+    const Array<int> & carray = arr;
+    EXPECT_EQ(carray.get(0), 1);
+}
+
+TEST_F(TestArray, test_array_insert)
+{
+    Array<int> arr = {1, 2, 3};
+
+    EXPECT_TRUE(arr.insert(10, 1));
+    EXPECT_TRUE(arr.is_equal({1, 10, 2, 3}));
+
+    static const int values[] = {5, 6};
+    EXPECT_TRUE(arr.insert(values, 2, 0));
+    EXPECT_TRUE(arr.is_equal({5, 6, 1, 10, 2, 3}));
+
+    EXPECT_FALSE(arr.insert(values, 2, 99));
+}
+
+TEST_F(TestArray, test_array_cast)
+{
+    Array<int> arr = {1, 2, 3};
+
+    EXPECT_EQ(arr.cast<int>(), &arr);
+    EXPECT_EQ(arr.cast<float>(), nullptr);
+}
+
+TEST_F(TestArray, test_array_merge)
+{
+    Array<int> first = {1, 2};
+    Array<int> second = {3, 4};
+
+    std::unique_ptr<Array<int>> merged(Array<int>::merge_to_array<int>({&first, &second}));
+    ASSERT_NE(merged, nullptr);
+    EXPECT_TRUE(merged->is_equal({1, 2, 3, 4}));
+}
+
+TEST_F(TestArray, test_array_mult_resize_capacity)
+{
+    ScopedModifier modifier(Array<int>::mult_resize_capacity, 4);
+
+    Array<int> arr;
+    arr.reserve(1);
+    EXPECT_EQ(arr.capacity(), 1u);
+
+    arr.reserve(5);
+    EXPECT_EQ(arr.capacity(), 16u);
 }
 
 } // namespace test

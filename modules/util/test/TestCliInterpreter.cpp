@@ -83,4 +83,14 @@ TEST_F(TestCliInterpreter, test_completion)
     EXPECT_NE(script.find("\"service add\")"), std::string::npos);
 }
 
+TEST_F(TestCliInterpreter, test_completion_loader)
+{
+    CliInterpreter cli("my-app");
+    cli.root().add_command("service", "manage services");
+
+    const std::string loader = cli.bash_completion_loader();
+    EXPECT_NE(loader.find("__complete"), std::string::npos);
+    EXPECT_NE(loader.find("my-app"), std::string::npos);
+}
+
 } // namespace test

@@ -1,4 +1,5 @@
 #include <sihd/util/mime.hpp>
+#include <sihd/util/str.hpp>
 
 namespace sihd::util::mime
 {
@@ -18,7 +19,7 @@ bool compatible(std::string_view a, std::string_view b)
 {
     if (a.empty() || b.empty())
         return true;
-    return base_type(a) == base_type(b);
+    return str::iequals(base_type(a), base_type(b));
 }
 
 std::optional<std::string_view> match_offered(const std::vector<std::string> & offered, std::string_view wanted)

@@ -1,3 +1,4 @@
+#include <atomic>
 #include <thread>
 
 #include <fmt/printf.h>
@@ -264,6 +265,46 @@ TEST_F(TestSafeQueue, test_safequeue_spam)
     t7.join();
 
     EXPECT_EQ(queue.size(), 0u);
+}
+
+TEST_F(TestSafeQueue, test_safequeue_push_lazy)
+{
+    SafeQueue<int> queue;
+    int made = 0;
+
+    EXPECT_TRUE(queue.push_lazy([&made] { return ++made; }, 2));
+    EXPECT_TRUE(queue.push_lazy([&made] { return ++made; }, 2));
+    EXPECT_FALSE(queue.push_lazy([&made] { return ++made; }, 2));
+
+    EXPECT_EQ(made, 2);
+    EXPECT_EQ(queue.size(), 2u);
+    EXPECT_EQ(queue.front(), 1);
+    EXPECT_EQ(queue.back(), 2);
+}
+
+TEST_F(TestSafeQueue, test_safequeue_terminate_unblocks_all_consumers)
+{
+    SafeQueue<int> queue;
+    std::atomic<int> unblocked = 0;
+
+    std::vector<std::thread> consumers;
+    for (size_t i = 0; i < 3; ++i)
+    {
+        consumers.emplace_back([&] {
+            while (queue.pop_wait().has_value())
+            {
+            }
+            ++unblocked;
+        });
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    queue.terminate();
+
+    for (std::thread & consumer : consumers)
+        consumer.join();
+
+    EXPECT_EQ(unblocked.load(), 3);
 }
 
 } // namespace test

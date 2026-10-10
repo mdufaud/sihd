@@ -6,6 +6,7 @@
 #include <sihd/util/Worker.hpp>
 
 #include "test_helper.hpp"
+#include "wait/wait_for.hpp"
 
 namespace test
 {
@@ -140,5 +141,52 @@ TEST_F(TestWorker, test_worker_state_transitions)
     EXPECT_TRUE(worker.stop_worker());
     EXPECT_FALSE(worker.is_worker_started());
     EXPECT_FALSE(worker.is_worker_running());
+}
+
+class BlockingWorker: public Worker
+{
+    public:
+        BlockingWorker(): Worker([this] { return this->run(); }) {}
+
+        bool run() override
+        {
+            running = true;
+            while (stop_requested == false)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            return true;
+        }
+
+        std::atomic<bool> running {false};
+        std::atomic<bool> stop_requested {false};
+};
+
+TEST_F(TestWorker, test_worker_stop_while_running)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    BlockingWorker worker;
+    EXPECT_TRUE(worker.start_sync_worker("blocking-worker"));
+    EXPECT_TRUE(wait_for([&] { return worker.running.load(); }));
+    EXPECT_TRUE(worker.is_worker_running());
+
+    worker.stop_requested = true;
+    EXPECT_TRUE(worker.stop_worker());
+    EXPECT_FALSE(worker.is_worker_running());
+    EXPECT_FALSE(worker.is_worker_started());
+}
+
+TEST_F(TestWorker, test_worker_detach)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    Worker worker([] { return true; });
+    worker.set_worker_detach(true);
+
+    EXPECT_TRUE(worker.start_sync_worker("detached-worker"));
+    EXPECT_TRUE(worker.is_worker_started());
+    EXPECT_TRUE(worker.stop_worker());
+    EXPECT_TRUE(wait_for([&] { return worker.is_worker_running() == false; }));
 }
 } // namespace test

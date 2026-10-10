@@ -1,12 +1,19 @@
+#include <atomic>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
+#include <sihd/util/AStepWorkerService.hpp>
 #include <sihd/util/AThreadedService.hpp>
+#include <sihd/util/AWorkerService.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/profiling.hpp>
+#include <sihd/util/time.hpp>
+
+#include "wait/wait_for.hpp"
 
 namespace test
 {
@@ -103,6 +110,62 @@ class FakeService: public AService
             ++n_reset;
             return true;
         }
+};
+
+class FakeWorkerService: public AWorkerService
+{
+    public:
+        FakeWorkerService(): AWorkerService("FakeWorkerService") {}
+        ~FakeWorkerService() { this->stop(); }
+
+        bool on_work_start() override
+        {
+            work_started = true;
+            while (stop_requested == false)
+                time::msleep(1);
+            return true;
+        }
+        bool on_work_stop() override
+        {
+            work_stopped = true;
+            return true;
+        }
+
+        std::atomic<bool> work_started {false};
+        std::atomic<bool> work_stopped {false};
+};
+
+class FakeStepWorkerService: public AStepWorkerService
+{
+    public:
+        FakeStepWorkerService(): AStepWorkerService("FakeStepWorkerService") {}
+        ~FakeStepWorkerService() { this->stop(); }
+
+        bool on_work_setup() override
+        {
+            work_setup_done = true;
+            return true;
+        }
+        bool on_work_start() override
+        {
+            ++work_step_count;
+            return true;
+        }
+        bool on_work_stop() override
+        {
+            work_stopped = true;
+            return true;
+        }
+        bool on_work_teardown() override
+        {
+            work_teardown_done = true;
+            return true;
+        }
+
+        std::atomic<bool> work_setup_done {false};
+        std::atomic<bool> work_stopped {false};
+        std::atomic<bool> work_teardown_done {false};
+        std::atomic<int> work_step_count {0};
 };
 
 class FakeServiceWithController: public FakeService
@@ -314,6 +377,46 @@ TEST_F(TestService, test_service_threaded)
     EXPECT_FALSE(service_ptr->stop());
 
     EXPECT_TRUE(service_ptr->reset());
+}
+
+TEST_F(TestService, test_service_worker)
+{
+    FakeWorkerService service;
+    service.set_start_synchronised(true);
+
+    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.start());
+    EXPECT_TRUE(service.is_running());
+    EXPECT_TRUE(wait_for([&] { return service.work_started.load(); }));
+    EXPECT_FALSE(service.start());
+
+    EXPECT_TRUE(service.stop());
+    EXPECT_FALSE(service.is_running());
+    EXPECT_TRUE(service.work_stopped.load());
+    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.reset());
+}
+
+TEST_F(TestService, test_service_step_worker)
+{
+    FakeStepWorkerService service;
+    EXPECT_TRUE(service.set_step_frequency(200));
+    service.set_start_synchronised(true);
+
+    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.start());
+    EXPECT_TRUE(service.is_running());
+    EXPECT_TRUE(service.work_setup_done.load());
+    EXPECT_TRUE(wait_for([&] { return service.work_step_count.load() > 0; }));
+
+    const int step_count = service.work_step_count.load();
+    EXPECT_TRUE(wait_for([&] { return service.work_step_count.load() > step_count; }));
+
+    EXPECT_TRUE(service.stop());
+    EXPECT_FALSE(service.is_running());
+    EXPECT_TRUE(service.work_stopped.load());
+    EXPECT_TRUE(service.work_teardown_done.load());
+    EXPECT_TRUE(service.reset());
 }
 
 } // namespace test

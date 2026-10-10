@@ -7,6 +7,8 @@
 #include <sihd/util/container.hpp>
 #include <sihd/util/term.hpp>
 
+#include "wait/wait_for.hpp"
+
 namespace test
 {
 SIHD_LOGGER;
@@ -93,6 +95,86 @@ TEST_F(TestThreadPool, test_threadpool_error)
 
     ASSERT_THROW(discarded.get(), std::future_error);
     EXPECT_EQ(executed.load(), 0);
+}
+
+TEST_F(TestThreadPool, test_threadpool_remaining_jobs)
+{
+    ThreadPool pool("thread_pool_remaining", 1);
+    std::atomic<int> count = 0;
+
+    for (size_t i = 0; i < 10; ++i)
+    {
+        pool.add_job([&count] {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            ++count;
+        });
+    }
+
+    EXPECT_GT(pool.remaining_jobs(), 0u);
+    pool.wait_all_jobs();
+    EXPECT_EQ(pool.remaining_jobs(), 0u);
+    EXPECT_TRUE(wait_for([&] { return count.load() == 10; }));
+
+    pool.stop();
+}
+
+TEST_F(TestThreadPool, test_threadpool_multi_producer)
+{
+    ThreadPool pool("thread_pool_producers", 4);
+    std::atomic<int> count = 0;
+
+    {
+        std::vector<std::jthread> producers;
+        for (size_t producer = 0; producer < 4; ++producer)
+        {
+            producers.emplace_back([&pool, &count] {
+                for (size_t i = 0; i < 250; ++i)
+                    pool.add_job([&count] { ++count; });
+            });
+        }
+    }
+
+    pool.wait_all_jobs();
+    EXPECT_TRUE(wait_for([&] { return count.load() == 1000; }));
+
+    pool.stop();
+}
+
+TEST_F(TestThreadPool, test_threadpool_stop_completes_inflight)
+{
+    ThreadPool pool("thread_pool_inflight", 1);
+    std::atomic<bool> started = false;
+    std::atomic<bool> done = false;
+
+    auto future = pool.add_job([&] {
+        started = true;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        done = true;
+    });
+
+    EXPECT_TRUE(wait_for([&] { return started.load(); }));
+    pool.stop();
+
+    EXPECT_TRUE(done.load());
+    EXPECT_NO_THROW(future.get());
+}
+
+TEST_F(TestThreadPool, test_threadpool_destructor_stops)
+{
+    std::atomic<bool> started = false;
+    std::atomic<bool> done = false;
+
+    {
+        ThreadPool pool("thread_pool_dtor", 1);
+        pool.add_job([&] {
+            started = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            done = true;
+        });
+        EXPECT_TRUE(wait_for([&] { return started.load(); }));
+    }
+
+    EXPECT_TRUE(done.load());
 }
 
 } // namespace test

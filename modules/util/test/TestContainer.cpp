@@ -1,3 +1,5 @@
+#include <deque>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
@@ -103,5 +105,39 @@ TEST_F(TestContainer, test_container_vector)
     ASSERT_EQ(vec.size(), 6u);
     EXPECT_EQ(vec[4], 6);
     EXPECT_EQ(vec[5], 7);
+}
+
+TEST_F(TestContainer, test_container_predicates)
+{
+    std::vector<int> vec = {5, 2, 8, 1, 9};
+
+    auto it = container::find_if(vec, [](int v) { return v % 2 == 0; });
+    ASSERT_NE(it, vec.end());
+    EXPECT_EQ(*it, 2);
+
+    EXPECT_TRUE(container::erase_if(vec, [](int v) { return v > 4; }));
+    EXPECT_EQ(vec, (std::vector<int> {2, 1}));
+    EXPECT_FALSE(container::erase_if(vec, [](int v) { return v > 4; }));
+
+    container::sort(vec, std::greater<int>());
+    EXPECT_EQ(vec, (std::vector<int> {2, 1}));
+
+    const std::vector<int> transformed = container::transform_if(
+        vec,
+        [](int v) { return v == 1; },
+        [](int v) { return v * 100; });
+    EXPECT_EQ(transformed, (std::vector<int> {100}));
+
+    std::deque<int> deque;
+    EXPECT_TRUE(container::emplace_front_unique(deque, 1));
+    EXPECT_FALSE(container::emplace_front_unique(deque, 1));
+    ASSERT_EQ(deque.size(), 1u);
+    EXPECT_EQ(deque.front(), 1);
+
+    std::vector<std::tuple<int, std::string>> tuples = {{2, "b"}, {1, "a"}, {2, "a"}};
+    container::sort_tuple<0, 1>(tuples);
+    EXPECT_EQ(tuples[0], std::make_tuple(1, "a"));
+    EXPECT_EQ(tuples[1], std::make_tuple(2, "a"));
+    EXPECT_EQ(tuples[2], std::make_tuple(2, "b"));
 }
 } // namespace test

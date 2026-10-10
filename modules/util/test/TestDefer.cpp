@@ -35,4 +35,15 @@ TEST_F(TestDefer, test_defer_order)
     EXPECT_EQ(order, "21");
 }
 
+TEST_F(TestDefer, test_defer_cancel)
+{
+    bool called = false;
+    {
+        Defer d([&called] { called = true; });
+        d.cancel();
+        EXPECT_FALSE(called);
+    }
+    EXPECT_FALSE(called);
+}
+
 } // namespace test
