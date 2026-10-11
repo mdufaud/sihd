@@ -37,8 +37,6 @@ modules = {
         "libs": ['CLI11'], # vcpkg builds cli11 as a static lib
         # CLI11 is a static lib: consumers of a static sihd_util must link it too
         "export-libs": ['fmt', 'CLI11'],
-        # stdc++fs only needed for GCC < 9 with glibc
-        "mingw-gnu-libs": ['stdc++fs'],
         # === Android specific ===
         "android-libs": ['log'],
         # === Emscripten specific ===

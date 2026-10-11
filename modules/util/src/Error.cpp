@@ -31,7 +31,9 @@ ErrorCode errc_to_error_code(std::errc ec)
         case std::errc::read_only_file_system:
             return ErrorCode::permission_denied;
         case std::errc::timed_out:
+#if !defined(_LIBCPP_VERSION) // libc++ deprecates errc::stream_timeout (ETIME has no winsuck mapping)
         case std::errc::stream_timeout:
+#endif
             return ErrorCode::timeout;
         case std::errc::resource_unavailable_try_again:
 #if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN // mingw: own errno, posix aliases EAGAIN

@@ -329,7 +329,7 @@ char glob_lower(char c)
 // POSIX bracket classes: [:alpha:], [:digit:]...
 bool glob_posix_class_match(std::string_view name, char c)
 {
-    static constexpr std::pair<std::string_view, int (*)(int)> classes[] = {
+    static const std::pair<std::string_view, int (*)(int)> classes[] = {
         {"alnum", std::isalnum},
         {"alpha", std::isalpha},
         {"blank", std::isblank},

@@ -44,7 +44,6 @@ class ImguiBackendWin32: public sihd::imgui::IImguiBackend
         WNDCLASSEX _win_cls;
         HWND _window;
 
-        ImguiRendererDirectX *_imgui_renderer_dx_ptr;
         IImguiRenderer *_imgui_renderer_ptr;
 };
 

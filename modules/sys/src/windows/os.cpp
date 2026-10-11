@@ -136,7 +136,6 @@ Timestamp boot_time()
     static Timestamp boot_timestamp = Timestamp(0);
     if (boot_timestamp == 0)
     {
-        auto uptime = std::chrono::milliseconds(GetTickCount64());
         typedef struct _SYSTEM_TIMEOFDAY_INFORMATION
         {
                 LARGE_INTEGER BootTime;

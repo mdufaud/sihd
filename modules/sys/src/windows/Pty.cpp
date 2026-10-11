@@ -102,9 +102,7 @@ class ConPty: public Pty
         HANDLE _pipe_in_write;                   ///< Pipe: We write input here
         HANDLE _pipe_out_read;                   ///< Pipe: We read output from here
         HANDLE _pipe_out_write;                  ///< Pipe: PTY writes to here
-        HANDLE _process;                         ///< Child process handle
-        HANDLE _thread;                          ///< Child main thread handle
-        PROCESS_INFORMATION _pi;                 ///< Process information
+        PROCESS_INFORMATION _pi;                 ///< Process and main thread handles
         LPPROC_THREAD_ATTRIBUTE_LIST _attr_list; ///< Thread attribute list for ConPTY
         bool _spawned;
         int _exit_status;
@@ -163,8 +161,6 @@ ConPty::ConPty():
     _pipe_in_write(INVALID_HANDLE_VALUE),
     _pipe_out_read(INVALID_HANDLE_VALUE),
     _pipe_out_write(INVALID_HANDLE_VALUE),
-    _process(INVALID_HANDLE_VALUE),
-    _thread(INVALID_HANDLE_VALUE),
     _attr_list(nullptr),
     _spawned(false),
     _exit_status(-1)

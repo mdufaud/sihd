@@ -98,7 +98,9 @@ filc_flags = [
 
 ## mingw specifics
 
-mingw_flags = gcc_flags
+# llvm-mingw's clang warns on un-annotated pointers in unpatchable C headers
+# (libzip, openssl) — gcc-mingw silently ignores the unknown -Wno- form
+mingw_flags = gcc_flags + ["-Wno-nullability-completeness"]
 
 ## emscripten specifics
 
