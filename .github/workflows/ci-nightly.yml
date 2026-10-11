@@ -40,6 +40,7 @@ jobs:
             dep-args: test=1 demo=1
             make-args: test=1 demo=1 asan=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            gcc14: ""
             itest: true
           - id: x64-linux-clang
             dep-args: compiler=clang demo=1
@@ -62,35 +63,42 @@ jobs:
           - id: arm32-linux-static
             dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
             make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            gcc14: arm-linux-gnueabihf
           - id: arm64-linux
             dep-args: machine=aarch64 demo=1
             make-args: machine=aarch64 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            gcc14: aarch64-linux-gnu
           - id: arm64-linux-static
             dep-args: machine=aarch64 static=1 demo=1
             make-args: machine=aarch64 static=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            gcc14: aarch64-linux-gnu
           - id: riscv64-linux
             dep-args: machine=riscv64 demo=1
             make-args: machine=riscv64 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+            gcc14: riscv64-linux-gnu
           - id: riscv64-linux-static
             dep-args: machine=riscv64 static=1 demo=1
             make-args: machine=riscv64 static=1 demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+            gcc14: riscv64-linux-gnu
           - id: x64-mingw-dynamic
             dep-args: platform=windows demo=1
             make-args: platform=windows demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'py=0'
+            llvm-mingw: true
           # static mingw: every transitive dep must be explicit (app.py
           # windows-static-libs), unlike the dynamic triplet
           - id: x64-mingw-static
             dep-args: platform=windows static=1 demo=1
             make-args: platform=windows static=1 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'py=0'
+            llvm-mingw: true
           - id: wasm32-emscripten
             dep-args: compiler=em m=util,sys,core,csv,zip,net demo=1
             make-args: compiler=em m=util,sys,core,csv,zip,net demo=1
@@ -136,6 +144,34 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ${{ matrix.apt }}
+
+      # C++23 deducing this needs gcc >= 14; noble ships gcc-13 as its default
+      # and in the distro cross toolchains
+      - name: Install gcc-14
+        if: matrix.gcc14 != null
+        run: |
+          if [ -z "${{ matrix.gcc14 }}" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc-14 g++-14
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+          else
+            sudo apt-get update
+            sudo apt-get install -y gcc-14-${{ matrix.gcc14 }} g++-14-${{ matrix.gcc14 }}
+            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}gcc ${{ matrix.gcc14 }}gcc /usr/bin/${{ matrix.gcc14 }}gcc-14 100
+            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}g++ ${{ matrix.gcc14 }}g++ /usr/bin/${{ matrix.gcc14 }}g++-14 100
+          fi
+
+      # distro mingw-w64 is gcc-13 (no deducing this) and noble ships no gcc-14
+      # mingw; llvm-mingw carries clang >= 19, its own mingw-w64 sysroot and
+      # winpthreads, with the gcc-named drivers the build expects
+      - name: Install llvm-mingw
+        if: matrix.llvm-mingw
+        run: |
+          curl -fsSL https://github.com/mstorsjo/llvm-mingw/releases/download/20261006/llvm-mingw-20261006-ucrt-ubuntu-22.04-x86_64.tar.xz -o /tmp/llvm-mingw.tar.xz
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -xJf /tmp/llvm-mingw.tar.xz --strip-components=1 -C /opt/llvm-mingw
+          echo /opt/llvm-mingw/bin >> "$GITHUB_PATH"
 
       - name: Install clang (llvm.org)
         if: matrix.clang-llvm
