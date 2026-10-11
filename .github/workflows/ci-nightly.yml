@@ -40,7 +40,7 @@ jobs:
             dep-args: test=1 demo=1
             make-args: test=1 demo=1 asan=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
-            gcc14: ""
+            gcc14: native
             itest: true
           - id: x64-linux-clang
             dep-args: compiler=clang demo=1
@@ -155,7 +155,7 @@ jobs:
       - name: Install gcc-14
         if: matrix.gcc14 != null
         run: |
-          if [ -z "${{ matrix.gcc14 }}" ]; then
+          if [ "${{ matrix.gcc14 }}" = "native" ]; then
             sudo apt-get update
             sudo apt-get install -y gcc-14 g++-14
             sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
