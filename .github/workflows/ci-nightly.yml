@@ -163,8 +163,8 @@ jobs:
           else
             sudo apt-get update
             sudo apt-get install -y gcc-14-${{ matrix.gcc14 }} g++-14-${{ matrix.gcc14 }}
-            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}gcc ${{ matrix.gcc14 }}gcc /usr/bin/${{ matrix.gcc14 }}gcc-14 100
-            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}g++ ${{ matrix.gcc14 }}g++ /usr/bin/${{ matrix.gcc14 }}g++-14 100
+            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}-gcc ${{ matrix.gcc14 }}-gcc /usr/bin/${{ matrix.gcc14 }}-gcc-14 100
+            sudo update-alternatives --install /usr/bin/${{ matrix.gcc14 }}-g++ ${{ matrix.gcc14 }}-g++ /usr/bin/${{ matrix.gcc14 }}-g++-14 100
           fi
 
       # distro mingw-w64 is gcc-13 (no deducing this) and noble ships no gcc-14
