@@ -2,13 +2,14 @@ diff --git a/CMakeLists-implied-options.txt b/CMakeLists-implied-options.txt
 index b0e3934..cecc5ee 100644
 --- a/CMakeLists-implied-options.txt
 +++ b/CMakeLists-implied-options.txt
-@@ -443,7 +443,8 @@ if (LWS_WITH_PLUGINS OR (LWS_WITH_EVLIB_PLUGINS AND LWS_WITH_EVENT_LIBS))
+@@ -443,7 +443,9 @@ if (LWS_WITH_PLUGINS OR (LWS_WITH_EVLIB_PLUGINS AND LWS_WITH_EVENT_LIBS))
  	set(LWS_WITH_PLUGINS_API 1)
  endif()
  
 -if (WIN32 AND NOT LWS_EXT_PTHREAD_LIBRARIES)
 +# MinGW has built-in pthreads, so don't force LWS_MAX_SMP=1 for it.
-+if (WIN32 AND NOT MINGW AND NOT LWS_EXT_PTHREAD_LIBRARIES)
++# clang on Windows-GNU (llvm-mingw) leaves the MINGW variable unset: gate on the compiler id.
++if (WIN32 AND NOT MINGW AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND NOT LWS_EXT_PTHREAD_LIBRARIES)
          set(LWS_MAX_SMP 1)
          message("SMD requires pthreads")
          set(LWS_WITH_SYS_SMD 0)
@@ -19,14 +20,14 @@ index c2e33e0..ee31a76 100644
 @@ -576,10 +576,16 @@ set(LWS_LIBMOUNT_LIBRARIES CACHE PATH "Path to the libmount library")
  set(LWS_EXT_PTHREAD_INCLUDE_DIR CACHE PATH "Path to an external pthreads include directory")
  set(LWS_EXT_PTHREAD_LIBRARIES CACHE PATH "Path to an external pthreads library")
- 
+
 -if(WIN32)
 +# MinGW has built-in pthreads support; pthreads_windows (PThreads4W) is only needed for MSVC.
-+if(WIN32 AND NOT MINGW)
++if(WIN32 AND NOT MINGW AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
      find_package(pthreads_windows REQUIRED)
      set(LWS_EXT_PTHREAD_INCLUDE_DIR ${PThreads4W_INCLUDE_DIR})
      set(LWS_EXT_PTHREAD_LIBRARIES ${PThreads4W_LIBRARY})
-+elseif(MINGW)
++elseif(MINGW OR CMAKE_C_COMPILER_ID MATCHES "Clang")
 +    # LIB_LIST_AT_END (the actual link) is gated on INCLUDE_DIR being set:
 +    # winpthreads lives in the default sysroot, so any non-empty value does
 +    set(LWS_EXT_PTHREAD_INCLUDE_DIR /)
