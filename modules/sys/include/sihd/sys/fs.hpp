@@ -71,10 +71,10 @@ bool is_socket(std::string_view path);
 bool is_block(std::string_view path);
 bool is_character(std::string_view path);
 bool is_fifo(std::string_view path);
-std::optional<size_t> file_size(std::string_view path);
+std::expected<size_t, sihd::util::Error> file_size(std::string_view path);
 
 // creation is epoch 0 when the backing filesystem/kernel doesn't track birth times
-std::optional<FileTimes> times(std::string_view path);
+std::expected<FileTimes, sihd::util::Error> times(std::string_view path);
 sihd::util::Timestamp last_write(std::string_view path);
 
 // uses _access
@@ -93,9 +93,9 @@ StorageMedium storage_medium(std::string_view path);
 
 std::vector<MountEntry> mounts();
 // bytes usable by the caller
-std::optional<uint64_t> free_space(std::string_view path);
+std::expected<uint64_t, sihd::util::Error> free_space(std::string_view path);
 // bytes
-std::optional<uint64_t> total_space(std::string_view path);
+std::expected<uint64_t, sihd::util::Error> total_space(std::string_view path);
 
 // permissions
 std::string permission_to_str(unsigned int mode);
@@ -164,14 +164,14 @@ std::optional<std::string> read_link(std::string_view path);
 // fast read from file
 ssize_t read_binary(std::string_view path, char *buf, size_t size);
 // fast string read: offset > 0 seeks from the beginning, offset < 0 from the end
-std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary = true);
+std::expected<std::string, sihd::util::Error> read(std::string_view path, sihd::util::Slice slice, bool binary = true);
 // text mode only: reads lines
-std::optional<std::string> read_line(std::string_view path, size_t line_number);
+std::expected<std::string, sihd::util::Error> read_line(std::string_view path, size_t line_number);
 // text mode only; empty lines are omitted
-std::optional<std::vector<std::string>> read_lines(std::string_view path);
+std::expected<std::vector<std::string>, sihd::util::Error> read_lines(std::string_view path);
 // fast all file read
 // the default text mode stops at ^Z on windows: pass binary=true for raw bytes
-std::optional<std::string> read_all(std::string_view path, bool binary = false);
+std::expected<std::string, sihd::util::Error> read_all(std::string_view path, bool binary = false);
 
 // fast write into file; text mode translates LF to CRLF on windows
 std::expected<void, sihd::util::Error>

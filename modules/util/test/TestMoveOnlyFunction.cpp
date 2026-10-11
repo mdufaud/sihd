@@ -67,6 +67,12 @@ TEST_F(TestMoveOnlyFunction, test_move_only_callable)
 
 TEST_F(TestMoveOnlyFunction, test_move_assign_and_reset)
 {
+#if defined(__GNUC__) && !defined(__clang__)
+    // gcc 16 -Os false positive: move_only_function union storage flagged uninitialized on move
+# pragma GCC diagnostic push
+# pragma GCC diagnostic ignored "-Wuninitialized"
+# pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
     MoveOnlyFunction<std::string(const char *)> fn = [](const char *str) {
         return std::string(str);
     };
@@ -75,6 +81,9 @@ TEST_F(TestMoveOnlyFunction, test_move_assign_and_reset)
 
     moved = nullptr;
     EXPECT_FALSE(static_cast<bool>(moved));
+#if defined(__GNUC__) && !defined(__clang__)
+# pragma GCC diagnostic pop
+#endif
 }
 
 } // namespace test

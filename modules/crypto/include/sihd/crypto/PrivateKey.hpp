@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <expected>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -15,13 +16,13 @@ namespace sihd::crypto
 class PrivateKey
 {
     public:
-        PrivateKey();
-        ~PrivateKey();
+        PrivateKey() = default;
+        ~PrivateKey() = default;
 
-        PrivateKey(const PrivateKey & other);
-        PrivateKey & operator=(const PrivateKey & other);
-        PrivateKey(PrivateKey && other) noexcept;
-        PrivateKey & operator=(PrivateKey && other) noexcept;
+        PrivateKey(const PrivateKey & other) = default;
+        PrivateKey & operator=(const PrivateKey & other) = default;
+        PrivateKey(PrivateKey && other) noexcept = default;
+        PrivateKey & operator=(PrivateKey && other) noexcept = default;
 
         operator bool() const { return _handle != nullptr; }
 
@@ -36,10 +37,12 @@ class PrivateKey
 
         void clear();
 
-        void *native() const { return _handle; }
+        void *native() const { return _handle.get(); }
 
     private:
-        void *_handle;
+        // type-erased EVP_PKEY: the deleter freeing it is bound at acquisition,
+        // keeping openssl types out of this header
+        std::shared_ptr<void> _handle;
 };
 
 } // namespace sihd::crypto

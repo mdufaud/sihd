@@ -1,11 +1,12 @@
 #ifndef __SIHD_UTIL_CALLBACK_HPP__
 #define __SIHD_UTIL_CALLBACK_HPP__
 
-#include <functional>
 #include <map>
 #include <memory>
 #include <stdexcept>
 #include <string>
+
+#include <sihd/util/MoveOnlyFunction.hpp>
 
 namespace sihd::util
 {
@@ -39,18 +40,11 @@ class CallbackManager
                                })));
         }
 
-        // std::function binding
-        template <typename R, typename... Targs>
-        void set(const std::string & name, std::function<R(Targs...)> fun)
-        {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
-        }
-
-        // The entire signature of the lambda must be passed to this overload.
+        // The entire signature of the callable must be passed to this overload.
         template <typename R, typename... Targs, typename Callable>
         void set(const std::string & name, Callable callable)
         {
-            std::function<R(Targs...)> fun(callable);
+            MoveOnlyFunction<R(Targs...)> fun(std::move(callable));
             _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
@@ -96,14 +90,14 @@ class CallbackManager
         class Callback: public CallbackBase
         {
             public:
-                Callback(std::function<R(Targs...)> && fun) { _fun = std::move(fun); }
+                Callback(MoveOnlyFunction<R(Targs...)> && fun) { _fun = std::move(fun); }
 
                 ~Callback() = default;
 
                 R call(Targs... args) { return _fun(args...); }
 
             private:
-                std::function<R(Targs...)> _fun;
+                MoveOnlyFunction<R(Targs...)> _fun;
         };
 
         template <typename R, typename... Targs>

@@ -5,6 +5,7 @@
 
 #include <cctype> // isdigit
 #include <cstring>
+#include <ranges>
 #include <set>
 
 #include <sihd/sys/fs.hpp>
@@ -74,12 +75,12 @@ std::optional<CpuTimes> parse_cpu_times(std::string_view line)
     CpuTimes times;
     uint64_t *values[] =
         {&times.user, &times.nice, &times.system, &times.idle, &times.iowait, &times.irq, &times.softirq, &times.steal};
-    for (size_t i = 0; i < 8; ++i)
+    for (const auto [value, field] : std::views::zip(values, std::views::drop(fields, 1)))
     {
-        const auto ticks = str::convert_from_string<uint64_t>(fields[i + 1]);
+        const auto ticks = str::convert_from_string<uint64_t>(field);
         if (!ticks)
             return std::nullopt;
-        *values[i] = *ticks * 1'000'000'000ull / (uint64_t)clk_tck;
+        *value = *ticks * 1'000'000'000ull / (uint64_t)clk_tck;
     }
     return times;
 }
@@ -246,16 +247,14 @@ std::vector<CpuTimes> per_core_cpu_times()
 
 std::optional<uint64_t> cpu_frequency()
 {
-    if (const auto hz = max_khz_over_cpus("cpufreq/scaling_cur_freq"))
-        return hz;
-    return cpuinfo_mhz_to_hz();
+    return max_khz_over_cpus("cpufreq/scaling_cur_freq").or_else(cpuinfo_mhz_to_hz);
 }
 
 std::optional<uint64_t> cpu_max_frequency()
 {
-    if (const auto hz = max_khz_over_cpus("cpufreq/cpuinfo_max_freq"))
-        return hz;
-    return max_khz_over_cpus("cpufreq/scaling_max_freq");
+    return max_khz_over_cpus("cpufreq/cpuinfo_max_freq").or_else([] {
+        return max_khz_over_cpus("cpufreq/scaling_max_freq");
+    });
 }
 
 OsInfo os_info()

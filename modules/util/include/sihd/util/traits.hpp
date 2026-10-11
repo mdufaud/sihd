@@ -203,6 +203,13 @@ using are_all_convertible = std::integral_constant<bool, (... && std::is_convert
 template <typename T, typename... Args>
 using are_all_constructible = std::integral_constant<bool, (... && std::is_constructible_v<T, Args>)>;
 
+/**
+ * Deducing this accessors
+ */
+
+template <class Self, class T>
+using const_prop_ptr = std::conditional_t<std::is_const_v<std::remove_reference_t<Self>>, const T *, T *>;
+
 } // namespace sihd::util::traits
 
 #endif

@@ -172,7 +172,7 @@ bool is_executable(std::string_view path)
     return _access(path.data(), 04) == 0;
 }
 
-std::optional<FileTimes> times(std::string_view path)
+std::expected<FileTimes, Error> times(std::string_view path)
 {
     HANDLE handle = CreateFileA(path.data(),
                                 // query access: metadata does not need read rights
@@ -184,12 +184,12 @@ std::optional<FileTimes> times(std::string_view path)
                                 FILE_FLAG_BACKUP_SEMANTICS,
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not open '{}': {}", path, os::last_error_str()));
     FILE_BASIC_INFO info;
     const BOOL ok = GetFileInformationByHandleEx(handle, FileBasicInfo, &info, sizeof(info));
     CloseHandle(handle);
     if (!ok)
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not query times of '{}': {}", path, os::last_error_str()));
     FileTimes ret;
     ret.creation = filetime_to_ts(info.CreationTime.QuadPart);
     ret.access = filetime_to_ts(info.LastAccessTime.QuadPart);
@@ -202,10 +202,12 @@ Timestamp last_write(std::string_view path)
     return times(path).value_or(FileTimes()).write;
 }
 
-std::optional<size_t> file_size(std::string_view path)
+std::expected<size_t, Error> file_size(std::string_view path)
 {
     struct stat s;
-    return do_stat(path.data(), &s) ? s.st_size : std::optional<size_t> {};
+    if (!do_stat(path.data(), &s))
+        return std::unexpected(Error::from_errno("could not stat '{}'", path));
+    return s.st_size;
 }
 
 // directories
@@ -462,19 +464,19 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
     return ret;
 }
 
-std::optional<uint64_t> free_space(std::string_view path)
+std::expected<uint64_t, Error> free_space(std::string_view path)
 {
     ULARGE_INTEGER free_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not query free space of '{}': {}", path, os::last_error_str()));
     return free_bytes.QuadPart;
 }
 
-std::optional<uint64_t> total_space(std::string_view path)
+std::expected<uint64_t, Error> total_space(std::string_view path)
 {
     ULARGE_INTEGER total_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))
-        return std::nullopt;
+        return std::unexpected(Error(io_error, "could not query total space of '{}': {}", path, os::last_error_str()));
     return total_bytes.QuadPart;
 }
 

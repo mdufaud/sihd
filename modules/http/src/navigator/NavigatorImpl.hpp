@@ -88,7 +88,12 @@ struct Navigator::Impl
                         std::vector<uint8_t> data;
                         bool binary;
                 };
-                struct lws_context *context = nullptr;
+                struct LwsContextFree
+                {
+                        void operator()(struct lws_context *context) const;
+                };
+
+                std::unique_ptr<struct lws_context, LwsContextFree> context;
                 struct lws *wsi = nullptr;
                 sihd::util::Worker worker;
                 sihd::util::Waitable waitable;

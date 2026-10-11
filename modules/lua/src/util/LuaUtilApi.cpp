@@ -628,14 +628,20 @@ void LuaUtilApi::load_base(Vm & vm)
         .addProperty(
             "c_ptr",
             +[](const Named *self) -> int64_t { return (int64_t)self; })
-        .addFunction("parent", static_cast<Node *(Named::*)()>(&Named::parent))
+        .addFunction(
+            "parent",
+            +[](Named *self) -> Node * { return self->parent(); })
         .addFunction("name", &Named::name)
         .addFunction("full_name", &Named::full_name)
         .addFunction("class_name", &Named::class_name)
         .addFunction("description", &Named::description)
         .addFunction("full_name", &Named::full_name)
-        .addFunction("root", &Named::root)
-        .addFunction("find", static_cast<Named *(Named::*)(const std::string &)>(&Named::find))
+        .addFunction(
+            "root",
+            +[](Named *self) -> Node * { return self->root(); })
+        .addFunction(
+            "find",
+            +[](Named *self, const std::string & path) -> Named * { return self->find(path); })
         .addFunction(
             "__eq",
             +[](const Named *self, const Named *other) -> bool { return self == other; })
@@ -666,7 +672,9 @@ void LuaUtilApi::load_base(Vm & vm)
                 return node;
             },
             +[](Node *node) { delete node; })
-        .addFunction("get_child", static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child))
+        .addFunction(
+            "get_child",
+            +[](Node *self, const std::string & name) -> Named * { return self->get_child(name); })
         .addFunction(
             "add_child",
             +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })

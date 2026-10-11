@@ -2,6 +2,7 @@
 #define __SIHD_CRYPTO_TLSCONTEXT_HPP__
 
 #include <expected>
+#include <memory>
 #include <string_view>
 
 #include <sihd/util/Error.hpp>
@@ -15,13 +16,13 @@ class Certificate;
 class TlsContext
 {
     public:
-        TlsContext();
-        ~TlsContext();
+        TlsContext() = default;
+        ~TlsContext() = default;
 
-        TlsContext(const TlsContext & other);
-        TlsContext & operator=(const TlsContext & other);
-        TlsContext(TlsContext && other) noexcept;
-        TlsContext & operator=(TlsContext && other) noexcept;
+        TlsContext(const TlsContext & other) = default;
+        TlsContext & operator=(const TlsContext & other) = default;
+        TlsContext(TlsContext && other) noexcept = default;
+        TlsContext & operator=(TlsContext && other) noexcept = default;
 
         operator bool() const { return _handle != nullptr; }
 
@@ -34,10 +35,12 @@ class TlsContext
 
         void clear();
 
-        void *native() const { return _handle; }
+        void *native() const { return _handle.get(); }
 
     private:
-        void *_handle;
+        // type-erased SSL_CTX: the deleter freeing it is bound at acquisition,
+        // keeping openssl types out of this header
+        std::shared_ptr<void> _handle;
 };
 
 } // namespace sihd::crypto

@@ -354,6 +354,7 @@ conditional_modules = {
 ###############################################################################
 
 cppcheck = {
+    "std": "c++23",
     "undefines": ["SIHD_LOGGING_OFF"],
 }
 

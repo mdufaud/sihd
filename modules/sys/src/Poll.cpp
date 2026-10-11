@@ -1,6 +1,9 @@
 // sterror errno
+#include <algorithm>
 #include <cerrno>
 #include <cstring>
+#include <numeric>
+#include <ranges>
 
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/os.hpp>
@@ -24,16 +27,24 @@ namespace
 
 int get_fd_index(const std::vector<struct pollfd> & lst_fds, int fd)
 {
-    if (fd < 0)
+    const auto it = std::ranges::find_if(lst_fds, [fd](const struct pollfd & entry) { return (int)entry.fd == fd; });
+    if (it == lst_fds.end())
         return -1;
-    size_t i = 0;
-    while (i < lst_fds.size())
-    {
-        if ((int)lst_fds[i].fd == fd)
-            return i;
-        ++i;
-    }
-    return -1;
+    return (int)(it - lst_fds.begin());
+}
+
+size_t count_fds_events(const std::vector<struct pollfd> & lst_fds, int mask)
+{
+#if defined(__cpp_lib_ranges_fold_left)
+    return std::ranges::fold_left(lst_fds, size_t {0}, [mask](size_t count, const struct pollfd & entry) {
+        return count + (entry.events & mask);
+    });
+#else
+    return std::accumulate(lst_fds.begin(),
+                           lst_fds.end(),
+                           size_t {0},
+                           [mask](size_t count, const struct pollfd & entry) { return count + (entry.events & mask); });
+#endif
 }
 
 int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
@@ -144,27 +155,13 @@ bool Poll::clear_fd(int fd)
 size_t Poll::read_fds_size() const
 {
     std::lock_guard lock(_fds_mutex);
-    size_t ret = 0;
-    size_t i = 0;
-    while (i < _lst_fds.size())
-    {
-        ret += 1 * (_lst_fds[i].events & (POLLIN | POLLPRI));
-        ++i;
-    }
-    return ret;
+    return count_fds_events(_lst_fds, POLLIN | POLLPRI);
 }
 
 size_t Poll::write_fds_size() const
 {
     std::lock_guard lock(_fds_mutex);
-    size_t ret = 0;
-    size_t i = 0;
-    while (i < _lst_fds.size())
-    {
-        ret += 1 * (_lst_fds[i].events & POLLOUT);
-        ++i;
-    }
-    return ret;
+    return count_fds_events(_lst_fds, POLLOUT);
 }
 
 bool Poll::set_read_fd(int fd)

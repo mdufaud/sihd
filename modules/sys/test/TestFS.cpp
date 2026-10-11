@@ -269,9 +269,9 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_EQ(fs::read_all(path).value_or(""), "bin");
 #endif
 
-    EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
+    EXPECT_FALSE(fs::read_all("/there/is/no/path.txt").has_value());
     EXPECT_FALSE(fs::write("/there/is/no/path.txt", "none").has_value());
-    EXPECT_EQ(fs::read_all("/there/is/no/path.txt"), std::nullopt);
+    EXPECT_FALSE(fs::read_all("/there/is/no/path.txt").has_value());
 }
 
 TEST_F(TestFS, test_fs_read_lines)
@@ -375,8 +375,8 @@ TEST_F(TestFS, test_fs_disk_space)
     EXPECT_LE(*free_bytes, *total_bytes);
     SIHD_LOG(debug, "disk: {} / {} bytes free", *free_bytes, *total_bytes);
 
-    EXPECT_EQ(fs::free_space("/nonexistent/zzz"), std::nullopt);
-    EXPECT_EQ(fs::total_space("/nonexistent/zzz"), std::nullopt);
+    EXPECT_FALSE(fs::free_space("/nonexistent/zzz").has_value());
+    EXPECT_FALSE(fs::total_space("/nonexistent/zzz").has_value());
 }
 
 TEST_F(TestFS, test_fs_mounts)

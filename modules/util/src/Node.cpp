@@ -1,5 +1,3 @@
-#include <algorithm>
-
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
@@ -36,7 +34,7 @@ void add_child_informations(const Node *node,
                             const std::string & indent)
 {
     s += fmt::format("{}{}", indent, name);
-    const Node *parent = child->cparent();
+    const Node *parent = child->parent();
     if (name != child->name())
         s += fmt::format("  => {}", child->full_name());
     else if (parent != node)
@@ -54,7 +52,7 @@ void add_children_informations(const Node *node, std::string & s, Node::TreeOpts
 {
     for (const std::string & name : node->children_keys())
     {
-        const Named *child = node->cget_child(name);
+        const Named *child = node->get_child(name);
         if (child != nullptr)
             add_child_informations(node, name, child, s, opts, indent);
     }
@@ -159,17 +157,6 @@ Node::ChildEntry *Node::_get_child_entry(const std::string & name) const
     return nullptr;
 }
 
-Named *Node::get_child(const std::string & name)
-{
-    return const_cast<Named *>(this->cget_child(name));
-}
-
-const Named *Node::cget_child(const std::string & name) const
-{
-    Node::ChildEntry *entry = this->_get_child_entry(name);
-    return entry != nullptr ? entry->obj : nullptr;
-}
-
 bool Node::remove_child(const Named *child)
 {
     return this->remove_child(child->name());
@@ -189,9 +176,7 @@ bool Node::_remove_child_entry(Node::ChildEntry *entry)
     {
         delete entry->obj;
     }
-    auto it = std::find(_children_keys.begin(), _children_keys.end(), entry->name);
-    if (it != _children_keys.end())
-        _children_keys.erase(it);
+    std::erase(_children_keys, entry->name);
     _children_map.erase(entry->name);
     delete entry;
     return true;
@@ -243,7 +228,7 @@ bool Node::add_link(const std::string & link, const std::string & path)
 
 bool Node::remove_link(const std::string & link)
 {
-    _link_keys.erase(std::find(_link_keys.begin(), _link_keys.end(), link));
+    std::erase(_link_keys, link);
     return _link_map.erase(link) > 0;
 }
 

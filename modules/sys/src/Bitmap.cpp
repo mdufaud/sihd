@@ -8,6 +8,7 @@
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/endian.hpp>
 
 #define BI_RGB 0
 #define BI_RLE4 1
@@ -399,11 +400,11 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
             {
                 uint32_t packed = 0;
                 if (bpp == 32)
-                    packed = row[x * 4] | (row[x * 4 + 1] << 8) | (row[x * 4 + 2] << 16) | (row[x * 4 + 3] << 24);
+                    packed = endian::read_le<uint32_t>(row + x * 4, sizeof(uint32_t));
                 else if (bpp == 24)
-                    packed = row[x * 3] | (row[x * 3 + 1] << 8) | (row[x * 3 + 2] << 16);
+                    packed = endian::read_le<uint32_t>(row + x * 3, 3);
                 else // bpp == 16
-                    packed = row[x * 2] | (row[x * 2 + 1] << 8);
+                    packed = endian::read_le<uint16_t>(row + x * 2, sizeof(uint16_t));
 
                 if (bitfields)
                 {

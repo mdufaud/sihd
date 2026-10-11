@@ -388,7 +388,7 @@ TEST_F(TestTlsTcp, tls_send_to_client_refused_while_partial_write_pending)
     ASSERT_EQ(server_handler.client_count(), 1u);
     wait_for([&] { return client.socket().tls_active(); });
 
-    const size_t payload_size = 2 * 1024 * 1024;
+    const size_t payload_size = 16 * 1024 * 1024;
     ArrChar payload(payload_size);
     payload.resize(payload_size);
     for (size_t i = 0; i < payload_size; ++i)
@@ -402,7 +402,7 @@ TEST_F(TestTlsTcp, tls_send_to_client_refused_while_partial_write_pending)
 
     ArrChar recv(payload_size);
     size_t received = 0;
-    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
     while (received < payload_size && std::chrono::steady_clock::now() < deadline)
     {
         if (!client.socket().tls_pending() && !client.poll(100))

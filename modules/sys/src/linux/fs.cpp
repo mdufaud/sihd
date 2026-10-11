@@ -275,7 +275,7 @@ std::string user_dirs_path(std::string_view key)
     const std::string config_dir = xdg_path("XDG_CONFIG_HOME", ".config");
     if (config_dir.empty())
         return "";
-    const std::optional<std::string> content = read_all(combine(config_dir, "user-dirs.dirs"));
+    const auto content = read_all(combine(config_dir, "user-dirs.dirs"));
     if (!content.has_value())
         return "";
     const std::string home = home_path();
@@ -349,12 +349,12 @@ bool is_executable(std::string_view path)
     return access(path.data(), X_OK) == 0;
 }
 
-std::optional<FileTimes> times(std::string_view path)
+std::expected<FileTimes, Error> times(std::string_view path)
 {
 #if defined(SIHD_FS_HAS_STATX)
     struct statx stx;
     if (::statx(AT_FDCWD, path.data(), 0, STATX_BASIC_STATS | STATX_BTIME, &stx) != 0)
-        return std::nullopt;
+        return std::unexpected(Error::from_errno("could not stat '{}'", path));
     FileTimes ret;
     if (stx.stx_mask & STATX_BTIME)
         ret.creation = statx_timestamp_to_ts(stx.stx_btime);
@@ -366,7 +366,7 @@ std::optional<FileTimes> times(std::string_view path)
 #else
     struct stat s;
     if (!do_stat(path.data(), &s))
-        return std::nullopt;
+        return std::unexpected(Error::from_errno("could not stat '{}'", path));
     FileTimes ret;
     ret.access = Timestamp(time::seconds(s.st_atime));
     ret.write = Timestamp(time::seconds(s.st_mtime));
@@ -379,10 +379,12 @@ Timestamp last_write(std::string_view path)
     return times(path).value_or(FileTimes()).write;
 }
 
-std::optional<size_t> file_size(std::string_view path)
+std::expected<size_t, Error> file_size(std::string_view path)
 {
     struct stat s;
-    return do_stat(path.data(), &s) ? s.st_size : std::optional<size_t> {};
+    if (!do_stat(path.data(), &s))
+        return std::unexpected(Error::from_errno("could not stat '{}'", path));
+    return s.st_size;
 }
 
 // directories
@@ -643,19 +645,19 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
 #endif
 }
 
-std::optional<uint64_t> free_space(std::string_view path)
+std::expected<uint64_t, Error> free_space(std::string_view path)
 {
     struct statvfs vfs;
     if (::statvfs(path.data(), &vfs) != 0)
-        return std::nullopt;
+        return std::unexpected(Error::from_errno("could not statfs '{}'", path));
     return (uint64_t)vfs.f_bavail * vfs.f_frsize;
 }
 
-std::optional<uint64_t> total_space(std::string_view path)
+std::expected<uint64_t, Error> total_space(std::string_view path)
 {
     struct statvfs vfs;
     if (::statvfs(path.data(), &vfs) != 0)
-        return std::nullopt;
+        return std::unexpected(Error::from_errno("could not statfs '{}'", path));
     return (uint64_t)vfs.f_blocks * vfs.f_frsize;
 }
 

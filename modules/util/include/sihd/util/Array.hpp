@@ -5,7 +5,8 @@
 #include <cstring>   // mem* str*
 #include <limits>    // numeric_limits
 #include <stdexcept> // out of range
-#include <utility>   // std::enable_if
+#include <type_traits>
+#include <utility> // std::enable_if
 
 #include <sihd/util/ArrayIterator.hpp>
 #include <sihd/util/IArray.hpp>
@@ -14,6 +15,7 @@
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/traits.hpp>
+#include <sihd/util/type.hpp>
 
 namespace sihd::util
 {
@@ -465,8 +467,11 @@ class Array: public IArray,
         /* class methods */
         /*********************************************************************/
 
-        T *data() { return _buf_ptr; }
-        const T *data() const { return _buf_ptr; }
+        template <class Self>
+        auto data(this Self && self) -> traits::const_prop_ptr<Self, T>
+        {
+            return self._buf_ptr;
+        }
 
         void set_buffer_ownership(bool active) { _has_ownership = active; }
 

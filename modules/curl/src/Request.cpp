@@ -181,6 +181,11 @@ struct ErrorResolver<CURLcode>
 namespace sihd::curl
 {
 
+struct SlistFree
+{
+        void operator()(curl_slist *list) const { curl_slist_free_all(list); }
+};
+
 struct Request::Impl
 {
         CURL *curl = nullptr;
@@ -188,7 +193,7 @@ struct Request::Impl
         // non-empty: construction failed and left the handle defunct
         std::string init_error;
 
-        curl_slist *header_list = nullptr;
+        std::unique_ptr<curl_slist, SlistFree> header_list;
         curl_mime *mime = nullptr;
 
         std::string url;
@@ -208,8 +213,6 @@ struct Request::Impl
 
         ~Impl()
         {
-            if (header_list != nullptr)
-                curl_slist_free_all(header_list);
             if (mime != nullptr)
                 curl_mime_free(mime);
             if (curl != nullptr)
@@ -354,9 +357,7 @@ bool Request::set_headers(const HeaderList & headers)
         }
         list = appended;
     }
-    if (_impl->header_list != nullptr)
-        curl_slist_free_all(_impl->header_list);
-    _impl->header_list = list;
+    _impl->header_list.reset(list);
     return set_opt(*_impl, CURLOPT_HTTPHEADER, list);
 }
 
@@ -574,13 +575,11 @@ long Request::new_connection_count() const
 
 std::vector<std::string> Request::cookie_list() const
 {
-    curl_slist *list = nullptr;
-    if (!get_info(_impl->curl, CURLINFO_COOKIELIST, list))
+    curl_slist *raw = nullptr;
+    if (!get_info(_impl->curl, CURLINFO_COOKIELIST, raw))
         return {};
-    std::vector<std::string> lines = slist_lines(list);
-    if (list != nullptr)
-        curl_slist_free_all(list);
-    return lines;
+    std::unique_ptr<curl_slist, SlistFree> list(raw);
+    return slist_lines(list.get());
 }
 
 std::expected<void, sihd::util::Error> Request::perform()
@@ -603,11 +602,7 @@ void Request::reset()
     if (_impl->curl == nullptr)
         return;
     curl_easy_reset(_impl->curl);
-    if (_impl->header_list != nullptr)
-    {
-        curl_slist_free_all(_impl->header_list);
-        _impl->header_list = nullptr;
-    }
+    _impl->header_list.reset();
     if (_impl->mime != nullptr)
     {
         curl_mime_free(_impl->mime);

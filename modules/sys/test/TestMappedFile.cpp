@@ -70,7 +70,7 @@ TEST_F(TestMappedFile, test_mappedfile_create)
         ASSERT_TRUE(read_only.open_read_only(path));
         EXPECT_TRUE(read_only.read_only());
         EXPECT_EQ(read_only.size(), size);
-        EXPECT_EQ(std::memcmp(read_only.cdata(), expected.data(), expected.size()), 0);
+        EXPECT_EQ(std::memcmp(read_only.data(), expected.data(), expected.size()), 0);
         EXPECT_TRUE(read_only.clear());
         // clear is idempotent
         EXPECT_TRUE(read_only.clear());

@@ -2,13 +2,13 @@
 #define __SIHD_UTIL_THREADPOOL_HPP__
 
 #include <atomic>
-#include <functional>
 #include <future>
 #include <string>
 #include <string_view>
 #include <thread>
 #include <vector>
 
+#include <sihd/util/MoveOnlyFunction.hpp>
 #include <sihd/util/SafeQueue.hpp>
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -21,7 +21,7 @@ namespace sihd::util
 class ThreadPool
 {
     public:
-        using Job = std::function<void()>;
+        using Job = MoveOnlyFunction<void()>;
 
         template <typename Function, typename... Args>
         using CallableReturnType = typename std::invoke_result_t<Function, Args...>;
@@ -61,9 +61,10 @@ class ThreadPool
             // wrap a callable target with std::packaged_task
             using PackagedTask = std::packaged_task<CallableReturnType<Function>()>;
 
-            auto packed_task = std::make_shared<PackagedTask>(std::forward<Function>(function));
-            _jobs.push([packed_task] { (*packed_task)(); });
-            return packed_task->get_future();
+            auto packed_task = std::make_unique<PackagedTask>(std::forward<Function>(function));
+            std::future<CallableReturnType<Function>> future = packed_task->get_future();
+            _jobs.push([packed_task = std::move(packed_task)] { (*packed_task)(); });
+            return future;
         }
 
         template <typename Function>

@@ -247,30 +247,24 @@ std::optional<RawContent> fetch_format(UINT format, const std::string & mime_str
         HANDLE object = GetClipboardData(CF_UNICODETEXT);
         if (object == nullptr)
             return std::nullopt;
-        auto text = utf8_from_unicode_text(object);
-        if (!text.has_value())
-            return std::nullopt;
-        return RawContent {mime_str, to_bytes(*text)};
+        return utf8_from_unicode_text(object).transform(
+            [&mime_str](std::string && text) { return RawContent {mime_str, to_bytes(text)}; });
     }
     if (format == CF_DIB)
     {
         HANDLE object = GetClipboardData(CF_DIB);
         if (object == nullptr)
             return std::nullopt;
-        auto bmp = bmp_file_from_dib(object);
-        if (!bmp.has_value())
-            return std::nullopt;
-        return RawContent {mime_str, std::move(*bmp)};
+        return bmp_file_from_dib(object).transform(
+            [&mime_str](ArrByte && bmp) { return RawContent {mime_str, std::move(bmp)}; });
     }
     if (format == CF_HDROP)
     {
         HANDLE object = GetClipboardData(CF_HDROP);
         if (object == nullptr)
             return std::nullopt;
-        auto uri_list_data = uri_list_from_hdrop(object);
-        if (!uri_list_data.has_value())
-            return std::nullopt;
-        return RawContent {mime_str, to_bytes(*uri_list_data)};
+        return uri_list_from_hdrop(object).transform(
+            [&mime_str](std::string && uri_list) { return RawContent {mime_str, to_bytes(uri_list)}; });
     }
     return bytes_from_format(format).and_then(
         [&mime_str](ArrByte && bytes) { return std::optional(RawContent {mime_str, std::move(bytes)}); });
@@ -529,10 +523,8 @@ bool set_raw(const std::vector<RawContentView> & contents)
             continue;
         }
         // Several mime types can map to one format: set it once.
-        const auto already_there = [format](const std::pair<UINT, HANDLE> & item) {
-            return item.first == format;
-        };
-        if (std::find_if(to_set.begin(), to_set.end(), already_there) != to_set.end())
+        if (std::ranges::any_of(to_set,
+                                [format](const std::pair<UINT, HANDLE> & item) { return item.first == format; }))
         {
             GlobalFree(object);
             continue;

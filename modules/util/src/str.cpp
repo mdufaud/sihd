@@ -13,6 +13,7 @@
 #include <iterator>
 #include <locale>
 #include <random>
+#include <ranges>
 #include <regex>
 #include <sstream>
 
@@ -1019,40 +1020,41 @@ std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols)
     std::string line;
     const unsigned char *bytes = (const unsigned char *)mem;
 
-    size_t i = 0;
-    while (i < size + suppl)
+#if defined(__cpp_lib_ranges_chunk)
+    for (const auto chunk : std::views::iota(size_t {0}, size + suppl) | std::views::chunk(cols))
     {
-        if ((i % cols) == 0)
+        const size_t i_begin = chunk.front();
+#else
+    for (size_t i_begin = 0; i_begin < size + suppl; i_begin += cols)
+    {
+#endif
+        fmt::format_to(std::back_inserter(line), "0x{:x}:", i_begin);
+        line.append(max_addr_size - num::size(i_begin, 16), ' ');
+        for (size_t i = i_begin; i < i_begin + cols; ++i)
         {
-            fmt::format_to(std::back_inserter(line), "0x{:x}:", i);
-            line.append(max_addr_size - num::size(i, 16), ' ');
-        }
-        if (i < size)
-        {
-            line += num_to_char(bytes[i] / 16);
-            line += num_to_char(bytes[i] % 16);
-            line += ' ';
-        }
-        else
-        {
-            line += "   ";
-        }
-        if ((i % cols) == cols - 1)
-        {
-            line += "  ";
-            for (size_t begin = i - (cols - 1); begin <= i; ++begin)
+            if (i < size)
             {
-                if (begin >= size)
-                    line += ' ';
-                else if (std::isprint(bytes[begin]))
-                    line += (char)bytes[begin];
-                else
-                    line += '.';
+                line += num_to_char(bytes[i] / 16);
+                line += num_to_char(bytes[i] % 16);
+                line += ' ';
             }
-            ret.emplace_back(std::move(line));
-            line.clear();
+            else
+            {
+                line += "   ";
+            }
         }
-        ++i;
+        line += "  ";
+        for (size_t begin = i_begin; begin < i_begin + cols; ++begin)
+        {
+            if (begin >= size)
+                line += ' ';
+            else if (std::isprint(bytes[begin]))
+                line += (char)bytes[begin];
+            else
+                line += '.';
+        }
+        ret.emplace_back(std::move(line));
+        line.clear();
     }
     return ret;
 }
@@ -1417,87 +1419,50 @@ int stopping_enclose_index(std::string_view view, int index, const char *authori
 
 std::string remove_escape_char(std::string_view str, int escape)
 {
-    const size_t len = str.size();
-    size_t count_escapes = 0;
-    size_t i = 0;
-    size_t j = 0;
     std::string ret;
-
-    while (i < len)
-    {
-        if (str[i] == escape)
+    ret.resize_and_overwrite(str.size(), [&](char *buf, size_t) {
+        size_t j = 0;
+        for (size_t i = 0; i < str.size(); ++i)
         {
-            ++count_escapes;
-            ++i;
-        }
-        ++i;
-    }
-    ret.resize(len - count_escapes);
-    i = 0;
-    while (i < len)
-    {
-        if (str[i] == escape)
-            ++i;
-        if (i < len)
-        {
-            ret[j] = str[i];
-            ++i;
+            if (str[i] == escape)
+                ++i;
+            if (i >= str.size())
+                break;
+            buf[j] = str[i];
             ++j;
         }
-    }
+        return j;
+    });
     return ret;
 }
 
 std::string remove_enclosing(std::string_view str, const char *authorized_start_enclose, int escape)
 {
-    const size_t len = str.size();
-    size_t count_sequences = 0;
-    size_t j = 0;
-    size_t i = 0;
-    bool in_seq = false;
-    int current_seq;
     std::string ret;
-
-    while (i < len)
-    {
-        if (!in_seq && is_char_enclose_start(str[i], authorized_start_enclose)
-            && is_escaped_char(str.data(), i, escape) == false)
+    ret.resize_and_overwrite(str.size(), [&](char *buf, size_t) {
+        size_t j = 0;
+        bool in_seq = false;
+        int current_seq = 0;
+        for (size_t i = 0; i < str.size(); ++i)
         {
-            current_seq = stopping_enclose_of(str[i]);
-            ++count_sequences;
-            in_seq = true;
+            if (!in_seq && is_char_enclose_start(str[i], authorized_start_enclose)
+                && is_escaped_char(str.data(), i, escape) == false)
+            {
+                current_seq = stopping_enclose_of(str[i]);
+                in_seq = true;
+            }
+            else if (in_seq && str[i] == current_seq)
+            {
+                in_seq = false;
+            }
+            else
+            {
+                buf[j] = str[i];
+                ++j;
+            }
         }
-        else if (in_seq && str[i] == current_seq)
-        {
-            ++count_sequences;
-            in_seq = false;
-        }
-        ++i;
-    }
-    ret.resize(len - count_sequences);
-    i = 0;
-    in_seq = false;
-    while (i < len)
-    {
-        if (!in_seq && is_char_enclose_start(str[i], authorized_start_enclose)
-            && is_escaped_char(str.data(), i, escape) == false)
-        {
-            current_seq = stopping_enclose_of(str[i]);
-            ++i;
-            in_seq = true;
-        }
-        else if (in_seq && str[i] == current_seq)
-        {
-            ++i;
-            in_seq = false;
-        }
-        else
-        {
-            ret[j] = str[i];
-            ++j;
-            ++i;
-        }
-    }
+        return j;
+    });
     return ret;
 }
 

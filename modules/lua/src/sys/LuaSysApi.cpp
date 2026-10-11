@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <future>
+#include <optional>
 
 // clang-format off
 #include <sihd/lua/LuaGil.hpp>
@@ -483,7 +484,14 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction("exists", &fs::exists)
         .addFunction("is_file", &fs::is_file)
         .addFunction("is_dir", &fs::is_dir)
-        .addFunction("file_size", &fs::file_size)
+        .addFunction(
+            "file_size",
+            +[](const char *path) -> std::optional<size_t> {
+                std::optional<size_t> ret;
+                if (auto size = fs::file_size(path))
+                    ret = *size;
+                return ret;
+            })
         // the lua bool boundary swallows the Error: log it once here
         .addFunction(
             "remove_directory",

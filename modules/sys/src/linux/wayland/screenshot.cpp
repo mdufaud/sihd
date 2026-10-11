@@ -48,7 +48,7 @@ SIHD_NEW_LOGGER("sihd::sys::screenshot");
 namespace
 {
 
-constexpr Duration capture_timeout = time::sec(2);
+constexpr Duration capture_timeout = Duration(time::sec(2));
 
 // Event loops
 

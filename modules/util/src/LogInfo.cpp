@@ -1,6 +1,3 @@
-#include <array>
-#include <map>
-
 #include <fmt/core.h>
 
 #include <sihd/util/LogInfo.hpp>
@@ -74,18 +71,23 @@ const char *LogInfo::level_str(LogLevel level)
 
 LogLevel LogInfo::level_from_str(std::string_view level)
 {
-    static std::map<std::string_view, LogLevel> log_to_str = {{"EMERGENCY", LogLevel::emergency},
-                                                              {"ALERT", LogLevel::alert},
-                                                              {"CRITICAL", LogLevel::critical},
-                                                              {"ERROR", LogLevel::error},
-                                                              {"WARNING", LogLevel::warning},
-                                                              {"NOTICE", LogLevel::notice},
-                                                              {"INFO", LogLevel::info},
-                                                              {"DEBUG", LogLevel::debug}};
-    auto it = log_to_str.find(level);
-    if (it == log_to_str.end())
-        return LogLevel::none;
-    return it->second;
+    if (level == "EMERGENCY")
+        return LogLevel::emergency;
+    if (level == "ALERT")
+        return LogLevel::alert;
+    if (level == "CRITICAL")
+        return LogLevel::critical;
+    if (level == "ERROR")
+        return LogLevel::error;
+    if (level == "WARNING")
+        return LogLevel::warning;
+    if (level == "NOTICE")
+        return LogLevel::notice;
+    if (level == "INFO")
+        return LogLevel::info;
+    if (level == "DEBUG")
+        return LogLevel::debug;
+    return LogLevel::none;
 }
 
 } // namespace sihd::util

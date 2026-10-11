@@ -3,7 +3,6 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <cerrno>
 #include <cstring>
 #include <functional>
@@ -23,6 +22,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "../internal/deadline.hpp"
+#include "../internal/mime_fetch.hpp"
 #include "protocols/ext-data-control-v1-client-protocol.h"
 #include "protocols/wlr-data-control-unstable-v1-client-protocol.h"
 
@@ -340,31 +340,6 @@ void serve_source_request(SelectionState & state, const char *mime_type, int32_t
     state.served = state.served || ok;
 }
 
-// Mimes to fetch, in fetch order: every offered one when nothing is wanted,
-// else the wanted mimes the offer advertises.
-std::vector<std::string> mimes_to_fetch(const std::vector<std::string> & offered,
-                                        const std::vector<std::string_view> & wanted_mimes)
-{
-    if (wanted_mimes.empty())
-        return offered;
-
-    std::vector<std::string> fetch_list;
-    for (std::string_view mime_str : wanted_mimes)
-    {
-        // Request only mimes the offer advertises.
-        if (auto offered_mime = mime::match_offered(offered, mime_str); offered_mime.has_value())
-        {
-            if (std::find(fetch_list.begin(), fetch_list.end(), *offered_mime) == fetch_list.end())
-                fetch_list.emplace_back(*offered_mime);
-        }
-    }
-    if (fetch_list.empty())
-    {
-        SIHD_LOG(debug, "wayland: none of the wanted mime types is offered (offered: {})", fmt::join(offered, ", "));
-    }
-    return fetch_list;
-}
-
 // Receives the offered data through a pipe: Derived::receive writes the offer
 // fd to the compositor, the mime must be one of the mimes the offer advertises.
 template <typename Derived, typename Offer>
@@ -429,12 +404,18 @@ class DataControl
             auto *offer = reinterpret_cast<typename Derived::Offer *>(_state.selection_offer);
             Defer destroy_offer([&] { Derived::destroy_offer(offer); });
 
+            const auto fetch_list = internal::mimes_to_fetch(found->second, wanted_mimes);
+            if (wanted_mimes.empty() == false && fetch_list.empty())
+                SIHD_LOG(debug,
+                         "wayland: none of the wanted mime types is offered (offered: {})",
+                         fmt::join(found->second, ", "));
+
             std::vector<RawContent> contents;
-            for (const std::string & mime_str : mimes_to_fetch(found->second, wanted_mimes))
+            for (const auto & [offered_mime, label] : fetch_list)
             {
-                auto data = receive_offer_data<Derived>(_conn, deadline, offer, mime_str.c_str());
+                auto data = receive_offer_data<Derived>(_conn, deadline, offer, offered_mime.c_str());
                 if (data.has_value())
-                    contents.push_back(RawContent {mime_str, std::move(*data)});
+                    contents.push_back(RawContent {label, std::move(*data)});
             }
             return contents;
         }

@@ -332,7 +332,7 @@ std::string App::_read_conf()
 {
     if (_conf_path.empty())
         return "";
-    std::optional<std::string> content = fs::read_all(_conf_path);
+    auto content = fs::read_all(_conf_path);
     if (content.has_value() == false)
         throw std::runtime_error("cannot read conf file '" + _conf_path + "'");
     return *content;

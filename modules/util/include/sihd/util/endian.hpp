@@ -2,7 +2,9 @@
 #define __SIHD_UTIL_ENDIAN_HPP__
 
 #include <bit>
+#include <concepts>
 #include <cstdint>
+#include <cstring>
 #include <string>
 
 namespace sihd::util
@@ -25,21 +27,48 @@ std::string type_str(std::endian type);
 
 bool switch_buffer_endianness(void *buf, ByteSize size, size_t buf_size);
 
+template <typename T>
+concept SwappableEndian = std::integral<T> || std::same_as<T, float> || std::same_as<T, double>;
+
 // byte swap
 template <typename T>
-T swap(T value);
+    requires SwappableEndian<T>
+constexpr T swap(T value)
+{
+    if constexpr (std::integral<T>)
+        return std::byteswap(value);
+    else
+    {
+        using Uint = std::conditional_t<sizeof(T) == sizeof(uint32_t), uint32_t, uint64_t>;
+        return std::bit_cast<T>(std::byteswap(std::bit_cast<Uint>(value)));
+    }
+}
 
 /* Convert from little or big-endian order to host byte order */
 template <typename T, std::endian endian>
-T convert(T from);
+    requires SwappableEndian<T>
+constexpr T convert(T from)
+{
+    if constexpr (endian == std::endian::native)
+        return from;
+    else
+        return swap(from);
+}
 
 /* Convert from host byte order to little or big-endian order */
 template <typename T, std::endian endian>
-T convert_from(T value);
+    requires SwappableEndian<T>
+constexpr T convert_from(T value)
+{
+    if constexpr (endian == std::endian::native)
+        return value;
+    else
+        return swap(value);
+}
 
 /* Convert from little or big-endian order to host byte order */
 template <typename T>
-T convert(T value, std::endian endian)
+constexpr T convert(T value, std::endian endian)
 {
     if (endian == std::endian::little)
         return convert<T, std::endian::little>(value);
@@ -50,7 +79,7 @@ T convert(T value, std::endian endian)
 
 /* Convert from host byte order to little or big-endian order */
 template <typename T>
-T convert_from(T value, std::endian endian)
+constexpr T convert_from(T value, std::endian endian)
 {
     if (endian == std::endian::little)
         return convert_from<T, std::endian::little>(value);
@@ -59,85 +88,28 @@ T convert_from(T value, std::endian endian)
     return value;
 }
 
+/* Read 'size' little-endian bytes into T, zero-padded above */
+template <typename T>
+    requires SwappableEndian<T>
+T read_le(const uint8_t *data, size_t size)
+{
+    T value = 0;
+    std::memcpy(&value, data, size);
+    return convert<T, std::endian::little>(value);
+}
+
+/* Read 'size' big-endian bytes into T, zero-padded above */
+template <typename T>
+    requires SwappableEndian<T>
+T read_be(const uint8_t *data, size_t size)
+{
+    T value = 0;
+    std::memcpy(reinterpret_cast<uint8_t *>(&value) + (sizeof(T) - size), data, size);
+    return convert<T, std::endian::big>(value);
+}
+
 } // namespace endian
 
 } // namespace sihd::util
-
-template <>
-uint16_t sihd::util::endian::swap<uint16_t>(uint16_t ret);
-template <>
-int16_t sihd::util::endian::swap<int16_t>(int16_t ret);
-template <>
-uint32_t sihd::util::endian::swap<uint32_t>(uint32_t ret);
-template <>
-int32_t sihd::util::endian::swap<int32_t>(int32_t ret);
-template <>
-uint64_t sihd::util::endian::swap<uint64_t>(uint64_t ret);
-template <>
-int64_t sihd::util::endian::swap<int64_t>(int64_t ret);
-
-template <>
-float sihd::util::endian::swap<float>(float ret);
-
-template <>
-double sihd::util::endian::swap<double>(double ret);
-
-// convert from little or big-endian order to host byte order.
-
-template <>
-uint16_t sihd::util::endian::convert<uint16_t, std::endian::little>(uint16_t value);
-template <>
-uint16_t sihd::util::endian::convert<uint16_t, std::endian::big>(uint16_t value);
-template <>
-int16_t sihd::util::endian::convert<int16_t, std::endian::little>(int16_t value);
-template <>
-int16_t sihd::util::endian::convert<int16_t, std::endian::big>(int16_t value);
-
-template <>
-uint32_t sihd::util::endian::convert<uint32_t, std::endian::little>(uint32_t value);
-template <>
-uint32_t sihd::util::endian::convert<uint32_t, std::endian::big>(uint32_t value);
-template <>
-int32_t sihd::util::endian::convert<int32_t, std::endian::little>(int32_t value);
-template <>
-int32_t sihd::util::endian::convert<int32_t, std::endian::big>(int32_t value);
-
-template <>
-uint64_t sihd::util::endian::convert<uint64_t, std::endian::little>(uint64_t value);
-template <>
-uint64_t sihd::util::endian::convert<uint64_t, std::endian::big>(uint64_t value);
-template <>
-int64_t sihd::util::endian::convert<int64_t, std::endian::little>(int64_t value);
-template <>
-int64_t sihd::util::endian::convert<int64_t, std::endian::big>(int64_t value);
-
-// convert from host byte order to little or big-endian order
-
-template <>
-uint16_t sihd::util::endian::convert_from<uint16_t, std::endian::little>(uint16_t value);
-template <>
-uint16_t sihd::util::endian::convert_from<uint16_t, std::endian::big>(uint16_t value);
-template <>
-int16_t sihd::util::endian::convert_from<int16_t, std::endian::little>(int16_t value);
-template <>
-int16_t sihd::util::endian::convert_from<int16_t, std::endian::big>(int16_t value);
-
-template <>
-uint32_t sihd::util::endian::convert_from<uint32_t, std::endian::little>(uint32_t value);
-template <>
-uint32_t sihd::util::endian::convert_from<uint32_t, std::endian::big>(uint32_t value);
-template <>
-int32_t sihd::util::endian::convert_from<int32_t, std::endian::little>(int32_t value);
-template <>
-int32_t sihd::util::endian::convert_from<int32_t, std::endian::big>(int32_t value);
-
-template <>
-uint64_t sihd::util::endian::convert_from<uint64_t, std::endian::little>(uint64_t value);
-template <>
-uint64_t sihd::util::endian::convert_from<uint64_t, std::endian::big>(uint64_t value);
-template <>
-int64_t sihd::util::endian::convert_from<int64_t, std::endian::little>(int64_t value);
-template <>
-int64_t sihd::util::endian::convert_from<int64_t, std::endian::big>(int64_t value);
 
 #endif

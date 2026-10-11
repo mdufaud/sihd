@@ -1,5 +1,7 @@
 #include <pybind11/stl.h>
 
+#include <optional>
+
 #include <sihd/py/sys/PySysApi.hpp>
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
@@ -36,7 +38,13 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("exists", &fs::exists)
         .def("is_file", &fs::is_file)
         .def("is_dir", &fs::is_dir)
-        .def("file_size", &fs::file_size)
+        .def("file_size",
+             [](const std::string & path) -> std::optional<size_t> {
+                 std::optional<size_t> ret;
+                 if (auto size = fs::file_size(path))
+                     ret = *size;
+                 return ret;
+             })
         // the python bool boundary swallows the Error: log it once here
         .def("remove_directory",
              [](std::string_view path) {

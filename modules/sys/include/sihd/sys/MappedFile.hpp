@@ -6,10 +6,12 @@
 #include <expected>
 #include <string>
 #include <string_view>
+#include <type_traits>
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Error.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/traits.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
 # define mode_t unsigned int
@@ -42,9 +44,11 @@ class MappedFile
         std::expected<void, sihd::util::Error> clear();
         std::expected<void, sihd::util::Error> sync(bool async = false);
 
-        void *data() { return _addr; }
-
-        const void *cdata() const { return _addr; }
+        template <class Self>
+        auto data(this Self && self) -> sihd::util::traits::const_prop_ptr<Self, void>
+        {
+            return self._addr;
+        }
 
         int fd() const { return _fd; }
         size_t size() const { return _size; }

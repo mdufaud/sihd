@@ -12,6 +12,11 @@ using sihd::util::Url;
 
 SIHD_LOGGER;
 
+void Navigator::Impl::WsState::LwsContextFree::operator()(struct lws_context *context) const
+{
+    lws_context_destroy(context);
+}
+
 int Navigator::Impl::ws_lws_callback(struct lws *wsi,
                                      enum lws_callback_reasons reason,
                                      void *user,
@@ -189,7 +194,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
         ctx_info.http_proxy_address = ws_proxy_addr.c_str();
     // else: leave http_proxy_address null so lws uses the env proxy
 
-    ws.context = lws_create_context(&ctx_info);
+    ws.context.reset(lws_create_context(&ctx_info));
     if (ws.context == nullptr)
     {
         SIHD_LOG(error, "Navigator: failed to create lws context for WebSocket client");
@@ -198,7 +203,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
 
     struct lws_client_connect_info connect_info;
     memset(&connect_info, 0, sizeof(connect_info));
-    connect_info.context = ws.context;
+    connect_info.context = ws.context.get();
     connect_info.address = parsed.host.c_str();
     connect_info.port = parsed.port != 0 ? parsed.port : scheme_port(parsed.scheme);
     connect_info.path = parsed.path.c_str();
@@ -220,8 +225,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     if (ws.wsi == nullptr)
     {
         SIHD_LOG(error, "Navigator: failed to initiate WebSocket connection");
-        lws_context_destroy(ws.context);
-        ws.context = nullptr;
+        ws.context.reset();
         return false;
     }
 
@@ -231,7 +235,7 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     ws.worker.set_method([this] {
         while (!ws.stop_requested && ws.worker.is_worker_started())
         {
-            lws_service(ws.context, 0);
+            lws_service(ws.context.get(), 0);
             {
                 auto lock = ws.waitable.guard();
                 if (!ws.connected && ws.handshake_done)
@@ -254,14 +258,10 @@ void Navigator::Impl::ws_disconnect()
 {
     ws.stop_requested = true;
     if (ws.context != nullptr)
-        lws_cancel_service(ws.context);
+        lws_cancel_service(ws.context.get());
     ws.worker.stop_worker();
 
-    if (ws.context != nullptr)
-    {
-        lws_context_destroy(ws.context);
-        ws.context = nullptr;
-    }
+    ws.context.reset();
     ws.wsi = nullptr;
     ws.connected = false;
     ws.handshake_done = false;
@@ -280,7 +280,7 @@ bool Navigator::Impl::ws_queue_message(const void *data, size_t len, bool binary
     ws.send_queue.push(std::move(msg));
 
     lws_callback_on_writable(ws.wsi);
-    lws_cancel_service(ws.context);
+    lws_cancel_service(ws.context.get());
 
     return true;
 }

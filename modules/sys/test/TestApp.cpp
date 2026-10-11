@@ -143,7 +143,7 @@ TEST_F(TestApp, test_log_sinks_file_conf)
         ASSERT_EQ(run_app(app, {"--conf", conf_path, "emit"}), 0);
     }
 
-    const std::optional<std::string> content = fs::read_all(log_path);
+    const auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("KEPTMSG"), std::string::npos);
     EXPECT_EQ(content->find("DROPPEDMSG"), std::string::npos);
@@ -207,7 +207,7 @@ TEST_F(TestApp, test_golden_conf)
     }
     EXPECT_EQ(reloads, 1);
     EXPECT_EQ(signaled, 1);
-    std::optional<std::string> content = fs::read_all(log_path);
+    auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("GOLDENMSG"), std::string::npos);
     (void)fs::remove_file(log_path);
@@ -434,7 +434,7 @@ TEST_F(TestApp, test_log_file)
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
     }
-    std::optional<std::string> content = fs::read_all(log_path);
+    auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("FILEMSG"), std::string::npos);
     (void)fs::remove_file(path);
@@ -461,7 +461,7 @@ TEST_F(TestApp, test_log_file_level)
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
     }
-    std::optional<std::string> content = fs::read_all(log_path);
+    auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     // the level filter applies to the file logger
     EXPECT_NE(content->find("INFOMSG"), std::string::npos);
@@ -501,11 +501,11 @@ TEST_F(TestApp, test_log_file_reload)
         ASSERT_TRUE(app.reload());
         EXPECT_EQ(app.evaluate(std::vector<std::string> {"emit"}), 0);
     }
-    std::optional<std::string> first = fs::read_all(log_path1);
+    auto first = fs::read_all(log_path1);
     ASSERT_TRUE(first.has_value());
     EXPECT_NE(first->find("FIRSTMSG"), std::string::npos);
     EXPECT_EQ(first->find("SECONDMSG"), std::string::npos);
-    std::optional<std::string> second = fs::read_all(log_path2);
+    auto second = fs::read_all(log_path2);
     ASSERT_TRUE(second.has_value());
     EXPECT_NE(second->find("SECONDMSG"), std::string::npos);
     (void)fs::remove_file(path);
@@ -532,7 +532,7 @@ TEST_F(TestApp, test_log_console_opt_out)
         // the sinks conf replaces the default logger, the file logger stayed
         EXPECT_EQ(app.logger(), nullptr);
     }
-    std::optional<std::string> content = fs::read_all(log_path);
+    auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
     EXPECT_NE(content->find("NOCONSOLEMSG"), std::string::npos);
     (void)fs::remove_file(path);

@@ -31,13 +31,26 @@ namespace sihd::crypto
 namespace
 {
 
-X509 *as_cert(void *h)
+struct X509Free
 {
-    return static_cast<X509 *>(h);
-}
-EVP_PKEY *as_key(void *h)
+        void operator()(X509 *cert) const { X509_free(cert); }
+};
+struct X509ExtFree
 {
-    return static_cast<EVP_PKEY *>(h);
+        void operator()(X509_EXTENSION *ext) const { X509_EXTENSION_free(ext); }
+};
+struct BnFree
+{
+        void operator()(BIGNUM *bn) const { BN_free(bn); }
+};
+struct Asn1TimeFree
+{
+        void operator()(ASN1_TIME *time) const { ASN1_TIME_free(time); }
+};
+
+std::shared_ptr<void> make_handle(X509 *cert)
+{
+    return std::shared_ptr<void>(cert, X509Free {});
 }
 
 void add_name_entry(X509_NAME *name, const char *field, const std::string & value)
@@ -70,13 +83,12 @@ sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 {
     if (!time)
         return sihd::util::Timestamp(0);
-    ASN1_TIME *epoch = ASN1_TIME_set(nullptr, 0);
-    if (!epoch)
+    std::unique_ptr<ASN1_TIME, Asn1TimeFree> epoch(ASN1_TIME_set(nullptr, 0));
+    if (epoch == nullptr)
         return sihd::util::Timestamp(0);
     int days = 0;
     int secs = 0;
-    int ok = ASN1_TIME_diff(&days, &secs, epoch, time);
-    ASN1_TIME_free(epoch);
+    int ok = ASN1_TIME_diff(&days, &secs, epoch.get(), time);
     if (ok != 1)
         return sihd::util::Timestamp(0);
     int64_t total = static_cast<int64_t>(days) * 86400 + secs;
@@ -84,52 +96,6 @@ sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 }
 
 } // namespace
-
-Certificate::Certificate(): _handle(nullptr) {}
-
-Certificate::~Certificate()
-{
-    this->clear();
-}
-
-Certificate::Certificate(const Certificate & other): _handle(nullptr)
-{
-    if (other._handle)
-    {
-        X509_up_ref(as_cert(other._handle));
-        _handle = other._handle;
-    }
-}
-
-Certificate & Certificate::operator=(const Certificate & other)
-{
-    if (this != &other)
-    {
-        this->clear();
-        if (other._handle)
-        {
-            X509_up_ref(as_cert(other._handle));
-            _handle = other._handle;
-        }
-    }
-    return *this;
-}
-
-Certificate::Certificate(Certificate && other) noexcept: _handle(other._handle)
-{
-    other._handle = nullptr;
-}
-
-Certificate & Certificate::operator=(Certificate && other) noexcept
-{
-    if (this != &other)
-    {
-        this->clear();
-        _handle = other._handle;
-        other._handle = nullptr;
-    }
-    return *this;
-}
 
 std::expected<void, sihd::util::Error>
     Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
@@ -147,32 +113,31 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
     this->clear();
     if (!key)
         return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
-    X509 *cert = X509_new();
-    if (!cert)
+    std::unique_ptr<X509, X509Free> cert(X509_new());
+    if (cert == nullptr)
         return make_error("Certificate: X509_new");
 
-    X509_set_version(cert, 2); // X509 v3
+    X509_set_version(cert.get(), 2); // X509 v3
 
     if (opts.serial != 0)
     {
-        ASN1_INTEGER_set_uint64(X509_get_serialNumber(cert), opts.serial);
+        ASN1_INTEGER_set_uint64(X509_get_serialNumber(cert.get()), opts.serial);
     }
     else
     {
-        BIGNUM *bn = BN_new();
-        if (bn && BN_rand(bn, 64, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY) == 1)
-            BN_to_ASN1_INTEGER(bn, X509_get_serialNumber(cert));
+        std::unique_ptr<BIGNUM, BnFree> bn(BN_new());
+        if (bn && BN_rand(bn.get(), 64, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY) == 1)
+            BN_to_ASN1_INTEGER(bn.get(), X509_get_serialNumber(cert.get()));
         else
-            ASN1_INTEGER_set(X509_get_serialNumber(cert), 1);
-        BN_free(bn);
+            ASN1_INTEGER_set(X509_get_serialNumber(cert.get()), 1);
     }
 
-    X509_gmtime_adj(X509_getm_notBefore(cert), 0);
-    X509_gmtime_adj(X509_getm_notAfter(cert), 60L * 60 * 24 * opts.days);
+    X509_gmtime_adj(X509_getm_notBefore(cert.get()), 0);
+    X509_gmtime_adj(X509_getm_notAfter(cert.get()), 60L * 60 * 24 * opts.days);
 
-    X509_set_pubkey(cert, as_key(key.native()));
+    X509_set_pubkey(cert.get(), static_cast<EVP_PKEY *>(key.native()));
 
-    X509_NAME *name = X509_get_subject_name(cert);
+    X509_NAME *name = X509_get_subject_name(cert.get());
     add_name_entry(name, "CN", opts.common_name);
     add_name_entry(name, "O", opts.organization);
     add_name_entry(name, "OU", opts.organizational_unit);
@@ -180,53 +145,39 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
     add_name_entry(name, "ST", opts.state);
     add_name_entry(name, "L", opts.locality);
     add_name_entry(name, "emailAddress", opts.email);
-    X509_set_issuer_name(cert, name);
+    X509_set_issuer_name(cert.get(), name);
 
     if (!opts.subject_alt_names.empty())
     {
         std::string san = sihd::util::str::join(opts.subject_alt_names, ",");
-        X509_EXTENSION *ext = X509V3_EXT_conf_nid(nullptr,
-                                                  nullptr,
-                                                  NID_subject_alt_name,
-                                                  const_cast<char *>(san.c_str()));
-        if (ext)
+        std::unique_ptr<X509_EXTENSION, X509ExtFree> ext(
+            X509V3_EXT_conf_nid(nullptr, nullptr, NID_subject_alt_name, const_cast<char *>(san.c_str())));
+        if (ext == nullptr)
         {
-            if (X509_add_ext(cert, ext, -1) != 1)
-            {
-                X509_EXTENSION_free(ext);
-                X509_free(cert);
-                // add failure left the openssl queue dirty for the next make_error
-                ERR_clear_error();
-                return make_error("Certificate: could not add subject alt names");
-            }
-            X509_EXTENSION_free(ext);
-        }
-        else
-        {
-            X509_free(cert);
             // conf failure left the openssl queue dirty for the next make_error
             ERR_clear_error();
             return std::unexpected(Error(invalid_argument, "invalid subject alt names: {}", san));
+        }
+        if (X509_add_ext(cert.get(), ext.get(), -1) != 1)
+        {
+            // add failure left the openssl queue dirty for the next make_error
+            ERR_clear_error();
+            return make_error("Certificate: could not add subject alt names");
         }
     }
 
     if (opts.is_ca)
     {
-        X509_EXTENSION *ext = X509V3_EXT_conf_nid(nullptr,
-                                                  nullptr,
-                                                  NID_basic_constraints,
-                                                  const_cast<char *>("critical,CA:TRUE"));
+        std::unique_ptr<X509_EXTENSION, X509ExtFree> ext(
+            X509V3_EXT_conf_nid(nullptr, nullptr, NID_basic_constraints, const_cast<char *>("critical,CA:TRUE")));
         if (ext)
         {
-            if (X509_add_ext(cert, ext, -1) != 1)
+            if (X509_add_ext(cert.get(), ext.get(), -1) != 1)
             {
-                X509_EXTENSION_free(ext);
-                X509_free(cert);
                 // add failure left the openssl queue dirty for the next make_error
                 ERR_clear_error();
                 return make_error("Certificate: could not add basic constraints");
             }
-            X509_EXTENSION_free(ext);
         }
         else
         {
@@ -235,12 +186,9 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
         }
     }
 
-    if (X509_sign(cert, as_key(key.native()), EVP_sha256()) <= 0)
-    {
-        X509_free(cert);
+    if (X509_sign(cert.get(), static_cast<EVP_PKEY *>(key.native()), EVP_sha256()) <= 0)
         return make_error("Certificate: X509_sign");
-    }
-    _handle = cert;
+    _handle = make_handle(cert.release());
     return {};
 }
 
@@ -251,11 +199,11 @@ std::expected<void, sihd::util::Error> Certificate::load_pem(std::string_view pa
     FILE *fp = fopen(std::string(path).c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
-    X509 *cert = PEM_read_X509(fp, nullptr, nullptr, nullptr);
+    std::unique_ptr<X509, X509Free> cert(PEM_read_X509(fp, nullptr, nullptr, nullptr));
     fclose(fp);
-    if (!cert)
+    if (cert == nullptr)
         return make_error("Certificate: read PEM from '{}'", path);
-    _handle = cert;
+    _handle = make_handle(cert.release());
     return {};
 }
 
@@ -267,7 +215,7 @@ std::expected<void, sihd::util::Error> Certificate::save_pem(std::string_view pa
     FILE *fp = fopen(std::string(path).c_str(), "w");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
-    const bool ok = PEM_write_X509(fp, as_cert(_handle)) > 0;
+    const bool ok = PEM_write_X509(fp, static_cast<X509 *>(_handle.get())) > 0;
     fclose(fp);
     if (!ok)
         return make_error("Certificate: write PEM to '{}'", path);
@@ -279,10 +227,10 @@ std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data
     ERR_clear_error();
     this->clear();
     const unsigned char *p = data;
-    X509 *cert = d2i_X509(nullptr, &p, static_cast<long>(len));
-    if (!cert)
+    std::unique_ptr<X509, X509Free> cert(d2i_X509(nullptr, &p, static_cast<long>(len)));
+    if (cert == nullptr)
         return make_error("Certificate: read DER data");
-    _handle = cert;
+    _handle = make_handle(cert.release());
     return {};
 }
 
@@ -293,11 +241,11 @@ std::expected<void, sihd::util::Error> Certificate::load_pem_string(std::string_
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
         return make_error("Certificate: BIO_new_mem_buf");
-    X509 *cert = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
+    std::unique_ptr<X509, X509Free> cert(PEM_read_bio_X509(bio, nullptr, nullptr, nullptr));
     BIO_free(bio);
-    if (!cert)
+    if (cert == nullptr)
         return make_error("Certificate: read PEM from string");
-    _handle = cert;
+    _handle = make_handle(cert.release());
     return {};
 }
 
@@ -308,7 +256,7 @@ std::string Certificate::to_pem_string() const
     BIO *bio = BIO_new(BIO_s_mem());
     if (!bio)
         return {};
-    if (PEM_write_bio_X509(bio, as_cert(_handle)) <= 0)
+    if (PEM_write_bio_X509(bio, static_cast<X509 *>(_handle.get())) <= 0)
     {
         BIO_free(bio);
         return {};
@@ -324,24 +272,24 @@ bool Certificate::verify(const Certificate & ca) const
 {
     if (!_handle || !ca._handle)
         return false;
-    EVP_PKEY *ca_key = X509_get0_pubkey(as_cert(ca._handle));
+    EVP_PKEY *ca_key = X509_get0_pubkey(static_cast<X509 *>(ca._handle.get()));
     if (!ca_key)
         return false;
-    return X509_verify(as_cert(_handle), ca_key) == 1;
+    return X509_verify(static_cast<X509 *>(_handle.get()), ca_key) == 1;
 }
 
 std::string Certificate::subject_common_name() const
 {
     if (!_handle)
         return {};
-    return name_common_name(X509_get_subject_name(as_cert(_handle)));
+    return name_common_name(X509_get_subject_name(static_cast<X509 *>(_handle.get())));
 }
 
 std::string Certificate::issuer_common_name() const
 {
     if (!_handle)
         return {};
-    return name_common_name(X509_get_issuer_name(as_cert(_handle)));
+    return name_common_name(X509_get_issuer_name(static_cast<X509 *>(_handle.get())));
 }
 
 std::vector<std::string> Certificate::subject_alt_names() const
@@ -350,7 +298,7 @@ std::vector<std::string> Certificate::subject_alt_names() const
     if (!_handle)
         return result;
     auto *names = static_cast<GENERAL_NAMES *>(
-        X509_get_ext_d2i(as_cert(_handle), NID_subject_alt_name, nullptr, nullptr));
+        X509_get_ext_d2i(static_cast<X509 *>(_handle.get()), NID_subject_alt_name, nullptr, nullptr));
     if (!names)
         return result;
     int count = sk_GENERAL_NAME_num(names);
@@ -389,21 +337,21 @@ sihd::util::Timestamp Certificate::not_before() const
 {
     if (!_handle)
         return sihd::util::Timestamp(0);
-    return asn1_time_to_timestamp(X509_get0_notBefore(as_cert(_handle)));
+    return asn1_time_to_timestamp(X509_get0_notBefore(static_cast<X509 *>(_handle.get())));
 }
 
 sihd::util::Timestamp Certificate::not_after() const
 {
     if (!_handle)
         return sihd::util::Timestamp(0);
-    return asn1_time_to_timestamp(X509_get0_notAfter(as_cert(_handle)));
+    return asn1_time_to_timestamp(X509_get0_notAfter(static_cast<X509 *>(_handle.get())));
 }
 
 std::string Certificate::serial_hex() const
 {
     if (!_handle)
         return {};
-    ASN1_INTEGER *serial = X509_get_serialNumber(as_cert(_handle));
+    ASN1_INTEGER *serial = X509_get_serialNumber(static_cast<X509 *>(_handle.get()));
     if (!serial)
         return {};
     BIGNUM *bn = ASN1_INTEGER_to_BN(serial, nullptr);
@@ -420,16 +368,12 @@ bool Certificate::is_ca() const
 {
     if (!_handle)
         return false;
-    return X509_check_ca(as_cert(_handle)) > 0;
+    return X509_check_ca(static_cast<X509 *>(_handle.get())) > 0;
 }
 
 void Certificate::clear()
 {
-    if (_handle)
-    {
-        X509_free(as_cert(_handle));
-        _handle = nullptr;
-    }
+    _handle.reset();
 }
 
 } // namespace sihd::crypto

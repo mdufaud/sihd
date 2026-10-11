@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -34,13 +35,13 @@ struct CertOptions
 class Certificate
 {
     public:
-        Certificate();
-        ~Certificate();
+        Certificate() = default;
+        ~Certificate() = default;
 
-        Certificate(const Certificate & other);
-        Certificate & operator=(const Certificate & other);
-        Certificate(Certificate && other) noexcept;
-        Certificate & operator=(Certificate && other) noexcept;
+        Certificate(const Certificate & other) = default;
+        Certificate & operator=(const Certificate & other) = default;
+        Certificate(Certificate && other) noexcept = default;
+        Certificate & operator=(Certificate && other) noexcept = default;
 
         operator bool() const { return _handle != nullptr; }
 
@@ -67,10 +68,12 @@ class Certificate
 
         void clear();
 
-        void *native() const { return _handle; }
+        void *native() const { return _handle.get(); }
 
     private:
-        void *_handle;
+        // type-erased X509: the deleter freeing it is bound at acquisition,
+        // keeping openssl types out of this header
+        std::shared_ptr<void> _handle;
 };
 
 } // namespace sihd::crypto

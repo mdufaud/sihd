@@ -44,15 +44,13 @@ class Observable: public IObservable<T>
                 _remove_current_observer = true;
                 return;
             }
-            auto it = std::find(_observers.begin(), _observers.end(), obs);
-            if (it != _observers.end())
-                _observers.erase(it);
+            std::erase(_observers, obs);
         }
 
         bool is_observer(IHandler<T *> *obs) const
         {
             std::lock_guard l(_mutex);
-            return std::find(_observers.cbegin(), _observers.cend(), obs) != _observers.cend();
+            return std::ranges::contains(_observers, obs);
         }
 
         size_t observers_count() const

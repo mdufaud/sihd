@@ -58,7 +58,7 @@ bool DevSampler::is_running() const
 void DevSampler::handle(sihd::core::Channel *channel)
 {
     std::lock_guard l(_set_mutex);
-    if (_channels_map.find(channel) != _channels_map.end())
+    if (_channels_map.contains(channel))
     {
         _channels_sample_set.emplace(channel);
     }

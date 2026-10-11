@@ -1,13 +1,16 @@
 #ifndef __SIHD_UTIL_NODE_HPP__
 #define __SIHD_UTIL_NODE_HPP__
 
+#include <array>
 #include <exception>
 #include <expected>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
 #include <sihd/util/Error.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util
 {
@@ -73,15 +76,21 @@ class Node: public Named
         bool set_child_ownership(const std::string & name, bool ownership);
         bool set_child_ownership(const Named *child, bool ownership);
 
-        template <class ChildType>
-        ChildType *get_child(const std::string & name)
+        template <class Self>
+        auto get_child(this Self && self, const std::string & name) -> traits::const_prop_ptr<Self, Named>
         {
-            Named *obj = this->get_child(name);
-            if (obj != nullptr)
-                return dynamic_cast<ChildType *>(obj);
-            return nullptr;
+            const ChildEntry *entry = self._get_child_entry(name);
+            if (entry == nullptr)
+                return nullptr;
+            return entry->obj;
         }
-        Named *get_child(const std::string & name);
+
+        template <class ChildType, class Self>
+        auto get_child(this Self && self, const std::string & name) -> traits::const_prop_ptr<Self, ChildType>
+        {
+            using Ret = traits::const_prop_ptr<Self, ChildType>;
+            return dynamic_cast<Ret>(self.get_child(name));
+        }
 
         template <class ChildType = Named, typename... Keys>
         std::array<ChildType *, sizeof...(Keys)> get_all_child(const Keys &...args)
@@ -91,32 +100,6 @@ class Node: public Named
             int i = 0;
             const auto finder = [&array, &i, this](const auto & arg) {
                 array[i] = this->get_child<ChildType>(arg);
-                ++i;
-            };
-
-            (finder(args), ...);
-
-            return array;
-        }
-
-        template <class ChildType>
-        const ChildType *cget_child(const std::string & name) const
-        {
-            const Named *obj = this->cget_child(name);
-            if (obj != nullptr)
-                return dynamic_cast<const ChildType *>(obj);
-            return nullptr;
-        }
-        const Named *cget_child(const std::string & name) const;
-
-        template <class ChildType = Named, typename... Keys>
-        std::array<const ChildType *, sizeof...(Keys)> cget_all_child(const Keys &...args) const
-        {
-            std::array<const ChildType *, sizeof...(Keys)> array;
-
-            int i = 0;
-            const auto finder = [&array, &i, this](const auto & arg) {
-                array[i] = this->cget_child<ChildType>(arg);
                 ++i;
             };
 

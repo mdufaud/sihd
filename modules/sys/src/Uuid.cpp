@@ -1,3 +1,6 @@
+#include <bit>
+#include <cstring>
+
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
@@ -79,21 +82,14 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
     data.reserve(16 + name.size());
 
 #if defined(__SIHD_WINDOWS__)
-    // Convert namespace (GUID) to big-endian order
-    unsigned char *namespace_uuid_ptr = (unsigned char *)(&uuid_namespace._impl->uuid);
-    // Windows Data1 (4 bytes) - swapped
-    data.push_back(namespace_uuid_ptr[3]);
-    data.push_back(namespace_uuid_ptr[2]);
-    data.push_back(namespace_uuid_ptr[1]);
-    data.push_back(namespace_uuid_ptr[0]);
-    // Windows Data2 (2 bytes) - swapped
-    data.push_back(namespace_uuid_ptr[5]);
-    data.push_back(namespace_uuid_ptr[4]);
-    // Windows Data3 (2 bytes) - swapped
-    data.push_back(namespace_uuid_ptr[7]);
-    data.push_back(namespace_uuid_ptr[6]);
-    // Windows Data4 (8 bytes) - Already a byte array, no swap needed
-    data.insert(data.end(), &namespace_uuid_ptr[8], &namespace_uuid_ptr[16]);
+    // GUID fields are little-endian: byteswap each one, the memory then holds network order
+    GUID le;
+    std::memcpy(&le, &uuid_namespace._impl->uuid, sizeof(le));
+    le.Data1 = std::byteswap(le.Data1);
+    le.Data2 = std::byteswap(le.Data2);
+    le.Data3 = std::byteswap(le.Data3);
+    const auto *bytes = reinterpret_cast<const unsigned char *>(&le);
+    data.insert(data.end(), bytes, bytes + sizeof(le));
 #else
     // UUID already in network byte order
     data.insert(data.end(),
@@ -115,10 +111,11 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
     // Write the result into the uuid structure
 #if defined(__SIHD_WINDOWS__)
     GUID *guid_ptr = (GUID *)(&_impl->uuid);
-    guid_ptr->Data1 = (hash[0] << 24) | (hash[1] << 16) | (hash[2] << 8) | hash[3];
-    guid_ptr->Data2 = (hash[4] << 8) | hash[5];
-    guid_ptr->Data3 = (hash[6] << 8) | hash[7];
-    memcpy(guid_ptr->Data4, &hash[8], 8);
+    // hash is in network order: the fields load little-endian, byteswap them back
+    std::memcpy(guid_ptr, hash, 16);
+    guid_ptr->Data1 = std::byteswap(guid_ptr->Data1);
+    guid_ptr->Data2 = std::byteswap(guid_ptr->Data2);
+    guid_ptr->Data3 = std::byteswap(guid_ptr->Data3);
 #else
     memcpy(_impl->uuid, hash, 16);
 #endif

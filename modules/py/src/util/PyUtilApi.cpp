@@ -217,16 +217,23 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def_property_readonly(
             "c_ptr",
             +[](const Named *self) -> int64_t { return (int64_t)self; })
-        .def("parent",
-             static_cast<Node *(Named::*)()>(&Named::parent),
-             pybind11::return_value_policy::reference_internal)
+        .def(
+            "parent",
+            +[](Named *self) -> Node * { return self->parent(); },
+            pybind11::return_value_policy::reference_internal)
         .def("name", &Named::name)
         .def("full_name", &Named::full_name)
         .def("class_name", &Named::class_name)
         .def("description", &Named::description)
         .def("full_name", &Named::full_name)
-        .def("root", &Named::root, pybind11::return_value_policy::reference_internal)
-        .def("find", static_cast<Named *(Named::*)(const std::string &)>(&Named::find));
+        .def(
+            "root",
+            +[](Named *self) -> Node * { return self->root(); },
+            pybind11::return_value_policy::reference_internal)
+        .def(
+            "find",
+            +[](Named *self, const std::string & path) -> Named * { return self->find(path); },
+            pybind11::return_value_policy::reference_internal);
 
     pybind11::class_<Node::ChildEntry>(m_util, "ChildEntry")
         .def_readonly("name", &Node::ChildEntry::name)
@@ -243,9 +250,10 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
              }),
              pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("get_child",
-             static_cast<Named *(Node::*)(const std::string &)>(&Node::get_child),
-             pybind11::return_value_policy::reference_internal)
+        .def(
+            "get_child",
+            +[](Node *self, const std::string & name) -> Named * { return self->get_child(name); },
+            pybind11::return_value_policy::reference_internal)
         .def(
             "add_child",
             +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })

@@ -2,7 +2,9 @@
 #define __SIHD_UTIL_CONTAINER_HPP__
 
 #include <algorithm>
+#include <iterator>
 #include <numeric>
+#include <ranges>
 #include <tuple>
 #include <vector>
 
@@ -57,19 +59,19 @@ static constexpr auto return_same_predicate = [](const auto & v) {
 template <traits::Iterable Container, typename Value>
 auto find(Container & container, const Value & value)
 {
-    return std::find(container.begin(), container.end(), value);
+    return std::ranges::find(container, value);
 }
 
 template <traits::Iterable Container, typename Predicate>
 auto find_if(Container & container, const Predicate & predicate)
 {
-    return std::find_if(container.begin(), container.end(), predicate);
+    return std::ranges::find_if(container, predicate);
 }
 
 template <traits::Iterable Container, typename Value>
 bool contains(const Container & container, const Value & value)
 {
-    return std::find(container.begin(), container.end(), value) != container.end();
+    return std::ranges::contains(container, value);
 }
 
 template <traits::Iterable Container, typename Predicate>
@@ -99,8 +101,7 @@ bool erase_if(Container & container, const Predicate & predicate)
 template <traits::BackEmplacable Container, typename T>
 bool emplace_back_unique(Container & container, const T & value)
 {
-    const auto it = std::find(container.begin(), container.end(), value);
-    const bool ret = it == container.end();
+    const bool ret = contains(container, value) == false;
     if (ret)
         container.emplace_back(value);
     return ret;
@@ -109,8 +110,7 @@ bool emplace_back_unique(Container & container, const T & value)
 template <traits::FrontEmplacable Container, typename T>
 bool emplace_front_unique(Container & container, const T & value)
 {
-    const auto it = std::find(container.begin(), container.end(), value);
-    const bool ret = it == container.end();
+    const bool ret = contains(container, value) == false;
     if (ret)
         container.emplace_front(value);
     return ret;
@@ -200,11 +200,17 @@ template <traits::Iterable Container,
           typename Type = typename details::predicate_return_value_type<Predicate, Container>>
 Type sum(const Container & container, const Predicate & predicate = details::return_same_predicate)
 {
+#if defined(__cpp_lib_ranges_fold_left)
+    return std::ranges::fold_left(container, Type {}, [&predicate](auto accumulated, const auto & val) {
+        return std::move(accumulated) + predicate(val);
+    });
+#else
     return std::accumulate(
         container.begin(),
         container.end(),
         Type {},
         [&predicate](auto accumulated, const auto & val) { return std::move(accumulated) + predicate(val); });
+#endif
 }
 
 template <traits::Iterable Container, typename Predicate = decltype(details::return_same_predicate)>
@@ -213,7 +219,7 @@ double average(const Container & container, const Predicate & predicate = detail
     if (container.begin() == container.end())
         return 0.;
 
-    return static_cast<double>(sum(container, predicate)) / std::distance(container.begin(), container.end());
+    return static_cast<double>(sum(container, predicate)) / std::ranges::distance(container);
 }
 
 template <int... Columns, typename Tuple>
@@ -230,17 +236,8 @@ template <traits::Iterable Container,
           typename ReturnType = typename details::predicate_return_value_type<Transform, Container>>
 std::vector<ReturnType> transform_if(const Container & container, Predicate && pred, Transform && transform)
 {
-    std::vector<ReturnType> output;
-
-    for (const auto & elem : container)
-    {
-        if (pred(elem))
-        {
-            output.emplace_back(transform(elem));
-        }
-    }
-
-    return output;
+    return container | std::views::filter(std::forward<Predicate>(pred))
+           | std::views::transform(std::forward<Transform>(transform)) | std::ranges::to<std::vector>();
 }
 
 } // namespace sihd::util::container

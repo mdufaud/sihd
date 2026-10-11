@@ -140,4 +140,31 @@ TEST_F(TestEndian, test_endian_convert)
     EXPECT_EQ(u32_little, endian::convert_from(u32_big, std::endian::big));
     EXPECT_EQ(u64_little, endian::convert_from(u64_big, std::endian::big));
 }
+
+TEST_F(TestEndian, test_endian_read_be)
+{
+    const uint8_t be32[] = {0x12, 0x34, 0x56, 0x78};
+    EXPECT_EQ(endian::read_be<uint32_t>(be32, sizeof(be32)), 0x12345678u);
+
+    // fewer bytes than T: the remaining high bytes stay zero
+    const uint8_t be24[] = {0x34, 0x56, 0x78};
+    EXPECT_EQ(endian::read_be<uint32_t>(be24, sizeof(be24)), 0x00345678u);
+
+    const uint8_t be16[] = {0x12, 0x34};
+    EXPECT_EQ(endian::read_be<uint16_t>(be16, sizeof(be16)), 0x1234u);
+}
+
+TEST_F(TestEndian, test_endian_read_le)
+{
+    const uint8_t le32[] = {0x78, 0x56, 0x34, 0x12};
+    EXPECT_EQ(endian::read_le<uint32_t>(le32, sizeof(le32)), 0x12345678u);
+
+    // fewer bytes than T: the remaining high bytes stay zero
+    const uint8_t le24[] = {0x78, 0x56, 0x34};
+    EXPECT_EQ(endian::read_le<uint32_t>(le24, sizeof(le24)), 0x00345678u);
+
+    const uint8_t le16[] = {0x34, 0x12};
+    EXPECT_EQ(endian::read_le<uint16_t>(le16, sizeof(le16)), 0x1234u);
+}
+
 } // namespace test

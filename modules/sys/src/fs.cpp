@@ -553,69 +553,66 @@ std::expected<void, Error> write(std::string_view path, std::string_view view, b
     return {};
 }
 
-std::optional<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary)
+std::expected<std::string, Error> read(std::string_view path, sihd::util::Slice slice, bool binary)
 {
-    File file(path, binary ? "rb" : "r");
-    if (!file.is_open())
-        return std::nullopt;
+    File file;
+    auto opened = file.open(path, binary ? "rb" : "r");
+    if (!opened)
+        SIHD_UNEXPECTED_RETURN(opened);
 
-    const auto file_size = file.file_size();
-    if (!file_size)
-        return std::nullopt;
-    const auto range = slice.resolve((size_t)*file_size);
+    const auto size = file.file_size();
+    if (!size)
+        SIHD_UNEXPECTED_RETURN(size);
+    const auto range = slice.resolve((size_t)*size);
 
     if (range.empty())
-        return std::nullopt;
+        return std::string {};
 
     if (!file.seek_begin(range.from))
-        return std::nullopt;
+        return std::unexpected(Error::from_errno("could not seek '{}' to {}", path, range.from));
 
     std::string str;
-    const auto read = file.read(str, range.size());
-    if (read && *read > 0)
-        return str;
-
-    return std::nullopt;
+    const auto got = file.read(str, range.size());
+    if (!got)
+        SIHD_UNEXPECTED_RETURN(got);
+    if (*got == 0)
+        return std::unexpected(Error(io_error, "could not read '{}' at offset {}", path, range.from));
+    return str;
 }
 
-std::optional<std::string> read_line(std::string_view path, size_t line_number)
+std::expected<std::string, Error> read_line(std::string_view path, size_t line_number)
 {
     std::ifstream file(path.data(), std::ifstream::in);
-    if (file.is_open())
+    if (!file.is_open())
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    std::string line;
+    size_t i = 0;
+    while (i <= line_number)
     {
-        std::string line;
-        size_t i = 0;
-        while (i <= line_number)
-        {
-            if (file.eof() || file.bad() || !std::getline(file, line))
-                return std::nullopt;
-            ++i;
-        }
-        return line;
+        if (file.eof() || file.bad() || !std::getline(file, line))
+            return std::unexpected(Error(not_found, "no line {} in '{}'", line_number, path));
+        ++i;
     }
-    return std::nullopt;
+    return line;
 }
 
-std::optional<std::vector<std::string>> read_lines(std::string_view path)
+std::expected<std::vector<std::string>, Error> read_lines(std::string_view path)
 {
-    std::optional<std::string> content = read_all(path);
-    if (!content)
-        return std::nullopt;
-    return str::split(*content, '\n');
+    return read_all(path).transform([](const std::string & content) { return str::split(content, '\n'); });
 }
 
-std::optional<std::string> read_all(std::string_view path, bool binary)
+std::expected<std::string, Error> read_all(std::string_view path, bool binary)
 {
     const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
     std::ifstream file(path.data(), mode);
-    if (file.is_open() && file.good())
-    {
-        std::stringstream buffer;
-        buffer << file.rdbuf();
-        file.close();
-        return buffer.str();
-    }
-    return std::nullopt;
+    if (!file.is_open() || !file.good())
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    file.close();
+    if (file.bad())
+        return std::unexpected(Error(io_error, "could not read '{}'", path));
+    return buffer.str();
 }
 
 ssize_t read_binary(std::string_view path, char *buf, size_t size)

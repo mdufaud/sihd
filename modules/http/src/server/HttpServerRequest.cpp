@@ -213,7 +213,7 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
                 {
                     ArrByte buffer;
                     buffer.resize(chunk.size() + LWS_PRE);
-                    memcpy(buffer.data() + LWS_PRE, chunk.data(), chunk.size());
+                    std::copy(chunk.begin(), chunk.end(), buffer.data() + LWS_PRE);
                     auto write_proto = has_more ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
                     if (lws_write(wsi,
                                   (u_char *)(buffer.data() + LWS_PRE),

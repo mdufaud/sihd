@@ -85,8 +85,8 @@ int main(int argc, char **argv)
             fmt::print("  {:<24} {:<8} {} free / {}\n",
                        mount.mount_point,
                        mount.fs_type,
-                       bytes_str(fs::free_space(mount.mount_point)),
-                       bytes_str(fs::total_space(mount.mount_point)));
+                       bytes_str(fs::free_space(mount.mount_point).value_or(0)),
+                       bytes_str(fs::total_space(mount.mount_point).value_or(0)));
         }
     });
 

@@ -54,7 +54,7 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(sftp.get_file(fs::cwd() + "/test/resources/file.txt", test_dir + "/recv_file.txt").has_value());
     EXPECT_TRUE(fs::is_file(test_dir + "/sent_file.txt"));
     EXPECT_TRUE(fs::is_file(test_dir + "/recv_file.txt"));
-    EXPECT_EQ(fs::file_size(test_dir + "/sent_file.txt"), fs::file_size("test/resources/file.txt"));
+    EXPECT_EQ(fs::file_size(test_dir + "/sent_file.txt").value(), fs::file_size("test/resources/file.txt").value());
 
     std::vector<std::string> list;
     EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list).has_value());
@@ -77,7 +77,7 @@ TEST_F(TestSftp, test_sftp)
     {
         if (attr.is_file())
         {
-            EXPECT_EQ(attr.size(), fs::file_size("test/resources/file.txt"));
+            EXPECT_EQ(attr.size(), fs::file_size("test/resources/file.txt").value());
         }
         nlink += (int)attr.is_link();
         nregular += (int)attr.is_file();
@@ -117,7 +117,7 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     EXPECT_FALSE(sftp.get_file("../secret.txt", leaked).has_value());
     if (fs::is_file(leaked))
     {
-        EXPECT_EQ(fs::file_size(leaked), 0u);
+        EXPECT_EQ(fs::file_size(leaked).value(), 0u);
     }
 
     // Legit read inside the jail still works

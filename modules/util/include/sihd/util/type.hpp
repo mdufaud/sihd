@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_TYPE_HPP__
 #define __SIHD_UTIL_TYPE_HPP__
 
+#include <cstddef>
 #include <cstdint>
 #include <string_view>
 
@@ -28,10 +29,122 @@ enum Type
 namespace type
 {
 
-size_t size(Type type);
-const char *str(Type type);
-bool is_unsigned(Type type);
-Type from_str(std::string_view type);
+constexpr Type from_str(std::string_view str)
+{
+    if (str == "none")
+        return TYPE_NONE;
+    if (str == "bool")
+        return TYPE_BOOL;
+    if (str == "char")
+        return TYPE_CHAR;
+    if (str == "byte")
+        return TYPE_BYTE;
+    if (str == "ubyte")
+        return TYPE_UBYTE;
+    if (str == "short")
+        return TYPE_SHORT;
+    if (str == "ushort")
+        return TYPE_USHORT;
+    if (str == "int")
+        return TYPE_INT;
+    if (str == "uint")
+        return TYPE_UINT;
+    if (str == "long")
+        return TYPE_LONG;
+    if (str == "ulong")
+        return TYPE_ULONG;
+    if (str == "float")
+        return TYPE_FLOAT;
+    if (str == "double")
+        return TYPE_DOUBLE;
+    if (str == "object")
+        return TYPE_OBJECT;
+    return TYPE_NONE;
+}
+
+constexpr const char *str(Type type)
+{
+    switch (type)
+    {
+        case TYPE_NONE:
+            return "none";
+        case TYPE_BOOL:
+            return "bool";
+        case TYPE_CHAR:
+            return "char";
+        case TYPE_BYTE:
+            return "byte";
+        case TYPE_UBYTE:
+            return "ubyte";
+        case TYPE_SHORT:
+            return "short";
+        case TYPE_USHORT:
+            return "ushort";
+        case TYPE_INT:
+            return "int";
+        case TYPE_UINT:
+            return "uint";
+        case TYPE_LONG:
+            return "long";
+        case TYPE_ULONG:
+            return "ulong";
+        case TYPE_FLOAT:
+            return "float";
+        case TYPE_DOUBLE:
+            return "double";
+        case TYPE_OBJECT:
+            return "object";
+        default:
+            return "unknown";
+    }
+}
+
+constexpr size_t size(Type type)
+{
+    switch (type)
+    {
+        case TYPE_BOOL:
+            return sizeof(bool);
+        case TYPE_CHAR:
+            return sizeof(char);
+        case TYPE_BYTE:
+            return sizeof(int8_t);
+        case TYPE_UBYTE:
+            return sizeof(uint8_t);
+        case TYPE_SHORT:
+            return sizeof(int16_t);
+        case TYPE_USHORT:
+            return sizeof(uint16_t);
+        case TYPE_INT:
+            return sizeof(int32_t);
+        case TYPE_UINT:
+            return sizeof(uint32_t);
+        case TYPE_LONG:
+            return sizeof(int64_t);
+        case TYPE_ULONG:
+            return sizeof(uint64_t);
+        case TYPE_FLOAT:
+            return sizeof(float);
+        case TYPE_DOUBLE:
+            return sizeof(double);
+        default:
+            return 0;
+    }
+}
+
+constexpr bool is_unsigned(Type type)
+{
+    switch (type)
+    {
+        case TYPE_UBYTE:
+        case TYPE_USHORT:
+        case TYPE_UINT:
+        case TYPE_ULONG:
+            return true;
+        default:
+            return false;
+    }
+}
 
 template <typename T>
 constexpr Type from()

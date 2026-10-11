@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <expected>
+#include <memory>
 
 #include <sihd/util/Error.hpp>
 
@@ -29,8 +30,8 @@ enum class TlsHandshakeStep
 class TlsConnection
 {
     public:
-        TlsConnection();
-        ~TlsConnection();
+        TlsConnection() = default;
+        ~TlsConnection() = default;
 
         // non-movable: the Socket& bound at init must outlive the SSL handle
         TlsConnection(const TlsConnection &) = delete;
@@ -52,10 +53,17 @@ class TlsConnection
         std::expected<void, sihd::util::Error> shutdown() const;
         void clear();
 
-        void *native() const { return _handle; }
+        void *native() const { return _handle.get(); }
 
     private:
-        void *_handle;
+        struct SslFree
+        {
+                void operator()(void *ssl) const;
+        };
+
+        // type-erased SSL: the deleter freeing it lives in the source,
+        // keeping openssl types out of this header
+        std::unique_ptr<void, SslFree> _handle;
         Socket *_socket = nullptr;
 };
 

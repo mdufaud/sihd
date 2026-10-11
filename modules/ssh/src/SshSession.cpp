@@ -40,6 +40,13 @@ struct SshKeyHashDeleter
 
 using SshKeyHash = std::unique_ptr<uint8_t, SshKeyHashDeleter>;
 
+struct SshKeyFree
+{
+        void operator()(ssh_key_struct *key) const { ssh_key_free(key); }
+};
+
+using SshKeyPtr = std::unique_ptr<ssh_key_struct, SshKeyFree>;
+
 std::expected<void, Error>
     set_ssh_option(ssh_session_struct *session, std::string_view name, ssh_options_e option, const void *value)
 {
@@ -129,21 +136,20 @@ bool SshSession::connected()
 
 std::expected<void, Error> SshSession::check_hostkey()
 {
-    uint8_t *hash_ptr = nullptr;
     size_t hash_len = 0;
-    ssh_key_struct *pubkey_ptr = nullptr;
+    SshKeyPtr pubkey;
+    SshKeyHash hash_pubkey;
 
-    if (ssh_get_server_publickey(_impl_ptr->ssh_session_ptr, &pubkey_ptr) == SSH_ERROR)
+    if (ssh_get_server_publickey(_impl_ptr->ssh_session_ptr, std::out_ptr(pubkey)) == SSH_ERROR)
         return std::unexpected(Error(_impl_ptr->ssh_session_ptr,
                                      "could not get server public key: {}",
                                      ssh_error_str(_impl_ptr->ssh_session_ptr)));
-    SshKey pubkey(pubkey_ptr);
 
-    if (ssh_get_publickey_hash(pubkey_ptr, SSH_PUBLICKEY_HASH_SHA1, &hash_ptr, &hash_len) == SSH_ERROR)
+    if (ssh_get_publickey_hash(pubkey.get(), SSH_PUBLICKEY_HASH_SHA1, std::out_ptr(hash_pubkey), &hash_len)
+        == SSH_ERROR)
         return std::unexpected(Error(_impl_ptr->ssh_session_ptr,
                                      "could not get public key sha1 hash: {}",
                                      ssh_error_str(_impl_ptr->ssh_session_ptr)));
-    SshKeyHash hash_pubkey(hash_ptr);
 
 #if LIBSSH_VERSION_MINOR > 7
     const ssh_known_hosts_e state = ssh_session_is_known_server(_impl_ptr->ssh_session_ptr);
@@ -155,14 +161,14 @@ std::expected<void, Error> SshSession::check_hostkey()
         case SSH_KNOWN_HOSTS_UNKNOWN:
             // intentional: accept unknown host with a warning (local-server use)
             {
-                char *hexa = ssh_get_hexa(hash_ptr, hash_len);
+                char *hexa = ssh_get_hexa(hash_pubkey.get(), hash_len);
                 SIHD_LOG(warning, "host key unknown: {}", hexa);
                 free(hexa);
             }
             return {};
         default:
         {
-            char *hexa = ssh_get_hexa(hash_ptr, hash_len);
+            char *hexa = ssh_get_hexa(hash_pubkey.get(), hash_len);
             Error err(_impl_ptr->ssh_session_ptr,
                       "host key verification failed: {} (state = {}): {}",
                       hexa,
@@ -182,14 +188,14 @@ std::expected<void, Error> SshSession::check_hostkey()
         case SSH_SERVER_FILE_NOT_FOUND:
             // intentional: accept unknown host with a warning (local-server use)
             {
-                char *hexa = ssh_get_hexa(hash_ptr, hash_len);
+                char *hexa = ssh_get_hexa(hash_pubkey.get(), hash_len);
                 SIHD_LOG(warning, "host key unknown: {}", hexa);
                 free(hexa);
             }
             return {};
         default:
         {
-            char *hexa = ssh_get_hexa(hash_ptr, hash_len);
+            char *hexa = ssh_get_hexa(hash_pubkey.get(), hash_len);
             Error err(_impl_ptr->ssh_session_ptr,
                       "host key verification failed: {} (state = {}): {}",
                       hexa,

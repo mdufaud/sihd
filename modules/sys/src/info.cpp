@@ -1,5 +1,7 @@
 #include "internal/info.hpp"
 
+#include <ranges>
+
 #include <sihd/sys/info.hpp>
 #include <sihd/util/str.hpp>
 
@@ -90,8 +92,8 @@ bool CpuUsage::sample()
         _per_core_usage.clear();
         if (per_core.size() == _per_core.size())
         {
-            for (size_t i = 0; i < per_core.size(); ++i)
-                _per_core_usage.push_back(usage_percent(_per_core[i], per_core[i]));
+            for (const auto [prev, now] : std::views::zip(_per_core, per_core))
+                _per_core_usage.push_back(usage_percent(prev, now));
         }
         _has_delta = true;
     }

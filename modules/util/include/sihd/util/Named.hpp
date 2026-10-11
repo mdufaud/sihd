@@ -4,6 +4,9 @@
 #include <array>
 #include <string>
 #include <string_view>
+#include <type_traits>
+
+#include <sihd/util/traits.hpp>
 
 namespace sihd::util
 {
@@ -30,31 +33,46 @@ class Named
         bool is_owned_by_parent() const;
         virtual bool set_parent_ownership(bool ownership);
 
-        template <class C>
-        C *parent()
+        template <class Self>
+        auto parent(this Self && self) -> traits::const_prop_ptr<Self, Node>
         {
-            return dynamic_cast<C *>(_parent_ptr);
+            return self._parent_ptr;
         }
-        Node *parent();
 
-        template <class C>
-        const C *cparent() const
+        template <class C, class Self>
+        auto parent(this Self && self) -> traits::const_prop_ptr<Self, C>
         {
-            return dynamic_cast<const C *>(_parent_ptr);
+            using Ret = traits::const_prop_ptr<Self, C>;
+            return dynamic_cast<Ret>(self.parent());
         }
-        const Node *cparent() const;
 
-        Node *root();
-        const Node *croot() const;
-
-        static Named *find_from(Named *from, const std::string & path);
-        static const Named *cfind_from(const Named *from, const std::string & path);
-
-        Named *find(const std::string & path);
-        template <class C>
-        C *find(const std::string & path)
+        template <class Self>
+        auto root(this Self && self) -> traits::const_prop_ptr<Self, Node>
         {
-            return dynamic_cast<C *>(this->find(path));
+            constexpr bool is_const = std::is_const_v<std::remove_reference_t<Self>>;
+            const Node *ret = self._root();
+            if constexpr (is_const)
+                return ret;
+            else
+                return const_cast<Node *>(ret);
+        }
+
+        template <class Self>
+        auto find(this Self && self, const std::string & path) -> traits::const_prop_ptr<Self, Named>
+        {
+            constexpr bool is_const = std::is_const_v<std::remove_reference_t<Self>>;
+            const Named *ret = self._find(path);
+            if constexpr (is_const)
+                return ret;
+            else
+                return const_cast<Named *>(ret);
+        }
+
+        template <class C, class Self>
+        auto find(this Self && self, const std::string & path) -> traits::const_prop_ptr<Self, C>
+        {
+            using Ret = traits::const_prop_ptr<Self, C>;
+            return dynamic_cast<Ret>(self.find(path));
         }
 
         template <typename Type = Named, typename... Keys>
@@ -73,34 +91,13 @@ class Named
             return array;
         }
 
-        template <class C>
-        const C *cfind(const std::string & path) const
-        {
-            return dynamic_cast<const C *>(this->cfind(path));
-        }
-        const Named *cfind(const std::string & path) const;
-
-        template <typename Type = Named, typename... Keys>
-        std::array<const Type *, sizeof...(Keys)> cfind_all(const Keys &...args)
-        {
-            std::array<const Type *, sizeof...(Keys)> array;
-
-            int i = 0;
-            const auto finder = [&array, &i, this](const auto & arg) {
-                array[i] = this->cfind<Type>(arg);
-                ++i;
-            };
-
-            (finder(args), ...);
-
-            return array;
-        }
-
         static char separator;
 
-    protected:
-
     private:
+        const Node *_root() const;
+        const Named *_find(const std::string & path) const;
+        static const Named *_find_from(const Named *from, const std::string & path);
+
         Node *_parent_ptr;
         std::string _name;
 };

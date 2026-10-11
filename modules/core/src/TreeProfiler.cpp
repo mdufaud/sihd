@@ -1308,7 +1308,7 @@ void TreeProfiler::_report_named(const sihd::util::Named *named,
     {
         if (key != named->name())
             s += fmt::format("  => {}", named->full_name());
-        else if (named->cparent() != parent)
+        else if (named->parent() != parent)
             s += fmt::format("  -> {}", named->full_name());
     }
     const ServiceEntry *service_entry = service != nullptr ? this->_cfind_service_entry(service) : nullptr;
@@ -1345,7 +1345,7 @@ void TreeProfiler::_report_named(const sihd::util::Named *named,
         return;
     for (const std::string & name : node->children_keys())
     {
-        const sihd::util::Named *child = node->cget_child(name);
+        const sihd::util::Named *child = node->get_child(name);
         if (child != nullptr)
             this->_report_named(child, node, name, s, opts, depth + 1, visited);
     }
@@ -1380,7 +1380,7 @@ void TreeProfiler::_collect_live(const sihd::util::Named *named,
     if (node == nullptr)
         return;
     for (const std::string & name : node->children_keys())
-        this->_collect_live(node->cget_child(name), nameds, services);
+        this->_collect_live(node->get_child(name), nameds, services);
 }
 
 sihd::util::Timestamp TreeProfiler::_now() const

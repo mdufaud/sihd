@@ -21,17 +21,14 @@ std::list<IRunnable *> g_runnables;
 void add_handler(IRunnable *ptr)
 {
     std::lock_guard lock(g_runnable_mutex);
-    auto it = std::find(g_runnables.begin(), g_runnables.end(), ptr);
-    if (it == g_runnables.end())
+    if (std::ranges::contains(g_runnables, ptr) == false)
         g_runnables.push_back(ptr);
 }
 
 void remove_handler(IRunnable *ptr)
 {
     std::lock_guard lock(g_runnable_mutex);
-    auto it = std::find(g_runnables.begin(), g_runnables.end(), ptr);
-    if (it != g_runnables.end())
-        g_runnables.erase(it);
+    std::erase(g_runnables, ptr);
 }
 
 void clear_handlers()

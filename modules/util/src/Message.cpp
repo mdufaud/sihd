@@ -161,7 +161,7 @@ std::string Message::description() const
 
 const MessageField *Message::_require_field(const std::string & name) const
 {
-    const MessageField *field = this->cget_child<MessageField>(name);
+    const MessageField *field = this->get_child<MessageField>(name);
     if (field == nullptr)
         throw std::invalid_argument("Message: no such field '" + name + "'");
     return field;

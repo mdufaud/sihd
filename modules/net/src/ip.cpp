@@ -1,7 +1,6 @@
 #include <strings.h>
 
 #include <cstring>
-#include <map>
 
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
@@ -99,37 +98,30 @@ int protocol(std::string_view name)
 
 int domain(std::string_view name)
 {
-    static std::map<std::string_view, int> domain_to_str = {
-        {"unix", PF_UNIX},
-        {"ipv4", PF_INET},
-        {"ipv6", PF_INET6},
-        /*
-        {"ipx", PF_IPX}, {"netlink", PF_NETLINK}, {"x25", PF_X25}, {"ax25", PF_AX25},
-        {"atmpvc", PF_ATMPVC}, {"appletalk", PF_APPLETALK}, {"packet", PF_PACKET},
-        */
-    };
-    auto it = domain_to_str.find(name);
-    if (it == domain_to_str.end())
-        return -1;
-    return it->second;
+    if (name == "unix")
+        return PF_UNIX;
+    if (name == "ipv4")
+        return PF_INET;
+    if (name == "ipv6")
+        return PF_INET6;
+    return -1;
 }
 
 int socktype(std::string_view name)
 {
-    static std::map<std::string_view, int> socktype_to_str = {
-        {"udp", SOCK_DGRAM},
-        {"tcp", SOCK_STREAM},
-        {"datagram", SOCK_DGRAM},
-        {"stream", SOCK_STREAM},
-        {"raw", SOCK_RAW},
-        {"seqpacket", SOCK_SEQPACKET},
-        {"rdm", SOCK_RDM},
-        {"packet", SOCK_PACKET},
-    };
-    auto it = socktype_to_str.find(name);
-    if (it == socktype_to_str.end())
-        return -1;
-    return it->second;
+    if (name == "udp" || name == "datagram")
+        return SOCK_DGRAM;
+    if (name == "tcp" || name == "stream")
+        return SOCK_STREAM;
+    if (name == "raw")
+        return SOCK_RAW;
+    if (name == "seqpacket")
+        return SOCK_SEQPACKET;
+    if (name == "rdm")
+        return SOCK_RDM;
+    if (name == "packet")
+        return SOCK_PACKET;
+    return -1;
 }
 
 bool is_valid_ipv4(std::string_view ip)

@@ -14,6 +14,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "../internal/deadline.hpp"
+#include "../internal/mime_fetch.hpp"
 #include "clipboard.hpp"
 #include "x11_display.hpp"
 #include <X11/Xatom.h>
@@ -267,7 +268,7 @@ std::optional<std::vector<std::string>> read_targets(ClipboardSession & session,
         auto mime_str = target_mime(display, static_cast<Atom>(atoms[i]));
         // Several targets (TEXT, UTF8_STRING) canonicalize to the same mime.
         if (mime_str.has_value() && !is_protocol_target(*mime_str)
-            && std::find(targets.begin(), targets.end(), *mime_str) == targets.end())
+            && std::ranges::contains(targets, *mime_str) == false)
             targets.push_back(std::move(*mime_str));
     }
     return targets;
@@ -438,30 +439,15 @@ std::vector<RawContent> get_wanted(const std::vector<std::string_view> & wanted_
     if (!targets.has_value())
         return {};
 
-    // Mime types to fetch, in fetch order.
-    std::vector<std::string> fetch_list;
-    if (wanted_mimes.empty())
-        fetch_list = *targets;
-    else
-    {
-        for (std::string_view mime_str : wanted_mimes)
-        {
-            // Request only mimes the owner advertises.
-            if (auto offered_mime = mime::match_offered(*targets, mime_str); offered_mime.has_value())
-            {
-                if (std::find(fetch_list.begin(), fetch_list.end(), *offered_mime) == fetch_list.end())
-                    fetch_list.emplace_back(*offered_mime);
-            }
-        }
-    }
+    const auto fetch_list = internal::mimes_to_fetch(*targets, wanted_mimes);
 
     std::vector<RawContent> contents;
-    for (const std::string & mime_str : fetch_list)
+    for (const auto & [offered_mime, label] : fetch_list)
     {
         ArrByte out;
-        if (!convert_selection(session, target_atom(display, mime_str), out, deadline) || out.empty())
+        if (!convert_selection(session, target_atom(display, offered_mime), out, deadline) || out.empty())
             continue;
-        contents.push_back(RawContent {mime_str, std::move(out)});
+        contents.push_back(RawContent {label, std::move(out)});
     }
     return contents;
 }
