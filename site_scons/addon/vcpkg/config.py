@@ -15,8 +15,9 @@ module/dependency declarations.
 ###############################################################################
 
 # Extra flags injected into VCPKG_C_FLAGS / VCPKG_CXX_FLAGS via overlay triplet.
+# clang (llvm-mingw) rejects -Wno-error=<unknown-warning> with a -Wunknown-warning-option
+# warning that breaks cmake's flag probes (libpcap C99 check) — GNU-only flags stay out.
 vcpkg_cflags = [
-    "-Wno-error=discarded-qualifiers",         # libwebsockets v4.5.2 + GCC >= 14
     "-Wno-error=incompatible-pointer-types",   # libzip 1.7.3 Win32 API function pointers vs mingw-w64 headers + GCC >= 14
     "-Wno-error=unused-variable",              # libwebsockets v4.5.2 unused 'cname' in context.c on mingw (Windows path not fully valid)
 ]
