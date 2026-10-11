@@ -1810,4 +1810,93 @@ TEST_F(TestTreeProfiler, test_reset_from_dispatch_hook)
     EXPECT_EQ(dev->handled, 2);
 }
 
+class FailingStartDevice: public Device
+{
+    public:
+        FailingStartDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
+
+        bool is_running() const override { return false; }
+
+    protected:
+        bool on_init() override
+        {
+            this->add_channel("c1", "int");
+            return true;
+        }
+
+        bool on_start() override { return false; }
+};
+
+class ExitSuccessCollector: public sihd::util::IHandler<TreeProfiler::Event *>
+{
+    public:
+        void handle(TreeProfiler::Event *event) override
+        {
+            if (event->kind == TreeProfiler::Event::exit)
+                exit_success[event->what].push_back(event->success);
+        }
+
+        std::map<std::string, std::vector<bool>> exit_success;
+};
+
+TEST_F(TestTreeProfiler, test_failing_op_exit_is_unsuccessful)
+{
+    Node root("root");
+    FailingStartDevice *dev = root.add_child<FailingStartDevice>("device");
+
+    FakeClock clock;
+    TreeProfiler profiler;
+    profiler.set_clock(&clock);
+    ExitSuccessCollector collector;
+    profiler.add_observer(&collector);
+    ASSERT_TRUE(profiler.observe(&root));
+
+    ASSERT_TRUE(dev->setup());
+    ASSERT_TRUE(dev->init());
+    EXPECT_FALSE(dev->start());
+
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
+    ASSERT_NE(c1, nullptr);
+    EXPECT_TRUE(c1->write<int>(0, 1));
+    ASSERT_TRUE(profiler.flush());
+
+    ASSERT_EQ(collector.exit_success["start"].size(), 1u);
+    EXPECT_FALSE(collector.exit_success["start"][0]);
+    ASSERT_EQ(collector.exit_success["write"].size(), 1u);
+    EXPECT_TRUE(collector.exit_success["write"][0]);
+}
+
+TEST_F(TestTreeProfiler, test_report_opts_recursion_and_description)
+{
+    Node root("root");
+    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
+
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+
+    FakeClock clock;
+    TreeProfiler profiler;
+    profiler.set_clock(&clock);
+    ASSERT_TRUE(profiler.observe(&root));
+
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
+    ASSERT_NE(c1, nullptr);
+    EXPECT_TRUE(c1->write<int>(0, 1));
+
+    const std::string full = profiler.report_str();
+    EXPECT_NE(full.find("c1"), std::string::npos);
+
+    TreeProfiler::ReportOpts opts;
+    opts.max_recursion = 1;
+    const std::string truncated = profiler.report_str(opts);
+    EXPECT_NE(truncated.find("device"), std::string::npos);
+    EXPECT_EQ(truncated.find("c1"), std::string::npos);
+
+    TreeProfiler::ReportOpts desc;
+    desc.description = true;
+    const std::string with_desc = profiler.report_str(desc);
+    EXPECT_NE(with_desc.find("int["), std::string::npos);
+    EXPECT_GT(with_desc.size(), full.size());
+}
+
 } // namespace test

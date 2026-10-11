@@ -60,12 +60,16 @@ TEST_F(TestClocks, test_clocks_start_stop)
     SteadyClock steady;
     SystemClock system;
 
-    EXPECT_TRUE(steady.start());
-    EXPECT_TRUE(steady.stop());
-    EXPECT_TRUE(system.start());
-    EXPECT_TRUE(system.stop());
+    EXPECT_TRUE(steady.is_steady());
+    EXPECT_FALSE(system.is_steady());
 
-    EXPECT_GT(Clock::default_clock.now(), 0);
+    EXPECT_TRUE(steady.start());
+    EXPECT_GT(steady.now().get(), 0);
+    EXPECT_TRUE(steady.stop());
+
+    EXPECT_TRUE(system.start());
+    EXPECT_GT(system.now().get(), 0);
+    EXPECT_TRUE(system.stop());
 }
 
 } // namespace test

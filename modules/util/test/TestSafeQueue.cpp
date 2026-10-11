@@ -298,7 +298,7 @@ TEST_F(TestSafeQueue, test_safequeue_terminate_unblocks_all_consumers)
         });
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     queue.terminate();
 
     for (std::thread & consumer : consumers)

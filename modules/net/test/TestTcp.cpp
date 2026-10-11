@@ -1,3 +1,4 @@
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <thread>
@@ -8,10 +9,19 @@
 #include <sihd/net/BasicServerHandler.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/net/TcpServer.hpp>
+#include <sihd/sys/Poll.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ObserverWaiter.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <unistd.h>
+
+# include <sihd/sys/fs.hpp>
+#endif
 
 #include "listener/make_listener.hpp"
 
@@ -438,5 +448,91 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
     ASSERT_TRUE(server.stop());
     ASSERT_TRUE(worker.stop_worker());
 }
+
+TEST_F(TestTcp, test_tcp_client_recv_timeout_never_parks)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+    const IpAddr localhost = IpAddr::localhost(port);
+
+    TcpClient client("tcp-client");
+    ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
+    Socket accepted(listener.accept(connect_timeout_ms).value_or(-1));
+    ASSERT_TRUE(accepted.is_open());
+
+    ASSERT_TRUE(client.set_recv_timeout(50));
+    sihd::util::ArrChar recv(64);
+    const auto start = std::chrono::steady_clock::now();
+    auto res = client.receive(recv);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+    ASSERT_FALSE(res.has_value());
+    EXPECT_LT(elapsed, std::chrono::seconds(2));
+    EXPECT_GE(std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count(), 25);
+
+    const sihd::util::ArrChar first("one byte");
+    ASSERT_TRUE(accepted.send_all(first).has_value());
+    EXPECT_TRUE(client.poll(1000));
+    auto data = client.receive(recv);
+    ASSERT_TRUE(data.has_value());
+    EXPECT_EQ(data.value(), (size_t)first.size());
+
+    const sihd::util::ArrChar second("second");
+    ASSERT_TRUE(accepted.send_all(second).has_value());
+    EXPECT_TRUE(client.poll(1000));
+    IpAddr peer;
+    auto with_addr = client.receive(peer, recv);
+    ASSERT_TRUE(with_addr.has_value());
+    EXPECT_EQ(with_addr.value(), (size_t)second.size());
+    EXPECT_EQ(peer, localhost);
+
+    EXPECT_TRUE(client.close().has_value());
+
+    (void)accepted.close();
+    (void)listener.close();
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestTcp, test_tcp_unix_roundtrip)
+{
+    const std::string path = "/tmp/sihd_test_tcp_unix_" + std::to_string(getpid()) + ".sock";
+    sihd::util::Defer remove_file([&] { (void)sihd::sys::fs::remove_file(path); });
+
+    TcpServer server("tcp-unix-server");
+    TcpClient client("tcp-unix-client");
+    BasicServerHandler server_handler;
+
+    ASSERT_TRUE(server.open_unix_and_bind(path).has_value());
+    server.set_server_handler(&server_handler);
+    server.set_poll_timeout(1);
+
+    const sihd::util::ArrChar hello("hello unix");
+    Synchronizer received_sync(2);
+    std::atomic<bool> received_signaled {false};
+    Handler<BasicServerHandler *> handler([&](BasicServerHandler *srv) {
+        for (auto & c : srv->read_activity())
+        {
+            std::lock_guard lk(c->mutex);
+            if (c->read_array.is_bytes_equal(hello) && !received_signaled.exchange(true))
+                received_sync.sync(std::chrono::seconds(1));
+        }
+    });
+    server_handler.add_observer(&handler);
+
+    Worker worker([&server] { return server.start(); });
+    ASSERT_TRUE(worker.start_sync_worker("tcp-unix-server"));
+    sihd::util::Defer stop_worker([&] {
+        server.stop();
+        worker.stop_worker();
+    });
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    ASSERT_TRUE(client.open_unix_and_connect(path).has_value());
+    EXPECT_TRUE(client.connected());
+    ASSERT_TRUE(client.send_all(hello).has_value());
+    EXPECT_TRUE(received_sync.sync(std::chrono::seconds(2)));
+}
+#endif
 
 } // namespace test

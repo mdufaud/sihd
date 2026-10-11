@@ -1,5 +1,7 @@
 #include <chrono>
+#include <memory>
 #include <thread>
+#include <wait_for.hpp>
 
 #include <gtest/gtest.h>
 
@@ -217,5 +219,170 @@ TEST_F(TestRecords, test_records_dev_recorder)
 
     // channel array and back_array must be in the same state
     EXPECT_TRUE(back_array->is_bytes_equal(*int_channel->array()));
+}
+
+TEST_F(TestRecords, test_records_recorder_handler_not_found)
+{
+    Core core;
+    core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+
+    DevRecorder dev_recorder("dev_recorder", &core);
+    dev_recorder.set_parent_ownership(false);
+    (void)dev_recorder.set_conf_str("handler", "..no_such_handler");
+
+    EXPECT_FALSE(core.init());
+}
+
+TEST_F(TestRecords, test_records_recorder_channel_not_found)
+{
+    Core core;
+    core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+
+    DevRecorder dev_recorder("dev_recorder", &core);
+    dev_recorder.set_parent_ownership(false);
+    ASSERT_TRUE(dev_recorder.set_conf_str("handler", "..mem_recorder"));
+    ASSERT_TRUE(dev_recorder.add_record_channel("int=..no_such_channel"));
+
+    EXPECT_TRUE(core.init());
+    EXPECT_FALSE(core.start());
+}
+
+TEST_F(TestRecords, test_records_recorder_remove_recorded_channel)
+{
+    Core core;
+    Channel *int_channel = core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+    Channel *bool_channel = core.add_channel("bool_channel", sihd::util::TYPE_BOOL, 2);
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+
+    DevRecorder dev_recorder("dev_recorder", &core);
+    dev_recorder.set_parent_ownership(false);
+    ASSERT_TRUE(dev_recorder.set_conf_str("handler", "..mem_recorder"));
+    ASSERT_TRUE(dev_recorder.add_record_channel("int=..int_channel"));
+    ASSERT_TRUE(dev_recorder.add_record_channel("bool=..bool_channel"));
+    EXPECT_TRUE(dev_recorder.remove_recorded_channel("bool"));
+
+    EXPECT_TRUE(core.init());
+    EXPECT_TRUE(core.start());
+
+    int_channel->write(0, 7);
+    bool_channel->write(0, true);
+
+    EXPECT_TRUE(core.stop());
+
+    const MapListRecordedValues & map = mem_recorder.make_recorded_values();
+    ASSERT_TRUE(map.find("int") != map.end());
+    EXPECT_TRUE(map.find("bool") == map.end());
+    ASSERT_EQ(map.at("int").size(), 1u);
+    sihd::util::ArrInt *recorded = dynamic_cast<sihd::util::ArrInt *>(map.at("int").front().second.get());
+    ASSERT_NE(recorded, nullptr);
+    EXPECT_EQ(recorded->at(0), 7);
+}
+
+TEST_F(TestRecords, test_records_player_provider_not_found)
+{
+    Core core;
+    DevPlayer dev_player("dev_player", &core);
+    dev_player.set_parent_ownership(false);
+    EXPECT_TRUE(dev_player.set_conf_str("provider", "..no_such_provider"));
+
+    EXPECT_TRUE(core.init());
+    EXPECT_FALSE(core.start());
+}
+
+TEST_F(TestRecords, test_records_player_pause_resume)
+{
+    Core core;
+    Channel *int_channel = core.add_channel("int_channel", sihd::util::TYPE_INT, 2);
+
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+    EXPECT_TRUE(mem_recorder.set_stop_providing_when_empty(true));
+
+    DevPlayer dev_replayer("dev_replayer", &core);
+    dev_replayer.set_parent_ownership(false);
+    EXPECT_TRUE(dev_replayer.set_conf({{"provider", "..mem_recorder"},
+                                       {"provider_wait_time", 1},
+                                       {"alias",
+                                        {
+                                            "int=..int_channel",
+                                        }}}));
+
+    sihd::util::ArrInt arr_int = {1, 0};
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(5)), &arr_int);
+    arr_int[0] = 2;
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(40)), &arr_int);
+    arr_int[0] = 3;
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(80)), &arr_int);
+    arr_int[0] = 4;
+    mem_recorder.add_record("int", sihd::util::Timestamp(sihd::util::time::milli(120)), &arr_int);
+
+    EXPECT_TRUE(core.init());
+
+    Channel *end = dev_replayer.get_channel("end").value_or(nullptr);
+    Channel *play = dev_replayer.get_channel("play").value_or(nullptr);
+    ASSERT_NE(end, nullptr);
+    ASSERT_NE(play, nullptr);
+
+    EXPECT_TRUE(core.start());
+
+    ChannelWaiter end_waiter(end);
+
+    play->write(0, true);
+    EXPECT_TRUE(wait_for([&] { return int_channel->read<int>(0) == 1; }, std::chrono::milliseconds(1000)));
+
+    play->write(0, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    const int paused_value = int_channel->read<int>(0);
+    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+    EXPECT_EQ(int_channel->read<int>(0), paused_value);
+
+    play->write(0, true);
+    EXPECT_TRUE(end_waiter.wait_for_nb(sihd::util::Duration(sihd::util::time::milli(500)), 1));
+    EXPECT_EQ(int_channel->read<int>(0), 4);
+
+    EXPECT_TRUE(core.stop());
+}
+
+TEST_F(TestRecords, test_records_mem_recorder_provider)
+{
+    MemRecorder rec("rec");
+    EXPECT_TRUE(rec.empty());
+
+    sihd::util::ArrInt arr = {1, 2};
+    rec.add_record("b", sihd::util::Timestamp(sihd::util::time::milli(2)), &arr);
+    rec.add_record("a", sihd::util::Timestamp(sihd::util::time::milli(1)), &arr);
+    EXPECT_FALSE(rec.empty());
+
+    PlayableRecord out;
+    ASSERT_TRUE(rec.provide(&out));
+    EXPECT_EQ(out.name, "a");
+    ASSERT_TRUE(rec.provide(&out));
+    EXPECT_EQ(out.name, "b");
+    EXPECT_FALSE(rec.provide(&out));
+
+    rec.clear();
+    EXPECT_TRUE(rec.empty());
+
+    std::vector<PlayableRecord> records;
+    records.push_back(PlayableRecord {"c",
+                                      sihd::util::Timestamp(sihd::util::time::milli(3)),
+                                      std::make_shared<sihd::util::ArrInt>(arr)});
+    records.push_back(PlayableRecord {"d",
+                                      sihd::util::Timestamp(sihd::util::time::milli(4)),
+                                      std::make_shared<sihd::util::ArrInt>(arr)});
+    rec.add_records(records);
+    ASSERT_TRUE(rec.provide(&out));
+    EXPECT_EQ(out.name, "c");
+    ASSERT_TRUE(rec.provide(&out));
+    EXPECT_EQ(out.name, "d");
+    EXPECT_FALSE(rec.provide(&out));
+
+    rec.add_record("e", sihd::util::Timestamp(sihd::util::time::milli(5)), &arr);
+    EXPECT_NE(rec.hexdump_records().find("e"), std::string::npos);
 }
 } // namespace test

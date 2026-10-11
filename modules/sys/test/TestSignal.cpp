@@ -1,4 +1,5 @@
 #include <atomic>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -8,10 +9,17 @@
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Timer.hpp>
 #include <sihd/util/build.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/wait.h>
+# include <unistd.h>
+#endif
 
 namespace test
 {
@@ -258,6 +266,144 @@ TEST_F(TestSignal, test_sig_thread_blocker_restores_mask)
     EXPECT_EQ(sigismember(&after, sig_alt), 0);  // unblocked on scope exit
 
     pthread_sigmask(SIG_UNBLOCK, &pre, nullptr);
+}
+#endif
+
+TEST_F(TestSignal, test_signal_categories_and_names)
+{
+    EXPECT_TRUE(signal::is_category_termination(SIGTERM));
+    EXPECT_TRUE(signal::is_category_termination(SIGINT));
+    EXPECT_TRUE(signal::is_category_dump(SIGABRT));
+    EXPECT_TRUE(signal::is_category_dump(SIGILL));
+    EXPECT_TRUE(signal::is_category_dump(SIGSEGV));
+    EXPECT_FALSE(signal::is_category_stop(SIGTERM));
+    EXPECT_FALSE(signal::is_category_dump(SIGTERM));
+    EXPECT_FALSE(signal::is_category_termination(SIGABRT));
+    EXPECT_FALSE(signal::is_category_stop(0));
+    EXPECT_FALSE(signal::is_category_termination(0));
+    EXPECT_FALSE(signal::is_category_dump(0));
+
+#if !defined(__SIHD_WINDOWS__)
+    EXPECT_TRUE(signal::is_category_stop(SIGSTOP));
+    EXPECT_TRUE(signal::is_category_stop(SIGTSTP));
+    EXPECT_TRUE(signal::is_category_stop(SIGTTIN));
+    EXPECT_TRUE(signal::is_category_termination(SIGUSR1));
+    EXPECT_TRUE(signal::is_category_termination(SIGHUP));
+    EXPECT_TRUE(signal::is_category_termination(SIGPIPE));
+    EXPECT_TRUE(signal::is_category_dump(SIGQUIT));
+    EXPECT_TRUE(signal::is_category_dump(SIGFPE));
+    EXPECT_FALSE(signal::is_category_termination(SIGSTOP));
+    EXPECT_FALSE(signal::is_category_dump(SIGTERM));
+#endif
+
+    EXPECT_FALSE(signal::name(SIGTERM).empty());
+    EXPECT_FALSE(signal::name(SIGINT).empty());
+    EXPECT_FALSE(signal::name(SIGABRT).empty());
+#if !defined(__SIHD_WINDOWS__)
+    EXPECT_FALSE(signal::name(SIGUSR1).empty());
+#endif
+}
+
+TEST_F(TestSignal, test_signal_reset_received_single)
+{
+    ASSERT_TRUE(signal::handle(sig_term));
+    ASSERT_TRUE(signal::handle(sig_alt));
+    sihd::util::Defer unhandle_all([] {
+        (void)signal::unhandle(sig_term);
+        (void)signal::unhandle(sig_alt);
+        signal::reset_all_received();
+    });
+
+    raise(sig_term);
+    raise(sig_alt);
+    auto first = signal::status(sig_term);
+    ASSERT_TRUE(first);
+    EXPECT_GE(first->received.load(), 1U);
+    auto second = signal::status(sig_alt);
+    ASSERT_TRUE(second);
+    EXPECT_GE(second->received.load(), 1U);
+
+    signal::reset_received(sig_term);
+
+    auto reset = signal::status(sig_term);
+    ASSERT_TRUE(reset);
+    EXPECT_EQ(reset->received.load(), 0U);
+    auto kept = signal::status(sig_alt);
+    ASSERT_TRUE(kept);
+    EXPECT_GE(kept->received.load(), 1U);
+}
+
+TEST_F(TestSignal, test_signal_waiter_timeout)
+{
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+    SigWaiter wait({.timeout = std::chrono::milliseconds(50)});
+    EXPECT_FALSE(wait.received_signal());
+}
+
+TEST_F(TestSignal, test_signal_watcher_rm_signal)
+{
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "Buggy with valgrind";
+
+    std::atomic<int> sig = -1;
+    Synchronizer sync(2);
+    Handler<SigWatcher *> handler([&sig, &sync](SigWatcher *watcher) {
+        auto & catched_signals = watcher->catched_signals();
+        if (catched_signals.empty())
+            return;
+        sig = catched_signals[0];
+        (void)sync.sync(std::chrono::milliseconds(100));
+    });
+
+    SigWatcher watcher("sig-watcher-rm-test");
+    watcher.set_polling_frequency(400);
+    watcher.add_observer(&handler);
+    ASSERT_TRUE(watcher.add_signal(sig_term));
+    watcher.start();
+    sihd::util::Defer stop_watcher([&] {
+        watcher.stop();
+#if !defined(__SIHD_WINDOWS__)
+        (void)signal::unblock_thread(sig_term);
+#endif
+    });
+
+    send_self(sig_term);
+    ASSERT_TRUE(sync.sync(std::chrono::milliseconds(200)));
+    ASSERT_EQ(sig.load(), sig_term);
+
+    ASSERT_TRUE(watcher.rm_signal(sig_term));
+#if !defined(__SIHD_WINDOWS__)
+    sig = -1;
+    send_self(sig_term);
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    EXPECT_EQ(sig.load(), -1);
+#endif
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestSignal, test_signal_exit_config_exits_with_sig_number)
+{
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "fork under valgrind";
+
+    signal::set_exit_config({.on_termination = true, .exit_with_sig_number = true});
+    sihd::util::Defer reset_config([] { signal::set_exit_config(signal::SigExitConfig {}); });
+
+    fflush(stdout);
+    const pid_t pid = fork();
+    ASSERT_GE(pid, 0);
+    if (pid == 0)
+    {
+        signal::reset_all_received();
+        (void)signal::handle(SIGTERM);
+        kill(getpid(), SIGTERM);
+        _exit(100);
+    }
+    int wstatus = 0;
+    ASSERT_EQ(waitpid(pid, &wstatus, 0), pid);
+    EXPECT_TRUE(WIFEXITED(wstatus));
+    EXPECT_EQ(WEXITSTATUS(wstatus), SIGTERM);
 }
 #endif
 

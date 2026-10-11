@@ -164,7 +164,7 @@ TEST_F(TestWaitable, test_waitable_notify_all_wakes_every_waiter)
         });
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
     waitable.notify_all();
 
     for (std::thread & t : waiters)

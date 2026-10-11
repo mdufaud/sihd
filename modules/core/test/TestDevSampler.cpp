@@ -95,4 +95,54 @@ TEST_F(TestDevSampler, test_devsampler)
     ASSERT_TRUE(core.stop());
 }
 
+TEST_F(TestDevSampler, test_devsampler_wrong_conf)
+{
+    Core core;
+    DevSampler *dev_ptr = core.add_child<DevSampler>("sampler");
+    EXPECT_FALSE(dev_ptr->set_conf_str("sample", "no_separator"));
+    EXPECT_TRUE(dev_ptr->set_conf_str("sample", "..no_such_out=..no_such_in"));
+
+    EXPECT_TRUE(core.init());
+    EXPECT_FALSE(core.start());
+}
+
+TEST_F(TestDevSampler, test_devsampler_two_mappings)
+{
+    Core core;
+    core.add_channel("in1", "int", 1);
+    core.add_channel("out1", "int", 1);
+    core.add_channel("in2", "int", 1);
+    core.add_channel("out2", "int", 1);
+
+    DevSampler *dev_ptr = core.add_child<DevSampler>("sampler");
+    ASSERT_TRUE(dev_ptr->set_conf("frequency", 100.0));
+    ASSERT_TRUE(dev_ptr->set_conf_str("sample", "..out1=..in1"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("sample", "..out2=..in2"));
+
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    Channel *in1 = core.get_channel("in1").value_or(nullptr);
+    Channel *out1 = core.get_channel("out1").value_or(nullptr);
+    Channel *in2 = core.get_channel("in2").value_or(nullptr);
+    Channel *out2 = core.get_channel("out2").value_or(nullptr);
+    ASSERT_NE(in1, nullptr);
+    ASSERT_NE(out1, nullptr);
+    ASSERT_NE(in2, nullptr);
+    ASSERT_NE(out2, nullptr);
+
+    ChannelWaiter out1_waiter(out1);
+    ChannelWaiter out2_waiter(out2);
+
+    EXPECT_TRUE(in1->write(ArrInt({42})));
+    EXPECT_TRUE(out1_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
+    EXPECT_EQ(out1->read<int>(0), 42);
+
+    EXPECT_TRUE(in2->write(ArrInt({43})));
+    EXPECT_TRUE(out2_waiter.prev_wait_for(sihd::util::Duration(time::sec(1))));
+    EXPECT_EQ(out2->read<int>(0), 43);
+
+    ASSERT_TRUE(core.stop());
+}
+
 } // namespace test

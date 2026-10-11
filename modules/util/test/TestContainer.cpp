@@ -1,4 +1,5 @@
 #include <deque>
+#include <functional>
 
 #include <gtest/gtest.h>
 
@@ -119,8 +120,8 @@ TEST_F(TestContainer, test_container_predicates)
     EXPECT_EQ(vec, (std::vector<int> {2, 1}));
     EXPECT_FALSE(container::erase_if(vec, [](int v) { return v > 4; }));
 
-    container::sort(vec, std::greater<int>());
-    EXPECT_EQ(vec, (std::vector<int> {2, 1}));
+    container::sort(vec, std::less<int>());
+    EXPECT_EQ(vec, (std::vector<int> {1, 2}));
 
     const std::vector<int> transformed = container::transform_if(
         vec,

@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 
+#include <chrono>
 #include <csignal>
 #include <cstring>
 #include <string>
@@ -416,6 +417,177 @@ TEST_F(TestSocket, test_socket_receive_eintr)
     EXPECT_EQ(strncmp(recv.data(), "eintr", 5), 0);
 
     pthread_join(thread, nullptr);
+}
+#endif
+
+TEST_F(TestSocket, test_socket_options_extended)
+{
+    Socket sock;
+    ASSERT_TRUE(sock.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+
+    EXPECT_TRUE(sock.set_tcp_nodelay(true).has_value());
+    EXPECT_TRUE(sock.is_tcp_nodelay());
+    EXPECT_TRUE(sock.set_tcp_nodelay(false).has_value());
+#if !defined(__SIHD_WINDOWS__)
+    EXPECT_FALSE(sock.is_tcp_nodelay());
+#endif
+
+    EXPECT_TRUE(sock.set_ttl(64).has_value());
+
+    Socket udp;
+    ASSERT_TRUE(udp.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    EXPECT_TRUE(udp.set_broadcast(true).has_value());
+    EXPECT_TRUE(udp.is_broadcast());
+    EXPECT_TRUE(udp.set_broadcast(false).has_value());
+#if !defined(__SIHD_WINDOWS__)
+    EXPECT_FALSE(udp.is_broadcast());
+#endif
+}
+
+#if defined(__SIHD_LINUX__)
+TEST_F(TestSocket, test_socket_bind_to_device)
+{
+    Socket sock;
+    ASSERT_TRUE(sock.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    EXPECT_TRUE(sock.bind_to_device("lo").has_value());
+    EXPECT_FALSE(sock.bind_to_device("no-such-iface-sihd").has_value());
+}
+#endif
+
+TEST_F(TestSocket, test_socket_recv_timeout_expires)
+{
+    Socket server;
+    ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(server.set_reuseaddr(true).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
+    const int port = server.local_port();
+    ASSERT_GT(port, 0);
+    ASSERT_TRUE(server.listen(1).has_value());
+
+    Socket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port)).has_value());
+    Socket accepted(server.accept().value_or(-1));
+    ASSERT_TRUE(accepted.is_open());
+
+    ASSERT_TRUE(accepted.set_recv_timeout(50).has_value());
+    sihd::util::ArrChar recv(64);
+    const auto start = std::chrono::steady_clock::now();
+    auto res = accepted.receive(recv);
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now()
+                                                                               - start);
+    ASSERT_FALSE(res.has_value());
+    EXPECT_GE(elapsed.count(), 25);
+    EXPECT_LT(elapsed.count(), 2000);
+}
+
+TEST_F(TestSocket, test_socket_send_all_non_blocking_would_block)
+{
+    Socket server;
+    ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(server.set_reuseaddr(true).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
+    const int port = server.local_port();
+    ASSERT_GT(port, 0);
+    ASSERT_TRUE(server.listen(1).has_value());
+
+    Socket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port)).has_value());
+    Socket accepted(server.accept().value_or(-1));
+    ASSERT_TRUE(accepted.is_open());
+
+    ASSERT_TRUE(client.set_sndbuf(2048).has_value());
+    ASSERT_TRUE(client.set_blocking(false).has_value());
+
+    const std::string payload(256 * 1024, 'x');
+    auto res = client.send_all({payload.data(), payload.size()});
+    // the socket buffer size is a hint the platform may ignore: keep pouring until it refuses
+    for (int i = 0; res.has_value() && i < 64; ++i)
+        res = client.send_all({payload.data(), payload.size()});
+    ASSERT_FALSE(res.has_value());
+    EXPECT_TRUE(res.error().retryable());
+
+    EXPECT_TRUE(client.close().has_value());
+    EXPECT_TRUE(accepted.close().has_value());
+    EXPECT_TRUE(server.close().has_value());
+}
+
+TEST_F(TestSocket, test_socket_send_all_to_datagram_refused)
+{
+    Socket receiver;
+    ASSERT_TRUE(receiver.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    ASSERT_TRUE(receiver.set_reuseaddr(true).has_value());
+    ASSERT_TRUE(receiver.bind(IpAddr("127.0.0.1", 0)).has_value());
+    const int port = receiver.local_port();
+    ASSERT_GT(port, 0);
+
+    Socket sender;
+    ASSERT_TRUE(sender.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    ASSERT_TRUE(sender.set_sndbuf(2048).has_value());
+    ASSERT_TRUE(sender.set_blocking(false).has_value());
+
+    const std::string payload(64 * 1024, 'y');
+    auto res = sender.send_all_to(IpAddr("127.0.0.1", port), {payload.data(), payload.size()});
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, sihd::util::ErrorCode::overflow);
+
+    EXPECT_TRUE(sender.close().has_value());
+    EXPECT_TRUE(receiver.close().has_value());
+}
+
+TEST_F(TestSocket, test_socket_send_receive_after_close)
+{
+    Socket sock;
+    ASSERT_TRUE(sock.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    EXPECT_TRUE(sock.close().has_value());
+
+    auto sent = sock.send("hello");
+    ASSERT_FALSE(sent.has_value());
+    EXPECT_EQ(sent.error().code, sihd::util::ErrorCode::closed);
+
+    sihd::util::ArrChar recv(16);
+    auto received = sock.receive(recv);
+    ASSERT_FALSE(received.has_value());
+    EXPECT_EQ(received.error().code, sihd::util::ErrorCode::closed);
+}
+
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
+TEST_F(TestSocket, test_socket_unix_datagram_roundtrip)
+{
+    const std::string path = "/tmp/sihd_test_unix_dgram_" + std::to_string(getpid()) + ".sock";
+    const std::string sender_path = path + ".sender";
+    sihd::util::Defer cleanup([&] {
+        (void)sihd::sys::fs::remove_file(path);
+        (void)sihd::sys::fs::remove_file(sender_path);
+    });
+
+    Socket receiver;
+    ASSERT_TRUE(receiver.open(AF_UNIX, SOCK_DGRAM, 0).has_value());
+    ASSERT_TRUE(receiver.bind_unix(path).has_value());
+
+    Socket sender;
+    ASSERT_TRUE(sender.open(AF_UNIX, SOCK_DGRAM, 0).has_value());
+    const char msg[] = "unix dgram";
+    ASSERT_EQ(sender.send_to_unix(path, msg), (ssize_t)strlen(msg));
+
+    std::string from;
+    sihd::util::ArrChar recv(64);
+    EXPECT_EQ(receiver.receive_from_unix(from, recv), (ssize_t)strlen(msg));
+    EXPECT_EQ(strncmp(recv.data(), msg, strlen(msg)), 0);
+
+    Socket bound_sender;
+    ASSERT_TRUE(bound_sender.open(AF_UNIX, SOCK_DGRAM, 0).has_value());
+    ASSERT_TRUE(bound_sender.bind_unix(sender_path).has_value());
+    ASSERT_EQ(bound_sender.send_to_unix(path, msg), (ssize_t)strlen(msg));
+    EXPECT_EQ(receiver.receive_from_unix(from, recv), (ssize_t)strlen(msg));
+    EXPECT_EQ(from, sender_path);
+
+    const sihd::util::ArrChar payload("all the bytes");
+    EXPECT_TRUE(bound_sender.send_all_to_unix(path, payload).has_value());
+    sihd::util::ArrChar recv2(64);
+    EXPECT_EQ(receiver.receive_from_unix(from, recv2), (ssize_t)payload.size());
+    EXPECT_EQ(strncmp(recv2.data(), payload.data(), payload.size()), 0);
 }
 #endif
 

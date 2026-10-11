@@ -136,4 +136,27 @@ TEST_F(TestDevMessage, test_devmessage)
 
     ASSERT_TRUE(core.stop());
 }
+
+TEST_F(TestDevMessage, test_devmessage_init_unknown_message)
+{
+    Core core;
+    DevMessage *dev = core.add_child<DevMessage>("dev");
+    (void)dev->set_conf_str("message", "..no_such_message");
+    EXPECT_FALSE(core.init());
+}
+
+TEST_F(TestDevMessage, test_devmessage_init_unfinished)
+{
+    Core core;
+    DevMessage *dev = core.add_child<DevMessage>("dev");
+    Message *msg = core.add_child<Message>("msg");
+    msg->add_field("size", TYPE_INT, 1);
+    (void)dev->set_conf_str("message", "..msg");
+
+    EXPECT_FALSE(core.init());
+    EXPECT_FALSE(core.reset());
+    EXPECT_FALSE(core.init());
+    (void)msg->finish();
+    EXPECT_FALSE(core.init());
+}
 } // namespace test

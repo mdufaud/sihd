@@ -72,7 +72,10 @@ std::expected<void, sihd::util::Error> TcpClient::connect(const IpAddr & addr, i
     auto res = _socket.connect(addr, timeout_ms);
     _connected = res.has_value();
     if (_connected)
+    {
+        _client_addr = addr;
         SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
+    }
     return res;
 }
 
@@ -123,6 +126,7 @@ std::expected<void, sihd::util::Error> TcpClient::close()
 {
     (void)_socket.shutdown();
     _connected = false;
+    _client_addr = IpAddr();
     return _socket.close();
 }
 
@@ -165,10 +169,8 @@ bool TcpClient::poll()
 
 std::expected<size_t, sihd::util::Error> TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
 {
-    auto res = _socket.receive_from(addr, arr);
-    if (_connected)
-        _connected = (res && res.value() > 0) || (!res && res.error().retryable());
-    return res;
+    addr = _client_addr;
+    return this->receive(arr);
 }
 
 std::expected<size_t, sihd::util::Error> TcpClient::receive(sihd::util::IArray & arr)

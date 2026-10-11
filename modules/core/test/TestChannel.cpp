@@ -113,6 +113,42 @@ TEST_F(TestChannel, test_channel_set_clock)
     EXPECT_EQ(c.timestamp().get(), time::milli(2));
 }
 
+TEST_F(TestChannel, test_channel_clock_restore)
+{
+    FakeClock clock;
+    Channel c("chan", "int");
+
+    c.set_clock(&clock);
+    EXPECT_TRUE(c.write<int>(0, 1));
+    EXPECT_EQ(c.timestamp().get(), time::milli(1));
+
+    c.set_clock(Channel::default_clock());
+    EXPECT_TRUE(c.write<int>(0, 2));
+    EXPECT_GT(c.timestamp().get(), time::milli(1));
+}
+
+TEST_F(TestChannel, test_channel_write_from_channel)
+{
+    Channel dst("dst", "int", 2);
+    Channel src("src", "int", 2);
+    EXPECT_TRUE(src.write<int>(0, 11));
+    EXPECT_TRUE(src.write<int>(1, 22));
+
+    EXPECT_TRUE(dst.write(src));
+    EXPECT_EQ(dst.read<int>(0), 11);
+    EXPECT_EQ(dst.read<int>(1), 22);
+}
+
+TEST_F(TestChannel, test_channel_resize)
+{
+    Channel c("chan", "int", 1);
+    EXPECT_FALSE(c.resizable());
+    EXPECT_TRUE(c.resize(4));
+    EXPECT_EQ(c.size(), 4u);
+    EXPECT_TRUE(c.write<int>(3, 9));
+    EXPECT_EQ(c.read<int>(3), 9);
+}
+
 TEST_F(TestChannel, test_channel_conf)
 {
     EXPECT_EQ(Channel::build(""), nullptr);

@@ -1,8 +1,10 @@
 #include <chrono>
+#include <memory>
 #include <string>
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/Poll.hpp>
 #include <sihd/sys/platform.hpp>
 
 #include "listener/make_listener.hpp"
@@ -12,6 +14,8 @@
 #else
 # include <winsock2.h>
 #endif
+
+#include <wait_for.hpp>
 
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
@@ -252,6 +256,264 @@ TEST_F(TestTlsTcp, tls_timed_handshake_on_blocking_socket)
         total += (size_t)rcv;
     }
     EXPECT_EQ(std::string(recv_buf, total), "blocking handshake");
+}
+
+TEST_F(TestTlsTcp, tls_connection_without_init_fails)
+{
+    TlsConnection conn;
+    EXPECT_FALSE(conn.connect(100).has_value());
+    EXPECT_FALSE(conn.accept(100).has_value());
+    EXPECT_FALSE(conn.accept_step().has_value());
+    char buf[16];
+    EXPECT_FALSE(conn.read(buf, sizeof(buf)).has_value());
+    EXPECT_FALSE(conn.write(buf, sizeof(buf)).has_value());
+    EXPECT_FALSE(conn.pending());
+
+    TlsContext empty_ctx;
+    Socket sock;
+    ASSERT_TRUE(sock.open(AF_INET, SOCK_STREAM, 0).has_value());
+    auto inited = conn.init(empty_ctx, sock);
+    ASSERT_FALSE(inited.has_value());
+    EXPECT_EQ(inited.error().code, sihd::util::ErrorCode::not_initialized);
+}
+
+TEST_F(TestTlsTcp, tls_accept_step_drives_handshake_to_completion)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+
+    Socket client_sock;
+    ASSERT_TRUE(client_sock.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(client_sock.connect(IpAddr("127.0.0.1", port)).has_value());
+
+    TlsSocket server_side(listener.accept(tls_connect_timeout_ms).value_or(-1), true);
+    ASSERT_TRUE(server_side.is_open());
+    server_side.set_tls_context(_server_ctx);
+
+    TlsConnection client_conn;
+    ASSERT_TRUE(client_conn.init(_client_ctx, client_sock));
+    Worker worker([&client_conn] { return client_conn.connect(tls_connect_timeout_ms).has_value(); });
+    ASSERT_TRUE(worker.start_sync_worker("tls-client-handshake"));
+    sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
+
+    TlsHandshakeStep step = server_side.tls_accept_step();
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    sihd::sys::Poll poll;
+    poll.set_limit(1);
+    while ((step == TlsHandshakeStep::want_read || step == TlsHandshakeStep::want_write)
+           && std::chrono::steady_clock::now() < deadline)
+    {
+        if (step == TlsHandshakeStep::want_read)
+            poll.set_read_fd(server_side.socket());
+        else
+            poll.set_write_fd(server_side.socket());
+        poll.poll(100);
+        step = server_side.tls_accept_step();
+    }
+    ASSERT_TRUE(worker.stop_worker());
+    EXPECT_EQ(step, TlsHandshakeStep::complete);
+    EXPECT_TRUE(server_side.tls_active());
+
+    const ArrChar hello("stepped");
+    ASSERT_GT((ssize_t)client_conn.write(hello.data(), hello.size()).value_or(0), 0);
+    ArrChar recv(64);
+    auto received = server_side.receive(recv);
+    ASSERT_TRUE(received.has_value());
+    EXPECT_EQ(received.value(), (size_t)hello.size());
+
+    EXPECT_TRUE(client_conn.shutdown().has_value());
+    auto closed = server_side.receive(recv);
+    ASSERT_TRUE(closed.has_value());
+    EXPECT_EQ(closed.value(), 0u);
+}
+
+TEST_F(TestTlsTcp, tls_handshake_deadline_drops_silent_peer)
+{
+    TcpServer server("tls-server");
+    BasicServerHandler server_handler;
+    server_handler.set_tls_context(_server_ctx);
+    ASSERT_TRUE(server_handler.set_tls_accept_timeout(300));
+
+    ASSERT_TRUE(server.open_and_bind(IpAddr::localhost(0)).has_value());
+    const int port = server.socket().local_port();
+    ASSERT_GT(port, 0);
+    server.set_server_handler(&server_handler);
+    server.set_poll_timeout(1);
+
+    Worker worker([&server] { return server.start(); });
+    ASSERT_TRUE(worker.start_sync_worker("tls-server"));
+    sihd::util::Defer stop_worker([&] {
+        server.stop();
+        worker.stop_worker();
+    });
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    Socket silent_peer;
+    ASSERT_TRUE(silent_peer.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(silent_peer.connect(IpAddr("127.0.0.1", port)).has_value());
+
+    wait_for([&] { return server_handler.clients().size() == 1u; });
+    ASSERT_EQ(server_handler.clients().size(), 1u);
+
+    wait_for([&] { return server_handler.clients().empty(); });
+    EXPECT_EQ(server_handler.client_count(), 0u);
+}
+
+TEST_F(TestTlsTcp, tls_send_to_client_refused_while_partial_write_pending)
+{
+    TcpServer server("tls-server");
+    TcpClient client("tls-client");
+    BasicServerHandler server_handler;
+    server_handler.set_tls_context(_server_ctx);
+    client.set_tls_context(_client_ctx);
+
+    ASSERT_TRUE(server.open_and_bind(IpAddr::localhost(0)).has_value());
+    const int port = server.socket().local_port();
+    ASSERT_GT(port, 0);
+    server.set_server_handler(&server_handler);
+    server.set_poll_timeout(1);
+
+    Worker worker([&server] { return server.start(); });
+    ASSERT_TRUE(worker.start_sync_worker("tls-server"));
+    sihd::util::Defer stop_worker([&] {
+        server.stop();
+        worker.stop_worker();
+    });
+    ASSERT_TRUE(server.wait_ready(std::chrono::seconds(1)));
+
+    ASSERT_TRUE(client.open_and_connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms).has_value());
+    wait_for([&] { return server_handler.client_count() == 1u; });
+    ASSERT_EQ(server_handler.client_count(), 1u);
+    wait_for([&] { return client.socket().tls_active(); });
+
+    const size_t payload_size = 2 * 1024 * 1024;
+    ArrChar payload(payload_size);
+    payload.resize(payload_size);
+    for (size_t i = 0; i < payload_size; ++i)
+        payload.buf()[i] = (char)(i % 251 + 1);
+    auto clients = server_handler.clients();
+    ASSERT_EQ(clients.size(), 1u);
+    ASSERT_TRUE(wait_for([&] { return server_handler.send_to_client(clients[0], payload); }));
+
+    const ArrChar second("refused");
+    EXPECT_FALSE(server_handler.send_to_client(clients[0], second));
+
+    ArrChar recv(payload_size);
+    size_t received = 0;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (received < payload_size && std::chrono::steady_clock::now() < deadline)
+    {
+        if (!client.socket().tls_pending() && !client.poll(100))
+            continue;
+        const auto size = client.receive(recv.buf() + received, payload_size - received);
+        if (!size)
+        {
+            if (!size.error().retryable())
+                break;
+        }
+        else if (size.value() > 0)
+            received += size.value();
+        else
+            break;
+    }
+    ASSERT_EQ(received, payload_size);
+    EXPECT_EQ(memcmp(recv.buf(), payload.buf(), payload_size), 0);
+
+    bool resumed = wait_for([&] { return server_handler.send_to_client(clients[0], second); });
+    EXPECT_TRUE(resumed);
+}
+
+TEST_F(TestTlsTcp, tls_socket_connect_failure_closes_socket)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+
+    TlsSocket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    client.set_tls_context(_client_ctx);
+    auto res = client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms);
+    EXPECT_FALSE(res.has_value());
+    EXPECT_FALSE(client.is_open());
+
+    (void)listener.close();
+}
+
+TEST_F(TestTlsTcp, tls_socket_standalone_accept)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+
+    TlsSocket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    client.set_tls_context(_client_ctx);
+
+    std::unique_ptr<TlsSocket> server_side;
+    Worker worker([&] {
+        const int fd = listener.accept(tls_connect_timeout_ms).value_or(-1);
+        if (fd < 0)
+            return false;
+        server_side = std::make_unique<TlsSocket>(fd, true);
+        server_side->set_tls_context(_server_ctx);
+        return server_side->tls_accept(tls_connect_timeout_ms).has_value();
+    });
+    ASSERT_TRUE(worker.start_sync_worker("tls-server-accept"));
+    sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
+
+    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms).has_value());
+    ASSERT_TRUE(worker.stop_worker());
+    ASSERT_NE(server_side.get(), nullptr);
+
+    EXPECT_TRUE(client.tls_active());
+    EXPECT_TRUE(server_side->tls_active());
+
+    const ArrChar hello("tls standalone");
+    ASSERT_EQ(client.send(hello).value_or(0), (size_t)hello.size());
+    ArrChar recv(64);
+    auto received = server_side->receive(recv);
+    ASSERT_TRUE(received.has_value());
+    EXPECT_EQ(received.value(), (size_t)hello.size());
+    EXPECT_EQ(strncmp(recv.data(), hello.data(), hello.size()), 0);
+
+    EXPECT_TRUE(server_side->shutdown().has_value());
+    auto closed = client.receive(recv);
+    ASSERT_TRUE(closed.has_value());
+    EXPECT_EQ(closed.value(), 0u);
+
+    (void)client.close();
+    (void)server_side->close();
+    (void)listener.close();
+}
+
+TEST_F(TestTlsTcp, tls_socket_plain_fallback_without_context)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+
+    TlsSocket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms).has_value());
+
+    TlsSocket server_side(listener.accept(tls_connect_timeout_ms).value_or(-1), true);
+    ASSERT_TRUE(server_side.is_open());
+    EXPECT_FALSE(server_side.tls_active());
+
+    const ArrChar hello("plain");
+    ASSERT_EQ(client.send(hello).value_or(0), (size_t)hello.size());
+    ArrChar recv(64);
+    EXPECT_EQ(server_side.receive(recv), (ssize_t)hello.size());
+    EXPECT_EQ(strncmp(recv.data(), hello.data(), hello.size()), 0);
+
+    (void)client.close();
+    (void)server_side.close();
+    (void)listener.close();
 }
 
 } // namespace test

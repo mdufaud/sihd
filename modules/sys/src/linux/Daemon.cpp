@@ -80,7 +80,11 @@ bool Daemon::run()
     if (pid > 0)
         _exit(EXIT_SUCCESS);
     // write pid file
-    _write_pid_file();
+    if (_write_pid_file() == false)
+    {
+        SIHD_LOG(error, "Daemon: could not write pid file '{}'", _pid_file_path);
+        _exit(4);
+    }
     // change file creation mask
     umask(0);
     // change directory

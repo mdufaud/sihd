@@ -4,9 +4,16 @@
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <unistd.h>
+
+# include <sihd/sys/fs.hpp>
+#endif
 
 namespace test
 {
@@ -118,5 +125,55 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     EXPECT_TRUE(array_rcv.is_equal(helloworld));
     EXPECT_EQ(array_rcv.size(), strlen(helloworld));
 }
+
+TEST_F(TestUdp, test_udp_receiver_poll_timeout_and_unbound_errors)
+{
+    UdpReceiver receiver("udp-receiver");
+
+    sihd::util::ArrChar array_rcv(64);
+    auto unbound = receiver.receive(array_rcv);
+    ASSERT_FALSE(unbound.has_value());
+    EXPECT_EQ(unbound.error().code, sihd::util::ErrorCode::closed);
+
+    EXPECT_FALSE(receiver.poll(20));
+
+    ASSERT_TRUE(receiver.open_and_bind(IpAddr("127.0.0.1", 0)).has_value());
+    const int port = receiver.socket().local_port();
+    ASSERT_GT(port, 0);
+
+    EXPECT_FALSE(receiver.poll(20));
+
+    UdpSender sender("udp-sender");
+    ASSERT_TRUE(sender.open_and_connect({"127.0.0.1", port}).has_value());
+    const char msg[] = "wake";
+    ASSERT_EQ(sender.send(msg), (ssize_t)strlen(msg));
+    EXPECT_TRUE(receiver.poll(1000));
+
+    EXPECT_TRUE(receiver.close().has_value());
+    EXPECT_TRUE(sender.close().has_value());
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestUdp, test_udp_unix_roundtrip)
+{
+    const std::string path = "/tmp/sihd_test_udp_unix_" + std::to_string(getpid()) + ".sock";
+    sihd::util::Defer remove_file([&] { (void)sihd::sys::fs::remove_file(path); });
+
+    UdpSender sender("udp-unix-sender");
+    UdpReceiver receiver("udp-unix-receiver");
+
+    ASSERT_TRUE(receiver.open_unix_and_bind(path).has_value());
+    ASSERT_TRUE(sender.open_unix_and_connect(path).has_value());
+
+    const char helloworld[] = "hello unix dgram";
+    sihd::util::ArrChar array_rcv(64);
+    ASSERT_EQ(sender.send(helloworld), (ssize_t)strlen(helloworld));
+    EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)strlen(helloworld));
+    EXPECT_TRUE(array_rcv.is_equal(helloworld));
+
+    EXPECT_TRUE(receiver.close().has_value());
+    EXPECT_TRUE(sender.close().has_value());
+}
+#endif
 
 } // namespace test

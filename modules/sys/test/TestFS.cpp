@@ -8,6 +8,7 @@
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
@@ -582,5 +583,86 @@ TEST_F(TestFS, test_fs_download_path)
 }
 
 #endif
+
+TEST_F(TestFS, test_fs_hard_link_and_rename)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string dir = tmp_dir.path();
+
+    const std::string target = dir + "/target.txt";
+    ASSERT_TRUE(fs::write(target, "link me").has_value());
+
+    const std::string hard = dir + "/hard.txt";
+    ASSERT_TRUE(fs::make_hard_link(target, hard).has_value());
+    EXPECT_TRUE(fs::are_equals(target, hard));
+
+    const std::string renamed = dir + "/renamed.txt";
+    ASSERT_TRUE(fs::rename(hard, renamed).has_value());
+    EXPECT_FALSE(fs::exists(hard));
+    EXPECT_TRUE(fs::exists(renamed));
+    EXPECT_TRUE(fs::are_equals(target, renamed));
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestFS, test_fs_dir_link_and_read_link)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string dir = tmp_dir.path();
+
+    const std::string sub = dir + "/sub";
+    ASSERT_TRUE(std::filesystem::create_directory(sub));
+
+    const std::string link = dir + "/sub-link";
+    ASSERT_TRUE(fs::make_dir_link(sub, link).has_value());
+    const auto linked = fs::read_link(link);
+    ASSERT_TRUE(linked.has_value());
+    EXPECT_EQ(*linked, sub);
+
+    const std::string file_target = dir + "/file.txt";
+    ASSERT_TRUE(fs::write(file_target, "content").has_value());
+    const std::string file_link = dir + "/file-link.txt";
+    ASSERT_TRUE(fs::make_file_link(file_target, file_link).has_value());
+    const auto file_linked = fs::read_link(file_link);
+    ASSERT_TRUE(file_linked.has_value());
+    EXPECT_EQ(*file_linked, file_target);
+}
+#endif
+
+TEST_F(TestFS, test_fs_chdir_roundtrip)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+
+    const std::string previous = fs::cwd();
+    sihd::util::Defer restore_cwd([&] { (void)fs::chdir(previous); });
+    ASSERT_TRUE(fs::chdir(tmp_dir.path()).has_value());
+    EXPECT_EQ(fs::cwd(), tmp_dir.path());
+    EXPECT_TRUE(fs::chdir(previous).has_value());
+    EXPECT_EQ(fs::cwd(), previous);
+
+    EXPECT_FALSE(fs::chdir("/no-such-dir-sihd-chdir").has_value());
+    EXPECT_EQ(fs::cwd(), previous);
+}
+
+TEST_F(TestFS, test_fs_make_tmp_directory)
+{
+    // the windows impl builds on tmpnam, which wine does not provide windows-style
+    if (running_under_wine())
+        GTEST_SKIP() << "make_tmp_directory under wine";
+
+    auto tmp1 = fs::make_tmp_directory("sihd_fs_test_");
+    ASSERT_TRUE(tmp1.has_value());
+    EXPECT_TRUE(fs::is_dir(*tmp1));
+
+    auto tmp2 = fs::make_tmp_directory("sihd_fs_test_");
+    ASSERT_TRUE(tmp2.has_value());
+    EXPECT_NE(*tmp1, *tmp2);
+
+    EXPECT_TRUE(fs::remove_directory(*tmp1).has_value());
+    EXPECT_TRUE(fs::remove_directory(*tmp2).has_value());
+    EXPECT_FALSE(fs::exists(*tmp1));
+}
 
 } // namespace test

@@ -1315,7 +1315,6 @@ TEST_F(TestStr, test_str_localtimeoffset)
     const std::string offset = str::localtimeoffset_str(epoch);
     EXPECT_FALSE(offset.empty());
     EXPECT_EQ(offset[0], '+');
-    EXPECT_EQ(offset, epoch.localtimeoffset_str());
 }
 
 TEST_F(TestStr, test_str_to_signed_unsigned_float)

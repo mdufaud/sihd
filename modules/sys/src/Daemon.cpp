@@ -130,7 +130,7 @@ bool Daemon::_lock_pid_file()
     FileMutex tmp(_pid_file_path, true);
     _pid_file_mutex = std::move(tmp);
 
-    _lock = std::unique_lock(_pid_file_mutex);
+    _lock = std::unique_lock(_pid_file_mutex, std::defer_lock);
     if (_lock.try_lock() == false)
     {
         SIHD_LOG(error, "Daemon: cannot lock file");
@@ -155,6 +155,9 @@ bool Daemon::_write_pid_file()
         SIHD_LOG(error, "Daemon: pid file short write: {}/{}", *wrote, towrite.size());
         return false;
     }
+    // a pid file exists to be read by a supervisor while the daemon lives: stdio buffering must not hold it
+    if (SIHD_UNEXPECTED_LOG(file.flush()))
+        return false;
 
     return true;
 }

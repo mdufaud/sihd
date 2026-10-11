@@ -86,7 +86,6 @@ TEST_F(TestCliInterpreter, test_completion)
 TEST_F(TestCliInterpreter, test_completion_loader)
 {
     CliInterpreter cli("my-app");
-    cli.root().add_command("service", "manage services");
 
     const std::string loader = cli.bash_completion_loader();
     EXPECT_NE(loader.find("__complete"), std::string::npos);

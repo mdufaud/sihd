@@ -109,6 +109,9 @@ TEST_F(TestTime, test_time_tm)
 
 TEST_F(TestTime, test_time_local_tm)
 {
+    if (time::get_timezone() == 0)
+        GTEST_SKIP() << "UTC host: the timezone-sign regression is not observable";
+
     const time::UnixTime t = time::sec(1700000000);
 
     struct tm local = time::to_tm(t, true);

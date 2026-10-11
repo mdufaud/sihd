@@ -1,6 +1,18 @@
+#include <sys/types.h>
+
+#include <bit>
 #include <cstring>
 
 #include <gtest/gtest.h>
+
+#include <sihd/sys/platform.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <netinet/in.h>
+# include <sys/socket.h>
+#else
+# include <winsock2.h>
+#endif
 
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/dns.hpp>
@@ -295,6 +307,123 @@ TEST_F(TestIpAddr, test_ipaddr_subnet_edges)
     memset(&zeroed, 0, sizeof(zeroed));
     Subnet sub = v6.subnet();
     EXPECT_EQ(memcmp(&sub, &zeroed, sizeof(Subnet)), 0);
+}
+
+TEST_F(TestIpAddr, test_ipaddr_name_mappings)
+{
+    EXPECT_EQ(ip::domain("ipv4"), AF_INET);
+    EXPECT_EQ(ip::domain("ipv6"), AF_INET6);
+    EXPECT_EQ(ip::domain("nope"), -1);
+    EXPECT_EQ(ip::domain(""), -1);
+
+    EXPECT_EQ(ip::socktype("tcp"), SOCK_STREAM);
+    EXPECT_EQ(ip::socktype("udp"), SOCK_DGRAM);
+    EXPECT_EQ(ip::socktype("stream"), SOCK_STREAM);
+    EXPECT_EQ(ip::socktype("datagram"), SOCK_DGRAM);
+    EXPECT_EQ(ip::socktype("nope"), -1);
+
+    EXPECT_STREQ(ip::domain_str(AF_INET), "ipv4");
+    EXPECT_STREQ(ip::domain_str(AF_INET6), "ipv6");
+    EXPECT_STREQ(ip::domain_str(-1), "error");
+    EXPECT_STREQ(ip::domain_str(123), "");
+
+    EXPECT_STREQ(ip::socktype_str(SOCK_STREAM), "stream");
+    EXPECT_STREQ(ip::socktype_str(SOCK_DGRAM), "datagram");
+    EXPECT_STREQ(ip::socktype_str(-1), "error");
+
+    EXPECT_EQ(ip::protocol("udp"), IPPROTO_UDP);
+    EXPECT_EQ(ip::protocol("tcp"), IPPROTO_TCP);
+    EXPECT_EQ(ip::protocol("nope"), -1);
+    EXPECT_STREQ(ip::protocol_str(IPPROTO_UDP), "udp");
+    EXPECT_STREQ(ip::protocol_str(IPPROTO_TCP), "tcp");
+    EXPECT_STREQ(ip::protocol_str(300), "");
+}
+
+TEST_F(TestIpAddr, test_ipaddr_netmask_helpers)
+{
+    EXPECT_EQ(ip::to_netmask(0), 0u);
+    EXPECT_EQ(ip::to_netmask(32), 0xffffffffu);
+    EXPECT_EQ(ip::to_netmask(33), 0xffffffffu);
+    EXPECT_EQ(ip::to_netmask(64), 0xffffffffu);
+    for (int bits : {1, 4, 8, 16, 24, 31})
+        EXPECT_EQ(std::popcount(ip::to_netmask((uint32_t)bits)), bits) << bits;
+
+    EXPECT_TRUE(ip::is_valid_netmask(0xffffffff));
+    EXPECT_TRUE(ip::is_valid_netmask(0xffffff80));
+    EXPECT_TRUE(ip::is_valid_netmask(0xffff0000));
+    EXPECT_TRUE(ip::is_valid_netmask(0x80000000));
+    EXPECT_FALSE(ip::is_valid_netmask(0));
+    EXPECT_FALSE(ip::is_valid_netmask(0x7fffff00));
+    EXPECT_FALSE(ip::is_valid_netmask(0xff00ff00));
+    EXPECT_FALSE(ip::is_valid_netmask(0x00000001));
+}
+
+TEST_F(TestIpAddr, test_ipaddr_is_valid_ip_inputs)
+{
+    EXPECT_TRUE(ip::is_valid_ipv4("255.255.255.255"));
+    EXPECT_TRUE(ip::is_valid_ipv4("0.0.0.0"));
+    EXPECT_FALSE(ip::is_valid_ipv4("256.0.0.1"));
+    EXPECT_FALSE(ip::is_valid_ipv4("1.2.3"));
+    EXPECT_FALSE(ip::is_valid_ipv4("1.2.3.4.5"));
+    EXPECT_FALSE(ip::is_valid_ipv4("a.b.c.d"));
+    EXPECT_FALSE(ip::is_valid_ipv4(""));
+    EXPECT_FALSE(ip::is_valid_ipv4("::1"));
+
+    EXPECT_TRUE(ip::is_valid_ipv6("::"));
+    EXPECT_TRUE(ip::is_valid_ipv6("::1"));
+    EXPECT_TRUE(ip::is_valid_ipv6("2001:db8::1"));
+    EXPECT_FALSE(ip::is_valid_ipv6("gggg::1"));
+    EXPECT_FALSE(ip::is_valid_ipv6("2001:db8:::1"));
+    EXPECT_FALSE(ip::is_valid_ipv6("2001:db8::1:2:3:4:5:6:7"));
+    EXPECT_FALSE(ip::is_valid_ipv6(""));
+
+    EXPECT_FALSE(ip::is_valid_ip(""));
+    EXPECT_FALSE(ip::is_valid_ip("toto"));
+}
+
+TEST_F(TestIpAddr, test_dns_find_filters)
+{
+    auto empty = dns::find("");
+    ASSERT_FALSE(empty.has_value());
+    EXPECT_EQ(empty.error().code, sihd::util::ErrorCode::invalid_argument);
+
+    auto icmp = dns::find("localhost", false, -1, IPPROTO_ICMP);
+    ASSERT_FALSE(icmp.has_value());
+    EXPECT_EQ(icmp.error().code, sihd::util::ErrorCode::invalid_argument);
+
+    auto icmpv6 = dns::find("localhost", false, -1, IPPROTO_ICMPV6);
+    ASSERT_FALSE(icmpv6.has_value());
+    EXPECT_EQ(icmpv6.error().code, sihd::util::ErrorCode::invalid_argument);
+
+    auto ipv4 = dns::find("localhost");
+    ASSERT_TRUE(ipv4.has_value());
+    EXPECT_TRUE(ipv4->is_ipv4());
+
+    auto ipv6 = dns::find("localhost", true);
+    ASSERT_TRUE(ipv6.has_value());
+    EXPECT_TRUE(ipv6->is_ipv6());
+
+    auto unknown = dns::find("no-such-host-sihd-dns-find");
+    ASSERT_FALSE(unknown.has_value());
+    EXPECT_EQ(unknown.error().code, sihd::util::ErrorCode::not_found);
+}
+
+TEST_F(TestIpAddr, test_dns_lookup_error_and_dump)
+{
+    // windows getaddrinfo("") resolves to the local host: the empty-name refusal is unix-only
+#if !defined(__SIHD_WINDOWS__)
+    auto failed = dns::lookup("");
+    EXPECT_FALSE(failed.success);
+    EXPECT_TRUE(failed.results.empty());
+#endif
+
+    auto dns = dns::lookup("localhost");
+    EXPECT_TRUE(dns.success);
+    EXPECT_FALSE(dns.results.empty());
+
+    const std::string dump = dns.dump();
+    EXPECT_NE(dump.find("host: localhost"), std::string::npos);
+    EXPECT_NE(dump.find("ipv"), std::string::npos);
 }
 
 } // namespace test
