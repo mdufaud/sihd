@@ -91,10 +91,6 @@ jobs:
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'py=0'
             llvm-mingw: true
-            # libwebsockets routes to find_package(pthreads_windows) under clang,
-            # unsatisfiable on mingw (the pthreads port is an empty stub there);
-            # needs a port-level threading fix before these leave experimental
-            experimental: true
           # static mingw: every transitive dep must be explicit (app.py
           # windows-static-libs), unlike the dynamic triplet
           - id: x64-mingw-static
@@ -103,7 +99,6 @@ jobs:
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'py=0'
             llvm-mingw: true
-            experimental: true # same pthreads_windows routing as the dynamic leg
           - id: wasm32-emscripten
             dep-args: compiler=em m=util,sys,core,csv,zip,net demo=1
             make-args: compiler=em m=util,sys,core,csv,zip,net demo=1
