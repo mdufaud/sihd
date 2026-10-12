@@ -227,23 +227,23 @@ std::string tmp_path()
 
 std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
 {
-    (void)prefix;
     std::error_code ec;
     auto tmp_path = std::filesystem::temp_directory_path(ec);
     if (ec)
     {
         return std::unexpected(Error(ec, "could not resolve the temp directory: {}", ec.message()));
     }
-    char name[L_tmpnam];
-    if (std::tmpnam(name) == nullptr)
-        return std::unexpected(Error(io_error, "could not generate a temporary name"));
-    std::string_view tmp_name = name;
-    tmp_name.remove_prefix(1);
-    tmp_path /= tmp_name;
-    std::string path = tmp_path.string();
-    auto res = make_directory(path);
-    SIHD_UNEXPECTED_RETURN(res);
-    return path;
+    // like mkdtemp on unix: the random characters are appended to the prefix path
+    const std::string base = prefix.empty() ? ensure_separation(tmp_path.string()) : std::string(prefix);
+    std::expected<void, Error> made = std::unexpected(Error(io_error, "no directory created"));
+    for (int attempt = 0; attempt < 8; ++attempt)
+    {
+        const std::string path = base + str::generate_random(8);
+        made = make_directory(path);
+        if (made)
+            return path;
+    }
+    return std::unexpected(std::move(made).error());
 }
 
 std::expected<void, Error> make_directory(std::string_view path, unsigned int mode)

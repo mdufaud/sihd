@@ -11,10 +11,9 @@ class CrashHandler
     public:
         struct Options
         {
-                // unix file descriptor the crash context and backtrace are written to
-                int fd = 2;
-                // windows minidump path; empty disables the dump
-                std::string minidump_path;
+                // crash dump file: minidump on windows, text report on unix;
+                // empty keeps the report on stderr only
+                std::string dump_path;
                 // unix: re-raise with the default disposition, preserving the core dump;
                 // windows: chain to WER/JIT — false terminates with the exception code
                 bool rethrow = true;

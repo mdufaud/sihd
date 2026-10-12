@@ -19,10 +19,11 @@ namespace sihd::sys
 namespace
 {
 
+constexpr int stderr_fd = 2;
+
 std::atomic<bool> g_installed {false};
-std::atomic<int> g_fd {2};
+std::string g_dump_path;
 std::atomic<bool> g_rethrow {true};
-std::string g_minidump_path;
 LPTOP_LEVEL_EXCEPTION_FILTER g_previous_filter = nullptr;
 
 void write_all(int fd, const void *data, unsigned int size)
@@ -64,19 +65,18 @@ void write_hex(int fd, uintptr_t value)
 
 LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
 {
-    const int fd = g_fd.load(std::memory_order_relaxed);
     if (info != nullptr && info->ExceptionRecord != nullptr)
     {
-        write_str(fd, "fatal exception 0x");
-        write_hex(fd, (uintptr_t)info->ExceptionRecord->ExceptionCode);
-        write_str(fd, " at 0x");
-        write_hex(fd, (uintptr_t)info->ExceptionRecord->ExceptionAddress);
-        write_str(fd, "\n");
+        write_str(stderr_fd, "fatal exception 0x");
+        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionCode);
+        write_str(stderr_fd, " at 0x");
+        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionAddress);
+        write_str(stderr_fd, "\n");
     }
-    os::backtrace(fd);
-    if (g_minidump_path.empty() == false)
+    os::backtrace(stderr_fd);
+    if (g_dump_path.empty() == false)
     {
-        HANDLE file = CreateFileA(g_minidump_path.c_str(),
+        HANDLE file = CreateFileA(g_dump_path.c_str(),
                                   GENERIC_WRITE,
                                   0,
                                   nullptr,
@@ -121,9 +121,8 @@ bool CrashHandler::install(const Options & options)
         g_installed.store(false);
         return false;
     }
-    g_fd.store(options.fd);
+    g_dump_path = options.dump_path;
     g_rethrow.store(options.rethrow);
-    g_minidump_path = options.minidump_path;
     g_previous_filter = SetUnhandledExceptionFilter(unhandled_filter);
     _options = options;
     _installed = true;

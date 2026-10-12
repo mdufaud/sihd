@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <signal.h>
 #include <ucontext.h>
 #include <unistd.h>
@@ -19,8 +20,10 @@ namespace
 
 constexpr size_t alt_stack_size = 64 * 1024;
 
+constexpr int stderr_fd = 2;
+
 std::atomic<bool> g_installed {false};
-std::atomic<int> g_fd {2};
+std::string g_dump_path;
 std::atomic<bool> g_rethrow {true};
 struct sigaction g_previous[signal::max_signal];
 alignas(16) static char g_alt_stack[alt_stack_size];
@@ -101,10 +104,9 @@ void write_registers(int fd, ucontext_t *uc)
     write_hex(fd, sp);
 }
 
-void crash_handler(int sig, siginfo_t *info, void *ctx)
+void write_report(int fd, int sig, siginfo_t *info, void *ctx)
 {
     // os::backtrace takes a mutex: a crash while holding it deadlocks instead of dumping
-    const int fd = g_fd.load(std::memory_order_relaxed);
     write_str(fd, "fatal signal ");
     write_num(fd, (uint64_t)sig);
     // a positive si_code is a kernel-generated fault, where si_addr is valid
@@ -116,6 +118,20 @@ void crash_handler(int sig, siginfo_t *info, void *ctx)
     write_registers(fd, (ucontext_t *)ctx);
     write_str(fd, "\n");
     os::backtrace(fd);
+}
+
+void crash_handler(int sig, siginfo_t *info, void *ctx)
+{
+    write_report(stderr_fd, sig, info, ctx);
+    if (g_dump_path.empty() == false)
+    {
+        const int dump_fd = open(g_dump_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (dump_fd >= 0)
+        {
+            write_report(dump_fd, sig, info, ctx);
+            close(dump_fd);
+        }
+    }
     // SA_RESETHAND already restored the default disposition
     if (g_rethrow.load(std::memory_order_relaxed))
         raise(sig);
@@ -161,7 +177,7 @@ bool CrashHandler::install(const Options & options)
         g_installed.store(false);
         return false;
     }
-    g_fd.store(options.fd);
+    g_dump_path = options.dump_path;
     g_rethrow.store(options.rethrow);
     bool ok = true;
     int last_installed = 0;

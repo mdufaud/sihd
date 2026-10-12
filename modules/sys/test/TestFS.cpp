@@ -648,10 +648,6 @@ TEST_F(TestFS, test_fs_chdir_roundtrip)
 
 TEST_F(TestFS, test_fs_make_tmp_directory)
 {
-    // the windows impl builds on tmpnam, which wine does not provide windows-style
-    if (running_under_wine())
-        GTEST_SKIP() << "make_tmp_directory under wine";
-
     auto tmp1 = fs::make_tmp_directory("sihd_fs_test_");
     ASSERT_TRUE(tmp1.has_value());
     EXPECT_TRUE(fs::is_dir(*tmp1));

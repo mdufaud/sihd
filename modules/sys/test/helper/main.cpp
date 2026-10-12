@@ -58,10 +58,10 @@ int do_daemonize(const char *pid_file, const char *working_dir, const char *seco
     }
 }
 
-int do_crash(const char *minidump_path)
+int do_crash(const char *dump_path)
 {
     sihd::sys::CrashHandler::Options options;
-    options.minidump_path = minidump_path;
+    options.dump_path = dump_path;
     // rethrow would trigger the system core dump machinery, which a test must not depend on
     options.rethrow = false;
     sihd::sys::CrashHandler handler(options);

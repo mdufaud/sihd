@@ -56,14 +56,14 @@ TEST_F(TestCrashHandler, test_crash_handler_already_installed)
 
 TEST_F(TestCrashHandler, test_crash_handler_dump)
 {
-    const std::string minidump_path = fs::combine(fs::tmp_path(), "sihd_crash_" + str::generate_random(8) + ".dmp");
+    const std::string dump_path = fs::combine(fs::tmp_path(), "sihd_crash_" + str::generate_random(8) + ".dmp");
 
     std::string output;
     proc::Options options;
     options.stderr_callback = [&](std::string_view view) {
         output.append(view);
     };
-    const std::vector<std::string> args = {helper_path(), "crash", minidump_path};
+    const std::vector<std::string> args = {helper_path(), "crash", dump_path};
     auto exit_code_future = proc::execute(args, options);
     const int exit_code = exit_code_future.get();
 
@@ -71,7 +71,7 @@ TEST_F(TestCrashHandler, test_crash_handler_dump)
     {
         // access violation is a non-zero exit code
         EXPECT_NE(exit_code, 0);
-        const auto size = fs::file_size(minidump_path);
+        const auto size = fs::file_size(dump_path);
         ASSERT_TRUE(size.has_value());
         EXPECT_GT(*size, 0u);
     }
@@ -79,11 +79,16 @@ TEST_F(TestCrashHandler, test_crash_handler_dump)
     {
         // rethrow disabled: the handler exits with 128 + SIGSEGV
         EXPECT_EQ(exit_code, 128 + 11);
+        // the dump file carries the text report
+        const auto report = fs::read_all(dump_path);
+        ASSERT_TRUE(report.has_value());
+        EXPECT_NE(report->find("fatal signal 11"), std::string::npos);
+        EXPECT_NE(report->find("backtrace"), std::string::npos);
     }
     EXPECT_NE(output.find("fatal "), std::string::npos);
     SIHD_LOG(debug, "crash output: {}", output);
 
-    (void)fs::remove_file(minidump_path);
+    (void)fs::remove_file(dump_path);
 }
 
 } // namespace test
