@@ -69,6 +69,45 @@ void Process::set_chdir(std::string_view path)
     _chdir = path;
 }
 
+bool Process::set_nice(int nice_value)
+{
+    _nice = nice_value;
+    return true;
+}
+
+bool Process::set_scheduler(sched::Policy policy, sched::Priority priority)
+{
+    _scheduler = {policy, priority};
+    return true;
+}
+
+bool Process::set_affinity(const std::vector<bool> & cpu_mask)
+{
+    if (cpu_mask.empty())
+        return false;
+    _affinity = cpu_mask;
+    return true;
+}
+
+void Process::_apply_child_policy()
+{
+    if (_nice)
+    {
+        auto applied = sched::set_nice(static_cast<pid_t>(this->pid()), *_nice);
+        SIHD_UNEXPECTED_LOG(applied);
+    }
+    if (_scheduler)
+    {
+        auto applied = sched::set_scheduler(static_cast<pid_t>(this->pid()), _scheduler->first, _scheduler->second);
+        SIHD_UNEXPECTED_LOG(applied);
+    }
+    if (_affinity.empty() == false)
+    {
+        auto applied = sched::set_affinity(static_cast<pid_t>(this->pid()), _affinity);
+        SIHD_UNEXPECTED_LOG(applied);
+    }
+}
+
 // Argv
 
 Process & Process::set_function(std::nullptr_t)

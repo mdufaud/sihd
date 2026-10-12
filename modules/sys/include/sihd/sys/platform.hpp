@@ -9,6 +9,7 @@
 # include <sys/resource.h> // rlim_t
 # include <sys/socket.h>   // socklen_t
 #else
+# include <sys/types.h> // pid_t
 typedef int socklen_t;
 typedef unsigned long rlim_t;
 typedef unsigned int uid_t;

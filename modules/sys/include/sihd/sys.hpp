@@ -18,6 +18,7 @@
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
+#include <sihd/sys/ProcessMonitor.hpp>
 #include <sihd/sys/Pty.hpp>
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/SigHandler.hpp>
@@ -33,6 +34,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/sys/program.hpp>
+#include <sihd/sys/sched.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/services.hpp>
 #include <sihd/sys/signal.hpp>

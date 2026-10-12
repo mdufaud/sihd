@@ -674,6 +674,7 @@ std::expected<void, Error> Process::execute()
         safe_close(_impl->pipe.std_in.fd_read);
         safe_close(_impl->pipe.std_out.fd_write);
         safe_close(_impl->pipe.std_err.fd_write);
+        this->_apply_child_policy();
     }
 
     if (_close_stdin_after_exec)

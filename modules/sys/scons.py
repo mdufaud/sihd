@@ -20,6 +20,7 @@ sources = Glob('src/*.cpp')
 # functions and CapabilitySet); the linux ones self-guard and compile as no-ops on android/web
 if builder.build_platform == "windows":
     sources += Glob('src/windows/*.cpp')
+    sources += Glob('src/windows/internal/*.cpp')
 else:
     sources += Glob('src/linux/*.cpp')
     # shared plumbing for the clipboard / screenshot backends
@@ -41,6 +42,7 @@ if builder.build_platform != "web":
     env.build_demo("demo/file_watcher.cpp", name = "file_watcher", libs = [sihd_sys_libname])
     env.build_demo("demo/file_poller.cpp", name = "file_poller", libs = [sihd_sys_libname])
     env.build_demo("demo/process_info.cpp", name = "process_info", libs = [sihd_sys_libname])
+    env.build_demo("demo/process_monitor.cpp", name = "process_monitor", libs = [sihd_sys_libname])
     env.build_demo("demo/fs_info.cpp", name = "fs_info", libs = [sihd_sys_libname])
     env.build_demo("demo/sys_info.cpp", name = "sys_info", libs = [sihd_sys_libname])
 

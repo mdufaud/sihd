@@ -5,11 +5,15 @@
 #include <csignal>
 #include <expected>
 #include <functional>
+#include <optional>
 #include <span>
+#include <utility>
+#include <vector>
 
 #include <sihd/sys/Environment.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/sys/sched.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Error.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -129,6 +133,10 @@ class Process: public sihd::util::IHandler<Poll *>,
 
         void set_chdir(std::string_view path);
 
+        bool set_nice(int nice_value);
+        bool set_scheduler(sched::Policy policy, sched::Priority priority);
+        bool set_affinity(const std::vector<bool> & cpu_mask);
+
 #if !defined(__SIHD_WINDOWS__)
         // LINUX only methods
 
@@ -194,6 +202,8 @@ class Process: public sihd::util::IHandler<Poll *>,
         std::expected<void, sihd::util::Error> _do_spawn(const std::vector<const char *> & argv);
         std::expected<void, sihd::util::Error> _do_child_process(const std::vector<const char *> & argv);
 
+        void _apply_child_policy();
+
         std::atomic<bool> _started;
         std::atomic<bool> _executing;
         bool _close_stdin_after_exec;
@@ -203,6 +213,9 @@ class Process: public sihd::util::IHandler<Poll *>,
         std::string _chroot;
         std::string _chdir;
         bool _force_fork;
+        std::optional<int> _nice;
+        std::optional<std::pair<sched::Policy, sched::Priority>> _scheduler;
+        std::vector<bool> _affinity;
         std::function<int()> _fun_to_execute;
         sihd::util::Waitable _waitable;
         Poll _poll;

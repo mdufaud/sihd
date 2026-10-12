@@ -51,6 +51,13 @@ void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & opti
         proc_ptr->env_clear();
     if (!options.env.empty())
         proc_ptr->env_load(options.env);
+
+    if (options.nice.has_value())
+        proc_ptr->set_nice(*options.nice);
+    if (options.scheduler_policy.has_value())
+        proc_ptr->set_scheduler(*options.scheduler_policy, options.scheduler_priority);
+    if (options.affinity.empty() == false)
+        proc_ptr->set_affinity(options.affinity);
 }
 
 int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)

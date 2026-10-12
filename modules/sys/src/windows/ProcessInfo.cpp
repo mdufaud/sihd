@@ -17,6 +17,7 @@
 #include <sihd/util/str.hpp>
 
 #include "internal/nt_dll.hpp"
+#include "internal/proc_metrics.hpp"
 
 using _NtQueryInformationProcess = NTSTATUS(WINAPI *)(HANDLE ProcessHandle,
                                                       PROCESSINFOCLASS SystemInformationClass,
@@ -76,18 +77,21 @@ SIHD_LOGGER;
 namespace
 {
 
-bool read_process_memory(HANDLE & handle, WindowsUserProcessInfos & procParams)
+bool query_process_basic_information(HANDLE handle, PROCESS_BASIC_INFORMATION & pbi)
 {
-    // https://stackoverflow.com/questions/1202653/check-for-environment-variable-in-another-process
-    PROCESS_BASIC_INFORMATION pbi;
-    ULONG returnLength;
-
     _NtQueryInformationProcess fct = reinterpret_cast<_NtQueryInformationProcess>(
         internal::nt_dll_symbol("ntdll", "NtQueryInformationProcess"));
     if (fct == nullptr)
         return false;
-    NTSTATUS status = fct(handle, ProcessBasicInformation, &pbi, sizeof(pbi), &returnLength);
-    if (!NT_SUCCESS(status))
+    ULONG return_length = 0;
+    return NT_SUCCESS(fct(handle, ProcessBasicInformation, &pbi, sizeof(pbi), &return_length));
+}
+
+bool read_process_memory(HANDLE & handle, WindowsUserProcessInfos & procParams)
+{
+    // https://stackoverflow.com/questions/1202653/check-for-environment-variable-in-another-process
+    PROCESS_BASIC_INFORMATION pbi;
+    if (query_process_basic_information(handle, pbi) == false)
         return false;
 
     PEB peb;
@@ -125,23 +129,26 @@ void list_processes(std::function<bool(std::string_view, int)> predicate)
 
     PROCESSENTRY32 pe32;
     pe32.dwSize = sizeof(PROCESSENTRY32);
-    if (!Process32First(process_snap, &pe32))
-    {
-        CloseHandle(process_snap);
-        return;
-    }
-
-    do
+    BOOL has_entry = Process32First(process_snap, &pe32);
+    while (has_entry)
     {
         if (predicate(pe32.szExeFile, pe32.th32ProcessID))
         {
             CloseHandle(process_snap);
             return;
         }
+        has_entry = Process32Next(process_snap, &pe32);
     }
-    while (Process32Next(process_snap, &pe32));
 
     CloseHandle(process_snap);
+}
+
+int parent_pid_of(HANDLE handle)
+{
+    PROCESS_BASIC_INFORMATION pbi;
+    if (query_process_basic_information(handle, pbi) == false)
+        return -1;
+    return static_cast<int>(pbi.InheritedFromUniqueProcessId);
 }
 
 } // namespace
@@ -296,6 +303,29 @@ std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::strin
         return false;
     });
     return processes;
+}
+
+std::vector<int> ProcessInfo::pids()
+{
+    std::vector<int> pids;
+    list_processes([&pids](std::string_view, int pid) {
+        pids.push_back(pid);
+        return false;
+    });
+    return pids;
+}
+
+ProcessMetrics ProcessInfo::metrics() const
+{
+    ProcessMetrics metrics;
+    metrics.pid = _impl->pid;
+    HANDLE handle = _impl->process_handle;
+    if (handle == INVALID_HANDLE_VALUE)
+        return metrics;
+    internal::process_metrics_of(handle, metrics);
+    metrics.thread_count = internal::thread_count_of(_impl->pid);
+    metrics.parent_pid = parent_pid_of(handle);
+    return metrics;
 }
 
 ProcessInfo::ProcessInfo(int pid)

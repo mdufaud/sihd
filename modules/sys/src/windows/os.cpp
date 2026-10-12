@@ -121,6 +121,11 @@ Timestamp filetime_to_timestamp(uint64_t filetime_ticks)
     return Timestamp(static_cast<int64_t>((filetime_ticks - 116444736000000000ULL) * 100));
 }
 
+Duration filetime_to_duration(uint64_t filetime_ticks)
+{
+    return Duration(static_cast<int64_t>(filetime_ticks) * 100);
+}
+
 Timestamp filetime_now()
 {
     FILETIME ft;

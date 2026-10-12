@@ -667,4 +667,63 @@ TEST_F(TestProcess, test_process_exec_not_found)
     }
 }
 
+TEST_F(TestProcess, test_process_child_policy)
+{
+    auto mask = sched::affinity(os::pid());
+    ASSERT_TRUE(mask.has_value());
+
+    Process proc(cmd_sleep());
+
+    ASSERT_TRUE(proc.set_nice(10));
+    ASSERT_TRUE(proc.set_affinity(*mask));
+    ASSERT_TRUE(proc.execute());
+
+    auto nice = sched::nice(static_cast<pid_t>(proc.pid()));
+    ASSERT_TRUE(nice.has_value());
+    EXPECT_EQ(*nice, 10);
+
+    auto child_mask = sched::affinity(static_cast<pid_t>(proc.pid()));
+    ASSERT_TRUE(child_mask.has_value());
+    EXPECT_EQ(*child_mask, *mask);
+
+    ASSERT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_child_scheduler)
+{
+    if constexpr (sihd::util::build::is_windows || sihd::util::build::is_emscripten)
+        GTEST_SKIP() << "scheduler policies are a linux feature";
+    auto probe = sched::scheduler(os::pid());
+    if (probe.has_value() == false)
+        GTEST_SKIP() << "sched syscalls unavailable: " << probe.error().message;
+
+    Process proc(cmd_sleep());
+
+    ASSERT_TRUE(proc.set_scheduler(sched::Policy::batch, sched::Priority {}));
+    ASSERT_TRUE(proc.execute());
+
+    auto child_policy = sched::scheduler(static_cast<pid_t>(proc.pid()));
+    ASSERT_TRUE(child_policy.has_value()) << child_policy.error().message;
+    EXPECT_EQ(*child_policy, sched::Policy::batch);
+
+    ASSERT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_exec_policy_options)
+{
+    auto mask = sched::affinity(os::pid());
+    ASSERT_TRUE(mask.has_value());
+
+    proc::Options options({
+        .nice = 5,
+        .scheduler_policy = sched::Policy::batch,
+        .scheduler_priority = {},
+        .affinity = *mask,
+    });
+
+    auto exit_code = proc::execute(cmd_echo_hello_world(), options);
+    ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(500)), std::future_status::ready);
+    ASSERT_EQ(exit_code.get(), 0);
+}
+
 } // namespace test

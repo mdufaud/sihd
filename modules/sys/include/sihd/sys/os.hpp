@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
 
@@ -22,6 +23,7 @@ sihd::util::Timestamp boot_time();
 #if defined(__SIHD_WINDOWS__)
 // 100ns ticks since 1601-01-01 (FILETIME / ULARGE_INTEGER::QuadPart) -> unix epoch timestamp
 sihd::util::Timestamp filetime_to_timestamp(uint64_t filetime_ticks);
+sihd::util::Duration filetime_to_duration(uint64_t filetime_ticks);
 // current system time (GetSystemTimePreciseAsFileTime, 100ns resolution)
 sihd::util::Timestamp filetime_now();
 #endif

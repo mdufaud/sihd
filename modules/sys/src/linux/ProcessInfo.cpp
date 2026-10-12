@@ -11,6 +11,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+#include "internal/proc_stat.hpp"
+
 namespace sihd::sys
 {
 
@@ -39,23 +41,21 @@ std::string get_process_name_from_pid(int pid)
     return "";
 }
 
-void list_processes(std::function<bool(std::string_view, int)> predicate)
+void for_each_pid(const std::function<bool(int)> & predicate)
 {
     for (const std::string & child : fs::children("/proc"))
     {
-        if (str::regex_match(child, "\\d+/"))
-        {
-            int pid = std::stoi(child);
-            if (proc_exists(pid))
-            {
-                std::string found_process_name = get_process_name_from_pid(pid);
-                if (predicate(found_process_name, pid))
-                {
-                    return;
-                }
-            }
-        }
+        if (str::regex_match(child, "\\d+/") == false)
+            continue;
+        const int pid = std::stoi(child);
+        if (proc_exists(pid) && predicate(pid))
+            return;
     }
+}
+
+void list_processes(std::function<bool(std::string_view, int)> predicate)
+{
+    for_each_pid([&predicate](int pid) { return predicate(get_process_name_from_pid(pid), pid); });
 }
 
 } // namespace
@@ -179,6 +179,28 @@ std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::strin
         return false;
     });
     return processes;
+}
+
+std::vector<int> ProcessInfo::pids()
+{
+    std::vector<int> pids;
+    for_each_pid([&pids](int pid) {
+        pids.push_back(pid);
+        return false;
+    });
+    return pids;
+}
+
+ProcessMetrics ProcessInfo::metrics() const
+{
+    ProcessMetrics metrics;
+    metrics.pid = _impl->pid;
+    auto read = internal::read_proc_metrics(_impl->pid);
+    if (read.has_value() == false)
+        return metrics;
+    metrics = std::move(*read);
+    metrics.pid = _impl->pid;
+    return metrics;
 }
 
 ProcessInfo::ProcessInfo(int pid)

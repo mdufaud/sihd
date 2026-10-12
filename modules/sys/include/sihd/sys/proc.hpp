@@ -4,11 +4,13 @@
 #include <functional>
 #include <future>
 #include <initializer_list>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
+#include <sihd/sys/sched.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
 
@@ -28,6 +30,10 @@ struct Options
         bool close_stderr = false;
         bool purge_env = false;
         std::vector<std::string> env = {};
+        std::optional<int> nice = {};
+        std::optional<sched::Policy> scheduler_policy = {};
+        sched::Priority scheduler_priority = {};
+        std::vector<bool> affinity = {};
 };
 
 std::future<int> execute(std::span<const std::string> args, const Options & options = {});

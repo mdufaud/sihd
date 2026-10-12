@@ -25,6 +25,7 @@ class PluginLoader;
 class Poll;
 class Process;
 class ProcessInfo;
+class ProcessMonitor;
 class Pty;
 class SharedMemory;
 class SigHandler;
