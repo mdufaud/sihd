@@ -9,6 +9,7 @@ namespace sihd::sys
 class Bitmap;
 enum class Cap;
 class CapabilitySet;
+class CrashHandler;
 class Daemon;
 class DynLib;
 class File;

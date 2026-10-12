@@ -3,6 +3,7 @@
 #include <string>
 #include <thread>
 
+#include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/SharedMemory.hpp>
 
@@ -56,6 +57,17 @@ int do_daemonize(const char *pid_file, const char *working_dir, const char *seco
         return 2;
     }
 }
+
+int do_crash(const char *minidump_path)
+{
+    sihd::sys::CrashHandler::Options options;
+    options.minidump_path = minidump_path;
+    // rethrow would trigger the system core dump machinery, which a test must not depend on
+    options.rethrow = false;
+    sihd::sys::CrashHandler handler(options);
+    *(volatile int *)0 = 0;
+    return 0;
+}
 } // namespace
 
 int main(int argc, char **argv)
@@ -64,6 +76,8 @@ int main(int argc, char **argv)
         return do_sleep(argv[2]);
     if (argc >= 3 && strcmp(argv[1], "shm") == 0)
         return do_shm(argv[2]);
+    if (argc >= 3 && strcmp(argv[1], "crash") == 0)
+        return do_crash(argv[2]);
     if (argc >= 5 && strcmp(argv[1], "daemonize") == 0)
         return do_daemonize(argv[2], argv[3], argv[4]);
     return 255;

@@ -1,0 +1,89 @@
+#include <string>
+
+#include <gtest/gtest.h>
+
+#include <sihd/sys/CrashHandler.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/proc.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
+#include <sihd/util/str.hpp>
+
+#include "test_helper.hpp"
+
+namespace test
+{
+SIHD_LOGGER;
+using namespace sihd::util;
+using namespace sihd::sys;
+
+class TestCrashHandler: public ::testing::Test
+{
+    protected:
+        TestCrashHandler() { LoggerManager::stream(); }
+
+        virtual ~TestCrashHandler() { LoggerManager::clear_loggers(); }
+
+        virtual void SetUp() {}
+
+        virtual void TearDown() {}
+};
+
+TEST_F(TestCrashHandler, test_crash_handler_raii)
+{
+    {
+        CrashHandler handler(CrashHandler::Options {});
+        EXPECT_TRUE(handler.is_installed());
+    }
+    CrashHandler handler;
+    EXPECT_FALSE(handler.is_installed());
+    EXPECT_TRUE(handler.install({}));
+    EXPECT_TRUE(handler.is_installed());
+    handler.uninstall();
+    EXPECT_FALSE(handler.is_installed());
+    // uninstalling twice is a no-op
+    handler.uninstall();
+}
+
+TEST_F(TestCrashHandler, test_crash_handler_already_installed)
+{
+    CrashHandler handler;
+    CrashHandler other;
+    EXPECT_TRUE(handler.install({}));
+    EXPECT_FALSE(other.is_installed());
+    EXPECT_FALSE(other.install({}));
+}
+
+TEST_F(TestCrashHandler, test_crash_handler_dump)
+{
+    const std::string minidump_path = fs::combine(fs::tmp_path(), "sihd_crash_" + str::generate_random(8) + ".dmp");
+
+    std::string output;
+    proc::Options options;
+    options.stderr_callback = [&](std::string_view view) {
+        output.append(view);
+    };
+    const std::vector<std::string> args = {helper_path(), "crash", minidump_path};
+    auto exit_code_future = proc::execute(args, options);
+    const int exit_code = exit_code_future.get();
+
+    if constexpr (build::is_windows)
+    {
+        // access violation is a non-zero exit code
+        EXPECT_NE(exit_code, 0);
+        const auto size = fs::file_size(minidump_path);
+        ASSERT_TRUE(size.has_value());
+        EXPECT_GT(*size, 0u);
+    }
+    else
+    {
+        // rethrow disabled: the handler exits with 128 + SIGSEGV
+        EXPECT_EQ(exit_code, 128 + 11);
+    }
+    EXPECT_NE(output.find("fatal "), std::string::npos);
+    SIHD_LOG(debug, "crash output: {}", output);
+
+    (void)fs::remove_file(minidump_path);
+}
+
+} // namespace test

@@ -79,6 +79,9 @@ modules = {
             'shell32', # SHGetKnownFolderPath (fs known folders)
             'ole32', # CoTaskMemFree (fs known folders)
             'uuid', # FOLDERID_* guids (fs known folders)
+            'powrprof', # GetSystemPowerStatus (power)
+            'wtsapi32', # WTSEnumerateSessions (session)
+            'dbghelp', # MiniDumpWriteDump (CrashHandler)
             # ! never add libucrt with mingw
         ],
         # === Export every libs for convenience ===

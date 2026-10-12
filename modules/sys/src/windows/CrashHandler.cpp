@@ -1,0 +1,143 @@
+// clang-format off
+# include <windows.h>
+# include <dbghelp.h>
+// clang-format on
+
+#include <io.h> // _write
+
+#include <atomic>
+#include <cstring> // strlen
+
+#include <sihd/sys/CrashHandler.hpp>
+#include <sihd/sys/os.hpp>
+
+namespace sihd::sys
+{
+
+// the unhandled exception filter is process state: the handler's values live
+// at file scope, guarded by g_installed
+namespace
+{
+
+std::atomic<bool> g_installed {false};
+std::atomic<int> g_fd {2};
+std::atomic<bool> g_rethrow {true};
+std::string g_minidump_path;
+LPTOP_LEVEL_EXCEPTION_FILTER g_previous_filter = nullptr;
+
+void write_all(int fd, const void *data, unsigned int size)
+{
+    const char *bytes = (const char *)data;
+    while (size > 0)
+    {
+        const int written = _write(fd, bytes, size);
+        if (written <= 0)
+            return;
+        bytes += written;
+        size -= (unsigned int)written;
+    }
+}
+
+void write_str(int fd, const char *str)
+{
+    write_all(fd, str, (unsigned int)strlen(str));
+}
+
+void write_hex(int fd, uintptr_t value)
+{
+    static constexpr char digits[] = "0123456789abcdef";
+    char buf[18];
+    buf[0] = '0';
+    buf[1] = 'x';
+    size_t i = sizeof(buf);
+    while (i > 2)
+    {
+        buf[--i] = digits[value & 0xf];
+        value >>= 4;
+    }
+    // skip leading zeros, keep at least one digit
+    size_t start = 2;
+    while (start < sizeof(buf) - 1 && buf[start] == '0')
+        ++start;
+    write_all(fd, buf + start, (unsigned int)(sizeof(buf) - start));
+}
+
+LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
+{
+    const int fd = g_fd.load(std::memory_order_relaxed);
+    if (info != nullptr && info->ExceptionRecord != nullptr)
+    {
+        write_str(fd, "fatal exception 0x");
+        write_hex(fd, (uintptr_t)info->ExceptionRecord->ExceptionCode);
+        write_str(fd, " at 0x");
+        write_hex(fd, (uintptr_t)info->ExceptionRecord->ExceptionAddress);
+        write_str(fd, "\n");
+    }
+    os::backtrace(fd);
+    if (g_minidump_path.empty() == false)
+    {
+        HANDLE file = CreateFileA(g_minidump_path.c_str(),
+                                  GENERIC_WRITE,
+                                  0,
+                                  nullptr,
+                                  CREATE_ALWAYS,
+                                  FILE_ATTRIBUTE_NORMAL,
+                                  nullptr);
+        if (file != INVALID_HANDLE_VALUE)
+        {
+            MINIDUMP_EXCEPTION_INFORMATION dump_info;
+            dump_info.ThreadId = GetCurrentThreadId();
+            dump_info.ExceptionPointers = info;
+            dump_info.ClientPointers = FALSE;
+            MiniDumpWriteDump(GetCurrentProcess(),
+                              GetCurrentProcessId(),
+                              file,
+                              (MINIDUMP_TYPE)(MiniDumpNormal | MiniDumpWithProcessThreadData),
+                              &dump_info,
+                              nullptr,
+                              nullptr);
+            CloseHandle(file);
+        }
+    }
+    // rethrow chains to WER/JIT; otherwise terminate with the exception code,
+    // symmetric to the unix rethrow=false (_exit 128+sig)
+    if (g_rethrow.load(std::memory_order_relaxed))
+        return EXCEPTION_CONTINUE_SEARCH;
+    DWORD code = (DWORD)-1;
+    if (info != nullptr && info->ExceptionRecord != nullptr)
+        code = info->ExceptionRecord->ExceptionCode;
+    ExitProcess(code);
+}
+
+} // namespace
+
+bool CrashHandler::install(const Options & options)
+{
+    if (_installed || g_installed.exchange(true))
+        return false;
+    // a debugger owns the crashes: do not interfere
+    if (IsDebuggerPresent())
+    {
+        g_installed.store(false);
+        return false;
+    }
+    g_fd.store(options.fd);
+    g_rethrow.store(options.rethrow);
+    g_minidump_path = options.minidump_path;
+    g_previous_filter = SetUnhandledExceptionFilter(unhandled_filter);
+    _options = options;
+    _installed = true;
+    return true;
+}
+
+void CrashHandler::uninstall()
+{
+    if (_installed == false)
+        return;
+    SetUnhandledExceptionFilter(g_previous_filter);
+    g_previous_filter = nullptr;
+    _installed = false;
+    g_installed.store(false);
+}
+
+} // namespace sihd::sys
