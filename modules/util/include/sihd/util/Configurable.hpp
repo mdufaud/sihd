@@ -7,7 +7,7 @@
 
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/Callback.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::util
 {
@@ -55,44 +55,44 @@ class Configurable
         };
 
         template <typename T>
-        std::expected<void, Error> set_conf(const std::string & name)
+        sihd::util::Result<void> set_conf(const std::string & name)
         {
             return this->set_conf(name, T {});
         }
 
         template <typename... T>
-        std::expected<void, Error> set_conf(const std::string & name, T... params)
+        sihd::util::Result<void> set_conf(const std::string & name, T... params)
         {
-            std::expected<void, Error> res = this->_check_conf_handler<T...>(name);
+            sihd::util::Result<void> res = this->_check_conf_handler<T...>(name);
             if (!res)
                 return res;
             return this->_call_conf<T...>(name, std::forward<T>(params)...);
         }
 
-        std::expected<void, Error> set_conf_float(const std::string & name, double param);
+        sihd::util::Result<void> set_conf_float(const std::string & name, double param);
 
-        std::expected<void, Error> set_conf_int(const std::string & name, int64_t param);
+        sihd::util::Result<void> set_conf_int(const std::string & name, int64_t param);
 
-        std::expected<void, Error> set_conf_str(const std::string & name, const std::string & param);
+        sihd::util::Result<void> set_conf_str(const std::string & name, const std::string & param);
 
-        std::expected<void, Error> set_conf_str(const std::string & name, std::string_view param);
+        sihd::util::Result<void> set_conf_str(const std::string & name, std::string_view param);
 
-        std::expected<void, Error> set_conf_str(const std::string & name, const char *param);
+        sihd::util::Result<void> set_conf_str(const std::string & name, const char *param);
 
         // Json-based configuration
-        std::expected<void, Error> set_conf(const sihd::json::Json & json);
-        std::expected<void, Error> set_conf(const std::string & key, const sihd::json::Json & val);
+        sihd::util::Result<void> set_conf(const sihd::json::Json & json);
+        sihd::util::Result<void> set_conf(const std::string & key, const sihd::json::Json & val);
 
     private:
         CallbackManager _callback_manager;
 
-        std::expected<void, Error> _set_conf_from_json(const std::string & name, const sihd::json::Json & val);
-        std::expected<void, Error> _set_conf_json(const std::string & name, const sihd::json::Json & val);
+        sihd::util::Result<void> _set_conf_from_json(const std::string & name, const sihd::json::Json & val);
+        sihd::util::Result<void> _set_conf_json(const std::string & name, const sihd::json::Json & val);
 
         static std::unexpected<Error> _no_conf_key(const std::string & name);
 
         template <typename... T>
-        std::expected<void, Error> _check_conf_handler(const std::string & name)
+        sihd::util::Result<void> _check_conf_handler(const std::string & name)
         {
             if (_callback_manager.exists(name) == false)
                 return this->_no_conf_key(name);
@@ -102,7 +102,7 @@ class Configurable
         }
 
         template <typename... T>
-        std::expected<void, Error> _call_conf(const std::string & name, T... args)
+        sihd::util::Result<void> _call_conf(const std::string & name, T... args)
         {
             if (_callback_manager.call<bool, T...>(name, std::forward<T>(args)...))
                 return {};

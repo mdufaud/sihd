@@ -5,6 +5,7 @@
 #include <sihd/sys/LoggerFile.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 using namespace sihd::util;
 namespace sihd::sys
@@ -56,7 +57,7 @@ bool LoggerFile::set_pattern(const std::string & pattern)
     return patterned.has_value();
 }
 
-std::expected<void, Error> LoggerFile::_open_file()
+sihd::util::Result<void> LoggerFile::_open_file()
 {
     return _file.open(_path, _append ? "a" : "w");
 }

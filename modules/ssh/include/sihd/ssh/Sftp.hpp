@@ -2,14 +2,13 @@
 #define __SIHD_SSH_SFTP_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <sys/types.h> // mode_t, uid_t, gid_t
@@ -54,32 +53,31 @@ class Sftp
         Sftp(const Sftp & other) = delete;
         Sftp & operator=(const Sftp &) = delete;
 
-        std::expected<void, sihd::util::Error> open();
+        sihd::util::Result<void> open();
         bool is_open() const;
         void close();
 
-        std::expected<void, sihd::util::Error> mkdir(std::string_view path, mode_t mode = 0755);
-        std::expected<void, sihd::util::Error> symlink(std::string_view from, std::string_view to);
+        sihd::util::Result<void> mkdir(std::string_view path, mode_t mode = 0755);
+        sihd::util::Result<void> symlink(std::string_view from, std::string_view to);
 
         // TODO replace std::string return with optional
         std::string readlink(std::string_view path);
 
-        std::expected<void, sihd::util::Error>
+        sihd::util::Result<void>
             send_file(std::string_view local_path, std::string_view remote_path, mode_t mode = 0644);
-        std::expected<void, sihd::util::Error> get_file(std::string_view remote_path, std::string_view local_path);
+        sihd::util::Result<void> get_file(std::string_view remote_path, std::string_view local_path);
 
         // TODO replace out param return with optional
-        std::expected<void, sihd::util::Error> list_dir(std::string_view path, std::vector<SftpAttribute> & list);
+        sihd::util::Result<void> list_dir(std::string_view path, std::vector<SftpAttribute> & list);
         // TODO replace out param return with optional
-        std::expected<void, sihd::util::Error> list_dir_filenames(std::string_view path,
-                                                                  std::vector<std::string> & list);
+        sihd::util::Result<void> list_dir_filenames(std::string_view path, std::vector<std::string> & list);
 
-        std::expected<void, sihd::util::Error> rename(std::string_view from, std::string_view to);
-        std::expected<void, sihd::util::Error> chmod(std::string_view path, mode_t mode);
-        std::expected<void, sihd::util::Error> chown(std::string_view path, uid_t owner, gid_t group);
+        sihd::util::Result<void> rename(std::string_view from, std::string_view to);
+        sihd::util::Result<void> chmod(std::string_view path, mode_t mode);
+        sihd::util::Result<void> chown(std::string_view path, uid_t owner, gid_t group);
 
-        std::expected<void, sihd::util::Error> rmdir(std::string_view path);
-        std::expected<void, sihd::util::Error> rm(std::string_view path);
+        sihd::util::Result<void> rmdir(std::string_view path);
+        sihd::util::Result<void> rm(std::string_view path);
 
         std::vector<SftpExtension> extensions();
 

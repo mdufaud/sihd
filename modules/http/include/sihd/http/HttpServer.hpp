@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
 #define __SIHD_HTTP_HTTPSERVER_HPP__
 
-#include <expected>
 #include <memory>
 #include <set>
 
@@ -16,6 +15,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -49,7 +49,7 @@ class HttpServer: public sihd::util::Node,
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);
 
-        virtual std::expected<std::string, sihd::util::Error> get_resource_path(std::string_view path);
+        virtual sihd::util::Result<std::string> get_resource_path(std::string_view path);
 
         bool add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
 

@@ -1,6 +1,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Result.hpp>
 
 #ifndef SIHD_NODE_MAX_LINK_RECURSION
 # define SIHD_NODE_MAX_LINK_RECURSION 20
@@ -93,12 +94,12 @@ void Node::_log_add_child_error(const Error & error)
     SIHD_LOG(error, "{}", error.message);
 }
 
-std::expected<void, Error> Node::add_child(Named *child, bool ownership)
+sihd::util::Result<void> Node::add_child(Named *child, bool ownership)
 {
     return this->add_child(child->name(), child, ownership);
 }
 
-std::expected<void, Error> Node::add_child(const std::string & name, Named *child, bool ownership)
+sihd::util::Result<void> Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
         return std::unexpected(Error(already_exists, "child '{}' already exists in '{}'", name, this->full_name()));
@@ -274,9 +275,9 @@ void Node::on_remove_child(const std::string & name, Named *child)
     (void)child;
 }
 
-std::expected<void, Error> Node::resolve_links(size_t recursion)
+sihd::util::Result<void> Node::resolve_links(size_t recursion)
 {
-    std::expected<void, Error> ret;
+    sihd::util::Result<void> ret;
     for (const auto & link : _link_keys)
     {
         const auto & path = _link_map.at(link);

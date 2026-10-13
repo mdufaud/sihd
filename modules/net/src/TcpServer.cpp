@@ -3,6 +3,7 @@
 #include <sihd/net/TcpServer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::net
 {
@@ -57,14 +58,14 @@ bool TcpServer::set_poll_timeout(int milliseconds)
     return _poll.set_timeout(milliseconds);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::open_socket_unix()
+sihd::util::Result<void> TcpServer::open_socket_unix()
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::open_socket(bool ipv6)
+sihd::util::Result<void> TcpServer::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
@@ -74,12 +75,12 @@ std::expected<void, sihd::util::Error> TcpServer::open_socket(bool ipv6)
     return res;
 }
 
-std::expected<void, sihd::util::Error> TcpServer::bind(const IpAddr & addr)
+sihd::util::Result<void> TcpServer::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::open_and_bind(const IpAddr & ip)
+sihd::util::Result<void> TcpServer::open_and_bind(const IpAddr & ip)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -87,7 +88,7 @@ std::expected<void, sihd::util::Error> TcpServer::open_and_bind(const IpAddr & i
     return this->bind(ip);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::open_and_bind(std::string_view ip, int port)
+sihd::util::Result<void> TcpServer::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -96,7 +97,7 @@ std::expected<void, sihd::util::Error> TcpServer::open_and_bind(std::string_view
     return this->bind(addr);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::open_unix_and_bind(std::string_view path)
+sihd::util::Result<void> TcpServer::open_unix_and_bind(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -104,7 +105,7 @@ std::expected<void, sihd::util::Error> TcpServer::open_unix_and_bind(std::string
     return this->bind_unix(path);
 }
 
-std::expected<void, sihd::util::Error> TcpServer::close()
+sihd::util::Result<void> TcpServer::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
@@ -121,7 +122,7 @@ void TcpServer::_setup_poll()
     _poll.set_read_fd(_socket.socket());
 }
 
-std::expected<int, sihd::util::Error> TcpServer::accept_client(IpAddr *client_ip, int timeout_ms)
+sihd::util::Result<int> TcpServer::accept_client(IpAddr *client_ip, int timeout_ms)
 {
     if (client_ip != nullptr)
         return _socket.accept(*client_ip, timeout_ms);

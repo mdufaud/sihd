@@ -22,6 +22,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
@@ -349,7 +350,7 @@ bool is_executable(std::string_view path)
     return access(path.data(), X_OK) == 0;
 }
 
-std::expected<FileTimes, Error> times(std::string_view path)
+sihd::util::Result<FileTimes> times(std::string_view path)
 {
 #if defined(SIHD_FS_HAS_STATX)
     struct statx stx;
@@ -379,7 +380,7 @@ Timestamp last_write(std::string_view path)
     return times(path).value_or(FileTimes()).write;
 }
 
-std::expected<size_t, Error> file_size(std::string_view path)
+sihd::util::Result<size_t> file_size(std::string_view path)
 {
     struct stat s;
     if (!do_stat(path.data(), &s))
@@ -400,7 +401,7 @@ std::string tmp_path()
     return "/tmp";
 }
 
-std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
+sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
 {
     if (prefix.size() + 6 > PATH_MAX)
         return std::unexpected(Error(invalid_argument, "path too long: {}", prefix));
@@ -416,7 +417,7 @@ std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
     return path;
 }
 
-std::expected<void, Error> make_directory(std::string_view path, unsigned int mode)
+sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -460,7 +461,7 @@ std::vector<std::string> children(std::string_view path)
 
 // files
 
-std::expected<void, Error> truncate(std::string_view path, int64_t size)
+sihd::util::Result<void> truncate(std::string_view path, int64_t size)
 {
     if (::truncate(path.data(), static_cast<off_t>(size)) != 0)
     {
@@ -469,7 +470,7 @@ std::expected<void, Error> truncate(std::string_view path, int64_t size)
     return {};
 }
 
-std::expected<void, Error>
+sihd::util::Result<void>
     copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
 {
     int in_fd = ::open(from.data(), O_RDONLY);
@@ -525,7 +526,7 @@ std::expected<void, Error>
         return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
     }
 
-    std::expected<void, Error> res {};
+    sihd::util::Result<void> res {};
     if (r != CopyResult::done)
         res = std::unexpected(Error(io_error, "could not copy '{}' to '{}'", from, to));
     ::close(in_fd);
@@ -566,7 +567,7 @@ std::string realpath(std::string_view path)
     return result;
 }
 
-std::expected<void, Error> chdir(std::string_view path)
+sihd::util::Result<void> chdir(std::string_view path)
 {
     if (::chdir(path.data()) != 0)
     {
@@ -645,7 +646,7 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
 #endif
 }
 
-std::expected<uint64_t, Error> free_space(std::string_view path)
+sihd::util::Result<uint64_t> free_space(std::string_view path)
 {
     struct statvfs vfs;
     if (::statvfs(path.data(), &vfs) != 0)
@@ -653,7 +654,7 @@ std::expected<uint64_t, Error> free_space(std::string_view path)
     return (uint64_t)vfs.f_bavail * vfs.f_frsize;
 }
 
-std::expected<uint64_t, Error> total_space(std::string_view path)
+sihd::util::Result<uint64_t> total_space(std::string_view path)
 {
     struct statvfs vfs;
     if (::statvfs(path.data(), &vfs) != 0)

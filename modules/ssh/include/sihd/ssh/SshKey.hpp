@@ -2,12 +2,11 @@
 #define __SIHD_SSH_SSHKEY_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::ssh
 {
@@ -34,14 +33,11 @@ class SshKey
         static KeyType type_from_name(std::string_view name);
         static const char *type_str(KeyType type);
 
-        std::expected<void, sihd::util::Error> generate(KeyType type, int parameter);
-        std::expected<void, sihd::util::Error> import_pubkey_file(std::string_view path);
-        std::expected<void, sihd::util::Error> import_privkey_file(std::string_view path,
-                                                                   const char *passphrase = nullptr);
-        std::expected<void, sihd::util::Error> import_pubkey_mem(const char *base64_key,
-                                                                 KeyType type = KeyType::Unknown);
-        std::expected<void, sihd::util::Error> import_privkey_mem(const char *base64_key,
-                                                                  const char *passphrase = nullptr);
+        sihd::util::Result<void> generate(KeyType type, int parameter);
+        sihd::util::Result<void> import_pubkey_file(std::string_view path);
+        sihd::util::Result<void> import_privkey_file(std::string_view path, const char *passphrase = nullptr);
+        sihd::util::Result<void> import_pubkey_mem(const char *base64_key, KeyType type = KeyType::Unknown);
+        sihd::util::Result<void> import_privkey_mem(const char *base64_key, const char *passphrase = nullptr);
 
         bool is_equal(const SshKey & sshkey);
 
@@ -53,8 +49,7 @@ class SshKey
         void *key() const;
 
         std::string base64() const;
-        std::expected<void, sihd::util::Error> export_privkey_file(std::string_view path,
-                                                                   const char *passphrase = nullptr) const;
+        sihd::util::Result<void> export_privkey_file(std::string_view path, const char *passphrase = nullptr) const;
 
         // Takes ownership
         void set_key(void *key);

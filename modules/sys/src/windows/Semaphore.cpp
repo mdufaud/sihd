@@ -3,6 +3,7 @@
 #include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -12,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-std::expected<void, Error> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
+sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
 {
     (void)mode;
 
@@ -33,7 +34,7 @@ std::expected<void, Error> Semaphore::create(std::string_view name, unsigned int
     return {};
 }
 
-std::expected<void, Error> Semaphore::attach(std::string_view name)
+sihd::util::Result<void> Semaphore::attach(std::string_view name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -49,7 +50,7 @@ std::expected<void, Error> Semaphore::attach(std::string_view name)
     return {};
 }
 
-std::expected<void, Error> Semaphore::clear()
+sihd::util::Result<void> Semaphore::clear()
 {
     bool ret = true;
     if (_sem != nullptr)
@@ -89,7 +90,7 @@ bool Semaphore::post()
     return _sem != nullptr && ReleaseSemaphore(static_cast<HANDLE>(_sem), 1, nullptr) != 0;
 }
 
-std::expected<int, Error> Semaphore::value() const
+sihd::util::Result<int> Semaphore::value() const
 {
     return std::unexpected(Error(not_supported, "no semaphore value on windows"));
 }

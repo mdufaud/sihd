@@ -3,6 +3,7 @@
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -64,7 +65,7 @@ void *SshKey::key() const
     return _impl_ptr->ssh_key_ptr;
 }
 
-std::expected<void, Error> SshKey::generate(KeyType type, int parameter)
+sihd::util::Result<void> SshKey::generate(KeyType type, int parameter)
 {
     this->clear_key();
     if (ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -72,7 +73,7 @@ std::expected<void, Error> SshKey::generate(KeyType type, int parameter)
     return {};
 }
 
-std::expected<void, Error> SshKey::import_privkey_file(std::string_view path, const char *passphrase)
+sihd::util::Result<void> SshKey::import_privkey_file(std::string_view path, const char *passphrase)
 {
     this->clear_key();
     if (ssh_pki_import_privkey_file(path.data(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -80,7 +81,7 @@ std::expected<void, Error> SshKey::import_privkey_file(std::string_view path, co
     return {};
 }
 
-std::expected<void, Error> SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
+sihd::util::Result<void> SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
 {
     this->clear_key();
     if (ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -88,7 +89,7 @@ std::expected<void, Error> SshKey::import_privkey_mem(const char *base64_key, co
     return {};
 }
 
-std::expected<void, Error> SshKey::import_pubkey_file(std::string_view path)
+sihd::util::Result<void> SshKey::import_pubkey_file(std::string_view path)
 {
     this->clear_key();
     if (ssh_pki_import_pubkey_file(path.data(), &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -96,7 +97,7 @@ std::expected<void, Error> SshKey::import_pubkey_file(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
+sihd::util::Result<void> SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
 {
     this->clear_key();
     if (ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -148,7 +149,7 @@ std::string SshKey::base64() const
     return result;
 }
 
-std::expected<void, Error> SshKey::export_privkey_file(std::string_view path, const char *passphrase) const
+sihd::util::Result<void> SshKey::export_privkey_file(std::string_view path, const char *passphrase) const
 {
     if (_impl_ptr->ssh_key_ptr == nullptr || !this->is_private())
         return std::unexpected(Error(not_initialized, "cannot export - no private key available"));

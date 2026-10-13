@@ -1,5 +1,6 @@
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/csv/utils.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::csv::utils
@@ -57,8 +58,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     return ret;
 }
 
-std::expected<CsvData, sihd::util::Error>
-    read_csv(std::string_view path, bool remove_header, int delimiter, char comment_char)
+sihd::util::Result<CsvData> read_csv(std::string_view path, bool remove_header, int delimiter, char comment_char)
 {
     CsvReader reader;
 

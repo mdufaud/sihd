@@ -1,6 +1,6 @@
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/error.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -33,7 +33,7 @@ std::shared_ptr<void> make_handle(EVP_PKEY *key)
 
 } // namespace
 
-std::expected<void, sihd::util::Error> PrivateKey::generate_rsa(int bits)
+sihd::util::Result<void> PrivateKey::generate_rsa(int bits)
 {
     ERR_clear_error();
     this->clear();
@@ -49,7 +49,7 @@ std::expected<void, sihd::util::Error> PrivateKey::generate_rsa(int bits)
     return {};
 }
 
-std::expected<void, sihd::util::Error> PrivateKey::generate_ec(std::string_view curve_name)
+sihd::util::Result<void> PrivateKey::generate_ec(std::string_view curve_name)
 {
     ERR_clear_error();
     this->clear();
@@ -71,7 +71,7 @@ std::expected<void, sihd::util::Error> PrivateKey::generate_ec(std::string_view 
     return {};
 }
 
-std::expected<void, sihd::util::Error> PrivateKey::load_pem(std::string_view path)
+sihd::util::Result<void> PrivateKey::load_pem(std::string_view path)
 {
     ERR_clear_error();
     this->clear();
@@ -86,7 +86,7 @@ std::expected<void, sihd::util::Error> PrivateKey::load_pem(std::string_view pat
     return {};
 }
 
-std::expected<void, sihd::util::Error> PrivateKey::save_pem(std::string_view path) const
+sihd::util::Result<void> PrivateKey::save_pem(std::string_view path) const
 {
     ERR_clear_error();
     if (!_handle)
@@ -103,7 +103,7 @@ std::expected<void, sihd::util::Error> PrivateKey::save_pem(std::string_view pat
     return {};
 }
 
-std::expected<void, sihd::util::Error> PrivateKey::load_pem_string(std::string_view pem)
+sihd::util::Result<void> PrivateKey::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
     this->clear();

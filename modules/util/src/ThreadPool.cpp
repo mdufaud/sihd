@@ -2,8 +2,8 @@
 
 #include <fmt/format.h>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/ThreadPool.hpp>
 #include <sihd/util/thread.hpp>
@@ -78,7 +78,7 @@ void ThreadPool::Thread::_loop()
 {
     while (!_stop)
     {
-        std::expected<Job, Error> expected_job = _jobs.pop();
+        sihd::util::Result<Job> expected_job = _jobs.pop();
         if (expected_job.has_value() == false)
             break;
         Job job = std::move(*expected_job);

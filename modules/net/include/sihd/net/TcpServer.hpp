@@ -1,8 +1,6 @@
 #ifndef __SIHD_NET_TCPSERVER_HPP__
 #define __SIHD_NET_TCPSERVER_HPP__
 
-#include <expected>
-
 #include <sihd/net/INetServer.hpp>
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/Socket.hpp>
@@ -11,6 +9,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::net
@@ -26,21 +25,21 @@ class TcpServer: public INetServer,
         TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~TcpServer();
 
-        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
-        std::expected<void, sihd::util::Error> open_socket_unix();
+        sihd::util::Result<void> open_socket(bool ipv6 = false);
+        sihd::util::Result<void> open_socket_unix();
         bool socket_opened() { return _socket.is_open(); }
 
-        std::expected<void, sihd::util::Error> bind(const IpAddr & addr);
-        std::expected<void, sihd::util::Error> bind_unix(std::string_view path) { return _socket.bind_unix(path); }
+        sihd::util::Result<void> bind(const IpAddr & addr);
+        sihd::util::Result<void> bind_unix(std::string_view path) { return _socket.bind_unix(path); }
 
-        std::expected<void, sihd::util::Error> open_and_bind(const IpAddr & ip);
-        std::expected<void, sihd::util::Error> open_and_bind(std::string_view ip, int port);
-        std::expected<void, sihd::util::Error> open_unix_and_bind(std::string_view path);
+        sihd::util::Result<void> open_and_bind(const IpAddr & ip);
+        sihd::util::Result<void> open_and_bind(std::string_view ip, int port);
+        sihd::util::Result<void> open_unix_and_bind(std::string_view path);
 
-        std::expected<void, sihd::util::Error> close();
+        sihd::util::Result<void> close();
 
         // INetServer
-        std::expected<int, sihd::util::Error> accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
+        sihd::util::Result<int> accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
         bool add_client_read(int socket) override;
         bool add_client_write(int socket) override;
         bool remove_client_read(int socket) override;

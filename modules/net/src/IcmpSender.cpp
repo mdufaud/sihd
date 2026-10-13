@@ -6,6 +6,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>     // inet_ntop
@@ -146,7 +147,7 @@ bool IcmpSender::_set_conf_data_size(int byte_size)
     return this->set_data_size(static_cast<size_t>(byte_size));
 }
 
-std::expected<void, sihd::util::Error> IcmpSender::open_socket_unix()
+sihd::util::Result<void> IcmpSender::open_socket_unix()
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
@@ -154,7 +155,7 @@ std::expected<void, sihd::util::Error> IcmpSender::open_socket_unix()
     return _socket.open(AF_UNIX, SOCK_RAW, IPPROTO_ICMP);
 }
 
-std::expected<void, sihd::util::Error> IcmpSender::open_socket(bool ipv6)
+sihd::util::Result<void> IcmpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
@@ -180,7 +181,7 @@ std::expected<void, sihd::util::Error> IcmpSender::open_socket(bool ipv6)
     return res;
 }
 
-std::expected<void, sihd::util::Error> IcmpSender::close()
+sihd::util::Result<void> IcmpSender::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
@@ -300,7 +301,7 @@ void IcmpSender::_apply_config()
     _config_applied = true;
 }
 
-std::expected<void, sihd::util::Error> IcmpSender::send_to(const IpAddr & addr)
+sihd::util::Result<void> IcmpSender::send_to(const IpAddr & addr)
 {
     if (!_socket.is_open())
         return std::unexpected(

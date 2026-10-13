@@ -4,6 +4,7 @@
 #include <sihd/pcap/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/time.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -60,7 +61,7 @@ Sniffer::~Sniffer()
     this->close();
 }
 
-std::expected<void, sihd::util::Error> Sniffer::open(const std::string & source)
+sihd::util::Result<void> Sniffer::open(const std::string & source)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     _impl_ptr->pcap_ptr = pcap_create(source.c_str(), errbuf);
@@ -92,7 +93,7 @@ bool Sniffer::is_active() const
     return _active;
 }
 
-std::expected<void, sihd::util::Error> Sniffer::activate()
+sihd::util::Result<void> Sniffer::activate()
 {
     int ret = pcap_activate(_impl_ptr->pcap_ptr);
     if (ret == PCAP_ERROR)
@@ -149,7 +150,7 @@ bool Sniffer::sniff()
     return ret == 0;
 }
 
-std::expected<bool, sihd::util::Error> Sniffer::read_next()
+sihd::util::Result<bool> Sniffer::read_next()
 {
     if (this->is_open() == false)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "not open"));
@@ -189,7 +190,7 @@ bool Sniffer::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-std::expected<sihd::util::Timestamp, sihd::util::Error> Sniffer::get_read_timestamp() const
+sihd::util::Result<sihd::util::Timestamp> Sniffer::get_read_timestamp() const
 {
     return _pkt_nano_timestamp;
 }

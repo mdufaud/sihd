@@ -1,5 +1,6 @@
 #include <sihd/core/ChannelMatch.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 #include <sihd/util/str.hpp>
@@ -15,7 +16,7 @@ SIHD_LOGGER;
 namespace
 {
 
-std::expected<void, Error> convert_trigger_value(const std::string & str, Value & value)
+sihd::util::Result<void> convert_trigger_value(const std::string & str, Value & value)
 {
     value = Value::from_any_string(str);
     if (value.empty())
@@ -67,7 +68,7 @@ ChannelMatch::Comparison ChannelMatch::comparison_from_str(std::string_view str)
     return None;
 }
 
-std::expected<void, Error> ChannelMatch::parse(std::string_view conf_str)
+sihd::util::Result<void> ChannelMatch::parse(std::string_view conf_str)
 {
     StrConfiguration conf(conf_str);
     auto [key_cmp, key_idx, key_value, key_invert] = conf.find_all("cmp", "idx", "value", "invert");
@@ -106,7 +107,7 @@ std::expected<void, Error> ChannelMatch::parse(std::string_view conf_str)
     return {};
 }
 
-std::expected<void, Error> ChannelMatch::parse_trigger(std::string_view conf)
+sihd::util::Result<void> ChannelMatch::parse_trigger(std::string_view conf)
 {
     Splitter splitter(":");
     splitter.set_empty_delimitations(true);

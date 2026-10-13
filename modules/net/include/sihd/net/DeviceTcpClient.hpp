@@ -1,12 +1,11 @@
 #ifndef __SIHD_NET_DEVICETCPCLIENT_HPP__
 #define __SIHD_NET_DEVICETCPCLIENT_HPP__
 
-#include <expected>
-
 #include <sihd/core/Device.hpp>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/TcpClient.hpp>
 #include <sihd/util/IRunnable.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
@@ -46,7 +45,7 @@ class DeviceTcpClient: public sihd::core::Device,
         bool run() override;
 
     private:
-        std::expected<void, sihd::util::Error> _connect();
+        sihd::util::Result<void> _connect();
         void _set_connected(bool connected);
 
         TcpClient _tcp_client;

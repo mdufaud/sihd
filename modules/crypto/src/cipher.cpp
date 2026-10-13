@@ -2,7 +2,7 @@
 
 #include <sihd/crypto/cipher.hpp>
 #include <sihd/crypto/error.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -33,12 +33,12 @@ struct CtxFree
         void operator()(EVP_CIPHER_CTX *ctx) const { EVP_CIPHER_CTX_free(ctx); }
 };
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> do_cipher(bool encrypt,
-                                                                 std::string_view algorithm,
-                                                                 const uint8_t *key,
-                                                                 const uint8_t *iv,
-                                                                 const uint8_t *data,
-                                                                 size_t data_len)
+sihd::util::Result<std::vector<uint8_t>> do_cipher(bool encrypt,
+                                                   std::string_view algorithm,
+                                                   const uint8_t *key,
+                                                   const uint8_t *iv,
+                                                   const uint8_t *data,
+                                                   size_t data_len)
 {
     ERR_clear_error();
     std::string algo(algorithm);
@@ -86,32 +86,32 @@ std::expected<std::vector<uint8_t>, sihd::util::Error> do_cipher(bool encrypt,
 
 } // namespace
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> encrypt(std::string_view algorithm,
-                                                               const uint8_t *key,
-                                                               [[maybe_unused]] size_t key_len,
-                                                               const uint8_t *iv,
-                                                               [[maybe_unused]] size_t iv_len,
-                                                               const uint8_t *data,
-                                                               size_t data_len)
+sihd::util::Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,
+                                                 const uint8_t *key,
+                                                 [[maybe_unused]] size_t key_len,
+                                                 const uint8_t *iv,
+                                                 [[maybe_unused]] size_t iv_len,
+                                                 const uint8_t *data,
+                                                 size_t data_len)
 {
     return do_cipher(true, algorithm, key, iv, data, data_len);
 }
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> decrypt(std::string_view algorithm,
-                                                               const uint8_t *key,
-                                                               [[maybe_unused]] size_t key_len,
-                                                               const uint8_t *iv,
-                                                               [[maybe_unused]] size_t iv_len,
-                                                               const uint8_t *data,
-                                                               size_t data_len)
+sihd::util::Result<std::vector<uint8_t>> decrypt(std::string_view algorithm,
+                                                 const uint8_t *key,
+                                                 [[maybe_unused]] size_t key_len,
+                                                 const uint8_t *iv,
+                                                 [[maybe_unused]] size_t iv_len,
+                                                 const uint8_t *data,
+                                                 size_t data_len)
 {
     return do_cipher(false, algorithm, key, iv, data, data_len);
 }
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> encrypt(std::string_view algorithm,
-                                                               sihd::util::ArrByteView key,
-                                                               sihd::util::ArrByteView iv,
-                                                               sihd::util::ArrByteView data)
+sihd::util::Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,
+                                                 sihd::util::ArrByteView key,
+                                                 sihd::util::ArrByteView iv,
+                                                 sihd::util::ArrByteView data)
 {
     return encrypt(algorithm,
                    reinterpret_cast<const uint8_t *>(key.data()),
@@ -122,10 +122,10 @@ std::expected<std::vector<uint8_t>, sihd::util::Error> encrypt(std::string_view 
                    data.size());
 }
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> decrypt(std::string_view algorithm,
-                                                               sihd::util::ArrByteView key,
-                                                               sihd::util::ArrByteView iv,
-                                                               sihd::util::ArrByteView data)
+sihd::util::Result<std::vector<uint8_t>> decrypt(std::string_view algorithm,
+                                                 sihd::util::ArrByteView key,
+                                                 sihd::util::ArrByteView iv,
+                                                 sihd::util::ArrByteView data)
 {
     return decrypt(algorithm,
                    reinterpret_cast<const uint8_t *>(key.data()),

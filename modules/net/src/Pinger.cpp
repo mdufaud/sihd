@@ -2,7 +2,7 @@
 #include <cstring>
 #include <memory>
 
-#include <sihd/sys/platform.hpp>
+#include <sihd/net/Pinger.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <regex.h>
@@ -10,11 +10,12 @@
 # include <unistd.h>
 #endif
 
-#include <sihd/net/Pinger.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/time.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56
@@ -77,13 +78,13 @@ Pinger::~Pinger()
         this->stop();
 }
 
-std::expected<void, sihd::util::Error> Pinger::open_unix()
+sihd::util::Result<void> Pinger::open_unix()
 {
     set_internal_data_size(_sender, _data_ptr, ICMP_ECHO_REQUEST_LENGTH);
     return _sender.open_socket_unix();
 }
 
-std::expected<void, sihd::util::Error> Pinger::open(bool ipv6)
+sihd::util::Result<void> Pinger::open(bool ipv6)
 {
     if (ipv6)
         set_internal_data_size(_sender, _data_ptr, ICMP6_ECHO_REQUEST_LENGTH);

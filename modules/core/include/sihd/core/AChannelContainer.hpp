@@ -1,13 +1,11 @@
 #ifndef __SIHD_CORE_ACHANNELCONTAINER_HPP__
 #define __SIHD_CORE_ACHANNELCONTAINER_HPP__
 
-#include <expected>
-
 #include <sihd/core/Channel.hpp>
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::core
@@ -21,9 +19,9 @@ class AChannelContainer: public sihd::util::Node,
         AChannelContainer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~AChannelContainer();
 
-        std::expected<Channel *, sihd::util::Error> find_channel(const std::string & name);
+        sihd::util::Result<Channel *> find_channel(const std::string & name);
 
-        std::expected<Channel *, sihd::util::Error> get_channel(const std::string & name);
+        sihd::util::Result<Channel *> get_channel(const std::string & name);
 
         // store channel configuration, when links are resolved, create the channel if unlinked or get the
         // linked one
@@ -57,7 +55,7 @@ class AChannelContainer: public sihd::util::Node,
         Channel *add_channel_resizable(const std::string & name, sihd::util::Type type, size_t size, size_t capacity);
         Channel *add_channel_resizable(const std::string & name, std::string_view type, size_t size, size_t capacity);
 
-        std::expected<void, sihd::util::Error> observe_channel(const std::string & channel_name);
+        sihd::util::Result<void> observe_channel(const std::string & channel_name);
         bool observe_channel(Channel *c);
         void remove_channels_observation();
 

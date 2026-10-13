@@ -2,12 +2,11 @@
 #define __SIHD_CORE_DEVFILTER_HPP__
 
 #include <atomic>
-#include <expected>
 #include <string_view>
 
 #include <sihd/core/ChannelMatch.hpp>
 #include <sihd/core/Device.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Task.hpp>
 #include <sihd/util/Value.hpp>
@@ -24,7 +23,7 @@ class DevFilter: public sihd::core::Device
                 Rule(ChannelMatch::Comparison comparison);
                 ~Rule();
 
-                std::expected<void, sihd::util::Error> parse(std::string_view conf);
+                sihd::util::Result<void> parse(std::string_view conf);
                 Rule & in(std::string_view channel_name);
                 Rule & out(std::string_view channel_name);
                 Rule & match(bool active);
@@ -112,8 +111,8 @@ class DevFilter: public sihd::core::Device
                 InternalRule();
                 ~InternalRule();
 
-                std::expected<void, sihd::util::Error> set(const Rule *conf, Channel *in, Channel *out);
-                std::expected<void, sihd::util::Error> verify();
+                sihd::util::Result<void> set(const Rule *conf, Channel *in, Channel *out);
+                sihd::util::Result<void> verify();
 
                 Channel *channel_in_ptr;
                 Channel *channel_out_ptr;
@@ -121,7 +120,7 @@ class DevFilter: public sihd::core::Device
         };
 
         bool _set_filter_conf(std::string_view conf, ChannelMatch::Comparison comparison);
-        std::expected<void, sihd::util::Error> _parse_conf(std::string_view conf, ChannelMatch::Comparison comparison);
+        sihd::util::Result<void> _parse_conf(std::string_view conf, ChannelMatch::Comparison comparison);
         void _apply_rule(const Channel *channel_in, Channel *channel_out, const Rule *rule_ptr);
 
         std::atomic<bool> _running;

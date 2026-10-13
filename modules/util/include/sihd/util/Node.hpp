@@ -3,13 +3,12 @@
 
 #include <array>
 #include <exception>
-#include <expected>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::util
@@ -44,9 +43,8 @@ class Node: public Named
         virtual ~Node();
 
         // Children
-        std::expected<void, Error> add_child(Named *child, bool take_ownership = true);
-        virtual std::expected<void, Error>
-            add_child(const std::string & name, Named *child, bool take_ownership = true);
+        sihd::util::Result<void> add_child(Named *child, bool take_ownership = true);
+        virtual sihd::util::Result<void> add_child(const std::string & name, Named *child, bool take_ownership = true);
 
         template <typename T>
         T *add_child(const std::string & name)
@@ -125,7 +123,7 @@ class Node: public Named
         bool add_link(const std::string & link, const std::string & path);
         bool remove_link(const std::string & link);
         Named *resolve_link(const std::string & path, size_t recursion = 0);
-        std::expected<void, Error> resolve_links(size_t recursion = 0);
+        sihd::util::Result<void> resolve_links(size_t recursion = 0);
 
         // Tree description
         std::string tree_str() const { return this->tree_str({}); };

@@ -2,14 +2,13 @@
 #define __SIHD_UTIL_TOKENPATTERN_HPP__
 
 #include <concepts>
-#include <expected>
 #include <memory>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::util
 {
@@ -46,7 +45,7 @@ class TokenPattern
         TokenPattern(const TokenPattern &) = delete;
         TokenPattern & operator=(const TokenPattern &) = delete;
 
-        std::expected<void, Error> compile(std::string_view pattern);
+        sihd::util::Result<void> compile(std::string_view pattern);
 
         const std::string & pattern() const { return *_pattern; }
 

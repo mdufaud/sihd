@@ -3,6 +3,7 @@
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
 
@@ -33,7 +34,7 @@ CsvWriter::CsvWriter(std::string_view path, bool append): CsvWriter()
 
 CsvWriter::~CsvWriter() = default;
 
-std::expected<void, Error> CsvWriter::set_delimiter(int c)
+sihd::util::Result<void> CsvWriter::set_delimiter(int c)
 {
     if (std::isprint(c))
     {
@@ -43,7 +44,7 @@ std::expected<void, Error> CsvWriter::set_delimiter(int c)
     return std::unexpected(Error(invalid_argument, "delimiter is not a printable character"));
 }
 
-std::expected<void, Error> CsvWriter::set_commentary(int c)
+sihd::util::Result<void> CsvWriter::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -53,7 +54,7 @@ std::expected<void, Error> CsvWriter::set_commentary(int c)
     return std::unexpected(Error(invalid_argument, "commentary is not a printable character"));
 }
 
-std::expected<void, Error> CsvWriter::open(std::string_view path, bool append)
+sihd::util::Result<void> CsvWriter::open(std::string_view path, bool append)
 {
     _col = 0;
     _row = 0;
@@ -78,7 +79,7 @@ bool CsvWriter::close()
     return !SIHD_UNEXPECTED_LOG(_file.close());
 }
 
-std::expected<void, Error> CsvWriter::new_row()
+sihd::util::Result<void> CsvWriter::new_row()
 {
     auto fed = _file.write_char(_line_feed);
     SIHD_UNEXPECTED_RETURN_CTX(fed, "writing new row");

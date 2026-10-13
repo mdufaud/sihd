@@ -4,6 +4,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 typedef void (*sighandler_t)(int);
@@ -27,7 +28,7 @@ SigHandler::~SigHandler()
     (void)this->unhandle();
 }
 
-std::expected<void, Error> SigHandler::handle(int sig)
+sihd::util::Result<void> SigHandler::handle(int sig)
 {
     auto unhandled = this->unhandle();
     if (!unhandled)
@@ -44,7 +45,7 @@ std::expected<void, Error> SigHandler::handle(int sig)
     return handled;
 }
 
-std::expected<void, Error> SigHandler::unhandle()
+sihd::util::Result<void> SigHandler::unhandle()
 {
     if (this->is_handling() == false)
     {

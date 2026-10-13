@@ -5,7 +5,7 @@
 #include <optional>
 #include <queue>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Waitable.hpp>
 
 namespace sihd::util
@@ -67,7 +67,7 @@ class SafeQueue
             return ret;
         }
 
-        std::expected<T, Error> pop()
+        sihd::util::Result<T> pop()
         {
             auto l = _waitable.wait_guard([this] { return _terminated || _queue.empty() == false; });
             if (_queue.empty())
@@ -81,7 +81,7 @@ class SafeQueue
 
         std::optional<T> pop_wait()
         {
-            std::expected<T, Error> ret = this->pop();
+            sihd::util::Result<T> ret = this->pop();
             if (ret.has_value() == false)
                 return std::nullopt;
             return std::move(*ret);

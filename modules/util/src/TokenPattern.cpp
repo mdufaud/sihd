@@ -1,5 +1,6 @@
 #include <charconv>
 
+#include <sihd/util/Result.hpp>
 #include <sihd/util/TokenPattern.hpp>
 
 namespace sihd::util
@@ -62,7 +63,7 @@ bool parse_classical(std::string_view spec, TokenPattern::Options & options)
     return i == spec.size();
 }
 
-std::expected<TokenPattern::Token, Error> parse_field(std::string_view view, size_t & index)
+sihd::util::Result<TokenPattern::Token> parse_field(std::string_view view, size_t & index)
 {
     TokenPattern::Token token;
     token.offset = index;
@@ -93,7 +94,7 @@ std::expected<TokenPattern::Token, Error> parse_field(std::string_view view, siz
 
 } // namespace
 
-std::expected<void, Error> TokenPattern::compile(std::string_view pattern)
+sihd::util::Result<void> TokenPattern::compile(std::string_view pattern)
 {
     // scan on a private buffer: a refusal leaves the members untouched
     std::unique_ptr<std::string> owned = std::make_unique<std::string>(pattern);
@@ -123,7 +124,7 @@ std::expected<void, Error> TokenPattern::compile(std::string_view pattern)
         }
         if (view[brace] == '}')
             return std::unexpected(Error(ErrorCode::invalid_argument, "unmatched '}}' at {}", brace));
-        std::expected<Token, Error> field = parse_field(view, index);
+        sihd::util::Result<Token> field = parse_field(view, index);
         if (field.has_value() == false)
             return std::unexpected(std::move(field).error());
         tokens.push_back(std::move(*field));

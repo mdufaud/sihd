@@ -1,5 +1,6 @@
 #include <sihd/core/AChannelContainer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::core
 {
@@ -13,7 +14,7 @@ AChannelContainer::AChannelContainer(const std::string & name, Node *parent): No
 
 AChannelContainer::~AChannelContainer() = default;
 
-std::expected<Channel *, Error> AChannelContainer::find_channel(const std::string & path)
+sihd::util::Result<Channel *> AChannelContainer::find_channel(const std::string & path)
 {
     Channel *c = this->find<Channel>(path);
     if (c == nullptr)
@@ -21,7 +22,7 @@ std::expected<Channel *, Error> AChannelContainer::find_channel(const std::strin
     return c;
 }
 
-std::expected<Channel *, Error> AChannelContainer::get_channel(const std::string & name)
+sihd::util::Result<Channel *> AChannelContainer::get_channel(const std::string & name)
 {
     Named *child = this->get_child(name);
     Channel *c = child != nullptr ? dynamic_cast<Channel *>(child) : nullptr;
@@ -163,7 +164,7 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
     return ret;
 }
 
-std::expected<void, Error> AChannelContainer::observe_channel(const std::string & channel_name)
+sihd::util::Result<void> AChannelContainer::observe_channel(const std::string & channel_name)
 {
     auto c = this->get_channel(channel_name);
     SIHD_UNEXPECTED_RETURN(c);

@@ -11,6 +11,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -78,7 +79,7 @@ bool NetInterface::supports_multicast() const
     return _flags & WIFF_MULTICAST;
 }
 
-std::expected<std::map<std::string, NetInterface>, sihd::util::Error> NetInterface::get_all_interfaces()
+sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 

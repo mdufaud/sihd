@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <chrono>
-#include <expected>
 #include <map>
 #include <optional>
 #include <queue>
@@ -16,6 +15,7 @@
 #include <sihd/http/Navigator.hpp>
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/navigator/NavigatorResponse.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
@@ -136,11 +136,11 @@ struct Navigator::Impl
                                       const RequestOptions & options,
                                       const Navigation & navigation);
         bool check_redirect_policy(const std::string & original_url, const std::string & target_url) const;
-        std::expected<SingleResponse, sihd::util::Error> try_perform(const std::string & url,
-                                                                     HttpRequest::RequestType type,
-                                                                     const RequestOptions & options,
-                                                                     const Navigation & navigation);
-        std::expected<NavigatorResponse, sihd::util::Error> perform(const Navigation & navigation);
+        sihd::util::Result<SingleResponse> try_perform(const std::string & url,
+                                                       HttpRequest::RequestType type,
+                                                       const RequestOptions & options,
+                                                       const Navigation & navigation);
+        sihd::util::Result<NavigatorResponse> perform(const Navigation & navigation);
         std::map<std::string, std::string> extract_cookies();
         std::vector<std::string> extract_raw_cookies();
 

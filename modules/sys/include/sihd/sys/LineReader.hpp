@@ -1,12 +1,10 @@
 #ifndef __SIHD_SYS_LINEREADER_HPP__
 #define __SIHD_SYS_LINEREADER_HPP__
 
-#include <expected>
-
 #include <sihd/sys/File.hpp>
 #include <sihd/util/Array.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IReader.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -29,25 +27,24 @@ class LineReader: public sihd::util::IReader
         LineReader(int fd, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(FILE *stream, bool ownership, const LineReaderOptions & options = LineReaderOptions::none());
 
-        static std::expected<std::string, sihd::util::Error>
+        static sihd::util::Result<std::string>
             fast_read_line(FILE *stream = stdin, const LineReaderOptions & options = LineReaderOptions::none());
 
-        static std::expected<std::string, sihd::util::Error>
-            fast_read_stdin(LineReaderOptions options = LineReaderOptions::none());
+        static sihd::util::Result<std::string> fast_read_stdin(LineReaderOptions options = LineReaderOptions::none());
 
         bool set_read_buffsize(size_t buffsize);
         bool set_line_buffsize(size_t buffsize);
         bool set_delimiter_in_line(bool active);
         bool set_delimiter(int c);
 
-        std::expected<void, sihd::util::Error> open(std::string_view path);
-        std::expected<void, sihd::util::Error> open_fd(int fd);
-        std::expected<void, sihd::util::Error> set_stream(FILE *stream, bool ownership = false);
+        sihd::util::Result<void> open(std::string_view path);
+        sihd::util::Result<void> open_fd(int fd);
+        sihd::util::Result<void> set_stream(FILE *stream, bool ownership = false);
         bool is_open() const;
         bool close();
 
         // false means end of read, an error means the read failed
-        std::expected<bool, sihd::util::Error> read_next();
+        sihd::util::Result<bool> read_next();
         bool get_read_data(sihd::util::ArrCharView & view) const;
 
         size_t buffsize() const { return _read_buff_size; }

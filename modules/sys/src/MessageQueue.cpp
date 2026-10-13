@@ -1,6 +1,7 @@
 #include <sihd/sys/MessageQueue.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 // create()/open()/clear()/unlink(name) and the send/receive family live in src/linux|windows/MessageQueue.cpp
 
@@ -56,7 +57,7 @@ MessageQueue::~MessageQueue()
     (void)this->clear();
 }
 
-std::expected<void, Error> MessageQueue::unlink()
+sihd::util::Result<void> MessageQueue::unlink()
 {
     if (_name.empty())
         return std::unexpected(Error(not_initialized, "message queue is not open"));

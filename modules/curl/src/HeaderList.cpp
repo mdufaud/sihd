@@ -1,6 +1,7 @@
 #include <utility>
 
 #include <sihd/curl/HeaderList.hpp>
+#include <sihd/util/Result.hpp>
 
 #include "impl.hpp"
 
@@ -34,7 +35,7 @@ HeaderList & HeaderList::operator=(HeaderList && other)
     return *this;
 }
 
-std::expected<void, sihd::util::Error> HeaderList::append(std::string_view line)
+sihd::util::Result<void> HeaderList::append(std::string_view line)
 {
     // curl_slist_append takes a null-terminated string and copies it
     std::string str(line);

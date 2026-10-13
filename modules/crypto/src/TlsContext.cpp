@@ -2,7 +2,7 @@
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/TlsContext.hpp>
 #include <sihd/crypto/error.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -30,7 +30,7 @@ std::unexpected<sihd::util::Error> error_not_initialized()
 
 } // namespace
 
-std::expected<void, sihd::util::Error> TlsContext::init(bool server_mode)
+sihd::util::Result<void> TlsContext::init(bool server_mode)
 {
     ERR_clear_error();
     this->clear();
@@ -43,7 +43,7 @@ std::expected<void, sihd::util::Error> TlsContext::init(bool server_mode)
     return {};
 }
 
-std::expected<void, sihd::util::Error> TlsContext::set_certificate(const Certificate & cert)
+sihd::util::Result<void> TlsContext::set_certificate(const Certificate & cert)
 {
     ERR_clear_error();
     if (!_handle)
@@ -55,7 +55,7 @@ std::expected<void, sihd::util::Error> TlsContext::set_certificate(const Certifi
     return {};
 }
 
-std::expected<void, sihd::util::Error> TlsContext::set_private_key(const PrivateKey & key)
+sihd::util::Result<void> TlsContext::set_private_key(const PrivateKey & key)
 {
     ERR_clear_error();
     if (!_handle)
@@ -67,7 +67,7 @@ std::expected<void, sihd::util::Error> TlsContext::set_private_key(const Private
     return {};
 }
 
-std::expected<void, sihd::util::Error> TlsContext::load_ca_cert(std::string_view path)
+sihd::util::Result<void> TlsContext::load_ca_cert(std::string_view path)
 {
     ERR_clear_error();
     if (!_handle)

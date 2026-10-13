@@ -1,5 +1,6 @@
 #include <cstring>
 
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
 
@@ -78,7 +79,7 @@ std::string id_str(pthread_t id)
     return to_id_str(id);
 }
 
-std::expected<void, Error> set_name(const std::string & name)
+sihd::util::Result<void> set_name(const std::string & name)
 {
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     const std::string subname = name.substr(0, 15);

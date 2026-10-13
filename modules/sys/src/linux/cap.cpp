@@ -1,6 +1,7 @@
 #include <sihd/sys/CapabilitySet.hpp>
 #include <sihd/sys/cap.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 // libcap is linux only: cap::supported is false elsewhere (android/emscripten/apple/bsd) and
 // every operation is a no-op.
@@ -219,7 +220,7 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>())
 
 CapabilitySet::~CapabilitySet() = default;
 
-std::expected<void, sihd::util::Error> CapabilitySet::refresh()
+sihd::util::Result<void> CapabilitySet::refresh()
 {
     _impl->clear();
     _impl->caps = cap_get_proc();
@@ -267,7 +268,7 @@ void CapabilitySet::drop_all()
         _impl->set_flag(cap, CAP_EFFECTIVE, false);
 }
 
-std::expected<void, sihd::util::Error> CapabilitySet::apply()
+sihd::util::Result<void> CapabilitySet::apply()
 {
     if (_impl->caps == nullptr)
         return std::unexpected(
@@ -321,7 +322,7 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>()) {}
 
 CapabilitySet::~CapabilitySet() = default;
 
-std::expected<void, sihd::util::Error> CapabilitySet::refresh()
+sihd::util::Result<void> CapabilitySet::refresh()
 {
     return std::unexpected(
         sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));
@@ -354,7 +355,7 @@ bool CapabilitySet::drop([[maybe_unused]] Cap cap)
 
 void CapabilitySet::drop_all() {}
 
-std::expected<void, sihd::util::Error> CapabilitySet::apply()
+sihd::util::Result<void> CapabilitySet::apply()
 {
     return std::unexpected(
         sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));

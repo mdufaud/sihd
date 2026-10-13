@@ -1,6 +1,7 @@
 #include <sihd/core/DevFilter.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 
@@ -24,7 +25,7 @@ SIHD_LOGGER;
 
 namespace
 {
-std::expected<void, util::Error> parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+sihd::util::Result<void> parse_options_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
 {
     auto [key_match, key_delay] = conf.find_all(CONF_KEY_MATCH, CONF_KEY_DELAY);
 
@@ -43,7 +44,7 @@ std::expected<void, util::Error> parse_options_config(DevFilter::Rule & rule, co
     return {};
 }
 
-std::expected<void, util::Error> parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
+sihd::util::Result<void> parse_write_config(DevFilter::Rule & rule, const util::StrConfiguration & conf)
 {
     auto key_write = conf.find(CONF_KEY_WRITE);
 
@@ -115,8 +116,7 @@ DevFilter::DevFilter(const std::string & name, sihd::util::Node *parent):
 
 DevFilter::~DevFilter() = default;
 
-std::expected<void, sihd::util::Error> DevFilter::_parse_conf(std::string_view rule_str,
-                                                              ChannelMatch::Comparison comparison)
+sihd::util::Result<void> DevFilter::_parse_conf(std::string_view rule_str, ChannelMatch::Comparison comparison)
 {
     // in=channel_path_in;out=channel_path_out;trigger=i:val1;write=j:val2
     Rule rule(comparison);
@@ -346,7 +346,7 @@ DevFilter::Rule & DevFilter::Rule::delay(sihd::util::Duration nano_delay)
     return *this;
 }
 
-std::expected<void, sihd::util::Error> DevFilter::Rule::parse(std::string_view conf_str)
+sihd::util::Result<void> DevFilter::Rule::parse(std::string_view conf_str)
 {
     util::StrConfiguration conf(conf_str);
 
@@ -403,8 +403,7 @@ DevFilter::InternalRule::InternalRule(): channel_in_ptr(nullptr), channel_out_pt
 
 DevFilter::InternalRule::~InternalRule() = default;
 
-std::expected<void, sihd::util::Error>
-    DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, Channel *out)
+sihd::util::Result<void> DevFilter::InternalRule::set(const DevFilter::Rule *conf, Channel *in, Channel *out)
 {
     if (in == out)
         return std::unexpected(util::Error(invalid_argument,
@@ -417,7 +416,7 @@ std::expected<void, sihd::util::Error>
     return this->verify();
 }
 
-std::expected<void, sihd::util::Error> DevFilter::InternalRule::verify()
+sihd::util::Result<void> DevFilter::InternalRule::verify()
 {
     if (rule_ptr->channel_match.verify(this->channel_in_ptr) == false)
         return std::unexpected(util::Error(invalid_argument,

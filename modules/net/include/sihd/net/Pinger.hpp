@@ -2,7 +2,6 @@
 #define __SIHD_NET_PINGER_HPP__
 
 #include <atomic>
-#include <expected>
 #include <memory>
 
 #include <sihd/net/IcmpSender.hpp>
@@ -11,6 +10,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/time.hpp>
@@ -60,8 +60,8 @@ class Pinger: public sihd::util::Named,
         bool set_client(const IpAddr & client);
         bool set_ping_count(size_t n);
 
-        std::expected<void, sihd::util::Error> open(bool ipv6 = false);
-        std::expected<void, sihd::util::Error> open_unix();
+        sihd::util::Result<void> open(bool ipv6 = false);
+        sihd::util::Result<void> open_unix();
 
         // filled when sending, receiving or timeout - call in observable
         const PingEvent & event() const { return _event; }

@@ -21,6 +21,7 @@
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/num.hpp>
@@ -1130,7 +1131,7 @@ std::string to_base64(std::string_view str)
     return to_base64(str.data(), str.size());
 }
 
-std::expected<std::vector<uint8_t>, Error> from_base64(std::string_view b64)
+sihd::util::Result<std::vector<uint8_t>> from_base64(std::string_view b64)
 {
     std::vector<uint8_t> ret;
     ret.reserve(b64.size() / 4 * 3);
@@ -1256,7 +1257,7 @@ bool is_number(std::string_view s, uint16_t base)
     return true;
 }
 
-std::expected<long long, Error> to_signed(std::string_view str, uint16_t base)
+sihd::util::Result<long long> to_signed(std::string_view str, uint16_t base)
 {
     const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
@@ -1275,7 +1276,7 @@ std::expected<long long, Error> to_signed(std::string_view str, uint16_t base)
     return negate ? -*parsed : *parsed;
 }
 
-std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint16_t base)
+sihd::util::Result<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
 {
     const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
@@ -1294,7 +1295,7 @@ std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint1
     return negate ? static_cast<unsigned long long>(0) - *parsed : *parsed;
 }
 
-std::expected<bool, Error> to_bool(std::string_view str)
+sihd::util::Result<bool> to_bool(std::string_view str)
 {
     if (str == "1" || str == "true")
         return true;
@@ -1303,7 +1304,7 @@ std::expected<bool, Error> to_bool(std::string_view str)
     return std::unexpected(Error(invalid_argument, "cannot parse '{}' as bool", str));
 }
 
-std::expected<char, Error> to_char(std::string_view str)
+sihd::util::Result<char> to_char(std::string_view str)
 {
     if (str.size() == 1)
     {
@@ -1322,7 +1323,7 @@ std::expected<char, Error> to_char(std::string_view str)
 
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
 
-std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt)
+sihd::util::Result<float> to_float(std::string_view str, std::chars_format fmt)
 {
     const auto parsed = from_chars_to<float>(str, fmt);
     if (!parsed)
@@ -1330,7 +1331,7 @@ std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt
     return *parsed;
 }
 
-std::expected<double, Error> to_double(std::string_view str, std::chars_format fmt)
+sihd::util::Result<double> to_double(std::string_view str, std::chars_format fmt)
 {
     const auto parsed = from_chars_to<double>(str, fmt);
     if (!parsed)
@@ -1340,7 +1341,7 @@ std::expected<double, Error> to_double(std::string_view str, std::chars_format f
 
 #else
 
-std::expected<float, Error> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+sihd::util::Result<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
     const auto parsed = strtod_fallback(str);
     if (!parsed)
@@ -1348,7 +1349,7 @@ std::expected<float, Error> to_float(std::string_view str, [[maybe_unused]] std:
     return static_cast<float>(*parsed);
 }
 
-std::expected<double, Error> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+sihd::util::Result<double> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
     const auto parsed = strtod_fallback(str);
     if (!parsed)

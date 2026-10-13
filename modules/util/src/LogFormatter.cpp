@@ -2,6 +2,7 @@
 #include <cstring>
 
 #include <sihd/util/LogFormatter.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::util
@@ -34,7 +35,7 @@ LogFormatter::LogFormatter()
     (void)this->set_pattern(default_pattern);
 }
 
-std::expected<void, Error> LogFormatter::set_pattern(std::string_view pattern)
+sihd::util::Result<void> LogFormatter::set_pattern(std::string_view pattern)
 {
     TokenPattern compiled;
     if (auto res = compiled.compile(pattern); res.has_value() == false)

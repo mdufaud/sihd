@@ -2,7 +2,6 @@
 #define __SIHD_CURL_REQUEST_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <functional>
 #include <memory>
 #include <string>
@@ -11,7 +10,7 @@
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Duration.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::curl
 {
@@ -116,7 +115,7 @@ class Request
         long new_connection_count() const;
         std::vector<std::string> cookie_list() const;
 
-        std::expected<void, sihd::util::Error> perform();
+        sihd::util::Result<void> perform();
         // error of the last failed operation - option setting or transfer - since the last reset()
         std::string last_error() const;
         void reset();

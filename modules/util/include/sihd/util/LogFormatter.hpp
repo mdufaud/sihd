@@ -1,14 +1,13 @@
 #ifndef __SIHD_UTIL_LOGFORMATTER_HPP__
 #define __SIHD_UTIL_LOGFORMATTER_HPP__
 
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/LogInfo.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/TokenPattern.hpp>
 
 namespace sihd::util
@@ -23,7 +22,7 @@ class LogFormatter
 
         LogFormatter();
 
-        std::expected<void, Error> set_pattern(std::string_view pattern);
+        sihd::util::Result<void> set_pattern(std::string_view pattern);
         std::string format(const LogInfo & info, std::string_view msg) const;
 
         const std::string & pattern() const;

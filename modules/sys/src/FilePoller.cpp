@@ -6,6 +6,7 @@
 #include <sihd/sys/FilePoller.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/container.hpp>
 
 namespace sihd::sys
@@ -172,7 +173,7 @@ void FilePoller::unwatch()
     _impl = std::make_unique<Impl>();
 }
 
-std::expected<void, Error> FilePoller::watch(std::string_view path, size_t max_depth)
+sihd::util::Result<void> FilePoller::watch(std::string_view path, size_t max_depth)
 {
     if (_impl->watch_path == path)
         return {};

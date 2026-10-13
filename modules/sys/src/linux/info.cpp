@@ -11,6 +11,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/info.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using namespace sihd::util;
@@ -24,7 +25,7 @@ SIHD_NEW_LOGGER("sihd::sys::info");
 namespace
 {
 
-std::expected<uint64_t, Error> read_uint(std::string_view path)
+sihd::util::Result<uint64_t> read_uint(std::string_view path)
 {
     auto content_opt = fs::read_all(path);
     if (!content_opt)
@@ -35,7 +36,7 @@ std::expected<uint64_t, Error> read_uint(std::string_view path)
 }
 
 // /proc/meminfo values are kibibytes
-std::expected<uint64_t, Error> read_meminfo_kib(std::string_view key)
+sihd::util::Result<uint64_t> read_meminfo_kib(std::string_view key)
 {
     const auto lines = fs::read_lines("/proc/meminfo");
     if (!lines)

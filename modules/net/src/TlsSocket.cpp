@@ -2,6 +2,7 @@
 
 #include <sihd/net/TlsSocket.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::net
@@ -54,7 +55,7 @@ TlsHandshakeStep TlsSocket::tls_accept_step()
     return *stepped;
 }
 
-std::expected<void, sihd::util::Error> TlsSocket::tls_accept(int timeout_ms)
+sihd::util::Result<void> TlsSocket::tls_accept(int timeout_ms)
 {
     if (!_tls_ctx || !this->is_open())
     {
@@ -64,7 +65,7 @@ std::expected<void, sihd::util::Error> TlsSocket::tls_accept(int timeout_ms)
     return this->_handshake(true, timeout_ms);
 }
 
-std::expected<void, sihd::util::Error> TlsSocket::_handshake(bool is_accept, int timeout_ms)
+sihd::util::Result<void> TlsSocket::_handshake(bool is_accept, int timeout_ms)
 {
     auto init = _tls_conn.init(*_tls_ctx, *this);
     if (!init)
@@ -78,7 +79,7 @@ std::expected<void, sihd::util::Error> TlsSocket::_handshake(bool is_accept, int
     return {};
 }
 
-std::expected<void, sihd::util::Error> TlsSocket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
+sihd::util::Result<void> TlsSocket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
 {
     auto res = Socket::connect(addr, addr_len, timeout_ms);
     if (!res)
@@ -95,21 +96,21 @@ std::expected<void, sihd::util::Error> TlsSocket::connect(const sockaddr *addr, 
     return {};
 }
 
-std::expected<size_t, sihd::util::Error> TlsSocket::send(sihd::util::ArrCharView view)
+sihd::util::Result<size_t> TlsSocket::send(sihd::util::ArrCharView view)
 {
     if (_tls_conn)
         return _tls_conn.write(view.data(), view.size());
     return Socket::send(view);
 }
 
-std::expected<size_t, sihd::util::Error> TlsSocket::receive(void *data, size_t size)
+sihd::util::Result<size_t> TlsSocket::receive(void *data, size_t size)
 {
     if (_tls_conn)
         return _tls_conn.read(data, size);
     return Socket::receive(data, size);
 }
 
-std::expected<void, sihd::util::Error> TlsSocket::shutdown() const
+sihd::util::Result<void> TlsSocket::shutdown() const
 {
     // the TLS close_notify write must happen before SHUT_RDWR, or SSL_shutdown
     // gets EPIPE and the process dies of SIGPIPE
@@ -118,7 +119,7 @@ std::expected<void, sihd::util::Error> TlsSocket::shutdown() const
     return Socket::shutdown();
 }
 
-std::expected<void, sihd::util::Error> TlsSocket::close()
+sihd::util::Result<void> TlsSocket::close()
 {
     if (_tls_conn)
     {

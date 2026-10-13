@@ -9,6 +9,7 @@
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 #include "impl.hpp"
 
@@ -47,7 +48,7 @@ std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, fmt::format_s
 
 // curl_global_init() is not thread-safe and must run before any other curl call, from a single
 // thread: funnel every request creation here. A failed init is not sticky, the next one retries
-std::expected<void, sihd::util::Error> global_init()
+sihd::util::Result<void> global_init()
 {
     static std::mutex mutex;
     static bool initialized = false;
@@ -582,7 +583,7 @@ std::vector<std::string> Request::cookie_list() const
     return slist_lines(list.get());
 }
 
-std::expected<void, sihd::util::Error> Request::perform()
+sihd::util::Result<void> Request::perform()
 {
     if (_impl->curl == nullptr)
         return err(not_initialized, _impl->init_error.empty() ? "no curl handle" : _impl->init_error);

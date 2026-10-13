@@ -1,4 +1,4 @@
-#include <sihd/sys/platform.hpp>
+#include <sihd/sys/File.hpp>
 
 #if !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # define ENABLE_SPAWN
@@ -27,13 +27,14 @@
 # define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
 #endif
 
-#include <sihd/sys/File.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
@@ -540,7 +541,7 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 #if defined(ENABLE_FORK)
 
-std::expected<void, Error> Process::_do_fork(const std::vector<const char *> & argv)
+sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> & argv)
 {
     // the exec array is owned here: nothing may allocate in the forked child
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
@@ -606,7 +607,7 @@ std::expected<void, Error> Process::_do_fork(const std::vector<const char *> & a
 
 #else
 
-std::expected<void, Error> Process::_do_fork(const std::vector<const char *> &)
+sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> &)
 {
     return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no fork on this platform"));
 }
@@ -615,7 +616,7 @@ std::expected<void, Error> Process::_do_fork(const std::vector<const char *> &)
 
 #if defined(ENABLE_SPAWN)
 
-std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> & argv)
+sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> & argv)
 {
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
@@ -663,20 +664,20 @@ std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> & 
 
 #else
 
-std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> &)
+sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> &)
 {
     return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no spawn on this platform"));
 }
 
 #endif
 
-std::expected<void, Error> Process::_do_child_process(const std::vector<const char *> &)
+sihd::util::Result<void> Process::_do_child_process(const std::vector<const char *> &)
 {
     return std::unexpected(
         sihd::util::Error(sihd::util::ErrorCode::not_supported, "no child process on this platform"));
 }
 
-std::expected<void, Error> Process::_do_execute(const std::vector<const char *> & argv)
+sihd::util::Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
     init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
@@ -688,7 +689,7 @@ std::expected<void, Error> Process::_do_execute(const std::vector<const char *> 
 #endif
 }
 
-std::expected<void, Error> Process::execute()
+sihd::util::Result<void> Process::execute()
 {
     if (this->is_process_running() || _executing.exchange(true) == true)
     {
@@ -793,7 +794,7 @@ bool Process::terminate()
     return this->is_process_running() == false;
 }
 
-std::expected<void, Error> Process::kill(int sig)
+sihd::util::Result<void> Process::kill(int sig)
 {
     if (this->is_process_running() == false)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process is not running"));
@@ -863,12 +864,12 @@ bool Process::is_process_running() const
     return _started.load();
 }
 
-std::expected<bool, Error> Process::wait_no_hang()
+sihd::util::Result<bool> Process::wait_no_hang()
 {
     return this->wait(WEXITED | WNOHANG);
 }
 
-std::expected<bool, Error> Process::wait(int options)
+sihd::util::Result<bool> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
@@ -894,22 +895,22 @@ bool Process::has_terminated() const
     return _impl->process_watcher.has_terminated();
 }
 
-std::expected<bool, Error> Process::wait_exit(int options)
+sihd::util::Result<bool> Process::wait_exit(int options)
 {
     return this->wait(WEXITED | options);
 }
 
-std::expected<bool, Error> Process::wait_stop(int options)
+sihd::util::Result<bool> Process::wait_stop(int options)
 {
     return this->wait(WSTOPPED | options);
 }
 
-std::expected<bool, Error> Process::wait_continue(int options)
+sihd::util::Result<bool> Process::wait_continue(int options)
 {
     return this->wait(WCONTINUED | options);
 }
 
-std::expected<bool, Error> Process::wait_any(int options)
+sihd::util::Result<bool> Process::wait_any(int options)
 {
     return this->wait(WEXITED | WSTOPPED | WCONTINUED | options);
 }

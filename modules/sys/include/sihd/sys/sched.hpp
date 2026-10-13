@@ -1,11 +1,10 @@
 #ifndef __SIHD_SYS_SCHED_HPP__
 #define __SIHD_SYS_SCHED_HPP__
 
-#include <expected>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys::sched
 {
@@ -27,14 +26,14 @@ struct Priority
         int value = 0;
 };
 
-std::expected<int, sihd::util::Error> nice(pid_t pid);
-std::expected<void, sihd::util::Error> set_nice(pid_t pid, int nice_value);
-std::expected<Policy, sihd::util::Error> scheduler(pid_t pid);
-std::expected<Priority, sihd::util::Error> scheduler_priority(pid_t pid);
-std::expected<void, sihd::util::Error> set_scheduler(pid_t pid, Policy policy, Priority priority);
+sihd::util::Result<int> nice(pid_t pid);
+sihd::util::Result<void> set_nice(pid_t pid, int nice_value);
+sihd::util::Result<Policy> scheduler(pid_t pid);
+sihd::util::Result<Priority> scheduler_priority(pid_t pid);
+sihd::util::Result<void> set_scheduler(pid_t pid, Policy policy, Priority priority);
 // index is the cpu id; limited to 64 cpus on windows (single processor group)
-std::expected<std::vector<bool>, sihd::util::Error> affinity(pid_t pid);
-std::expected<void, sihd::util::Error> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask);
+sihd::util::Result<std::vector<bool>> affinity(pid_t pid);
+sihd::util::Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask);
 
 } // namespace sihd::sys::sched
 

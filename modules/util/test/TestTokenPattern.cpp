@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/util/Result.hpp>
 #include <sihd/util/TokenPattern.hpp>
 
 namespace test
@@ -125,7 +126,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_refused_patterns)
     for (const std::string & bad : bad_patterns)
     {
         TokenPattern pattern;
-        const std::expected<void, Error> res = pattern.compile(bad);
+        const sihd::util::Result<void> res = pattern.compile(bad);
         ASSERT_FALSE(res.has_value()) << bad;
         EXPECT_NE(res.error().message.find("at "), std::string::npos) << bad;
     }
@@ -164,7 +165,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_escapes)
 TEST_F(TestTokenPattern, test_tokenpattern_field_name_boundary)
 {
     TokenPattern pattern;
-    const std::expected<void, Error> res = pattern.compile("{a-b}");
+    const sihd::util::Result<void> res = pattern.compile("{a-b}");
     ASSERT_FALSE(res.has_value());
     EXPECT_NE(res.error().message.find("at "), std::string::npos);
 }

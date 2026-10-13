@@ -8,6 +8,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <linux/if_link.h>
 #include <linux/if_packet.h>
@@ -89,7 +90,7 @@ bool NetInterface::supports_multicast() const
     return _flags & IFF_MULTICAST;
 }
 
-std::expected<std::map<std::string, NetInterface>, sihd::util::Error> NetInterface::get_all_interfaces()
+sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 

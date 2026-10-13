@@ -1,6 +1,7 @@
 #include <sihd/sys/Impersonation.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -72,7 +73,7 @@ Impersonation::~Impersonation()
     }
 }
 
-std::expected<void, Error> Impersonation::impersonate_as(const user::UserId & user_id, const user::GroupId & group_id)
+sihd::util::Result<void> Impersonation::impersonate_as(const user::UserId & user_id, const user::GroupId & group_id)
 {
     if (_impl->active)
         return std::unexpected(Error(not_initialized, "already impersonating"));
@@ -100,7 +101,7 @@ std::expected<void, Error> Impersonation::impersonate_as(const user::UserId & us
     return {};
 }
 
-std::expected<void, Error> Impersonation::revert()
+sihd::util::Result<void> Impersonation::revert()
 {
     if (!_impl->active)
         return std::unexpected(Error(not_initialized, "not impersonating"));
@@ -129,13 +130,13 @@ Impersonation::Impersonation(): _impl(std::make_unique<Impl>()) {}
 
 Impersonation::~Impersonation() = default;
 
-std::expected<void, Error> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
-                                                         [[maybe_unused]] const user::GroupId & group_id)
+sihd::util::Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
+                                                       [[maybe_unused]] const user::GroupId & group_id)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> Impersonation::revert()
+sihd::util::Result<void> Impersonation::revert()
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
@@ -147,9 +148,9 @@ bool Impersonation::impersonating() const
 
 #endif
 
-std::expected<void, Error> Impersonation::impersonate_with_credentials([[maybe_unused]] std::string_view user_name,
-                                                                       [[maybe_unused]] std::string_view password,
-                                                                       [[maybe_unused]] std::string_view domain)
+sihd::util::Result<void> Impersonation::impersonate_with_credentials([[maybe_unused]] std::string_view user_name,
+                                                                     [[maybe_unused]] std::string_view password,
+                                                                     [[maybe_unused]] std::string_view domain)
 {
     // unix authenticates through PAM, not through the identity switch: see impersonate_as
     return std::unexpected(Error(not_supported, "not supported on this platform"));

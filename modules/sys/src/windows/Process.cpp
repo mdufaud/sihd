@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-#include <sihd/sys/platform.hpp>
+#include <sihd/sys/File.hpp>
 
 #ifndef SIHD_PROCESS_READ_BUFFER_SIZE
 # define SIHD_PROCESS_READ_BUFFER_SIZE 2048
@@ -12,12 +12,13 @@
 # define SIHD_PROCESS_OUTPUT_FILE_DEFAULT_MODE 0740
 #endif
 
-#include <sihd/sys/File.hpp>
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/container.hpp>
 #include <sihd/util/time.hpp>
@@ -566,17 +567,17 @@ bool Process::stderr_to_file(std::string_view path, bool append)
 
 // Execution
 
-std::expected<void, Error> Process::_do_fork(const std::vector<const char *> &)
+sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> &)
 {
     return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no fork on this platform"));
 }
 
-std::expected<void, Error> Process::_do_spawn(const std::vector<const char *> &)
+sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> &)
 {
     return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no spawn on this platform"));
 }
 
-std::expected<void, Error> Process::_do_child_process(const std::vector<const char *> & argv)
+sihd::util::Result<void> Process::_do_child_process(const std::vector<const char *> & argv)
 {
     if (_fun_to_execute)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported,
@@ -640,12 +641,12 @@ std::expected<void, Error> Process::_do_child_process(const std::vector<const ch
     return {};
 }
 
-std::expected<void, Error> Process::_do_execute(const std::vector<const char *> & argv)
+sihd::util::Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
     return this->_do_child_process(argv);
 }
 
-std::expected<void, Error> Process::execute()
+sihd::util::Result<void> Process::execute()
 {
     if (this->is_process_running() || _executing.exchange(true) == true)
     {
@@ -757,7 +758,7 @@ bool Process::terminate()
     return this->is_process_running() == false;
 }
 
-std::expected<void, Error> Process::kill(int sig)
+sihd::util::Result<void> Process::kill(int sig)
 {
     if (this->is_process_running() == false)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process is not running"));
@@ -808,13 +809,13 @@ bool Process::is_process_running() const
     return _started.load();
 }
 
-std::expected<bool, Error> Process::wait_no_hang()
+sihd::util::Result<bool> Process::wait_no_hang()
 {
     constexpr DWORD timeout_ms = 5;
     return this->wait(timeout_ms);
 }
 
-std::expected<bool, Error> Process::wait(int options)
+sihd::util::Result<bool> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
@@ -840,12 +841,12 @@ bool Process::has_terminated() const
     return _impl->process_watcher.has_terminated();
 }
 
-std::expected<bool, Error> Process::wait_exit(int options)
+sihd::util::Result<bool> Process::wait_exit(int options)
 {
     return this->wait(options);
 }
 
-std::expected<bool, Error> Process::wait_any(int options)
+sihd::util::Result<bool> Process::wait_any(int options)
 {
     return this->wait(options);
 }

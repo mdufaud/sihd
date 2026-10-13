@@ -2,6 +2,7 @@
 #include <sys/resource.h>
 
 #include <sihd/sys/sched.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -54,7 +55,7 @@ int policy_from_scheduler(Policy policy)
 
 } // namespace
 
-std::expected<int, Error> nice(pid_t pid)
+sihd::util::Result<int> nice(pid_t pid)
 {
     errno = 0;
     const int value = getpriority(PRIO_PROCESS, pid);
@@ -64,14 +65,14 @@ std::expected<int, Error> nice(pid_t pid)
     return value;
 }
 
-std::expected<void, Error> set_nice(pid_t pid, int nice_value)
+sihd::util::Result<void> set_nice(pid_t pid, int nice_value)
 {
     if (setpriority(PRIO_PROCESS, pid, nice_value) == -1)
         return std::unexpected(Error::from_errno("setpriority({}, {})", pid, nice_value));
     return {};
 }
 
-std::expected<Policy, Error> scheduler(pid_t pid)
+sihd::util::Result<Policy> scheduler(pid_t pid)
 {
     const int policy = sched_getscheduler(pid);
     if (policy == -1)
@@ -79,7 +80,7 @@ std::expected<Policy, Error> scheduler(pid_t pid)
     return scheduler_from_policy(policy);
 }
 
-std::expected<Priority, Error> scheduler_priority(pid_t pid)
+sihd::util::Result<Priority> scheduler_priority(pid_t pid)
 {
     sched_param param = {};
     if (sched_getparam(pid, &param) == -1)
@@ -87,7 +88,7 @@ std::expected<Priority, Error> scheduler_priority(pid_t pid)
     return Priority {param.sched_priority};
 }
 
-std::expected<void, Error> set_scheduler(pid_t pid, Policy policy, Priority priority)
+sihd::util::Result<void> set_scheduler(pid_t pid, Policy policy, Priority priority)
 {
     // SCHED_DEADLINE is only settable through sched_setattr with the runtime/deadline/period triple
     if (policy == Policy::deadline)
@@ -99,7 +100,7 @@ std::expected<void, Error> set_scheduler(pid_t pid, Policy policy, Priority prio
     return {};
 }
 
-std::expected<std::vector<bool>, Error> affinity(pid_t pid)
+sihd::util::Result<std::vector<bool>> affinity(pid_t pid)
 {
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -117,7 +118,7 @@ std::expected<std::vector<bool>, Error> affinity(pid_t pid)
     return cpu_mask;
 }
 
-std::expected<void, Error> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
+sihd::util::Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
 {
     if (cpu_mask.empty())
         return std::unexpected(Error(invalid_argument, "empty cpu mask"));

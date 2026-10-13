@@ -12,6 +12,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
@@ -50,7 +51,7 @@ std::string combine_impl(std::string_view path1, std::string_view path2)
     return fmt::format("{0}{1}{2}", path1, g_separator_char, path2);
 }
 
-std::expected<void, Error>
+sihd::util::Result<void>
     internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
 {
     std::error_code ec;
@@ -185,17 +186,17 @@ unsigned int permission_from_str(std::string_view mode)
     return static_cast<unsigned int>(p);
 }
 
-std::expected<void, Error> permission_add(std::string_view path, unsigned int mode)
+sihd::util::Result<void> permission_add(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::add);
 }
 
-std::expected<void, Error> permission_rm(std::string_view path, unsigned int mode)
+sihd::util::Result<void> permission_rm(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::remove);
 }
 
-std::expected<void, Error> permission_set(std::string_view path, unsigned int mode)
+sihd::util::Result<void> permission_set(std::string_view path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::replace);
 }
@@ -211,7 +212,7 @@ unsigned int permission_get(std::string_view path)
 
 // directories
 
-std::expected<void, Error> remove_directory(std::string_view path)
+sihd::util::Result<void> remove_directory(std::string_view path)
 {
     if (rmdir(path.data()) != 0)
     {
@@ -220,10 +221,10 @@ std::expected<void, Error> remove_directory(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> remove_directories(std::string_view path)
+sihd::util::Result<void> remove_directories(std::string_view path)
 {
     std::vector<std::string> children = recursive_children(path);
-    std::expected<void, Error> res = {};
+    sihd::util::Result<void> res = {};
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
         auto removed = is_dir(*it) ? remove_directory(*it) : remove_file(*it);
@@ -233,9 +234,9 @@ std::expected<void, Error> remove_directories(std::string_view path)
     return res;
 }
 
-std::expected<void, Error> make_directory(std::string_view path, unsigned int mode);
+sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode);
 
-std::expected<void, Error> make_directories(std::string_view path, unsigned int mode)
+sihd::util::Result<void> make_directories(std::string_view path, unsigned int mode)
 {
     if (path.empty())
         return {};
@@ -415,7 +416,7 @@ std::optional<std::string> read_link(std::string_view path)
     return {link_path.string()};
 }
 
-std::expected<void, Error> make_file_link(std::string_view target, std::string_view link)
+sihd::util::Result<void> make_file_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
@@ -426,7 +427,7 @@ std::expected<void, Error> make_file_link(std::string_view target, std::string_v
     return {};
 }
 
-std::expected<void, Error> make_dir_link(std::string_view target, std::string_view link)
+sihd::util::Result<void> make_dir_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
@@ -438,7 +439,7 @@ std::expected<void, Error> make_dir_link(std::string_view target, std::string_vi
     return {};
 }
 
-std::expected<void, Error> make_hard_link(std::string_view target, std::string_view link)
+sihd::util::Result<void> make_hard_link(std::string_view target, std::string_view link)
 {
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
@@ -481,7 +482,7 @@ bool are_equals(std::string_view path1, std::string_view path2)
     return true;
 }
 
-std::expected<void, Error> remove_file(std::string_view path)
+sihd::util::Result<void> remove_file(std::string_view path)
 {
     if (remove(path.data()) != 0)
     {
@@ -490,7 +491,7 @@ std::expected<void, Error> remove_file(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> rename(std::string_view from, std::string_view to)
+sihd::util::Result<void> rename(std::string_view from, std::string_view to)
 {
     if (::rename(from.data(), to.data()) != 0)
     {
@@ -538,7 +539,7 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     return candidate;
 }
 
-std::expected<void, Error> write(std::string_view path, std::string_view view, bool append, bool binary)
+sihd::util::Result<void> write(std::string_view path, std::string_view view, bool append, bool binary)
 {
     const char *mode = binary ? (append ? "ab" : "wb") : (append ? "a" : "w");
     File file;
@@ -553,7 +554,7 @@ std::expected<void, Error> write(std::string_view path, std::string_view view, b
     return {};
 }
 
-std::expected<std::string, Error> read(std::string_view path, sihd::util::Slice slice, bool binary)
+sihd::util::Result<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary)
 {
     File file;
     auto opened = file.open(path, binary ? "rb" : "r");
@@ -580,7 +581,7 @@ std::expected<std::string, Error> read(std::string_view path, sihd::util::Slice 
     return str;
 }
 
-std::expected<std::string, Error> read_line(std::string_view path, size_t line_number)
+sihd::util::Result<std::string> read_line(std::string_view path, size_t line_number)
 {
     std::ifstream file(path.data(), std::ifstream::in);
     if (!file.is_open())
@@ -596,12 +597,12 @@ std::expected<std::string, Error> read_line(std::string_view path, size_t line_n
     return line;
 }
 
-std::expected<std::vector<std::string>, Error> read_lines(std::string_view path)
+sihd::util::Result<std::vector<std::string>> read_lines(std::string_view path)
 {
     return read_all(path).transform([](const std::string & content) { return str::split(content, '\n'); });
 }
 
-std::expected<std::string, Error> read_all(std::string_view path, bool binary)
+sihd::util::Result<std::string> read_all(std::string_view path, bool binary)
 {
     const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
     std::ifstream file(path.data(), mode);

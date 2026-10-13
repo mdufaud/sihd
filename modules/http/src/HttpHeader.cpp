@@ -1,5 +1,6 @@
 #include <sihd/http/HttpHeader.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 #include "lws.hpp"
@@ -133,7 +134,7 @@ HttpHeader & HttpHeader::set_header(const std::string & header_name, std::string
     return *this;
 }
 
-std::expected<void, sihd::util::Error> HttpHeader::add_header_from_str(std::string_view header)
+sihd::util::Result<void> HttpHeader::add_header_from_str(std::string_view header)
 {
     if (util::str::ends_with(header, "\n"))
         header.remove_suffix(1);

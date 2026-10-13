@@ -13,6 +13,7 @@
 #include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/LoggerThrow.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Waitable.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -310,10 +311,10 @@ TEST_F(TestLogger, test_logger_macros)
 
 TEST_F(TestLogger, test_logger_expected)
 {
-    std::expected<int, Error> ok = 42;
+    sihd::util::Result<int> ok = 42;
     ASSERT_FALSE(SIHD_UNEXPECTED_LOG(ok));
 
-    std::expected<int, Error> err = std::unexpected(Error(invalid_argument, "oops"));
+    sihd::util::Result<int> err = std::unexpected(Error(invalid_argument, "oops"));
     ASSERT_TRUE(SIHD_UNEXPECTED_LOG(err));
     ASSERT_EQ(log_counter->src, "test");
     ASSERT_TRUE(log_counter->msg.starts_with("TestLogger:"));

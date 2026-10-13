@@ -2,14 +2,13 @@
 #define __SIHD_NET_IPADDR_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netinet/in.h> // sockaddr
@@ -76,7 +75,7 @@ class IpAddr
         size_t addr_len() const;
         uint16_t port() const;
 
-        std::expected<void, sihd::util::Error> fetch_hostname();
+        sihd::util::Result<void> fetch_hostname();
 
         std::string str() const;
         const std::string & hostname() const;
@@ -84,7 +83,7 @@ class IpAddr
         // subnets
         Subnet subnet() const;
 
-        std::expected<void, sihd::util::Error> set_subnet_mask(std::string_view mask);
+        sihd::util::Result<void> set_subnet_mask(std::string_view mask);
         bool set_subnet_mask(uint32_t mask);
 
         bool is_same_subnet(const IpAddr & other_addr) const;

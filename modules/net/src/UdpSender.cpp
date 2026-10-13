@@ -1,6 +1,7 @@
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::net
 {
@@ -13,26 +14,26 @@ UdpSender::UdpSender(const std::string & name, sihd::util::Node *parent): sihd::
 
 UdpSender::~UdpSender() = default;
 
-std::expected<void, sihd::util::Error> UdpSender::open_socket_unix()
+sihd::util::Result<void> UdpSender::open_socket_unix()
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::open_socket(bool ipv6)
+sihd::util::Result<void> UdpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::connect(const IpAddr & addr)
+sihd::util::Result<void> UdpSender::connect(const IpAddr & addr)
 {
     return _socket.connect(addr);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::open_and_connect(const IpAddr & ip)
+sihd::util::Result<void> UdpSender::open_and_connect(const IpAddr & ip)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -40,7 +41,7 @@ std::expected<void, sihd::util::Error> UdpSender::open_and_connect(const IpAddr 
     return this->connect(ip);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::open_and_connect(std::string_view ip, int port)
+sihd::util::Result<void> UdpSender::open_and_connect(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -49,7 +50,7 @@ std::expected<void, sihd::util::Error> UdpSender::open_and_connect(std::string_v
     return this->connect(addr);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::open_unix_and_connect(std::string_view path)
+sihd::util::Result<void> UdpSender::open_unix_and_connect(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -57,33 +58,33 @@ std::expected<void, sihd::util::Error> UdpSender::open_unix_and_connect(std::str
     return this->connect_unix(path);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::close()
+sihd::util::Result<void> UdpSender::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
 }
 
-std::expected<size_t, sihd::util::Error> UdpSender::send(sihd::util::ArrCharView view)
+sihd::util::Result<size_t> UdpSender::send(sihd::util::ArrCharView view)
 {
     return _socket.send(view);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::send_all(sihd::util::ArrCharView view)
+sihd::util::Result<void> UdpSender::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::connect_unix(std::string_view path)
+sihd::util::Result<void> UdpSender::connect_unix(std::string_view path)
 {
     return _socket.connect_unix(path);
 }
 
-std::expected<size_t, sihd::util::Error> UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
+sihd::util::Result<size_t> UdpSender::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_to(addr, view);
 }
 
-std::expected<void, sihd::util::Error> UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrCharView view)
+sihd::util::Result<void> UdpSender::send_to_all(const IpAddr & addr, sihd::util::ArrCharView view)
 {
     return _socket.send_all_to(addr, view);
 }

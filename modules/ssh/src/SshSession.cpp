@@ -2,18 +2,19 @@
 
 #include <libssh/libssh.h>
 
+#include <sihd/ssh/SshSession.hpp>
+#include <sihd/ssh/utils.hpp>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/fmt.hpp>
-#include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <conio.h>
 #endif
 
-#include <sihd/ssh/SshSession.hpp>
-#include <sihd/ssh/utils.hpp>
+#include <sihd/util/Result.hpp>
+#include <sihd/util/fmt.hpp>
+#include <sihd/util/str.hpp>
 
 #include "ssh_error.hpp"
 
@@ -47,7 +48,7 @@ struct SshKeyFree
 
 using SshKeyPtr = std::unique_ptr<ssh_key_struct, SshKeyFree>;
 
-std::expected<void, Error>
+sihd::util::Result<void>
     set_ssh_option(ssh_session_struct *session, std::string_view name, ssh_options_e option, const void *value)
 {
     if (ssh_options_set(session, option, value) == SSH_OK)
@@ -93,7 +94,7 @@ void *SshSession::userdata() const
     return _impl_ptr->userdata;
 }
 
-std::expected<void, Error> SshSession::fast_connect(const SshSession::ConnectOptions & options)
+sihd::util::Result<void> SshSession::fast_connect(const SshSession::ConnectOptions & options)
 {
     this->delete_session();
     if (auto res = this->new_session(); !res)
@@ -118,7 +119,7 @@ std::expected<void, Error> SshSession::fast_connect(const SshSession::ConnectOpt
     return this->check_hostkey();
 }
 
-std::expected<void, Error> SshSession::connect()
+sihd::util::Result<void> SshSession::connect()
 {
     int r = 0;
     while ((r = ssh_connect(_impl_ptr->ssh_session_ptr)) == SSH_AGAIN)
@@ -134,7 +135,7 @@ bool SshSession::connected()
     return _impl_ptr->ssh_session_ptr != nullptr && ssh_is_connected(_impl_ptr->ssh_session_ptr);
 }
 
-std::expected<void, Error> SshSession::check_hostkey()
+sihd::util::Result<void> SshSession::check_hostkey()
 {
     size_t hash_len = 0;
     SshKeyPtr pubkey;
@@ -340,37 +341,37 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
     return AuthState(r);
 }
 
-std::expected<void, Error> SshSession::set_user(std::string_view user)
+sihd::util::Result<void> SshSession::set_user(std::string_view user)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.data());
 }
 
-std::expected<void, Error> SshSession::set_host(std::string_view host)
+sihd::util::Result<void> SshSession::set_host(std::string_view host)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.data());
 }
 
-std::expected<void, Error> SshSession::set_port(int port)
+sihd::util::Result<void> SshSession::set_port(int port)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "port", SSH_OPTIONS_PORT, &port);
 }
 
-std::expected<void, Error> SshSession::set_verbosity(int verbosity)
+sihd::util::Result<void> SshSession::set_verbosity(int verbosity)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 }
 
-std::expected<void, Error> SshSession::set_process_config(bool enable)
+sihd::util::Result<void> SshSession::set_process_config(bool enable)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "process_config", SSH_OPTIONS_PROCESS_CONFIG, &enable);
 }
 
-std::expected<void, Error> SshSession::set_ssh_dir(std::string_view path)
+sihd::util::Result<void> SshSession::set_ssh_dir(std::string_view path)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.data());
 }
 
-std::expected<void, Error> SshSession::set_timeout(int seconds)
+sihd::util::Result<void> SshSession::set_timeout(int seconds)
 {
     long value = seconds > 0 ? seconds : 0;
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "timeout", SSH_OPTIONS_TIMEOUT, &value);
@@ -381,7 +382,7 @@ void SshSession::set_blocking(bool active)
     ssh_set_blocking(_impl_ptr->ssh_session_ptr, (int)active);
 }
 
-std::expected<void, Error> SshSession::update_known_hosts()
+sihd::util::Result<void> SshSession::update_known_hosts()
 {
     const int r =
 #if LIBSSH_VERSION_MINOR > 7
@@ -396,7 +397,7 @@ std::expected<void, Error> SshSession::update_known_hosts()
                                  ssh_error_str(_impl_ptr->ssh_session_ptr)));
 }
 
-std::expected<void, Error> SshSession::known_hosts(std::string & hosts)
+sihd::util::Result<void> SshSession::known_hosts(std::string & hosts)
 {
 #if LIBSSH_VERSION_MINOR > 7
     char *hosts_ptr = nullptr;
@@ -426,7 +427,7 @@ void SshSession::silent_disconnect()
     ssh_silent_disconnect(_impl_ptr->ssh_session_ptr);
 }
 
-std::expected<void, Error> SshSession::new_session()
+sihd::util::Result<void> SshSession::new_session()
 {
     this->delete_session();
     _impl_ptr->ssh_session_ptr = ssh_new();
@@ -473,7 +474,7 @@ Sftp SshSession::make_sftp()
     return Sftp(_impl_ptr->ssh_session_ptr);
 }
 
-std::expected<void, Error> SshSession::make_channel(SshChannel & channel)
+sihd::util::Result<void> SshSession::make_channel(SshChannel & channel)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -484,7 +485,7 @@ std::expected<void, Error> SshSession::make_channel(SshChannel & channel)
     return {};
 }
 
-std::expected<void, Error> SshSession::make_channel_session(SshChannel & channel)
+sihd::util::Result<void> SshSession::make_channel_session(SshChannel & channel)
 {
     if (auto res = this->make_channel(channel); !res)
         return res;

@@ -7,6 +7,7 @@
 #include <sihd/sys/MessageQueue.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 #include "internal/deadline.hpp"
@@ -38,7 +39,7 @@ mqd_t mq_handle(intptr_t mq)
 
 } // namespace
 
-std::expected<void, Error>
+sihd::util::Result<void>
     MessageQueue::create(std::string_view name, size_t max_messages, size_t max_message_size, mode_t mode)
 {
     auto cleared = this->clear();
@@ -60,7 +61,7 @@ std::expected<void, Error>
     return {};
 }
 
-std::expected<void, Error> MessageQueue::open(std::string_view name)
+sihd::util::Result<void> MessageQueue::open(std::string_view name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -85,14 +86,14 @@ std::expected<void, Error> MessageQueue::open(std::string_view name)
     return {};
 }
 
-std::expected<void, Error> MessageQueue::unlink(std::string_view name)
+sihd::util::Result<void> MessageQueue::unlink(std::string_view name)
 {
     if (mq_unlink(mq_name(name).c_str()) == -1)
         return std::unexpected(Error::from_errno("could not mq_unlink '{}'", name));
     return {};
 }
 
-std::expected<void, Error> MessageQueue::clear()
+sihd::util::Result<void> MessageQueue::clear()
 {
     bool ret = true;
     if (_mq != -1)
@@ -109,7 +110,7 @@ std::expected<void, Error> MessageQueue::clear()
     return {};
 }
 
-std::expected<void, Error> MessageQueue::send(ArrByteView data, unsigned priority)
+sihd::util::Result<void> MessageQueue::send(ArrByteView data, unsigned priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -122,7 +123,7 @@ std::expected<void, Error> MessageQueue::send(ArrByteView data, unsigned priorit
     return {};
 }
 
-std::expected<void, Error> MessageQueue::try_send(ArrByteView data, unsigned priority)
+sihd::util::Result<void> MessageQueue::try_send(ArrByteView data, unsigned priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -149,7 +150,7 @@ std::expected<void, Error> MessageQueue::try_send(ArrByteView data, unsigned pri
     return sent;
 }
 
-std::expected<void, Error> MessageQueue::timed_send(ArrByteView data, Duration timeout, unsigned priority)
+sihd::util::Result<void> MessageQueue::timed_send(ArrByteView data, Duration timeout, unsigned priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -176,7 +177,7 @@ std::expected<void, Error> MessageQueue::timed_send(ArrByteView data, Duration t
     }
 }
 
-std::expected<std::string, Error> MessageQueue::receive(unsigned *priority)
+sihd::util::Result<std::string> MessageQueue::receive(unsigned *priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -229,7 +230,7 @@ std::optional<std::string> MessageQueue::try_receive(unsigned *priority)
     return ret;
 }
 
-std::expected<std::string, Error> MessageQueue::timed_receive(Duration timeout, unsigned *priority)
+sihd::util::Result<std::string> MessageQueue::timed_receive(Duration timeout, unsigned *priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -258,7 +259,7 @@ std::expected<std::string, Error> MessageQueue::timed_receive(Duration timeout, 
     }
 }
 
-std::expected<MessageQueue::Attributes, Error> MessageQueue::attributes() const
+sihd::util::Result<MessageQueue::Attributes> MessageQueue::attributes() const
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -269,7 +270,7 @@ std::expected<MessageQueue::Attributes, Error> MessageQueue::attributes() const
     return Attributes {attr.mq_maxmsg, attr.mq_msgsize, attr.mq_curmsgs};
 }
 
-std::expected<void, Error> MessageQueue::set_nonblocking(bool active)
+sihd::util::Result<void> MessageQueue::set_nonblocking(bool active)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -291,42 +292,42 @@ std::expected<void, Error> MessageQueue::set_nonblocking(bool active)
 
 // no POSIX message queues (android bionic, apple has no mq_*, emscripten)
 
-std::expected<void, Error> MessageQueue::create(std::string_view, size_t, size_t, mode_t)
+sihd::util::Result<void> MessageQueue::create(std::string_view, size_t, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::open(std::string_view)
+sihd::util::Result<void> MessageQueue::open(std::string_view)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::unlink(std::string_view)
+sihd::util::Result<void> MessageQueue::unlink(std::string_view)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::clear()
+sihd::util::Result<void> MessageQueue::clear()
 {
     return {};
 }
 
-std::expected<void, Error> MessageQueue::send(ArrByteView, unsigned)
+sihd::util::Result<void> MessageQueue::send(ArrByteView, unsigned)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::try_send(ArrByteView, unsigned)
+sihd::util::Result<void> MessageQueue::try_send(ArrByteView, unsigned)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::timed_send(ArrByteView, Duration, unsigned)
+sihd::util::Result<void> MessageQueue::timed_send(ArrByteView, Duration, unsigned)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<std::string, Error> MessageQueue::receive(unsigned *)
+sihd::util::Result<std::string> MessageQueue::receive(unsigned *)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
@@ -336,17 +337,17 @@ std::optional<std::string> MessageQueue::try_receive(unsigned *)
     return std::nullopt;
 }
 
-std::expected<std::string, Error> MessageQueue::timed_receive(Duration, unsigned *)
+sihd::util::Result<std::string> MessageQueue::timed_receive(Duration, unsigned *)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<MessageQueue::Attributes, Error> MessageQueue::attributes() const
+sihd::util::Result<MessageQueue::Attributes> MessageQueue::attributes() const
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MessageQueue::set_nonblocking(bool)
+sihd::util::Result<void> MessageQueue::set_nonblocking(bool)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

@@ -6,6 +6,7 @@
 #include <sihd/ssh/SshCommand.hpp>
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/time.hpp>
@@ -149,14 +150,14 @@ SshChannel & SshCommand::channel()
     return _impl->channel;
 }
 
-std::expected<void, Error> SshCommand::execute(std::string_view cmd)
+sihd::util::Result<void> SshCommand::execute(std::string_view cmd)
 {
     if (auto res = this->execute_async(cmd); !res)
         return res;
     return this->wait();
 }
 
-std::expected<void, Error> SshCommand::execute_async(std::string_view cmd)
+sihd::util::Result<void> SshCommand::execute_async(std::string_view cmd)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl->ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -193,8 +194,8 @@ std::expected<void, Error> SshCommand::execute_async(std::string_view cmd)
     return {};
 }
 
-std::expected<void, Error> SshCommand::wait(sihd::util::Duration timeout_nano,
-                                            sihd::util::time::UnixTime milliseconds_poll_time)
+sihd::util::Result<void> SshCommand::wait(sihd::util::Duration timeout_nano,
+                                          sihd::util::time::UnixTime milliseconds_poll_time)
 {
     if (_impl->channel.is_open() == false)
         return {};
@@ -221,7 +222,7 @@ std::expected<void, Error> SshCommand::wait(sihd::util::Duration timeout_nano,
     return {};
 }
 
-std::expected<void, Error> SshCommand::input(sihd::util::ArrCharView view)
+sihd::util::Result<void> SshCommand::input(sihd::util::ArrCharView view)
 {
     if (_impl->channel.is_open() == false)
         return std::unexpected(Error(closed, "could not write command input: channel is not open"));

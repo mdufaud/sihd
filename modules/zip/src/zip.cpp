@@ -1,5 +1,6 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 
@@ -35,7 +36,7 @@ std::vector<std::string> list_entries(std::string_view archive_path)
     return ret;
 }
 
-std::expected<void, Error> zip(std::string_view root_dir_path, std::string_view archive_path)
+sihd::util::Result<void> zip(std::string_view root_dir_path, std::string_view archive_path)
 {
     constexpr bool read_only = false;
     constexpr bool do_strict_checks = true;
@@ -50,7 +51,7 @@ std::expected<void, Error> zip(std::string_view root_dir_path, std::string_view 
     return zip.close();
 }
 
-std::expected<void, Error> unzip(std::string_view archive_path, std::string_view unzip_file_path)
+sihd::util::Result<void> unzip(std::string_view archive_path, std::string_view unzip_file_path)
 {
     constexpr bool read_only = true;
     constexpr bool do_strict_checks = true;

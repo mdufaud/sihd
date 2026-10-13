@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_HTTPREQUEST_HPP__
 #define __SIHD_HTTP_HTTPREQUEST_HPP__
 
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,7 +11,7 @@
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -38,7 +37,7 @@ class HttpRequest
         HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();
 
-        static std::expected<HttpRequest, sihd::util::Error> from_string(std::string_view raw);
+        static sihd::util::Result<HttpRequest> from_string(std::string_view raw);
         std::string to_string() const;
 
         static RequestType type_from_str(std::string_view type);

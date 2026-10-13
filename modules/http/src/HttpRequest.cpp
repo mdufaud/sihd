@@ -2,6 +2,7 @@
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/json/Json.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -170,7 +171,7 @@ bool HttpRequest::has_content() const
     return _array;
 }
 
-std::expected<HttpRequest, sihd::util::Error> HttpRequest::from_string(std::string_view raw)
+sihd::util::Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
 {
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)

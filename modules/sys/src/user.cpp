@@ -1,4 +1,5 @@
 #include <sihd/sys/user.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys::user
 {
@@ -8,7 +9,7 @@ std::optional<std::string> name()
     return name_of(effective_user());
 }
 
-std::expected<void, sihd::util::Error> drop_privileges(std::string_view user_name)
+sihd::util::Result<void> drop_privileges(std::string_view user_name)
 {
     const auto user_id = user_id_of(user_name);
     const auto group_id = primary_group_of(user_name);

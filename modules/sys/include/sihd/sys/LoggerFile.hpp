@@ -1,12 +1,12 @@
 #ifndef __SIHD_SYS_LOGGERFILE_HPP__
 #define __SIHD_SYS_LOGGERFILE_HPP__
 
-#include <expected>
 #include <string>
 
 #include <sihd/sys/File.hpp>
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/LogFormatter.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -30,7 +30,7 @@ class LoggerFile: public sihd::util::ALogger
         bool set_pattern(const std::string & pattern);
 
     private:
-        std::expected<void, sihd::util::Error> _open_file();
+        sihd::util::Result<void> _open_file();
 
         std::string _path;
         bool _append = true;

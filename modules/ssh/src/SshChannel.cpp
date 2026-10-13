@@ -4,6 +4,7 @@
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/fmt.hpp>
 
 #include "ssh_error.hpp"
@@ -20,8 +21,7 @@ namespace
 {
 
 template <typename... Args>
-std::expected<void, Error>
-    ssh_call_error(ssh_channel_struct *channel, fmt::format_string<Args...> format, Args &&...args)
+sihd::util::Result<void> ssh_call_error(ssh_channel_struct *channel, fmt::format_string<Args...> format, Args &&...args)
 {
     ssh_session session = ssh_channel_get_session(channel);
     return std::unexpected(
@@ -29,7 +29,7 @@ std::expected<void, Error>
 }
 
 template <typename Fn, typename... Args>
-std::expected<void, Error>
+sihd::util::Result<void>
     ssh_call(ssh_channel_struct *channel, Fn && fn, fmt::format_string<Args...> format, Args &&...args)
 {
     if (channel == nullptr)
@@ -45,7 +45,7 @@ std::expected<void, Error>
 
 // teardown sends never retry SSH_AGAIN: a stalled non-blocking peer must not spin the caller
 template <typename Fn, typename... Args>
-std::expected<void, Error>
+sihd::util::Result<void>
     ssh_call_once(ssh_channel_struct *channel, Fn && fn, fmt::format_string<Args...> format, Args &&...args)
 {
     if (channel == nullptr)
@@ -97,7 +97,7 @@ void SshChannel::set_channel(void *channel)
     _impl_ptr->ssh_channel_ptr = static_cast<ssh_channel_struct *>(channel);
 }
 
-std::expected<void, Error> SshChannel::open_session()
+sihd::util::Result<void> SshChannel::open_session()
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -105,7 +105,7 @@ std::expected<void, Error> SshChannel::open_session()
         "open session");
 }
 
-std::expected<void, Error> SshChannel::open_agent()
+sihd::util::Result<void> SshChannel::open_agent()
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -113,7 +113,7 @@ std::expected<void, Error> SshChannel::open_agent()
         "open agent channel");
 }
 
-std::expected<void, Error> SshChannel::open_x11(std::string_view addr, int port)
+sihd::util::Result<void> SshChannel::open_x11(std::string_view addr, int port)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -121,7 +121,7 @@ std::expected<void, Error> SshChannel::open_x11(std::string_view addr, int port)
         "open x11 channel");
 }
 
-std::expected<void, Error>
+sihd::util::Result<void>
     SshChannel::open_forward(std::string_view remotehost, int remoteport, std::string_view sourcehost, int localport)
 {
     return ssh_call(
@@ -136,7 +136,7 @@ std::expected<void, Error>
         "open forward channel");
 }
 
-std::expected<void, Error>
+sihd::util::Result<void>
     SshChannel::open_forward_unix(std::string_view remotepath, std::string_view sourcehost, int localport)
 {
 #if LIBSSH_VERSION_MINOR > 7
@@ -159,7 +159,7 @@ std::expected<void, Error>
 #endif
 }
 
-std::expected<void, Error> SshChannel::close()
+sihd::util::Result<void> SshChannel::close()
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,
@@ -172,7 +172,7 @@ bool SshChannel::is_open()
     return ssh_channel_is_open(_impl_ptr->ssh_channel_ptr) != 0;
 }
 
-std::expected<void, Error> SshChannel::request_sftp()
+sihd::util::Result<void> SshChannel::request_sftp()
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -180,10 +180,10 @@ std::expected<void, Error> SshChannel::request_sftp()
         "request sftp subsystem");
 }
 
-std::expected<void, Error> SshChannel::request_x11(std::string_view protocol,
-                                                   std::string_view cookie,
-                                                   int screen_number,
-                                                   bool single_connection)
+sihd::util::Result<void> SshChannel::request_x11(std::string_view protocol,
+                                                 std::string_view cookie,
+                                                 int screen_number,
+                                                 bool single_connection)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -197,7 +197,7 @@ std::expected<void, Error> SshChannel::request_x11(std::string_view protocol,
         "request x11");
 }
 
-std::expected<void, Error> SshChannel::request_subsystem(std::string_view subsys)
+sihd::util::Result<void> SshChannel::request_subsystem(std::string_view subsys)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -206,7 +206,7 @@ std::expected<void, Error> SshChannel::request_subsystem(std::string_view subsys
         subsys);
 }
 
-std::expected<void, Error> SshChannel::request_pty()
+sihd::util::Result<void> SshChannel::request_pty()
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -214,7 +214,7 @@ std::expected<void, Error> SshChannel::request_pty()
         "request pty");
 }
 
-std::expected<void, Error> SshChannel::change_pty_size(int cols, int rows)
+sihd::util::Result<void> SshChannel::change_pty_size(int cols, int rows)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -224,7 +224,7 @@ std::expected<void, Error> SshChannel::change_pty_size(int cols, int rows)
         rows);
 }
 
-std::expected<void, Error> SshChannel::request_shell()
+sihd::util::Result<void> SshChannel::request_shell()
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -232,7 +232,7 @@ std::expected<void, Error> SshChannel::request_shell()
         "request shell");
 }
 
-std::expected<void, Error> SshChannel::request_exec(std::string_view cmd)
+sihd::util::Result<void> SshChannel::request_exec(std::string_view cmd)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -241,7 +241,7 @@ std::expected<void, Error> SshChannel::request_exec(std::string_view cmd)
         cmd);
 }
 
-std::expected<void, Error> SshChannel::set_env(std::string_view name, std::string_view value)
+sihd::util::Result<void> SshChannel::set_env(std::string_view name, std::string_view value)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -285,7 +285,7 @@ void SshChannel::detach()
     _impl_ptr->ssh_channel_ptr = nullptr;
 }
 
-std::expected<void, Error> SshChannel::cancel_forward(std::string_view addr, int port)
+sihd::util::Result<void> SshChannel::cancel_forward(std::string_view addr, int port)
 {
     if (_impl_ptr->ssh_channel_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "could not cancel forward: no channel"));
@@ -318,7 +318,7 @@ int SshChannel::poll_timeout_stderr(int timeout_ms)
     return ssh_channel_poll_timeout(_impl_ptr->ssh_channel_ptr, timeout_ms, 1);
 }
 
-std::expected<void, Error> SshChannel::send_signal(std::string_view sig)
+sihd::util::Result<void> SshChannel::send_signal(std::string_view sig)
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,
@@ -327,7 +327,7 @@ std::expected<void, Error> SshChannel::send_signal(std::string_view sig)
         sig);
 }
 
-std::expected<void, Error> SshChannel::send_eof()
+sihd::util::Result<void> SshChannel::send_eof()
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,
@@ -340,7 +340,7 @@ bool SshChannel::is_eof()
     return ssh_channel_is_eof(_impl_ptr->ssh_channel_ptr) != 0;
 }
 
-std::expected<void, Error> SshChannel::request_send_exit_status(int exit_status)
+sihd::util::Result<void> SshChannel::request_send_exit_status(int exit_status)
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,
@@ -348,10 +348,10 @@ std::expected<void, Error> SshChannel::request_send_exit_status(int exit_status)
         "send exit status");
 }
 
-std::expected<void, Error> SshChannel::request_send_exit_signal(std::string_view signum,
-                                                                bool core_dumped,
-                                                                std::string_view errmsg,
-                                                                std::string_view lang)
+sihd::util::Result<void> SshChannel::request_send_exit_signal(std::string_view signum,
+                                                              bool core_dumped,
+                                                              std::string_view errmsg,
+                                                              std::string_view lang)
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,

@@ -1,5 +1,6 @@
 #include <sihd/json/Json.hpp>
 #include <sihd/util/Configurable.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::util
 {
@@ -9,31 +10,31 @@ std::unexpected<Error> Configurable::_no_conf_key(const std::string & name)
     return std::unexpected(Error(ErrorCode::not_found, "no conf key '{}'", name));
 }
 
-std::expected<void, Error> Configurable::set_conf_str(const std::string & name, const char *param)
+sihd::util::Result<void> Configurable::set_conf_str(const std::string & name, const char *param)
 {
     std::string_view str_view(param);
     return this->set_conf_str(name, str_view);
 }
 
-std::expected<void, Error> Configurable::set_conf(const sihd::json::Json & json)
+sihd::util::Result<void> Configurable::set_conf(const sihd::json::Json & json)
 {
     if (json.is_null() || json.is_object() == false)
         return std::unexpected(Error(ErrorCode::invalid_argument, "conf is not a json object"));
     for (auto it = json.begin(); it != json.end(); ++it)
     {
-        std::expected<void, Error> res = this->_set_conf_from_json(it.key(), it.value());
+        sihd::util::Result<void> res = this->_set_conf_from_json(it.key(), it.value());
         if (!res)
             return res;
     }
     return {};
 }
 
-std::expected<void, Error> Configurable::set_conf(const std::string & key, const sihd::json::Json & val)
+sihd::util::Result<void> Configurable::set_conf(const std::string & key, const sihd::json::Json & val)
 {
     return this->_set_conf_from_json(key, val);
 }
 
-std::expected<void, Error> Configurable::_set_conf_from_json(const std::string & key, const sihd::json::Json & val)
+sihd::util::Result<void> Configurable::_set_conf_from_json(const std::string & key, const sihd::json::Json & val)
 {
     if (val.is_object())
         return this->_set_conf_json(key, val);
@@ -41,7 +42,7 @@ std::expected<void, Error> Configurable::_set_conf_from_json(const std::string &
     {
         for (const auto & elem : val)
         {
-            std::expected<void, Error> res = this->_set_conf_from_json(key, elem);
+            sihd::util::Result<void> res = this->_set_conf_from_json(key, elem);
             if (!res)
                 return res;
         }
@@ -58,7 +59,7 @@ std::expected<void, Error> Configurable::_set_conf_from_json(const std::string &
     return std::unexpected(Error(ErrorCode::invalid_argument, "conf '{}': unsupported value", key));
 }
 
-std::expected<void, Error> Configurable::_set_conf_json(const std::string & name, const sihd::json::Json & val)
+sihd::util::Result<void> Configurable::_set_conf_json(const std::string & name, const sihd::json::Json & val)
 {
     if (_callback_manager.exists(name) == false)
         return this->_no_conf_key(name);
@@ -69,7 +70,7 @@ std::expected<void, Error> Configurable::_set_conf_json(const std::string & name
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 
-std::expected<void, Error> Configurable::set_conf_float(const std::string & name, double param)
+sihd::util::Result<void> Configurable::set_conf_float(const std::string & name, double param)
 {
     if (_callback_manager.exists(name) == false)
         return this->_no_conf_key(name);
@@ -80,7 +81,7 @@ std::expected<void, Error> Configurable::set_conf_float(const std::string & name
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 
-std::expected<void, Error> Configurable::set_conf_int(const std::string & name, int64_t param)
+sihd::util::Result<void> Configurable::set_conf_int(const std::string & name, int64_t param)
 {
     if (_callback_manager.exists(name) == false)
         return this->_no_conf_key(name);
@@ -103,7 +104,7 @@ std::expected<void, Error> Configurable::set_conf_int(const std::string & name, 
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 
-std::expected<void, Error> Configurable::set_conf_str(const std::string & name, const std::string & param)
+sihd::util::Result<void> Configurable::set_conf_str(const std::string & name, const std::string & param)
 {
     if (_callback_manager.exists(name) == false)
         return this->_no_conf_key(name);
@@ -118,7 +119,7 @@ std::expected<void, Error> Configurable::set_conf_str(const std::string & name, 
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 
-std::expected<void, Error> Configurable::set_conf_str(const std::string & name, std::string_view param)
+sihd::util::Result<void> Configurable::set_conf_str(const std::string & name, std::string_view param)
 {
     return this->set_conf_str(name, std::string(param));
 }

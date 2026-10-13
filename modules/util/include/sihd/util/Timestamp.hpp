@@ -2,12 +2,11 @@
 #define __SIHD_UTIL_TIMESTAMP_HPP__
 
 #include <concepts>
-#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/util/Duration.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/TimeBase.hpp>
 #include <sihd/util/time.hpp>
 
@@ -61,10 +60,10 @@ class Timestamp: public TimeBase<Timestamp>
         Timestamp(Calendar calendar, Clocktime clocktime);
 
         static Timestamp now();
-        static std::expected<Timestamp, Error> from_str(const std::string & date_str,
-                                                        std::string_view format = default_format);
+        static sihd::util::Result<Timestamp> from_str(const std::string & date_str,
+                                                      std::string_view format = default_format);
         // Parse with explicit locale (default: C locale for deterministic behavior)
-        static std::expected<Timestamp, Error>
+        static sihd::util::Result<Timestamp>
             from_str(const std::string & date_str, std::string_view format, const std::locale & loc);
 
         // this >= from && this <= (from + offset)

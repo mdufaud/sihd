@@ -49,8 +49,8 @@
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
@@ -96,7 +96,7 @@ pid_t pid()
     return getpid();
 }
 
-std::expected<rlim_t, Error> max_fds()
+sihd::util::Result<rlim_t> max_fds()
 {
     if constexpr (sihd::util::build::is_emscripten)
     {
@@ -110,14 +110,14 @@ std::expected<rlim_t, Error> max_fds()
     return r.rlim_cur;
 }
 
-std::expected<void, Error> ioctl(int fd, unsigned long request, void *arg_ptr)
+sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
     if (::ioctl(fd, request, arg_ptr) == -1)
         return std::unexpected(Error::from_errno("could not ioctl"));
     return {};
 }
 
-std::expected<void, Error> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
+sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
@@ -126,7 +126,7 @@ std::expected<void, Error> setsockopt(int socket, int level, int optname, const 
     return {};
 }
 
-std::expected<void, Error> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
+sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
@@ -275,7 +275,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
  * Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
  */
-std::expected<ssize_t, Error> peak_rss()
+sihd::util::Result<ssize_t> peak_rss()
 {
     if constexpr (sihd::util::build::is_emscripten)
     {
@@ -361,7 +361,7 @@ std::string error_str(int error_code)
     return strerror_result(strerror_r(error_code, buf, sizeof(buf)), buf);
 }
 
-std::expected<void, Error> mem_lock(const void *addr, size_t len)
+sihd::util::Result<void> mem_lock(const void *addr, size_t len)
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     (void)addr;
@@ -374,7 +374,7 @@ std::expected<void, Error> mem_lock(const void *addr, size_t len)
 #endif
 }
 
-std::expected<void, Error> mem_unlock(const void *addr, size_t len)
+sihd::util::Result<void> mem_unlock(const void *addr, size_t len)
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     (void)addr;

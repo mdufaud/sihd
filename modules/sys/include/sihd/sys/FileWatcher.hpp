@@ -1,16 +1,15 @@
 #ifndef __SIHD_SYS_FILEWATCHER_HPP__
 #define __SIHD_SYS_FILEWATCHER_HPP__
 
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys
@@ -54,7 +53,7 @@ class FileWatcher: public sihd::util::Observable<FileWatcher>,
 
         void set_run_timeout(int milliseconds);
 
-        std::expected<void, sihd::util::Error> watch(std::string_view path);
+        sihd::util::Result<void> watch(std::string_view path);
         bool unwatch(std::string_view path);
         bool is_watching(std::string_view path) const;
         void clear();

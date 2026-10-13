@@ -1,6 +1,7 @@
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/str.hpp>
@@ -214,10 +215,10 @@ bool Navigator::Impl::check_redirect_policy(const std::string & original_url, co
     return reg_domain(orig.host) == reg_domain(tgt.host);
 }
 
-std::expected<Navigator::Impl::SingleResponse, Error> Navigator::Impl::try_perform(const std::string & url,
-                                                                                   HttpRequest::RequestType type,
-                                                                                   const RequestOptions & options,
-                                                                                   const Navigation & navigation)
+sihd::util::Result<Navigator::Impl::SingleResponse> Navigator::Impl::try_perform(const std::string & url,
+                                                                                 HttpRequest::RequestType type,
+                                                                                 const RequestOptions & options,
+                                                                                 const Navigation & navigation)
 {
     long backoff = rate.retry_initial_backoff_ms;
     for (int attempt = 0; attempt <= rate.retry_max; ++attempt)
@@ -262,7 +263,7 @@ std::expected<Navigator::Impl::SingleResponse, Error> Navigator::Impl::try_perfo
     return std::unexpected(Error(unknown, "retry loop exited without a response"));
 }
 
-std::expected<NavigatorResponse, Error> Navigator::Impl::perform(const Navigation & navigation)
+sihd::util::Result<NavigatorResponse> Navigator::Impl::perform(const Navigation & navigation)
 {
     if (ssrf_guard && sihd::net::ip::is_private_host(parse_navigator_url(navigation.url).host))
     {

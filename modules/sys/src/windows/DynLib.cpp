@@ -7,6 +7,7 @@
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -56,7 +57,7 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_name)
+sihd::util::Result<void> DynLib::open([[maybe_unused]] std::string_view lib_name)
 {
 #if !defined(SIHD_STATIC)
     this->close();
@@ -74,7 +75,7 @@ std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_na
 #endif
 }
 
-std::expected<void *, Error> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
 {
 #if !defined(SIHD_STATIC)
     if (this->is_open() == false)

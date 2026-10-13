@@ -4,6 +4,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 #include "server/HttpServerImpl.hpp"
 
@@ -228,7 +229,7 @@ bool HttpServer::on_start()
     return true;
 }
 
-std::expected<std::string, sihd::util::Error> HttpServer::get_resource_path(std::string_view path)
+sihd::util::Result<std::string> HttpServer::get_resource_path(std::string_view path)
 {
     if (path.size() > 0 && path[0] == '/')
         path = path.substr(1);

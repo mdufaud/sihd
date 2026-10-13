@@ -6,6 +6,7 @@
 #include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 #include "internal/deadline.hpp"
@@ -20,7 +21,7 @@ SIHD_LOGGER;
 
 #if defined(__SIHD_UNIX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_APPLE__) && !defined(__SIHD_EMSCRIPTEN__)
 
-std::expected<void, Error> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
+sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -36,7 +37,7 @@ std::expected<void, Error> Semaphore::create(std::string_view name, unsigned int
     return {};
 }
 
-std::expected<void, Error> Semaphore::attach(std::string_view name)
+sihd::util::Result<void> Semaphore::attach(std::string_view name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -52,7 +53,7 @@ std::expected<void, Error> Semaphore::attach(std::string_view name)
     return {};
 }
 
-std::expected<void, Error> Semaphore::clear()
+sihd::util::Result<void> Semaphore::clear()
 {
     bool ret = true;
     if (_sem != nullptr)
@@ -106,7 +107,7 @@ bool Semaphore::post()
     return _sem != nullptr && sem_post(static_cast<sem_t *>(_sem)) == 0;
 }
 
-std::expected<int, Error> Semaphore::value() const
+sihd::util::Result<int> Semaphore::value() const
 {
     if (_sem == nullptr)
         return std::unexpected(Error(not_initialized, "semaphore '{}' is not attached", _name));
@@ -121,17 +122,17 @@ std::expected<int, Error> Semaphore::value() const
 
 // no POSIX named semaphores (android bionic, apple lacks sem_timedwait/sem_getvalue, emscripten)
 
-std::expected<void, Error> Semaphore::create(std::string_view, unsigned int, mode_t)
+sihd::util::Result<void> Semaphore::create(std::string_view, unsigned int, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> Semaphore::attach(std::string_view)
+sihd::util::Result<void> Semaphore::attach(std::string_view)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> Semaphore::clear()
+sihd::util::Result<void> Semaphore::clear()
 {
     return {};
 }
@@ -156,7 +157,7 @@ bool Semaphore::post()
     return false;
 }
 
-std::expected<int, Error> Semaphore::value() const
+sihd::util::Result<int> Semaphore::value() const
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

@@ -19,6 +19,7 @@
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 #include <sihd/util/str.hpp>
 
@@ -50,7 +51,7 @@ pybind11::dict headers_to_dict(const HttpResponse & resp)
 }
 
 template <typename T>
-std::optional<T> to_optional(std::expected<T, sihd::util::Error> && result)
+std::optional<T> to_optional(sihd::util::Result<T> && result)
 {
     if (SIHD_UNEXPECTED_LOG(result))
         return std::nullopt;

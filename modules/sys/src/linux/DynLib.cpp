@@ -1,4 +1,4 @@
-#include <sihd/sys/platform.hpp>
+#include <sihd/sys/DynLib.hpp>
 
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <dlfcn.h>
@@ -6,8 +6,9 @@
 
 #include <iterator>
 
-#include <sihd/sys/DynLib.hpp>
+#include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -49,7 +50,7 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_name)
+sihd::util::Result<void> DynLib::open([[maybe_unused]] std::string_view lib_name)
 {
 #if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
     this->close();
@@ -67,7 +68,7 @@ std::expected<void, Error> DynLib::open([[maybe_unused]] std::string_view lib_na
 #endif
 }
 
-std::expected<void *, Error> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
 {
 #if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
     if (this->is_open() == false)

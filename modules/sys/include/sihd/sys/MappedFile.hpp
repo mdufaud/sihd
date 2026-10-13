@@ -3,13 +3,12 @@
 
 #include <sys/stat.h> // mode_t
 
-#include <expected>
 #include <string>
 #include <string_view>
 #include <type_traits>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/traits.hpp>
 
@@ -35,14 +34,14 @@ class MappedFile
         MappedFile & operator=(MappedFile &&);
 
         // truncates/creates 'path' to 'size' bytes and maps it read-write; size must not be 0
-        std::expected<void, sihd::util::Error> create(std::string_view path, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> create(std::string_view path, size_t size, mode_t mode = 0600);
 
         // mapping an empty file fails
-        std::expected<void, sihd::util::Error> open_read_only(std::string_view path);
-        std::expected<void, sihd::util::Error> open_read_write(std::string_view path);
+        sihd::util::Result<void> open_read_only(std::string_view path);
+        sihd::util::Result<void> open_read_write(std::string_view path);
 
-        std::expected<void, sihd::util::Error> clear();
-        std::expected<void, sihd::util::Error> sync(bool async = false);
+        sihd::util::Result<void> clear();
+        sihd::util::Result<void> sync(bool async = false);
 
         template <class Self>
         auto data(this Self && self) -> sihd::util::traits::const_prop_ptr<Self, void>

@@ -18,6 +18,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
@@ -172,7 +173,7 @@ bool is_executable(std::string_view path)
     return _access(path.data(), 04) == 0;
 }
 
-std::expected<FileTimes, Error> times(std::string_view path)
+sihd::util::Result<FileTimes> times(std::string_view path)
 {
     HANDLE handle = CreateFileA(path.data(),
                                 // query access: metadata does not need read rights
@@ -202,7 +203,7 @@ Timestamp last_write(std::string_view path)
     return times(path).value_or(FileTimes()).write;
 }
 
-std::expected<size_t, Error> file_size(std::string_view path)
+sihd::util::Result<size_t> file_size(std::string_view path)
 {
     struct stat s;
     if (!do_stat(path.data(), &s))
@@ -225,7 +226,7 @@ std::string tmp_path()
     return tmp_path.value_or("C:\\Windows\\TEMP\\");
 }
 
-std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
+sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
 {
     std::error_code ec;
     auto tmp_path = std::filesystem::temp_directory_path(ec);
@@ -235,7 +236,7 @@ std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
     }
     // like mkdtemp on unix: the random characters are appended to the prefix path
     const std::string base = prefix.empty() ? ensure_separation(tmp_path.string()) : std::string(prefix);
-    std::expected<void, Error> made = std::unexpected(Error(io_error, "no directory created"));
+    sihd::util::Result<void> made = std::unexpected(Error(io_error, "no directory created"));
     for (int attempt = 0; attempt < 8; ++attempt)
     {
         const std::string path = base + str::generate_random_printable(8);
@@ -246,7 +247,7 @@ std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
     return std::unexpected(std::move(made).error());
 }
 
-std::expected<void, Error> make_directory(std::string_view path, unsigned int mode)
+sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -305,7 +306,7 @@ std::vector<std::string> recursive_children(std::string_view path, uint32_t max_
 
 // files
 
-std::expected<void, Error> truncate(std::string_view path, int64_t size)
+sihd::util::Result<void> truncate(std::string_view path, int64_t size)
 {
     int fd = _open(path.data(), _O_WRONLY);
     if (fd < 0)
@@ -323,7 +324,7 @@ std::expected<void, Error> truncate(std::string_view path, int64_t size)
     return {};
 }
 
-std::expected<void, Error>
+sihd::util::Result<void>
     copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
 {
     const std::wstring wfrom = str::to_wstr(from);
@@ -369,7 +370,7 @@ std::string realpath(std::string_view path)
     return std::string(resolved);
 }
 
-std::expected<void, Error> chdir(std::string_view path)
+sihd::util::Result<void> chdir(std::string_view path)
 {
     if (::_chdir(path.data()) != 0)
     {
@@ -464,7 +465,7 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
     return ret;
 }
 
-std::expected<uint64_t, Error> free_space(std::string_view path)
+sihd::util::Result<uint64_t> free_space(std::string_view path)
 {
     ULARGE_INTEGER free_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
@@ -472,7 +473,7 @@ std::expected<uint64_t, Error> free_space(std::string_view path)
     return free_bytes.QuadPart;
 }
 
-std::expected<uint64_t, Error> total_space(std::string_view path)
+sihd::util::Result<uint64_t> total_space(std::string_view path)
 {
     ULARGE_INTEGER total_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))

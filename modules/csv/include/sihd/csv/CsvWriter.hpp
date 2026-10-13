@@ -1,14 +1,13 @@
 #ifndef __SIHD_CSV_CSVWRITER_HPP__
 #define __SIHD_CSV_CSVWRITER_HPP__
 
-#include <expected>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include <sihd/sys/File.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IWriter.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::csv
 {
@@ -20,10 +19,10 @@ class CsvWriter: public sihd::util::IWriter
         CsvWriter(std::string_view path, bool append = false);
         virtual ~CsvWriter();
 
-        std::expected<void, sihd::util::Error> set_delimiter(int c);
-        std::expected<void, sihd::util::Error> set_commentary(int c);
+        sihd::util::Result<void> set_delimiter(int c);
+        sihd::util::Result<void> set_commentary(int c);
 
-        std::expected<void, sihd::util::Error> open(std::string_view path, bool append = false);
+        sihd::util::Result<void> open(std::string_view path, bool append = false);
         bool is_open() const;
         bool close();
 
@@ -33,7 +32,7 @@ class CsvWriter: public sihd::util::IWriter
         ssize_t write_row(const std::vector<std::string> & values);
         ssize_t write_commentary(std::string_view commentary);
 
-        std::expected<void, sihd::util::Error> new_row();
+        sihd::util::Result<void> new_row();
 
         int delimiter() const { return _delimiter; }
         int comment() const { return _comment; }

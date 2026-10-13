@@ -4,6 +4,7 @@
 
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -28,7 +29,7 @@ std::optional<std::string> get(std::string_view key)
     return value;
 }
 
-std::expected<void, Error> set(std::string_view key, std::string_view value)
+sihd::util::Result<void> set(std::string_view key, std::string_view value)
 {
     if (::SetEnvironmentVariableA(std::string(key).c_str(), std::string(value).c_str()) == 0)
     {
@@ -42,7 +43,7 @@ std::expected<void, Error> set(std::string_view key, std::string_view value)
     return {};
 }
 
-std::expected<void, Error> unset(std::string_view key)
+sihd::util::Result<void> unset(std::string_view key)
 {
     if (::SetEnvironmentVariableA(std::string(key).c_str(), nullptr) == 0)
     {

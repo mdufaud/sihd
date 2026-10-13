@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 
@@ -21,16 +21,16 @@ TEST(TestError, test_error_default)
 
 TEST(TestError, test_error_expected)
 {
-    const std::expected<int, Error> ok = 42;
+    const sihd::util::Result<int> ok = 42;
     EXPECT_TRUE(ok.has_value());
     EXPECT_EQ(ok.value(), 42);
 
-    const std::expected<int, Error> err = std::unexpected(Error(not_found, "failed"));
+    const sihd::util::Result<int> err = std::unexpected(Error(not_found, "failed"));
     EXPECT_FALSE(err.has_value());
     EXPECT_EQ(err.error().code, not_found);
     EXPECT_EQ(err.error().message, "failed");
 
-    const auto propagated = err.and_then([](int value) { return std::expected<int, Error>(value * 2); });
+    const auto propagated = err.and_then([](int value) { return sihd::util::Result<int>(value * 2); });
     EXPECT_FALSE(propagated.has_value());
     EXPECT_EQ(propagated.error().message, "failed");
 }
@@ -146,11 +146,11 @@ TEST(TestError, test_error_native_errc)
 
 TEST(TestError, test_error_unexpected_return_ctx)
 {
-    std::expected<int, Error> res = std::unexpected(Error(not_found, "no such channel"));
+    sihd::util::Result<int> res = std::unexpected(Error(not_found, "no such channel"));
     EXPECT_FALSE(res.has_value());
 
     // on error: same code, old message first, context appended
-    std::expected<int, Error> out = [&]() -> std::expected<int, Error> {
+    sihd::util::Result<int> out = [&]() -> sihd::util::Result<int> {
         SIHD_UNEXPECTED_RETURN_CTX(res, "in container '{}'", "node");
         return res;
     }();
@@ -159,8 +159,8 @@ TEST(TestError, test_error_unexpected_return_ctx)
     EXPECT_EQ(out.error().message, "no such channel: in container 'node'");
 
     // on success: no return, args unevaluated
-    std::expected<int, Error> ok = 42;
-    std::expected<int, Error> passed = [&]() -> std::expected<int, Error> {
+    sihd::util::Result<int> ok = 42;
+    sihd::util::Result<int> passed = [&]() -> sihd::util::Result<int> {
         SIHD_UNEXPECTED_RETURN_CTX(ok, "in container '{}'", "node");
         return ok;
     }();
@@ -168,8 +168,8 @@ TEST(TestError, test_error_unexpected_return_ctx)
     EXPECT_EQ(passed.value(), 42);
 
     // no variadic args: message kept as-is with the "{}: " prefix
-    std::expected<int, Error> no_args = std::unexpected(Error(io_error, "could not read"));
-    std::expected<int, Error> plain = [&]() -> std::expected<int, Error> {
+    sihd::util::Result<int> no_args = std::unexpected(Error(io_error, "could not read"));
+    sihd::util::Result<int> plain = [&]() -> sihd::util::Result<int> {
         SIHD_UNEXPECTED_RETURN_CTX(no_args, "reading config");
         return no_args;
     }();

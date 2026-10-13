@@ -6,6 +6,7 @@
 
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/program.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -21,7 +22,7 @@ std::string path()
     return ".";
 }
 
-std::expected<void *, Error> find_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> find_symbol([[maybe_unused]] std::string_view symbol_name)
 {
 #if !defined(SIHD_STATIC)
     DWORD needed = 0;

@@ -1,12 +1,11 @@
 #ifndef __SIHD_CORE_CHANNELMATCH_HPP__
 #define __SIHD_CORE_CHANNELMATCH_HPP__
 
-#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/core/Channel.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Value.hpp>
 
 namespace sihd::core
@@ -33,9 +32,9 @@ class ChannelMatch
         ChannelMatch(Comparison comparison, sihd::util::Value value, size_t idx = 0);
 
         // "value" or "idx:value", the comparison is left unchanged
-        std::expected<void, sihd::util::Error> parse_trigger(std::string_view conf);
+        sihd::util::Result<void> parse_trigger(std::string_view conf);
         // "cmp=equal;idx=0;value=false;invert=true"
-        std::expected<void, sihd::util::Error> parse(std::string_view conf);
+        sihd::util::Result<void> parse(std::string_view conf);
 
         bool match(const Channel *channel) const;
 

@@ -1,13 +1,12 @@
 #ifndef __SIHD_HTTP_MULTIPART_HPP__
 #define __SIHD_HTTP_MULTIPART_HPP__
 
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -31,7 +30,7 @@ class Multipart
         // case-insensitive match of the multipart/form-data media type, parameters allowed
         static bool is_content_type(std::string_view content_type);
         static std::optional<std::string> boundary(std::string_view content_type);
-        static std::expected<Multipart, sihd::util::Error> parse(std::string_view body, std::string_view content_type);
+        static sihd::util::Result<Multipart> parse(std::string_view body, std::string_view content_type);
 
         void add_field(std::string name, std::string value, std::string content_type = {});
         void add_file(std::string name, std::string path, std::string filename = {}, std::string content_type = {});

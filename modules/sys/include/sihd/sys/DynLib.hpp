@@ -1,11 +1,10 @@
 #ifndef __SIHD_SYS_DYNLIB_HPP__
 #define __SIHD_SYS_DYNLIB_HPP__
 
-#include <expected>
 #include <string>
 #include <string_view>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys
@@ -21,9 +20,9 @@ class DynLib
         DynLib(std::string_view lib_name);
         ~DynLib();
 
-        std::expected<void, sihd::util::Error> open(std::string_view lib_name);
+        sihd::util::Result<void> open(std::string_view lib_name);
 
-        std::expected<void *, sihd::util::Error> load_symbol(std::string_view symbol_name);
+        sihd::util::Result<void *> load_symbol(std::string_view symbol_name);
 
         bool close();
 

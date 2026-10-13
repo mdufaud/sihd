@@ -5,6 +5,7 @@
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 // missing mingw getsockopt action
 #ifndef SO_BSP_STATE
@@ -41,14 +42,14 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     return found.has_value();
 }
 
-std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string_view name)
+sihd::util::Result<void> Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     (void)socket;
     (void)name;
     return std::unexpected(Error(ErrorCode::not_supported, "bind to device unsupported on windows"));
 }
 
-std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
+sihd::util::Result<void> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::closed, "cannot set blocking on a closed socket"));
@@ -66,7 +67,7 @@ bool Socket::is_socket_blocking(int socket)
     return true;
 }
 
-std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milliseconds)
+sihd::util::Result<void> Socket::set_socket_recv_timeout(int socket, int milliseconds)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::closed, "cannot set recv timeout on a closed socket"));

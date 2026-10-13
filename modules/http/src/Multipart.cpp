@@ -6,6 +6,7 @@
 #include <sihd/http/HttpHeader.hpp>
 #include <sihd/http/Multipart.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using sihd::util::Error;
@@ -118,7 +119,7 @@ std::optional<std::string> Multipart::boundary(std::string_view content_type)
     return header_param(content_type, "boundary");
 }
 
-std::expected<Multipart, sihd::util::Error> Multipart::parse(std::string_view body, std::string_view content_type)
+sihd::util::Result<Multipart> Multipart::parse(std::string_view body, std::string_view content_type)
 {
     const std::optional<std::string> boundary = Multipart::boundary(content_type);
     if (boundary.has_value() == false)

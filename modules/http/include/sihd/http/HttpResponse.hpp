@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_HTTPRESPONSE_HPP__
 #define __SIHD_HTTP_HTTPRESPONSE_HPP__
 
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -11,8 +10,8 @@
 #include <sihd/http/MimeTypes.hpp>
 #include <sihd/json/fwd.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/MoveOnlyFunction.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -28,12 +27,12 @@ class HttpResponse
         HttpResponse & operator=(HttpResponse &&) = default;
         virtual ~HttpResponse();
 
-        static std::expected<HttpResponse, sihd::util::Error> from_string(std::string_view raw);
+        static sihd::util::Result<HttpResponse> from_string(std::string_view raw);
         std::string to_string() const;
 
         void set_status(uint32_t status);
 
-        std::expected<void, sihd::util::Error> set_content(sihd::util::ArrCharView data);
+        sihd::util::Result<void> set_content(sihd::util::ArrCharView data);
         bool set_plain_content(std::string_view str);
         bool set_byte_content(sihd::util::ArrByteView data);
         bool set_json_content(const sihd::json::Json & data);

@@ -2,7 +2,7 @@
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/error.hpp>
 #include <sihd/crypto/utils.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -58,8 +58,7 @@ std::unexpected<sihd::util::Error> make_error(std::string_view context)
 namespace sihd::crypto::utils
 {
 
-std::expected<std::vector<uint8_t>, sihd::util::Error>
-    sign_data(const PrivateKey & key, const uint8_t *data, size_t len)
+sihd::util::Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, const uint8_t *data, size_t len)
 {
     ERR_clear_error();
     if (!key)
@@ -147,7 +146,7 @@ bool verify_data(const Certificate & cert,
     return ret == 1;
 }
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> sign_data(const PrivateKey & key, sihd::util::ArrByteView data)
+sihd::util::Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, sihd::util::ArrByteView data)
 {
     return sign_data(key, reinterpret_cast<const uint8_t *>(data.data()), data.size());
 }

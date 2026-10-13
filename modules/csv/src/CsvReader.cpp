@@ -2,6 +2,7 @@
 
 #include <sihd/csv/CsvReader.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
@@ -54,7 +55,7 @@ CsvReader::CsvReader(std::string_view path): CsvReader()
 
 CsvReader::~CsvReader() = default;
 
-std::expected<void, Error> CsvReader::set_delimiter(int c)
+sihd::util::Result<void> CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
         return std::unexpected(Error(invalid_argument, "delimiter {} is not a printable character", c));
@@ -63,7 +64,7 @@ std::expected<void, Error> CsvReader::set_delimiter(int c)
     return {};
 }
 
-std::expected<void, Error> CsvReader::set_commentary(int c)
+sihd::util::Result<void> CsvReader::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -83,7 +84,7 @@ void CsvReader::set_timestamp_format(std::string format)
     _timestamp_fmt = std::move(format);
 }
 
-std::expected<void, Error> CsvReader::open(std::string_view path)
+sihd::util::Result<void> CsvReader::open(std::string_view path)
 {
     this->_reset_line();
     return _line_reader.open(path);
@@ -107,7 +108,7 @@ void CsvReader::_reset_line()
     _csv_cols.clear();
 }
 
-std::expected<bool, Error> CsvReader::read_next()
+sihd::util::Result<bool> CsvReader::read_next()
 {
     this->_reset_line();
     if (!this->is_open())
@@ -159,7 +160,7 @@ bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-std::expected<Timestamp, Error> CsvReader::get_read_timestamp() const
+sihd::util::Result<Timestamp> CsvReader::get_read_timestamp() const
 {
     if (_has_data == false)
         return std::unexpected(Error(not_initialized, "no data read"));

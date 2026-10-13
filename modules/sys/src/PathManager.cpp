@@ -5,6 +5,7 @@
 
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/container.hpp>
 
@@ -102,7 +103,7 @@ void PathManager::push_front(std::string_view path_item)
         _path_lst.emplace(_path_lst.begin(), path_item);
 }
 
-std::expected<void, sihd::util::Error> PathManager::remove(std::string_view path_item)
+sihd::util::Result<void> PathManager::remove(std::string_view path_item)
 {
     auto it = std::remove(_path_lst.begin(), _path_lst.end(), path_item);
     if (it == _path_lst.end())

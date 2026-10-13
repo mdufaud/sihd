@@ -4,6 +4,7 @@
 
 #include <sihd/sys/LoggerSystem.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using namespace sihd::util;
 
@@ -32,7 +33,7 @@ LoggerSystem::~LoggerSystem()
         closelog();
 }
 
-std::expected<void, Error> LoggerSystem::_open_source()
+sihd::util::Result<void> LoggerSystem::_open_source()
 {
     std::lock_guard<std::mutex> lock(g_syslog_mutex);
     if (g_instances > 0)

@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <cstdio>
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -14,7 +13,7 @@
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -24,7 +23,7 @@ namespace sihd::http
 class Client
 {
     public:
-        using Result = std::expected<void, sihd::util::Error>;
+        using Result = sihd::util::Result<void>;
 
         Client();
         ~Client();

@@ -1,12 +1,11 @@
 #ifndef __SIHD_SYS_CAPABILITY_SET_HPP__
 #define __SIHD_SYS_CAPABILITY_SET_HPP__
 
-#include <expected>
 #include <memory>
 #include <vector>
 
 #include <sihd/sys/cap.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -25,7 +24,7 @@ class CapabilitySet
         CapabilitySet & operator=(CapabilitySet &&) = delete;
 
         // reloads the snapshot, discarding uncommitted changes
-        std::expected<void, sihd::util::Error> refresh();
+        sihd::util::Result<void> refresh();
 
         // === query (never requires privileges) ===
 
@@ -44,7 +43,7 @@ class CapabilitySet
         bool drop(Cap cap);
         void drop_all();
 
-        std::expected<void, sihd::util::Error> apply();
+        sihd::util::Result<void> apply();
 
     private:
         struct Impl;

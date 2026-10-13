@@ -1,18 +1,19 @@
 #include <libssh/libssh.h>
 
+#include <sihd/ssh/SshShell.hpp>
+#include <sihd/ssh/utils.hpp>
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
-#include <sihd/util/Logger.hpp>
-#include <sihd/util/fmt.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <conio.h>
 #endif
 
-#include <sihd/ssh/SshShell.hpp>
-#include <sihd/ssh/utils.hpp>
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
+#include <sihd/util/fmt.hpp>
 
 #include "ssh_error.hpp"
 
@@ -46,7 +47,7 @@ SshChannel & SshShell::channel()
     return _impl_ptr->channel;
 }
 
-std::expected<void, Error> SshShell::open(bool x11)
+sihd::util::Result<void> SshShell::open(bool x11)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -68,7 +69,7 @@ std::expected<void, Error> SshShell::open(bool x11)
             rows = *val;
     }
 
-    std::expected<void, Error> res = _impl_ptr->channel.open_session();
+    sihd::util::Result<void> res = _impl_ptr->channel.open_session();
     if (res)
         res = _impl_ptr->channel.request_pty();
     if (res)

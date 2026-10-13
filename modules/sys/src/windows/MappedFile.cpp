@@ -3,6 +3,7 @@
 #include <sihd/sys/MappedFile.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -28,7 +29,7 @@ HANDLE int_to_handle(int fd)
     return reinterpret_cast<HANDLE>(static_cast<intptr_t>(fd));
 }
 
-std::expected<Mapping, Error> open_map(std::string_view path, DWORD desired_access, DWORD protect, DWORD view_access)
+sihd::util::Result<Mapping> open_map(std::string_view path, DWORD desired_access, DWORD protect, DWORD view_access)
 {
     HANDLE handle = CreateFileA(path.data(),
                                 desired_access,
@@ -75,7 +76,7 @@ std::expected<Mapping, Error> open_map(std::string_view path, DWORD desired_acce
 
 } // namespace
 
-std::expected<void, Error> MappedFile::create(std::string_view path, size_t size, mode_t mode)
+sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, mode_t mode)
 {
     (void)mode;
     auto cleared = this->clear();
@@ -130,7 +131,7 @@ std::expected<void, Error> MappedFile::create(std::string_view path, size_t size
     return {};
 }
 
-std::expected<void, Error> MappedFile::open_read_only(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -146,7 +147,7 @@ std::expected<void, Error> MappedFile::open_read_only(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> MappedFile::open_read_write(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_write(std::string_view path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -162,7 +163,7 @@ std::expected<void, Error> MappedFile::open_read_write(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> MappedFile::clear()
+sihd::util::Result<void> MappedFile::clear()
 {
     bool ret = true;
     if (_addr != nullptr)
@@ -191,7 +192,7 @@ std::expected<void, Error> MappedFile::clear()
     return {};
 }
 
-std::expected<void, Error> MappedFile::sync(bool async)
+sihd::util::Result<void> MappedFile::sync(bool async)
 {
     if (_addr == nullptr)
         return std::unexpected(Error(not_initialized, "no mapping"));

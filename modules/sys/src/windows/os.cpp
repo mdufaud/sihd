@@ -39,8 +39,8 @@ using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, P
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 
@@ -83,19 +83,19 @@ pid_t pid()
     return GetCurrentProcessId();
 }
 
-std::expected<rlim_t, Error> max_fds()
+sihd::util::Result<rlim_t> max_fds()
 {
     return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
 }
 
-std::expected<void, Error> ioctl(int fd, unsigned long request, void *arg_ptr)
+sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
     if (::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) != 0)
         return std::unexpected(Error(ErrorCode::io_error, "could not ioctl: {}", last_socket_error_str()));
     return {};
 }
 
-std::expected<void, Error> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
+sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
@@ -104,7 +104,7 @@ std::expected<void, Error> setsockopt(int socket, int level, int optname, const 
     return {};
 }
 
-std::expected<void, Error> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
+sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
@@ -184,7 +184,7 @@ Timestamp boot_time()
  *          http://creativecommons.org/licenses/by/3.0/deed.en_US
  */
 
-std::expected<ssize_t, Error> peak_rss()
+sihd::util::Result<ssize_t> peak_rss()
 {
     PROCESS_MEMORY_COUNTERS info;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info)) == FALSE)
@@ -235,14 +235,14 @@ std::string last_error_str()
     return error_str(GetLastError());
 }
 
-std::expected<void, Error> mem_lock(const void *addr, size_t len)
+sihd::util::Result<void> mem_lock(const void *addr, size_t len)
 {
     if (!VirtualLock(const_cast<LPVOID>(addr), len))
         return std::unexpected(Error(ErrorCode::io_error, "could not mem_lock: {}", last_error_str()));
     return {};
 }
 
-std::expected<void, Error> mem_unlock(const void *addr, size_t len)
+sihd::util::Result<void> mem_unlock(const void *addr, size_t len)
 {
     if (!VirtualUnlock(const_cast<LPVOID>(addr), len))
         return std::unexpected(Error(ErrorCode::io_error, "could not mem_unlock: {}", last_error_str()));

@@ -1,7 +1,6 @@
 #ifndef __SIHD_NET_ICMPSENDER_HPP__
 #define __SIHD_NET_ICMPSENDER_HPP__
 
-#include <expected>
 #include <memory>
 
 #include <sihd/net/Socket.hpp>
@@ -10,6 +9,7 @@
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Named.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/fwd.hpp>
 
 struct icmp;
@@ -40,9 +40,9 @@ class IcmpSender: public sihd::util::Named,
         IcmpSender(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~IcmpSender();
 
-        std::expected<void, sihd::util::Error> open_socket(bool ipv6 = false);
-        std::expected<void, sihd::util::Error> open_socket_unix();
-        std::expected<void, sihd::util::Error> close();
+        sihd::util::Result<void> open_socket(bool ipv6 = false);
+        sihd::util::Result<void> open_socket_unix();
+        sihd::util::Result<void> close();
 
         void set_echo();
         void set_type(int type);
@@ -54,7 +54,7 @@ class IcmpSender: public sihd::util::Named,
         bool set_data(sihd::util::ArrByteView view);
         bool set_data_size(size_t byte_size);
 
-        std::expected<void, sihd::util::Error> send_to(const IpAddr & addr);
+        sihd::util::Result<void> send_to(const IpAddr & addr);
 
         bool set_poll_timeout(int milliseconds);
         // poll for x milliseconds - returns true if socket is read

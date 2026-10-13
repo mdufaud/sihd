@@ -2,6 +2,7 @@
 
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -90,21 +91,21 @@ bool LineReader::set_line_buffsize(size_t buff)
     return true;
 }
 
-std::expected<void, Error> LineReader::open(std::string_view path)
+sihd::util::Result<void> LineReader::open(std::string_view path)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open(path, "r");
 }
 
-std::expected<void, Error> LineReader::open_fd(int fd)
+sihd::util::Result<void> LineReader::open_fd(int fd)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open_fd(fd, "r");
 }
 
-std::expected<void, Error> LineReader::set_stream(FILE *stream, bool ownership)
+sihd::util::Result<void> LineReader::set_stream(FILE *stream, bool ownership)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
@@ -122,7 +123,7 @@ bool LineReader::close()
     return !SIHD_UNEXPECTED_LOG(_file.close());
 }
 
-std::expected<bool, Error> LineReader::read_next()
+sihd::util::Result<bool> LineReader::read_next()
 {
     if (_line_buff.data() == nullptr || _read_buff.data() == nullptr)
         return std::unexpected(Error(not_initialized, "buffers not allocated"));
@@ -211,7 +212,7 @@ bool LineReader::_allocate_read_buffer()
     return _read_buff.reserve(_read_buff_size + 1);
 }
 
-std::expected<std::string, Error> LineReader::fast_read_line(FILE *stream, const LineReaderOptions & options)
+sihd::util::Result<std::string> LineReader::fast_read_line(FILE *stream, const LineReaderOptions & options)
 {
     LineReader reader(options);
 
@@ -226,7 +227,7 @@ std::expected<std::string, Error> LineReader::fast_read_line(FILE *stream, const
     return std::string(view.data(), view.size());
 }
 
-std::expected<std::string, Error> LineReader::fast_read_stdin(LineReaderOptions options)
+sihd::util::Result<std::string> LineReader::fast_read_stdin(LineReaderOptions options)
 {
     options.read_buffsize = 1;
     return LineReader::fast_read_line(stdin, options);

@@ -11,6 +11,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/time.hpp>
 
@@ -215,7 +216,7 @@ bool is_category_dump(int sig)
     }
 }
 
-std::expected<void, Error> ignore(int sig)
+sihd::util::Result<void> ignore(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_IGN);
@@ -233,7 +234,7 @@ std::expected<void, Error> ignore(int sig)
     return {};
 }
 
-std::expected<void, Error> handle(int sig, sig_handler *previous_handler)
+sihd::util::Result<void> handle(int sig, sig_handler *previous_handler)
 {
 #if defined(__SIHD_WINDOWS__)
     // Install console control handler for better CTRL+C/BREAK handling
@@ -261,7 +262,7 @@ std::expected<void, Error> handle(int sig, sig_handler *previous_handler)
     return {};
 }
 
-std::expected<void, Error> unhandle(int sig)
+sihd::util::Result<void> unhandle(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_DFL);

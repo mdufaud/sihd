@@ -3,13 +3,12 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 
 namespace sihd::crypto
@@ -45,15 +44,15 @@ class Certificate
 
         operator bool() const { return _handle != nullptr; }
 
-        std::expected<void, sihd::util::Error>
+        sihd::util::Result<void>
             generate_self_signed(const PrivateKey & key, std::string_view common_name, int days = 365);
-        std::expected<void, sihd::util::Error> generate_self_signed(const PrivateKey & key, const CertOptions & opts);
+        sihd::util::Result<void> generate_self_signed(const PrivateKey & key, const CertOptions & opts);
 
-        std::expected<void, sihd::util::Error> load_pem(std::string_view path);
-        std::expected<void, sihd::util::Error> save_pem(std::string_view path) const;
-        std::expected<void, sihd::util::Error> load_der(const uint8_t *data, size_t len);
+        sihd::util::Result<void> load_pem(std::string_view path);
+        sihd::util::Result<void> save_pem(std::string_view path) const;
+        sihd::util::Result<void> load_der(const uint8_t *data, size_t len);
 
-        std::expected<void, sihd::util::Error> load_pem_string(std::string_view pem);
+        sihd::util::Result<void> load_pem_string(std::string_view pem);
         std::string to_pem_string() const;
 
         bool verify(const Certificate & ca) const;

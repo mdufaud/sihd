@@ -10,7 +10,7 @@
 #include <fmt/ranges.h>
 
 #include <sihd/csv/CsvWriter.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/traits.hpp>
 
 namespace sihd::csv::utils
@@ -27,7 +27,7 @@ std::string escape_str(std::string_view view);
 CsvData csv_from_string(std::string_view content, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // get rows/columns from CSV file
-std::expected<CsvData, sihd::util::Error>
+sihd::util::Result<CsvData>
     read_csv(std::string_view path, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // check if tuple size and header size is the same
@@ -56,10 +56,10 @@ std::string csv_to_str(const std::vector<std::string> & columns_tags,
 }
 
 template <typename... Args>
-std::expected<void, sihd::util::Error> write_csv(std::string_view path,
-                                                 const std::vector<std::string> & columns_tags,
-                                                 const std::vector<std::tuple<Args...>> & rows,
-                                                 int delimiter = ',')
+sihd::util::Result<void> write_csv(std::string_view path,
+                                   const std::vector<std::string> & columns_tags,
+                                   const std::vector<std::tuple<Args...>> & rows,
+                                   int delimiter = ',')
 {
     CsvWriter writer;
 

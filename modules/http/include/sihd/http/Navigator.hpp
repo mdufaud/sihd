@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_NAVIGATOR_HPP__
 #define __SIHD_HTTP_NAVIGATOR_HPP__
 
-#include <expected>
 #include <functional>
 #include <map>
 #include <memory>
@@ -13,7 +12,7 @@
 #include <sihd/http/navigator/NavigatorResponse.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
@@ -63,19 +62,17 @@ class Navigator
         Navigator & operator=(Navigator &&) = delete;
 
         // HTTP methods
-        std::expected<NavigatorResponse, sihd::util::Error> get(std::string_view url);
-        std::expected<NavigatorResponse, sihd::util::Error> post(std::string_view url,
-                                                                 sihd::util::ArrCharView data = {});
-        std::expected<NavigatorResponse, sihd::util::Error> put(std::string_view url, sihd::util::ArrCharView data);
-        std::expected<NavigatorResponse, sihd::util::Error> patch(std::string_view url, sihd::util::ArrCharView data);
-        std::expected<NavigatorResponse, sihd::util::Error> del(std::string_view url);
-        std::expected<NavigatorResponse, sihd::util::Error> head(std::string_view url);
-        std::expected<NavigatorResponse, sihd::util::Error> options(std::string_view url);
-        std::expected<NavigatorResponse, sihd::util::Error> post_multipart(std::string_view url,
-                                                                           const Multipart & multipart);
-        std::expected<NavigatorResponse, sihd::util::Error> download(std::string_view url, std::string_view path);
+        sihd::util::Result<NavigatorResponse> get(std::string_view url);
+        sihd::util::Result<NavigatorResponse> post(std::string_view url, sihd::util::ArrCharView data = {});
+        sihd::util::Result<NavigatorResponse> put(std::string_view url, sihd::util::ArrCharView data);
+        sihd::util::Result<NavigatorResponse> patch(std::string_view url, sihd::util::ArrCharView data);
+        sihd::util::Result<NavigatorResponse> del(std::string_view url);
+        sihd::util::Result<NavigatorResponse> head(std::string_view url);
+        sihd::util::Result<NavigatorResponse> options(std::string_view url);
+        sihd::util::Result<NavigatorResponse> post_multipart(std::string_view url, const Multipart & multipart);
+        sihd::util::Result<NavigatorResponse> download(std::string_view url, std::string_view path);
         // streams the file through the request instead of loading it in memory
-        std::expected<NavigatorResponse, sihd::util::Error> put_file(std::string_view url, std::string_view path);
+        sihd::util::Result<NavigatorResponse> put_file(std::string_view url, std::string_view path);
 
         // connections opened by the last request; 0 means an existing one was reused
         long new_connection_count() const;
@@ -101,7 +98,7 @@ class Navigator
         void clear_auth();
 
         // Form-based login (auto CSRF extraction)
-        std::expected<void, sihd::util::Error> form_login(const FormLoginParams & params);
+        sihd::util::Result<void> form_login(const FormLoginParams & params);
 
         // Persistent headers
         void set_header(std::string_view name, std::string_view value);

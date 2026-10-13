@@ -12,6 +12,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -226,7 +227,7 @@ IpAddr IpAddr::localhost(int port, bool ipv6)
     return {ipv6 ? "::1" : "127.0.0.1", port};
 }
 
-std::expected<void, Error> IpAddr::set_subnet_mask(std::string_view mask)
+sihd::util::Result<void> IpAddr::set_subnet_mask(std::string_view mask)
 {
     struct sockaddr_in sockaddr_mask;
     if (to_sockaddr_in(&sockaddr_mask, mask) == false)
@@ -382,7 +383,7 @@ const std::string & IpAddr::hostname() const
     return _hostname;
 }
 
-std::expected<void, sihd::util::Error> IpAddr::fetch_hostname()
+sihd::util::Result<void> IpAddr::fetch_hostname()
 {
     if (!this->has_ip())
         return std::unexpected(

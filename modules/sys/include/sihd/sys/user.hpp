@@ -3,7 +3,6 @@
 
 #include <array>
 #include <cstdint>
-#include <expected>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -11,7 +10,7 @@
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys::user
@@ -99,9 +98,9 @@ std::optional<GroupId> primary_group_of(const UserId & id);
 
 // permanently drops to user/group - order matters: setgroups, setgid, then setuid; verifies the
 // drop cannot be reverted. A failure may leave it partially switched: exit on error if it matters
-std::expected<void, sihd::util::Error> drop_privileges(const UserId & user_id, const GroupId & group_id);
+sihd::util::Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id);
 // same, resolving the primary group of the user
-std::expected<void, sihd::util::Error> drop_privileges(std::string_view user_name);
+sihd::util::Result<void> drop_privileges(std::string_view user_name);
 
 } // namespace sihd::sys::user
 

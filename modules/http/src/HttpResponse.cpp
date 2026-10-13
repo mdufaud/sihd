@@ -4,6 +4,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -91,7 +92,7 @@ void HttpResponse::set_status(uint32_t status)
     _status = status;
 }
 
-std::expected<void, sihd::util::Error> HttpResponse::set_content(sihd::util::ArrCharView data)
+sihd::util::Result<void> HttpResponse::set_content(sihd::util::ArrCharView data)
 {
     if (_array.resize(data.byte_size()) == false)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::out_of_memory,
@@ -123,7 +124,7 @@ void HttpResponse::set_cookie(std::string_view name, std::string_view value, std
     _cookies.emplace_back(std::move(cookie_str));
 }
 
-std::expected<HttpResponse, sihd::util::Error> HttpResponse::from_string(std::string_view raw)
+sihd::util::Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
 {
     using namespace sihd::util;
 

@@ -9,6 +9,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 #define EVENT_SIZE (sizeof(FILE_NOTIFY_INFORMATION))
@@ -77,7 +78,7 @@ struct FileWatcher::Impl
         std::list<Watcher> _watchers;
 
         void init();
-        std::expected<void, Error> add_watch(std::string_view path);
+        sihd::util::Result<void> add_watch(std::string_view path);
         bool rm_watch(std::string_view path);
         bool is_watching(std::string_view path);
         void terminate();
@@ -104,7 +105,7 @@ bool FileWatcher::Impl::rm_watch(std::string_view path)
 
 void FileWatcher::Impl::init() {}
 
-std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::Impl::add_watch(std::string_view path)
 {
     if (this->is_watching(path))
         return {};
@@ -293,7 +294,7 @@ bool FileWatcher::run()
     return success;
 }
 
-std::expected<void, Error> FileWatcher::watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::watch(std::string_view path)
 {
     return _impl->add_watch(path);
 }

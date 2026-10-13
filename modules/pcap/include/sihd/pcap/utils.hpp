@@ -2,18 +2,17 @@
 #define __SIHD_PCAP_PCAPUTILS_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <string>
 #include <string_view>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::pcap::utils
 {
 
 bool init(int opts = -1);
 
-std::expected<void, sihd::util::Error> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask);
+sihd::util::Result<void> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask);
 
 std::string status_str(int code);
 std::string version();

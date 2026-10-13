@@ -10,8 +10,8 @@
 #include <fmt/core.h>
 #include <fmt/printf.h>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/LoggerManager.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/macro.hpp>
 
 #if SIHD_LOGGING_OFF
@@ -49,7 +49,7 @@
 // Log with printf like format
 # define SIHD_LOG_FORMAT(level, message, ...) SIHD_LOG_LVL_FORMAT(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
 
-// logs the error of a std::expected<..., sihd::util::Error> with the call site, returns true when it was an error
+// logs the error of a sihd::util::Result<...> with the call site, returns true when it was an error
 // SIHD_UNEXPECTED_LOG_NOLOC drops the call site from logs
 # if SIHD_UNEXPECTED_LOG_NOLOC
 #  define SIHD_UNEXPECTED_LOG(expected_value)                                                                          \
@@ -176,7 +176,7 @@ void log_unexpected_error(Logger & logger, const Error & err, const std::source_
 
 template <typename T>
 bool log_unexpected(Logger & logger,
-                    const std::expected<T, Error> & res,
+                    const sihd::util::Result<T> & res,
                     const std::source_location & loc = std::source_location::current())
 {
     if (res.has_value())

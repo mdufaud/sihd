@@ -3,6 +3,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -14,7 +15,7 @@ SIHD_NEW_LOGGER("sihd::sys::signal");
 
 // utilities
 
-std::expected<void, Error> kill(pid_t pid, int sig)
+sihd::util::Result<void> kill(pid_t pid, int sig)
 {
     HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
     if (handle == nullptr)

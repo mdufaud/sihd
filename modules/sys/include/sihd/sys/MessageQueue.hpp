@@ -4,7 +4,6 @@
 #include <sys/stat.h> // mode_t
 
 #include <cstdint>
-#include <expected>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,7 +11,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Duration.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -44,30 +43,29 @@ class MessageQueue
         MessageQueue(const MessageQueue &) = delete;
         MessageQueue & operator=(const MessageQueue &) = delete;
 
-        std::expected<void, sihd::util::Error>
+        sihd::util::Result<void>
             create(std::string_view name, size_t max_messages, size_t max_message_size, mode_t mode = 0600);
 
-        std::expected<void, sihd::util::Error> open(std::string_view name);
+        sihd::util::Result<void> open(std::string_view name);
 
-        static std::expected<void, sihd::util::Error> unlink(std::string_view name);
+        static sihd::util::Result<void> unlink(std::string_view name);
 
-        std::expected<void, sihd::util::Error> unlink();
+        sihd::util::Result<void> unlink();
 
-        std::expected<void, sihd::util::Error> clear();
+        sihd::util::Result<void> clear();
 
-        std::expected<void, sihd::util::Error> send(sihd::util::ArrByteView data, unsigned priority = 0);
-        std::expected<void, sihd::util::Error> try_send(sihd::util::ArrByteView data, unsigned priority = 0);
-        std::expected<void, sihd::util::Error>
+        sihd::util::Result<void> send(sihd::util::ArrByteView data, unsigned priority = 0);
+        sihd::util::Result<void> try_send(sihd::util::ArrByteView data, unsigned priority = 0);
+        sihd::util::Result<void>
             timed_send(sihd::util::ArrByteView data, sihd::util::Duration timeout, unsigned priority = 0);
 
-        std::expected<std::string, sihd::util::Error> receive(unsigned *priority = nullptr);
+        sihd::util::Result<std::string> receive(unsigned *priority = nullptr);
         std::optional<std::string> try_receive(unsigned *priority = nullptr);
-        std::expected<std::string, sihd::util::Error> timed_receive(sihd::util::Duration timeout,
-                                                                    unsigned *priority = nullptr);
+        sihd::util::Result<std::string> timed_receive(sihd::util::Duration timeout, unsigned *priority = nullptr);
 
-        std::expected<Attributes, sihd::util::Error> attributes() const;
+        sihd::util::Result<Attributes> attributes() const;
 
-        std::expected<void, sihd::util::Error> set_nonblocking(bool active);
+        sihd::util::Result<void> set_nonblocking(bool active);
 
     protected:
 

@@ -26,6 +26,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::ssh
 {
@@ -745,7 +746,7 @@ SshServer::~SshServer()
     SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_port(int port)
+sihd::util::Result<void> SshServer::set_port(int port)
 {
     if (this->is_running())
         return std::unexpected(
@@ -754,7 +755,7 @@ std::expected<void, sihd::util::Error> SshServer::set_port(int port)
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_bind_address(std::string_view addr)
+sihd::util::Result<void> SshServer::set_bind_address(std::string_view addr)
 {
     if (this->is_running())
         return std::unexpected(
@@ -763,7 +764,7 @@ std::expected<void, sihd::util::Error> SshServer::set_bind_address(std::string_v
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_rsa_key(std::string_view key_path)
+sihd::util::Result<void> SshServer::set_rsa_key(std::string_view key_path)
 {
     if (this->is_running())
         return std::unexpected(
@@ -772,7 +773,7 @@ std::expected<void, sihd::util::Error> SshServer::set_rsa_key(std::string_view k
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_ecdsa_key(std::string_view key_path)
+sihd::util::Result<void> SshServer::set_ecdsa_key(std::string_view key_path)
 {
     if (this->is_running())
         return std::unexpected(
@@ -781,7 +782,7 @@ std::expected<void, sihd::util::Error> SshServer::set_ecdsa_key(std::string_view
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_authorized_keys_file(std::string_view path)
+sihd::util::Result<void> SshServer::set_authorized_keys_file(std::string_view path)
 {
     if (this->is_running())
         return std::unexpected(
@@ -790,7 +791,7 @@ std::expected<void, sihd::util::Error> SshServer::set_authorized_keys_file(std::
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_banner(std::string_view banner)
+sihd::util::Result<void> SshServer::set_banner(std::string_view banner)
 {
     if (this->is_running())
         return std::unexpected(
@@ -799,13 +800,13 @@ std::expected<void, sihd::util::Error> SshServer::set_banner(std::string_view ba
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_verbosity(int level)
+sihd::util::Result<void> SshServer::set_verbosity(int level)
 {
     _impl_ptr->verbosity = level;
     return {};
 }
 
-std::expected<void, sihd::util::Error> SshServer::set_kex_timeout(int seconds)
+sihd::util::Result<void> SshServer::set_kex_timeout(int seconds)
 {
     if (this->is_running())
         return std::unexpected(

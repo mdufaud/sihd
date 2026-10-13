@@ -2,6 +2,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
@@ -155,7 +156,7 @@ bool DeviceTcpClient::on_reset()
     return true;
 }
 
-std::expected<void, sihd::util::Error> DeviceTcpClient::_connect()
+sihd::util::Result<void> DeviceTcpClient::_connect()
 {
     if (!_unix_path.empty())
         return _tcp_client.open_unix_and_connect(_unix_path);

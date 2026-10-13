@@ -11,7 +11,7 @@
 # include <ws2tcpip.h>
 #endif
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
@@ -97,7 +97,7 @@ sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 
 } // namespace
 
-std::expected<void, sihd::util::Error>
+sihd::util::Result<void>
     Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
 {
     CertOptions opts;
@@ -106,8 +106,7 @@ std::expected<void, sihd::util::Error>
     return this->generate_self_signed(key, opts);
 }
 
-std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const PrivateKey & key,
-                                                                         const CertOptions & opts)
+sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
 {
     ERR_clear_error();
     this->clear();
@@ -192,7 +191,7 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
     return {};
 }
 
-std::expected<void, sihd::util::Error> Certificate::load_pem(std::string_view path)
+sihd::util::Result<void> Certificate::load_pem(std::string_view path)
 {
     ERR_clear_error();
     this->clear();
@@ -207,7 +206,7 @@ std::expected<void, sihd::util::Error> Certificate::load_pem(std::string_view pa
     return {};
 }
 
-std::expected<void, sihd::util::Error> Certificate::save_pem(std::string_view path) const
+sihd::util::Result<void> Certificate::save_pem(std::string_view path) const
 {
     ERR_clear_error();
     if (!_handle)
@@ -222,7 +221,7 @@ std::expected<void, sihd::util::Error> Certificate::save_pem(std::string_view pa
     return {};
 }
 
-std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data, size_t len)
+sihd::util::Result<void> Certificate::load_der(const uint8_t *data, size_t len)
 {
     ERR_clear_error();
     this->clear();
@@ -234,7 +233,7 @@ std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data
     return {};
 }
 
-std::expected<void, sihd::util::Error> Certificate::load_pem_string(std::string_view pem)
+sihd::util::Result<void> Certificate::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
     this->clear();

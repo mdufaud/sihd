@@ -5,6 +5,7 @@
 #include <sihd/sys/Impersonation.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -64,16 +65,16 @@ Impersonation::~Impersonation()
     _impl->close();
 }
 
-std::expected<void, Error> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
-                                                         [[maybe_unused]] const user::GroupId & group_id)
+sihd::util::Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
+                                                       [[maybe_unused]] const user::GroupId & group_id)
 {
     // a token for an arbitrary account cannot be obtained without its credentials
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> Impersonation::impersonate_with_credentials(std::string_view user_name,
-                                                                       std::string_view password,
-                                                                       std::string_view domain)
+sihd::util::Result<void> Impersonation::impersonate_with_credentials(std::string_view user_name,
+                                                                     std::string_view password,
+                                                                     std::string_view domain)
 {
     if (_impl->active)
         return std::unexpected(Error(not_initialized, "already impersonating"));
@@ -106,7 +107,7 @@ std::expected<void, Error> Impersonation::impersonate_with_credentials(std::stri
     return {};
 }
 
-std::expected<void, Error> Impersonation::revert()
+sihd::util::Result<void> Impersonation::revert()
 {
     if (!_impl->active)
         return std::unexpected(Error(not_initialized, "not impersonating"));

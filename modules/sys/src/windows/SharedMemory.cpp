@@ -3,6 +3,7 @@
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -12,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-std::expected<void, Error> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode; // Windows uses security descriptors, not POSIX mode
 
@@ -47,7 +48,7 @@ std::expected<void, Error> SharedMemory::create(std::string_view id, size_t size
     return {};
 }
 
-std::expected<void, Error> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -76,7 +77,7 @@ std::expected<void, Error> SharedMemory::attach(std::string_view id, size_t size
     return {};
 }
 
-std::expected<void, Error> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -104,7 +105,7 @@ std::expected<void, Error> SharedMemory::attach_read_only(std::string_view id, s
     return {};
 }
 
-std::expected<void, Error> SharedMemory::clear()
+sihd::util::Result<void> SharedMemory::clear()
 {
     bool ret = true;
 

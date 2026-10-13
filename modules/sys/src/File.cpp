@@ -12,6 +12,7 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__) or defined(__SIHD_ANDROID__)
@@ -137,7 +138,7 @@ File & File::operator=(File && other)
     return *this;
 }
 
-std::expected<void, Error> File::set_buffer_size(size_t size)
+sihd::util::Result<void> File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)
         return {};
@@ -183,7 +184,7 @@ bool File::_allocate_buffer_if_not_exists()
     return _buf_size == 0 || _buf_ptr != nullptr;
 }
 
-std::expected<void, Error> File::buff_stream()
+sihd::util::Result<void> File::buff_stream()
 {
     this->_allocate_buffer_if_not_exists();
     if (_file_ptr != nullptr && _buf_ptr != nullptr)
@@ -205,7 +206,7 @@ void File::_delete_buffer()
     }
 }
 
-std::expected<void, Error> File::open_fd(int fd, std::string_view mode)
+sihd::util::Result<void> File::open_fd(int fd, std::string_view mode)
 {
     auto closed = this->close();
     if (!closed)
@@ -217,7 +218,7 @@ std::expected<void, Error> File::open_fd(int fd, std::string_view mode)
     return {};
 }
 
-std::expected<void, Error> File::set_stream(FILE *stream, bool ownership)
+sihd::util::Result<void> File::set_stream(FILE *stream, bool ownership)
 {
     auto closed = this->close();
     if (!closed)
@@ -227,7 +228,7 @@ std::expected<void, Error> File::set_stream(FILE *stream, bool ownership)
     return {};
 }
 
-std::expected<void, Error> File::open_tmpfile()
+sihd::util::Result<void> File::open_tmpfile()
 {
     auto closed = this->close();
     if (!closed)
@@ -239,7 +240,7 @@ std::expected<void, Error> File::open_tmpfile()
     return {};
 }
 
-std::expected<void, Error> File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
+sihd::util::Result<void> File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
 {
     auto closed = this->close();
     if (!closed)
@@ -283,7 +284,7 @@ std::expected<void, Error> File::open_tmp(std::string_view prefix, bool write_bi
 #endif
 }
 
-std::expected<void, Error> File::open(std::string_view path, std::string_view mode)
+sihd::util::Result<void> File::open(std::string_view path, std::string_view mode)
 {
     auto closed = this->close();
     if (!closed)
@@ -336,7 +337,7 @@ void File::clear_errors()
     clearerr(_file_ptr);
 }
 
-std::expected<void, Error> File::flush()
+sihd::util::Result<void> File::flush()
 {
     if (_file_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "no file open"));
@@ -345,7 +346,7 @@ std::expected<void, Error> File::flush()
     return {};
 }
 
-std::expected<void, Error> File::flush_unlocked()
+sihd::util::Result<void> File::flush_unlocked()
 {
     if (_file_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "no file open"));
@@ -354,7 +355,7 @@ std::expected<void, Error> File::flush_unlocked()
     return {};
 }
 
-std::expected<void, Error> File::close()
+sihd::util::Result<void> File::close()
 {
     if (_file_ptr != nullptr)
     {
@@ -370,7 +371,7 @@ std::expected<void, Error> File::close()
     return {};
 }
 
-std::expected<long, Error> File::file_size()
+sihd::util::Result<long> File::file_size()
 {
     auto current_offset = this->tell();
     SIHD_UNEXPECTED_RETURN(current_offset);
@@ -410,7 +411,7 @@ void File::unlock()
 #endif
 }
 
-std::expected<void, Error> File::open_mem(std::string_view mode, std::string_view put_in_buffer)
+sihd::util::Result<void> File::open_mem(std::string_view mode, std::string_view put_in_buffer)
 {
     if (this->_allocate_buffer_if_not_exists() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
@@ -475,7 +476,7 @@ std::expected<void, Error> File::open_mem(std::string_view mode, std::string_vie
     return this->set_stream(stream, true);
 }
 
-std::expected<long, Error> File::tell()
+sihd::util::Result<long> File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
@@ -483,22 +484,22 @@ std::expected<long, Error> File::tell()
     return ret;
 }
 
-std::expected<void, Error> File::seek(long offset)
+sihd::util::Result<void> File::seek(long offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-std::expected<void, Error> File::seek_begin(long offset)
+sihd::util::Result<void> File::seek_begin(long offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-std::expected<void, Error> File::seek_end(long offset)
+sihd::util::Result<void> File::seek_end(long offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-std::expected<void, Error> File::_seek(long offset, int origin)
+sihd::util::Result<void> File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
@@ -506,7 +507,7 @@ std::expected<void, Error> File::_seek(long offset, int origin)
     return {};
 }
 
-std::expected<size_t, Error> File::read(void *buf, size_t size)
+sihd::util::Result<size_t> File::read(void *buf, size_t size)
 {
     if (this->eof())
         return 0;
@@ -516,7 +517,7 @@ std::expected<size_t, Error> File::read(void *buf, size_t size)
     return ret;
 }
 
-std::expected<size_t, Error> File::read(std::string & str, size_t size)
+sihd::util::Result<size_t> File::read(std::string & str, size_t size)
 {
     str.resize(size);
     auto read = this->read(reinterpret_cast<char *>(str.data()), size);
@@ -529,7 +530,7 @@ std::expected<size_t, Error> File::read(std::string & str, size_t size)
     return read;
 }
 
-std::expected<size_t, Error> File::read(IArray & array)
+sihd::util::Result<size_t> File::read(IArray & array)
 {
     auto read = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
     if (!read)
@@ -542,7 +543,7 @@ std::expected<size_t, Error> File::read(IArray & array)
     return read;
 }
 
-std::expected<size_t, Error> File::write(const void *data, size_t size)
+sihd::util::Result<size_t> File::write(const void *data, size_t size)
 {
     size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
@@ -550,19 +551,19 @@ std::expected<size_t, Error> File::write(const void *data, size_t size)
     return ret;
 }
 
-std::expected<size_t, Error> File::write(ArrCharView view)
+sihd::util::Result<size_t> File::write(ArrCharView view)
 {
     return this->write(view.data(), view.size());
 }
 
-std::expected<void, Error> File::write_char(int c)
+sihd::util::Result<void> File::write_char(int c)
 {
     if (fputc(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
-std::expected<size_t, Error> File::write_unlocked(const void *data, size_t size)
+sihd::util::Result<size_t> File::write_unlocked(const void *data, size_t size)
 {
     size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
@@ -570,24 +571,24 @@ std::expected<size_t, Error> File::write_unlocked(const void *data, size_t size)
     return ret;
 }
 
-std::expected<size_t, Error> File::write_unlocked(ArrCharView view)
+sihd::util::Result<size_t> File::write_unlocked(ArrCharView view)
 {
     return this->write_unlocked(view.data(), view.size());
 }
 
-std::expected<void, Error> File::write_char_unlocked(int c)
+sihd::util::Result<void> File::write_char_unlocked(int c)
 {
     if (fputc_unlocked(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
-std::expected<size_t, Error> File::read_line(char **line, size_t *size)
+sihd::util::Result<size_t> File::read_line(char **line, size_t *size)
 {
     return this->read_line_delim(line, size, '\n');
 }
 
-std::expected<size_t, Error> File::read_line_delim(char **line, size_t *size, int delim)
+sihd::util::Result<size_t> File::read_line_delim(char **line, size_t *size, int delim)
 {
 #if defined(__SIHD_WINDOWS__)
     ssize_t ret = win_getdelim(line, size, delim, _file_ptr);

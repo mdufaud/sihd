@@ -1,12 +1,11 @@
 #ifndef __SIHD_SYS_LOGGERSYSTEM_HPP__
 #define __SIHD_SYS_LOGGERSYSTEM_HPP__
 
-#include <expected>
 #include <string>
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ALogger.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -29,7 +28,7 @@ class LoggerSystem: public sihd::util::ALogger
         bool set_facility(int facility);
 
     private:
-        std::expected<void, sihd::util::Error> _open_source();
+        sihd::util::Result<void> _open_source();
 
         std::string _progname;
         int _facility = default_facility;

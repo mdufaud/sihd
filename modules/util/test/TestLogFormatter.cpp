@@ -6,6 +6,7 @@
 
 #include <sihd/util/LogFormatter.hpp>
 #include <sihd/util/LoggerStream.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
@@ -119,7 +120,7 @@ TEST_F(TestLogFormatter, test_logformatter_refused_patterns)
     };
     for (const std::string & pattern : bad_patterns)
     {
-        const std::expected<void, Error> res = formatter.set_pattern(pattern);
+        const sihd::util::Result<void> res = formatter.set_pattern(pattern);
         ASSERT_FALSE(res.has_value());
         EXPECT_NE(res.error().message.find("at "), std::string::npos) << pattern;
     }

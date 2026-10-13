@@ -7,6 +7,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 // inotify backend. emscripten ships none -> FileWatcher is a no-op stub there.
 #if !defined(__SIHD_EMSCRIPTEN__)
@@ -89,7 +90,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
         void handle(Poll *poll);
 
         void init();
-        std::expected<void, Error> add_watch(std::string_view path);
+        sihd::util::Result<void> add_watch(std::string_view path);
         bool rm_watch(std::string_view path);
         bool is_watching(std::string_view path);
         void terminate();
@@ -130,7 +131,7 @@ void FileWatcher::Impl::init()
 #endif
 }
 
-std::expected<void, Error> FileWatcher::Impl::add_watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::Impl::add_watch(std::string_view path)
 {
 #if defined(INOTIFY_ENABLED)
     if (this->is_watching(path))
@@ -330,7 +331,7 @@ bool FileWatcher::run()
     return success;
 }
 
-std::expected<void, Error> FileWatcher::watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::watch(std::string_view path)
 {
     return _impl->add_watch(path);
 }

@@ -3,9 +3,7 @@
 
 #include <signal.h>
 
-#include <expected>
-
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -17,8 +15,8 @@ class SigHandler
         SigHandler(int sig);
         ~SigHandler();
 
-        std::expected<void, sihd::util::Error> handle(int sig);
-        std::expected<void, sihd::util::Error> unhandle();
+        sihd::util::Result<void> handle(int sig);
+        sihd::util::Result<void> unhandle();
 
         bool call_previous_handler() const;
 

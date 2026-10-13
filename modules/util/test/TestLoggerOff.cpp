@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 
@@ -17,9 +17,9 @@ TEST(TestLoggerOff, test_logging_off)
 {
     SIHD_NEW_LOGGER("test::off");
 
-    std::expected<int, sihd::util::Error> ok = 42;
+    sihd::util::Result<int> ok = 42;
     ASSERT_FALSE(SIHD_UNEXPECTED_LOG(ok));
-    std::expected<int, sihd::util::Error> err = std::unexpected(sihd::util::Error(invalid_argument, "off"));
+    sihd::util::Result<int> err = std::unexpected(sihd::util::Error(invalid_argument, "off"));
     ASSERT_TRUE(SIHD_UNEXPECTED_LOG(err));
 
     SIHD_LOG(info, "invisible {}", 42);

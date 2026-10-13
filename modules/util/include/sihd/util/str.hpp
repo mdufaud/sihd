@@ -14,9 +14,9 @@
 #include <utility>
 #include <vector>
 
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Slice.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
@@ -142,7 +142,7 @@ std::string to_base64(const IArray & arr);
 std::string to_base64(const IArrayView & arr);
 std::string to_base64(std::string_view str);
 // decoding ignores whitespace, accepts missing padding and non-canonical trailing bits
-std::expected<std::vector<uint8_t>, Error> from_base64(std::string_view b64);
+sihd::util::Result<std::vector<uint8_t>> from_base64(std::string_view b64);
 
 struct SearchResult
 {
@@ -222,15 +222,15 @@ std::string remove_enclosing(std::string_view str,
 // unquote(" \"hello\" ") -> "hello"
 std::string_view unquote(std::string_view str);
 
-std::expected<bool, Error> to_bool(std::string_view str);
-std::expected<char, Error> to_char(std::string_view str);
-std::expected<long long, Error> to_signed(std::string_view str, uint16_t base);
-std::expected<unsigned long long, Error> to_unsigned(std::string_view str, uint16_t base);
-std::expected<float, Error> to_float(std::string_view str, std::chars_format fmt = std::chars_format::general);
-std::expected<double, Error> to_double(std::string_view str, std::chars_format fmt = std::chars_format::general);
+sihd::util::Result<bool> to_bool(std::string_view str);
+sihd::util::Result<char> to_char(std::string_view str);
+sihd::util::Result<long long> to_signed(std::string_view str, uint16_t base);
+sihd::util::Result<unsigned long long> to_unsigned(std::string_view str, uint16_t base);
+sihd::util::Result<float> to_float(std::string_view str, std::chars_format fmt = std::chars_format::general);
+sihd::util::Result<double> to_double(std::string_view str, std::chars_format fmt = std::chars_format::general);
 
 template <typename T>
-std::expected<T, Error> convert_from_string(std::string_view str, uint16_t base = 10)
+sihd::util::Result<T> convert_from_string(std::string_view str, uint16_t base = 10)
 {
     if constexpr (std::is_same_v<T, bool>)
         return to_bool(str);

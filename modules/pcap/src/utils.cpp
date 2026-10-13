@@ -4,6 +4,7 @@
 
 #include <sihd/pcap/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::pcap::utils
 {
@@ -49,7 +50,7 @@ bool init(int opts)
     return _is_init;
 }
 
-std::expected<void, sihd::util::Error> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
+sihd::util::Result<void> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
 {
     static_assert(sizeof(bpf_u_int32) == sizeof(uint32_t));
     char errbuf[PCAP_ERRBUF_SIZE];

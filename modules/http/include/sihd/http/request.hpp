@@ -1,7 +1,6 @@
 #ifndef __SIHD_HTTP_REQUEST_HPP__
 #define __SIHD_HTTP_REQUEST_HPP__
 
-#include <expected>
 #include <future>
 #include <string_view>
 
@@ -9,62 +8,55 @@
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/util/ArrayView.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::http
 {
 
-using FutureHttpResponse = std::future<std::expected<HttpResponse, sihd::util::Error>>;
+using FutureHttpResponse = std::future<sihd::util::Result<HttpResponse>>;
 
-std::expected<HttpResponse, sihd::util::Error> get(std::string_view url,
-                                                   const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> get(std::string_view url, const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error> post(std::string_view url,
-                                                    sihd::util::ArrCharView data_view,
-                                                    const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> post(std::string_view url,
+                                      sihd::util::ArrCharView data_view,
+                                      const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error>
+sihd::util::Result<HttpResponse>
     put(std::string_view url, std::string_view file_path, const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error> del(std::string_view url,
-                                                   const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> del(std::string_view url, const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error> options(std::string_view url,
-                                                       const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> options(std::string_view url, const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error> patch(std::string_view url,
-                                                     sihd::util::ArrCharView data_view,
-                                                     const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> patch(std::string_view url,
+                                       sihd::util::ArrCharView data_view,
+                                       const RequestOptions & options = RequestOptions::none());
 
-std::expected<HttpResponse, sihd::util::Error> head(std::string_view url,
-                                                    const RequestOptions & options = RequestOptions::none());
+sihd::util::Result<HttpResponse> head(std::string_view url, const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_get(std::string_view url, const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_get(std::string_view url,
+                                                        const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_post(std::string_view url,
-               sihd::util::ArrCharView data_view,
-               const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_post(std::string_view url,
+                                                         sihd::util::ArrCharView data_view,
+                                                         const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_put(std::string_view url,
-              std::string_view file_path,
-              const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_put(std::string_view url,
+                                                        std::string_view file_path,
+                                                        const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_del(std::string_view url, const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_del(std::string_view url,
+                                                        const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_options(std::string_view url, const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_options(std::string_view url,
+                                                            const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_patch(std::string_view url,
-                sihd::util::ArrCharView data_view,
-                const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_patch(std::string_view url,
+                                                          sihd::util::ArrCharView data_view,
+                                                          const RequestOptions & options = RequestOptions::none());
 
-std::future<std::expected<HttpResponse, sihd::util::Error>>
-    async_head(std::string_view url, const RequestOptions & options = RequestOptions::none());
+std::future<sihd::util::Result<HttpResponse>> async_head(std::string_view url,
+                                                         const RequestOptions & options = RequestOptions::none());
 
 } // namespace sihd::http
 

@@ -1,6 +1,7 @@
 #include <cstdlib> // getenv setenv unsetenv
 
 #include <sihd/sys/env.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
 extern "C"
@@ -21,14 +22,14 @@ std::optional<std::string> get(std::string_view key)
     return std::string(value);
 }
 
-std::expected<void, Error> set(std::string_view key, std::string_view value)
+sihd::util::Result<void> set(std::string_view key, std::string_view value)
 {
     if (::setenv(std::string(key).c_str(), std::string(value).c_str(), 1) != 0)
         return std::unexpected(Error::from_errno("could not set environment variable '{}'", key));
     return {};
 }
 
-std::expected<void, Error> unset(std::string_view key)
+sihd::util::Result<void> unset(std::string_view key)
 {
     if (::unsetenv(std::string(key).c_str()) != 0)
         return std::unexpected(Error::from_errno("could not unset environment variable '{}'", key));

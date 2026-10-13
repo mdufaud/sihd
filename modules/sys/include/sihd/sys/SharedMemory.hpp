@@ -3,13 +3,12 @@
 
 #include <sys/stat.h> // mode_t
 
-#include <expected>
 #include <string>
 #include <string_view>
 #include <type_traits>
 
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/traits.hpp>
 
@@ -33,12 +32,12 @@ class SharedMemory
         SharedMemory(SharedMemory &&);
         SharedMemory & operator=(SharedMemory &&);
 
-        std::expected<void, sihd::util::Error> create(std::string_view id, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> create(std::string_view id, size_t size, mode_t mode = 0600);
 
-        std::expected<void, sihd::util::Error> attach(std::string_view id, size_t size, mode_t mode = 0600);
-        std::expected<void, sihd::util::Error> attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
+        sihd::util::Result<void> attach(std::string_view id, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
 
-        std::expected<void, sihd::util::Error> clear();
+        sihd::util::Result<void> clear();
 
         template <class Self>
         auto data(this Self && self) -> sihd::util::traits::const_prop_ptr<Self, void>

@@ -1,12 +1,11 @@
 #ifndef __SIHD_SSH_SSHSHELL_HPP__
 #define __SIHD_SSH_SSHSHELL_HPP__
 
-#include <expected>
 #include <memory>
 #include <string>
 
 #include <sihd/ssh/SshChannel.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::ssh
 {
@@ -20,7 +19,7 @@ class SshShell
         SshShell(const SshShell & other) = delete;
         SshShell & operator=(const SshShell &) = delete;
 
-        std::expected<void, sihd::util::Error> open(bool x11 = false);
+        sihd::util::Result<void> open(bool x11 = false);
         void close();
         bool read_loop();
 

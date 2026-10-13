@@ -2,6 +2,7 @@
 
 #include <sihd/lua/Vm.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using sihd::util::Error;
 using enum sihd::util::ErrorCode;
@@ -57,7 +58,7 @@ sihd::util::Error pop_lua_error(sihd::util::ErrorCode code, lua_State *state)
     return Error(code, msg == nullptr ? "unknown lua error" : msg);
 }
 
-std::expected<void, sihd::util::Error> do_chunk(lua_State *state, int load_status, sihd::util::ErrorCode load_code)
+sihd::util::Result<void> do_chunk(lua_State *state, int load_status, sihd::util::ErrorCode load_code)
 {
     if (load_status != 0)
         return std::unexpected(pop_lua_error(load_code, state));
@@ -214,7 +215,7 @@ bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
     return ret;
 }
 
-std::expected<void, sihd::util::Error> Vm::do_file(std::string_view path)
+sihd::util::Result<void> Vm::do_file(std::string_view path)
 {
     LuaGilGuard guard(_state_ptr);
     const int load_status = luaL_loadfile(_state_ptr, path.data());
@@ -226,7 +227,7 @@ std::expected<void, sihd::util::Error> Vm::do_file(std::string_view path)
     return do_chunk(_state_ptr, load_status, load_code);
 }
 
-std::expected<void, sihd::util::Error> Vm::do_string(std::string_view str)
+sihd::util::Result<void> Vm::do_string(std::string_view str)
 {
     LuaGilGuard guard(_state_ptr);
     const int load_status = luaL_loadstring(_state_ptr, str.data());

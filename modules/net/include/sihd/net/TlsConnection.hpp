@@ -4,10 +4,9 @@
 #include <sys/types.h>
 
 #include <cstddef>
-#include <expected>
 #include <memory>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::crypto
 {
@@ -39,18 +38,18 @@ class TlsConnection
 
         operator bool() const { return _handle != nullptr; }
 
-        std::expected<void, sihd::util::Error> init(sihd::crypto::TlsContext & ctx, Socket & socket);
-        std::expected<void, sihd::util::Error> connect(int timeout_ms);
-        std::expected<void, sihd::util::Error> accept(int timeout_ms);
-        std::expected<TlsHandshakeStep, sihd::util::Error> accept_step();
+        sihd::util::Result<void> init(sihd::crypto::TlsContext & ctx, Socket & socket);
+        sihd::util::Result<void> connect(int timeout_ms);
+        sihd::util::Result<void> accept(int timeout_ms);
+        sihd::util::Result<TlsHandshakeStep> accept_step();
 
         // 0 = clean close from peer
-        std::expected<size_t, sihd::util::Error> read(void *buf, size_t len);
-        std::expected<size_t, sihd::util::Error> write(const void *buf, size_t len);
+        sihd::util::Result<size_t> read(void *buf, size_t len);
+        sihd::util::Result<size_t> write(const void *buf, size_t len);
 
         bool pending() const;
 
-        std::expected<void, sihd::util::Error> shutdown() const;
+        sihd::util::Result<void> shutdown() const;
         void clear();
 
         void *native() const { return _handle.get(); }

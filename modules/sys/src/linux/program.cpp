@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include <sihd/sys/program.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -59,7 +60,7 @@ std::string path()
     return ".";
 }
 
-std::expected<void *, Error> find_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> find_symbol([[maybe_unused]] std::string_view symbol_name)
 {
 #if !defined(__SIHD_EMSCRIPTEN__)
     void *ret = dlsym(RTLD_DEFAULT, symbol_name.data());

@@ -3,6 +3,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::net
 {
@@ -51,21 +52,21 @@ bool TcpClient::set_recv_timeout(int milliseconds)
     return true;
 }
 
-std::expected<void, sihd::util::Error> TcpClient::open_socket_unix()
+sihd::util::Result<void> TcpClient::open_socket_unix()
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::open_socket(bool ipv6)
+sihd::util::Result<void> TcpClient::open_socket(bool ipv6)
 {
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::connect(const IpAddr & addr, int timeout_ms)
+sihd::util::Result<void> TcpClient::connect(const IpAddr & addr, int timeout_ms)
 {
     auto res = _socket.connect(addr, timeout_ms);
     _connected = res.has_value();
@@ -77,7 +78,7 @@ std::expected<void, sihd::util::Error> TcpClient::connect(const IpAddr & addr, i
     return res;
 }
 
-std::expected<void, sihd::util::Error> TcpClient::connect(std::string_view path)
+sihd::util::Result<void> TcpClient::connect(std::string_view path)
 {
     auto res = _socket.connect_unix(path);
     _connected = res.has_value();
@@ -86,7 +87,7 @@ std::expected<void, sihd::util::Error> TcpClient::connect(std::string_view path)
     return res;
 }
 
-std::expected<void, sihd::util::Error> TcpClient::reconnect(int timeout_ms)
+sihd::util::Result<void> TcpClient::reconnect(int timeout_ms)
 {
     auto res = _socket.reconnect(timeout_ms);
     _connected = res.has_value();
@@ -95,7 +96,7 @@ std::expected<void, sihd::util::Error> TcpClient::reconnect(int timeout_ms)
     return res;
 }
 
-std::expected<void, sihd::util::Error> TcpClient::open_and_connect(const IpAddr & ip, int timeout_ms)
+sihd::util::Result<void> TcpClient::open_and_connect(const IpAddr & ip, int timeout_ms)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -103,7 +104,7 @@ std::expected<void, sihd::util::Error> TcpClient::open_and_connect(const IpAddr 
     return this->connect(ip, timeout_ms);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::open_and_connect(std::string_view ip, int port, int timeout_ms)
+sihd::util::Result<void> TcpClient::open_and_connect(std::string_view ip, int port, int timeout_ms)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -112,7 +113,7 @@ std::expected<void, sihd::util::Error> TcpClient::open_and_connect(std::string_v
     return this->connect(addr, timeout_ms);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::open_unix_and_connect(std::string_view path)
+sihd::util::Result<void> TcpClient::open_unix_and_connect(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -120,7 +121,7 @@ std::expected<void, sihd::util::Error> TcpClient::open_unix_and_connect(std::str
     return this->connect(path);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::close()
+sihd::util::Result<void> TcpClient::close()
 {
     (void)_socket.shutdown();
     _connected = false;
@@ -165,13 +166,13 @@ bool TcpClient::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
-std::expected<size_t, sihd::util::Error> TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
+sihd::util::Result<size_t> TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
 {
     addr = _client_addr;
     return this->receive(arr);
 }
 
-std::expected<size_t, sihd::util::Error> TcpClient::receive(sihd::util::IArray & arr)
+sihd::util::Result<size_t> TcpClient::receive(sihd::util::IArray & arr)
 {
     auto res = _socket.receive(arr);
     if (_connected)
@@ -179,7 +180,7 @@ std::expected<size_t, sihd::util::Error> TcpClient::receive(sihd::util::IArray &
     return res;
 }
 
-std::expected<size_t, sihd::util::Error> TcpClient::receive(void *buf, size_t len)
+sihd::util::Result<size_t> TcpClient::receive(void *buf, size_t len)
 {
     auto res = _socket.receive(buf, len);
     if (_connected)
@@ -187,12 +188,12 @@ std::expected<size_t, sihd::util::Error> TcpClient::receive(void *buf, size_t le
     return res;
 }
 
-std::expected<size_t, sihd::util::Error> TcpClient::send(sihd::util::ArrCharView view)
+sihd::util::Result<size_t> TcpClient::send(sihd::util::ArrCharView view)
 {
     return _socket.send(view);
 }
 
-std::expected<void, sihd::util::Error> TcpClient::send_all(sihd::util::ArrCharView view)
+sihd::util::Result<void> TcpClient::send_all(sihd::util::ArrCharView view)
 {
     return _socket.send_all(view);
 }

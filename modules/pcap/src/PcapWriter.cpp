@@ -4,6 +4,7 @@
 #include <sihd/pcap/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::pcap
 {
@@ -59,7 +60,7 @@ bool PcapWriter::set_snaplen(int len)
     return true;
 }
 
-std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path, int datalink, int snaplen)
+sihd::util::Result<void> PcapWriter::open(std::string_view path, int datalink, int snaplen)
 {
     if (this->set_datalink(datalink) == false || this->set_snaplen(snaplen) == false)
         return std::unexpected(
@@ -67,14 +68,14 @@ std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path, i
     return this->open(path);
 }
 
-std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path, int datalink)
+sihd::util::Result<void> PcapWriter::open(std::string_view path, int datalink)
 {
     if (this->set_datalink(datalink) == false)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot set datalink"));
     return this->open(path);
 }
 
-std::expected<void, sihd::util::Error> PcapWriter::open(std::string_view path)
+sihd::util::Result<void> PcapWriter::open(std::string_view path)
 {
     this->close();
     _impl_ptr->pcap_ptr = pcap_open_dead(_linktype, _snaplen);

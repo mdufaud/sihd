@@ -3,13 +3,12 @@
 
 #include <sys/stat.h> // mode_t
 
-#include <expected>
 #include <string>
 #include <string_view>
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Duration.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
 
@@ -35,11 +34,11 @@ class Semaphore
         Semaphore(const Semaphore &) = delete;
         Semaphore & operator=(const Semaphore &) = delete;
 
-        std::expected<void, sihd::util::Error> create(std::string_view name, unsigned int value, mode_t mode = 0600);
+        sihd::util::Result<void> create(std::string_view name, unsigned int value, mode_t mode = 0600);
 
-        std::expected<void, sihd::util::Error> attach(std::string_view name);
+        sihd::util::Result<void> attach(std::string_view name);
 
-        std::expected<void, sihd::util::Error> clear();
+        sihd::util::Result<void> clear();
 
         bool wait();
         bool try_wait();
@@ -59,7 +58,7 @@ class Semaphore
                                                        - sihd::util::Timestamp(Clock::now()).get()));
         }
 
-        std::expected<int, sihd::util::Error> value() const;
+        sihd::util::Result<int> value() const;
 
         const std::string & name() const { return _name; }
 

@@ -2,7 +2,7 @@
 
 #include <sihd/crypto/digest.hpp>
 #include <sihd/crypto/error.hpp>
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 #include <openssl/err.h>
 #include <openssl/evp.h>
@@ -35,8 +35,7 @@ struct MdCtxFree
 
 } // namespace
 
-std::expected<std::vector<uint8_t>, sihd::util::Error>
-    compute(std::string_view algorithm, const uint8_t *data, size_t len)
+sihd::util::Result<std::vector<uint8_t>> compute(std::string_view algorithm, const uint8_t *data, size_t len)
 {
     ERR_clear_error();
     std::string algo(algorithm);
@@ -71,7 +70,7 @@ std::expected<std::vector<uint8_t>, sihd::util::Error>
     return result;
 }
 
-std::expected<std::vector<uint8_t>, sihd::util::Error> compute(std::string_view algorithm, sihd::util::ArrByteView data)
+sihd::util::Result<std::vector<uint8_t>> compute(std::string_view algorithm, sihd::util::ArrByteView data)
 {
     return compute(algorithm, reinterpret_cast<const uint8_t *>(data.data()), data.size());
 }

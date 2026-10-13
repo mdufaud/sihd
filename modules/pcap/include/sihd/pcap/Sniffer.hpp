@@ -2,17 +2,16 @@
 #define __SIHD_PCAP_SNIFFER_HPP__
 
 #include <cstdint>
-#include <expected>
 #include <memory>
 #include <optional>
 
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Configurable.hpp>
-#include <sihd/util/Error.hpp>
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::pcap
 {
@@ -34,20 +33,20 @@ class Sniffer: public sihd::util::Named,
         Sniffer(const std::string & name, sihd::util::Node *parent = nullptr);
         ~Sniffer();
 
-        std::expected<void, sihd::util::Error> open(const std::string & source);
+        sihd::util::Result<void> open(const std::string & source);
         bool close();
         bool is_open() const;
 
-        std::expected<void, sihd::util::Error> activate();
+        sihd::util::Result<void> activate();
         bool is_active() const;
 
         // sniff bufferful of packets from a pcap_t open for a live capture then leave
         bool sniff();
         // sniff one packet: false means no packet, an error means the read failed
-        std::expected<bool, sihd::util::Error> read_next() override;
+        sihd::util::Result<bool> read_next() override;
         // get datas
         bool get_read_data(sihd::util::ArrCharView & view) const override;
-        std::expected<sihd::util::Timestamp, sihd::util::Error> get_read_timestamp() const override;
+        sihd::util::Result<sihd::util::Timestamp> get_read_timestamp() const override;
         const sihd::util::ArrByte & data() const;
 
         // maximum pkts to sniff before stopping

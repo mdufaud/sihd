@@ -5,6 +5,7 @@
 #include <sihd/sys/LoggerSystem.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -28,7 +29,7 @@ LoggerSystem::~LoggerSystem()
     }
 }
 
-std::expected<void, Error> LoggerSystem::_open_source()
+sihd::util::Result<void> LoggerSystem::_open_source()
 {
     _impl = new Impl();
     _impl->handle = RegisterEventSource(NULL, _progname.c_str());

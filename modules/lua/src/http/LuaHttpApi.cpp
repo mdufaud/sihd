@@ -6,22 +6,23 @@
 #include <string>
 
 // clang-format off
-#include <sihd/lua/http/LuaHttpApi.hpp>
-#include <sihd/lua/util/LuaUtilApi.hpp>
-#include <sihd/lua/core/LuaCoreApi.hpp>
-#include <sihd/lua/LuaGil.hpp>
-// clang-format on
-
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/Multipart.hpp>
+// clang-format on
+
 #include <sihd/http/Navigator.hpp>
 #include <sihd/http/RequestOptions.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/http/request.hpp>
+#include <sihd/lua/LuaGil.hpp>
+#include <sihd/lua/core/LuaCoreApi.hpp>
+#include <sihd/lua/http/LuaHttpApi.hpp>
+#include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 #include <sihd/util/str.hpp>
 
@@ -59,7 +60,7 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
 
 // Marshals a NavigatorResponse to a Lua table so scripts never touch the move-only C++ type;
 // returns nil on failure, the error logged once here at the lua nil boundary
-luabridge::LuaRef response_to_lua(lua_State *state, std::expected<NavigatorResponse, sihd::util::Error> && resp)
+luabridge::LuaRef response_to_lua(lua_State *state, sihd::util::Result<NavigatorResponse> && resp)
 {
     if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());
@@ -84,7 +85,7 @@ luabridge::LuaRef response_to_lua(lua_State *state, std::expected<NavigatorRespo
     return table;
 }
 
-luabridge::LuaRef http_response_to_lua(lua_State *state, std::expected<HttpResponse, sihd::util::Error> && resp)
+luabridge::LuaRef http_response_to_lua(lua_State *state, sihd::util::Result<HttpResponse> && resp)
 {
     if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());

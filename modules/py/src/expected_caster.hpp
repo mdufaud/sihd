@@ -3,10 +3,9 @@
 
 #include <pybind11/pybind11.h>
 
-#include <expected>
 #include <stdexcept>
 
-#include <sihd/util/Error.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::py
 {
@@ -37,21 +36,21 @@ inline pybind11::object & error_type()
 namespace pybind11::detail
 {
 
-// cast a returned std::expected to its value; an error raises sihd.Error
+// cast a returned sihd::util::Result to its value; an error raises sihd.Error
 template <typename T>
-struct type_caster<std::expected<T, sihd::util::Error>>
+struct type_caster<sihd::util::Result<T>>
 {
     public:
-        static constexpr auto name = const_name("sihd.Expected[") + make_caster<T>::name + const_name("]");
+        static constexpr auto name = const_name("sihd.Result[") + make_caster<T>::name + const_name("]");
 
-        static handle cast(std::expected<T, sihd::util::Error> && src, return_value_policy policy, handle parent)
+        static handle cast(sihd::util::Result<T> && src, return_value_policy policy, handle parent)
         {
             if (!src)
                 sihd::py::raise_error(src.error());
             return make_caster<T>::cast(std::move(*src), policy, parent);
         }
 
-        static handle cast(const std::expected<T, sihd::util::Error> & src, return_value_policy policy, handle parent)
+        static handle cast(const sihd::util::Result<T> & src, return_value_policy policy, handle parent)
         {
             if (!src)
                 sihd::py::raise_error(src.error());
@@ -60,12 +59,12 @@ struct type_caster<std::expected<T, sihd::util::Error>>
 };
 
 template <>
-struct type_caster<std::expected<void, sihd::util::Error>>
+struct type_caster<sihd::util::Result<void>>
 {
     public:
         static constexpr auto name = const_name("None");
 
-        static handle cast(const std::expected<void, sihd::util::Error> & src, return_value_policy, handle)
+        static handle cast(const sihd::util::Result<void> & src, return_value_policy, handle)
         {
             if (!src)
                 sihd::py::raise_error(src.error());

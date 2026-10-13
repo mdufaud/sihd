@@ -6,6 +6,7 @@
 #include <sihd/sys/program.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/Result.hpp>
 
 #define SIHD_FACTORY_PREFIX "sihd_factory_"
 
@@ -24,11 +25,11 @@ namespace
 std::mutex g_libs_mutex;
 std::unordered_map<std::string, DynLib> g_loaded_libs;
 
-std::expected<sihd::util::Named *, Error> create_from_factory(const std::string & factory_name,
-                                                              const std::string & origin,
-                                                              void *symbol,
-                                                              const std::string & name,
-                                                              sihd::util::Node *parent)
+sihd::util::Result<sihd::util::Named *> create_from_factory(const std::string & factory_name,
+                                                            const std::string & origin,
+                                                            void *symbol,
+                                                            const std::string & name,
+                                                            sihd::util::Node *parent)
 {
     auto constructor_sym = (sihd::util::Named * (*)(const std::string &, sihd::util::Node *)) symbol;
     sihd::util::Named *created = constructor_sym(name, parent);
@@ -41,10 +42,10 @@ std::expected<sihd::util::Named *, Error> create_from_factory(const std::string 
 
 } // namespace
 
-std::expected<sihd::util::Named *, Error> PluginLoader::create_from_library(const std::string & libname,
-                                                                            const std::string & classname,
-                                                                            const std::string & name,
-                                                                            sihd::util::Node *parent)
+sihd::util::Result<sihd::util::Named *> PluginLoader::create_from_library(const std::string & libname,
+                                                                          const std::string & classname,
+                                                                          const std::string & name,
+                                                                          sihd::util::Node *parent)
 {
     std::string factory_name = SIHD_FACTORY_PREFIX + classname;
     std::lock_guard<std::mutex> lock(g_libs_mutex);
@@ -65,7 +66,7 @@ std::expected<sihd::util::Named *, Error> PluginLoader::create_from_library(cons
     return create_from_factory(factory_name, libname, symbol.value(), name, parent);
 }
 
-std::expected<sihd::util::Named *, Error>
+sihd::util::Result<sihd::util::Named *>
     PluginLoader::create_from_linked(const std::string & classname, const std::string & name, sihd::util::Node *parent)
 {
     const std::string factory_name = SIHD_FACTORY_PREFIX + classname;

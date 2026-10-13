@@ -7,6 +7,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netdb.h>      // getnameinfo
@@ -29,7 +30,7 @@ using enum sihd::util::ErrorCode;
 namespace
 {
 
-std::expected<bool, Error> ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)> && callback)
+sihd::util::Result<bool> ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)> && callback)
 {
     int ret;
     struct addrinfo hints;
@@ -78,7 +79,7 @@ std::expected<bool, Error> ask_dns(std::string_view host, std::function<bool(con
 
 } // namespace
 
-std::expected<IpAddr, Error> find(std::string_view host, bool ipv6, int socktype, int protocol)
+sihd::util::Result<IpAddr> find(std::string_view host, bool ipv6, int socktype, int protocol)
 {
     if (host.empty())
         return std::unexpected(Error(invalid_argument, "dns::find: empty host"));

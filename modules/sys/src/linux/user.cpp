@@ -8,6 +8,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/user.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys::user
 {
@@ -216,7 +217,7 @@ bool is_root()
     return geteuid() == 0;
 }
 
-std::expected<void, sihd::util::Error> drop_privileges(const UserId & user_id, const GroupId & group_id)
+sihd::util::Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id)
 {
     if constexpr (!can_drop_privileges)
     {

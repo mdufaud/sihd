@@ -4,6 +4,7 @@
 
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/fmt.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -20,7 +21,7 @@ std::mutex _init_mutex;
 int _ref_count = 0;
 } // namespace
 
-std::expected<void, Error> init()
+sihd::util::Result<void> init()
 {
     std::lock_guard l(_init_mutex);
     if (_ref_count == 0)
@@ -33,7 +34,7 @@ std::expected<void, Error> init()
     return {};
 }
 
-std::expected<void, Error> finalize()
+sihd::util::Result<void> finalize()
 {
     std::lock_guard l(_init_mutex);
     if (_ref_count == 0)

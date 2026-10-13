@@ -1,6 +1,7 @@
 #include <sihd/http/Navigator.hpp>
 #include <sihd/http/navigator/CsrfExtractor.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Url.hpp>
 
 #include "navigator/NavigatorImpl.hpp"
@@ -23,62 +24,61 @@ Navigator::~Navigator() = default;
 
 // HTTP methods
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::get(std::string_view url)
+sihd::util::Result<NavigatorResponse> Navigator::get(std::string_view url)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url)});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::post(std::string_view url, sihd::util::ArrCharView data)
+sihd::util::Result<NavigatorResponse> Navigator::post(std::string_view url, sihd::util::ArrCharView data)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .body = data});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::patch(std::string_view url, sihd::util::ArrCharView data)
+sihd::util::Result<NavigatorResponse> Navigator::patch(std::string_view url, sihd::util::ArrCharView data)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Patch, .body = data});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::head(std::string_view url)
+sihd::util::Result<NavigatorResponse> Navigator::head(std::string_view url)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Head});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::put(std::string_view url, sihd::util::ArrCharView data)
+sihd::util::Result<NavigatorResponse> Navigator::put(std::string_view url, sihd::util::ArrCharView data)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .body = data});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::del(std::string_view url)
+sihd::util::Result<NavigatorResponse> Navigator::del(std::string_view url)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Delete});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::options(std::string_view url)
+sihd::util::Result<NavigatorResponse> Navigator::options(std::string_view url)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Options});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::post_multipart(std::string_view url,
-                                                                              const Multipart & multipart)
+sihd::util::Result<NavigatorResponse> Navigator::post_multipart(std::string_view url, const Multipart & multipart)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .multipart = multipart});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::download(std::string_view url, std::string_view path)
+sihd::util::Result<NavigatorResponse> Navigator::download(std::string_view url, std::string_view path)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .download_path = std::string(path)});
 }
 
-std::expected<NavigatorResponse, sihd::util::Error> Navigator::put_file(std::string_view url, std::string_view path)
+sihd::util::Result<NavigatorResponse> Navigator::put_file(std::string_view url, std::string_view path)
 {
     _impl->reset_for_request();
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .upload_path = std::string(path)});
@@ -186,7 +186,7 @@ void Navigator::clear_auth()
     _impl->auth.digest = false;
 }
 
-std::expected<void, sihd::util::Error> Navigator::form_login(const FormLoginParams & params)
+sihd::util::Result<void> Navigator::form_login(const FormLoginParams & params)
 {
     auto page = get(params.login_url);
     SIHD_UNEXPECTED_RETURN(page);

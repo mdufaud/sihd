@@ -5,6 +5,7 @@
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
@@ -180,12 +181,12 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-std::expected<Timestamp, Error> Timestamp::from_str(const std::string & date_str, std::string_view format)
+sihd::util::Result<Timestamp> Timestamp::from_str(const std::string & date_str, std::string_view format)
 {
     return Timestamp::from_str(date_str, format, std::locale::classic());
 }
 
-std::expected<Timestamp, Error>
+sihd::util::Result<Timestamp>
     Timestamp::from_str(const std::string & date_str, std::string_view format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L

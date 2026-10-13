@@ -6,6 +6,7 @@
 #include <sihd/sys/CapabilitySet.hpp>
 #include <sihd/sys/cap.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys
 {
@@ -144,7 +145,7 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>())
 
 CapabilitySet::~CapabilitySet() = default;
 
-std::expected<void, sihd::util::Error> CapabilitySet::refresh()
+sihd::util::Result<void> CapabilitySet::refresh()
 {
     _impl->close();
     _impl->present.clear();
@@ -237,7 +238,7 @@ void CapabilitySet::drop_all()
         wanted = false;
 }
 
-std::expected<void, sihd::util::Error> CapabilitySet::apply()
+sihd::util::Result<void> CapabilitySet::apply()
 {
     if (_impl->token == nullptr)
         return std::unexpected(

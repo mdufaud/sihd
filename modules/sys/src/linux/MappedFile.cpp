@@ -6,6 +6,7 @@
 #include <sihd/sys/MappedFile.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -27,7 +28,7 @@ struct Mapping
         size_t size = 0;
 };
 
-std::expected<Mapping, Error> map_fd(int fd, size_t size, int prot, std::string_view path)
+sihd::util::Result<Mapping> map_fd(int fd, size_t size, int prot, std::string_view path)
 {
     void *addr = mmap(nullptr, size, prot, MAP_SHARED, fd, 0);
     if (addr == MAP_FAILED)
@@ -35,7 +36,7 @@ std::expected<Mapping, Error> map_fd(int fd, size_t size, int prot, std::string_
     return Mapping {fd, addr, size};
 }
 
-std::expected<Mapping, Error> open_map(std::string_view path, int open_flags, int prot)
+sihd::util::Result<Mapping> open_map(std::string_view path, int open_flags, int prot)
 {
     int fd = ::open(path.data(), open_flags);
     if (fd < 0)
@@ -57,7 +58,7 @@ std::expected<Mapping, Error> open_map(std::string_view path, int open_flags, in
 
 } // namespace
 
-std::expected<void, Error> MappedFile::create(std::string_view path, size_t size, mode_t mode)
+sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -87,7 +88,7 @@ std::expected<void, Error> MappedFile::create(std::string_view path, size_t size
     return {};
 }
 
-std::expected<void, Error> MappedFile::open_read_only(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -102,7 +103,7 @@ std::expected<void, Error> MappedFile::open_read_only(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> MappedFile::open_read_write(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_write(std::string_view path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -117,7 +118,7 @@ std::expected<void, Error> MappedFile::open_read_write(std::string_view path)
     return {};
 }
 
-std::expected<void, Error> MappedFile::clear()
+sihd::util::Result<void> MappedFile::clear()
 {
     bool ret = true;
     if (_addr != nullptr && _addr != MAP_FAILED)
@@ -137,7 +138,7 @@ std::expected<void, Error> MappedFile::clear()
     return {};
 }
 
-std::expected<void, Error> MappedFile::sync(bool async)
+sihd::util::Result<void> MappedFile::sync(bool async)
 {
     if (_addr == nullptr)
         return std::unexpected(Error(not_initialized, "no mapping"));
@@ -150,27 +151,27 @@ std::expected<void, Error> MappedFile::sync(bool async)
 
 // no POSIX shared mapping (android bionic, emscripten)
 
-std::expected<void, Error> MappedFile::create(std::string_view, size_t, mode_t)
+sihd::util::Result<void> MappedFile::create(std::string_view, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MappedFile::open_read_only(std::string_view)
+sihd::util::Result<void> MappedFile::open_read_only(std::string_view)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MappedFile::open_read_write(std::string_view)
+sihd::util::Result<void> MappedFile::open_read_write(std::string_view)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-std::expected<void, Error> MappedFile::clear()
+sihd::util::Result<void> MappedFile::clear()
 {
     return {};
 }
 
-std::expected<void, Error> MappedFile::sync(bool)
+sihd::util::Result<void> MappedFile::sync(bool)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstdlib>
-#include <expected>
 #include <iterator>
 
 #include <sihd/util/CliApp.hpp>
@@ -10,6 +9,7 @@
 #include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
@@ -527,7 +527,7 @@ bool CliApp::_install_sinks()
             if (std::find(std::begin(sink_entry_keys), std::end(sink_entry_keys), sink_key)
                 != std::end(sink_entry_keys))
                 continue;
-            std::expected<void, Error> res = sink->set_conf(std::string(sink_key), it.value());
+            sihd::util::Result<void> res = sink->set_conf(std::string(sink_key), it.value());
             if (!res)
             {
                 SIHD_LOG(error, "CliApp: sink '{}': {}", name, res.error().message);

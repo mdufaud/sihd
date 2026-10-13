@@ -9,7 +9,7 @@
 
 #include <fmt/core.h>
 
-// bails out of the function propagating the error: `res` must be a stored std::expected<..., Error>,
+// bails out of the function propagating the error: `res` must be a stored sihd::util::Result<...>,
 // not a call — the macro names its argument twice
 #define SIHD_UNEXPECTED_RETURN(res)                                                                                    \
     if ((res).has_value() == false)                                                                                    \
