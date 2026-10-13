@@ -134,6 +134,7 @@ bool DeviceTcpServer::on_start()
 
     if (!_tcp_server.wait_ready(std::chrono::seconds(1)))
     {
+        SIHD_LOG(error, "DeviceTcpServer: the server did not become ready in time");
         _tcp_server.stop();
         _worker.stop_worker();
         return false;

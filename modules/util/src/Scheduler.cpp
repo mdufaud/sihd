@@ -277,7 +277,10 @@ void Scheduler::_prepare_tasks()
 bool Scheduler::on_work_start()
 {
     if (_clock_ptr == nullptr || _clock_ptr->start() == false)
+    {
+        SIHD_LOG(error, "Scheduler '{}': could not start the clock", this->name());
         return false;
+    }
 
     this->overruns = 0;
 

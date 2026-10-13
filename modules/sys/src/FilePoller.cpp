@@ -196,7 +196,10 @@ std::expected<void, Error> FilePoller::watch(std::string_view path, size_t max_d
 bool FilePoller::run()
 {
     if (_impl->watch_path.empty())
+    {
+        SIHD_LOG(error, "FilePoller: no watch path configured");
         return false;
+    }
 
     const bool new_path_exists = fs::exists(_impl->watch_path);
     const sihd::util::Timestamp new_last_modif = last_write_or(_impl->watch_path, _impl->last_modif);

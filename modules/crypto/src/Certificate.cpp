@@ -115,7 +115,7 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
         return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
     std::unique_ptr<X509, X509Free> cert(X509_new());
     if (cert == nullptr)
-        return make_error("Certificate: X509_new");
+        return make_error("X509_new");
 
     X509_set_version(cert.get(), 2); // X509 v3
 
@@ -162,7 +162,7 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
         {
             // add failure left the openssl queue dirty for the next make_error
             ERR_clear_error();
-            return make_error("Certificate: could not add subject alt names");
+            return make_error("could not add subject alt names");
         }
     }
 
@@ -176,7 +176,7 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
             {
                 // add failure left the openssl queue dirty for the next make_error
                 ERR_clear_error();
-                return make_error("Certificate: could not add basic constraints");
+                return make_error("could not add basic constraints");
             }
         }
         else
@@ -187,7 +187,7 @@ std::expected<void, sihd::util::Error> Certificate::generate_self_signed(const P
     }
 
     if (X509_sign(cert.get(), static_cast<EVP_PKEY *>(key.native()), EVP_sha256()) <= 0)
-        return make_error("Certificate: X509_sign");
+        return make_error("X509_sign");
     _handle = make_handle(cert.release());
     return {};
 }
@@ -202,7 +202,7 @@ std::expected<void, sihd::util::Error> Certificate::load_pem(std::string_view pa
     std::unique_ptr<X509, X509Free> cert(PEM_read_X509(fp, nullptr, nullptr, nullptr));
     fclose(fp);
     if (cert == nullptr)
-        return make_error("Certificate: read PEM from '{}'", path);
+        return make_error("read PEM from '{}'", path);
     _handle = make_handle(cert.release());
     return {};
 }
@@ -211,14 +211,14 @@ std::expected<void, sihd::util::Error> Certificate::save_pem(std::string_view pa
 {
     ERR_clear_error();
     if (!_handle)
-        return std::unexpected(Error(not_initialized, "Certificate: no certificate loaded"));
+        return std::unexpected(Error(not_initialized, "no certificate loaded"));
     FILE *fp = fopen(std::string(path).c_str(), "w");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     const bool ok = PEM_write_X509(fp, static_cast<X509 *>(_handle.get())) > 0;
     fclose(fp);
     if (!ok)
-        return make_error("Certificate: write PEM to '{}'", path);
+        return make_error("write PEM to '{}'", path);
     return {};
 }
 
@@ -229,7 +229,7 @@ std::expected<void, sihd::util::Error> Certificate::load_der(const uint8_t *data
     const unsigned char *p = data;
     std::unique_ptr<X509, X509Free> cert(d2i_X509(nullptr, &p, static_cast<long>(len)));
     if (cert == nullptr)
-        return make_error("Certificate: read DER data");
+        return make_error("read DER data");
     _handle = make_handle(cert.release());
     return {};
 }
@@ -240,11 +240,11 @@ std::expected<void, sihd::util::Error> Certificate::load_pem_string(std::string_
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
-        return make_error("Certificate: BIO_new_mem_buf");
+        return make_error("BIO_new_mem_buf");
     std::unique_ptr<X509, X509Free> cert(PEM_read_bio_X509(bio, nullptr, nullptr, nullptr));
     BIO_free(bio);
     if (cert == nullptr)
-        return make_error("Certificate: read PEM from string");
+        return make_error("read PEM from string");
     _handle = make_handle(cert.release());
     return {};
 }

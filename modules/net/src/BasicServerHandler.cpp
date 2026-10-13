@@ -214,6 +214,7 @@ void BasicServerHandler::handle_new_client(INetServer *server)
         std::lock_guard lock(_mutex);
         if (this->_client_limit_reached())
         {
+            SIHD_LOG(warning, "BasicServerHandler: client limit reached, closing the new client");
             (void)Socket::close_socket(socket);
             return;
         }
@@ -331,6 +332,7 @@ void BasicServerHandler::_expire_tls_handshakes(INetServer *server, sihd::util::
             ++it;
             continue;
         }
+        SIHD_LOG(warning, "BasicServerHandler: TLS handshake timed out, dropping client '{}'", it->second->addr.str());
         it = this->_drop_client(server, it);
     }
 }

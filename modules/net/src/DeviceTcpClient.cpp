@@ -137,7 +137,7 @@ bool DeviceTcpClient::on_stop()
     _stop_requested = true;
     _waitable.notify_all();
     // best-effort unblock of a stuck tx send: the join below waits for it
-    (void)_tcp_client.socket().shutdown();
+    SIHD_UNEXPECTED_LOG(_tcp_client.socket().shutdown());
     _worker.stop_worker();
     _tcp_client.remove_observer(this);
     (void)_tcp_client.close();
@@ -233,6 +233,8 @@ void DeviceTcpClient::handle(sihd::core::Channel *c)
         return;
     if (_tcp_client.connected())
         SIHD_UNEXPECTED_LOG(_tcp_client.send_all(sihd::util::ArrCharView(*c->array())));
+    else
+        SIHD_LOG(warning, "DeviceTcpClient: dropping tx data, client is not connected");
 }
 
 void DeviceTcpClient::handle(INetReceiver *receiver)

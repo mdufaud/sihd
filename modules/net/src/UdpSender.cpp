@@ -16,16 +16,14 @@ UdpSender::~UdpSender() = default;
 std::expected<void, sihd::util::Error> UdpSender::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpSender: socket already open"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
 std::expected<void, sihd::util::Error> UdpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::already_exists, "UdpSender: socket already open"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 }
 

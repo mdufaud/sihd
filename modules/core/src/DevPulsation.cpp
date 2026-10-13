@@ -57,7 +57,8 @@ void DevPulsation::handle(sihd::core::Channel *c)
 bool DevPulsation::run()
 {
     ++_beats;
-    _channel_heartbeat_ptr->write<uint32_t>(0, _beats);
+    if (_channel_heartbeat_ptr->write<uint32_t>(0, _beats) == false)
+        SIHD_LOG(error, "DevPulsation: could not write the heartbeat");
     return true;
 }
 

@@ -63,7 +63,8 @@ bool Daemon::run()
     else if (pid > 0)
         _exit(EXIT_SUCCESS);
     // install signal handlers
-    this->_handle_signals();
+    if (this->_handle_signals() == false)
+        SIHD_LOG(error, "Daemon: could not install signal handlers");
     // process not killed once shell is exited
     pid_t sid = setsid();
     if (sid < 0)

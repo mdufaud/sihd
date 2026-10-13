@@ -35,8 +35,8 @@ std::expected<void, sihd::util::Error> drive_handshake(SSL *ssl, Socket *socket,
         {
             const int err = SSL_get_error(ssl, ret);
             if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-                return std::unexpected(Error(ErrorCode::would_block, "TlsConnection: {} would block", what));
-            return std::unexpected(Error(ErrorCode::io_error, "TlsConnection: {} failed: {}", what, err));
+                return std::unexpected(Error(ErrorCode::would_block, "{} would block", what));
+            return std::unexpected(Error(ErrorCode::io_error, "{} failed: {}", what, err));
         }
         return {};
     }
@@ -47,9 +47,8 @@ std::expected<void, sihd::util::Error> drive_handshake(SSL *ssl, Socket *socket,
     {
         auto blocking = socket->set_blocking(false);
         if (!blocking)
-            return std::unexpected(Error(ErrorCode::io_error,
-                                         "TlsConnection: could not set the socket non-blocking for the timed {}",
-                                         what));
+            return std::unexpected(
+                Error(ErrorCode::io_error, "could not set the socket non-blocking for the timed {}", what));
     }
     sihd::util::Defer restore_blocking([&] {
         if (was_blocking)
@@ -58,7 +57,7 @@ std::expected<void, sihd::util::Error> drive_handshake(SSL *ssl, Socket *socket,
 
     const int fd = SSL_get_fd(ssl);
     if (fd < 0)
-        return std::unexpected(Error(ErrorCode::not_initialized, "TlsConnection: no fd for timed {}", what));
+        return std::unexpected(Error(ErrorCode::not_initialized, "no fd for timed {}", what));
 
     sihd::util::SteadyClock clock;
     const sihd::util::time::UnixTime deadline = clock.now() + sihd::util::time::ms(timeout_ms);
@@ -69,10 +68,10 @@ std::expected<void, sihd::util::Error> drive_handshake(SSL *ssl, Socket *socket,
             return {};
         const int err = SSL_get_error(ssl, ret);
         if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE)
-            return std::unexpected(Error(ErrorCode::io_error, "TlsConnection: {} failed: {}", what, err));
+            return std::unexpected(Error(ErrorCode::io_error, "{} failed: {}", what, err));
         const sihd::util::time::UnixTime remaining = deadline - clock.now().nanoseconds();
         if (remaining <= 0)
-            return std::unexpected(Error(ErrorCode::timeout, "TlsConnection: {} timeout after {}ms", what, timeout_ms));
+            return std::unexpected(Error(ErrorCode::timeout, "{} timeout after {}ms", what, timeout_ms));
         sihd::sys::Poll poll;
         poll.set_limit(1);
         if (err == SSL_ERROR_WANT_READ)
@@ -81,7 +80,7 @@ std::expected<void, sihd::util::Error> drive_handshake(SSL *ssl, Socket *socket,
             poll.set_write_fd(fd);
         poll.poll((int)sihd::util::time::to_ms(remaining));
         if (poll.polling_error())
-            return std::unexpected(Error(ErrorCode::io_error, "TlsConnection: {} poll error", what));
+            return std::unexpected(Error(ErrorCode::io_error, "{} poll error", what));
     }
 }
 
@@ -99,14 +98,14 @@ std::expected<void, sihd::util::Error> TlsConnection::init(sihd::crypto::TlsCont
 
     this->clear();
     if (!ctx)
-        return std::unexpected(Error(ErrorCode::not_initialized, "TlsConnection: context is empty"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "context is empty"));
     SSL *ssl = SSL_new(static_cast<SSL_CTX *>(ctx.native()));
     if (!ssl)
-        return std::unexpected(Error(ErrorCode::unknown, "TlsConnection: failed to create SSL"));
+        return std::unexpected(Error(ErrorCode::unknown, "failed to create SSL"));
     if (SSL_set_fd(ssl, socket.socket()) != 1)
     {
         SSL_free(ssl);
-        return std::unexpected(Error(ErrorCode::io_error, "TlsConnection: failed to set fd"));
+        return std::unexpected(Error(ErrorCode::io_error, "failed to set fd"));
     }
     _handle.reset(ssl);
     _socket = &socket;
@@ -116,24 +115,21 @@ std::expected<void, sihd::util::Error> TlsConnection::init(sihd::crypto::TlsCont
 std::expected<void, sihd::util::Error> TlsConnection::connect(int timeout_ms)
 {
     if (!_handle)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "no TLS connection"));
     return drive_handshake(as_ssl(_handle.get()), _socket, true, timeout_ms);
 }
 
 std::expected<void, sihd::util::Error> TlsConnection::accept(int timeout_ms)
 {
     if (!_handle)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "no TLS connection"));
     return drive_handshake(as_ssl(_handle.get()), _socket, false, timeout_ms);
 }
 
 std::expected<TlsHandshakeStep, sihd::util::Error> TlsConnection::accept_step()
 {
     if (!_handle)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "no TLS connection"));
     SSL *ssl = as_ssl(_handle.get());
     const int ret = SSL_accept(ssl);
     if (ret == 1)
@@ -143,7 +139,7 @@ std::expected<TlsHandshakeStep, sihd::util::Error> TlsConnection::accept_step()
         return TlsHandshakeStep::want_read;
     if (err == SSL_ERROR_WANT_WRITE)
         return TlsHandshakeStep::want_write;
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error, "TlsConnection: accept failed: {}", err));
+    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error, "accept failed: {}", err));
 }
 
 bool TlsConnection::pending() const
@@ -157,7 +153,7 @@ std::expected<size_t, sihd::util::Error> TlsConnection::read(void *buf, size_t l
     using sihd::util::ErrorCode;
 
     if (!_handle)
-        return std::unexpected(Error(ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "no TLS connection"));
     int ret = SSL_read(as_ssl(_handle.get()), buf, static_cast<int>(len));
     if (ret <= 0)
     {
@@ -165,8 +161,8 @@ std::expected<size_t, sihd::util::Error> TlsConnection::read(void *buf, size_t l
         if (err == SSL_ERROR_ZERO_RETURN)
             return (size_t)0;
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-            return std::unexpected(Error(ErrorCode::would_block, "TlsConnection: read would block"));
-        return std::unexpected(Error(ErrorCode::closed, "TlsConnection: read failed: {}", err));
+            return std::unexpected(Error(ErrorCode::would_block, "read would block"));
+        return std::unexpected(Error(ErrorCode::closed, "read failed: {}", err));
     }
     return (size_t)ret;
 }
@@ -177,14 +173,14 @@ std::expected<size_t, sihd::util::Error> TlsConnection::write(const void *buf, s
     using sihd::util::ErrorCode;
 
     if (!_handle)
-        return std::unexpected(Error(ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "no TLS connection"));
     int ret = SSL_write(as_ssl(_handle.get()), buf, static_cast<int>(len));
     if (ret <= 0)
     {
         const int err = SSL_get_error(as_ssl(_handle.get()), ret);
         if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE)
-            return std::unexpected(Error(ErrorCode::would_block, "TlsConnection: write would block"));
-        return std::unexpected(Error(ErrorCode::closed, "TlsConnection: write failed: {}", err));
+            return std::unexpected(Error(ErrorCode::would_block, "write would block"));
+        return std::unexpected(Error(ErrorCode::closed, "write failed: {}", err));
     }
     return (size_t)ret;
 }
@@ -192,8 +188,7 @@ std::expected<size_t, sihd::util::Error> TlsConnection::write(const void *buf, s
 std::expected<void, sihd::util::Error> TlsConnection::shutdown() const
 {
     if (!_handle)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "TlsConnection: no TLS connection"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "no TLS connection"));
     SSL_shutdown(as_ssl(_handle.get()));
     return {};
 }

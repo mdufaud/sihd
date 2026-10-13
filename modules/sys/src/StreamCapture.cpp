@@ -3,6 +3,7 @@
 #include <stdexcept>
 
 #include <sihd/sys/StreamCapture.hpp>
+#include <sihd/util/Logger.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 # include <io.h>
@@ -20,6 +21,8 @@
 
 namespace sihd::sys
 {
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -79,7 +82,8 @@ StreamCapture::~StreamCapture()
         return;
 
     std::fflush(_stream);
-    sihd_dup2(_saved_fd, _stream_fd);
+    if (sihd_dup2(_saved_fd, _stream_fd) == -1)
+        SIHD_LOG(critical, "StreamCapture: could not restore the captured stream file descriptor");
     sihd_close(_saved_fd);
     std::fclose(_tmp_file);
 }

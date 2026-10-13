@@ -32,29 +32,29 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     if (name.empty())
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: empty device name"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "empty device name"));
     if (name.size() >= IFNAMSIZ)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: device name too long: {}", name));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "device name too long: {}", name));
     char device_name[IFNAMSIZ] = {0};
     memcpy(device_name, name.data(), name.size());
     auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name));
-    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not bind to device");
+    SIHD_UNEXPECTED_RETURN_CTX(res, "could not bind to device");
     return {};
 }
 
 std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
-        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set blocking on a closed socket"));
+        return std::unexpected(Error(ErrorCode::closed, "cannot set blocking on a closed socket"));
     int opts = ::fcntl(socket, F_GETFL);
     if (opts < 0)
-        return std::unexpected(make_error("Socket: could not get fcntl"));
+        return std::unexpected(make_error("could not get fcntl"));
     if (active)
         opts &= ~O_NONBLOCK;
     else
         opts |= O_NONBLOCK;
     if (::fcntl(socket, F_SETFL, opts) < 0)
-        return std::unexpected(make_error("Socket: could not set fcntl options"));
+        return std::unexpected(make_error("could not set fcntl options"));
     return {};
 }
 
@@ -75,10 +75,10 @@ bool Socket::is_socket_blocking(int socket)
 std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milliseconds)
 {
     if (socket < 0)
-        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set recv timeout on a closed socket"));
+        return std::unexpected(Error(ErrorCode::closed, "cannot set recv timeout on a closed socket"));
     const timeval tv {milliseconds / 1000, (milliseconds % 1000) * 1000};
     auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not set recv timeout");
+    SIHD_UNEXPECTED_RETURN_CTX(res, "could not set recv timeout");
     return {};
 }
 

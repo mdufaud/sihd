@@ -45,16 +45,16 @@ std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string
 {
     (void)socket;
     (void)name;
-    return std::unexpected(Error(ErrorCode::not_supported, "Socket: bind to device unsupported on windows"));
+    return std::unexpected(Error(ErrorCode::not_supported, "bind to device unsupported on windows"));
 }
 
 std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
-        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set blocking on a closed socket"));
+        return std::unexpected(Error(ErrorCode::closed, "cannot set blocking on a closed socket"));
     unsigned long mode = active ? 0 : 1;
     auto res = sihd::sys::os::ioctl(socket, FIONBIO, &mode);
-    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not set blocking mode");
+    SIHD_UNEXPECTED_RETURN_CTX(res, "could not set blocking mode");
     return {};
 }
 
@@ -69,10 +69,10 @@ bool Socket::is_socket_blocking(int socket)
 std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milliseconds)
 {
     if (socket < 0)
-        return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set recv timeout on a closed socket"));
+        return std::unexpected(Error(ErrorCode::closed, "cannot set recv timeout on a closed socket"));
     DWORD ms = static_cast<DWORD>(milliseconds);
     auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &ms, sizeof(ms));
-    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not set recv timeout");
+    SIHD_UNEXPECTED_RETURN_CTX(res, "could not set recv timeout");
     return {};
 }
 

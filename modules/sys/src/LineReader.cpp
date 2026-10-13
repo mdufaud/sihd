@@ -93,21 +93,21 @@ bool LineReader::set_line_buffsize(size_t buff)
 std::expected<void, Error> LineReader::open(std::string_view path)
 {
     if (this->_init() == false)
-        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+        return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open(path, "r");
 }
 
 std::expected<void, Error> LineReader::open_fd(int fd)
 {
     if (this->_init() == false)
-        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+        return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open_fd(fd, "r");
 }
 
 std::expected<void, Error> LineReader::set_stream(FILE *stream, bool ownership)
 {
     if (this->_init() == false)
-        return std::unexpected(Error(out_of_memory, "LineReader: could not allocate buffers"));
+        return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.set_stream(stream, ownership);
 }
 
@@ -125,7 +125,7 @@ bool LineReader::close()
 std::expected<bool, Error> LineReader::read_next()
 {
     if (_line_buff.data() == nullptr || _read_buff.data() == nullptr)
-        return std::unexpected(Error(not_initialized, "LineReader: buffers not allocated"));
+        return std::unexpected(Error(not_initialized, "buffers not allocated"));
     _line_buff.data()[0] = 0;
     size_t fill_idx = 0;
     while (1)
@@ -144,7 +144,7 @@ std::expected<bool, Error> LineReader::read_next()
             if ((fill_idx + copy_len) >= _line_buff_size)
             {
                 if (this->_reallocate_line(fill_idx + copy_len) == false)
-                    return std::unexpected(Error(out_of_memory, "LineReader: could not reallocate line buffer"));
+                    return std::unexpected(Error(out_of_memory, "could not reallocate line buffer"));
             }
             // copy from into line either full read buffer or just matching part
             memcpy(_line_buff.data() + fill_idx, _read_buff.data() + _last_read_index, copy_len);

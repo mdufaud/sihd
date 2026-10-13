@@ -97,7 +97,10 @@ bool DevSampler::on_start()
             channel_in = *channel_in_res;
             channel_out = *channel_out_res;
             if (this->observe_channel(channel_in) == false)
+            {
+                SIHD_LOG(error, "DevSampler: could not observe channel '{}'", channel_in_path);
                 ret = false;
+            }
             _channels_map[channel_in] = channel_out;
         }
         else
@@ -137,8 +140,8 @@ bool DevSampler::run()
             SIHD_LOG(error, "DevSampler: Could not sample into: {}", channel_out->name());
         }
     }
-    if (channels_set.size() > 0)
-        _channel_sample->write(0, true);
+    if (channels_set.size() > 0 && _channel_sample->write(0, true) == false)
+        SIHD_LOG(error, "DevSampler: could not write the sample flag");
     return true;
 }
 

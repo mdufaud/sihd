@@ -45,7 +45,8 @@ bool Daemon::run()
         return false;
 
     // Install signal handlers
-    this->_handle_signals();
+    if (this->_handle_signals() == false)
+        SIHD_LOG(error, "Daemon: could not install signal handlers");
 
     // Detach from console
     if (!FreeConsole())
@@ -66,7 +67,8 @@ bool Daemon::run()
     }
 
     // Write pid file
-    _write_pid_file();
+    if (_write_pid_file() == false)
+        SIHD_LOG(error, "Daemon: could not write pid file");
 
     // Redirect standard handles to NUL
     HANDLE nul_handle = CreateFileA("NUL",

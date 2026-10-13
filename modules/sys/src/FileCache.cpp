@@ -55,7 +55,8 @@ void FileCache::clear()
 FileCache::OptionalCachedValue FileCache::get(const std::string & file_path)
 {
     // will invalidate the cache if the file has been modified
-    _file_watcher.run();
+    if (_file_watcher.run() == false)
+        SIHD_LOG(warning, "FileCache: could not poll the file watcher, cache may be stale");
     try
     {
         return _cache.get(file_path);

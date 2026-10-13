@@ -69,9 +69,10 @@ bool DeviceUdpReceiver::on_init()
 
 bool DeviceUdpReceiver::on_start()
 {
-    _channel_rx = this->get_channel("rx").value_or(nullptr);
-    if (_channel_rx == nullptr)
+    auto rx = this->get_channel("rx");
+    if (SIHD_UNEXPECTED_LOG(rx))
         return false;
+    _channel_rx = *rx;
 
     if (_port <= 0)
     {
@@ -122,7 +123,8 @@ bool DeviceUdpReceiver::run()
     _start_ok = true;
     _start_sync.sync();
 
-    _udp_receiver.start();
+    if (_udp_receiver.start() == false)
+        SIHD_LOG(error, "DeviceUdpReceiver: could not start the receiver");
 
     return true;
 }

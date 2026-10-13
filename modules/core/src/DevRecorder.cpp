@@ -68,7 +68,8 @@ void DevRecorder::handle(sihd::core::Channel *channel)
     std::string & alias = _map_channels[channel];
     _handler_ptr->handle(alias, channel);
     _records_array_ptr->get(0) += 1;
-    _channel_records_ptr->write(*_records_array_ptr);
+    if (_channel_records_ptr->write(*_records_array_ptr) == false)
+        SIHD_LOG(error, "DevRecorder: could not write the record count");
 }
 
 bool DevRecorder::on_init()

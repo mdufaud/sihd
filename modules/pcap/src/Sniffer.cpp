@@ -152,12 +152,12 @@ bool Sniffer::sniff()
 std::expected<bool, sihd::util::Error> Sniffer::read_next()
 {
     if (this->is_open() == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "Sniffer: not open"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "not open"));
     struct pcap_pkthdr *hdr;
     u_char *data;
     int ret = pcap_next_ex(_impl_ptr->pcap_ptr, &hdr, (const u_char **)(&data));
     if (ret == PCAP_ERROR)
-        return std::unexpected(sihd::util::Error(io_error, "Sniffer: {}", this->error()));
+        return std::unexpected(sihd::util::Error(io_error, "{}", this->error()));
     if (ret > 0)
         this->_new_packet(hdr, data);
     return ret > 0;

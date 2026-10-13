@@ -819,7 +819,7 @@ std::expected<bool, Error> Process::wait(int options)
     if (this->is_process_running() == false)
         return false;
     if (_impl->process_watcher.check_status(options) == false)
-        return std::unexpected(Error(io_error, "Process: wait: {}", os::last_error_str()));
+        return std::unexpected(Error(io_error, "wait: {}", os::last_error_str()));
     const bool terminated = _impl->process_watcher.has_terminated();
     if (terminated)
     {

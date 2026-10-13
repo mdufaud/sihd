@@ -111,7 +111,7 @@ std::expected<bool, Error> CsvReader::read_next()
 {
     this->_reset_line();
     if (!this->is_open())
-        return std::unexpected(Error(not_initialized, "CsvReader: not open"));
+        return std::unexpected(Error(not_initialized, "not open"));
     while (true)
     {
         auto line = _line_reader.read_next();
@@ -162,14 +162,14 @@ bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
 std::expected<Timestamp, Error> CsvReader::get_read_timestamp() const
 {
     if (_has_data == false)
-        return std::unexpected(Error(not_initialized, "CsvReader: no data read"));
+        return std::unexpected(Error(not_initialized, "no data read"));
     if (_timestamp_col < 0)
-        return std::unexpected(Error(not_initialized, "CsvReader: no timestamp column set"));
+        return std::unexpected(Error(not_initialized, "no timestamp column set"));
 
     const auto & columns = this->columns();
 
     if ((int)columns.size() <= _timestamp_col)
-        return std::unexpected(Error(not_found, "CsvReader: no column at index {}", _timestamp_col));
+        return std::unexpected(Error(not_found, "no column at index {}", _timestamp_col));
 
     const auto & time_str = columns.at(_timestamp_col);
 
@@ -181,10 +181,8 @@ std::expected<Timestamp, Error> CsvReader::get_read_timestamp() const
     }
     auto timestamp = Timestamp::from_str(time_str, _timestamp_fmt);
     if (!timestamp)
-        return std::unexpected(Error(invalid_argument,
-                                     "CsvReader: cannot process timestamp value '{}' with format '{}'",
-                                     time_str,
-                                     _timestamp_fmt));
+        return std::unexpected(
+            Error(invalid_argument, "cannot process timestamp value '{}' with format '{}'", time_str, _timestamp_fmt));
     return *timestamp;
 }
 

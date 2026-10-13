@@ -220,7 +220,10 @@ void TreeProfiler::_ensure_dispatcher()
         return;
     _stop_dispatch = false;
     if (_worker.start_worker("sihd.treeprofiler") == false)
+    {
+        SIHD_LOG(error, "TreeProfiler: could not start the dispatcher");
         _dispatcher_running = false;
+    }
 }
 
 void TreeProfiler::_stop_dispatcher()
@@ -619,6 +622,7 @@ bool TreeProfiler::_observe_channel(Channel *channel)
     channel->set_watcher(entry_ptr);
     if (channel->watcher() != entry_ptr)
     {
+        SIHD_LOG(warning, "TreeProfiler: could not watch channel '{}'", channel->full_name());
         auto l = _waitable.guard();
         _channels.erase(channel);
         return false;
@@ -630,14 +634,24 @@ bool TreeProfiler::_observe_service(sihd::util::AService *service)
 {
     auto *ctrl = dynamic_cast<sihd::util::ServiceController *>(service->service_ctrl());
     if (ctrl == nullptr)
+    {
+        sihd::util::Named *named = dynamic_cast<sihd::util::Named *>(service);
+        const std::string name = named != nullptr ? named->name() : "<unnamed>";
+        SIHD_LOG(debug, "TreeProfiler: service '{}' has no service controller", name);
         return false;
+    }
     {
         auto l = _waitable.guard();
         if (_services.count(ctrl) > 0)
             return true;
     }
     if (ctrl->add_observer(this) == false)
+    {
+        sihd::util::Named *named = dynamic_cast<sihd::util::Named *>(service);
+        const std::string name = named != nullptr ? named->name() : "<unnamed>";
+        SIHD_LOG(warning, "TreeProfiler: could not observe service '{}'", name);
         return false;
+    }
     auto entry = std::make_unique<ServiceEntry>();
     entry->service = service;
     entry->ctrl = ctrl;

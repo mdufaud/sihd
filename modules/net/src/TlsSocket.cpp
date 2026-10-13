@@ -59,7 +59,7 @@ std::expected<void, sihd::util::Error> TlsSocket::tls_accept(int timeout_ms)
     if (!_tls_ctx || !this->is_open())
     {
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized,
-                                                 "TlsSocket: cannot tls_accept without context and open socket"));
+                                                 "cannot tls_accept without context and open socket"));
     }
     return this->_handshake(true, timeout_ms);
 }

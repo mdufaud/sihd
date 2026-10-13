@@ -203,7 +203,10 @@ bool HttpServer::on_start()
     _impl->port = lws_info.port;
 
     if (_impl->stepworker.start_sync_worker(this->name() + "-callback") == false)
+    {
+        SIHD_LOG(error, "HttpServer: could not start the callback worker");
         return false;
+    }
 
     for (size_t tsi = 1; tsi < _impl->service_thread_count; ++tsi)
     {

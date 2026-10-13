@@ -62,8 +62,7 @@ std::expected<ssize_t, Error> socket_call(std::string_view op, auto && syscall)
     if (ret >= 0)
         return ret;
     const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(
-        Error(sihd::util::error_errno(err), "Socket: {} error: {}", op, sihd::sys::os::error_str(err)));
+    return std::unexpected(Error(sihd::util::error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
 }
 
 std::expected<size_t, Error> size_result(std::expected<ssize_t, Error> && res)
@@ -77,7 +76,7 @@ std::expected<void, Error> opt_result(std::string_view op, std::expected<void, E
 {
     if (res.has_value())
         return res;
-    return std::unexpected(Error(res.error().code, "Socket: {}: {}", op, std::move(res).error().message));
+    return std::unexpected(Error(res.error().code, "{}: {}", op, std::move(res).error().message));
 }
 
 std::expected<void, Error> opt_result(std::string_view op, bool ok)
@@ -85,13 +84,12 @@ std::expected<void, Error> opt_result(std::string_view op, bool ok)
     if (ok)
         return {};
     const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(
-        Error(sihd::util::error_errno(err), "Socket: {} error: {}", op, sihd::sys::os::error_str(err)));
+    return std::unexpected(Error(sihd::util::error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
 }
 
 Error closed_socket_error(std::string_view op)
 {
-    return Error(ErrorCode::closed, "Socket: cannot {} on a closed socket", op);
+    return Error(ErrorCode::closed, "cannot {} on a closed socket", op);
 }
 
 bool atomic_datagram_type(int type)
@@ -360,7 +358,7 @@ std::optional<int> Socket::get_socket_error(int socket)
 std::expected<void, Error> Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
 {
     if (socket < 0)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: cannot get peer name on a negative socket"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot get peer name on a negative socket"));
     return opt_result("get peer name", ::getpeername(socket, addr, addr_len) == 0);
 }
 
@@ -504,19 +502,19 @@ std::expected<void, Error> Socket::open(std::string_view domain, std::string_vie
     int sockprotocol = ip::protocol(protocol);
     if (sockdomain >= 0 && socktype >= 0 && sockprotocol >= 0)
         return this->open(sockdomain, socktype, sockprotocol);
-    return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: unknown domain, type or protocol"));
+    return std::unexpected(Error(ErrorCode::invalid_argument, "unknown domain, type or protocol"));
 }
 
 std::expected<void, Error> Socket::open(int domain, int type, int protocol)
 {
     if (this->is_open())
-        return std::unexpected(Error(ErrorCode::already_exists, "Socket: socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     _socket = ::socket(domain, type, protocol);
     _domain = domain;
     _type = type;
     _protocol = protocol;
     if (_socket < 0)
-        return std::unexpected(make_error("Socket: open error"));
+        return std::unexpected(make_error("open error"));
     return {};
 }
 
@@ -549,7 +547,7 @@ std::expected<void, Error> Socket::shutdown() const
         return {};
     if (::shutdown(_socket, SHUT_RDWR) == 0)
         return {};
-    return std::unexpected(make_error("Socket: shutdown error"));
+    return std::unexpected(make_error("shutdown error"));
 }
 
 /* ************************************************************************* */
@@ -567,9 +565,9 @@ std::expected<int, Error> Socket::accept(sockaddr *addr, socklen_t *addr_len, in
         poll.set_read_fd(_socket);
         poll.poll(timeout_ms);
         if (poll.polling_error())
-            return std::unexpected(make_error("Socket: accept poll error"));
+            return std::unexpected(make_error("accept poll error"));
         if (poll.polling_timeout())
-            return std::unexpected(Error(ErrorCode::timeout, "Socket: accept timeout after {}ms", timeout_ms));
+            return std::unexpected(Error(ErrorCode::timeout, "accept timeout after {}ms", timeout_ms));
     }
     return size_result(socket_call("accept", [&] { return (int)::accept(_socket, addr, addr_len); }));
 }
@@ -626,17 +624,17 @@ std::expected<void, Error> Socket::connect(const sockaddr *addr, socklen_t addr_
             poll.set_write_fd(_socket);
             poll.poll(timeout_ms);
             if (poll.polling_error())
-                res = std::unexpected(make_error("Socket: connect poll error"));
+                res = std::unexpected(make_error("connect poll error"));
             else if (poll.polling_timeout())
-                res = std::unexpected(Error(ErrorCode::timeout, "Socket: connect timeout after {}ms", timeout_ms));
+                res = std::unexpected(Error(ErrorCode::timeout, "connect timeout after {}ms", timeout_ms));
             else
             {
                 const std::optional<int> so_error = this->get_error();
                 if (so_error == std::nullopt)
-                    res = std::unexpected(make_error("Socket: connect error"));
+                    res = std::unexpected(make_error("connect error"));
                 else if (*so_error != 0)
                     res = std::unexpected(Error(sihd::util::error_errno(*so_error),
-                                                "Socket: connect error: {}",
+                                                "connect error: {}",
                                                 sihd::sys::os::error_str(*so_error)));
                 else
                     res = {};
@@ -644,7 +642,7 @@ std::expected<void, Error> Socket::connect(const sockaddr *addr, socklen_t addr_
         }
         else
             res = std::unexpected(
-                Error(sihd::util::error_errno(err), "Socket: connect error: {}", sihd::sys::os::error_str(err)));
+                Error(sihd::util::error_errno(err), "connect error: {}", sihd::sys::os::error_str(err)));
     }
     if (use_timeout && was_blocking)
         SIHD_UNEXPECTED_LOG(this->set_blocking(true));
@@ -680,7 +678,7 @@ std::expected<void, Error> Socket::reconnect(int timeout_ms)
     if (unix)
         return this->connect_unix(_connect_unix_path);
     if (_connect_addr.empty())
-        return std::unexpected(Error(ErrorCode::not_initialized, "Socket: no address to reconnect to"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "no address to reconnect to"));
     return this->connect(_connect_addr, timeout_ms);
 }
 
@@ -705,7 +703,7 @@ std::expected<void, Error> Socket::send_all(sihd::util::ArrCharView view)
         auto sent = this->send(view);
         SIHD_UNEXPECTED_RETURN_CTX(sent, "sending {} bytes", view.size());
         if (*sent != view.size())
-            return std::unexpected(Error(ErrorCode::io_error, "Socket: datagram sent partially"));
+            return std::unexpected(Error(ErrorCode::io_error, "datagram sent partially"));
         return {};
     }
     size_t sent = 0;
@@ -714,7 +712,7 @@ std::expected<void, Error> Socket::send_all(sihd::util::ArrCharView view)
         auto ret = this->send({view.data() + sent, view.size() - sent});
         SIHD_UNEXPECTED_RETURN_CTX(ret, "sending {} of {} bytes", sent, view.size());
         if (*ret == 0)
-            return std::unexpected(Error(ErrorCode::io_error, "Socket: send made no progress"));
+            return std::unexpected(Error(ErrorCode::io_error, "send made no progress"));
         sent += *ret;
     }
     return {};
@@ -762,7 +760,7 @@ std::expected<void, Error> Socket::send_all_to(const sockaddr *addr, socklen_t a
         auto sent = this->send_to(addr, addr_len, view);
         SIHD_UNEXPECTED_RETURN_CTX(sent, "sending {} bytes to {}", view.size(), ip::to_str(addr));
         if (*sent != view.size())
-            return std::unexpected(Error(ErrorCode::io_error, "Socket: datagram sent partially"));
+            return std::unexpected(Error(ErrorCode::io_error, "datagram sent partially"));
         return {};
     }
     size_t sent = 0;
@@ -771,7 +769,7 @@ std::expected<void, Error> Socket::send_all_to(const sockaddr *addr, socklen_t a
         auto ret = this->send_to(addr, addr_len, {view.data() + sent, view.size() - sent});
         SIHD_UNEXPECTED_RETURN_CTX(ret, "sending {} of {} bytes to {}", sent, view.size(), ip::to_str(addr));
         if (*ret == 0)
-            return std::unexpected(Error(ErrorCode::io_error, "Socket: send made no progress"));
+            return std::unexpected(Error(ErrorCode::io_error, "send made no progress"));
         sent += *ret;
     }
     return {};
@@ -946,13 +944,13 @@ std::expected<void, Error>
         {
             mreq.ipv6mr_interface = if_nametoindex(iface.data());
             if (mreq.ipv6mr_interface == 0)
-                return std::unexpected(Error(ErrorCode::not_found, "Socket: no interface named: {}", iface));
+                return std::unexpected(Error(ErrorCode::not_found, "no interface named: {}", iface));
         }
 #endif
         return opt_result("multicast membership",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, ipv6_opt, &mreq, sizeof(mreq)));
     }
-    return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: multicast group is not an ip address"));
+    return std::unexpected(Error(ErrorCode::invalid_argument, "multicast group is not an ip address"));
 }
 
 std::expected<void, Error> Socket::join_multicast(const IpAddr & group, std::string_view iface)
@@ -1000,7 +998,7 @@ std::expected<void, Error> Socket::bind_unix(std::string_view path)
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: invalid unix path: {}", path));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
     auto res = this->bind((sockaddr *)&addr, *addr_len);
     if (res)
     {
@@ -1016,7 +1014,7 @@ std::expected<void, Error> Socket::connect_unix(std::string_view path)
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: invalid unix path: {}", path));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
     auto res = this->connect((sockaddr *)&addr, *addr_len);
     if (res)
     {
@@ -1031,7 +1029,7 @@ std::expected<size_t, Error> Socket::send_to_unix(std::string_view path, sihd::u
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: invalid unix path: {}", path));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
     return this->send_to((sockaddr *)&addr, *addr_len, view);
 }
 
@@ -1040,7 +1038,7 @@ std::expected<void, Error> Socket::send_all_to_unix(std::string_view path, sihd:
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
-        return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: invalid unix path: {}", path));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
     return this->send_all_to((sockaddr *)&addr, *addr_len, view);
 }
 

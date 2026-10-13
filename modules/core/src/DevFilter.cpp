@@ -183,7 +183,10 @@ bool DevFilter::set_filter_byte_xor(std::string_view rule_str)
 void DevFilter::_rule_match(Channel *channel_out, const Rule *rule_ptr, int64_t out_val)
 {
     const sihd::util::IArray *array_out = channel_out->array();
-    channel_out->write({(const int8_t *)&out_val, array_out->data_size()}, array_out->byte_index(rule_ptr->write_idx));
+    const bool written = channel_out->write({(const int8_t *)&out_val, array_out->data_size()},
+                                            array_out->byte_index(rule_ptr->write_idx));
+    if (written == false)
+        SIHD_LOG(error, "DevFilter: could not write into the output channel '{}'", channel_out->name());
 }
 
 void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,

@@ -39,12 +39,12 @@ std::expected<void, sihd::util::Error> PrivateKey::generate_rsa(int bits)
     this->clear();
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr));
     if (ctx == nullptr)
-        return make_error("PrivateKey: EVP_PKEY_CTX_new_id");
+        return make_error("EVP_PKEY_CTX_new_id");
     std::unique_ptr<EVP_PKEY, PkeyFree> key;
     const bool ok = EVP_PKEY_keygen_init(ctx.get()) > 0 && EVP_PKEY_CTX_set_rsa_keygen_bits(ctx.get(), bits) > 0
                     && EVP_PKEY_keygen(ctx.get(), std::out_ptr(key)) > 0;
     if (!ok || key == nullptr)
-        return make_error("PrivateKey: RSA keygen");
+        return make_error("RSA keygen");
     _handle = make_handle(key.release());
     return {};
 }
@@ -55,7 +55,7 @@ std::expected<void, sihd::util::Error> PrivateKey::generate_ec(std::string_view 
     this->clear();
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr));
     if (ctx == nullptr)
-        return make_error("PrivateKey: EVP_PKEY_CTX_new_from_name");
+        return make_error("EVP_PKEY_CTX_new_from_name");
     // valid char * modifiable
     std::string curve(curve_name);
     OSSL_PARAM params[] = {
@@ -66,7 +66,7 @@ std::expected<void, sihd::util::Error> PrivateKey::generate_ec(std::string_view 
     const bool ok = EVP_PKEY_keygen_init(ctx.get()) > 0 && EVP_PKEY_CTX_set_params(ctx.get(), params) > 0
                     && EVP_PKEY_keygen(ctx.get(), std::out_ptr(key)) > 0;
     if (!ok || key == nullptr)
-        return make_error("PrivateKey: EC keygen for curve '{}'", curve_name);
+        return make_error("EC keygen for curve '{}'", curve_name);
     _handle = make_handle(key.release());
     return {};
 }
@@ -81,7 +81,7 @@ std::expected<void, sihd::util::Error> PrivateKey::load_pem(std::string_view pat
     std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_PrivateKey(fp, nullptr, nullptr, nullptr));
     fclose(fp);
     if (key == nullptr)
-        return make_error("PrivateKey: read PEM from '{}'", path);
+        return make_error("read PEM from '{}'", path);
     _handle = make_handle(key.release());
     return {};
 }
@@ -90,7 +90,7 @@ std::expected<void, sihd::util::Error> PrivateKey::save_pem(std::string_view pat
 {
     ERR_clear_error();
     if (!_handle)
-        return std::unexpected(Error(not_initialized, "PrivateKey: no key loaded"));
+        return std::unexpected(Error(not_initialized, "no key loaded"));
     FILE *fp = fopen(std::string(path).c_str(), "w");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
@@ -99,7 +99,7 @@ std::expected<void, sihd::util::Error> PrivateKey::save_pem(std::string_view pat
              > 0;
     fclose(fp);
     if (!ok)
-        return make_error("PrivateKey: write PEM to '{}'", path);
+        return make_error("write PEM to '{}'", path);
     return {};
 }
 
@@ -109,11 +109,11 @@ std::expected<void, sihd::util::Error> PrivateKey::load_pem_string(std::string_v
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
-        return make_error("PrivateKey: BIO_new_mem_buf");
+        return make_error("BIO_new_mem_buf");
     std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr));
     BIO_free(bio);
     if (key == nullptr)
-        return make_error("PrivateKey: read PEM from string");
+        return make_error("read PEM from string");
     _handle = make_handle(key.release());
     return {};
 }

@@ -136,7 +136,15 @@ IMessageField *Message::clone() const
     {
         IMessageField *cloned_field = _fields.at(name)->clone();
         if (cloned_field != nullptr)
-            cloned->add_field(name, cloned_field);
+        {
+            if (cloned->add_field(name, cloned_field) == false)
+            {
+                SIHD_LOG(error, "Message: could not add field '{}' to the clone", name);
+                delete cloned_field;
+                error = true;
+                break;
+            }
+        }
         else
         {
             SIHD_LOG(error, "Message: clone failed for field '{}'", name);
@@ -171,7 +179,8 @@ std::vector<uint8_t> Message::to_bytes()
 {
     const size_t sz = this->field_byte_size();
     std::vector<uint8_t> result(sz);
-    this->field_write_to(result.data(), sz);
+    if (this->field_write_to(result.data(), sz) == false)
+        SIHD_LOG(error, "Message: could not write fields to bytes");
     return result;
 }
 

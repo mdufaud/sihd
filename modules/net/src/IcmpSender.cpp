@@ -149,8 +149,7 @@ bool IcmpSender::_set_conf_data_size(int byte_size)
 std::expected<void, sihd::util::Error> IcmpSender::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::already_exists, "IcmpSender: socket already open"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     _config_applied = false;
     return _socket.open(AF_UNIX, SOCK_RAW, IPPROTO_ICMP);
 }
@@ -158,8 +157,7 @@ std::expected<void, sihd::util::Error> IcmpSender::open_socket_unix()
 std::expected<void, sihd::util::Error> IcmpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::already_exists, "IcmpSender: socket already open"));
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     _config_applied = false;
 
     // Default: use SOCK_RAW for both IPv4 and IPv6 (cross-platform)
@@ -306,7 +304,7 @@ std::expected<void, sihd::util::Error> IcmpSender::send_to(const IpAddr & addr)
 {
     if (!_socket.is_open())
         return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "IcmpSender: cannot send - socket not opened"));
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot send - socket not opened"));
 
     if (_config_applied == false)
         this->_apply_config();

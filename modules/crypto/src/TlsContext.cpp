@@ -25,7 +25,7 @@ struct CtxFree
 
 std::unexpected<sihd::util::Error> error_not_initialized()
 {
-    return std::unexpected(Error(not_initialized, "TlsContext: context not initialized"));
+    return std::unexpected(Error(not_initialized, "context not initialized"));
 }
 
 } // namespace
@@ -37,7 +37,7 @@ std::expected<void, sihd::util::Error> TlsContext::init(bool server_mode)
     const SSL_METHOD *method = server_mode ? TLS_server_method() : TLS_client_method();
     std::unique_ptr<SSL_CTX, CtxFree> ctx(SSL_CTX_new(method));
     if (ctx == nullptr)
-        return make_error("TlsContext: SSL_CTX_new");
+        return make_error("SSL_CTX_new");
     SSL_CTX_set_min_proto_version(ctx.get(), TLS1_2_VERSION);
     _handle = std::shared_ptr<void>(ctx.release(), CtxFree {});
     return {};
@@ -49,9 +49,9 @@ std::expected<void, sihd::util::Error> TlsContext::set_certificate(const Certifi
     if (!_handle)
         return error_not_initialized();
     if (!cert)
-        return std::unexpected(Error(invalid_argument, "TlsContext: certificate is empty"));
+        return std::unexpected(Error(invalid_argument, "certificate is empty"));
     if (SSL_CTX_use_certificate(static_cast<SSL_CTX *>(_handle.get()), static_cast<X509 *>(cert.native())) != 1)
-        return make_error("TlsContext: SSL_CTX_use_certificate");
+        return make_error("SSL_CTX_use_certificate");
     return {};
 }
 
@@ -61,9 +61,9 @@ std::expected<void, sihd::util::Error> TlsContext::set_private_key(const Private
     if (!_handle)
         return error_not_initialized();
     if (!key)
-        return std::unexpected(Error(invalid_argument, "TlsContext: private key is empty"));
+        return std::unexpected(Error(invalid_argument, "private key is empty"));
     if (SSL_CTX_use_PrivateKey(static_cast<SSL_CTX *>(_handle.get()), static_cast<EVP_PKEY *>(key.native())) != 1)
-        return make_error("TlsContext: SSL_CTX_use_PrivateKey");
+        return make_error("SSL_CTX_use_PrivateKey");
     return {};
 }
 
@@ -74,7 +74,7 @@ std::expected<void, sihd::util::Error> TlsContext::load_ca_cert(std::string_view
         return error_not_initialized();
     std::string p(path);
     if (SSL_CTX_load_verify_locations(static_cast<SSL_CTX *>(_handle.get()), p.c_str(), nullptr) != 1)
-        return make_error("TlsContext: load CA cert from '{}'", path);
+        return make_error("load CA cert from '{}'", path);
     return {};
 }
 

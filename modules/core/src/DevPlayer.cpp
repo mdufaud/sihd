@@ -173,10 +173,8 @@ bool DevPlayer::run()
     PlayableRecord record = std::move(*next_record);
 
     auto it = _map_channels.find(record.name);
-    if (it != _map_channels.end())
-        it->second->write(*record.value.get());
-    else
-        SIHD_LOG(error, "DevPlayer: channel '{}' not found", record.name);
+    if (it == _map_channels.end() || it->second->write(*record.value.get()) == false)
+        SIHD_LOG(error, "DevPlayer: could not write record into channel '{}'", record.name);
 
     {
         auto l = _waitable.guard();
@@ -222,8 +220,10 @@ bool DevPlayer::_main_loop()
 
 void DevPlayer::_provider_ended()
 {
-    if (_safe_queue.empty() && !_end_notified.exchange(true))
-        _channel_end_ptr->write<bool>(0, true);
+    if (_safe_queue.empty() && !_end_notified.exchange(true) && _channel_end_ptr->write<bool>(0, true) == false)
+    {
+        SIHD_LOG(error, "DevPlayer: could not write the end of stream flag");
+    }
 }
 
 bool DevPlayer::on_stop()

@@ -22,7 +22,11 @@ bool DynMessage::finish()
     for (const auto & name : this->children_keys())
     {
         IMessageField *field = _fields.at(name);
-        field->field_resize(field->field_size());
+        if (field->field_resize(field->field_size()) == false)
+        {
+            SIHD_LOG(error, "DynMessage: could not resize field '{}'", name);
+            return false;
+        }
     }
     _finished = true;
     return true;
@@ -162,9 +166,19 @@ IMessageField *DynMessage::clone() const
         IMessageField *cloned_field = field->clone();
         if (cloned_field != nullptr)
         {
-            cloned->add_field(name, cloned_field);
-            if (this->_is_hidden(field))
-                cloned->hide_field(name, true);
+            if (cloned->add_field(name, cloned_field) == false)
+            {
+                SIHD_LOG(error, "DynMessage: could not add field '{}' to the clone", name);
+                delete cloned_field;
+                error = true;
+                break;
+            }
+            if (this->_is_hidden(field) && cloned->hide_field(name, true) == false)
+            {
+                SIHD_LOG(error, "DynMessage: could not hide field '{}' in the clone", name);
+                error = true;
+                break;
+            }
         }
         else
         {
