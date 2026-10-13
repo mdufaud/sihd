@@ -312,9 +312,11 @@ bool is_root()
 
 // windows has no setuid: a process cannot permanently become another account.
 // see sihd::sys::Impersonation for the thread scoped, credential based counterpart.
-bool drop_privileges([[maybe_unused]] const UserId & user_id, [[maybe_unused]] const GroupId & group_id)
+std::expected<void, sihd::util::Error> drop_privileges([[maybe_unused]] const UserId & user_id,
+                                                       [[maybe_unused]] const GroupId & group_id)
 {
-    return false;
+    return std::unexpected(
+        sihd::util::Error(sihd::util::ErrorCode::not_supported, "cannot drop privileges on windows"));
 }
 
 } // namespace sihd::sys::user

@@ -44,10 +44,10 @@ void os()
 {
     SIHD_LOG(info, "pid: {}", sihd::sys::os::pid());
     SIHD_LOG(info, "is_root: {}", sihd::sys::user::is_root());
-    SIHD_LOG(info, "max_fds: {}", sihd::sys::os::max_fds());
+    SIHD_LOG(info, "max_fds: {}", sihd::sys::os::max_fds().value_or(0));
     SIHD_LOG(info, "debugger: {}", sihd::sys::os::is_run_by_debugger());
     SIHD_LOG(info, "valgrind: {}", sihd::sys::os::is_run_by_valgrind());
-    SIHD_LOG(info, "peak_rss: {}", str::bytes_str(sihd::sys::os::peak_rss()));
+    SIHD_LOG(info, "peak_rss: {}", str::bytes_str(sihd::sys::os::peak_rss().value_or(-1)));
     SIHD_LOG(info, "current_rss: {}", str::bytes_str(sihd::sys::os::current_rss()));
     fmt::print("\n");
 }

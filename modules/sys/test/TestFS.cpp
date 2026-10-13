@@ -7,6 +7,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
@@ -16,28 +17,11 @@
 
 #include "test_helper.hpp"
 
-#if defined(__SIHD_WINDOWS__)
-# include <windows.h>
-#endif
-
 namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::sys;
-
-#if defined(__SIHD_WINDOWS__)
-bool running_under_wine()
-{
-    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
-    return ntdll != nullptr && GetProcAddress(ntdll, "wine_get_version") != nullptr;
-}
-#else
-bool running_under_wine()
-{
-    return false;
-}
-#endif
 
 class TestFS: public ::testing::Test
 {
@@ -464,7 +448,7 @@ TEST_F(TestFS, test_fs_copy_file)
                     return true;
                 }).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
-    if (!running_under_wine())
+    if (!os::is_run_by_wine())
     {
         EXPECT_EQ(transferred, content.size());
     }
@@ -490,7 +474,7 @@ TEST_F(TestFS, test_fs_copy_file)
     EXPECT_FALSE(fs::copy_file(same, same).has_value());
     EXPECT_EQ(fs::file_size(same).value_or(0), content.size());
 
-    if (!running_under_wine())
+    if (!os::is_run_by_wine())
     {
         // cancellation removes the partial destination
         bool cancelled = false;

@@ -163,8 +163,8 @@ TEST_F(TestUser, test_user_is_root)
 TEST_F(TestUser, test_user_drop_privileges_unsupported)
 {
     // windows cannot permanently change the account of a running process
-    EXPECT_FALSE(user::drop_privileges(user::effective_user(), user::effective_group()));
-    EXPECT_FALSE(user::drop_privileges("sihd_no_such_user"));
+    EXPECT_FALSE(user::drop_privileges(user::effective_user(), user::effective_group()).has_value());
+    EXPECT_FALSE(user::drop_privileges("sihd_no_such_user").has_value());
 }
 
 #else
@@ -177,8 +177,8 @@ TEST_F(TestUser, test_user_is_root)
 TEST_F(TestUser, test_user_drop_privileges_denied)
 {
     // an invalid id is never dropped to
-    EXPECT_FALSE(user::drop_privileges(user::UserId {}, user::GroupId {}));
-    EXPECT_FALSE(user::drop_privileges("sihd_no_such_user"));
+    EXPECT_FALSE(user::drop_privileges(user::UserId {}, user::GroupId {}).has_value());
+    EXPECT_FALSE(user::drop_privileges("sihd_no_such_user").has_value());
 
     const user::UserId before_user = user::effective_user();
     const user::GroupId before_group = user::effective_group();
@@ -189,7 +189,7 @@ TEST_F(TestUser, test_user_drop_privileges_denied)
     // an unprivileged process cannot become another user
     const user::UserId other_user = user::UserId::from_native(before_user.native() + 1);
     const user::GroupId other_group = user::GroupId::from_native(before_group.native() + 1);
-    EXPECT_FALSE(user::drop_privileges(other_user, other_group));
+    EXPECT_FALSE(user::drop_privileges(other_user, other_group).has_value());
 
     // the failed attempt must not have changed the identity
     EXPECT_EQ(user::effective_user(), before_user);

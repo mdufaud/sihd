@@ -1,6 +1,7 @@
 #include "deadline.hpp"
 
 #include <sihd/util/Clocks.hpp>
+#include <sihd/util/time.hpp>
 
 namespace sihd::sys::internal
 {
@@ -24,6 +25,15 @@ int poll_timeout_ms(sihd::util::Timestamp deadline)
     const int milliseconds = static_cast<int>(sihd::util::time::to_milli(left));
     // 1 ms floor: poll(0) would spin.
     return milliseconds > 0 ? milliseconds : 1;
+}
+
+std::optional<timespec> realtime_deadline(sihd::util::Timestamp begin, sihd::util::Duration timeout)
+{
+    const sihd::util::Duration remaining = timeout - (steady_now() - begin);
+    if (remaining <= 0)
+        return std::nullopt;
+    // mq_*/sem_* take an absolute CLOCK_REALTIME deadline
+    return sihd::util::time::to_ts(sihd::util::SystemClock().now().get() + remaining.get());
 }
 
 } // namespace sihd::sys::internal

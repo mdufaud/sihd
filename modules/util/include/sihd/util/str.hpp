@@ -68,7 +68,10 @@ std::string wrap(std::string_view s, size_t max_width, std::string_view end_with
 // iec -> 1K = 1024B
 std::string bytes_str(int64_t bytes, bool iec = true);
 
+// control characters and punctuation included
 std::string generate_random(size_t size);
+// alphanumeric only: safe for file names
+std::string generate_random_printable(size_t size);
 
 bool print(std::string_view str);
 bool println(std::string_view str);

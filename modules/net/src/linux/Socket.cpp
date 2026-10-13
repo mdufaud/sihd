@@ -21,11 +21,11 @@ SIHD_LOGGER;
 bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
     socklen_t length = sizeof(int);
-    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length);
+    bool found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_DOMAIN, domain, &length).has_value();
     length = sizeof(int);
-    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length);
+    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_TYPE, type, &length).has_value();
     length = sizeof(int);
-    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length);
+    found = found && sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_PROTOCOL, protocol, &length).has_value();
     return found;
 }
 
@@ -37,9 +37,9 @@ std::expected<void, Error> Socket::bind_socket_to_device(int socket, std::string
         return std::unexpected(Error(ErrorCode::invalid_argument, "Socket: device name too long: {}", name));
     char device_name[IFNAMSIZ] = {0};
     memcpy(device_name, name.data(), name.size());
-    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name)))
-        return {};
-    return std::unexpected(make_error("Socket: bind to device error"));
+    auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE, device_name, sizeof(device_name));
+    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not bind to device");
+    return {};
 }
 
 std::expected<void, Error> Socket::set_socket_blocking(int socket, bool active)
@@ -77,9 +77,9 @@ std::expected<void, Error> Socket::set_socket_recv_timeout(int socket, int milli
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::closed, "Socket: cannot set recv timeout on a closed socket"));
     const timeval tv {milliseconds / 1000, (milliseconds % 1000) * 1000};
-    if (sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
-        return {};
-    return std::unexpected(make_error("Socket: could not set recv timeout"));
+    auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    SIHD_UNEXPECTED_RETURN_CTX(res, "Socket: could not set recv timeout");
+    return {};
 }
 
 } // namespace sihd::net

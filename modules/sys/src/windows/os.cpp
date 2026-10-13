@@ -39,6 +39,7 @@ using _NtQuerySystemInformation = NTSTATUS(WINAPI *)(SYSTEM_INFORMATION_CLASS, P
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
@@ -82,37 +83,34 @@ pid_t pid()
     return GetCurrentProcessId();
 }
 
-rlim_t max_fds()
+std::expected<rlim_t, Error> max_fds()
 {
     return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
 }
 
-bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
+std::expected<void, Error> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
-    bool ret = ::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) == 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: ioctl error: {}", last_socket_error_str());
-    return ret;
+    if (::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) != 0)
+        return std::unexpected(Error(ErrorCode::io_error, "could not ioctl: {}", last_socket_error_str()));
+    return {};
 }
 
-bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
+std::expected<void, Error> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
-        throw std::runtime_error("OS: cannot setsockopt on a negative socket");
-    bool ret = ::setsockopt(socket, level, optname, (const char *)optval, optlen) >= 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: setsockopt error: {}", last_socket_error_str());
-    return ret;
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
+    if (::setsockopt(socket, level, optname, static_cast<const char *>(optval), optlen) != 0)
+        return std::unexpected(Error(ErrorCode::io_error, "could not setsockopt: {}", last_socket_error_str()));
+    return {};
 }
 
-bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
+std::expected<void, Error> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
-        throw std::runtime_error("OS: cannot getsockopt on a negative socket");
-    bool ret = ::getsockopt(socket, level, optname, (char *)optval, optlen) >= 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", last_socket_error_str());
-    return ret;
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
+    if (::getsockopt(socket, level, optname, static_cast<char *>(optval), optlen) != 0)
+        return std::unexpected(Error(ErrorCode::io_error, "could not getsockopt: {}", last_socket_error_str()));
+    return {};
 }
 
 Timestamp filetime_to_timestamp(uint64_t filetime_ticks)
@@ -186,16 +184,12 @@ Timestamp boot_time()
  *          http://creativecommons.org/licenses/by/3.0/deed.en_US
  */
 
-/**
- * Returns the peak (maximum so far) resident set size (physical
- * memory use) measured in bytes, or zero if the value cannot be
- * determined on this OS.
- */
-ssize_t peak_rss()
+std::expected<ssize_t, Error> peak_rss()
 {
     PROCESS_MEMORY_COUNTERS info;
-    GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-    return (ssize_t)info.PeakWorkingSetSize;
+    if (GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info)) == FALSE)
+        return std::unexpected(Error(ErrorCode::io_error, "could not peak rss: {}", last_error_str()));
+    return static_cast<ssize_t>(info.PeakWorkingSetSize);
 }
 
 /**
@@ -204,9 +198,9 @@ ssize_t peak_rss()
  */
 ssize_t current_rss()
 {
-    PROCESS_MEMORY_COUNTERS info;
+    PROCESS_MEMORY_COUNTERS info = {};
     GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info));
-    return (ssize_t)info.WorkingSetSize;
+    return static_cast<ssize_t>(info.WorkingSetSize);
 }
 
 std::string error_str(int error_code)
@@ -241,6 +235,20 @@ std::string last_error_str()
     return error_str(GetLastError());
 }
 
+std::expected<void, Error> mem_lock(const void *addr, size_t len)
+{
+    if (!VirtualLock(const_cast<LPVOID>(addr), len))
+        return std::unexpected(Error(ErrorCode::io_error, "could not mem_lock: {}", last_error_str()));
+    return {};
+}
+
+std::expected<void, Error> mem_unlock(const void *addr, size_t len)
+{
+    if (!VirtualUnlock(const_cast<LPVOID>(addr), len))
+        return std::unexpected(Error(ErrorCode::io_error, "could not mem_unlock: {}", last_error_str()));
+    return {};
+}
+
 int last_socket_error()
 {
     return WSAGetLastError();
@@ -254,6 +262,12 @@ std::string last_socket_error_str()
 bool is_run_by_debugger()
 {
     return IsDebuggerPresent();
+}
+
+bool is_run_by_wine()
+{
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    return ntdll != nullptr && GetProcAddress(ntdll, "wine_get_version") != nullptr;
 }
 
 ssize_t backtrace(int fd, size_t backtrace_size)

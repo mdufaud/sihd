@@ -37,6 +37,7 @@
 #endif
 
 #include <ctype.h>
+#include <sys/mman.h>
 
 #include <algorithm>
 #include <cerrno>
@@ -48,6 +49,7 @@
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
@@ -94,7 +96,7 @@ pid_t pid()
     return getpid();
 }
 
-rlim_t max_fds()
+std::expected<rlim_t, Error> max_fds()
 {
     if constexpr (sihd::util::build::is_emscripten)
     {
@@ -103,38 +105,34 @@ rlim_t max_fds()
     struct rlimit r;
     if (getrlimit(RLIMIT_NOFILE, &r) == -1)
     {
-        SIHD_LOG(error, "OS: getrlim_t {}", last_error_str());
-        return 0;
+        return std::unexpected(Error::from_errno("could not getrlimit max fds"));
     }
     return r.rlim_cur;
 }
 
-bool ioctl(int fd, unsigned long request, void *arg_ptr, bool logerror)
+std::expected<void, Error> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
-    bool ret = ::ioctl(fd, request, arg_ptr) == 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: ioctl error: {}", last_error_str());
-    return ret;
+    if (::ioctl(fd, request, arg_ptr) == -1)
+        return std::unexpected(Error::from_errno("could not ioctl"));
+    return {};
 }
 
-bool setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen, bool logerror)
+std::expected<void, Error> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
-        throw std::runtime_error("OS: cannot setsockopt on a negative socket");
-    bool ret = ::setsockopt(socket, level, optname, optval, optlen) >= 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: setsockopt error: {}", last_error_str());
-    return ret;
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
+    if (::setsockopt(socket, level, optname, optval, optlen) == -1)
+        return std::unexpected(Error::from_errno("could not setsockopt"));
+    return {};
 }
 
-bool getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen, bool logerror)
+std::expected<void, Error> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
-        throw std::runtime_error("OS: cannot getsockopt on a negative socket");
-    bool ret = ::getsockopt(socket, level, optname, optval, optlen) >= 0;
-    if (!ret && logerror)
-        SIHD_LOG(error, "OS: getsockopt error: {}", last_error_str());
-    return ret;
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
+    if (::getsockopt(socket, level, optname, optval, optlen) == -1)
+        return std::unexpected(Error::from_errno("could not getsockopt"));
+    return {};
 }
 
 Timestamp boot_time()
@@ -275,14 +273,13 @@ ssize_t backtrace(int fd, size_t backtrace_size)
 
 /**
  * Returns the peak (maximum so far) resident set size (physical
- * memory use) measured in bytes, or zero if the value cannot be
- * determined on this OS.
+ * memory use) measured in bytes.
  */
-ssize_t peak_rss()
+std::expected<ssize_t, Error> peak_rss()
 {
     if constexpr (sihd::util::build::is_emscripten)
     {
-        return -1L;
+        return std::unexpected(Error(ErrorCode::not_supported, "peak_rss is not supported on this platform"));
     }
 #if defined(__SIHD_AIX__) || defined(__SIHD_SUN__)
 
@@ -290,35 +287,33 @@ ssize_t peak_rss()
     int fd = -1;
     if ((fd = open("/proc/self/psinfo", O_RDONLY)) == -1)
     {
-        SIHD_LOG(error, "OS: peak_rss open: {}", last_error_str());
-        return (ssize_t)-1L;
+        return std::unexpected(Error::from_errno("could not open psinfo"));
     }
     if (read(fd, &psinfo, sizeof(psinfo)) != sizeof(psinfo))
     {
-        SIHD_LOG(error, "OS: peak_rss read: {}", last_error_str());
+        auto error = Error::from_errno("could not read psinfo");
         close(fd);
-        return (ssize_t)-1L;
+        return std::unexpected(std::move(error));
     }
     close(fd);
-    return (ssize_t)(psinfo.pr_rssize * 1024L);
+    return static_cast<ssize_t>(psinfo.pr_rssize * 1024L);
 
 #elif defined(__SIHD_LINUX__) || defined(__SIHD_APPLE__)
 
     struct rusage rusage;
     if (getrusage(RUSAGE_SELF, &rusage) == -1)
     {
-        SIHD_LOG(error, "OS: peak_rss getrusage: {}", last_error_str());
-        return (ssize_t)-1L;
+        return std::unexpected(Error::from_errno("could not getrusage"));
     }
 # if defined(__SIHD_APPLE__)
-    return (ssize_t)rusage.ru_maxrss;
+    return static_cast<ssize_t>(rusage.ru_maxrss);
 # else
-    return (ssize_t)(rusage.ru_maxrss * 1024L);
+    return static_cast<ssize_t>(rusage.ru_maxrss * 1024L);
 # endif
 
 #else
 # pragma message("os::peak_rss is not supported on this platform")
-    return (ssize_t)-1L;
+    return std::unexpected(Error(ErrorCode::not_supported, "peak_rss is not supported on this platform"));
 #endif
 }
 
@@ -364,6 +359,32 @@ std::string error_str(int error_code)
 {
     char buf[128] = {};
     return strerror_result(strerror_r(error_code, buf, sizeof(buf)), buf);
+}
+
+std::expected<void, Error> mem_lock(const void *addr, size_t len)
+{
+#if defined(__SIHD_EMSCRIPTEN__)
+    (void)addr;
+    (void)len;
+    return std::unexpected(Error(ErrorCode::not_supported, "mem_lock is not supported on this platform"));
+#else
+    if (mlock(addr, len) == -1)
+        return std::unexpected(Error::from_errno("could not mem_lock"));
+    return {};
+#endif
+}
+
+std::expected<void, Error> mem_unlock(const void *addr, size_t len)
+{
+#if defined(__SIHD_EMSCRIPTEN__)
+    (void)addr;
+    (void)len;
+    return std::unexpected(Error(ErrorCode::not_supported, "mem_unlock is not supported on this platform"));
+#else
+    if (munlock(addr, len) == -1)
+        return std::unexpected(Error::from_errno("could not mem_unlock"));
+    return {};
+#endif
 }
 
 int last_error()
@@ -420,6 +441,11 @@ bool is_run_by_debugger()
 
     return false;
 #endif
+}
+
+bool is_run_by_wine()
+{
+    return false;
 }
 
 } // namespace sihd::sys::os

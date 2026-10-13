@@ -139,12 +139,12 @@ struct CapabilitySet::Impl
 
 CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>())
 {
-    this->refresh();
+    (void)this->refresh();
 }
 
 CapabilitySet::~CapabilitySet() = default;
 
-bool CapabilitySet::refresh()
+std::expected<void, sihd::util::Error> CapabilitySet::refresh()
 {
     _impl->close();
     _impl->present.clear();
@@ -152,25 +152,18 @@ bool CapabilitySet::refresh()
     _impl->desired.clear();
 
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &_impl->token) == 0)
-    {
-        SIHD_LOG(error, "CapabilitySet: OpenProcessToken failed");
-        return false;
-    }
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error, "could not open the process token"));
 
     DWORD size = 0;
     GetTokenInformation(_impl->token, TokenPrivileges, nullptr, 0, &size);
     if (size == 0)
-    {
-        SIHD_LOG(error, "CapabilitySet: GetTokenInformation returned no size");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "could not query the token information size"));
 
     std::vector<BYTE> buffer(size);
     if (GetTokenInformation(_impl->token, TokenPrivileges, buffer.data(), size, &size) == 0)
-    {
-        SIHD_LOG(error, "CapabilitySet: GetTokenInformation failed");
-        return false;
-    }
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::io_error, "could not query the token privileges"));
 
     const TOKEN_PRIVILEGES *token_privileges = reinterpret_cast<const TOKEN_PRIVILEGES *>(buffer.data());
     for (Cap cap : cap::all())
@@ -195,7 +188,7 @@ bool CapabilitySet::refresh()
         _impl->enabled[cap] = is_enabled;
         _impl->desired[cap] = is_enabled;
     }
-    return true;
+    return {};
 }
 
 bool CapabilitySet::is_enabled(Cap cap) const
@@ -244,20 +237,18 @@ void CapabilitySet::drop_all()
         wanted = false;
 }
 
-bool CapabilitySet::apply()
+std::expected<void, sihd::util::Error> CapabilitySet::apply()
 {
     if (_impl->token == nullptr)
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "capability set is not refreshed"));
 
     // adjust rights asked for only now
     HANDLE token = nullptr;
     if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &token) == 0)
-    {
-        SIHD_LOG(error, "CapabilitySet: OpenProcessToken failed");
-        return false;
-    }
+        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error, "could not open the process token"));
 
-    bool success = true;
+    std::string failed;
     for (const auto & [cap, wanted] : _impl->desired)
     {
         if (_impl->enabled[cap] == wanted)
@@ -277,14 +268,18 @@ bool CapabilitySet::apply()
         // AdjustTokenPrivileges succeeds even when the privilege was not assigned
         if (GetLastError() != ERROR_SUCCESS)
         {
-            SIHD_LOG(error, "CapabilitySet: cannot set privilege {}", cap::to_name(cap));
-            success = false;
+            if (!failed.empty())
+                failed += ", ";
+            failed += cap::to_name(cap);
             continue;
         }
         _impl->enabled[cap] = wanted;
     }
     CloseHandle(token);
-    return success;
+    if (!failed.empty())
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::permission_denied, "could not set privileges: {}", failed));
+    return {};
 }
 
 } // namespace sihd::sys

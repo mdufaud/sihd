@@ -238,7 +238,7 @@ std::expected<std::string, Error> make_tmp_directory(std::string_view prefix)
     std::expected<void, Error> made = std::unexpected(Error(io_error, "no directory created"));
     for (int attempt = 0; attempt < 8; ++attempt)
     {
-        const std::string path = base + str::generate_random(8);
+        const std::string path = base + str::generate_random_printable(8);
         made = make_directory(path);
         if (made)
             return path;

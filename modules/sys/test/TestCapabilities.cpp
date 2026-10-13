@@ -69,7 +69,7 @@ TEST_F(TestCapabilities, test_capabilities_availability)
 TEST_F(TestCapabilities, test_capabilities_query)
 {
     CapabilitySet caps;
-    EXPECT_TRUE(caps.refresh());
+    EXPECT_TRUE(caps.refresh().has_value());
 
     // querying own capabilities never requires privileges
     for (Cap cap : cap::all())
@@ -124,17 +124,17 @@ TEST_F(TestCapabilities, test_capabilities_raise_permitted_as_root)
     // a permitted capability can leave and re-enter the effective set
     EXPECT_TRUE(caps.drop(permitted_cap));
     EXPECT_FALSE(caps.is_enabled(permitted_cap));
-    EXPECT_TRUE(caps.apply());
+    EXPECT_TRUE(caps.apply().has_value());
 
-    EXPECT_TRUE(caps.refresh());
+    EXPECT_TRUE(caps.refresh().has_value());
     EXPECT_FALSE(caps.is_enabled(permitted_cap));
     EXPECT_TRUE(caps.permitted(permitted_cap));
 
     EXPECT_TRUE(caps.raise(permitted_cap));
     EXPECT_TRUE(caps.is_enabled(permitted_cap));
-    EXPECT_TRUE(caps.apply());
+    EXPECT_TRUE(caps.apply().has_value());
 
-    EXPECT_TRUE(caps.refresh());
+    EXPECT_TRUE(caps.refresh().has_value());
     EXPECT_TRUE(caps.is_enabled(permitted_cap));
 }
 
@@ -151,10 +151,10 @@ TEST_F(TestCapabilities, test_capabilities_drop)
     for (Cap cap : cap::all())
         EXPECT_FALSE(caps.is_enabled(cap));
 
-    EXPECT_TRUE(caps.apply());
+    EXPECT_TRUE(caps.apply().has_value());
 
     // the process really lost them
-    EXPECT_TRUE(caps.refresh());
+    EXPECT_TRUE(caps.refresh().has_value());
     EXPECT_TRUE(caps.enabled().empty());
     for (Cap cap : saved)
         EXPECT_FALSE(cap::has(cap));
@@ -162,9 +162,9 @@ TEST_F(TestCapabilities, test_capabilities_drop)
     // restore: the permitted set was untouched, so every saved capability can be raised again
     for (Cap cap : saved)
         EXPECT_TRUE(caps.raise(cap));
-    EXPECT_TRUE(caps.apply());
+    EXPECT_TRUE(caps.apply().has_value());
 
-    EXPECT_TRUE(caps.refresh());
+    EXPECT_TRUE(caps.refresh().has_value());
     EXPECT_EQ(caps.enabled(), saved);
     for (Cap cap : saved)
         EXPECT_TRUE(cap::has(cap));

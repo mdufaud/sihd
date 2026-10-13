@@ -712,13 +712,17 @@ void LuaSysApi::load_tools(Vm & vm)
             +[] { return STDERR_FILENO; })
         .addFunction("backtrace", &sihd::sys::os::backtrace)
         .addFunction("pid", &sihd::sys::os::pid)
-        .addFunction("max_fds", &sihd::sys::os::max_fds)
+        .addFunction(
+            "max_fds",
+            +[] { return sihd::sys::os::max_fds().value_or(0); })
         .addFunction("is_run_by_debugger", &sihd::sys::os::is_run_by_debugger)
         .addFunction("is_run_by_valgrind", &sihd::sys::os::is_run_by_valgrind)
         .addProperty(
             "is_run_with_asan",
             +[] { return sihd::util::build::is_run_with_asan; })
-        .addFunction("peak_rss", &sihd::sys::os::peak_rss)
+        .addFunction(
+            "peak_rss",
+            +[] { return sihd::sys::os::peak_rss().value_or(-1); })
         .addFunction("current_rss", &sihd::sys::os::current_rss)
         .endNamespace() // os
         .beginNamespace("user")

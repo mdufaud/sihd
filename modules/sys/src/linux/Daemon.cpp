@@ -102,9 +102,10 @@ bool Daemon::run()
             SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _user.to_string());
         }
         // a daemon that keeps running as root after a requested drop is a privilege escalation
-        if (user::drop_privileges(_user, _group) == false)
+        auto dropped = user::drop_privileges(_user, _group);
+        if (!dropped)
         {
-            SIHD_LOG(error, "Daemon: cannot drop privileges to uid {}", _user.to_string());
+            SIHD_LOG(error, "Daemon: cannot drop privileges to uid {}: {}", _user.to_string(), dropped.error().message);
             _exit(4);
         }
     }

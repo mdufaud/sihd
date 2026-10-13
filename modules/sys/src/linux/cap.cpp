@@ -214,21 +214,18 @@ struct CapabilitySet::Impl
 
 CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>())
 {
-    this->refresh();
+    (void)this->refresh();
 }
 
 CapabilitySet::~CapabilitySet() = default;
 
-bool CapabilitySet::refresh()
+std::expected<void, sihd::util::Error> CapabilitySet::refresh()
 {
     _impl->clear();
     _impl->caps = cap_get_proc();
     if (_impl->caps == nullptr)
-    {
-        SIHD_LOG(error, "CapabilitySet: cap_get_proc failed");
-        return false;
-    }
-    return true;
+        return std::unexpected(sihd::util::Error::from_errno("could not read the process capability set"));
+    return {};
 }
 
 bool CapabilitySet::is_enabled(Cap cap) const
@@ -270,20 +267,17 @@ void CapabilitySet::drop_all()
         _impl->set_flag(cap, CAP_EFFECTIVE, false);
 }
 
-bool CapabilitySet::apply()
+std::expected<void, sihd::util::Error> CapabilitySet::apply()
 {
     if (_impl->caps == nullptr)
-        return false;
+        return std::unexpected(
+            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "capability set is not refreshed"));
     if (cap_set_proc(_impl->caps) != 0)
-    {
-        SIHD_LOG(error, "CapabilitySet: cap_set_proc failed");
-        return false;
-    }
-    return true;
+        return std::unexpected(sihd::util::Error::from_errno("could not apply the process capability set"));
+    return {};
 }
 
 #else
-
 struct CapabilitySet::Impl
 {
 };
@@ -327,9 +321,10 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>()) {}
 
 CapabilitySet::~CapabilitySet() = default;
 
-bool CapabilitySet::refresh()
+std::expected<void, sihd::util::Error> CapabilitySet::refresh()
 {
-    return false;
+    return std::unexpected(
+        sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));
 }
 
 bool CapabilitySet::is_enabled([[maybe_unused]] Cap cap) const
@@ -359,9 +354,10 @@ bool CapabilitySet::drop([[maybe_unused]] Cap cap)
 
 void CapabilitySet::drop_all() {}
 
-bool CapabilitySet::apply()
+std::expected<void, sihd::util::Error> CapabilitySet::apply()
 {
-    return false;
+    return std::unexpected(
+        sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));
 }
 
 #endif

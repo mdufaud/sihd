@@ -73,6 +73,13 @@ std::expected<size_t, Error> size_result(std::expected<ssize_t, Error> && res)
     return std::unexpected(std::move(res).error());
 }
 
+std::expected<void, Error> opt_result(std::string_view op, std::expected<void, Error> res)
+{
+    if (res.has_value())
+        return res;
+    return std::unexpected(Error(res.error().code, "Socket: {}: {}", op, std::move(res).error().message));
+}
+
 std::expected<void, Error> opt_result(std::string_view op, bool ok)
 {
     if (ok)
@@ -257,14 +264,20 @@ bool Socket::is_socket_tcp_nodelay(int socket)
 {
     int opt;
     socklen_t len = sizeof(opt);
-    return sihd::sys::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len, true) && opt != 0;
+    auto res = sihd::sys::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len);
+    if (SIHD_UNEXPECTED_LOG(res))
+        return false;
+    return opt != 0;
 }
 
 bool Socket::is_socket_broadcast(int socket)
 {
-    int res;
+    int res_opt;
     socklen_t length = sizeof(int);
-    return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res, &length, true) && res != 0;
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res_opt, &length);
+    if (SIHD_UNEXPECTED_LOG(res))
+        return false;
+    return res_opt != 0;
 }
 
 std::expected<void, Error> Socket::set_socket_keepalive(int socket, bool active)
@@ -282,7 +295,10 @@ bool Socket::is_socket_keepalive(int socket)
     int opt = 0;
 #endif
     socklen_t len = sizeof(opt);
-    return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &opt, &len, true) && opt != 0;
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &opt, &len);
+    if (SIHD_UNEXPECTED_LOG(res))
+        return false;
+    return opt != 0;
 }
 
 #ifdef SO_REUSEPORT
@@ -296,7 +312,10 @@ bool Socket::is_socket_reuseport(int socket)
 {
     int opt;
     socklen_t len = sizeof(opt);
-    return sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_REUSEPORT, &opt, &len, true) && opt != 0;
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_REUSEPORT, &opt, &len);
+    if (SIHD_UNEXPECTED_LOG(res))
+        return false;
+    return opt != 0;
 }
 #endif
 
@@ -314,7 +333,8 @@ int Socket::get_socket_rcvbuf(int socket)
 {
     int val = -1;
     socklen_t len = sizeof(val);
-    sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_RCVBUF, &val, &len, true);
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_RCVBUF, &val, &len);
+    SIHD_UNEXPECTED_LOG(res);
     return val;
 }
 
@@ -322,7 +342,8 @@ int Socket::get_socket_sndbuf(int socket)
 {
     int val = -1;
     socklen_t len = sizeof(val);
-    sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_SNDBUF, &val, &len, true);
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_SNDBUF, &val, &len);
+    SIHD_UNEXPECTED_LOG(res);
     return val;
 }
 
@@ -330,7 +351,8 @@ std::optional<int> Socket::get_socket_error(int socket)
 {
     int so_error = 0;
     socklen_t len = sizeof(so_error);
-    if (sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_ERROR, &so_error, &len) == false)
+    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_ERROR, &so_error, &len);
+    if (!res)
         return std::nullopt;
     return so_error;
 }

@@ -4,6 +4,7 @@
 
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
@@ -56,7 +57,8 @@ TEST_F(TestCrashHandler, test_crash_handler_already_installed)
 
 TEST_F(TestCrashHandler, test_crash_handler_dump)
 {
-    const std::string dump_path = fs::combine(fs::tmp_path(), "sihd_crash_" + str::generate_random(8) + ".dmp");
+    const std::string dump_path = fs::combine(fs::tmp_path(),
+                                              "sihd_crash_" + str::generate_random_printable(8) + ".dmp");
 
     std::string output;
     proc::Options options;
@@ -83,7 +85,10 @@ TEST_F(TestCrashHandler, test_crash_handler_dump)
         const auto report = fs::read_all(dump_path);
         ASSERT_TRUE(report.has_value());
         EXPECT_NE(report->find("fatal signal 11"), std::string::npos);
-        EXPECT_NE(report->find("backtrace"), std::string::npos);
+        if constexpr (os::backtrace_supported)
+        {
+            EXPECT_NE(report->find("backtrace"), std::string::npos);
+        }
     }
     EXPECT_NE(output.find("fatal "), std::string::npos);
     SIHD_LOG(debug, "crash output: {}", output);

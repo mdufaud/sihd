@@ -65,15 +65,7 @@ void write_hex(int fd, uintptr_t value)
 
 LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
 {
-    if (info != nullptr && info->ExceptionRecord != nullptr)
-    {
-        write_str(stderr_fd, "fatal exception 0x");
-        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionCode);
-        write_str(stderr_fd, " at 0x");
-        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionAddress);
-        write_str(stderr_fd, "\n");
-    }
-    os::backtrace(stderr_fd);
+    // dump first: the symbolizer/stderr writes below can crash the filter (nested exception), losing the dump
     if (g_dump_path.empty() == false)
     {
         HANDLE file = CreateFileA(g_dump_path.c_str(),
@@ -83,7 +75,9 @@ LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
                                   CREATE_ALWAYS,
                                   FILE_ATTRIBUTE_NORMAL,
                                   nullptr);
-        if (file != INVALID_HANDLE_VALUE)
+        if (file == INVALID_HANDLE_VALUE)
+            write_str(stderr_fd, "could not create the dump file\n");
+        else
         {
             MINIDUMP_EXCEPTION_INFORMATION dump_info;
             dump_info.ThreadId = GetCurrentThreadId();
@@ -99,6 +93,15 @@ LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
             CloseHandle(file);
         }
     }
+    if (info != nullptr && info->ExceptionRecord != nullptr)
+    {
+        write_str(stderr_fd, "fatal exception 0x");
+        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionCode);
+        write_str(stderr_fd, " at 0x");
+        write_hex(stderr_fd, (uintptr_t)info->ExceptionRecord->ExceptionAddress);
+        write_str(stderr_fd, "\n");
+    }
+    os::backtrace(stderr_fd);
     // rethrow chains to WER/JIT; otherwise terminate with the exception code,
     // symmetric to the unix rethrow=false (_exit 128+sig)
     if (g_rethrow.load(std::memory_order_relaxed))

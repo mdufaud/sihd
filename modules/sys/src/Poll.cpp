@@ -127,7 +127,11 @@ void Poll::resize(int nfds)
 bool Poll::set_limit(int limit)
 {
     if (limit < 0)
-        _max_fds = os::max_fds();
+    {
+        auto fds = os::max_fds();
+        SIHD_UNEXPECTED_LOG(fds);
+        _max_fds = fds.value_or(0);
+    }
     else
         _max_fds = limit;
     return true;

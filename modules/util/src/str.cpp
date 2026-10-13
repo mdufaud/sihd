@@ -43,6 +43,19 @@ namespace sihd::util::str
 namespace
 {
 
+std::string generate_from_charset(size_t size, std::string_view charset)
+{
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<size_t> dist(0, charset.size() - 1);
+
+    std::string str;
+    str.reserve(size);
+    for (size_t i = 0; i < size; ++i)
+        str.push_back(charset[dist(rng)]);
+    return str;
+}
+
 Error parse_error(std::errc ec, std::string_view value, std::string_view type)
 {
     return Error(ec, "cannot parse '{}' as {}: {}", value, type, std::make_error_code(ec).message());
@@ -1678,18 +1691,15 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
 
 std::string generate_random(size_t size)
 {
-    constexpr std::string_view
+    static constexpr std::string_view
         charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+    return generate_from_charset(size, charset);
+}
 
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_int_distribution<size_t> dist(0, charset.size() - 1);
-
-    std::string str;
-    str.reserve(size);
-    for (size_t i = 0; i < size; ++i)
-        str.push_back(charset[dist(rng)]);
-    return str;
+std::string generate_random_printable(size_t size)
+{
+    static constexpr std::string_view charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    return generate_from_charset(size, charset);
 }
 
 std::string wrap(std::string_view s, size_t max_width, std::string_view end_with)

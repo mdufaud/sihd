@@ -21,6 +21,8 @@ class Impersonation;
 class LineReader;
 class LoggerFile;
 class LoggerSystem;
+class MemLock;
+class MessageQueue;
 class PathManager;
 class PluginLoader;
 class Poll;
@@ -28,6 +30,7 @@ class Process;
 class ProcessInfo;
 class ProcessMonitor;
 class Pty;
+class Semaphore;
 class SharedMemory;
 class SigHandler;
 #if !defined(__SIHD_WINDOWS__)

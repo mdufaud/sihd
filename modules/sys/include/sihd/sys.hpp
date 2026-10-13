@@ -14,6 +14,8 @@
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/sys/LoggerFile.hpp>
 #include <sihd/sys/LoggerSystem.hpp>
+#include <sihd/sys/MemLock.hpp>
+#include <sihd/sys/MessageQueue.hpp>
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/PluginLoader.hpp>
 #include <sihd/sys/Poll.hpp>
@@ -21,6 +23,7 @@
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/ProcessMonitor.hpp>
 #include <sihd/sys/Pty.hpp>
+#include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/SigWaiter.hpp>
