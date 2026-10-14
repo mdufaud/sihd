@@ -287,7 +287,56 @@ void screen()
     fmt::print("\n");
 }
 
-void input()
+void keyboard_input()
+{
+    SIHD_LOG(info, "Typing 'sihd rules ' into the focused window");
+    time::sleep(1);
+    if (auto typed = sihd::sys::keyboard::type_text("sihd rules "); !typed.has_value())
+        SIHD_LOG(error, "Could not type: {}", typed.error().message);
+
+    SIHD_LOG(info, "Pressing and releasing the A key");
+    time::sleep(1);
+    if (auto down = sihd::sys::keyboard::key_down(sihd::sys::keyboard::Key::a); !down.has_value())
+        SIHD_LOG(error, "Could not press the key: {}", down.error().message);
+    if (auto up = sihd::sys::keyboard::key_up(sihd::sys::keyboard::Key::a); !up.has_value())
+        SIHD_LOG(error, "Could not release the key: {}", up.error().message);
+
+    SIHD_LOG(info, "Pressing enter");
+    time::sleep(1);
+    if (auto pressed = sihd::sys::keyboard::key_press(sihd::sys::keyboard::Key::enter); !pressed.has_value())
+        SIHD_LOG(error, "Could not press: {}", pressed.error().message);
+
+    SIHD_LOG(info, "Pressing shift + s");
+    time::sleep(1);
+    if (auto shifted = sihd::sys::keyboard::key_press(sihd::sys::keyboard::Key::s,
+                                                      sihd::sys::keyboard::Modifiers::shift);
+        !shifted.has_value())
+        SIHD_LOG(error, "Could not press: {}", shifted.error().message);
+
+    SIHD_LOG(info, "Typing the invalid utf-8 bytes 0xff 0xfe and pressing Key::none - both must be rejected");
+    time::sleep(1);
+    if (sihd::sys::keyboard::type_text("\xff\xfe").has_value())
+        SIHD_LOG(error, "Invalid utf-8 was accepted");
+    if (sihd::sys::keyboard::key_press(sihd::sys::keyboard::Key::none).has_value())
+        SIHD_LOG(error, "Key::none was accepted");
+    fmt::print("\n");
+}
+
+void trace_side(int dx, int dy, int steps, int pause_ms)
+{
+    for (int i = 0; i < steps; ++i)
+    {
+        auto moved = sihd::sys::mouse::mouse_move_by(dx, dy);
+        if (!moved.has_value())
+        {
+            SIHD_LOG(error, "Could not move the cursor: {}", moved.error().message);
+            return;
+        }
+        time::msleep(pause_ms);
+    }
+}
+
+void mouse_input()
 {
     SIHD_LOG(info, "Moving the cursor to the center of the primary monitor");
     auto primary = sihd::sys::screen::primary();
@@ -300,18 +349,30 @@ void input()
     else
     {
         SIHD_LOG(error, "No primary monitor: {}", primary.error().message);
+        return;
     }
 
-    SIHD_LOG(info, "Typing into the focused window");
-    if (auto typed = sihd::sys::keyboard::type_text("sihd rules"); !typed.has_value())
-        SIHD_LOG(error, "Could not type: {}", typed.error().message);
+    SIHD_LOG(info, "Tracing a square from the center of the screen");
+    trace_side(10, 0, 20, 20);
+    trace_side(0, 10, 20, 20);
+    trace_side(-10, 0, 20, 20);
+    trace_side(0, -10, 20, 20);
 
-    SIHD_LOG(info, "Pressing ctrl + alt + s");
-    auto pressed = sihd::sys::keyboard::key_press(
-        sihd::sys::keyboard::Key::s,
-        sihd::sys::keyboard::Modifiers::ctrl | sihd::sys::keyboard::Modifiers::alt);
-    if (!pressed.has_value())
-        SIHD_LOG(error, "Could not press: {}", pressed.error().message);
+    SIHD_LOG(info, "Scrolling down");
+    for (int i = 0; i < 5; ++i)
+    {
+        if (auto scrolled = sihd::sys::mouse::mouse_scroll(0, 1); !scrolled.has_value())
+            SIHD_LOG(error, "Could not scroll: {}", scrolled.error().message);
+        time::msleep(300);
+    }
+
+    SIHD_LOG(info, "Clicking, then pressing and releasing the left button");
+    if (auto clicked = sihd::sys::mouse::mouse_click(); !clicked.has_value())
+        SIHD_LOG(error, "Could not click: {}", clicked.error().message);
+    if (auto down = sihd::sys::mouse::mouse_button(sihd::sys::mouse::MouseButton::left, true); !down.has_value())
+        SIHD_LOG(error, "Could not press the button: {}", down.error().message);
+    if (auto up = sihd::sys::mouse::mouse_button(sihd::sys::mouse::MouseButton::left, false); !up.has_value())
+        SIHD_LOG(error, "Could not release the button: {}", up.error().message);
     fmt::print("\n");
 }
 
@@ -403,9 +464,15 @@ int main(int argc, char **argv)
     }
     if constexpr (keyboard::supported)
     {
-        app.root().add_command("input", "move the cursor and type into the focused window").on_run([] {
-            demo::input();
+        app.root().add_command("keyboard", "type into the focused window - 3 seconds to focus").on_run([&app] {
+            fmt::print("Focus the window that must receive the input - Ctrl + C to abort\n");
+            app.wait_for_termination(sihd::util::Duration(time::seconds(3)));
+            demo::keyboard_input();
         });
+    }
+    if constexpr (mouse::supported)
+    {
+        app.root().add_command("mouse", "move, scroll and click the cursor").on_run([] { demo::mouse_input(); });
     }
     app.root().add_command("process", "execute a process").on_run([] { demo::process(); });
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });

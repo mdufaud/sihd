@@ -1,6 +1,3 @@
-#include <string>
-#include <vector>
-
 #include <gtest/gtest.h>
 
 #include <sihd/sys/keyboard.hpp>
@@ -14,17 +11,6 @@ namespace test
 
 using namespace sihd::util;
 using namespace sihd::sys;
-
-namespace
-{
-
-// Injection lands in the focused window of a live session: only the opt-in
-// runs (SIHD_TEST_INPUT=1) may type into the developer's desktop.
-bool input_enabled()
-{
-    const char *enabled = getenv("SIHD_TEST_INPUT");
-    return enabled != nullptr && std::string(enabled) == "1";
-}
 
 TEST(TestKeyboard, test_modifier_combination)
 {
@@ -59,27 +45,5 @@ TEST(TestKeyboard, test_no_session_is_an_error)
 }
 
 #endif
-
-TEST(TestKeyboard, test_active_injection)
-{
-    if constexpr (!keyboard::supported)
-    {
-        GTEST_SKIP() << "no keyboard backend compiled in";
-    }
-    if (!input_enabled())
-    {
-        GTEST_SKIP() << "set SIHD_TEST_INPUT=1 to type into the live session";
-    }
-
-    EXPECT_TRUE(keyboard::type_text("sihd").has_value());
-    EXPECT_TRUE(keyboard::key_press(keyboard::Key::enter).has_value());
-    EXPECT_TRUE(keyboard::key_press(keyboard::Key::c, keyboard::Modifiers::ctrl).has_value());
-    EXPECT_TRUE(keyboard::key_down(keyboard::Key::a).has_value());
-    EXPECT_TRUE(keyboard::key_up(keyboard::Key::a).has_value());
-    EXPECT_FALSE(keyboard::type_text("\xff\xfe").has_value());
-    EXPECT_FALSE(keyboard::key_press(keyboard::Key::none).has_value());
-}
-
-} // namespace
 
 } // namespace test

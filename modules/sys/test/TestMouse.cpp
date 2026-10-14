@@ -1,5 +1,3 @@
-#include <string>
-
 #include <gtest/gtest.h>
 
 #include <sihd/sys/mouse.hpp>
@@ -13,15 +11,6 @@ namespace test
 
 using namespace sihd::util;
 using namespace sihd::sys;
-
-namespace
-{
-
-bool input_enabled()
-{
-    const char *enabled = getenv("SIHD_TEST_INPUT");
-    return enabled != nullptr && std::string(enabled) == "1";
-}
 
 // Wine always provides a session and its SendInput succeeds: the sessionless
 // case is only provable on linux, where it must be a clean not_supported error.
@@ -48,26 +37,5 @@ TEST(TestMouse, test_no_session_is_an_error)
 }
 
 #endif
-
-TEST(TestMouse, test_active_injection)
-{
-    if constexpr (!mouse::supported)
-    {
-        GTEST_SKIP() << "no mouse backend compiled in";
-    }
-    if (!input_enabled())
-    {
-        GTEST_SKIP() << "set SIHD_TEST_INPUT=1 to move the live session cursor";
-    }
-
-    EXPECT_TRUE(mouse::mouse_move(10, 10).has_value());
-    EXPECT_TRUE(mouse::mouse_move_by(1, 1).has_value());
-    EXPECT_TRUE(mouse::mouse_scroll(0, 1).has_value());
-    EXPECT_TRUE(mouse::mouse_button(mouse::MouseButton::left, true).has_value());
-    EXPECT_TRUE(mouse::mouse_button(mouse::MouseButton::left, false).has_value());
-    EXPECT_TRUE(mouse::mouse_click().has_value());
-}
-
-} // namespace
 
 } // namespace test

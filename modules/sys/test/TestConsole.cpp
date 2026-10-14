@@ -59,7 +59,7 @@ TEST_F(TestConsole, test_console_size)
     if (console::is_interactive() == false)
         GTEST_SKIP() << "requires a tty";
 
-    auto res = console::size(1);
+    auto res = console::size(0);
     ASSERT_TRUE(res.has_value());
     SIHD_LOG(info, "Console size: {}x{}", res->cols, res->rows);
     EXPECT_GT(res->cols, 0);
