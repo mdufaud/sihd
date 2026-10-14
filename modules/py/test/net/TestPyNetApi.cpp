@@ -6,6 +6,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "../DirectorySwitcher.hpp"
+#include "../PyInterpreter.hpp"
 
 namespace test
 {
@@ -26,7 +27,7 @@ class TestPyNetApi: public ::testing::Test
 TEST_F(TestPyNetApi, test_pynet_base)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/net/py/test_net.py"));
 }
 } // namespace test

@@ -14,6 +14,8 @@
 #include <sihd/sys/user.hpp>
 #include <sihd/util/Logger.hpp>
 
+#include "../expected_caster.hpp"
+
 namespace sihd::py
 {
 

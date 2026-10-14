@@ -8,6 +8,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "../DirectorySwitcher.hpp"
+#include "../PyInterpreter.hpp"
 
 namespace test
 {
@@ -37,14 +38,14 @@ class TestPyHttpApi: public ::testing::Test
 TEST_F(TestPyHttpApi, test_pyhttp_navigator)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_http.py"));
 }
 
 TEST_F(TestPyHttpApi, test_pyhttp_server)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_server.py"));
 }
 } // namespace test

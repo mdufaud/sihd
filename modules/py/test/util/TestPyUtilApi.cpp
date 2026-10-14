@@ -9,6 +9,7 @@
 #include <sihd/util/ansi.hpp>
 
 #include "../DirectorySwitcher.hpp"
+#include "../PyInterpreter.hpp"
 
 namespace test
 {
@@ -30,28 +31,28 @@ class TestPyUtilApi: public ::testing::Test
 TEST_F(TestPyUtilApi, test_pyutil_node)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_node.py"));
 }
 
 TEST_F(TestPyUtilApi, test_pyutil_log)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_log.py"));
 }
 
 TEST_F(TestPyUtilApi, test_pyutil_thread)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_thread.py"));
 }
 
 TEST_F(TestPyUtilApi, test_pyutil_array)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/util/py/test_array.py"));
 }
 } // namespace test

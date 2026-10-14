@@ -27,7 +27,7 @@ class TestProviders: public ::testing::Test
 
 TEST_F(TestProviders, test_provider_array)
 {
-    int value;
+    int value = 0;
     ArrInt array = {1, 2, 3};
 
     ArrayProvider<int> provider(&array);

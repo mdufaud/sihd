@@ -11,6 +11,7 @@
 #include <sihd/util/ansi.hpp>
 
 #include "../DirectorySwitcher.hpp"
+#include "../PyInterpreter.hpp"
 
 namespace test
 {
@@ -31,21 +32,21 @@ class TestPyCoreApi: public ::testing::Test
 TEST_F(TestPyCoreApi, test_pycore_channel)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_channel.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_devpulsation)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_devpulsation.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_observer)
 {
     DirectorySwitcher d(lib_path());
-    pybind11::scoped_interpreter guard {};
+    py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer.py"));
 }
 } // namespace test

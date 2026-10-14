@@ -15,12 +15,13 @@ static_defines = ['SIHD_STATIC']
 arm32_libs = ['atomic']
 riscv64_libs = ['atomic']
 riscv32_libs = ['atomic']
+arm64_flags = ['-mbranch-protection=standard']
 
 ## mode specifics
 modes = ["debug", "fast", "size", "release"]
 
 _default_flags = [
-    "-D_FORTIFY_SOURCE=2",
+    "-D_FORTIFY_SOURCE=3",
 ]
 
 mode_debug_flags = _default_flags + ["-g", "-Og"]
@@ -33,18 +34,32 @@ android_sign_config = "./keystore.properties"
 
 ## gcc specifics
 
-gcc_flags = [
+_gcc_base_flags = [
     "-Werror",
     "-fasynchronous-unwind-tables",
     "-fexceptions",
+    "-Wno-unknown-pragmas",
+]
+
+gcc_flags = _gcc_base_flags + [
     "-fstack-protector",
     "-fstack-protector-strong",
-    "-Wno-unknown-pragmas",
+    "-ftrivial-auto-var-init=zero",
+    "-D_GLIBCXX_ASSERTIONS",
+    # -fhardened reports our explicit -D_FORTIFY_SOURCE/-D_GLIBCXX_ASSERTIONS
+    # as "not enabled by -fhardened"; identical values, so silence it
+    "-Wno-hardened",
     # "-fconcepts-diagnostics-depth=2",/
     # hide pragma messages
     # "-ftrack-macro-expansion=0",
     # "-fno-diagnostics-show-caret",
 ]
+
+# not in gcc_flags: -fhardened under -O0 turns off fortify and warns
+# (-Whardened), which -Werror fails in fast mode
+mode_debug_gcc_flags = ["-fhardened"]
+mode_size_gcc_flags = ["-fhardened"]
+mode_release_gcc_flags = ["-fhardened"]
 
 mode_size_gcc_link = ['-s']
 mode_release_gcc_link = ['-s']
@@ -60,9 +75,6 @@ gcc_shared_bin_link = [
     "-pie",
 ]
 
-if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
-    gcc_flags.append("-fdiagnostics-color=always")
-
 ## clang specifics
 
 clang_flags = [
@@ -73,6 +85,15 @@ clang_flags = [
     "-Wno-unknown-warning-option",
     # clang-22+ flags char8_t->char32_t inside vendored gtest headers
     "-Wno-character-conversion",
+    "-fstack-protector-strong",
+    "-ftrivial-auto-var-init=pattern",
+    "-D_GLIBCXX_ASSERTIONS",
+]
+
+# stack-clash only: -fcf-protection is x86-only and the x86_64 machine token
+# (underscore) is not expressible in app conf attributes
+clang_gnu_flags = [
+    "-fstack-clash-protection",
 ]
 # clang uses libstdc++ by default on Linux, libc++ on macOS
 # use clang-musl-libs if you need different libs for musl
@@ -84,6 +105,15 @@ clang_defines = [
 
 mode_size_clang_link = ['-s']
 mode_release_clang_link = ['-s']
+
+clang_link = [
+    "-Wl,-z,now",
+    "-Wl,-z,relro",
+]
+
+clang_shared_bin_link = [
+    "-pie",
+]
 
 ## fil-c specifics
 
@@ -100,7 +130,42 @@ filc_flags = [
 
 # llvm-mingw's clang warns on un-annotated pointers in unpatchable C headers
 # (libzip, openssl) — gcc-mingw silently ignores the unknown -Wno- form
-mingw_flags = gcc_flags + ["-Wno-nullability-completeness"]
+mingw_flags = _gcc_base_flags + [
+    "-fstack-protector",
+    "-fstack-protector-strong",
+    "-ftrivial-auto-var-init=pattern",
+    "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST",
+    "-Wno-nullability-completeness",
+]
+
+if hasattr(sys.stdout, 'isatty') and sys.stdout.isatty():
+    gcc_flags.append("-fdiagnostics-color=always")
+    mingw_flags.append("-fdiagnostics-color=always")
+
+## zig specifics
+
+zig_flags = [
+    "-fstack-protector-strong",
+    "-ftrivial-auto-var-init=pattern",
+    "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST",
+]
+
+zig_link = [
+    "-Wl,-z,now",
+    "-Wl,-z,relro",
+]
+
+zig_shared_bin_link = [
+    "-pie",
+]
+
+## ndk specifics
+
+ndk_flags = [
+    "-fstack-protector-strong",
+    "-ftrivial-auto-var-init=pattern",
+    "-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST",
+]
 
 ## emscripten specifics
 
