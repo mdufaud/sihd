@@ -199,6 +199,9 @@ CliInterpreter::CliInterpreter(std::string_view name, std::string_view descripti
     _cli->require_subcommand(0, 1);
     _root->bind("log-level", _log_level_str, "Logging level: emergency..debug");
     _cli->add_option("--set", _set_args, "Override a conf value: --set command.path.key=value");
+    _cli->add_flag("--generate-bash-completion", "Print the bash completion script");
+    // wide enough that the longest base option keeps its description on the same line
+    _cli->get_formatter()->column_width(40);
     if (_version.empty() == false)
         _cli->set_version_flag("--version", _version);
 }

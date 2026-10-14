@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <iterator>
 
+#include <fmt/format.h>
+
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/Logger.hpp>
@@ -23,6 +25,40 @@ namespace
 {
 
 constexpr int poll_step_ms = 50;
+
+constexpr std::string_view completion_flag = "--generate-bash-completion";
+
+constexpr std::string_view
+    completion_tip = "enable bash completion with:\n\tsource <({} --generate-bash-completion{})\n";
+
+bool stdout_is_tty()
+{
+    return isatty(fileno(stdout)) != 0;
+}
+
+// the loader command instead of the script when a terminal reads the dump flag: true when printed
+bool print_completion_tip(const std::vector<std::string> & args, const char *program)
+{
+    if (stdout_is_tty() == false)
+        return false;
+    for (const std::string & arg : args)
+    {
+        if (arg.starts_with(completion_flag) == false)
+            continue;
+        std::string_view kind = std::string_view(arg).substr(completion_flag.size());
+        if (kind.empty() == false)
+        {
+            if (kind.starts_with('=') == false)
+                continue;
+            kind.remove_prefix(1);
+            if (kind != "dynamic" && kind != "static")
+                continue;
+        }
+        fmt::print(stderr, completion_tip, program, kind == "dynamic" ? "=dynamic" : "");
+        return true;
+    }
+    return false;
+}
 
 constexpr std::string_view sink_entry_keys[] = {"logger",
                                                 "plugin",
@@ -116,14 +152,31 @@ int CliApp::run(int argc, char **argv)
     int help_status = this->_intercept_help(args);
     if (help_status >= 0)
     {
+        if (help_status == EXIT_SUCCESS && stdout_is_tty())
+            fmt::print(stderr, completion_tip, argv[0], "");
         this->_transition(Event::halt);
         return help_status;
+    }
+    if (print_completion_tip(args, argv[0]))
+    {
+        this->_transition(Event::halt);
+        return EXIT_SUCCESS;
     }
     int completion_status = this->_intercept_completion(args);
     if (completion_status >= 0)
     {
         this->_transition(Event::halt);
         return completion_status;
+    }
+    if (args.empty())
+    {
+        if (stdout_is_tty() == false)
+        {
+            fmt::print("{}", this->bash_completion());
+            this->_transition(Event::halt);
+            return EXIT_SUCCESS;
+        }
+        fmt::print(stderr, completion_tip, argv[0], "");
     }
     int status = this->_parse(args);
     if (status != 0)

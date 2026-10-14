@@ -461,8 +461,9 @@ TEST_F(TestCliApp, test_completion_static_script)
     EXPECT_EQ(complete_with_bash(script, {"my-app", ""}), "service\nhelp\n");
     // prefix filtering
     EXPECT_EQ(complete_with_bash(script, {"my-app", "ser"}), "service\n");
-    // options and flags on a dash, including the cli11 help option
-    EXPECT_EQ(complete_with_bash(script, {"my-app", "--"}), "--log-level\n--set\n--help\n--version\n");
+    // options and flags on a dash, including the cli11 help option and the completion dump
+    EXPECT_EQ(complete_with_bash(script, {"my-app", "--"}),
+              "--log-level\n--set\n--help\n--generate-bash-completion\n--version\n");
     // depth: own options plus the ancestors', fallthrough
     EXPECT_EQ(complete_with_bash(script, {"my-app", "service", "add", "--u"}), "--url\n");
     // a value option consumes the next word
@@ -540,6 +541,32 @@ TEST_F(TestCliApp, test_completion_interception_edges)
     std::string out = testing::internal::GetCapturedStdout();
     EXPECT_EQ(out.find("complete -F"), std::string::npos);
     EXPECT_EQ(conf, "--generate-bash-completion");
+}
+
+TEST_F(TestCliApp, test_bare_run_piped_emits_completion)
+{
+    CompletionVars vars;
+    CliApp app({.name = "my-app", .description = "an app", .setup_logging = false});
+    add_completion_commands(app, vars);
+    bool ran = false;
+    app.root().add_command("serve", "serve").on_run([&] { ran = true; });
+
+    // captured stdout is not a tty: a bare run loads the completion, the root help stays out
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(run_app(app, {}), EXIT_SUCCESS);
+    std::string out = testing::internal::GetCapturedStdout();
+    EXPECT_NE(out.find("complete -F _my_app -o default my-app"), std::string::npos);
+    EXPECT_EQ(out.find("Usage"), std::string::npos);
+    EXPECT_FALSE(ran);
+
+    // a run with arguments is untouched
+    CliApp app2({.name = "my-app", .setup_logging = false});
+    bool ran2 = false;
+    app2.root().add_command("serve", "serve").on_run([&] { ran2 = true; });
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(run_app(app2, {"serve"}), EXIT_SUCCESS);
+    EXPECT_EQ(testing::internal::GetCapturedStdout(), "");
+    EXPECT_TRUE(ran2);
 }
 
 TEST_F(TestCliApp, test_options_scope_and_fallthrough)
