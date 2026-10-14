@@ -13,17 +13,17 @@
 namespace sihd::sys
 {
 
-std::optional<uint16_t> service_port(std::string_view name, std::string_view proto)
+std::optional<uint16_t> service_port(const std::string & name, const std::string & proto)
 {
-    struct servent *se = getservbyname(name.data(), proto.data());
+    struct servent *se = getservbyname(name.c_str(), proto.c_str());
     if (se == nullptr)
         return std::nullopt;
     return static_cast<uint16_t>(ntohs(static_cast<uint16_t>(se->s_port)));
 }
 
-std::optional<std::string> service_name(uint16_t port, std::string_view proto)
+std::optional<std::string> service_name(uint16_t port, const std::string & proto)
 {
-    struct servent *se = getservbyport(htons(port), proto.data());
+    struct servent *se = getservbyport(htons(port), proto.c_str());
     if (se == nullptr)
         return std::nullopt;
     return std::string(se->s_name);

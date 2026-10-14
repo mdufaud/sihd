@@ -197,7 +197,7 @@ struct StdFdWrapper
         void redirect_to(std::function<void(std::string_view)> && fun);
         void redirect_to(std::string & output);
         void redirect_to(Process::FileDescType fd);
-        bool redirect_to_file(std::string_view path, bool append, mode_t open_mode);
+        bool redirect_to_file(const std::string & path, bool append, mode_t open_mode);
         void reset();
         void zero_fd_read();
 };
@@ -262,11 +262,11 @@ void StdFdWrapper::redirect_to(Process::FileDescType fd)
     this->fd_write = fd;
 }
 
-bool StdFdWrapper::redirect_to_file(std::string_view path, bool append, mode_t open_mode)
+bool StdFdWrapper::redirect_to_file(const std::string & path, bool append, mode_t open_mode)
 {
     this->fun = nullptr;
     bool success = false;
-    this->fd_write = open(path.data(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), open_mode);
+    this->fd_write = open(path.c_str(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), open_mode);
     success = this->fd_write >= 0;
     if (success)
         this->action = append ? FileAppend : File;
@@ -450,9 +450,9 @@ Process & Process::stdin_from(FileDescType fd)
     return *this;
 }
 
-bool Process::stdin_from_file(std::string_view path)
+bool Process::stdin_from_file(const std::string & path)
 {
-    _impl->pipe.std_in.fd_read = open(path.data(), O_RDONLY);
+    _impl->pipe.std_in.fd_read = open(path.c_str(), O_RDONLY);
     const bool success = _impl->pipe.std_in.fd_read >= 0;
     if (!success)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
@@ -493,7 +493,7 @@ Process & Process::stdout_to(Process & proc)
     return *this;
 }
 
-bool Process::stdout_to_file(std::string_view path, bool append)
+bool Process::stdout_to_file(const std::string & path, bool append)
 {
     return _impl->pipe.std_out.redirect_to_file(path, append, this->open_mode);
 }
@@ -532,7 +532,7 @@ Process & Process::stderr_to(Process & proc)
     return *this;
 }
 
-bool Process::stderr_to_file(std::string_view path, bool append)
+bool Process::stderr_to_file(const std::string & path, bool append)
 {
     return _impl->pipe.std_err.redirect_to_file(path, append, this->open_mode);
 }

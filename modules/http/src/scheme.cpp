@@ -16,7 +16,7 @@ int scheme_port(std::string_view scheme)
         return 80;
     if (scheme == "https" || scheme == "wss")
         return 443;
-    return sihd::sys::service_port(scheme).value_or(0);
+    return sihd::sys::service_port(std::string(scheme)).value_or(0);
 }
 
 } // namespace sihd::http

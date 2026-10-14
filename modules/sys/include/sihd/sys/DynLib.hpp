@@ -2,7 +2,6 @@
 #define __SIHD_SYS_DYNLIB_HPP__
 
 #include <string>
-#include <string_view>
 
 #include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
@@ -17,12 +16,12 @@ class DynLib
         static constexpr bool supported = !sihd::util::build::is_statically_linked && !sihd::util::build::is_emscripten;
 
         DynLib();
-        DynLib(std::string_view lib_name);
+        DynLib(const std::string & lib_name);
         ~DynLib();
 
-        sihd::util::Result<void> open(std::string_view lib_name);
+        sihd::util::Result<void> open(const std::string & lib_name);
 
-        sihd::util::Result<void *> load_symbol(std::string_view symbol_name);
+        sihd::util::Result<void *> load_symbol(const std::string & symbol_name);
 
         bool close();
 

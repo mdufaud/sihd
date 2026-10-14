@@ -28,7 +28,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
 
 // get rows/columns from CSV file
 sihd::util::Result<CsvData>
-    read_csv(std::string_view path, bool remove_header, int delimiter = ',', char comment_char = '#');
+    read_csv(const std::string & path, bool remove_header, int delimiter = ',', char comment_char = '#');
 
 // check if tuple size and header size is the same
 template <typename... Args>
@@ -56,7 +56,7 @@ std::string csv_to_str(const std::vector<std::string> & columns_tags,
 }
 
 template <typename... Args>
-sihd::util::Result<void> write_csv(std::string_view path,
+sihd::util::Result<void> write_csv(const std::string & path,
                                    const std::vector<std::string> & columns_tags,
                                    const std::vector<std::tuple<Args...>> & rows,
                                    int delimiter = ',')

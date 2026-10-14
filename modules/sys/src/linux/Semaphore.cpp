@@ -21,13 +21,13 @@ SIHD_LOGGER;
 
 #if defined(__SIHD_UNIX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_APPLE__) && !defined(__SIHD_EMSCRIPTEN__)
 
-sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
+sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
         return cleared;
 
-    sem_t *sem = sem_open(name.data(), O_CREAT | O_EXCL, mode, value);
+    sem_t *sem = sem_open(name.c_str(), O_CREAT | O_EXCL, mode, value);
     if (sem == SEM_FAILED)
         return std::unexpected(Error::from_errno("could not sem_open '{}'", name));
 
@@ -37,13 +37,13 @@ sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int v
     return {};
 }
 
-sihd::util::Result<void> Semaphore::attach(std::string_view name)
+sihd::util::Result<void> Semaphore::attach(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
         return cleared;
 
-    sem_t *sem = sem_open(name.data(), 0);
+    sem_t *sem = sem_open(name.c_str(), 0);
     if (sem == SEM_FAILED)
         return std::unexpected(Error::from_errno("could not sem_open '{}'", name));
 
@@ -122,12 +122,12 @@ sihd::util::Result<int> Semaphore::value() const
 
 // no POSIX named semaphores (android bionic, apple lacks sem_timedwait/sem_getvalue, emscripten)
 
-sihd::util::Result<void> Semaphore::create(std::string_view, unsigned int, mode_t)
+sihd::util::Result<void> Semaphore::create(const std::string &, unsigned int, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> Semaphore::attach(std::string_view)
+sihd::util::Result<void> Semaphore::attach(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

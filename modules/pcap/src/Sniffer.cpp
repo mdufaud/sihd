@@ -326,12 +326,12 @@ int Sniffer::datalink()
 
 // settings
 
-bool Sniffer::set_filter(std::string_view filter)
+bool Sniffer::set_filter(const std::string & filter)
 {
     bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
     bool optimize = true;
     struct bpf_program pcap_filter;
-    int ret = pcap_compile(_impl_ptr->pcap_ptr, &pcap_filter, filter.data(), (int)optimize, netmask);
+    int ret = pcap_compile(_impl_ptr->pcap_ptr, &pcap_filter, filter.c_str(), (int)optimize, netmask);
     if (ret == 0)
         ret = pcap_setfilter(_impl_ptr->pcap_ptr, &pcap_filter);
     pcap_freecode(&pcap_filter);

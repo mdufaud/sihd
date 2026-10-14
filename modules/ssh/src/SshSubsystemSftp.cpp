@@ -758,7 +758,7 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
     SIHD_LOG(debug, "SshSubsystemSftp: OPEN '{}' flags={:#x} mode={:o}", path, flags, mode);
 
     // Convert SFTP flags to fopen mode string
-    std::string_view open_mode;
+    std::string open_mode;
     bool has_read = (flags & SSH_FXF_READ) != 0;
     bool has_write = (flags & SSH_FXF_WRITE) != 0;
     bool has_append = (flags & SSH_FXF_APPEND) != 0;

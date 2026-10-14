@@ -4,7 +4,6 @@
 #include <sys/stat.h> // mode_t
 
 #include <string>
-#include <string_view>
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Duration.hpp>
@@ -34,9 +33,9 @@ class Semaphore
         Semaphore(const Semaphore &) = delete;
         Semaphore & operator=(const Semaphore &) = delete;
 
-        sihd::util::Result<void> create(std::string_view name, unsigned int value, mode_t mode = 0600);
+        sihd::util::Result<void> create(const std::string & name, unsigned int value, mode_t mode = 0600);
 
-        sihd::util::Result<void> attach(std::string_view name);
+        sihd::util::Result<void> attach(const std::string & name);
 
         sihd::util::Result<void> clear();
 

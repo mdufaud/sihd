@@ -101,9 +101,9 @@ sihd::util::Result<void> SshSession::fast_connect(const SshSession::ConnectOptio
         return res;
     if (auto res = this->set_verbosity(options.verbosity); !res)
         return res;
-    if (auto res = this->set_user(options.user); !res)
+    if (auto res = this->set_user(std::string(options.user)); !res)
         return res;
-    if (auto res = this->set_host(options.host); !res)
+    if (auto res = this->set_host(std::string(options.host)); !res)
         return res;
     if (auto res = this->set_port(options.port); !res)
         return res;
@@ -237,9 +237,9 @@ SshSession::AuthState SshSession::auth_gssapi()
     return AuthState(ssh_userauth_gssapi(_impl_ptr->ssh_session_ptr));
 }
 
-SshSession::AuthState SshSession::auth_password(std::string_view password)
+SshSession::AuthState SshSession::auth_password(const std::string & password)
 {
-    return AuthState(ssh_userauth_password(_impl_ptr->ssh_session_ptr, nullptr, password.data()));
+    return AuthState(ssh_userauth_password(_impl_ptr->ssh_session_ptr, nullptr, password.c_str()));
 }
 
 SshSession::AuthState SshSession::auth_key_auto(const char *passphrase)
@@ -247,7 +247,7 @@ SshSession::AuthState SshSession::auth_key_auto(const char *passphrase)
     return AuthState(ssh_userauth_publickey_auto(_impl_ptr->ssh_session_ptr, nullptr, passphrase));
 }
 
-SshSession::AuthState SshSession::auth_key_file(std::string_view private_key_path, const char *passphrase)
+SshSession::AuthState SshSession::auth_key_file(const std::string & private_key_path, const char *passphrase)
 {
     SshKey key;
 
@@ -260,7 +260,7 @@ SshSession::AuthState SshSession::auth_key_file(std::string_view private_key_pat
     return this->auth_key(key);
 }
 
-SshSession::AuthState SshSession::auth_key_try_file(std::string_view public_key_path)
+SshSession::AuthState SshSession::auth_key_try_file(const std::string & public_key_path)
 {
     SshKey key;
 
@@ -341,14 +341,14 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
     return AuthState(r);
 }
 
-sihd::util::Result<void> SshSession::set_user(std::string_view user)
+sihd::util::Result<void> SshSession::set_user(const std::string & user)
 {
-    return set_ssh_option(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.data());
+    return set_ssh_option(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.c_str());
 }
 
-sihd::util::Result<void> SshSession::set_host(std::string_view host)
+sihd::util::Result<void> SshSession::set_host(const std::string & host)
 {
-    return set_ssh_option(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.data());
+    return set_ssh_option(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.c_str());
 }
 
 sihd::util::Result<void> SshSession::set_port(int port)
@@ -366,9 +366,9 @@ sihd::util::Result<void> SshSession::set_process_config(bool enable)
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "process_config", SSH_OPTIONS_PROCESS_CONFIG, &enable);
 }
 
-sihd::util::Result<void> SshSession::set_ssh_dir(std::string_view path)
+sihd::util::Result<void> SshSession::set_ssh_dir(const std::string & path)
 {
-    return set_ssh_option(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.data());
+    return set_ssh_option(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.c_str());
 }
 
 sihd::util::Result<void> SshSession::set_timeout(int seconds)

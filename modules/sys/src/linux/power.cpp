@@ -17,9 +17,9 @@ SIHD_NEW_LOGGER("sihd::sys::power");
 namespace
 {
 
-constexpr std::string_view power_supply_dir = "/sys/class/power_supply";
+constexpr const char *power_supply_dir = "/sys/class/power_supply";
 
-std::optional<std::string> read_str(std::string_view path)
+std::optional<std::string> read_str(const std::string & path)
 {
     const auto content = fs::read_all(path);
     if (!content)
@@ -27,7 +27,7 @@ std::optional<std::string> read_str(std::string_view path)
     return std::string(str::trim(*content));
 }
 
-std::optional<uint64_t> read_uint(std::string_view path)
+std::optional<uint64_t> read_uint(const std::string & path)
 {
     const auto content = fs::read_all(path);
     if (!content)

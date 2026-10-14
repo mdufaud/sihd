@@ -1,5 +1,5 @@
 #include <iostream>
-#include <string_view>
+#include <string>
 
 #include <fmt/core.h>
 
@@ -10,7 +10,7 @@ using namespace sihd::lua;
 
 #define PROMPT "$> "
 
-static void run_line(Vm & vm, std::string_view str)
+static void run_line(Vm & vm, const std::string & str)
 {
     if (auto res = vm.do_string(str); !res)
         std::cerr << fmt::format("{} (code = {})\n", res.error().message, (int)res.error().code);

@@ -94,7 +94,7 @@ class Process: public sihd::util::IHandler<Poll *>,
          */
         Process & stdin_close();
         Process & stdin_from(const std::string & input);
-        bool stdin_from_file(std::string_view path);
+        bool stdin_from_file(const std::string & path);
         Process & stdin_from(FileDescType fd);
         // Close stdin pipe after execution so that the process do not hang
         Process & stdin_close_after_exec(bool activate);
@@ -104,14 +104,14 @@ class Process: public sihd::util::IHandler<Poll *>,
         Process & stdout_to(std::string & output);
         Process & stdout_to(Process & proc);
         Process & stdout_to(FileDescType fd);
-        bool stdout_to_file(std::string_view path, bool append = false);
+        bool stdout_to_file(const std::string & path, bool append = false);
 
         Process & stderr_close();
         Process & stderr_to(std::function<void(std::string_view)> fun);
         Process & stderr_to(std::string & output);
         Process & stderr_to(Process & proc);
         Process & stderr_to(FileDescType fd);
-        bool stderr_to_file(std::string_view path, bool append = false);
+        bool stderr_to_file(const std::string & path, bool append = false);
 
         void clear_argv();
         Process & add_argv(std::string_view arg);

@@ -29,9 +29,9 @@ HANDLE int_to_handle(int fd)
     return reinterpret_cast<HANDLE>(static_cast<intptr_t>(fd));
 }
 
-sihd::util::Result<Mapping> open_map(std::string_view path, DWORD desired_access, DWORD protect, DWORD view_access)
+sihd::util::Result<Mapping> open_map(const std::string & path, DWORD desired_access, DWORD protect, DWORD view_access)
 {
-    HANDLE handle = CreateFileA(path.data(),
+    HANDLE handle = CreateFileA(path.c_str(),
                                 desired_access,
                                 FILE_SHARE_READ,
                                 nullptr,
@@ -76,7 +76,7 @@ sihd::util::Result<Mapping> open_map(std::string_view path, DWORD desired_access
 
 } // namespace
 
-sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, mode_t mode)
+sihd::util::Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
 {
     (void)mode;
     auto cleared = this->clear();
@@ -84,7 +84,7 @@ sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, 
         return cleared;
     if (size == 0)
         return std::unexpected(Error(invalid_argument, "cannot map an empty size"));
-    HANDLE handle = CreateFileA(path.data(),
+    HANDLE handle = CreateFileA(path.c_str(),
                                 GENERIC_READ | GENERIC_WRITE,
                                 FILE_SHARE_READ,
                                 nullptr,
@@ -131,7 +131,7 @@ sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -147,7 +147,7 @@ sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)

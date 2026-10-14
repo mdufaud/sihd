@@ -40,7 +40,7 @@ mqd_t mq_handle(intptr_t mq)
 } // namespace
 
 sihd::util::Result<void>
-    MessageQueue::create(std::string_view name, size_t max_messages, size_t max_message_size, mode_t mode)
+    MessageQueue::create(const std::string & name, size_t max_messages, size_t max_message_size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -61,7 +61,7 @@ sihd::util::Result<void>
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::open(std::string_view name)
+sihd::util::Result<void> MessageQueue::open(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -86,7 +86,7 @@ sihd::util::Result<void> MessageQueue::open(std::string_view name)
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::unlink(std::string_view name)
+sihd::util::Result<void> MessageQueue::unlink(const std::string & name)
 {
     if (mq_unlink(mq_name(name).c_str()) == -1)
         return std::unexpected(Error::from_errno("could not mq_unlink '{}'", name));
@@ -292,17 +292,17 @@ sihd::util::Result<void> MessageQueue::set_nonblocking(bool active)
 
 // no POSIX message queues (android bionic, apple has no mq_*, emscripten)
 
-sihd::util::Result<void> MessageQueue::create(std::string_view, size_t, size_t, mode_t)
+sihd::util::Result<void> MessageQueue::create(const std::string &, size_t, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MessageQueue::open(std::string_view)
+sihd::util::Result<void> MessageQueue::open(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MessageQueue::unlink(std::string_view)
+sihd::util::Result<void> MessageQueue::unlink(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

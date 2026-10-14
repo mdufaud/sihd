@@ -290,7 +290,7 @@ sihd::util::Result<std::string> queue_receive(HANDLE handle,
 } // namespace
 
 sihd::util::Result<void>
-    MessageQueue::create(std::string_view name, size_t max_messages, size_t max_message_size, mode_t mode)
+    MessageQueue::create(const std::string & name, size_t max_messages, size_t max_message_size, mode_t mode)
 {
     (void)mode;
 
@@ -329,7 +329,7 @@ sihd::util::Result<void>
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::open(std::string_view name)
+sihd::util::Result<void> MessageQueue::open(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -371,7 +371,7 @@ sihd::util::Result<void> MessageQueue::open(std::string_view name)
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::unlink(std::string_view)
+sihd::util::Result<void> MessageQueue::unlink(const std::string &)
 {
     // named pipes are refcounted kernel objects: nothing to unlink
     return {};

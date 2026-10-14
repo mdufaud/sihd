@@ -36,9 +36,9 @@ sihd::util::Result<Mapping> map_fd(int fd, size_t size, int prot, std::string_vi
     return Mapping {fd, addr, size};
 }
 
-sihd::util::Result<Mapping> open_map(std::string_view path, int open_flags, int prot)
+sihd::util::Result<Mapping> open_map(const std::string & path, int open_flags, int prot)
 {
-    int fd = ::open(path.data(), open_flags);
+    int fd = ::open(path.c_str(), open_flags);
     if (fd < 0)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     struct stat s;
@@ -58,14 +58,14 @@ sihd::util::Result<Mapping> open_map(std::string_view path, int open_flags, int 
 
 } // namespace
 
-sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, mode_t mode)
+sihd::util::Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
         return cleared;
     if (size == 0)
         return std::unexpected(Error(invalid_argument, "cannot map an empty size"));
-    int fd = ::open(path.data(), O_RDWR | O_CREAT | O_TRUNC, mode);
+    int fd = ::open(path.c_str(), O_RDWR | O_CREAT | O_TRUNC, mode);
     if (fd < 0)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     if (ftruncate(fd, size) == -1)
@@ -88,7 +88,7 @@ sihd::util::Result<void> MappedFile::create(std::string_view path, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -103,7 +103,7 @@ sihd::util::Result<void> MappedFile::open_read_only(std::string_view path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(std::string_view path)
+sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -151,17 +151,17 @@ sihd::util::Result<void> MappedFile::sync(bool async)
 
 // no POSIX shared mapping (android bionic, emscripten)
 
-sihd::util::Result<void> MappedFile::create(std::string_view, size_t, mode_t)
+sihd::util::Result<void> MappedFile::create(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(std::string_view)
+sihd::util::Result<void> MappedFile::open_read_only(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(std::string_view)
+sihd::util::Result<void> MappedFile::open_read_write(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

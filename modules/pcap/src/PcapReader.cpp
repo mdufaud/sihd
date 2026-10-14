@@ -38,25 +38,25 @@ PcapReader::~PcapReader()
     this->close();
 }
 
-sihd::util::Result<void> PcapReader::open(std::string_view path)
+sihd::util::Result<void> PcapReader::open(const std::string & path)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
-    _impl_ptr->pcap_ptr = pcap_open_offline(path.data(), errbuf);
+    _impl_ptr->pcap_ptr = pcap_open_offline(path.c_str(), errbuf);
     if (_impl_ptr->pcap_ptr == nullptr)
         return std::unexpected(Error(io_error, "cannot open '{}': {}", path, errbuf));
     _impl_ptr->precision = pcap_get_tstamp_precision(_impl_ptr->pcap_ptr);
     return {};
 }
 
-sihd::util::Result<void> PcapReader::open_micro_precision(std::string_view path)
+sihd::util::Result<void> PcapReader::open_micro_precision(const std::string & path)
 {
-    return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_MICRO);
+    return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-sihd::util::Result<void> PcapReader::open_nano_precision(std::string_view path)
+sihd::util::Result<void> PcapReader::open_nano_precision(const std::string & path)
 {
-    return this->_open_precision(path.data(), PCAP_TSTAMP_PRECISION_NANO);
+    return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_NANO);
 }
 
 sihd::util::Result<void> PcapReader::_open_precision(const char *path, u_int precision)

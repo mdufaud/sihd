@@ -57,7 +57,7 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> DynLib::open([[maybe_unused]] std::string_view lib_name)
+sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
 {
 #if !defined(SIHD_STATIC)
     this->close();
@@ -75,12 +75,12 @@ sihd::util::Result<void> DynLib::open([[maybe_unused]] std::string_view lib_name
 #endif
 }
 
-sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(SIHD_STATIC)
     if (this->is_open() == false)
         return std::unexpected(Error(not_initialized, "no library open"));
-    void *ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.data());
+    void *ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.c_str());
     if (ret == nullptr)
         return lib_error();
     return ret;

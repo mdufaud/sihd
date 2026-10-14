@@ -88,9 +88,9 @@ const char *protocol_str(int protocol)
     return pe->p_name;
 }
 
-int protocol(std::string_view name)
+int protocol(const std::string & name)
 {
-    struct protoent *pe = getprotobyname(name.data());
+    struct protoent *pe = getprotobyname(name.c_str());
     if (pe == nullptr)
         return -1;
     return pe->p_proto;
@@ -124,19 +124,19 @@ int socktype(std::string_view name)
     return -1;
 }
 
-bool is_valid_ipv4(std::string_view ip)
+bool is_valid_ipv4(const std::string & ip)
 {
     struct sockaddr_in sa;
-    return inet_pton(AF_INET, ip.data(), &(sa.sin_addr)) == 1;
+    return inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr)) == 1;
 }
 
-bool is_valid_ipv6(std::string_view ip)
+bool is_valid_ipv6(const std::string & ip)
 {
     struct sockaddr_in6 sa;
-    return inet_pton(AF_INET6, ip.data(), &(sa.sin6_addr)) == 1;
+    return inet_pton(AF_INET6, ip.c_str(), &(sa.sin6_addr)) == 1;
 }
 
-bool is_valid_ip(std::string_view ip)
+bool is_valid_ip(const std::string & ip)
 {
     return is_valid_ipv4(ip) || is_valid_ipv6(ip);
 }
@@ -182,13 +182,13 @@ bool is_private_ipv4(uint32_t addr)
            || (addr >> 16) == 0xC0A8;           // 192.168.0.0/16 (class C)
 }
 
-bool is_private_host(std::string_view host)
+bool is_private_host(const std::string & host)
 {
     struct addrinfo hints {};
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     struct addrinfo *res = nullptr;
-    if (getaddrinfo(std::string(host).c_str(), nullptr, &hints, &res) != 0)
+    if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0)
         return false;
 
     bool found = false;

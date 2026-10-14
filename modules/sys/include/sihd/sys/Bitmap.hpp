@@ -3,7 +3,7 @@
 
 #include <bit>
 #include <cstdint>
-#include <string_view>
+#include <string>
 #include <vector>
 
 #include <sihd/util/ArrayView.hpp>
@@ -66,8 +66,8 @@ class Bitmap
         Color get(size_t row, size_t line) const;
         bool is_accessible(size_t row, size_t line) const;
 
-        bool save_bmp(std::string_view path) const;
-        bool read_bmp(std::string_view path);
+        bool save_bmp(const std::string & path) const;
+        bool read_bmp(const std::string & path);
 
         // Serialize bitmap to BMP format in memory
         PixelBuffer to_bmp_data() const;

@@ -150,14 +150,14 @@ SshChannel & SshCommand::channel()
     return _impl->channel;
 }
 
-sihd::util::Result<void> SshCommand::execute(std::string_view cmd)
+sihd::util::Result<void> SshCommand::execute(const std::string & cmd)
 {
     if (auto res = this->execute_async(cmd); !res)
         return res;
     return this->wait();
 }
 
-sihd::util::Result<void> SshCommand::execute_async(std::string_view cmd)
+sihd::util::Result<void> SshCommand::execute_async(const std::string & cmd)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl->ssh_session_ptr);
     if (channel_ptr == nullptr)

@@ -16,9 +16,9 @@ class File
 {
     public:
         File();
-        File(int fd, std::string_view mode);
+        File(int fd, const std::string & mode);
         File(FILE *stream, bool ownership);
-        File(std::string_view path, std::string_view mode);
+        File(const std::string & path, const std::string & mode);
         File(File && other);
         ~File();
 
@@ -33,13 +33,14 @@ class File
         operator FILE *() const { return _file_ptr; }
 
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
-        sihd::util::Result<void> open(std::string_view path, std::string_view mode);
+        sihd::util::Result<void> open(const std::string & path, const std::string & mode);
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
-        sihd::util::Result<void> open_fd(int fd, std::string_view mode);
+        sihd::util::Result<void> open_fd(int fd, const std::string & mode);
         sihd::util::Result<void> set_stream(FILE *stream, bool ownership);
-        sihd::util::Result<void> open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix = "");
+        sihd::util::Result<void>
+            open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix = "");
         // open with setted buffer_size
-        sihd::util::Result<void> open_mem(std::string_view mode, std::string_view put_in_buffer = "");
+        sihd::util::Result<void> open_mem(const std::string & mode, std::string_view put_in_buffer = "");
         sihd::util::Result<void> open_tmpfile();
         bool is_open() const;
         sihd::util::Result<void> close();

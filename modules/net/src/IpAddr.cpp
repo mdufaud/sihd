@@ -62,9 +62,9 @@ uint32_t netmask_value_for_family(std::optional<uint32_t> mask_value, int family
     return *mask_value;
 }
 
-bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
+bool to_sockaddr_in(sockaddr_in *addr, const std::string & ip, int port = 0)
 {
-    int ret = inet_pton(AF_INET, ip.data(), &addr->sin_addr);
+    int ret = inet_pton(AF_INET, ip.c_str(), &addr->sin_addr);
     if (ret <= 0)
     {
         // 0 is returned if src does not contain a character string representing a valid network address in
@@ -78,9 +78,9 @@ bool to_sockaddr_in(sockaddr_in *addr, std::string_view ip, int port = 0)
     return true;
 }
 
-bool to_sockaddr_in6(sockaddr_in6 *addr, std::string_view ip, int port = 0)
+bool to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int port = 0)
 {
-    int ret = inet_pton(AF_INET6, ip.data(), &addr->sin6_addr);
+    int ret = inet_pton(AF_INET6, ip.c_str(), &addr->sin6_addr);
     if (ret <= 0)
     {
         // 0 is returned if src does not contain a character string representing a valid network address in
@@ -227,7 +227,7 @@ IpAddr IpAddr::localhost(int port, bool ipv6)
     return {ipv6 ? "::1" : "127.0.0.1", port};
 }
 
-sihd::util::Result<void> IpAddr::set_subnet_mask(std::string_view mask)
+sihd::util::Result<void> IpAddr::set_subnet_mask(const std::string & mask)
 {
     struct sockaddr_in sockaddr_mask;
     if (to_sockaddr_in(&sockaddr_mask, mask) == false)

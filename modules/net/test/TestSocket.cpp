@@ -247,6 +247,10 @@ TEST_F(TestSocket, test_socket_unix_abstract)
     Socket refused;
     ASSERT_TRUE(refused.open(AF_UNIX, SOCK_STREAM, 0).has_value());
     EXPECT_FALSE(refused.bind_unix(too_long).has_value());
+
+    Socket empty_path;
+    ASSERT_TRUE(empty_path.open(AF_UNIX, SOCK_STREAM, 0).has_value());
+    EXPECT_FALSE(empty_path.bind_unix(std::string_view {}).has_value());
 }
 #endif
 

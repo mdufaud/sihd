@@ -52,7 +52,7 @@ FileMutex::FileMutex(File && file)
     _file = std::move(file);
 }
 
-FileMutex::FileMutex(std::string_view path, bool create_file_if_not_exist)
+FileMutex::FileMutex(const std::string & path, bool create_file_if_not_exist)
 {
     SIHD_UNEXPECTED_LOG(_file.open(path, create_file_if_not_exist ? "a" : "r"));
 }

@@ -3,7 +3,6 @@
 
 #include <concepts>
 #include <string>
-#include <string_view>
 
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
@@ -61,10 +60,10 @@ class Timestamp: public TimeBase<Timestamp>
 
         static Timestamp now();
         static sihd::util::Result<Timestamp> from_str(const std::string & date_str,
-                                                      std::string_view format = default_format);
+                                                      const std::string & format = default_format);
         // Parse with explicit locale (default: C locale for deterministic behavior)
         static sihd::util::Result<Timestamp>
-            from_str(const std::string & date_str, std::string_view format, const std::locale & loc);
+            from_str(const std::string & date_str, const std::string & format, const std::locale & loc);
 
         // this >= from && this <= (from + offset)
         bool in_interval(Timestamp from, Duration offset) const;

@@ -16,13 +16,13 @@ class CsvWriter: public sihd::util::IWriter
 {
     public:
         CsvWriter();
-        CsvWriter(std::string_view path, bool append = false);
+        CsvWriter(const std::string & path, bool append = false);
         virtual ~CsvWriter();
 
         sihd::util::Result<void> set_delimiter(int c);
         sihd::util::Result<void> set_commentary(int c);
 
-        sihd::util::Result<void> open(std::string_view path, bool append = false);
+        sihd::util::Result<void> open(const std::string & path, bool append = false);
         bool is_open() const;
         bool close();
 

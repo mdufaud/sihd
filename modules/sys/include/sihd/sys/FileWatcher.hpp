@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
@@ -47,15 +46,15 @@ class FileWatcher: public sihd::util::Observable<FileWatcher>,
         static constexpr bool supported = !sihd::util::build::is_emscripten;
 
         FileWatcher();
-        FileWatcher(std::string_view path);
-        FileWatcher(std::string_view path, int run_timeout_milliseconds);
+        FileWatcher(const std::string & path);
+        FileWatcher(const std::string & path, int run_timeout_milliseconds);
         virtual ~FileWatcher();
 
         void set_run_timeout(int milliseconds);
 
-        sihd::util::Result<void> watch(std::string_view path);
-        bool unwatch(std::string_view path);
-        bool is_watching(std::string_view path) const;
+        sihd::util::Result<void> watch(const std::string & path);
+        bool unwatch(const std::string & path);
+        bool is_watching(const std::string & path) const;
         void clear();
 
         bool run() override;

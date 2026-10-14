@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <sihd/util/IRunnable.hpp>
@@ -18,10 +17,10 @@ class FilePoller: public sihd::util::Observable<FilePoller>,
 {
     public:
         FilePoller();
-        FilePoller(std::string_view path, size_t max_depth);
+        FilePoller(const std::string & path, size_t max_depth);
         virtual ~FilePoller();
 
-        sihd::util::Result<void> watch(std::string_view path, size_t max_depth);
+        sihd::util::Result<void> watch(const std::string & path, size_t max_depth);
         void unwatch();
 
         bool run() override;

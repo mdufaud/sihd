@@ -21,9 +21,9 @@ class PcapWriter: public sihd::util::Named,
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
         ~PcapWriter();
 
-        sihd::util::Result<void> open(std::string_view path);
-        sihd::util::Result<void> open(std::string_view path, int datalink);
-        sihd::util::Result<void> open(std::string_view path, int datalink, int snaplen);
+        sihd::util::Result<void> open(const std::string & path);
+        sihd::util::Result<void> open(const std::string & path, int datalink);
+        sihd::util::Result<void> open(const std::string & path, int datalink, int snaplen);
         bool close();
         bool is_open() const;
 

@@ -29,16 +29,16 @@ namespace sihd::net::ip
 const char *domain_str(int domain);
 const char *socktype_str(int socktype);
 const char *protocol_str(int protocol);
-int protocol(std::string_view name);
+int protocol(const std::string & name);
 int domain(std::string_view name);
 int socktype(std::string_view name);
 
-bool is_valid_ipv4(std::string_view ip);
-bool is_valid_ipv6(std::string_view ip);
-bool is_valid_ip(std::string_view ip);
+bool is_valid_ipv4(const std::string & ip);
+bool is_valid_ipv6(const std::string & ip);
+bool is_valid_ip(const std::string & ip);
 
 bool is_private_ipv4(uint32_t addr);
-bool is_private_host(std::string_view host);
+bool is_private_host(const std::string & host);
 
 std::string to_str(const sockaddr *addr);
 std::string to_str(const sockaddr_in *addr_in);

@@ -71,7 +71,7 @@ class Sniffer: public sihd::util::Named,
         // in / out / both
         bool set_direction(std::string_view direction);
 
-        bool set_filter(std::string_view filter);
+        bool set_filter(const std::string & filter);
 
         std::vector<int> datalinks();
         std::vector<int> timestamp_types();

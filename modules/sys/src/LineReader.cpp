@@ -23,7 +23,7 @@ LineReader::LineReader(const LineReaderOptions & options):
 {
 }
 
-LineReader::LineReader(std::string_view path, const LineReaderOptions & options): LineReader(options)
+LineReader::LineReader(const std::string & path, const LineReaderOptions & options): LineReader(options)
 {
     SIHD_UNEXPECTED_LOG(this->open(path));
 }
@@ -91,7 +91,7 @@ bool LineReader::set_line_buffsize(size_t buff)
     return true;
 }
 
-sihd::util::Result<void> LineReader::open(std::string_view path)
+sihd::util::Result<void> LineReader::open(const std::string & path)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));

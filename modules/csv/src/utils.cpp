@@ -58,7 +58,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     return ret;
 }
 
-sihd::util::Result<CsvData> read_csv(std::string_view path, bool remove_header, int delimiter, char comment_char)
+sihd::util::Result<CsvData> read_csv(const std::string & path, bool remove_header, int delimiter, char comment_char)
 {
     CsvReader reader;
 

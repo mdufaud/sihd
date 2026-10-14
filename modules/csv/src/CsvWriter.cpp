@@ -27,7 +27,7 @@ CsvWriter::CsvWriter()
     SIHD_UNEXPECTED_LOG(_file.set_buffer_size(4096));
 }
 
-CsvWriter::CsvWriter(std::string_view path, bool append): CsvWriter()
+CsvWriter::CsvWriter(const std::string & path, bool append): CsvWriter()
 {
     SIHD_UNEXPECTED_LOG(this->open(path, append));
 }
@@ -54,7 +54,7 @@ sihd::util::Result<void> CsvWriter::set_commentary(int c)
     return std::unexpected(Error(invalid_argument, "commentary is not a printable character"));
 }
 
-sihd::util::Result<void> CsvWriter::open(std::string_view path, bool append)
+sihd::util::Result<void> CsvWriter::open(const std::string & path, bool append)
 {
     _col = 0;
     _row = 0;

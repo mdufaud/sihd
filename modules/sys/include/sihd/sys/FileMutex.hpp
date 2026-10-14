@@ -1,7 +1,7 @@
 #ifndef __SIHD_SYS_FILEMUTEX_HPP__
 #define __SIHD_SYS_FILEMUTEX_HPP__
 
-#include <string_view>
+#include <string>
 
 #include <sihd/sys/File.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -14,7 +14,7 @@ class FileMutex
     public:
         FileMutex() = default;
         FileMutex(File && file);
-        FileMutex(std::string_view path, bool create_file_if_not_exist = true);
+        FileMutex(const std::string & path, bool create_file_if_not_exist = true);
         FileMutex(FileMutex && other);
         ~FileMutex() = default;
 

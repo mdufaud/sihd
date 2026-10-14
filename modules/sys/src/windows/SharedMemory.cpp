@@ -13,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode; // Windows uses security descriptors, not POSIX mode
 
@@ -26,7 +26,7 @@ sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, 
                                        PAGE_READWRITE,
                                        static_cast<DWORD>(size >> 32),
                                        static_cast<DWORD>(size & 0xFFFFFFFF),
-                                       id.data());
+                                       id.c_str());
     if (handle == nullptr)
         return std::unexpected(Error(io_error, "could not create file mapping '{}': {}", id, os::last_error_str()));
 
@@ -48,7 +48,7 @@ sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -56,7 +56,7 @@ sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, 
     if (!cleared)
         return cleared;
 
-    HANDLE handle = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, id.data());
+    HANDLE handle = OpenFileMappingA(FILE_MAP_ALL_ACCESS, FALSE, id.c_str());
     if (handle == nullptr)
         return std::unexpected(Error(not_found, "could not open file mapping '{}': {}", id, os::last_error_str()));
 
@@ -77,7 +77,7 @@ sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -85,7 +85,7 @@ sihd::util::Result<void> SharedMemory::attach_read_only(std::string_view id, siz
     if (!cleared)
         return cleared;
 
-    HANDLE handle = OpenFileMappingA(FILE_MAP_READ, FALSE, id.data());
+    HANDLE handle = OpenFileMappingA(FILE_MAP_READ, FALSE, id.c_str());
     if (handle == nullptr)
         return std::unexpected(Error(not_found, "could not open file mapping '{}': {}", id, os::last_error_str()));
 

@@ -13,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int value, mode_t mode)
+sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
 {
     (void)mode;
 
@@ -24,7 +24,7 @@ sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int v
     if (value > static_cast<unsigned int>(LONG_MAX))
         return std::unexpected(Error(invalid_argument, "could not create semaphore '{}': value overflows LONG", name));
 
-    HANDLE handle = CreateSemaphoreA(nullptr, static_cast<LONG>(value), LONG_MAX, name.data());
+    HANDLE handle = CreateSemaphoreA(nullptr, static_cast<LONG>(value), LONG_MAX, name.c_str());
     if (handle == nullptr)
         return std::unexpected(Error(io_error, "could not create semaphore '{}': {}", name, os::last_error_str()));
 
@@ -34,13 +34,13 @@ sihd::util::Result<void> Semaphore::create(std::string_view name, unsigned int v
     return {};
 }
 
-sihd::util::Result<void> Semaphore::attach(std::string_view name)
+sihd::util::Result<void> Semaphore::attach(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
         return cleared;
 
-    HANDLE handle = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name.data());
+    HANDLE handle = OpenSemaphoreA(SEMAPHORE_ALL_ACCESS, FALSE, name.c_str());
     if (handle == nullptr)
         return std::unexpected(Error(not_found, "could not open semaphore '{}': {}", name, os::last_error_str()));
 

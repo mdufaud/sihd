@@ -18,9 +18,9 @@ class PcapReader: public sihd::util::Named,
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
         ~PcapReader();
 
-        sihd::util::Result<void> open(std::string_view path);
-        sihd::util::Result<void> open_micro_precision(std::string_view path);
-        sihd::util::Result<void> open_nano_precision(std::string_view path);
+        sihd::util::Result<void> open(const std::string & path);
+        sihd::util::Result<void> open_micro_precision(const std::string & path);
+        sihd::util::Result<void> open_nano_precision(const std::string & path);
         sihd::util::Result<void> open(FILE *file);
         sihd::util::Result<void> open_micro_precision(FILE *file);
         sihd::util::Result<void> open_nano_precision(FILE *file);

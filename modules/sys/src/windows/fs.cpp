@@ -38,9 +38,9 @@ struct CopyProgressCtx
         const std::function<bool(size_t, size_t)> *progress;
 };
 
-bool do_stat(std::string_view path, struct stat *s)
+bool do_stat(const std::string & path, struct stat *s)
 {
-    return ::_stat(path.data(), reinterpret_cast<struct _stat *>(s)) == 0;
+    return ::_stat(path.c_str(), reinterpret_cast<struct _stat *>(s)) == 0;
 }
 
 // FILETIME counts 100ns intervals since 1601-01-01; 0 means the field is not tracked
@@ -153,29 +153,29 @@ std::string download_path()
 
 // stat
 
-bool exists(std::string_view path)
+bool exists(const std::string & path)
 {
-    return _access(path.data(), 0) == 0;
+    return _access(path.c_str(), 0) == 0;
 }
 
-bool is_readable(std::string_view path)
+bool is_readable(const std::string & path)
 {
-    return _access(path.data(), 04) == 0;
+    return _access(path.c_str(), 04) == 0;
 }
 
-bool is_writable(std::string_view path)
+bool is_writable(const std::string & path)
 {
-    return _access(path.data(), 02) == 0;
+    return _access(path.c_str(), 02) == 0;
 }
 
-bool is_executable(std::string_view path)
+bool is_executable(const std::string & path)
 {
-    return _access(path.data(), 04) == 0;
+    return _access(path.c_str(), 04) == 0;
 }
 
-sihd::util::Result<FileTimes> times(std::string_view path)
+sihd::util::Result<FileTimes> times(const std::string & path)
 {
-    HANDLE handle = CreateFileA(path.data(),
+    HANDLE handle = CreateFileA(path.c_str(),
                                 // query access: metadata does not need read rights
                                 0,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -198,15 +198,15 @@ sihd::util::Result<FileTimes> times(std::string_view path)
     return ret;
 }
 
-Timestamp last_write(std::string_view path)
+Timestamp last_write(const std::string & path)
 {
     return times(path).value_or(FileTimes()).write;
 }
 
-sihd::util::Result<size_t> file_size(std::string_view path)
+sihd::util::Result<size_t> file_size(const std::string & path)
 {
     struct stat s;
-    if (!do_stat(path.data(), &s))
+    if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     return s.st_size;
 }
@@ -226,7 +226,7 @@ std::string tmp_path()
     return tmp_path.value_or("C:\\Windows\\TEMP\\");
 }
 
-sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
+sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
 {
     std::error_code ec;
     auto tmp_path = std::filesystem::temp_directory_path(ec);
@@ -235,7 +235,7 @@ sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
         return std::unexpected(Error(ec, "could not resolve the temp directory: {}", ec.message()));
     }
     // like mkdtemp on unix: the random characters are appended to the prefix path
-    const std::string base = prefix.empty() ? ensure_separation(tmp_path.string()) : std::string(prefix);
+    const std::string base = prefix.empty() ? ensure_separation(tmp_path.string()) : prefix;
     sihd::util::Result<void> made = std::unexpected(Error(io_error, "no directory created"));
     for (int attempt = 0; attempt < 8; ++attempt)
     {
@@ -247,21 +247,21 @@ sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
     return std::unexpected(std::move(made).error());
 }
 
-sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode)
+sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
     if (path.empty())
         return std::unexpected(Error(invalid_argument, "empty path"));
     (void)mode;
-    if (_mkdir(path.data()) != 0)
+    if (_mkdir(path.c_str()) != 0)
     {
         return std::unexpected(Error::from_errno("could not make directory '{}'", path));
     }
     return {};
 }
 
-std::vector<std::string> children(std::string_view path)
+std::vector<std::string> children(const std::string & path)
 {
     std::vector<std::string> ret;
 
@@ -283,7 +283,7 @@ std::vector<std::string> children(std::string_view path)
     return ret;
 }
 
-std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth)
+std::vector<std::string> recursive_children(const std::string & path, uint32_t max_depth)
 {
     std::vector<std::string> ret;
 
@@ -306,9 +306,9 @@ std::vector<std::string> recursive_children(std::string_view path, uint32_t max_
 
 // files
 
-sihd::util::Result<void> truncate(std::string_view path, int64_t size)
+sihd::util::Result<void> truncate(const std::string & path, int64_t size)
 {
-    int fd = _open(path.data(), _O_WRONLY);
+    int fd = _open(path.c_str(), _O_WRONLY);
     if (fd < 0)
     {
         return std::unexpected(Error::from_errno("could not open '{}' for truncating", path));
@@ -325,7 +325,7 @@ sihd::util::Result<void> truncate(std::string_view path, int64_t size)
 }
 
 sihd::util::Result<void>
-    copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
+    copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
 {
     const std::wstring wfrom = str::to_wstr(from);
     const std::wstring wto = str::to_wstr(to);
@@ -358,28 +358,28 @@ sihd::util::Result<void>
 #endif
 }
 
-std::string realpath(std::string_view path)
+std::string realpath(const std::string & path)
 {
     // POSIX realpath requires every path component to exist; _fullpath is purely
     // lexical and succeeds for nonexistent paths -> guard to keep the same contract
     if (!fs::exists(path))
         return "";
     char resolved[PATH_MAX];
-    if (_fullpath(resolved, path.data(), PATH_MAX) == nullptr)
+    if (_fullpath(resolved, path.c_str(), PATH_MAX) == nullptr)
         return "";
     return std::string(resolved);
 }
 
-sihd::util::Result<void> chdir(std::string_view path)
+sihd::util::Result<void> chdir(const std::string & path)
 {
-    if (::_chdir(path.data()) != 0)
+    if (::_chdir(path.c_str()) != 0)
     {
         return std::unexpected(Error::from_errno("could not chdir to '{}'", path));
     }
     return {};
 }
 
-MountType mount_type([[maybe_unused]] std::string_view path)
+MountType mount_type([[maybe_unused]] const std::string & path)
 {
     // UNC path (\\server\share) is always a network mount
     if (path.size() >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
@@ -397,7 +397,7 @@ MountType mount_type([[maybe_unused]] std::string_view path)
     return drive_type_to_mount(GetDriveTypeA(root));
 }
 
-StorageMedium storage_medium([[maybe_unused]] std::string_view path)
+StorageMedium storage_medium([[maybe_unused]] const std::string & path)
 {
     // no rotational backing for these (or backing is a loop file)
     const MountType type = mount_type(path);
@@ -465,7 +465,7 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
     return ret;
 }
 
-sihd::util::Result<uint64_t> free_space(std::string_view path)
+sihd::util::Result<uint64_t> free_space(const std::string & path)
 {
     ULARGE_INTEGER free_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
@@ -473,7 +473,7 @@ sihd::util::Result<uint64_t> free_space(std::string_view path)
     return free_bytes.QuadPart;
 }
 
-sihd::util::Result<uint64_t> total_space(std::string_view path)
+sihd::util::Result<uint64_t> total_space(const std::string & path)
 {
     ULARGE_INTEGER total_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))

@@ -12,7 +12,7 @@ namespace sihd::zip
 
 SIHD_LOGGER;
 
-std::vector<std::string> list_entries(std::string_view archive_path)
+std::vector<std::string> list_entries(const std::string & archive_path)
 {
     constexpr bool read_only = true;
     constexpr bool do_strict_checks = true;
@@ -36,7 +36,7 @@ std::vector<std::string> list_entries(std::string_view archive_path)
     return ret;
 }
 
-sihd::util::Result<void> zip(std::string_view root_dir_path, std::string_view archive_path)
+sihd::util::Result<void> zip(const std::string & root_dir_path, const std::string & archive_path)
 {
     constexpr bool read_only = false;
     constexpr bool do_strict_checks = true;
@@ -51,7 +51,7 @@ sihd::util::Result<void> zip(std::string_view root_dir_path, std::string_view ar
     return zip.close();
 }
 
-sihd::util::Result<void> unzip(std::string_view archive_path, std::string_view unzip_file_path)
+sihd::util::Result<void> unzip(const std::string & archive_path, const std::string & unzip_file_path)
 {
     constexpr bool read_only = true;
     constexpr bool do_strict_checks = true;

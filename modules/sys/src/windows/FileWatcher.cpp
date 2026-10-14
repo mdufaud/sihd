@@ -78,20 +78,20 @@ struct FileWatcher::Impl
         std::list<Watcher> _watchers;
 
         void init();
-        sihd::util::Result<void> add_watch(std::string_view path);
-        bool rm_watch(std::string_view path);
-        bool is_watching(std::string_view path);
+        sihd::util::Result<void> add_watch(const std::string & path);
+        bool rm_watch(const std::string & path);
+        bool is_watching(const std::string & path);
         void terminate();
         bool poll_new_events(int milliseconds_timeout);
 };
 
-bool FileWatcher::Impl::is_watching(std::string_view path)
+bool FileWatcher::Impl::is_watching(const std::string & path)
 {
     return std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; })
            != _watchers.end();
 }
 
-bool FileWatcher::Impl::rm_watch(std::string_view path)
+bool FileWatcher::Impl::rm_watch(const std::string & path)
 {
     auto it = std::find_if(_watchers.begin(), _watchers.end(), [path](const Watcher & w) { return w.path == path; });
     const bool found = it != _watchers.end();
@@ -105,7 +105,7 @@ bool FileWatcher::Impl::rm_watch(std::string_view path)
 
 void FileWatcher::Impl::init() {}
 
-sihd::util::Result<void> FileWatcher::Impl::add_watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::Impl::add_watch(const std::string & path)
 {
     if (this->is_watching(path))
         return {};
@@ -271,14 +271,14 @@ FileWatcher::FileWatcher()
     _run_timeout_milliseconds = 100;
 };
 
-FileWatcher::FileWatcher(std::string_view path): FileWatcher()
+FileWatcher::FileWatcher(const std::string & path): FileWatcher()
 {
     auto watched = _impl->add_watch(path);
     if (!watched)
         throw std::runtime_error(watched.error().message);
 }
 
-FileWatcher::FileWatcher(std::string_view path, int run_timeout_milliseconds): FileWatcher(path)
+FileWatcher::FileWatcher(const std::string & path, int run_timeout_milliseconds): FileWatcher(path)
 {
     this->set_run_timeout(run_timeout_milliseconds);
 }
@@ -294,17 +294,17 @@ bool FileWatcher::run()
     return success;
 }
 
-sihd::util::Result<void> FileWatcher::watch(std::string_view path)
+sihd::util::Result<void> FileWatcher::watch(const std::string & path)
 {
     return _impl->add_watch(path);
 }
 
-bool FileWatcher::unwatch(std::string_view path)
+bool FileWatcher::unwatch(const std::string & path)
 {
     return _impl->rm_watch(path);
 }
 
-bool FileWatcher::is_watching(std::string_view path) const
+bool FileWatcher::is_watching(const std::string & path) const
 {
     return _impl->is_watching(path);
 }

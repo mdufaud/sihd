@@ -2,7 +2,6 @@
 #define __SIHD_CSV_CSVREADER_HPP__
 
 #include <string>
-#include <string_view>
 
 #include <sihd/sys/LineReader.hpp>
 #include <sihd/util/IReader.hpp>
@@ -16,7 +15,7 @@ class CsvReader: public sihd::util::IReaderTimestamp
 {
     public:
         CsvReader();
-        CsvReader(std::string_view path);
+        CsvReader(const std::string & path);
         virtual ~CsvReader();
 
         sihd::util::Result<void> set_delimiter(int c);
@@ -24,7 +23,7 @@ class CsvReader: public sihd::util::IReaderTimestamp
         void set_timestamp_col(int n);
         void set_timestamp_format(std::string format);
 
-        sihd::util::Result<void> open(std::string_view path);
+        sihd::util::Result<void> open(const std::string & path);
         bool is_open() const;
         bool close();
 

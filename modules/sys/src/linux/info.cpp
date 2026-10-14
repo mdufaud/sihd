@@ -25,7 +25,7 @@ SIHD_NEW_LOGGER("sihd::sys::info");
 namespace
 {
 
-sihd::util::Result<uint64_t> read_uint(std::string_view path)
+sihd::util::Result<uint64_t> read_uint(const std::string & path)
 {
     auto content_opt = fs::read_all(path);
     if (!content_opt)

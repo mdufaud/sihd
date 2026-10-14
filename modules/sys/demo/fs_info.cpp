@@ -45,7 +45,7 @@ const char *medium_str(fs::StorageMedium medium)
     return "unknown";
 }
 
-void dump(std::string_view path)
+void dump(const std::string & path)
 {
     fmt::print("path        : {}\n", path);
     fmt::print("  exists    : {}\n", fs::exists(path));

@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include <sihd/util/Result.hpp>
 
@@ -30,12 +29,12 @@ class SshKey
         SshKey(void *key = nullptr);
         ~SshKey();
 
-        static KeyType type_from_name(std::string_view name);
+        static KeyType type_from_name(const std::string & name);
         static const char *type_str(KeyType type);
 
         sihd::util::Result<void> generate(KeyType type, int parameter);
-        sihd::util::Result<void> import_pubkey_file(std::string_view path);
-        sihd::util::Result<void> import_privkey_file(std::string_view path, const char *passphrase = nullptr);
+        sihd::util::Result<void> import_pubkey_file(const std::string & path);
+        sihd::util::Result<void> import_privkey_file(const std::string & path, const char *passphrase = nullptr);
         sihd::util::Result<void> import_pubkey_mem(const char *base64_key, KeyType type = KeyType::Unknown);
         sihd::util::Result<void> import_privkey_mem(const char *base64_key, const char *passphrase = nullptr);
 
@@ -49,7 +48,7 @@ class SshKey
         void *key() const;
 
         std::string base64() const;
-        sihd::util::Result<void> export_privkey_file(std::string_view path, const char *passphrase = nullptr) const;
+        sihd::util::Result<void> export_privkey_file(const std::string & path, const char *passphrase = nullptr) const;
 
         // Takes ownership
         void set_key(void *key);

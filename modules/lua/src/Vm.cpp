@@ -174,29 +174,29 @@ luabridge::LuaRef Vm::new_table()
     return luabridge::newTable(_state_ptr);
 }
 
-luabridge::LuaRef Vm::get_ref(std::string_view name)
+luabridge::LuaRef Vm::get_ref(const std::string & name)
 {
-    return luabridge::getGlobal(_state_ptr, name.data());
+    return luabridge::getGlobal(_state_ptr, name.c_str());
 }
 
-bool Vm::ref_exists(std::string_view name)
+bool Vm::ref_exists(const std::string & name)
 {
-    lua_getglobal(_state_ptr, name.data());
+    lua_getglobal(_state_ptr, name.c_str());
     const bool exists = lua_isnil(_state_ptr, -1) == 0;
     lua_pop(_state_ptr, 1);
     return exists;
 }
 
-bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
+bool Vm::refs_exists(const std::initializer_list<std::string> & lst)
 {
     if (lst.size() == 0)
         return false;
     bool first = true;
-    for (const std::string_view & str : lst)
+    for (const std::string & str : lst)
     {
         if (first)
         {
-            lua_getglobal(_state_ptr, str.data());
+            lua_getglobal(_state_ptr, str.c_str());
             first = false;
         }
         else
@@ -206,7 +206,7 @@ bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
                 lua_remove(_state_ptr, -1);
                 return false;
             }
-            lua_getfield(_state_ptr, -1, str.data());
+            lua_getfield(_state_ptr, -1, str.c_str());
             lua_remove(_state_ptr, -2);
         }
     }
@@ -215,10 +215,10 @@ bool Vm::refs_exists(const std::initializer_list<std::string_view> & lst)
     return ret;
 }
 
-sihd::util::Result<void> Vm::do_file(std::string_view path)
+sihd::util::Result<void> Vm::do_file(const std::string & path)
 {
     LuaGilGuard guard(_state_ptr);
-    const int load_status = luaL_loadfile(_state_ptr, path.data());
+    const int load_status = luaL_loadfile(_state_ptr, path.c_str());
     sihd::util::ErrorCode load_code = out_of_memory;
     if (load_status == LUA_ERRFILE)
         load_code = not_found;
@@ -227,10 +227,10 @@ sihd::util::Result<void> Vm::do_file(std::string_view path)
     return do_chunk(_state_ptr, load_status, load_code);
 }
 
-sihd::util::Result<void> Vm::do_string(std::string_view str)
+sihd::util::Result<void> Vm::do_string(const std::string & str)
 {
     LuaGilGuard guard(_state_ptr);
-    const int load_status = luaL_loadstring(_state_ptr, str.data());
+    const int load_status = luaL_loadstring(_state_ptr, str.c_str());
     const sihd::util::ErrorCode load_code = load_status == LUA_ERRSYNTAX ? invalid_argument : out_of_memory;
     return do_chunk(_state_ptr, load_status, load_code);
 }

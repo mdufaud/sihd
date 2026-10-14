@@ -83,7 +83,7 @@ class IpAddr
         // subnets
         Subnet subnet() const;
 
-        sihd::util::Result<void> set_subnet_mask(std::string_view mask);
+        sihd::util::Result<void> set_subnet_mask(const std::string & mask);
         bool set_subnet_mask(uint32_t mask);
 
         bool is_same_subnet(const IpAddr & other_addr) const;

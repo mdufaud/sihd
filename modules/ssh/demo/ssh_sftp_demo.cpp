@@ -13,7 +13,7 @@ using namespace sihd::util;
 using namespace sihd::sys;
 using namespace sihd::ssh;
 
-void print_dir(Sftp & sftp, std::string_view path)
+void print_dir(Sftp & sftp, const std::string & path)
 {
     fmt::print("Listing directories in '{}':\n", path);
     std::vector<sihd::ssh::SftpAttribute> list;

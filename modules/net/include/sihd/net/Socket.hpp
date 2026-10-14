@@ -99,8 +99,8 @@ class Socket
         int get_rcvbuf() const;
         int get_sndbuf() const;
 
-        sihd::util::Result<void> join_multicast(const IpAddr & group, std::string_view iface = "");
-        sihd::util::Result<void> leave_multicast(const IpAddr & group, std::string_view iface = "");
+        sihd::util::Result<void> join_multicast(const IpAddr & group, const std::string & iface = "");
+        sihd::util::Result<void> leave_multicast(const IpAddr & group, const std::string & iface = "");
         sihd::util::Result<void> set_multicast_ttl(int ttl);
         sihd::util::Result<void> set_multicast_loop(bool active);
 
@@ -190,7 +190,7 @@ class Socket
     protected:
         void _clear_socket_info();
         sihd::util::Result<void>
-            _multicast_membership(const IpAddr & group, std::string_view iface, int ipv4_opt, int ipv6_opt);
+            _multicast_membership(const IpAddr & group, const std::string & iface, int ipv4_opt, int ipv6_opt);
 
         int _domain = -1;
         int _type = -1;

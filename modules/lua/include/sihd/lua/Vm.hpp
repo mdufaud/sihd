@@ -20,7 +20,6 @@ extern "C"
 #include <cstdint> // need this for LuaBridge
 #include <memory>
 #include <string>
-#include <string_view>
 
 #include <luabridge3/LuaBridge/LuaBridge.h>
 
@@ -57,17 +56,17 @@ class Vm: public ILuaThreadStateHandler
         bool new_thread(Vm & vm);
 
         luabridge::LuaRef new_table();
-        luabridge::LuaRef get_ref(std::string_view name);
+        luabridge::LuaRef get_ref(const std::string & name);
         template <typename T>
-        void set_ref(std::string_view name, T obj)
+        void set_ref(const std::string & name, T obj)
         {
-            luabridge::setGlobal(_state_ptr, obj, name.data());
+            luabridge::setGlobal(_state_ptr, obj, name.c_str());
         }
-        bool ref_exists(std::string_view name);
-        bool refs_exists(const std::initializer_list<std::string_view> & lst);
+        bool ref_exists(const std::string & name);
+        bool refs_exists(const std::initializer_list<std::string> & lst);
 
-        sihd::util::Result<void> do_file(std::string_view path);
-        sihd::util::Result<void> do_string(std::string_view str);
+        sihd::util::Result<void> do_file(const std::string & path);
+        sihd::util::Result<void> do_string(const std::string & str);
 
         std::string dump_stack(int max = -1);
         void print_stack(int max = -1, FILE *output = stdout);

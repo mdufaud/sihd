@@ -56,7 +56,7 @@ bool HttpServer::set_port(int port)
     return true;
 }
 
-bool HttpServer::set_root_dir(std::string_view root_dir)
+bool HttpServer::set_root_dir(const std::string & root_dir)
 {
     bool ret = fs::is_dir(root_dir);
     if (ret)
@@ -71,7 +71,7 @@ bool HttpServer::set_poll_frequency(double freq)
     return _impl->stepworker.set_frequency(freq);
 }
 
-bool HttpServer::set_ssl_cert_path(std::string_view path)
+bool HttpServer::set_ssl_cert_path(const std::string & path)
 {
     bool ret = fs::is_file(path);
     if (ret)
@@ -81,7 +81,7 @@ bool HttpServer::set_ssl_cert_path(std::string_view path)
     return ret;
 }
 
-bool HttpServer::set_ssl_cert_key(std::string_view path)
+bool HttpServer::set_ssl_cert_key(const std::string & path)
 {
     bool ret = fs::is_file(path);
     if (ret)

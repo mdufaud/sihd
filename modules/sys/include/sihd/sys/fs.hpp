@@ -63,55 +63,55 @@ std::string cache_path();
 std::string download_path();
 
 // stat
-bool is_file(std::string_view path);
-bool is_dir(std::string_view path);
-bool is_symlink(std::string_view path);
-bool is_socket(std::string_view path);
-bool is_block(std::string_view path);
-bool is_character(std::string_view path);
-bool is_fifo(std::string_view path);
-sihd::util::Result<size_t> file_size(std::string_view path);
+bool is_file(const std::string & path);
+bool is_dir(const std::string & path);
+bool is_symlink(const std::string & path);
+bool is_socket(const std::string & path);
+bool is_block(const std::string & path);
+bool is_character(const std::string & path);
+bool is_fifo(const std::string & path);
+sihd::util::Result<size_t> file_size(const std::string & path);
 
 // creation is epoch 0 when the backing filesystem/kernel doesn't track birth times
-sihd::util::Result<FileTimes> times(std::string_view path);
-sihd::util::Timestamp last_write(std::string_view path);
+sihd::util::Result<FileTimes> times(const std::string & path);
+sihd::util::Timestamp last_write(const std::string & path);
 
 // uses _access
-bool exists(std::string_view path);
-bool is_readable(std::string_view path);
-bool is_writable(std::string_view path);
-bool is_executable(std::string_view path);
+bool exists(const std::string & path);
+bool is_readable(const std::string & path);
+bool is_writable(const std::string & path);
+bool is_executable(const std::string & path);
 
 // storage
 
 // reliable classification of the filesystem backing 'path'
-MountType mount_type(std::string_view path);
+MountType mount_type(const std::string & path);
 // heuristic (rotational vs seek-penalty); returns unknown for
 // network/ram/readonly/virtual/unresolvable backings
-StorageMedium storage_medium(std::string_view path);
+StorageMedium storage_medium(const std::string & path);
 
 std::vector<MountEntry> mounts();
 // bytes usable by the caller
-sihd::util::Result<uint64_t> free_space(std::string_view path);
+sihd::util::Result<uint64_t> free_space(const std::string & path);
 // bytes
-sihd::util::Result<uint64_t> total_space(std::string_view path);
+sihd::util::Result<uint64_t> total_space(const std::string & path);
 
 // permissions
 std::string permission_to_str(unsigned int mode);
 unsigned int permission_from_str(std::string_view mode);
-sihd::util::Result<void> permission_add(std::string_view path, unsigned int mode);
-sihd::util::Result<void> permission_rm(std::string_view path, unsigned int mode);
-sihd::util::Result<void> permission_set(std::string_view path, unsigned int mode);
-unsigned int permission_get(std::string_view path);
+sihd::util::Result<void> permission_add(const std::string & path, unsigned int mode);
+sihd::util::Result<void> permission_rm(const std::string & path, unsigned int mode);
+sihd::util::Result<void> permission_set(const std::string & path, unsigned int mode);
+unsigned int permission_get(const std::string & path);
 
 // directories
-sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix = "");
-sihd::util::Result<void> remove_directory(std::string_view path);
-sihd::util::Result<void> remove_directories(std::string_view path);
-sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode = 0750);
-sihd::util::Result<void> make_directories(std::string_view path, unsigned int mode = 0750);
-std::vector<std::string> children(std::string_view path);
-std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth = 0);
+sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix = "");
+sihd::util::Result<void> remove_directory(const std::string & path);
+sihd::util::Result<void> remove_directories(const std::string & path);
+sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode = 0750);
+sihd::util::Result<void> make_directories(const std::string & path, unsigned int mode = 0750);
+std::vector<std::string> children(const std::string & path);
+std::vector<std::string> recursive_children(const std::string & path, uint32_t max_depth = 0);
 
 // path manipulation
 bool is_absolute(std::string_view path);
@@ -135,46 +135,47 @@ std::string combine(std::string_view path1, std::string_view path2);
 std::string ensure_separation(std::string_view path);
 
 // files
-sihd::util::Result<void> remove_file(std::string_view path);
-sihd::util::Result<void> rename(std::string_view from, std::string_view to);
-sihd::util::Result<void> truncate(std::string_view path, int64_t size);
-bool are_equals(std::string_view path1, std::string_view path2);
+sihd::util::Result<void> remove_file(const std::string & path);
+sihd::util::Result<void> rename(const std::string & from, const std::string & to);
+sihd::util::Result<void> truncate(const std::string & path, int64_t size);
+bool are_equals(const std::string & path1, const std::string & path2);
 
 // overwrites 'to'; 'progress' returning false cancels and removes the partial 'to';
 // a copy that fails before starting leaves 'to' untouched; same-file copies are refused
-sihd::util::Result<void> copy_file(std::string_view from,
-                                   std::string_view to,
+sihd::util::Result<void> copy_file(const std::string & from,
+                                   const std::string & to,
                                    const std::function<bool(size_t transferred, size_t total)> & progress = nullptr);
 
 // resolve
-std::string realpath(std::string_view path);
+std::string realpath(const std::string & path);
 
 // Confines 'path' (relative to 'root') inside the jail: collapses '.'/'..' lexically before
 // touching the filesystem, then resolves symlinks; escapes clamp to 'root'; empty root = unchanged
 std::string jail(std::string_view root, std::string_view path);
 
 // links
-sihd::util::Result<void> make_file_link(std::string_view target, std::string_view link);
-sihd::util::Result<void> make_dir_link(std::string_view target, std::string_view link);
-sihd::util::Result<void> make_hard_link(std::string_view target, std::string_view link);
-std::optional<std::string> read_link(std::string_view path);
+sihd::util::Result<void> make_file_link(const std::string & target, const std::string & link);
+sihd::util::Result<void> make_dir_link(const std::string & target, const std::string & link);
+sihd::util::Result<void> make_hard_link(const std::string & target, const std::string & link);
+std::optional<std::string> read_link(const std::string & path);
 
 // fast read from file
-ssize_t read_binary(std::string_view path, char *buf, size_t size);
+ssize_t read_binary(const std::string & path, char *buf, size_t size);
 // fast string read: offset > 0 seeks from the beginning, offset < 0 from the end
-sihd::util::Result<std::string> read(std::string_view path, sihd::util::Slice slice, bool binary = true);
+sihd::util::Result<std::string> read(const std::string & path, sihd::util::Slice slice, bool binary = true);
 // text mode only: reads lines
-sihd::util::Result<std::string> read_line(std::string_view path, size_t line_number);
+sihd::util::Result<std::string> read_line(const std::string & path, size_t line_number);
 // text mode only; empty lines are omitted
-sihd::util::Result<std::vector<std::string>> read_lines(std::string_view path);
+sihd::util::Result<std::vector<std::string>> read_lines(const std::string & path);
 // fast all file read
 // the default text mode stops at ^Z on windows: pass binary=true for raw bytes
-sihd::util::Result<std::string> read_all(std::string_view path, bool binary = false);
+sihd::util::Result<std::string> read_all(const std::string & path, bool binary = false);
 
 // fast write into file; text mode translates LF to CRLF on windows
-sihd::util::Result<void> write(std::string_view path, std::string_view view, bool append = false, bool binary = false);
+sihd::util::Result<void>
+    write(const std::string & path, std::string_view view, bool append = false, bool binary = false);
 
-sihd::util::Result<void> chdir(std::string_view path);
+sihd::util::Result<void> chdir(const std::string & path);
 
 } // namespace sihd::sys::fs
 

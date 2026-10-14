@@ -27,9 +27,9 @@ struct Shm
         void *addr;
 };
 
-sihd::util::Result<Shm> __open(std::string_view id, mode_t mode, int shm_flags)
+sihd::util::Result<Shm> __open(const std::string & id, mode_t mode, int shm_flags)
 {
-    int fd = shm_open(id.data(), shm_flags, mode);
+    int fd = shm_open(id.c_str(), shm_flags, mode);
     if (fd == -1)
         return std::unexpected(Error::from_errno("could not shm_open '{}'", id));
     return Shm {fd, nullptr};
@@ -44,7 +44,7 @@ sihd::util::Result<Shm> __mmap(Shm shm, size_t size, int mmap_flags)
     return shm;
 }
 
-sihd::util::Result<Shm> create_shm(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+sihd::util::Result<Shm> create_shm(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
     auto shm = __open(id, mode, shm_flags);
     if (!shm)
@@ -63,7 +63,7 @@ sihd::util::Result<Shm> create_shm(std::string_view id, size_t size, mode_t mode
     return mapped;
 }
 
-sihd::util::Result<Shm> shm_attach(std::string_view id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+sihd::util::Result<Shm> shm_attach(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
     auto shm = __open(id, mode, shm_flags);
     if (!shm)
@@ -77,7 +77,7 @@ sihd::util::Result<Shm> shm_attach(std::string_view id, size_t size, mode_t mode
 
 } // namespace
 
-sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -94,7 +94,7 @@ sihd::util::Result<void> SharedMemory::create(std::string_view id, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -112,7 +112,7 @@ sihd::util::Result<void> SharedMemory::attach(std::string_view id, size_t size, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(std::string_view id, size_t size, mode_t mode)
+sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -158,17 +158,17 @@ sihd::util::Result<void> SharedMemory::clear()
 
 // no POSIX shared memory (android bionic, emscripten)
 
-sihd::util::Result<void> SharedMemory::create(std::string_view, size_t, mode_t)
+sihd::util::Result<void> SharedMemory::create(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> SharedMemory::attach(std::string_view, size_t, mode_t)
+sihd::util::Result<void> SharedMemory::attach(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(std::string_view, size_t, mode_t)
+sihd::util::Result<void> SharedMemory::attach_read_only(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

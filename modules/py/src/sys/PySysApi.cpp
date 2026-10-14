@@ -49,18 +49,18 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
              })
         // the python bool boundary swallows the Error: log it once here
         .def("remove_directory",
-             [](std::string_view path) {
+             [](const std::string & path) {
                  auto res = fs::remove_directory(path);
                  return !SIHD_UNEXPECTED_LOG(res);
              })
         .def("remove_directories",
-             [](std::string_view path) {
+             [](const std::string & path) {
                  auto res = fs::remove_directories(path);
                  return !SIHD_UNEXPECTED_LOG(res);
              })
         .def(
             "make_directory",
-            [](std::string_view path, unsigned int mode) {
+            [](const std::string & path, unsigned int mode) {
                 auto res = fs::make_directory(path, mode);
                 return !SIHD_UNEXPECTED_LOG(res);
             },
@@ -68,7 +68,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
             pybind11::arg("mode") = 0750)
         .def(
             "make_directories",
-            [](std::string_view path, unsigned int mode) {
+            [](const std::string & path, unsigned int mode) {
                 auto res = fs::make_directories(path, mode);
                 return !SIHD_UNEXPECTED_LOG(res);
             },
@@ -84,7 +84,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("extension", &fs::extension)
         .def("combine", static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::combine))
         .def("remove_file",
-             [](std::string_view path) {
+             [](const std::string & path) {
                  auto res = fs::remove_file(path);
                  return !SIHD_UNEXPECTED_LOG(res);
              })

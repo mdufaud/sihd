@@ -228,7 +228,7 @@ Bitmap::PixelBuffer Bitmap::to_bmp_data() const
     return bmp_data;
 }
 
-bool Bitmap::save_bmp(std::string_view path) const
+bool Bitmap::save_bmp(const std::string & path) const
 {
     File file(path, "wb");
 
@@ -243,7 +243,7 @@ bool Bitmap::save_bmp(std::string_view path) const
     return wrote && *wrote == bmp_data.size();
 }
 
-bool Bitmap::read_bmp(std::string_view path)
+bool Bitmap::read_bmp(const std::string & path)
 {
     File file(path, "rb");
 

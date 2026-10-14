@@ -78,16 +78,14 @@ bool println(std::string_view str);
 
 char *csub(std::string_view str, Slice slice = {});
 
-// name must be null-terminated
-std::string demangle(std::string_view name);
+std::string demangle(const std::string & name);
 template <typename T>
 std::string demangle_type_name(const T & type)
 {
     return str::demangle(typeid(type).name());
 }
 
-// the format string must be null-terminated
-std::string format(std::string_view format, ...);
+std::string format(const char *format, ...);
 
 bool is_all_spaces(std::string_view s);
 bool is_digit(int c, uint16_t base = 10);

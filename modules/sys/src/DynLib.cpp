@@ -8,7 +8,7 @@ SIHD_LOGGER;
 
 DynLib::DynLib(): _handle(nullptr) {}
 
-DynLib::DynLib(std::string_view lib_name): DynLib()
+DynLib::DynLib(const std::string & lib_name): DynLib()
 {
     SIHD_UNEXPECTED_LOG(this->open(lib_name));
 }

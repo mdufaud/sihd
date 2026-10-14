@@ -175,7 +175,7 @@ struct StdFdWrapper
         void redirect_to(std::function<void(std::string_view)> && fun);
         void redirect_to(std::string & output);
         void redirect_to(Process::FileDescType fd);
-        bool redirect_to_file(std::string_view path, bool append, mode_t open_mode);
+        bool redirect_to_file(const std::string & path, bool append, mode_t open_mode);
         void reset();
         void zero_fd_read();
 };
@@ -243,7 +243,7 @@ void StdFdWrapper::redirect_to(Process::FileDescType fd)
     this->fd_write = fd;
 }
 
-bool StdFdWrapper::redirect_to_file(std::string_view path, bool append, mode_t open_mode)
+bool StdFdWrapper::redirect_to_file(const std::string & path, bool append, mode_t open_mode)
 {
 #pragma message("TODO CreateFile permissions in windows")
     (void)open_mode;
@@ -456,7 +456,7 @@ Process & Process::stdin_from(FileDescType fd)
     return *this;
 }
 
-bool Process::stdin_from_file(std::string_view path)
+bool Process::stdin_from_file(const std::string & path)
 {
     SECURITY_ATTRIBUTES sec_attr;
     sec_attr.nLength = sizeof(sec_attr);
@@ -516,7 +516,7 @@ Process & Process::stdout_to(Process & proc)
     return *this;
 }
 
-bool Process::stdout_to_file(std::string_view path, bool append)
+bool Process::stdout_to_file(const std::string & path, bool append)
 {
     return _impl->pipe.std_out.redirect_to_file(path, append, this->open_mode);
 }
@@ -560,7 +560,7 @@ Process & Process::stderr_to(Process & proc)
     return *this;
 }
 
-bool Process::stderr_to_file(std::string_view path, bool append)
+bool Process::stderr_to_file(const std::string & path, bool append)
 {
     return _impl->pipe.std_err.redirect_to_file(path, append, this->open_mode);
 }

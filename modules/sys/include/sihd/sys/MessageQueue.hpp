@@ -6,7 +6,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <string_view>
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
@@ -44,11 +43,11 @@ class MessageQueue
         MessageQueue & operator=(const MessageQueue &) = delete;
 
         sihd::util::Result<void>
-            create(std::string_view name, size_t max_messages, size_t max_message_size, mode_t mode = 0600);
+            create(const std::string & name, size_t max_messages, size_t max_message_size, mode_t mode = 0600);
 
-        sihd::util::Result<void> open(std::string_view name);
+        sihd::util::Result<void> open(const std::string & name);
 
-        static sihd::util::Result<void> unlink(std::string_view name);
+        static sihd::util::Result<void> unlink(const std::string & name);
 
         sihd::util::Result<void> unlink();
 

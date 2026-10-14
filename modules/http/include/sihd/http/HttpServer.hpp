@@ -30,10 +30,10 @@ class HttpServer: public sihd::util::Node,
 
         bool set_encoding(std::string_view encoding);
         bool set_port(int port);
-        bool set_root_dir(std::string_view root_dir);
+        bool set_root_dir(const std::string & root_dir);
         bool set_poll_frequency(double freq);
-        bool set_ssl_cert_path(std::string_view path);
-        bool set_ssl_cert_key(std::string_view path);
+        bool set_ssl_cert_path(const std::string & path);
+        bool set_ssl_cert_key(const std::string & path);
         bool set_404_path(std::string_view path);
         bool set_server_name(std::string_view path);
         bool set_cors_origin(std::string_view origin);

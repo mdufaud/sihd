@@ -48,7 +48,7 @@ CsvReader::CsvReader()
     _line_reader.set_delimiter_in_line(true);
 }
 
-CsvReader::CsvReader(std::string_view path): CsvReader()
+CsvReader::CsvReader(const std::string & path): CsvReader()
 {
     SIHD_UNEXPECTED_LOG(this->open(path));
 }
@@ -84,7 +84,7 @@ void CsvReader::set_timestamp_format(std::string format)
     _timestamp_fmt = std::move(format);
 }
 
-sihd::util::Result<void> CsvReader::open(std::string_view path)
+sihd::util::Result<void> CsvReader::open(const std::string & path)
 {
     this->_reset_line();
     return _line_reader.open(path);

@@ -21,7 +21,7 @@ namespace sihd::util
 namespace
 {
 
-std::unexpected<Error> date_parse_error(const std::string & date_str, std::string_view format)
+std::unexpected<Error> date_parse_error(const std::string & date_str, const std::string & format)
 {
     return std::unexpected(Error(invalid_argument, "could not parse date '{}' with format '{}'", date_str, format));
 }
@@ -181,20 +181,20 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-sihd::util::Result<Timestamp> Timestamp::from_str(const std::string & date_str, std::string_view format)
+sihd::util::Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format)
 {
     return Timestamp::from_str(date_str, format, std::locale::classic());
 }
 
 sihd::util::Result<Timestamp>
-    Timestamp::from_str(const std::string & date_str, std::string_view format, const std::locale & loc)
+    Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
     std::chrono::system_clock::time_point tp;
 
     std::istringstream ss {date_str};
     ss.imbue(loc);
-    ss >> std::chrono::parse(format.data(), tp);
+    ss >> std::chrono::parse(format.c_str(), tp);
 
     if (ss.fail())
         return date_parse_error(date_str, format);
@@ -205,7 +205,7 @@ sihd::util::Result<Timestamp>
     std::istringstream ss {date_str.data()};
 
     ss.imbue(loc);
-    ss >> std::get_time(&t, format.data());
+    ss >> std::get_time(&t, format.c_str());
 
     if (ss.fail())
         return date_parse_error(date_str, format);

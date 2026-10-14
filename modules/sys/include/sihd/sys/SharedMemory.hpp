@@ -4,7 +4,6 @@
 #include <sys/stat.h> // mode_t
 
 #include <string>
-#include <string_view>
 #include <type_traits>
 
 #include <sihd/sys/platform.hpp>
@@ -32,10 +31,10 @@ class SharedMemory
         SharedMemory(SharedMemory &&);
         SharedMemory & operator=(SharedMemory &&);
 
-        sihd::util::Result<void> create(std::string_view id, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> create(const std::string & id, size_t size, mode_t mode = 0600);
 
-        sihd::util::Result<void> attach(std::string_view id, size_t size, mode_t mode = 0600);
-        sihd::util::Result<void> attach_read_only(std::string_view id, size_t size, mode_t mode = 0400);
+        sihd::util::Result<void> attach(const std::string & id, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> attach_read_only(const std::string & id, size_t size, mode_t mode = 0400);
 
         sihd::util::Result<void> clear();
 

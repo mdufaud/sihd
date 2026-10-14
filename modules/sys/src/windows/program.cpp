@@ -22,7 +22,7 @@ std::string path()
     return ".";
 }
 
-sihd::util::Result<void *> find_symbol([[maybe_unused]] std::string_view symbol_name)
+sihd::util::Result<void *> find_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(SIHD_STATIC)
     DWORD needed = 0;
@@ -35,7 +35,7 @@ sihd::util::Result<void *> find_symbol([[maybe_unused]] std::string_view symbol_
     {
         if (module == nullptr)
             continue;
-        void *ret = (void *)GetProcAddress(module, symbol_name.data());
+        void *ret = (void *)GetProcAddress(module, symbol_name.c_str());
         if (ret != nullptr)
             return ret;
     }

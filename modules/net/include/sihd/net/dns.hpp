@@ -9,7 +9,7 @@
 namespace sihd::net::dns
 {
 
-sihd::util::Result<IpAddr> find(std::string_view host, bool ipv6 = false, int socktype = -1, int protocol = -1);
+sihd::util::Result<IpAddr> find(const std::string & host, bool ipv6 = false, int socktype = -1, int protocol = -1);
 
 struct DnsEntry
 {
@@ -28,8 +28,8 @@ struct DnsLookup
         std::string dump() const;
 };
 
-DnsLookup lookup(std::string_view host);
-std::future<DnsLookup> lookup_async(std::string_view host);
+DnsLookup lookup(const std::string & host);
+std::future<DnsLookup> lookup_async(const std::string & host);
 
 } // namespace sihd::net::dns
 

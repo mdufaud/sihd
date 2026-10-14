@@ -30,7 +30,7 @@ using enum sihd::util::ErrorCode;
 namespace
 {
 
-sihd::util::Result<bool> ask_dns(std::string_view host, std::function<bool(const IpAddr &, int, int)> && callback)
+sihd::util::Result<bool> ask_dns(const std::string & host, std::function<bool(const IpAddr &, int, int)> && callback)
 {
     int ret;
     struct addrinfo hints;
@@ -43,7 +43,7 @@ sihd::util::Result<bool> ask_dns(std::string_view host, std::function<bool(const
     hints.ai_protocol = 0;
     hints.ai_flags = AI_CANONNAME;
 
-    if ((ret = getaddrinfo(host.data(), NULL, &hints, &results)) != 0)
+    if ((ret = getaddrinfo(host.c_str(), NULL, &hints, &results)) != 0)
         return std::unexpected(Error(not_found, "'{}': {}", host, gai_strerror(ret)));
 
     first_result = results;
@@ -79,7 +79,7 @@ sihd::util::Result<bool> ask_dns(std::string_view host, std::function<bool(const
 
 } // namespace
 
-sihd::util::Result<IpAddr> find(std::string_view host, bool ipv6, int socktype, int protocol)
+sihd::util::Result<IpAddr> find(const std::string & host, bool ipv6, int socktype, int protocol)
 {
     if (host.empty())
         return std::unexpected(Error(invalid_argument, "dns::find: empty host"));
@@ -111,7 +111,7 @@ sihd::util::Result<IpAddr> find(std::string_view host, bool ipv6, int socktype, 
     return ret;
 }
 
-DnsLookup lookup(std::string_view host)
+DnsLookup lookup(const std::string & host)
 {
     DnsLookup ret;
 
@@ -150,9 +150,9 @@ std::string DnsLookup::dump() const
     return dump;
 }
 
-std::future<DnsLookup> lookup_async(std::string_view host)
+std::future<DnsLookup> lookup_async(const std::string & host)
 {
-    return std::async(std::launch::async, [h = std::string(host)] { return lookup(h); });
+    return std::async(std::launch::async, [h = host] { return lookup(h); });
 }
 
 } // namespace sihd::net::dns

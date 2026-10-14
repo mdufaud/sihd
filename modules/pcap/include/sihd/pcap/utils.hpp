@@ -3,7 +3,6 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>
 
 #include <sihd/util/Result.hpp>
 
@@ -12,7 +11,7 @@ namespace sihd::pcap::utils
 
 bool init(int opts = -1);
 
-sihd::util::Result<void> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask);
+sihd::util::Result<void> lookupnet(const std::string & dev, uint32_t *ip, uint32_t *mask);
 
 std::string status_str(int code);
 std::string version();
@@ -20,12 +19,12 @@ std::string version();
 bool is_timestamp_type(int ts);
 std::string timestamp_type_str(int ts);
 std::string timestamp_type_desc(int dtl);
-int timestamp_type(std::string_view dtl);
+int timestamp_type(const std::string & dtl);
 
 bool is_datalink(int dtl);
 std::string datalink_str(int dtl);
 std::string datalink_desc(int dtl);
-int datalink(std::string_view dtl);
+int datalink(const std::string & dtl);
 
 } // namespace sihd::pcap::utils
 

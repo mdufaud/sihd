@@ -4,7 +4,6 @@
 #include <sys/stat.h> // mode_t
 
 #include <string>
-#include <string_view>
 #include <type_traits>
 
 #include <sihd/sys/platform.hpp>
@@ -34,11 +33,11 @@ class MappedFile
         MappedFile & operator=(MappedFile &&);
 
         // truncates/creates 'path' to 'size' bytes and maps it read-write; size must not be 0
-        sihd::util::Result<void> create(std::string_view path, size_t size, mode_t mode = 0600);
+        sihd::util::Result<void> create(const std::string & path, size_t size, mode_t mode = 0600);
 
         // mapping an empty file fails
-        sihd::util::Result<void> open_read_only(std::string_view path);
-        sihd::util::Result<void> open_read_write(std::string_view path);
+        sihd::util::Result<void> open_read_only(const std::string & path);
+        sihd::util::Result<void> open_read_write(const std::string & path);
 
         sihd::util::Result<void> clear();
         sihd::util::Result<void> sync(bool async = false);

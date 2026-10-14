@@ -66,7 +66,7 @@ void map_path_into(std::vector<FileStat> & file_stats,
     }
 }
 
-Timestamp last_write_or(std::string_view path, Timestamp fallback)
+Timestamp last_write_or(const std::string & path, Timestamp fallback)
 {
     auto times = fs::times(path);
     if (!times)
@@ -131,7 +131,7 @@ FilePoller::FilePoller()
     _impl = std::make_unique<Impl>();
 }
 
-FilePoller::FilePoller(std::string_view path, size_t max_depth): FilePoller()
+FilePoller::FilePoller(const std::string & path, size_t max_depth): FilePoller()
 {
     auto watched = this->watch(path, max_depth);
     if (!watched)
@@ -173,7 +173,7 @@ void FilePoller::unwatch()
     _impl = std::make_unique<Impl>();
 }
 
-sihd::util::Result<void> FilePoller::watch(std::string_view path, size_t max_depth)
+sihd::util::Result<void> FilePoller::watch(const std::string & path, size_t max_depth)
 {
     if (_impl->watch_path == path)
         return {};

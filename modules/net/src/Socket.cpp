@@ -107,9 +107,11 @@ bool atomic_datagram_type(int type)
 
 std::optional<socklen_t> unix_path_to_sockaddr(sockaddr_un *addr, std::string_view path)
 {
+    if (path.empty())
+        return std::nullopt;
     // addr_len separates pathname (terminator included) from abstract (leading null kept)
     const size_t terminator = (path[0] != '\0');
-    if (path.empty() || path.size() + terminator > sizeof(addr->sun_path))
+    if (path.size() + terminator > sizeof(addr->sun_path))
         return std::nullopt;
     memset(addr, 0, sizeof(*addr));
     addr->sun_family = AF_UNIX;
@@ -168,7 +170,7 @@ Socket::Socket(int socket, std::string_view domain, std::string_view socket_type
     _socket = socket;
     _domain = ip::domain(domain);
     _type = ip::socktype(socket_type);
-    _protocol = ip::protocol(protocol);
+    _protocol = ip::protocol(std::string(protocol));
     if (_domain == -1)
         SIHD_LOG(error, "Socket: domain unknown: {}", domain);
     if (_type == -1)
@@ -500,7 +502,7 @@ sihd::util::Result<void> Socket::open(std::string_view domain, std::string_view 
 {
     int sockdomain = ip::domain(domain);
     int socktype = ip::socktype(type);
-    int sockprotocol = ip::protocol(protocol);
+    int sockprotocol = ip::protocol(std::string(protocol));
     if (sockdomain >= 0 && socktype >= 0 && sockprotocol >= 0)
         return this->open(sockdomain, socktype, sockprotocol);
     return std::unexpected(Error(ErrorCode::invalid_argument, "unknown domain, type or protocol"));
@@ -917,7 +919,7 @@ sihd::util::Result<int> Socket::accept(int timeout_ms)
 /* ************************************************************************* */
 
 sihd::util::Result<void>
-    Socket::_multicast_membership(const IpAddr & group, std::string_view iface, int ipv4_opt, int ipv6_opt)
+    Socket::_multicast_membership(const IpAddr & group, const std::string & iface, int ipv4_opt, int ipv6_opt)
 {
     if (!this->is_open())
         return std::unexpected(closed_socket_error("multicast membership"));
@@ -943,7 +945,7 @@ sihd::util::Result<void>
 #if !defined(__SIHD_WINDOWS__)
         if (!iface.empty())
         {
-            mreq.ipv6mr_interface = if_nametoindex(iface.data());
+            mreq.ipv6mr_interface = if_nametoindex(iface.c_str());
             if (mreq.ipv6mr_interface == 0)
                 return std::unexpected(Error(ErrorCode::not_found, "no interface named: {}", iface));
         }
@@ -954,12 +956,12 @@ sihd::util::Result<void>
     return std::unexpected(Error(ErrorCode::invalid_argument, "multicast group is not an ip address"));
 }
 
-sihd::util::Result<void> Socket::join_multicast(const IpAddr & group, std::string_view iface)
+sihd::util::Result<void> Socket::join_multicast(const IpAddr & group, const std::string & iface)
 {
     return this->_multicast_membership(group, iface, IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP);
 }
 
-sihd::util::Result<void> Socket::leave_multicast(const IpAddr & group, std::string_view iface)
+sihd::util::Result<void> Socket::leave_multicast(const IpAddr & group, const std::string & iface)
 {
     return this->_multicast_membership(group, iface, IP_DROP_MEMBERSHIP, IPV6_LEAVE_GROUP);
 }

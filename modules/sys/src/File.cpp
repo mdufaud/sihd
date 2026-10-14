@@ -97,7 +97,7 @@ File::File()
     _stream_ownership = true;
 }
 
-File::File(int fd, std::string_view mode): File()
+File::File(int fd, const std::string & mode): File()
 {
     SIHD_UNEXPECTED_LOG(this->open_fd(fd, mode));
 }
@@ -107,7 +107,7 @@ File::File(FILE *stream, bool ownership): File()
     SIHD_UNEXPECTED_LOG(this->set_stream(stream, ownership));
 }
 
-File::File(std::string_view path, std::string_view mode): File()
+File::File(const std::string & path, const std::string & mode): File()
 {
     SIHD_UNEXPECTED_LOG(this->open(path, mode));
 }
@@ -206,12 +206,12 @@ void File::_delete_buffer()
     }
 }
 
-sihd::util::Result<void> File::open_fd(int fd, std::string_view mode)
+sihd::util::Result<void> File::open_fd(int fd, const std::string & mode)
 {
     auto closed = this->close();
     if (!closed)
         return closed;
-    _file_ptr = fdopen(fd, mode.data());
+    _file_ptr = fdopen(fd, mode.c_str());
     if (_file_ptr == nullptr)
         return std::unexpected(Error::from_errno("could not open file descriptor {}", fd));
     _stream_ownership = true;
@@ -240,7 +240,7 @@ sihd::util::Result<void> File::open_tmpfile()
     return {};
 }
 
-sihd::util::Result<void> File::open_tmp(std::string_view prefix, bool write_binary, std::string_view suffix)
+sihd::util::Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix)
 {
     auto closed = this->close();
     if (!closed)
@@ -249,9 +249,9 @@ sihd::util::Result<void> File::open_tmp(std::string_view prefix, bool write_bina
     if (path_size >= PATH_MAX)
         return std::unexpected(Error(invalid_argument, "path too long: {}", path_size));
     char path[PATH_MAX];
-    strcpy(path, prefix.data());
+    strcpy(path, prefix.c_str());
     strcpy(path + prefix.size(), "XXXXXX");
-    strcpy(path + prefix.size() + 6, suffix.data());
+    strcpy(path + prefix.size() + 6, suffix.c_str());
 #if !defined(__SIHD_WINDOWS__)
     int fd = mkstemps(path, (int)suffix.size());
     if (fd < 0)
@@ -284,12 +284,12 @@ sihd::util::Result<void> File::open_tmp(std::string_view prefix, bool write_bina
 #endif
 }
 
-sihd::util::Result<void> File::open(std::string_view path, std::string_view mode)
+sihd::util::Result<void> File::open(const std::string & path, const std::string & mode)
 {
     auto closed = this->close();
     if (!closed)
         return closed;
-    _file_ptr = fopen(path.data(), mode.data());
+    _file_ptr = fopen(path.c_str(), mode.c_str());
     if (_file_ptr == nullptr)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     _path = path;
@@ -411,7 +411,7 @@ void File::unlock()
 #endif
 }
 
-sihd::util::Result<void> File::open_mem(std::string_view mode, std::string_view put_in_buffer)
+sihd::util::Result<void> File::open_mem(const std::string & mode, std::string_view put_in_buffer)
 {
     if (this->_allocate_buffer_if_not_exists() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
@@ -461,7 +461,7 @@ sihd::util::Result<void> File::open_mem(std::string_view mode, std::string_view 
         return std::unexpected(std::move(error));
     }
 
-    stream = _fdopen(fd, mode.data());
+    stream = _fdopen(fd, mode.c_str());
     if (!stream)
         return std::unexpected(Error::from_errno("could not open temporary file"));
     /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful,
@@ -469,7 +469,7 @@ sihd::util::Result<void> File::open_mem(std::string_view mode, std::string_view 
      * descriptor.*/
     rewind(stream);
 #else
-    stream = fmemopen(_buf_ptr, _buf_size, mode.data());
+    stream = fmemopen(_buf_ptr, _buf_size, mode.c_str());
     if (stream == nullptr)
         return std::unexpected(Error::from_errno("could not open memory stream"));
 #endif

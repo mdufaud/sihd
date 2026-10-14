@@ -50,11 +50,11 @@ bool init(int opts)
     return _is_init;
 }
 
-sihd::util::Result<void> lookupnet(std::string_view dev, uint32_t *ip, uint32_t *mask)
+sihd::util::Result<void> lookupnet(const std::string & dev, uint32_t *ip, uint32_t *mask)
 {
     static_assert(sizeof(bpf_u_int32) == sizeof(uint32_t));
     char errbuf[PCAP_ERRBUF_SIZE];
-    int ret = pcap_lookupnet(dev.data(),
+    int ret = pcap_lookupnet(dev.c_str(),
                              reinterpret_cast<bpf_u_int32 *>(ip),
                              reinterpret_cast<bpf_u_int32 *>(mask),
                              errbuf);
@@ -78,9 +78,9 @@ std::string datalink_desc(int dtl)
     return pcap_datalink_val_to_description(dtl);
 }
 
-int datalink(std::string_view dtl)
+int datalink(const std::string & dtl)
 {
-    return pcap_datalink_name_to_val(dtl.data());
+    return pcap_datalink_name_to_val(dtl.c_str());
 }
 
 bool is_timestamp_type(int ts)
@@ -98,9 +98,9 @@ std::string timestamp_type_desc(int ts)
     return pcap_tstamp_type_val_to_description(ts);
 }
 
-int timestamp_type(std::string_view ts)
+int timestamp_type(const std::string & ts)
 {
-    return pcap_tstamp_type_name_to_val(ts.data());
+    return pcap_tstamp_type_name_to_val(ts.c_str());
 }
 
 } // namespace sihd::pcap::utils

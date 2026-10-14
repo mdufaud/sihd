@@ -93,9 +93,9 @@ enum class CopyResult
 // copy_file_range/sendfile accept at most this many bytes per call
 constexpr size_t range_chunk_max = 0x7ffff000;
 
-bool do_stat(std::string_view path, struct stat *s)
+bool do_stat(const std::string & path, struct stat *s)
 {
-    return ::stat(path.data(), s) == 0;
+    return ::stat(path.c_str(), s) == 0;
 }
 
 #if defined(SIHD_FS_HAS_STATX)
@@ -199,7 +199,7 @@ CopyResult kernel_copy(int in_fd, int out_fd, size_t total, const std::function<
 
 #endif
 
-void get_recursive_children(std::string_view path,
+void get_recursive_children(const std::string & path,
                             std::vector<std::string> & children,
                             uint32_t current_depth,
                             uint32_t max_depth)
@@ -209,7 +209,7 @@ void get_recursive_children(std::string_view path,
 
     DIR *dir_ptr;
     struct dirent *dirent;
-    if ((dir_ptr = opendir(path.data())) != NULL)
+    if ((dir_ptr = opendir(path.c_str())) != NULL)
     {
         while ((dirent = readdir(dir_ptr)) != NULL)
         {
@@ -330,31 +330,31 @@ std::string download_path()
 
 // stat
 
-bool exists(std::string_view path)
+bool exists(const std::string & path)
 {
-    return access(path.data(), F_OK) == 0;
+    return access(path.c_str(), F_OK) == 0;
 }
 
-bool is_readable(std::string_view path)
+bool is_readable(const std::string & path)
 {
-    return access(path.data(), R_OK) == 0;
+    return access(path.c_str(), R_OK) == 0;
 }
 
-bool is_writable(std::string_view path)
+bool is_writable(const std::string & path)
 {
-    return access(path.data(), W_OK) == 0;
+    return access(path.c_str(), W_OK) == 0;
 }
 
-bool is_executable(std::string_view path)
+bool is_executable(const std::string & path)
 {
-    return access(path.data(), X_OK) == 0;
+    return access(path.c_str(), X_OK) == 0;
 }
 
-sihd::util::Result<FileTimes> times(std::string_view path)
+sihd::util::Result<FileTimes> times(const std::string & path)
 {
 #if defined(SIHD_FS_HAS_STATX)
     struct statx stx;
-    if (::statx(AT_FDCWD, path.data(), 0, STATX_BASIC_STATS | STATX_BTIME, &stx) != 0)
+    if (::statx(AT_FDCWD, path.c_str(), 0, STATX_BASIC_STATS | STATX_BTIME, &stx) != 0)
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     FileTimes ret;
     if (stx.stx_mask & STATX_BTIME)
@@ -366,7 +366,7 @@ sihd::util::Result<FileTimes> times(std::string_view path)
     return ret;
 #else
     struct stat s;
-    if (!do_stat(path.data(), &s))
+    if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     FileTimes ret;
     ret.access = Timestamp(time::seconds(s.st_atime));
@@ -375,15 +375,15 @@ sihd::util::Result<FileTimes> times(std::string_view path)
 #endif
 }
 
-Timestamp last_write(std::string_view path)
+Timestamp last_write(const std::string & path)
 {
     return times(path).value_or(FileTimes()).write;
 }
 
-sihd::util::Result<size_t> file_size(std::string_view path)
+sihd::util::Result<size_t> file_size(const std::string & path)
 {
     struct stat s;
-    if (!do_stat(path.data(), &s))
+    if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     return s.st_size;
 }
@@ -401,7 +401,7 @@ std::string tmp_path()
     return "/tmp";
 }
 
-sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
+sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
 {
     if (prefix.size() + 6 > PATH_MAX)
         return std::unexpected(Error(invalid_argument, "path too long: {}", prefix));
@@ -417,20 +417,20 @@ sihd::util::Result<std::string> make_tmp_directory(std::string_view prefix)
     return path;
 }
 
-sihd::util::Result<void> make_directory(std::string_view path, unsigned int mode)
+sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
     if (path.empty())
         return std::unexpected(Error(invalid_argument, "empty path"));
-    if (mkdir(path.data(), mode) != 0)
+    if (mkdir(path.c_str(), mode) != 0)
     {
         return std::unexpected(Error::from_errno("could not make directory '{}'", path));
     }
     return {};
 }
 
-std::vector<std::string> recursive_children(std::string_view path, uint32_t max_depth)
+std::vector<std::string> recursive_children(const std::string & path, uint32_t max_depth)
 {
     std::vector<std::string> ret;
     uint32_t current_depth = 0;
@@ -438,12 +438,12 @@ std::vector<std::string> recursive_children(std::string_view path, uint32_t max_
     return ret;
 }
 
-std::vector<std::string> children(std::string_view path)
+std::vector<std::string> children(const std::string & path)
 {
     std::vector<std::string> ret;
     DIR *dir_ptr;
     struct dirent *dirent;
-    if ((dir_ptr = opendir(path.data())) != NULL)
+    if ((dir_ptr = opendir(path.c_str())) != NULL)
     {
         while ((dirent = readdir(dir_ptr)) != NULL)
         {
@@ -461,9 +461,9 @@ std::vector<std::string> children(std::string_view path)
 
 // files
 
-sihd::util::Result<void> truncate(std::string_view path, int64_t size)
+sihd::util::Result<void> truncate(const std::string & path, int64_t size)
 {
-    if (::truncate(path.data(), static_cast<off_t>(size)) != 0)
+    if (::truncate(path.c_str(), static_cast<off_t>(size)) != 0)
     {
         return std::unexpected(Error::from_errno("could not truncate '{}' to {} bytes", path, size));
     }
@@ -471,9 +471,9 @@ sihd::util::Result<void> truncate(std::string_view path, int64_t size)
 }
 
 sihd::util::Result<void>
-    copy_file(std::string_view from, std::string_view to, const std::function<bool(size_t, size_t)> & progress)
+    copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
 {
-    int in_fd = ::open(from.data(), O_RDONLY);
+    int in_fd = ::open(from.c_str(), O_RDONLY);
     if (in_fd < 0)
     {
         return std::unexpected(Error::from_errno("could not open '{}' for copy", from));
@@ -489,13 +489,13 @@ sihd::util::Result<void>
 
     // opening the destination would truncate the source itself
     struct stat dst;
-    if (::stat(to.data(), &dst) == 0 && dst.st_dev == s.st_dev && dst.st_ino == s.st_ino)
+    if (::stat(to.c_str(), &dst) == 0 && dst.st_dev == s.st_dev && dst.st_ino == s.st_ino)
     {
         ::close(in_fd);
         return std::unexpected(Error(invalid_argument, "'{}' and '{}' are the same file", from, to));
     }
 
-    int out_fd = ::open(to.data(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    int out_fd = ::open(to.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (out_fd < 0)
     {
         std::unexpected<Error> ret(Error::from_errno("could not open '{}' for copy", to));
@@ -522,7 +522,7 @@ sihd::util::Result<void>
     {
         ::close(in_fd);
         ::close(out_fd);
-        ::unlink(to.data());
+        ::unlink(to.c_str());
         return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
     }
 
@@ -553,13 +553,13 @@ sihd::util::Result<void>
         res = std::unexpected(Error::from_errno("could not close '{}'", to));
     }
     if (!res)
-        ::unlink(to.data());
+        ::unlink(to.c_str());
     return res;
 }
 
-std::string realpath(std::string_view path)
+std::string realpath(const std::string & path)
 {
-    char *real = ::realpath(path.data(), nullptr);
+    char *real = ::realpath(path.c_str(), nullptr);
     if (!real)
         return "";
     std::string result(real);
@@ -567,20 +567,20 @@ std::string realpath(std::string_view path)
     return result;
 }
 
-sihd::util::Result<void> chdir(std::string_view path)
+sihd::util::Result<void> chdir(const std::string & path)
 {
-    if (::chdir(path.data()) != 0)
+    if (::chdir(path.c_str()) != 0)
     {
         return std::unexpected(Error::from_errno("could not chdir to '{}'", path));
     }
     return {};
 }
 
-MountType mount_type([[maybe_unused]] std::string_view path)
+MountType mount_type([[maybe_unused]] const std::string & path)
 {
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     struct statfs buf;
-    if (::statfs(path.data(), &buf) != 0)
+    if (::statfs(path.c_str(), &buf) != 0)
         return MountType::unknown;
 
     switch (static_cast<unsigned long>(buf.f_type))
@@ -629,7 +629,7 @@ MountType mount_type([[maybe_unused]] std::string_view path)
 #endif
 }
 
-StorageMedium storage_medium([[maybe_unused]] std::string_view path)
+StorageMedium storage_medium([[maybe_unused]] const std::string & path)
 {
     // no rotational backing for these (or backing is a loop file)
     const MountType type = mount_type(path);
@@ -646,18 +646,18 @@ StorageMedium storage_medium([[maybe_unused]] std::string_view path)
 #endif
 }
 
-sihd::util::Result<uint64_t> free_space(std::string_view path)
+sihd::util::Result<uint64_t> free_space(const std::string & path)
 {
     struct statvfs vfs;
-    if (::statvfs(path.data(), &vfs) != 0)
+    if (::statvfs(path.c_str(), &vfs) != 0)
         return std::unexpected(Error::from_errno("could not statfs '{}'", path));
     return (uint64_t)vfs.f_bavail * vfs.f_frsize;
 }
 
-sihd::util::Result<uint64_t> total_space(std::string_view path)
+sihd::util::Result<uint64_t> total_space(const std::string & path)
 {
     struct statvfs vfs;
-    if (::statvfs(path.data(), &vfs) != 0)
+    if (::statvfs(path.c_str(), &vfs) != 0)
         return std::unexpected(Error::from_errno("could not statfs '{}'", path));
     return (uint64_t)vfs.f_blocks * vfs.f_frsize;
 }

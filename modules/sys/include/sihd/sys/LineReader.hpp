@@ -23,7 +23,7 @@ class LineReader: public sihd::util::IReader
         };
 
         LineReader(const LineReaderOptions & options = LineReaderOptions::none());
-        LineReader(std::string_view path, const LineReaderOptions & options = LineReaderOptions::none());
+        LineReader(const std::string & path, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(int fd, const LineReaderOptions & options = LineReaderOptions::none());
         LineReader(FILE *stream, bool ownership, const LineReaderOptions & options = LineReaderOptions::none());
 
@@ -37,7 +37,7 @@ class LineReader: public sihd::util::IReader
         bool set_delimiter_in_line(bool active);
         bool set_delimiter(int c);
 
-        sihd::util::Result<void> open(std::string_view path);
+        sihd::util::Result<void> open(const std::string & path);
         sihd::util::Result<void> open_fd(int fd);
         sihd::util::Result<void> set_stream(FILE *stream, bool ownership = false);
         bool is_open() const;

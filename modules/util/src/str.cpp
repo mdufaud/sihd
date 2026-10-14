@@ -804,10 +804,10 @@ char *csub(std::string_view str, Slice slice)
     return ret;
 }
 
-std::string demangle(std::string_view name)
+std::string demangle(const std::string & name)
 {
     int status = -1;
-    char *ptr = abi::__cxa_demangle(name.data(), NULL, NULL, &status);
+    char *ptr = abi::__cxa_demangle(name.c_str(), NULL, NULL, &status);
 
     if (status == 0 && ptr != nullptr)
     {
@@ -815,17 +815,17 @@ std::string demangle(std::string_view name)
         free(ptr);
         return ret;
     }
-    return std::string(name);
+    return name;
 }
 
-std::string format(std::string_view format, ...)
+std::string format(const char *format, ...)
 {
     constexpr size_t buffer_size = SIHD_UTIL_STR_BUFFER;
     thread_local char buffer[buffer_size];
 
     va_list args;
     va_start(args, format);
-    const int size = vsnprintf(buffer, buffer_size, format.data(), args);
+    const int size = vsnprintf(buffer, buffer_size, format, args);
     va_end(args);
 
     if (size < 0)
@@ -836,7 +836,7 @@ std::string format(std::string_view format, ...)
     // larger than the buffer: args were consumed, restart and format into the result
     va_start(args, format);
     std::string str(size, 0);
-    vsnprintf(str.data(), size + 1, format.data(), args);
+    vsnprintf(str.data(), size + 1, format, args);
     va_end(args);
     return str;
 }

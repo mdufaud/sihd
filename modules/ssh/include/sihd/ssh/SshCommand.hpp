@@ -22,8 +22,8 @@ class SshCommand
         SshCommand(const SshCommand & other) = delete;
         SshCommand & operator=(const SshCommand &) = delete;
 
-        sihd::util::Result<void> execute(std::string_view cmd);
-        sihd::util::Result<void> execute_async(std::string_view cmd);
+        sihd::util::Result<void> execute(const std::string & cmd);
+        sihd::util::Result<void> execute_async(const std::string & cmd);
         sihd::util::Result<void> input(sihd::util::ArrCharView view);
         sihd::util::Result<void> wait(sihd::util::Duration timeout_nano = {},
                                       sihd::util::time::UnixTime milliseconds_poll_time = 1);
