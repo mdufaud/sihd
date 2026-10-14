@@ -5,10 +5,10 @@
 #include <sihd/imgui/ImguiBackendSDL.hpp>
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
 #include <sihd/imgui/ImguiRunner.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
 
 namespace test
 {
@@ -32,7 +32,7 @@ class TestOpenGL3_SDL: public ::testing::Test
 
 TEST_F(TestOpenGL3_SDL, test_opengl3_sdl_interactive)
 {
-    if (sihd::util::term::is_interactive() == false)
+    if (sihd::sys::console::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
     ImguiRunner imgui("imgui-runner");
     ASSERT_TRUE(imgui.init_imgui());

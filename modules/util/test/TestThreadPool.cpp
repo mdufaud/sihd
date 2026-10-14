@@ -4,8 +4,8 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ThreadPool.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/term.hpp>
 
 #include "wait/wait_for.hpp"
 

@@ -5,7 +5,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/program.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 namespace test
 {

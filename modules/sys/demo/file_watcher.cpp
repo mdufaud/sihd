@@ -4,10 +4,10 @@
 
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/FileWatcher.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
     if constexpr (sihd::util::build::is_windows)
     {
-        term::set_output_utf8();
+        console::set_output_utf8();
     }
 
     App app({

@@ -5,9 +5,9 @@
 
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/ProcessMonitor.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
 using namespace sihd::util;
@@ -19,7 +19,7 @@ int main(int argc, char **argv)
 {
     if constexpr (sihd::util::build::is_windows)
     {
-        term::set_output_utf8();
+        console::set_output_utf8();
     }
 
     App app({

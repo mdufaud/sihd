@@ -16,6 +16,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
@@ -23,7 +24,6 @@
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
 #include "http_test_helpers.hpp"
@@ -112,7 +112,7 @@ TEST_F(TestHttpServer, test_httpserver_auto)
 
 TEST_F(TestHttpServer, test_httpserver_websockets)
 {
-    if (sihd::util::term::is_interactive() == false)
+    if (sihd::sys::console::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
 
     SimpleHttpServer server;

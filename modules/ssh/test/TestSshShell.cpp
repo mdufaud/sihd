@@ -2,10 +2,10 @@
 
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshShell.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
 
 namespace test
 {
@@ -27,7 +27,7 @@ class TestSshShell: public ::testing::Test
 TEST_F(TestSshShell, test_sshshell_interactive)
 {
     // requires an interactive terminal, a running SSH server on localhost:22 and valid key auth
-    if (sihd::util::term::is_interactive() == false)
+    if (sihd::sys::console::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
     if (sihd::sys::os::is_run_by_valgrind())
         GTEST_SKIP_("no valgrind");

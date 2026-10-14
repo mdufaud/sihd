@@ -18,8 +18,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 
 namespace demo
 {

@@ -4,9 +4,9 @@
 #include <ftxui/dom/elements.hpp>
 #include <gtest/gtest.h>
 
+#include <sihd/sys/console.hpp>
 #include <sihd/tui/CliComponent.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
 
 namespace test
 {
@@ -28,7 +28,7 @@ class TestCli: public ::testing::Test
 
 TEST_F(TestCli, test_tui_cli)
 {
-    if (sihd::util::term::is_interactive() == false)
+    if (sihd::sys::console::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
 
     CompletionMap completions = {

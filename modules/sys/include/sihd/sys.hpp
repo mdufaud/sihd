@@ -32,6 +32,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/info.hpp>
 #include <sihd/sys/os.hpp>

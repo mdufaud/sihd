@@ -1,5 +1,5 @@
-#ifndef __SIHD_UTIL_TERM_HPP__
-#define __SIHD_UTIL_TERM_HPP__
+#ifndef __SIHD_UTIL_ANSI_HPP__
+#define __SIHD_UTIL_ANSI_HPP__
 
 #include <stdio.h>
 #include <unistd.h>
@@ -7,14 +7,14 @@
 #include <string>
 #include <string_view>
 
-#define SIHD_TERM_ANSI_UNICODE_ESCAPE "\u001b"
-#define SIHD_TERM_ANSI_HEXA_ESCAPE "\x1B"
-#define SIHD_TERM_ANSI_DECIMAL_ESCAPE "\27"
-#define SIHD_TERM_ANSI_OCTAL_ESCAPE "\033"
+#define SIHD_ANSI_UNICODE_ESCAPE "\u001b"
+#define SIHD_ANSI_HEXA_ESCAPE "\x1B"
+#define SIHD_ANSI_DECIMAL_ESCAPE "\27"
+#define SIHD_ANSI_OCTAL_ESCAPE "\033"
 
-#define __ESC SIHD_TERM_ANSI_OCTAL_ESCAPE
+#define __ESC SIHD_ANSI_OCTAL_ESCAPE
 
-namespace sihd::util::term
+namespace sihd::util::ansi
 {
 
 namespace attr
@@ -88,13 +88,9 @@ inline constexpr const char *SCROLL_DOWN = __ESC "[T";
 
 } // namespace attr
 
-void set_output_utf8();
-
-bool is_interactive();
-
 // True when ANSI color escapes will be rendered on the given output: honors NO_COLOR /
 // CLICOLOR_FORCE, TERM and isatty; on Android the terminal bridge UI renders ANSI
-bool supports_color(FILE *output = stderr);
+bool color_supported(FILE *output = stderr);
 
 std::string fmt(std::string_view str, const char *attr);
 std::string fmt(std::string_view str, const char *attr1, const char *attr2);
@@ -120,7 +116,7 @@ std::string prev_line(int n);
 std::string set_pos(int line, int col);
 std::string set_col(int n);
 
-} // namespace sihd::util::term
+} // namespace sihd::util::ansi
 
 #undef __ESC
 

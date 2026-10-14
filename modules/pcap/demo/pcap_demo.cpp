@@ -12,8 +12,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Runnable.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // prevents: previous declaration as 'typedef long int suseconds_t' - windows libwebsockets

@@ -10,6 +10,15 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/program.hpp>
 
+#if defined(__SIHD_WINDOWS__)
+# include <winsock2.h>
+
+# include <io.h>
+# include <ws2tcpip.h>
+#else
+# include <unistd.h>
+#endif
+
 namespace test
 {
 
@@ -52,6 +61,146 @@ struct ScopedEnv
         std::string _name;
         std::optional<std::string> _previous;
 };
+
+#if defined(__SIHD_WINDOWS__)
+
+inline bool ensure_wsa()
+{
+    static bool started = [] {
+        WSADATA data;
+        return WSAStartup(MAKEWORD(2, 2), &data) == 0;
+    }();
+    return started;
+}
+
+// WSAPoll only polls sockets, so build a connected loopback TCP socket pair:
+// fds[0] = read end (server), fds[1] = write end (client)
+inline bool make_fd_pair(int fds[2])
+{
+    if (!ensure_wsa())
+        return false;
+
+    SOCKET listener = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == INVALID_SOCKET)
+        return false;
+
+    sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    int addrlen = sizeof(addr);
+    if (::bind(listener, (sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR
+        || ::getsockname(listener, (sockaddr *)&addr, &addrlen) == SOCKET_ERROR
+        || ::listen(listener, 1) == SOCKET_ERROR)
+    {
+        ::closesocket(listener);
+        return false;
+    }
+
+    SOCKET client = ::socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (client == INVALID_SOCKET)
+    {
+        ::closesocket(listener);
+        return false;
+    }
+
+    if (::connect(client, (sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR)
+    {
+        ::closesocket(listener);
+        ::closesocket(client);
+        return false;
+    }
+
+    SOCKET server = ::accept(listener, nullptr, nullptr);
+    ::closesocket(listener);
+    if (server == INVALID_SOCKET)
+    {
+        ::closesocket(client);
+        return false;
+    }
+
+    // disable Nagle so small writes are readable within the poll timeout
+    const int one = 1;
+    ::setsockopt(client, IPPROTO_TCP, TCP_NODELAY, (const char *)&one, sizeof(one));
+    ::setsockopt(server, IPPROTO_TCP, TCP_NODELAY, (const char *)&one, sizeof(one));
+
+    fds[0] = (int)server;
+    fds[1] = (int)client;
+    return true;
+}
+
+// pair io goes through winsock
+inline ssize_t read_fd(int fd, void *buf, size_t count)
+{
+    return ::recv((SOCKET)fd, (char *)buf, (int)count, 0);
+}
+
+inline ssize_t write_fd(int fd, const void *buf, size_t count)
+{
+    return ::send((SOCKET)fd, (const char *)buf, (int)count, 0);
+}
+
+inline void close_fd(int fd)
+{
+    ::closesocket((SOCKET)fd);
+}
+
+// plain crt file-descriptor io - windows sockets cannot use it
+inline ssize_t read_file_fd(int fd, void *buf, size_t count)
+{
+    return ::_read(fd, buf, (unsigned int)count);
+}
+
+inline ssize_t write_file_fd(int fd, const void *buf, size_t count)
+{
+    return ::_write(fd, buf, (unsigned int)count);
+}
+
+inline off_t seek_file_fd(int fd, off_t offset, int whence)
+{
+    return ::_lseek(fd, (long)offset, whence);
+}
+
+#else
+
+inline bool make_fd_pair(int fds[2])
+{
+    return ::pipe(fds) == 0;
+}
+
+inline ssize_t read_fd(int fd, void *buf, size_t count)
+{
+    return ::read(fd, buf, count);
+}
+
+inline ssize_t write_fd(int fd, const void *buf, size_t count)
+{
+    return ::write(fd, buf, count);
+}
+
+inline void close_fd(int fd)
+{
+    ::close(fd);
+}
+
+inline ssize_t read_file_fd(int fd, void *buf, size_t count)
+{
+    return ::read(fd, buf, count);
+}
+
+inline ssize_t write_file_fd(int fd, const void *buf, size_t count)
+{
+    return ::write(fd, buf, count);
+}
+
+inline off_t seek_file_fd(int fd, off_t offset, int whence)
+{
+    return ::lseek(fd, offset, whence);
+}
+
+#endif
 
 } // namespace test
 

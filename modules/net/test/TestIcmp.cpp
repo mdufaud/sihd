@@ -14,7 +14,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 #include "sihd/net/IpAddr.hpp"
 

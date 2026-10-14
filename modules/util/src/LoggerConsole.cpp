@@ -3,7 +3,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerConsole.hpp>
 #include <sihd/util/NamedFactory.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 namespace sihd::util
 {
@@ -43,23 +43,23 @@ const char *level_color(LogLevel level)
     switch (level)
     {
         case LogLevel::emergency:
-            return term::attr::VIOLET;
+            return ansi::attr::VIOLET;
         case LogLevel::alert:
-            return term::attr::VIOLET;
+            return ansi::attr::VIOLET;
         case LogLevel::critical:
-            return term::attr::VIOLET2;
+            return ansi::attr::VIOLET2;
         case LogLevel::error:
-            return term::attr::RED2;
+            return ansi::attr::RED2;
         case LogLevel::warning:
-            return term::attr::YELLOW;
+            return ansi::attr::YELLOW;
         case LogLevel::notice:
-            return term::attr::CYAN;
+            return ansi::attr::CYAN;
         case LogLevel::info:
-            return term::attr::GREEN;
+            return ansi::attr::GREEN;
         case LogLevel::debug:
-            return term::attr::GREY;
+            return ansi::attr::GREY;
         default:
-            return term::attr::WHITE;
+            return ansi::attr::WHITE;
     }
 }
 
@@ -67,7 +67,7 @@ const char *level_color(LogLevel level)
 
 LoggerConsole::LoggerConsole(const std::string & name, Node *parent):
     ALogger(name, parent),
-    _colors(term::supports_color(stderr))
+    _colors(ansi::color_supported(stderr))
 {
     this->add_conf("colors", &LoggerConsole::set_colors);
 }
@@ -85,7 +85,7 @@ bool LoggerConsole::set_colors(bool colors)
 void LoggerConsole::log(const LogInfo & info, std::string_view msg)
 {
     const char *beg = _colors ? level_color(info.level) : "";
-    const char *end = _colors ? term::attr::ENDC : "";
+    const char *end = _colors ? ansi::attr::ENDC : "";
 
     const std::string fmt_msg = fmt::format("{}{} [{}] <{}> {}{}\n",
                                             beg,

@@ -3,27 +3,11 @@
 
 #include <fmt/format.h>
 
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/term.hpp>
 
-#if defined(__ANDROID__)
-# include <sys/stat.h>
-#endif
-
-#if defined(__SIHD_WINDOWS__)
-# include <windows.h>
-#endif
-
-namespace sihd::util::term
+namespace sihd::util::ansi
 {
-
-void set_output_utf8()
-{
-#if defined(__SIHD_WINDOWS__)
-    SetConsoleOutputCP(CP_UTF8);
-    setvbuf(stdout, nullptr, _IOFBF, 1000);
-#endif
-}
 
 std::string fmt(std::string_view str, const char *attr)
 {
@@ -35,19 +19,7 @@ std::string fmt(std::string_view str, const char *attr1, const char *attr2)
     return fmt::format("{}{}{}{}", attr1, attr2, str, attr::ENDC);
 }
 
-bool is_interactive()
-{
-#if defined(__ANDROID__)
-    // On Android the terminal bridge connects stdin to a pipe from the UI: isatty() is 0 even though
-    // the user can type via the UI, so also return true when stdin is a FIFO/pipe
-    struct stat st;
-    if (fstat(fileno(stdin), &st) == 0 && S_ISFIFO(st.st_mode))
-        return true;
-#endif
-    return isatty(fileno(stdin));
-}
-
-bool supports_color(FILE *output)
+bool color_supported(FILE *output)
 {
     // explicit overrides (https://no-color.org, https://bixense.com/clicolors)
     if (::getenv("NO_COLOR") != nullptr)
@@ -78,77 +50,77 @@ bool supports_color(FILE *output)
 
 std::string underline(std::string_view str)
 {
-    return term::fmt(str, attr::UNDERLINE);
+    return fmt(str, attr::UNDERLINE);
 }
 
 std::string bold(std::string_view str)
 {
-    return term::fmt(str, attr::BOLD);
+    return fmt(str, attr::BOLD);
 }
 
 std::string selected(std::string_view str)
 {
-    return term::fmt(str, attr::SELECTED);
+    return fmt(str, attr::SELECTED);
 }
 
 std::string blink(std::string_view str)
 {
-    return term::fmt(str, attr::BLINK);
+    return fmt(str, attr::BLINK);
 }
 
 std::string red(std::string_view str)
 {
-    return term::fmt(str, attr::RED2);
+    return fmt(str, attr::RED2);
 }
 
 std::string green(std::string_view str)
 {
-    return term::fmt(str, attr::GREEN2);
+    return fmt(str, attr::GREEN2);
 }
 
 std::string white_bg(std::string_view str)
 {
-    return term::fmt(str, attr::WHITEBG, attr::BLACK);
+    return fmt(str, attr::WHITEBG, attr::BLACK);
 }
 
 std::string move_cursor_up(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}A", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}A", n);
 }
 
 std::string move_cursor_down(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}B", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}B", n);
 }
 
 std::string move_cursor_right(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}C", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}C", n);
 }
 
 std::string move_cursor_left(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}D", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}D", n);
 }
 
 std::string next_line(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}E", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}E", n);
 }
 
 std::string prev_line(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}F", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}F", n);
 }
 
 std::string set_pos(int line, int col)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{};{}H", line, col);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{};{}H", line, col);
 }
 
 std::string set_col(int n)
 {
-    return fmt::format(SIHD_TERM_ANSI_OCTAL_ESCAPE "[{}G", n);
+    return fmt::format(SIHD_ANSI_OCTAL_ESCAPE "[{}G", n);
 }
 
-} // namespace sihd::util::term
+} // namespace sihd::util::ansi

@@ -2,7 +2,7 @@
 #define __SIHD_UTIL_LOGGERCONSOLE_HPP__
 
 #include <sihd/util/ALogger.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 namespace sihd::util
 {
@@ -12,7 +12,7 @@ class LoggerConsole: public ALogger
     public:
         LoggerConsole(const std::string & name, Node *parent = nullptr);
         // explicit: a string literal would otherwise rank const char*->bool above ->std::string
-        explicit LoggerConsole(bool colors = term::supports_color(stderr));
+        explicit LoggerConsole(bool colors = ansi::color_supported(stderr));
         virtual ~LoggerConsole();
 
         virtual void log(const LogInfo & info, std::string_view msg) override;

@@ -10,8 +10,8 @@
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::util
@@ -441,7 +441,7 @@ Node & CliApp::sinks()
 ALogger *CliApp::create_default_logger()
 {
     // human format with colors on a terminal, the dated format for captured output
-    if (term::supports_color(stderr))
+    if (ansi::color_supported(stderr))
         return new LoggerConsole("console");
     return new LoggerStream(stderr);
 }

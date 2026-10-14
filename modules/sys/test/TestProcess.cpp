@@ -5,13 +5,13 @@
 
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/term.hpp>
 
 #include "test_helper.hpp"
 
@@ -100,7 +100,7 @@ class TestProcess: public ::testing::Test
 
 TEST_F(TestProcess, test_process_service)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
@@ -209,7 +209,7 @@ TEST_F(TestProcess, test_process_out)
 
 TEST_F(TestProcess, test_process_in_cat)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     Process proc(cmd_stdin_passthrough());
     std::string output;
@@ -255,7 +255,7 @@ TEST_F(TestProcess, test_process_in_cat)
 
 TEST_F(TestProcess, test_process_in_wc)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
@@ -301,7 +301,7 @@ TEST_F(TestProcess, test_process_file_in)
     SIHD_LOG(info, "Writing file for 'cat' input: {}", test_file);
     EXPECT_TRUE(fs::write(test_file, "hello world").has_value());
 
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
 
     Process proc(cmd_stdin_passthrough());
@@ -380,7 +380,7 @@ TEST_F(TestProcess, test_process_close)
     EXPECT_EQ((int)proc.return_code(), 2);
 #endif
 
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     Process cat(cmd_stdin_passthrough());
     cat.stdin_close().stderr_close();
@@ -402,7 +402,7 @@ TEST_F(TestProcess, test_process_close)
 
 TEST_F(TestProcess, test_process_chain)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     std::string output;
 #if !defined(__SIHD_WINDOWS__)
@@ -475,7 +475,7 @@ TEST_F(TestProcess, test_process_stderr)
 // windows TerminateProcess makes the child exit with a code, never "by signal"
 TEST_F(TestProcess, test_process_signal_kill)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     Process cat {"cat"};
 
@@ -492,7 +492,7 @@ TEST_F(TestProcess, test_process_signal_kill)
 // SIGSTOP / SIGCONT have no windows equivalent
 TEST_F(TestProcess, test_process_signal_stop)
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         GTEST_SKIP() << "Is an interactive test";
     Process cat {"cat"};
 

@@ -9,6 +9,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/Uuid.hpp>
 #include <sihd/sys/clipboard.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
@@ -25,7 +26,6 @@
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/macro.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/time.hpp>
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -104,7 +104,7 @@ void dynlib()
 
 void read_line()
 {
-    if (term::is_interactive() == false)
+    if (console::is_interactive() == false)
         return;
     fmt::print("Say something: ");
     std::cout.flush();
@@ -283,7 +283,7 @@ void process()
 
     if constexpr (sihd::util::build::is_windows)
     {
-        term::set_output_utf8();
+        console::set_output_utf8();
         args.push_back("cmd.exe");
         args.push_back("/c");
         args.push_back("dir");

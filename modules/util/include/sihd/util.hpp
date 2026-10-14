@@ -87,6 +87,7 @@
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/container.hpp>
@@ -98,7 +99,6 @@
 #include <sihd/util/num.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/tools.hpp>

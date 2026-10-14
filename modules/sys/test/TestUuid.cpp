@@ -5,8 +5,8 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/ansi.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/term.hpp>
 
 namespace test
 {

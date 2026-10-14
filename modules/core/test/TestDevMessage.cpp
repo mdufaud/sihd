@@ -8,7 +8,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 namespace test
 {

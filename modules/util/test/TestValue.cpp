@@ -6,7 +6,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Value.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 namespace test
 {

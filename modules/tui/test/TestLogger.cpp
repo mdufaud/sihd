@@ -2,12 +2,12 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/console.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/tui/LoggerComponent.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/num.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 
 #include "ftxui/component/captured_mouse.hpp" // for ftxui
 #include "ftxui/component/component.hpp"      // for CatchEvent, Renderer
@@ -75,7 +75,7 @@ class TestLogger: public ::testing::Test
 
 TEST_F(TestLogger, test_tui_cmd)
 {
-    if (sihd::util::term::is_interactive() == false)
+    if (sihd::sys::console::is_interactive() == false)
         GTEST_SKIP_("requires interaction");
 
     using namespace sihd::util;

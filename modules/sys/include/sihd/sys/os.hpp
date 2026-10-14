@@ -19,6 +19,27 @@ sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr = nu
 sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen);
 sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen);
 
+enum class FdType
+{
+    unknown,
+    regular,
+    tty,
+    pipe,
+    socket,
+};
+
+sihd::util::Result<FdType> fd_type(int fd);
+bool is_regular(int fd);
+bool is_tty(int fd);
+bool is_pipe(int fd);
+bool is_socket(int fd);
+
+sihd::util::Result<void> set_nonblocking(int fd, bool enable = true);
+sihd::util::Result<size_t> bytes_available(int fd);
+
+sihd::util::Result<int> dup(int fd);
+sihd::util::Result<int> dup2(int fd, int to);
+
 sihd::util::Timestamp boot_time();
 
 #if defined(__SIHD_WINDOWS__)

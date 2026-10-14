@@ -113,6 +113,89 @@ sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *op
     return {};
 }
 
+sihd::util::Result<FdType> fd_type(int fd)
+{
+    if (fd < 0)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot get file type of a negative fd"));
+    // GetFileType cannot tell a socket from a pipe (wine maps them alike): winsock answers SO_TYPE on sockets only
+    int so_type = 0;
+    int so_len = sizeof(so_type);
+    if (::getsockopt(fd, SOL_SOCKET, SO_TYPE, reinterpret_cast<char *>(&so_type), &so_len) == 0)
+        return FdType::socket;
+    const HANDLE handle = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+    if (handle == INVALID_HANDLE_VALUE)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "no handle behind fd {}", fd));
+    switch (GetFileType(handle))
+    {
+        case FILE_TYPE_DISK:
+            return FdType::regular;
+        case FILE_TYPE_CHAR:
+            return _isatty(fd) != 0 ? FdType::tty : FdType::unknown;
+        case FILE_TYPE_PIPE:
+            return FdType::pipe;
+        default:
+            return FdType::unknown;
+    }
+}
+
+bool is_regular(int fd)
+{
+    return fd_type(fd) == FdType::regular;
+}
+
+bool is_tty(int fd)
+{
+    return _isatty(fd) != 0;
+}
+
+bool is_pipe(int fd)
+{
+    return fd_type(fd) == FdType::pipe;
+}
+
+bool is_socket(int fd)
+{
+    return fd_type(fd) == FdType::socket;
+}
+
+sihd::util::Result<void> set_nonblocking(int fd, bool enable)
+{
+    // FIONBIO goes through ioctlsocket, which drives sockets only on windows
+    u_long mode = enable ? 1 : 0;
+    return ioctl(fd, FIONBIO, &mode);
+}
+
+sihd::util::Result<size_t> bytes_available(int fd)
+{
+    u_long available = 0;
+    if (ioctlsocket(fd, FIONREAD, &available) == 0)
+        return static_cast<size_t>(available);
+    const int socket_error = last_socket_error();
+    // pipes only report their pending bytes through PeekNamedPipe
+    const HANDLE handle = reinterpret_cast<HANDLE>(_get_osfhandle(fd));
+    DWORD pipe_available = 0;
+    if (handle != INVALID_HANDLE_VALUE && PeekNamedPipe(handle, nullptr, 0, nullptr, &pipe_available, nullptr))
+        return static_cast<size_t>(pipe_available);
+    if (handle != INVALID_HANDLE_VALUE)
+        return std::unexpected(Error(ErrorCode::io_error, "could not read available bytes: {}", last_error_str()));
+    return std::unexpected(Error(ErrorCode::io_error, "could not read available bytes: {}", error_str(socket_error)));
+}
+
+sihd::util::Result<int> dup(int fd)
+{
+    const int new_fd = _dup(fd);
+    if (new_fd == -1)
+        return std::unexpected(Error::from_errno("could not dup"));
+    return new_fd;
+}
+
+sihd::util::Result<int> dup2(int fd, int to)
+{
+    if (_dup2(fd, to) == -1)
+        return std::unexpected(Error::from_errno("could not dup2"));
+    return to;
+}
+
 Timestamp filetime_to_timestamp(uint64_t filetime_ticks)
 {
     // 100ns ticks since 1601-01-01 -> nanoseconds since the unix epoch

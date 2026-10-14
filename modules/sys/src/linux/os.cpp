@@ -37,7 +37,11 @@
 #endif
 
 #include <ctype.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <cerrno>
@@ -133,6 +137,78 @@ sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *op
     if (::getsockopt(socket, level, optname, optval, optlen) == -1)
         return std::unexpected(Error::from_errno("could not getsockopt"));
     return {};
+}
+
+sihd::util::Result<FdType> fd_type(int fd)
+{
+    if (fd < 0)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot fstat a negative fd"));
+    struct stat st;
+    if (::fstat(fd, &st) == -1)
+        return std::unexpected(Error::from_errno("could not fstat"));
+    if (S_ISREG(st.st_mode))
+        return FdType::regular;
+    if (S_ISFIFO(st.st_mode))
+        return FdType::pipe;
+    if (S_ISSOCK(st.st_mode))
+        return FdType::socket;
+    if (S_ISCHR(st.st_mode) && ::isatty(fd))
+        return FdType::tty;
+    return FdType::unknown;
+}
+
+bool is_regular(int fd)
+{
+    return fd_type(fd) == FdType::regular;
+}
+
+bool is_tty(int fd)
+{
+    return ::isatty(fd) != 0;
+}
+
+bool is_pipe(int fd)
+{
+    return fd_type(fd) == FdType::pipe;
+}
+
+bool is_socket(int fd)
+{
+    return fd_type(fd) == FdType::socket;
+}
+
+sihd::util::Result<void> set_nonblocking(int fd, bool enable)
+{
+    const int flags = ::fcntl(fd, F_GETFL);
+    if (flags == -1)
+        return std::unexpected(Error::from_errno("could not get fd flags"));
+    const int wanted = enable ? flags | O_NONBLOCK : flags & ~O_NONBLOCK;
+    if (::fcntl(fd, F_SETFL, wanted) == -1)
+        return std::unexpected(Error::from_errno("could not set fd flags"));
+    return {};
+}
+
+sihd::util::Result<size_t> bytes_available(int fd)
+{
+    int available = 0;
+    auto res = ioctl(fd, FIONREAD, &available);
+    SIHD_UNEXPECTED_RETURN(res);
+    return static_cast<size_t>(available);
+}
+
+sihd::util::Result<int> dup(int fd)
+{
+    const int new_fd = ::dup(fd);
+    if (new_fd == -1)
+        return std::unexpected(Error::from_errno("could not dup"));
+    return new_fd;
+}
+
+sihd::util::Result<int> dup2(int fd, int to)
+{
+    if (::dup2(fd, to) == -1)
+        return std::unexpected(Error::from_errno("could not dup2"));
+    return to;
 }
 
 Timestamp boot_time()

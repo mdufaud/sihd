@@ -3,6 +3,7 @@
 #include <regex>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/sys/console.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/AThreadedService.hpp>
@@ -15,7 +16,6 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/endian.hpp>
 #include <sihd/util/str.hpp>
-#include <sihd/util/term.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 #include <sihd/util/type.hpp>
@@ -525,7 +525,7 @@ void LuaUtilApi::load_tools(Vm & vm)
         .endNamespace() // str
         // path namespace removed - use PathManager class instead
         .beginNamespace("term")
-        .addFunction("is_interactive", &term::is_interactive)
+        .addFunction("is_interactive", &sihd::sys::console::is_interactive)
         .endNamespace() // term
         .beginNamespace("endian")
         .addFunction(

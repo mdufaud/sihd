@@ -7,7 +7,7 @@
 #include <sihd/py/sys/PySysApi.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/term.hpp>
+#include <sihd/util/ansi.hpp>
 
 #include "../DirectorySwitcher.hpp"
 
