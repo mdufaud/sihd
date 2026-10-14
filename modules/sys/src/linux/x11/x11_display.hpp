@@ -4,6 +4,7 @@
 // RAII display connection shared by the x11 clipboard and screenshot backends.
 // Xlib's default error handler exits the process: ours logs and fails the call instead.
 
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include <X11/Xlib.h>
@@ -21,6 +22,12 @@ inline int display_error_handler(Display *, XErrorEvent *event)
              event->request_code,
              event->serial);
     return 0;
+}
+
+// The failure of an unopened display connection.
+inline sihd::util::Error open_error()
+{
+    return {sihd::util::ErrorCode::io_error, "could not open the display"};
 }
 
 struct DisplayConnection

@@ -74,6 +74,7 @@ modules = {
             'ssp', # winsock (Poll)
             'ws2_32', # windows socket api (Poll)
             'gdi32', # wingdi (screenshot/clipboard)
+            'user32', # SendInput (input injection)
             'imagehlp', # backtrace / SymFromAddr
             'advapi32', # token privileges (Capabilities) / GetUserName
             'shell32', # SHGetKnownFolderPath (fs known folders)

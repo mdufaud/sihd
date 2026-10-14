@@ -63,7 +63,7 @@ jobs:
       - name: Install X11/GL/libudev dev packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+          sudo apt-get install -y libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
 
       # C++23 deducing this needs gcc >= 14; noble's default gcc is 13
       - name: Install gcc-14
@@ -85,6 +85,11 @@ jobs:
         # ICMPv6 echo to external hosts: runners have no outbound IPv6
         env:
           TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*
+
+      # compile-only coverage of the opt-gated display backends: no display
+      # runs them, but their sources must not rot
+      - name: Build display backends (x11, wayland)
+        run: make x11=1 wayland=1 test=1 demo=1 asan=1
 
       - name: Report binary cache size
         if: always()

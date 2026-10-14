@@ -4,22 +4,18 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
-#include <functional>
 #include <limits>
-#include <map>
 #include <string>
 #include <vector>
 #include <wayland-client.h>
 
 #include <sihd/sys/Bitmap.hpp>
-#include <sihd/sys/Poll.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/Defer.hpp>
@@ -28,6 +24,8 @@
 #include <sihd/util/time.hpp>
 
 #include "../internal/deadline.hpp"
+#include "connection.hpp"
+#include "outputs.hpp"
 #include "protocols/wlr-screencopy-unstable-v1-client-protocol.h"
 
 // Native wlr-screencopy capture, grim / spectacle / gnome-screenshot as the tools fallback:
@@ -37,6 +35,9 @@
 #ifndef MFD_CLOEXEC
 # define MFD_CLOEXEC 0x0001U
 #endif
+
+using sihd::sys::internal::wayland::dispatch_until;
+using sihd::sys::internal::wayland::roundtrip_bounded;
 
 namespace sihd::sys::screenshot::wayland
 {
@@ -50,63 +51,24 @@ namespace
 
 constexpr Duration capture_timeout = Duration(time::sec(2));
 
-// Event loops
-
-class Connection;
-
-// Dispatches wayland events until `stop` returns true, the deadline expires or
-// the connection fails.
-bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<bool()> & stop);
-
-// Bounded roundtrip: dispatches until the compositor acknowledges with the
-// sync callback, or the deadline expires.
-bool roundtrip_bounded(Connection & conn, Timestamp deadline);
-
 // Connection and registry
 
 // RAII connection binding the screencopy manager, wl_shm and the outputs.
-// Listeners are const instance members fed with `this`.
-class Connection
+class Connection: public internal::wayland::Connection
 {
     public:
-        explicit Connection(Timestamp deadline);
+        explicit Connection(Timestamp deadline): internal::wayland::Connection() { bind_globals(deadline); }
 
-        ~Connection()
-        {
-            if (_registry != nullptr)
-                wl_registry_destroy(_registry);
-            if (_display != nullptr)
-                wl_display_disconnect(_display);
-        }
-
-        Connection(const Connection &) = delete;
-        Connection & operator=(const Connection &) = delete;
-
-        bool ok() const { return _ok; }
-
-        wl_display *display() { return _display; }
-
-        int fd() const { return _fd; }
-
-        // Globals bound from the registry: the capture manager, the shm
-        // allocator and every output.
         zwlr_screencopy_manager_v1 *manager = nullptr;
         wl_shm *shm = nullptr;
-        std::vector<wl_output *> outputs;
 
-        // The output whose wl_output.name (v4) is `name`.
-        wl_output *output(const std::string & name) const
-        {
-            for (const auto & [wl_out, output_name] : _output_names)
-            {
-                if (output_name == name)
-                    return wl_out;
-            }
-            return nullptr;
-        }
+        internal::wayland::Outputs & outputs() { return _outputs; }
 
-    private:
-        void bind_global(wl_registry *registry, uint32_t name, const char *interface, uint32_t version)
+        // The output whose announced name (v4) is `name`.
+        wl_output *output(const std::string & name) const { return _outputs.find(name); }
+
+    protected:
+        void bind_global(wl_registry *registry, uint32_t name, const char *interface, uint32_t version) override
         {
             if (strcmp(interface, zwlr_screencopy_manager_v1_interface.name) == 0 && manager == nullptr)
             {
@@ -117,125 +79,17 @@ class Connection
             {
                 shm = static_cast<wl_shm *>(wl_registry_bind(registry, name, &wl_shm_interface, 1));
             }
-            else if (strcmp(interface, wl_output_interface.name) == 0)
+            else
             {
-                // Version 4 announces the output names this backend matches on.
-                wl_output *bound = static_cast<wl_output *>(
-                    wl_registry_bind(registry, name, &wl_output_interface, std::min(version, 4u)));
-                outputs.push_back(bound);
-                wl_output_add_listener(bound, &_output_listener, this);
+                _outputs.bind(registry, name, interface, version);
             }
         }
 
-        const wl_registry_listener _registry_listener = {
-            .global =
-                [](void *data, wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
-                    static_cast<Connection *>(data)->bind_global(registry, name, interface, version);
-                },
-            .global_remove = [](void *, wl_registry *, uint32_t) {},
-        };
+        bool ready() const override { return manager != nullptr && shm != nullptr; }
 
-        const wl_output_listener _output_listener = {
-            .geometry = [](void *,
-                           wl_output *,
-                           int32_t,
-                           int32_t,
-                           int32_t,
-                           int32_t,
-                           int32_t,
-                           const char *,
-                           const char *,
-                           int32_t) {},
-            .mode = [](void *, wl_output *, uint32_t, int32_t, int32_t, int32_t) {},
-            .done = [](void *, wl_output *) {},
-            .scale = [](void *, wl_output *, int32_t) {},
-            .name = [](void *data,
-                       wl_output *output,
-                       const char *name) { static_cast<Connection *>(data)->_output_names[output] = name; },
-            .description = [](void *, wl_output *, const char *) {},
-        };
-
-        std::map<wl_output *, std::string> _output_names;
-        wl_display *_display = nullptr;
-        wl_registry *_registry = nullptr;
-        int _fd = -1;
-        bool _ok = false;
+    private:
+        internal::wayland::Outputs _outputs;
 };
-
-Connection::Connection(Timestamp deadline)
-{
-    _display = wl_display_connect(nullptr);
-    if (_display == nullptr)
-        return;
-    _fd = wl_display_get_fd(_display);
-    _registry = wl_display_get_registry(_display);
-    wl_registry_add_listener(_registry, &_registry_listener, this);
-    // First roundtrip binds the globals, the second lets the outputs announce their names - bounded:
-    // a wedged compositor must not hang the call
-    if (!roundtrip_bounded(*this, deadline) || !roundtrip_bounded(*this, deadline))
-        return;
-    _ok = manager != nullptr && shm != nullptr;
-}
-
-// Dispatches wayland events until `stop` returns true, the deadline expires or
-// the connection fails.
-bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<bool()> & stop)
-{
-    wl_display *display = conn.display();
-    Poll poll {1};
-    poll.set_read_fd(conn.fd());
-
-    wl_display_flush(display);
-    while (!stop())
-    {
-        if (wl_display_get_error(display) != 0)
-            return false;
-        if (wl_display_prepare_read(display) != 0)
-        {
-            // Events are already queued: dispatch them without reading.
-            if (wl_display_dispatch_pending(display) < 0)
-                return false;
-            continue;
-        }
-
-        const int ret = poll.poll(internal::poll_timeout_ms(deadline));
-        if (ret <= 0)
-        {
-            wl_display_cancel_read(display);
-            // A polling error, or the deadline reached, gives up.
-            if (poll.polling_error() || internal::steady_now() >= deadline)
-                return false;
-            // Signal interrupt while time is left: keep waiting.
-            continue;
-        }
-        if (wl_display_read_events(display) < 0)
-            return false;
-        if (wl_display_dispatch_pending(display) < 0)
-            return false;
-    }
-    return true;
-}
-
-// Bounded roundtrip: dispatches until the compositor acknowledges with the
-// sync callback, or the deadline expires.
-bool roundtrip_bounded(Connection & conn, Timestamp deadline)
-{
-    struct SyncDone
-    {
-            bool done = false;
-    };
-    SyncDone done;
-    const wl_callback_listener listener = {
-        .done = [](void *data, wl_callback *, uint32_t) { static_cast<SyncDone *>(data)->done = true; },
-    };
-    wl_callback *callback = wl_display_sync(conn.display());
-    if (callback == nullptr)
-        return false;
-    wl_callback_add_listener(callback, &listener, &done);
-    const bool ok = dispatch_until(conn, deadline, [&] { return done.done; });
-    wl_callback_destroy(callback);
-    return ok;
-}
 
 // Capture
 
@@ -575,15 +429,16 @@ bool take_screen_native(Bitmap & bm, const std::string & output_name)
     }
     // A multi-output full screen is left to the tools: grim stitches every
     // output, the protocol captures one at a time.
-    if (conn.outputs.size() > 1)
+    const std::vector<internal::wayland::OutputState> & outputs = conn.outputs().states();
+    if (outputs.size() > 1)
     {
-        SIHD_LOG(debug, "wayland: {} outputs, native capture takes one - trying tools first", conn.outputs.size());
+        SIHD_LOG(debug, "wayland: {} outputs, native capture takes one - trying tools first", outputs.size());
         return false;
     }
-    if (conn.outputs.empty())
+    if (outputs.empty())
         return false;
 
-    return capture_into(conn.outputs.front());
+    return capture_into(outputs.front().proxy);
 }
 
 bool take_screen_binaries(Bitmap & bm, const std::string & output_name)

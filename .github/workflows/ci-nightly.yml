@@ -39,13 +39,13 @@ jobs:
           - id: x64-linux
             dep-args: test=1 demo=1
             make-args: test=1 demo=1 asan=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             gcc14: native
             itest: true
           - id: x64-linux-clang
             dep-args: compiler=clang demo=1
             make-args: compiler=clang demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             # noble clang-18 defines __cpp_concepts=201907L, libstdc++-14 headers keep <expected> closed
             clang-llvm: true
           # musl.cc is unreachable from runners; zig carries its own musl sysroot
@@ -63,27 +63,27 @@ jobs:
           - id: arm32-linux-static
             dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
             make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             gcc14: arm-linux-gnueabihf
           - id: arm64-linux
             dep-args: machine=aarch64 demo=1
             make-args: machine=aarch64 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
             gcc14: aarch64-linux-gnu
           - id: arm64-linux-static
             dep-args: machine=aarch64 static=1 demo=1
             make-args: machine=aarch64 static=1 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
             gcc14: aarch64-linux-gnu
           - id: riscv64-linux
             dep-args: machine=riscv64 demo=1
             make-args: machine=riscv64 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
             gcc14: riscv64-linux-gnu
           - id: riscv64-linux-static
             dep-args: machine=riscv64 static=1 demo=1
             make-args: machine=riscv64 static=1 demo=1
-            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
+            apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev gcc-riscv64-linux-gnu g++-riscv64-linux-gnu
             gcc14: riscv64-linux-gnu
           - id: x64-mingw-dynamic
             dep-args: platform=windows demo=1

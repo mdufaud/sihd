@@ -150,6 +150,7 @@ vcpkg_cross_linux_extlibs = {
     "libxinerama": "",  # multi-monitor support
     "libxcursor": "",   # cursor management (needed by GLFW3, dlopen'd at runtime)
     "libxrandr": "",    # resolution/rotation (transitive: libxrender, libxfixes)
+    "libxtst": "",
     "libxkbcommon": "", # keyboard handling (needed by both X11 and Wayland)
     # Wayland
     "wayland": "",            # core Wayland (requires force-build for cross)

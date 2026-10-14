@@ -11,10 +11,13 @@
 #include <sihd/sys/clipboard.hpp>
 #include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/keyboard.hpp>
+#include <sihd/sys/mouse.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/sys/program.hpp>
+#include <sihd/sys/screen.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/sys/user.hpp>
@@ -258,6 +261,60 @@ void screenshot()
     fmt::print("\n");
 }
 
+void screen()
+{
+    auto monitors = sihd::sys::screen::monitors();
+    if (!monitors.has_value())
+    {
+        SIHD_LOG(error, "No monitors: {}", monitors.error().message);
+        return;
+    }
+    for (const auto & monitor : *monitors)
+    {
+        SIHD_LOG(info,
+                 "Monitor '{}' at ({},{}) {}x{} ({}x{}mm) scale {:.2f} dpi {:.1f}{}",
+                 monitor.name,
+                 monitor.x,
+                 monitor.y,
+                 monitor.width,
+                 monitor.height,
+                 monitor.width_mm,
+                 monitor.height_mm,
+                 monitor.scale,
+                 monitor.dpi,
+                 monitor.primary ? " [primary]" : "");
+    }
+    fmt::print("\n");
+}
+
+void input()
+{
+    SIHD_LOG(info, "Moving the cursor to the center of the primary monitor");
+    auto primary = sihd::sys::screen::primary();
+    if (primary.has_value())
+    {
+        auto moved = sihd::sys::mouse::mouse_move(primary->x + primary->width / 2, primary->y + primary->height / 2);
+        if (!moved.has_value())
+            SIHD_LOG(error, "Could not move the cursor: {}", moved.error().message);
+    }
+    else
+    {
+        SIHD_LOG(error, "No primary monitor: {}", primary.error().message);
+    }
+
+    SIHD_LOG(info, "Typing into the focused window");
+    if (auto typed = sihd::sys::keyboard::type_text("sihd rules"); !typed.has_value())
+        SIHD_LOG(error, "Could not type: {}", typed.error().message);
+
+    SIHD_LOG(info, "Pressing ctrl + alt + s");
+    auto pressed = sihd::sys::keyboard::key_press(
+        sihd::sys::keyboard::Key::s,
+        sihd::sys::keyboard::Modifiers::ctrl | sihd::sys::keyboard::Modifiers::alt);
+    if (!pressed.has_value())
+        SIHD_LOG(error, "Could not press: {}", pressed.error().message);
+    fmt::print("\n");
+}
+
 void process()
 {
     std::vector<std::string> args;
@@ -340,6 +397,16 @@ int main(int argc, char **argv)
     {
         app.root().add_command("screenshot", "take screenshots").on_run([] { demo::screenshot(); });
     }
+    if constexpr (screen::supported)
+    {
+        app.root().add_command("screen", "list the monitors").on_run([] { demo::screen(); });
+    }
+    if constexpr (keyboard::supported)
+    {
+        app.root().add_command("input", "move the cursor and type into the focused window").on_run([] {
+            demo::input();
+        });
+    }
     app.root().add_command("process", "execute a process").on_run([] { demo::process(); });
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
     app.root().add_command("wait", "wait 5 seconds or until a stop signal").on_run([&app] {
@@ -365,6 +432,8 @@ int main(int argc, char **argv)
             demo::clipboard();
         if constexpr (screenshot::supported)
             demo::screenshot();
+        if constexpr (screen::supported)
+            demo::screen();
         demo::process();
         demo::read_line();
         fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");

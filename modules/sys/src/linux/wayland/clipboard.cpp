@@ -5,7 +5,6 @@
 
 #include <cerrno>
 #include <cstring>
-#include <functional>
 #include <map>
 #include <optional>
 #include <string>
@@ -23,11 +22,15 @@
 
 #include "../internal/deadline.hpp"
 #include "../internal/mime_fetch.hpp"
+#include "connection.hpp"
 #include "protocols/ext-data-control-v1-client-protocol.h"
 #include "protocols/wlr-data-control-unstable-v1-client-protocol.h"
 
 // Native wayland clipboard backend: ext_data_control_v1 (KWin, recent wlroots),
 // wlr_data_control_v1 (older), core wl_data_device (Mutter). One-shot set.
+
+using sihd::sys::internal::wayland::dispatch_until;
+using sihd::sys::internal::wayland::roundtrip_bounded;
 
 namespace sihd::sys::clipboard::wayland
 {
@@ -39,39 +42,12 @@ SIHD_NEW_LOGGER("sihd::sys::clipboard");
 namespace
 {
 
-class Connection;
-
-// Dispatches wayland events until `stop` returns true, the deadline expires or
-// the connection fails.
-bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<bool()> & stop);
-
 // Connection and registry
 
-// RAII connection binding the clipboard related globals with two roundtrips.
-// All its wayland listeners are instance members fed with `this`.
-class Connection
+class Connection: public internal::wayland::Connection
 {
     public:
-        // Binds the clipboard related globals with two roundtrips bounded by
-        // `deadline`.
-        Connection(Timestamp deadline);
-
-        ~Connection()
-        {
-            if (_registry != nullptr)
-                wl_registry_destroy(_registry);
-            if (_display != nullptr)
-                wl_display_disconnect(_display);
-        }
-
-        Connection(const Connection &) = delete;
-        Connection & operator=(const Connection &) = delete;
-
-        bool ok() const { return _ok; }
-
-        wl_display *display() { return _display; }
-
-        int fd() const { return _fd; }
+        explicit Connection(Timestamp deadline): internal::wayland::Connection() { bind_globals(deadline); }
 
         // Globals bound from the registry: data-control managers preferred, the
         // core data device manager is the fallback for compositors without it.
@@ -82,8 +58,8 @@ class Connection
         // Serial the core wl_data_device.set_selection wants.
         uint32_t keyboard_serial = 0;
 
-    private:
-        void bind_global(wl_registry *registry, uint32_t name, const char *interface)
+    protected:
+        void bind_global(wl_registry *registry, uint32_t name, const char *interface, uint32_t) override
         {
             if (strcmp(interface, wl_seat_interface.name) == 0 && seat == nullptr)
             {
@@ -107,6 +83,9 @@ class Connection
             }
         }
 
+        bool ready() const override { return seat != nullptr; }
+
+    private:
         void on_seat_capabilities(wl_seat *seat_proxy, uint32_t capabilities)
         {
             // Serials come from the keyboard: the core wl_data_device
@@ -118,14 +97,6 @@ class Connection
             if (keyboard != nullptr)
                 wl_keyboard_add_listener(keyboard, &_keyboard_listener, this);
         }
-
-        const wl_registry_listener _registry_listener = {
-            .global =
-                [](void *data, wl_registry *registry, uint32_t name, const char *interface, uint32_t) {
-                    static_cast<Connection *>(data)->bind_global(registry, name, interface);
-                },
-            .global_remove = [](void *, wl_registry *, uint32_t) {},
-        };
 
         const wl_seat_listener _seat_listener = {
             .capabilities =
@@ -147,89 +118,9 @@ class Connection
             .modifiers = [](void *, wl_keyboard *, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t) {},
             .repeat_info = [](void *, wl_keyboard *, int32_t, int32_t) {},
         };
-
-        wl_display *_display = nullptr;
-        wl_registry *_registry = nullptr;
-        int _fd = -1;
-        bool _ok = false;
 };
 
 // Event loops and fd pumps
-
-// Dispatches wayland events until `stop` returns true, the deadline expires or
-// the connection fails.
-bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<bool()> & stop)
-{
-    wl_display *display = conn.display();
-    Poll poll {1};
-    poll.set_read_fd(conn.fd());
-
-    wl_display_flush(display);
-    while (!stop())
-    {
-        if (wl_display_get_error(display) != 0)
-            return false;
-        if (wl_display_prepare_read(display) != 0)
-        {
-            // Events are already queued: dispatch them without reading.
-            if (wl_display_dispatch_pending(display) < 0)
-                return false;
-            continue;
-        }
-
-        const int ret = poll.poll(internal::poll_timeout_ms(deadline));
-        if (ret <= 0)
-        {
-            wl_display_cancel_read(display);
-            // A polling error, or the deadline reached, gives up.
-            if (poll.polling_error() || internal::steady_now() >= deadline)
-                return false;
-            // Signal interrupt while time is left: keep waiting.
-            continue;
-        }
-        if (wl_display_read_events(display) < 0)
-            return false;
-        if (wl_display_dispatch_pending(display) < 0)
-            return false;
-    }
-    return true;
-}
-
-// Bounded roundtrip: dispatches until the compositor acknowledges with the
-// sync callback, or the deadline expires.
-bool roundtrip_bounded(Connection & conn, Timestamp deadline)
-{
-    struct SyncDone
-    {
-            bool done = false;
-    };
-    SyncDone done;
-    const wl_callback_listener listener = {
-        .done = [](void *data, wl_callback *, uint32_t) { static_cast<SyncDone *>(data)->done = true; },
-    };
-    wl_callback *callback = wl_display_sync(conn.display());
-    if (callback == nullptr)
-        return false;
-    wl_callback_add_listener(callback, &listener, &done);
-    const bool ok = dispatch_until(conn, deadline, [&] { return done.done; });
-    wl_callback_destroy(callback);
-    return ok;
-}
-
-Connection::Connection(Timestamp deadline)
-{
-    _display = wl_display_connect(nullptr);
-    if (_display == nullptr)
-        return;
-    _fd = wl_display_get_fd(_display);
-    _registry = wl_display_get_registry(_display);
-    wl_registry_add_listener(_registry, &_registry_listener, this);
-    // First roundtrip binds the globals, the second lets them emit initial events (seat capabilities)
-    // - bounded like the rest of the flows: a wedged compositor must not hang the call
-    if (!roundtrip_bounded(*this, deadline) || !roundtrip_bounded(*this, deadline))
-        return;
-    _ok = seat != nullptr;
-}
 
 // Reads `fd` until EOF or deadline. Each read is guarded by a poll so a slow
 // writer cannot hang us past the deadline.

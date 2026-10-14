@@ -35,12 +35,15 @@
 #include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/info.hpp>
+#include <sihd/sys/keyboard.hpp>
+#include <sihd/sys/mouse.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/sys/power.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/sys/program.hpp>
 #include <sihd/sys/sched.hpp>
+#include <sihd/sys/screen.hpp>
 #include <sihd/sys/screenshot.hpp>
 #include <sihd/sys/services.hpp>
 #include <sihd/sys/session.hpp>

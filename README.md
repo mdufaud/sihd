@@ -10,7 +10,7 @@ Aimed to be a simple C++ library with some python and/or LUA bindings that gets,
 |--------|-------------|--------------|
 | `json` | JSON parsing/serialization (simdjson) | — |
 | `util` | Base: threading, logging, filesystem, types, named objects | json |
-| `sys` | OS abstraction: filesystem, process spawning, IPC, signals, dynamic loading | util |
+| `sys` | OS abstraction: filesystem, process spawning, IPC, signals, dynamic loading, clipboard, screenshot, keyboard/mouse injection, monitor enumeration | util |
 | `crypto` | Cryptography (OpenSSL: hashing, AES, HMAC) | util, openssl |
 | `core` | Devices, Channels, data flow, service lifecycle | util |
 | `net` | Networking with SSL/TLS | util, openssl |

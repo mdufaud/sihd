@@ -6,7 +6,7 @@ compile_x11 = env.is_opt("x11")
 compile_wayland = env.is_opt("wayland")
 
 if compile_x11:
-    env.Append(LIBS = ["X11"])
+    env.Append(LIBS = ["X11", "Xtst", "Xrandr"])
     env.Append(CPPDEFINES = ["SIHD_COMPILE_WITH_X11"])
 
 if compile_wayland:
