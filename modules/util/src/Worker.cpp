@@ -71,6 +71,8 @@ bool Worker::start_worker(std::string_view name)
 
 bool Worker::start_sync_worker(std::string_view name)
 {
+    if (_started)
+        return true;
     ScopedModifier m(_sync_start, false);
     _sync_start = true;
     bool ret = this->start_worker(name);

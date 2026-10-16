@@ -3,6 +3,7 @@
 #include <cerrno>
 #include <climits>
 #include <cstring>
+#include <new>
 #include <random>
 #include <string>
 
@@ -30,6 +31,8 @@
 # include <share.h>
 # include <sys/stat.h>
 # include <windows.h>
+#else
+# include <unistd.h>
 #endif
 
 using enum sihd::util::ErrorCode;
@@ -55,10 +58,11 @@ ssize_t win_getdelim(char **line, size_t *size, int delim, FILE *stream)
     }
     if (*line == nullptr || *size == 0)
     {
-        *size = 128;
-        *line = (char *)realloc(*line, *size);
-        if (*line == nullptr)
+        char *allocated = (char *)realloc(*line, 128);
+        if (allocated == nullptr)
             return -1;
+        *line = allocated;
+        *size = 128;
     }
     size_t pos = 0;
     int c;
@@ -112,7 +116,7 @@ File::File(const std::string & path, const std::string & mode): File()
     SIHD_UNEXPECTED_LOG(this->open(path, mode));
 }
 
-File::File(File && other)
+File::File(File && other): File()
 {
     *this = std::move(other);
 }
@@ -125,6 +129,10 @@ File::~File()
 
 File & File::operator=(File && other)
 {
+    if (this == &other)
+        return *this;
+    (void)this->close();
+    this->_delete_buffer();
     _file_ptr = other._file_ptr;
     _path = std::move(other._path);
     _buf_ptr = other._buf_ptr;
@@ -170,12 +178,8 @@ bool File::_allocate_buffer_if_not_exists()
 {
     if (_buf_ptr == nullptr && _buf_size > 0)
     {
-        _buf_ptr = new char[_buf_size];
-        if (_buf_ptr == nullptr)
-        {
-            SIHD_LOG(error, "File: could not allocate buffer: {}", _buf_size);
-        }
-        else
+        _buf_ptr = new (std::nothrow) char[_buf_size];
+        if (_buf_ptr != nullptr)
         {
             _buf_ptr[0] = 0;
             _buf_ptr[_buf_size - 1] = 0;
@@ -186,7 +190,8 @@ bool File::_allocate_buffer_if_not_exists()
 
 sihd::util::Result<void> File::buff_stream()
 {
-    this->_allocate_buffer_if_not_exists();
+    if (!this->_allocate_buffer_if_not_exists())
+        return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
     if (_file_ptr != nullptr && _buf_ptr != nullptr)
     {
         int ret = setvbuf(_file_ptr, _buf_ptr, _buf_mode, _buf_size);
@@ -259,6 +264,11 @@ sihd::util::Result<void> File::open_tmp(const std::string & prefix, bool write_b
     auto opened = this->open_fd(fd, write_binary ? "wb" : "w");
     if (opened)
         _path = path;
+    else
+    {
+        ::close(fd);
+        ::unlink(path);
+    }
     return opened;
 #else
     // _mktemp_s derives 5 digits from the PID plus one letter (26 names max) and is broken under wine
@@ -463,7 +473,11 @@ sihd::util::Result<void> File::open_mem(const std::string & mode, std::string_vi
 
     stream = _fdopen(fd, mode.c_str());
     if (!stream)
-        return std::unexpected(Error::from_errno("could not open temporary file"));
+    {
+        auto error = Error::from_errno("could not open temporary file");
+        _close(fd);
+        return std::unexpected(std::move(error));
+    }
     /*File descriptors passed into _fdopen are owned by the returned FILE * stream. If _fdopen is successful,
      * do not call _close on the file descriptor.Calling fclose on the returned FILE * also closes the file
      * descriptor.*/

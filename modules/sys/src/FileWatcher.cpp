@@ -22,6 +22,10 @@ std::string FileWatcherEvent::type_str() const
             return "modified";
         case FileWatcherEventType::renamed:
             return "renamed";
+        case FileWatcherEventType::terminated:
+            return "terminated";
+        case FileWatcherEventType::overflow:
+            return "overflow";
 #if defined(__SIHD_UNIX__)
         // emitted only by the inotify backend
         case FileWatcherEventType::opened:

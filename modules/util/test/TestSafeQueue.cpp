@@ -1,4 +1,5 @@
 #include <atomic>
+#include <future>
 #include <thread>
 
 #include <fmt/printf.h>
@@ -169,6 +170,26 @@ TEST_F(TestSafeQueue, test_safequeue_space)
     EXPECT_EQ(queue.size(), 3u);
     EXPECT_EQ(queue.front(), 2);
     EXPECT_EQ(queue.back(), 42);
+}
+
+TEST_F(TestSafeQueue, test_safequeue_clear_releases_space)
+{
+    SafeQueue<int> queue;
+    queue.push(1);
+    std::promise<void> started;
+    std::promise<bool> released;
+    auto ready = started.get_future();
+    auto result = released.get_future();
+    std::thread producer([&] {
+        started.set_value();
+        released.set_value(queue.wait_for_space(1));
+    });
+    ready.wait();
+    queue.clear();
+    EXPECT_EQ(result.wait_for(std::chrono::seconds(1)), std::future_status::ready);
+    queue.terminate();
+    producer.join();
+    EXPECT_TRUE(result.get());
 }
 
 TEST_F(TestSafeQueue, test_safequeue_peek)

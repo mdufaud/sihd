@@ -91,7 +91,14 @@ sihd::util::Result<void> Impersonation::impersonate_as(const user::UserId & user
         auto error = Error::from_errno("could not set user {}", user_id.native());
         // put the group back, the switch is aborted
         if (!set_thread_egid(previous_gid))
-            SIHD_LOG(error, "could not restore group {}", previous_gid);
+        {
+            _impl->previous_uid = previous_uid;
+            _impl->previous_gid = previous_gid;
+            _impl->active = true;
+            sihd::util::Result<void> restore = std::unexpected(
+                Error::from_errno("could not restore group {}", previous_gid));
+            SIHD_UNEXPECTED_RETURN_CTX(restore, "could not set user {}", user_id.native());
+        }
         return std::unexpected(std::move(error));
     }
 

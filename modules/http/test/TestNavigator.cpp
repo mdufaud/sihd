@@ -387,6 +387,38 @@ TEST_F(TestNavigator, test_navigator_redirect_policy_none)
     EXPECT_TRUE(resp->redirect_history().empty());
 }
 
+TEST_F(TestNavigator, test_navigator_meta_refresh)
+{
+    ServerScope scope;
+
+    const std::string meta_page =
+        R"(<html><head><meta http-equiv="refresh" content="0; url=http://localhost:3001/api/dest"></head></html>)";
+    scope.server._webservice->set_entry_point("meta_html", [&meta_page](const HttpRequest &, HttpResponse & resp) {
+        ASSERT_TRUE(resp.set_content({meta_page.data(), meta_page.size()}).has_value());
+        resp.set_content_type("text/html");
+    });
+    scope.server._webservice->set_entry_point("meta_plain", [&meta_page](const HttpRequest &, HttpResponse & resp) {
+        ASSERT_TRUE(resp.set_plain_content(meta_page));
+    });
+    scope.server._webservice->set_entry_point("dest", [](const HttpRequest &, HttpResponse & resp) {
+        resp.set_plain_content("arrived");
+    });
+
+    scope.start();
+
+    Navigator nav;
+    nav.clear_proxy();
+
+    auto html = nav.get("localhost:3001/api/meta_html");
+    ASSERT_TRUE(html.has_value());
+    EXPECT_EQ(html->content().cpp_str(), "arrived");
+    EXPECT_NE(html->final_url().find("/api/dest"), std::string::npos);
+
+    auto plain = nav.get("localhost:3001/api/meta_plain");
+    ASSERT_TRUE(plain.has_value());
+    EXPECT_EQ(plain->content().cpp_str(), meta_page);
+}
+
 TEST_F(TestNavigator, test_navigator_custom_headers)
 {
     ServerScope scope;

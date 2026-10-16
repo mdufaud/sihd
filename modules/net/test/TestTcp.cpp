@@ -308,11 +308,12 @@ TEST_F(TestTcp, test_tcp_connect_timeout_unreachable)
     IpAddr unreachable("192.0.2.1", 81);
     TcpClient client("tcp-client");
 
+    constexpr int timeout_ms = 200;
     const auto start = std::chrono::steady_clock::now();
-    EXPECT_FALSE(client.open_and_connect(unreachable, connect_timeout_ms).has_value());
+    EXPECT_FALSE(client.open_and_connect(unreachable, timeout_ms).has_value());
     EXPECT_FALSE(client.connected());
     const auto elapsed = std::chrono::steady_clock::now() - start;
-    EXPECT_LT(elapsed, std::chrono::milliseconds(5 * connect_timeout_ms));
+    EXPECT_LT(elapsed, std::chrono::milliseconds(5 * timeout_ms));
 
     (void)client.close();
 }

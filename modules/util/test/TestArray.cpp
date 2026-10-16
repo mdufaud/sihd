@@ -917,6 +917,52 @@ TEST_F(TestArray, test_array_insert)
     EXPECT_FALSE(arr.insert(values, 2, 99));
 }
 
+TEST_F(TestArray, test_array_empty_input)
+{
+    Array<int> array = {1, 2};
+    EXPECT_TRUE(array.insert(nullptr, 0, 1));
+    EXPECT_TRUE(array.push_back({}));
+    EXPECT_TRUE(array.push_front({}));
+    EXPECT_TRUE(array.is_equal({1, 2}));
+    Array<int> empty;
+    EXPECT_TRUE(empty.insert(nullptr, 0, 0));
+    EXPECT_FALSE(empty.insert(nullptr, 0, 1));
+    EXPECT_TRUE(empty.from(nullptr, 0));
+    EXPECT_TRUE(empty.empty());
+}
+
+TEST_F(TestArray, test_array_self_insert)
+{
+    Array<int> value = {1, 2, 3};
+    ASSERT_TRUE(value.reserve(8));
+    EXPECT_TRUE(value.insert(value[2], 0));
+    EXPECT_TRUE(value.is_equal({3, 1, 2, 3}));
+    Array<int> range = {1, 2, 3};
+    EXPECT_TRUE(range.insert(range.data() + 1, 2, 0));
+    EXPECT_TRUE(range.is_equal({2, 3, 1, 2, 3}));
+}
+
+TEST_F(TestArray, test_array_borrowed_growth)
+{
+    int values[] = {1, 2};
+    Array<int> arr;
+    arr.assign(values, 2);
+    EXPECT_TRUE(arr.push_back(3));
+    EXPECT_TRUE(arr.is_equal({1, 2, 3}));
+    EXPECT_EQ(values[0], 1);
+    EXPECT_EQ(values[1], 2);
+}
+
+TEST_F(TestArray, test_array_overflow_refused)
+{
+    Array<int> arr = {1, 2};
+    const size_t excessive = std::numeric_limits<size_t>::max() / sizeof(int) + 1;
+    EXPECT_FALSE(arr.reserve(excessive));
+    EXPECT_FALSE(arr.insert(arr.data(), excessive, 0));
+    EXPECT_FALSE(arr.from(arr.data(), excessive));
+    EXPECT_TRUE(arr.is_equal({1, 2}));
+}
+
 TEST_F(TestArray, test_array_cast)
 {
     Array<int> arr = {1, 2, 3};

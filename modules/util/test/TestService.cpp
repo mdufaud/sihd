@@ -1,4 +1,5 @@
 #include <atomic>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -29,9 +30,9 @@ class FakeThreadedService: public AThreadedService
         bool on_start() override
         {
             auto b = std::make_shared<Synchronizer>(3);
-            thread1 = std::jthread([b] { b->sync(); });
-            thread2 = std::jthread([b] { b->sync(); });
-            thread3 = std::jthread([b, this] {
+            thread1 = std::thread([b] { b->sync(); });
+            thread2 = std::thread([b] { b->sync(); });
+            thread3 = std::thread([b, this] {
                 b->sync();
                 started = true;
                 this->notify_service_thread_started();
@@ -41,6 +42,9 @@ class FakeThreadedService: public AThreadedService
 
         bool on_stop() override
         {
+            for (std::thread *worker : {&thread1, &thread2, &thread3})
+                if (worker->joinable())
+                    worker->join();
             started = false;
             return true;
         }
@@ -48,9 +52,9 @@ class FakeThreadedService: public AThreadedService
         bool is_running() const override { return started; }
 
         bool started = false;
-        std::jthread thread1;
-        std::jthread thread2;
-        std::jthread thread3;
+        std::thread thread1;
+        std::thread thread2;
+        std::thread thread3;
 };
 
 class FakeBlockingService: public ABlockingService

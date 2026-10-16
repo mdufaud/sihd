@@ -27,6 +27,27 @@ TEST_F(TestMessage, test_message_errors)
     // TODO
 }
 
+TEST_F(TestMessage, test_message_clone_before_finish)
+{
+    Message message("message");
+    EXPECT_TRUE(message.add_field<int32_t>("values", 3));
+    std::unique_ptr<IMessageField> clone(message.clone());
+    ASSERT_NE(clone, nullptr);
+    EXPECT_EQ(clone->field_byte_size(), 12u);
+    EXPECT_TRUE(clone->finish());
+}
+
+TEST_F(TestMessage, test_message_removed_field_size)
+{
+    Message message("message");
+    EXPECT_TRUE(message.add_field<int32_t>("first"));
+    EXPECT_TRUE(message.add_field<int32_t>("second"));
+    EXPECT_TRUE(message.remove_child("first"));
+    EXPECT_EQ(message.field_byte_size(), 4u);
+    EXPECT_TRUE(message.finish());
+    EXPECT_EQ(message.array()->byte_size(), 4u);
+}
+
 TEST_F(TestMessage, test_dynmessage)
 {
     struct s_msg1

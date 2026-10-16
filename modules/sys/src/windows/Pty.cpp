@@ -8,11 +8,14 @@
 
 #include <cstring>
 
+#include <sihd/sys/Environment.hpp>
 #include <sihd/sys/Pty.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
+#include "internal/command_line.hpp"
+#include "internal/environment.hpp"
 #include "internal/nt_dll.hpp"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -91,11 +94,11 @@ class ConPty: public Pty
         void send_eof() override;
 
     private:
-        std::string _shell;                                    ///< Shell executable
-        std::vector<std::string> _args;                        ///< Shell arguments
-        std::vector<std::pair<std::string, std::string>> _env; ///< Environment variables
-        std::string _working_dir;                              ///< Working directory
-        PtySize _size;                                         ///< Terminal size
+        std::string _shell;             ///< Shell executable
+        std::vector<std::string> _args; ///< Shell arguments
+        Environment _env;
+        std::string _working_dir; ///< Working directory
+        PtySize _size;            ///< Terminal size
 
         HPCON _hpc;                              ///< Pseudo console handle
         HANDLE _pipe_in_read;                    ///< Pipe: PTY reads from here (we write to _pipe_in_write)
@@ -220,7 +223,7 @@ void ConPty::set_args(std::vector<std::string> args)
 
 void ConPty::set_env(std::string_view name, std::string_view value)
 {
-    _env.emplace_back(name, value);
+    _env.set(name, value);
 }
 
 void ConPty::set_size(const PtySize & size)
@@ -312,23 +315,14 @@ bool ConPty::spawn()
         return false;
     }
 
-    // Build command line
-    std::string cmdline = _shell;
+    std::vector<std::string_view> arguments {_shell};
     for (const auto & arg : _args)
-    {
-        cmdline += " ";
-        // Quote arguments containing spaces
-        if (arg.find(' ') != std::string::npos)
-        {
-            cmdline += "\"" + arg + "\"";
-        }
-        else
-        {
-            cmdline += arg;
-        }
-    }
-
-    // inherit the parent environment and just set TERM; a full environment block would be more
+        arguments.emplace_back(arg);
+    const std::string cmdline = internal::command_line(arguments);
+    Environment environment = Environment::from_current();
+    for (const auto & [key, value] : _env.entries())
+        environment.set(key, value);
+    const std::string env_block = internal::to_windows_block(environment);
 
     // Create the process
     STARTUPINFOEXA si;
@@ -347,7 +341,7 @@ bool ConPty::spawn()
                         nullptr,
                         FALSE,
                         EXTENDED_STARTUPINFO_PRESENT,
-                        nullptr, // Inherit environment
+                        const_cast<char *>(env_block.data()),
                         working_dir,
                         &si.StartupInfo,
                         &_pi))

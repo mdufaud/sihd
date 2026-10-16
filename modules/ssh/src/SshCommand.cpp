@@ -200,17 +200,13 @@ sihd::util::Result<void> SshCommand::wait(sihd::util::Duration timeout_nano,
     if (_impl->channel.is_open() == false)
         return {};
     int r = 0;
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(timeout_nano);
     while (_impl->stop == false && (r = _impl->channel.exit_status()) == -1)
     {
-        if (timeout_nano > 0)
-        {
-            _impl->waitable.wait_for(timeout_nano, [this] { return _impl->stop; });
-            r = _impl->channel.exit_status();
+        if (timeout_nano > 0 && std::chrono::steady_clock::now() >= deadline)
             break;
-        }
-        else
-            _impl->waitable.wait_for(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds_poll_time)),
-                                     [this] { return _impl->stop; });
+        _impl->waitable.wait_for(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds_poll_time)),
+                                 [this] { return _impl->stop; });
     }
     if (r == -1 && !_impl->command_status.exit_error)
         return std::unexpected(

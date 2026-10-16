@@ -412,7 +412,7 @@ TEST_F(TestLogger, test_logger_filter_thread)
     SIHD_LOG(info, "Should count");
     EXPECT_EQ(log_counter->info, 1);
 
-    std::jthread thread1([]() { SIHD_LOG(warning, "Should not count"); });
+    std::thread thread1([]() { SIHD_LOG(warning, "Should not count"); });
     thread1.join();
     EXPECT_EQ(log_counter->warning, 0);
 
@@ -426,7 +426,7 @@ TEST_F(TestLogger, test_logger_filter_thread)
     SIHD_LOG(error, "Should not count");
     EXPECT_EQ(log_counter->error, 0);
 
-    std::jthread thread2([]() { SIHD_LOG(critical, "Should count"); });
+    std::thread thread2([]() { SIHD_LOG(critical, "Should count"); });
     thread2.join();
     EXPECT_EQ(log_counter->critical, 1);
 
@@ -440,7 +440,7 @@ TEST_F(TestLogger, test_logger_filter_thread)
     SIHD_LOG(debug, "Should not count");
     EXPECT_EQ(log_counter->debug, 0);
 
-    std::jthread thread3([]() {
+    std::thread thread3([]() {
         (void)thread::set_name("toto");
         SIHD_LOG(debug, "Should count");
         (void)thread::set_name("titi");
@@ -540,7 +540,7 @@ TEST_F(TestLogger, test_logger_delete_loggers_type)
 
 TEST_F(TestLogger, test_logger_threads)
 {
-    std::vector<std::jthread> pool;
+    std::vector<std::thread> pool;
     for (int t = 0; t < 4; ++t)
     {
         pool.emplace_back([] {
@@ -550,7 +550,7 @@ TEST_F(TestLogger, test_logger_threads)
             }
         });
     }
-    for (std::jthread & t : pool)
+    for (std::thread & t : pool)
         t.join();
     ASSERT_EQ(log_counter->info, 1000);
 }
@@ -583,7 +583,7 @@ TEST_F(TestLogger, test_logger_async_threads)
 {
     SharedStateSink::State state;
     LoggerManager::async(new SharedStateSink(&state));
-    std::vector<std::jthread> pool;
+    std::vector<std::thread> pool;
     for (int t = 0; t < 4; ++t)
     {
         pool.emplace_back([] {
@@ -593,7 +593,7 @@ TEST_F(TestLogger, test_logger_async_threads)
             }
         });
     }
-    for (std::jthread & t : pool)
+    for (std::thread & t : pool)
         t.join();
     LoggerManager::clear_loggers();
     ASSERT_EQ(state.count.load(), 200);

@@ -256,7 +256,7 @@ bool FilePoller::run()
         _impl->removed.emplace_back(_impl->watch_path);
     else if (new_path_exists && !_impl->path_exists)
         _impl->created.emplace_back(_impl->watch_path);
-    else if (_impl->last_modif < new_last_modif)
+    else if (_impl->last_modif != new_last_modif)
         _impl->changed.emplace_back(_impl->watch_path);
 
     _impl->path_exists = new_path_exists;

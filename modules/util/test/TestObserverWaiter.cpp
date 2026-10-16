@@ -44,6 +44,15 @@ TEST_F(TestObserverWaiter, test_observer_waiter_wait)
     EXPECT_EQ(waiter.observing(), &src);
 }
 
+TEST_F(TestObserverWaiter, test_observer_waiter_previous_notification)
+{
+    SimpleSource src;
+    ObserverWaiter<SimpleSource> waiter(&src);
+    src.notify();
+    waiter.prev_wait();
+    EXPECT_EQ(waiter.notifications(), 1u);
+}
+
 TEST_F(TestObserverWaiter, test_observer_waiter_wait_for_timeout)
 {
     SimpleSource src;

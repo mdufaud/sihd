@@ -53,9 +53,8 @@ class Collector: public Observable<Collector<T>>,
     protected:
         bool on_start() override
         {
-            this->service_set_ready();
-
             _running = true;
+            this->service_set_ready();
             while (_running && _provider_ptr->providing())
             {
                 if (_provider_ptr->provide(&_data))
@@ -80,7 +79,7 @@ class Collector: public Observable<Collector<T>>,
         T _data;
         IProvider<T> *_provider_ptr;
 
-        bool _running;
+        std::atomic<bool> _running;
         Duration _wait_duration;
 
         std::mutex _run_mutex;

@@ -96,7 +96,7 @@ App::~App()
 {
     for (int sig = 1; sig < signal::max_signal; ++sig)
     {
-        if (_sig_actions[sig] != SigAction::none)
+        if (_sig_actions[sig].installed)
             (void)signal::unhandle(sig);
     }
     this->uninstall_logging();
@@ -234,14 +234,14 @@ void App::on_conf_reloaded()
 void App::poll_events()
 {
     // copied under the lock: a reload from another thread may rework the signal policy
-    std::array<SigAction, signal::max_signal> actions;
+    std::array<SignalState, signal::max_signal> actions;
     {
         std::lock_guard<std::recursive_mutex> lock(this->mutex());
         actions = _sig_actions;
     }
     for (int sig = 1; sig < signal::max_signal; ++sig)
     {
-        const SigAction action = actions[sig];
+        const SigAction action = actions[sig].action;
         if (action == SigAction::none)
             continue;
         std::optional<signal::SigStatus> status = signal::status(sig);
@@ -271,37 +271,35 @@ void App::poll_events()
 
 void App::_set_default_signal_actions()
 {
-    _sig_actions.fill(SigAction::none);
-    _sig_actions[SIGINT] = SigAction::stop;
-    _sig_actions[SIGTERM] = SigAction::stop;
+    for (SignalState & state : _sig_actions)
+        state.action = SigAction::none;
+    _sig_actions[SIGINT].action = SigAction::stop;
+    _sig_actions[SIGTERM].action = SigAction::stop;
 }
 
-void App::_set_signal_action(int sig, SigAction action)
+bool App::_set_signal_action(int64_t sig, SigAction action)
 {
     if (sig < 1 || sig >= signal::max_signal)
     {
         SIHD_LOG(error, "App: signal {} out of range", sig);
-        return;
+        return false;
     }
-    _sig_actions[sig] = action;
+    _sig_actions[sig].action = action;
+    return true;
 }
 
 bool App::_signal_actions_from_json(const sihd::json::Json & json, SigAction action)
 {
     auto apply_one = [this, action](const sihd::json::Json & entry) -> bool {
         if (entry.is_number_integer() || entry.is_number_unsigned())
-        {
-            this->_set_signal_action(static_cast<int>(entry.get<int64_t>()), action);
-            return true;
-        }
+            return this->_set_signal_action(entry.get<int64_t>(), action);
         std::optional<int> sig = sig_from_conf_value(entry.get_or<std::string>(""));
         if (sig.has_value() == false)
         {
             SIHD_LOG(error, "App: unknown signal in conf '{}'", entry.get_or<std::string>(""));
             return false;
         }
-        this->_set_signal_action(*sig, action);
-        return true;
+        return this->_set_signal_action(*sig, action);
     };
     if (json.is_array())
     {
@@ -319,12 +317,16 @@ void App::_install_signals()
 {
     for (int sig = 1; sig < signal::max_signal; ++sig)
     {
-        if (_sig_actions[sig] == SigAction::none)
+        SignalState & state = _sig_actions[sig];
+        if (state.action == SigAction::none)
+        {
+            if (state.installed && !SIHD_UNEXPECTED_LOG(signal::unhandle(sig)))
+                state.installed = false;
             continue;
-        if (_sig_actions[sig] == SigAction::ignore)
-            SIHD_UNEXPECTED_LOG(signal::ignore(sig));
-        else
-            SIHD_UNEXPECTED_LOG(signal::handle(sig));
+        }
+        auto installed = state.action == SigAction::ignore ? signal::ignore(sig) : signal::handle(sig);
+        if (!SIHD_UNEXPECTED_LOG(installed))
+            state.installed = true;
     }
 }
 

@@ -5,6 +5,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/build.hpp>
 
 namespace test
@@ -43,6 +44,20 @@ TEST_F(TestFile, test_file_write_read)
         EXPECT_EQ(read.value(), 5u);
         EXPECT_STREQ(buf, "hello");
     }
+}
+
+TEST_F(TestFile, test_file_move_assignment_closes_previous)
+{
+    File first;
+    File second;
+    ASSERT_TRUE(first.open_tmpfile());
+    ASSERT_TRUE(second.open_tmpfile());
+    const int previous = second.fd();
+    const int transferred = first.fd();
+    second = std::move(first);
+    EXPECT_FALSE(os::fd_type(previous));
+    EXPECT_EQ(second.fd(), transferred);
+    EXPECT_FALSE(first.is_open());
 }
 
 TEST_F(TestFile, test_file_write_string_view)

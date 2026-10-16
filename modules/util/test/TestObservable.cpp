@@ -361,6 +361,31 @@ TEST_F(TestObservable, test_obs_watcher_recursive_notification)
     EXPECT_EQ(seq, "aAraArRbBRbB");
 }
 
+TEST_F(TestObservable, test_obs_recursive_removal)
+{
+    SomeObservable observable;
+    bool nested = false;
+    int calls = 0;
+    Handler<SomeObservable *> recursor([&](SomeObservable *obs) {
+        if (!nested)
+        {
+            nested = true;
+            obs->notify();
+            obs->remove_observer(&recursor);
+        }
+        else
+            obs->remove_observer(&recursor);
+    });
+    Handler<SomeObservable *> other([&](SomeObservable *) { ++calls; });
+    observable.add_observer(&recursor);
+    observable.add_observer(&other);
+    observable.notify();
+    EXPECT_EQ(calls, 2);
+    EXPECT_FALSE(observable.is_observer(&recursor));
+    observable.notify();
+    EXPECT_EQ(calls, 3);
+}
+
 TEST_F(TestObservable, test_obs_watcher_recursive_detach)
 {
     std::string seq;

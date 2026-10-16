@@ -66,7 +66,7 @@ std::optional<Duration> units_to_time(std::optional<uint64_t> units, std::option
 {
     if (!units || !units_per_hour || *units_per_hour == 0)
         return std::nullopt;
-    return Duration(std::chrono::nanoseconds((int64_t)((double)*units / (double)*units_per_hour * 3600.0 * 1e9)));
+    return Duration(time::from_double((double)*units / (double)*units_per_hour * 3600.0));
 }
 
 // dir path and name of every power supply whose sysfs type matches

@@ -16,14 +16,13 @@ namespace sihd::sys
 struct ProcessMonitor::Impl
 {
         std::vector<ProcessSample> collect(const std::string & name_filter);
-        void finish_pass(std::vector<ProcessSample> fresh);
+        void finish_pass(std::vector<ProcessSample> fresh, sihd::util::Timestamp wall_now);
 
         sihd::util::StepWorker worker;
         std::string name_filter;
         mutable std::mutex mutex;
         std::vector<ProcessSample> samples;
-        // pid -> (process cpu ns, system busy ns) of the previous pass
-        std::map<int, std::pair<uint64_t, uint64_t>> cpu_history;
+        std::map<int, std::pair<uint64_t, sihd::util::Timestamp>> cpu_history;
 };
 
 } // namespace sihd::sys

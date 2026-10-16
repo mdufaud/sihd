@@ -19,6 +19,9 @@ class DynLib
         DynLib(const std::string & lib_name);
         ~DynLib();
 
+        DynLib(const DynLib &) = delete;
+        DynLib & operator=(const DynLib &) = delete;
+
         sihd::util::Result<void> open(const std::string & lib_name);
 
         sihd::util::Result<void *> load_symbol(const std::string & symbol_name);

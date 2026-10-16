@@ -277,21 +277,12 @@ ssize_t write_number(int fd, int number)
 ssize_t backtrace(int fd, size_t backtrace_size)
 {
     constexpr size_t buffer_size = SIHD_MAX_BACKTRACE_SIZE;
-    static void *buffer[buffer_size];
-    static std::mutex buffer_mutex;
-
-    std::lock_guard l(buffer_mutex);
+    void *buffer[buffer_size];
     const size_t wanted_size = std::min(backtrace_size, buffer_size);
     const size_t size = ::backtrace(buffer, wanted_size);
-    char **strings = (char **)backtrace_symbols(buffer, size);
     bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
-    if (strings == nullptr)
-    {
-        write_endl(fd, "Error while getting backtrace symbols");
-        return -1;
-    }
     uint32_t i = 0;
     while (ret && i < size)
     {
@@ -318,10 +309,10 @@ ssize_t backtrace(int fd, size_t backtrace_size)
         {
             ret = ret && write(fd, "] ") > 0;
         }
-        ret = ret && write_endl(fd, strings[i]) > 0;
+        if (ret)
+            backtrace_symbols_fd(buffer + i, 1, fd);
         ++i;
     }
-    free(strings);
     return size;
 }
 

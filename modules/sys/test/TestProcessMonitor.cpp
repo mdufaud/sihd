@@ -1,8 +1,10 @@
+#include <algorithm>
 #include <chrono>
 
 #include <gtest/gtest.h>
 
 #include <sihd/sys/ProcessMonitor.hpp>
+#include <sihd/sys/info.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -69,8 +71,9 @@ TEST_F(TestProcessMonitor, test_process_monitor_cpu)
     ASSERT_TRUE(monitor.poll());
     auto self = monitor.sample(getpid());
     ASSERT_TRUE(self.has_value());
+    const double cores = std::max<uint32_t>(info::cpu_count(), 1);
     EXPECT_GT(self->cpu_percent, 0.0);
-    EXPECT_LE(self->cpu_percent, 100.0);
+    EXPECT_LE(self->cpu_percent, 2.0 * 100.0 / cores);
 }
 
 TEST_F(TestProcessMonitor, test_process_monitor_start_stop)

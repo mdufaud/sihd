@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
@@ -94,6 +96,62 @@ TEST_F(TestTime, test_time_timeval)
     EXPECT_EQ(time::nano_tv(nano_tv), 350);
 }
 
+TEST_F(TestTime, test_time_integer_precision)
+{
+    constexpr time::UnixTime nano = 1700000000999999999;
+    EXPECT_EQ(time::to_sec(nano), 1700000000);
+    EXPECT_EQ(time::to_milli(nano), 1700000000999);
+    EXPECT_EQ(time::to_micro(nano), 1700000000999999);
+    EXPECT_EQ(time::sec(9223372035), 9223372035000000000);
+    const auto ts = time::to_ts(nano);
+    EXPECT_EQ(ts.tv_sec, 1700000000);
+    EXPECT_EQ(ts.tv_nsec, 999999999);
+    EXPECT_EQ(time::ts(ts), nano);
+    EXPECT_EQ(time::nano_tv(time::to_nano_tv(nano)), nano);
+    const auto negative = time::to_ts(-500000000);
+    EXPECT_EQ(negative.tv_sec, -1);
+    EXPECT_EQ(negative.tv_nsec, 500000000);
+    EXPECT_EQ(time::ts(negative), -500000000);
+    EXPECT_EQ(time::tv(time::to_tv(-500000)), -500000000);
+    EXPECT_EQ(time::tv(time::milli_to_tv(-500)), -500000000);
+    for (const auto limit : {std::numeric_limits<time::UnixTime>::min(), std::numeric_limits<time::UnixTime>::max()})
+    {
+        if constexpr (sizeof(timespec {}.tv_sec) >= sizeof(time::UnixTime))
+        {
+            EXPECT_EQ(time::ts(time::to_ts(limit)), limit);
+        }
+        else
+        {
+            EXPECT_THROW(time::to_ts(limit), std::out_of_range);
+        }
+        if constexpr (sizeof(timeval {}.tv_sec) >= sizeof(time::UnixTime))
+        {
+            EXPECT_EQ(time::nano_tv(time::to_nano_tv(limit)), limit);
+        }
+        else
+        {
+            EXPECT_THROW(time::to_nano_tv(limit), std::out_of_range);
+        }
+    }
+}
+
+TEST_F(TestTime, test_time_clock_components)
+{
+    const time::UnixTime nano = time::hours(20) + time::min(37) + time::sec(10) + time::milli(500);
+    EXPECT_EQ(time::clock_hour(nano), 20);
+    EXPECT_EQ(time::clock_minute(nano), 37);
+    EXPECT_EQ(time::clock_second(nano), 10);
+    EXPECT_EQ(time::clock_millisecond(nano), 500);
+    EXPECT_EQ(time::clock_microsecond(nano), 500000);
+    // % keeps the sign: the components of a negative timestamp stay positive
+    EXPECT_EQ(time::clock_hour(-time::hours(1)), 23);
+    EXPECT_EQ(time::clock_minute(-time::min(1)), 59);
+    EXPECT_EQ(time::clock_second(-time::sec(1)), 59);
+    EXPECT_EQ(time::clock_millisecond(-time::milli(500)), 500);
+    EXPECT_EQ(time::clock_millisecond(-1), 999);
+    EXPECT_EQ(time::clock_microsecond(-1), 999999);
+}
+
 TEST_F(TestTime, test_time_tm)
 {
     struct tm tm = time::to_tm(
@@ -105,6 +163,8 @@ TEST_F(TestTime, test_time_tm)
     EXPECT_EQ(tm.tm_hour, 20);
     EXPECT_EQ(tm.tm_min, 37);
     EXPECT_EQ(tm.tm_sec, 10);
+    EXPECT_EQ(time::tm(tm),
+              time::days(3 * 365) + time::days(31) + time::days(25) + time::hours(20) + time::min(37) + time::sec(10));
 }
 
 TEST_F(TestTime, test_time_local_tm)

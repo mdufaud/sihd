@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <cerrno>
 #include <cstring>
-#include <numeric>
 #include <ranges>
 
 #include <sihd/sys/Poll.hpp>
@@ -27,6 +26,8 @@ namespace
 
 int get_fd_index(const std::vector<struct pollfd> & lst_fds, int fd)
 {
+    if (fd < 0)
+        return -1;
     const auto it = std::ranges::find_if(lst_fds, [fd](const struct pollfd & entry) { return (int)entry.fd == fd; });
     if (it == lst_fds.end())
         return -1;
@@ -35,16 +36,7 @@ int get_fd_index(const std::vector<struct pollfd> & lst_fds, int fd)
 
 size_t count_fds_events(const std::vector<struct pollfd> & lst_fds, int mask)
 {
-#if defined(__cpp_lib_ranges_fold_left)
-    return std::ranges::fold_left(lst_fds, size_t {0}, [mask](size_t count, const struct pollfd & entry) {
-        return count + (entry.events & mask);
-    });
-#else
-    return std::accumulate(lst_fds.begin(),
-                           lst_fds.end(),
-                           size_t {0},
-                           [mask](size_t count, const struct pollfd & entry) { return count + (entry.events & mask); });
-#endif
+    return std::ranges::count_if(lst_fds, [mask](const struct pollfd & entry) { return (entry.events & mask) != 0; });
 }
 
 int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
@@ -195,7 +187,7 @@ bool Poll::set_write_fd(int fd)
 bool Poll::rm_read_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_or_add_fd(_lst_fds, fd, _max_fds);
+    int idx = get_fd_index(_lst_fds, fd);
     if (idx >= 0)
     {
         _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLIN));
@@ -206,7 +198,7 @@ bool Poll::rm_read_fd(int fd)
 bool Poll::rm_write_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_or_add_fd(_lst_fds, fd, _max_fds);
+    int idx = get_fd_index(_lst_fds, fd);
     if (idx >= 0)
     {
         _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLOUT));

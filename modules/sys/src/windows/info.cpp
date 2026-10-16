@@ -14,6 +14,7 @@
 #include <fmt/format.h>
 
 #include <sihd/sys/info.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
@@ -32,7 +33,7 @@ namespace
 // 100ns ticks -> nanoseconds
 uint64_t ticks_to_ns(uint64_t ticks)
 {
-    return ticks * 100;
+    return static_cast<uint64_t>(os::filetime_to_duration(ticks).nanoseconds());
 }
 
 uint64_t filetime_span_ns(const FILETIME & ft)

@@ -10,6 +10,7 @@
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/IObservable.hpp>
 #include <sihd/util/IObserverWatcher.hpp>
+#include <sihd/util/ScopedModifier.hpp>
 
 namespace sihd::util
 {
@@ -17,6 +18,14 @@ namespace sihd::util
 template <typename T>
 class Observable: public IObservable<T>
 {
+    private:
+        struct ObserverIteration
+        {
+                typename std::list<IHandler<T *> *>::iterator current;
+                ObserverIteration *outer;
+                bool removed = false;
+        };
+
     public:
         Observable() = default;
         virtual ~Observable() = default;
@@ -39,12 +48,18 @@ class Observable: public IObservable<T>
         void remove_observer(IHandler<T *> *obs)
         {
             std::lock_guard l(_mutex);
-            if (_current_observer == obs)
-            {
-                _remove_current_observer = true;
+            const auto it = std::ranges::find(_observers, obs);
+            if (it == _observers.end())
                 return;
+            for (ObserverIteration *iteration = _iteration; iteration != nullptr; iteration = iteration->outer)
+            {
+                if (iteration->current == it)
+                {
+                    ++iteration->current;
+                    iteration->removed = true;
+                }
             }
-            std::erase(_observers, obs);
+            _observers.erase(it);
         }
 
         bool is_observer(IHandler<T *> *obs) const
@@ -91,11 +106,12 @@ class Observable: public IObservable<T>
             std::lock_guard lock(_mutex);
             if (_watcher != nullptr) [[unlikely]]
                 _watcher->before_notification(sender);
-            auto it = _observers.begin();
-            while (it != _observers.end())
+            ObserverIteration iteration {_observers.begin(), _iteration};
+            ScopedModifier active(_iteration, &iteration);
+            while (iteration.current != _observers.end())
             {
-                IHandler<T *> *obs = *it;
-                _current_observer = obs;
+                IHandler<T *> *obs = *iteration.current;
+                iteration.removed = false;
                 if (_watcher == nullptr) [[likely]]
                     obs->handle(sender);
                 else
@@ -106,25 +122,16 @@ class Observable: public IObservable<T>
                     if (_watcher != nullptr)
                         _watcher->after_observer(obs, sender);
                 }
-                if (_remove_current_observer)
-                {
-                    _remove_current_observer = false;
-                    it = _observers.erase(it);
-                }
-                else
-                {
-                    ++it;
-                }
+                if (!iteration.removed)
+                    ++iteration.current;
             }
-            _current_observer = nullptr;
             if (_watcher != nullptr) [[unlikely]]
                 _watcher->after_notification(sender);
         }
 
     private:
         mutable std::recursive_mutex _mutex;
-        bool _remove_current_observer {false};
-        IHandler<T *> *_current_observer {nullptr};
+        ObserverIteration *_iteration = nullptr;
         IObserverWatcher<T> *_watcher {nullptr};
         std::list<IHandler<T *> *> _observers;
 };

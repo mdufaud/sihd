@@ -48,7 +48,7 @@ Timestamp filetime_to_ts(int64_t filetime)
 {
     if (filetime == 0)
         return Timestamp(0);
-    return Timestamp((filetime - 116444736000000000LL) * 100);
+    return os::filetime_to_timestamp(static_cast<uint64_t>(filetime));
 }
 
 COPYFILE2_MESSAGE_ACTION CALLBACK copy_progress_cb(const COPYFILE2_MESSAGE *message, PVOID context)

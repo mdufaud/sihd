@@ -7,12 +7,18 @@
 
 #include <atomic>
 #include <cstring> // strlen
+#include <new>
 
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/os.hpp>
 
 namespace sihd::sys
 {
+
+struct CrashHandler::Impl
+{
+        LPTOP_LEVEL_EXCEPTION_FILTER previous_filter = nullptr;
+};
 
 // the unhandled exception filter is process state: the handler's values live
 // at file scope, guarded by g_installed
@@ -24,7 +30,6 @@ constexpr int stderr_fd = 2;
 std::atomic<bool> g_installed {false};
 std::string g_dump_path;
 std::atomic<bool> g_rethrow {true};
-LPTOP_LEVEL_EXCEPTION_FILTER g_previous_filter = nullptr;
 
 void write_all(int fd, const void *data, unsigned int size)
 {
@@ -124,9 +129,15 @@ bool CrashHandler::install(const Options & options)
         g_installed.store(false);
         return false;
     }
+    _impl = new (std::nothrow) Impl;
+    if (_impl == nullptr)
+    {
+        g_installed.store(false);
+        return false;
+    }
     g_dump_path = options.dump_path;
     g_rethrow.store(options.rethrow);
-    g_previous_filter = SetUnhandledExceptionFilter(unhandled_filter);
+    _impl->previous_filter = SetUnhandledExceptionFilter(unhandled_filter);
     _options = options;
     _installed = true;
     return true;
@@ -136,8 +147,9 @@ void CrashHandler::uninstall()
 {
     if (_installed == false)
         return;
-    SetUnhandledExceptionFilter(g_previous_filter);
-    g_previous_filter = nullptr;
+    SetUnhandledExceptionFilter(_impl->previous_filter);
+    delete _impl;
+    _impl = nullptr;
     _installed = false;
     g_installed.store(false);
 }

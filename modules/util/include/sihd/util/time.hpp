@@ -78,6 +78,17 @@ static constexpr auto to_minutes = to_min;
 UnixTime to_hours(UnixTime nano);
 // nano -> day
 UnixTime to_days(UnixTime nano);
+// the running-unit clock components (the Clocktime fields), positive on negative timestamps
+// nano -> clock hour of the day
+int clock_hour(UnixTime nano);
+// nano -> clock minute of the hour
+int clock_minute(UnixTime nano);
+// nano -> clock second of the minute
+int clock_second(UnixTime nano);
+// nano -> clock millisecond of the second
+int clock_millisecond(UnixTime nano);
+// nano -> clock microsecond of the second
+int clock_microsecond(UnixTime nano);
 // nano -> seconds,milliseconds
 double to_double(UnixTime nano);
 double to_double_milliseconds(UnixTime nano);
@@ -98,21 +109,21 @@ constexpr Duration to_duration(UnixTime nano)
 // micro -> nano
 constexpr UnixTime micro(UnixTime micro)
 {
-    return micro * 1E3;
+    return micro * 1000;
 }
 static constexpr auto us = micro;
 static constexpr auto microseconds = micro;
 // milli -> nano
 constexpr UnixTime milli(UnixTime milli)
 {
-    return milli * 1E6;
+    return milli * 1000000;
 }
 static constexpr auto ms = milli;
 static constexpr auto milliseconds = milli;
 // sec -> nano
 constexpr UnixTime sec(UnixTime sec)
 {
-    return sec * 1E9;
+    return sec * 1000000000;
 }
 static constexpr auto seconds = sec;
 // min -> nano

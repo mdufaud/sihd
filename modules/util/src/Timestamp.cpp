@@ -1,5 +1,6 @@
 #include <sys/time.h>
 
+#include <limits>
 #include <locale>
 #include <sstream>
 
@@ -37,7 +38,7 @@ Timestamp::Timestamp(Calendar calendar)
     tm.tm_mday = calendar.day;
     tm.tm_isdst = -1;
 
-    _nano = time::seconds(mktime(&tm));
+    _nano = time::local_tm(tm);
 }
 
 Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
@@ -52,7 +53,12 @@ Timestamp::Timestamp(Calendar calendar, Clocktime clocktime)
     tm.tm_sec = clocktime.second;
     tm.tm_isdst = -1;
 
-    _nano = time::seconds(mktime(&tm));
+    _nano = time::local_tm(tm);
+    const auto offset = time::milliseconds(clocktime.millisecond);
+    if ((offset > 0 && _nano > std::numeric_limits<int64_t>::max() - offset)
+        || (offset < 0 && _nano < std::numeric_limits<int64_t>::min() - offset))
+        throw std::out_of_range("calendar is outside the timestamp range");
+    _nano += offset;
 }
 
 Timestamp Timestamp::now()
@@ -77,22 +83,22 @@ std::string Timestamp::localtimeoffset_str(bool total_parenthesis, bool nano_res
 
 std::string Timestamp::format(const std::string & format) const
 {
-    return str::format_time(Timestamp(std::abs(_nano)), format);
+    return str::format_time(*this, format);
 }
 
 std::string Timestamp::local_format(const std::string & format) const
 {
-    return str::format_localtime(Timestamp(std::abs(_nano)), format);
+    return str::format_localtime(*this, format);
 }
 
 std::string Timestamp::format(const std::string & format, const std::locale & loc) const
 {
-    return str::format_time(Timestamp(std::abs(_nano)), format, loc);
+    return str::format_time(*this, format, loc);
 }
 
 std::string Timestamp::local_format(const std::string & format, const std::locale & loc) const
 {
-    return str::format_localtime(Timestamp(std::abs(_nano)), format, loc);
+    return str::format_localtime(*this, format, loc);
 }
 
 std::string Timestamp::sec_str(const std::string & format) const
@@ -138,7 +144,7 @@ Timestamp Timestamp::floor_day() const
 
 Timestamp Timestamp::modulo_min(uint32_t minutes) const
 {
-    if (minutes > 60)
+    if (minutes == 0 || minutes > 60)
         throw std::invalid_argument(fmt::format("modulo minutes must be inferior or equal to 60 - was {}", minutes));
 
     const int now_minutes = this->clocktime().minute;
@@ -149,35 +155,35 @@ Timestamp Timestamp::modulo_min(uint32_t minutes) const
 
 Clocktime Timestamp::clocktime() const
 {
-    struct tm tm = time::to_tm(std::abs(_nano), false);
+    struct tm tm = time::to_tm(_nano, false);
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
         .second = tm.tm_sec,
-        .millisecond = (int)((_nano - (time::to_seconds(_nano) * 1E9)) / 1E6),
+        .millisecond = time::clock_millisecond(_nano),
     };
 }
 
 Calendar Timestamp::calendar() const
 {
-    struct tm tm = time::to_tm(std::abs(_nano), false);
+    struct tm tm = time::to_tm(_nano, false);
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
 Clocktime Timestamp::local_clocktime() const
 {
-    struct tm tm = time::to_tm(std::abs(_nano), true);
+    struct tm tm = time::to_tm(_nano, true);
     return {
         .hour = tm.tm_hour,
         .minute = tm.tm_min,
         .second = tm.tm_sec,
-        .millisecond = (int)((_nano - (time::to_seconds(_nano) * 1E9)) / 1E6),
+        .millisecond = time::clock_millisecond(_nano),
     };
 }
 
 Calendar Timestamp::local_calendar() const
 {
-    struct tm tm = time::to_tm(std::abs(_nano), true);
+    struct tm tm = time::to_tm(_nano, true);
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
@@ -190,13 +196,25 @@ sihd::util::Result<Timestamp>
     Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
-    std::chrono::system_clock::time_point tp;
+    std::chrono::sys_seconds seconds;
+    std::chrono::sys_time<std::chrono::duration<uint64_t, std::nano>> parsed;
 
     std::istringstream ss {date_str};
     ss.imbue(loc);
-    ss >> std::chrono::parse(format.c_str(), tp);
+    ss >> std::chrono::parse(format.c_str(), seconds);
 
-    if (ss.fail())
+    if (ss.fail() || seconds.time_since_epoch().count() < std::numeric_limits<int64_t>::min() / 1000000000 - 1
+        || seconds.time_since_epoch().count() > std::numeric_limits<int64_t>::max() / 1000000000)
+        return date_parse_error(date_str, format);
+
+    ss.clear();
+    ss.seekg(0);
+    ss >> std::chrono::parse(format.c_str(), parsed);
+
+    const std::chrono::sys_time<std::chrono::nanoseconds> tp {
+        std::chrono::nanoseconds {static_cast<int64_t>(parsed.time_since_epoch().count())}};
+
+    if (ss.fail() || std::chrono::floor<std::chrono::seconds>(tp) != seconds)
         return date_parse_error(date_str, format);
 
     return Timestamp {tp};
@@ -210,7 +228,14 @@ sihd::util::Result<Timestamp>
     if (ss.fail())
         return date_parse_error(date_str, format);
 
-    return Timestamp {time::local_tm(t)};
+    try
+    {
+        return Timestamp {time::tm(t)};
+    }
+    catch (const std::out_of_range &)
+    {
+        return date_parse_error(date_str, format);
+    }
 #endif
 }
 
@@ -242,12 +267,12 @@ struct timespec Timestamp::ts() const
 
 struct tm Timestamp::tm() const
 {
-    return time::to_tm(std::abs(_nano), false);
+    return time::to_tm(_nano, false);
 }
 
 struct tm Timestamp::local_tm() const
 {
-    return time::to_tm(std::abs(_nano), true);
+    return time::to_tm(_nano, true);
 }
 
 } // namespace sihd::util

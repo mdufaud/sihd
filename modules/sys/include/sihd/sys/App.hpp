@@ -2,6 +2,7 @@
 #define __SIHD_SYS_APP_HPP__
 
 #include <array>
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -46,13 +47,19 @@ class App: public sihd::util::CliApp
             callback,
         };
 
+        struct SignalState
+        {
+                SigAction action = SigAction::none;
+                bool installed = false;
+        };
+
         void _set_default_signal_actions();
-        void _set_signal_action(int sig, SigAction action);
+        bool _set_signal_action(int64_t sig, SigAction action);
         bool _signal_actions_from_json(const sihd::json::Json & json, SigAction action);
         void _install_signals();
         std::string _read_conf();
 
-        std::array<SigAction, signal::max_signal> _sig_actions {};
+        std::array<SignalState, signal::max_signal> _sig_actions {};
         std::function<void(int)> _on_signal;
         std::string _conf_path;
         bool _daemon_run = false;

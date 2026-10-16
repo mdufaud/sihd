@@ -87,7 +87,6 @@ enum class CopyResult
     done,
     unsupported,
     cancelled,
-    stopped,
 };
 
 // copy_file_range/sendfile accept at most this many bytes per call
@@ -108,7 +107,7 @@ Timestamp statx_timestamp_to_ts(const struct statx_timestamp & ts)
 
 #endif
 
-bool write_full(int fd, const char *data, size_t size)
+sihd::util::Result<void> write_full(int fd, const char *data, size_t size)
 {
     while (size > 0)
     {
@@ -117,17 +116,17 @@ bool write_full(int fd, const char *data, size_t size)
         {
             if (errno == EINTR)
                 continue;
-            SIHD_LOG(error, "fs: copy_file: write: {}", os::last_error_str());
-            return false;
+            return std::unexpected(Error::from_errno("copy_file: write"));
         }
         data += n;
         size -= (size_t)n;
     }
-    return true;
+    return {};
 }
 
 template <typename CopyChunk>
-CopyResult kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::function<bool(size_t, size_t)> & progress)
+sihd::util::Result<CopyResult>
+    kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     size_t transferred = 0;
     while (transferred < total)
@@ -140,13 +139,12 @@ CopyResult kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::funct
             // these leave the fd offsets usable for the next strategy
             if (errno == EINVAL || errno == ENOSYS || errno == EXDEV || errno == EOPNOTSUPP)
                 return CopyResult::unsupported;
-            SIHD_LOG(error, "fs: copy_file: kernel copy: {}", os::last_error_str());
-            return CopyResult::stopped;
+            return std::unexpected(Error::from_errno("copy_file: kernel copy"));
         }
         if (n == 0)
         {
             // the source shrank under fstat; do not report a short copy as done
-            return CopyResult::stopped;
+            return std::unexpected(Error(io_error, "copy_file: source shortened during copy"));
         }
         transferred += (size_t)n;
         if (progress && !progress(transferred, total))
@@ -155,7 +153,7 @@ CopyResult kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::funct
     return CopyResult::done;
 }
 
-CopyResult
+sihd::util::Result<CopyResult>
     read_write_copy_loop(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     std::vector<char> buf(256 * 1024);
@@ -167,13 +165,12 @@ CopyResult
         {
             if (errno == EINTR)
                 continue;
-            SIHD_LOG(error, "fs: copy_file: read: {}", os::last_error_str());
-            return CopyResult::stopped;
+            return std::unexpected(Error::from_errno("copy_file: read"));
         }
         if (n == 0)
             return CopyResult::done;
-        if (!write_full(out_fd, buf.data(), (size_t)n))
-            return CopyResult::stopped;
+        auto written = write_full(out_fd, buf.data(), (size_t)n);
+        SIHD_UNEXPECTED_RETURN(written);
         transferred += (size_t)n;
         if (progress && !progress(transferred, total))
             return CopyResult::cancelled;
@@ -182,15 +179,16 @@ CopyResult
 
 #if defined(__linux__)
 
-CopyResult kernel_copy(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
+sihd::util::Result<CopyResult>
+    kernel_copy(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     // bionic declares copy_file_range only from API 30
 # if !defined(__ANDROID__) || __ANDROID_API__ >= 30
-    CopyResult r = kernel_copy_loop(
+    auto r = kernel_copy_loop(
         [&](size_t chunk) { return ::copy_file_range(in_fd, nullptr, out_fd, nullptr, chunk, 0); },
         total,
         progress);
-    if (r != CopyResult::unsupported)
+    if (!r || *r != CopyResult::unsupported)
         return r;
 # endif
     // copy_file_range wants a regular file on the same mount; sendfile covers more
@@ -369,8 +367,8 @@ sihd::util::Result<FileTimes> times(const std::string & path)
     if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     FileTimes ret;
-    ret.access = Timestamp(time::seconds(s.st_atime));
-    ret.write = Timestamp(time::seconds(s.st_mtime));
+    ret.access = Timestamp(s.st_atim);
+    ret.write = Timestamp(s.st_mtim);
     return ret;
 #endif
 }
@@ -503,12 +501,12 @@ sihd::util::Result<void>
         return ret;
     }
 
-    CopyResult r = CopyResult::stopped;
+    sihd::util::Result<CopyResult> r = CopyResult::done;
 #if defined(__linux__)
     if (total > 0)
     {
         r = kernel_copy(in_fd, out_fd, total, progress);
-        if (r == CopyResult::unsupported)
+        if (r && *r == CopyResult::unsupported)
             r = read_write_copy_loop(in_fd, out_fd, total, progress);
     }
     else
@@ -518,7 +516,7 @@ sihd::util::Result<void>
         r = read_write_copy_loop(in_fd, out_fd, total, progress);
     }
 
-    if (r == CopyResult::cancelled)
+    if (r && *r == CopyResult::cancelled)
     {
         ::close(in_fd);
         ::close(out_fd);
@@ -526,29 +524,31 @@ sihd::util::Result<void>
         return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
     }
 
-    sihd::util::Result<void> res {};
-    if (r != CopyResult::done)
-        res = std::unexpected(Error(io_error, "could not copy '{}' to '{}'", from, to));
-    ::close(in_fd);
-    if (res)
+    if (!r)
     {
-        // CopyFile2 preserves the source metadata; mirror it for symmetry
-        if (::fchmod(out_fd, s.st_mode & 07777) != 0)
-        {
-            res = std::unexpected(Error::from_errno("could not preserve permissions of '{}'", to));
-        }
-#if defined(SIHD_FS_HAS_STATX)
-        else
-        {
-            const struct timespec times[2] = {s.st_atim, s.st_mtim};
-            if (::futimens(out_fd, times) != 0)
-            {
-                res = std::unexpected(Error::from_errno("could not preserve times of '{}'", to));
-            }
-        }
-#endif
+        ::close(in_fd);
+        ::close(out_fd);
+        ::unlink(to.c_str());
+        SIHD_UNEXPECTED_RETURN_CTX(r, "could not copy '{}' to '{}'", from, to);
     }
-    if (::close(out_fd) != 0 && !res)
+    ::close(in_fd);
+    sihd::util::Result<void> res {};
+    // CopyFile2 preserves the source metadata; mirror it for symmetry
+    if (::fchmod(out_fd, s.st_mode & 07777) != 0)
+    {
+        res = std::unexpected(Error::from_errno("could not preserve permissions of '{}'", to));
+    }
+#if defined(SIHD_FS_HAS_STATX)
+    else
+    {
+        const struct timespec times[2] = {s.st_atim, s.st_mtim};
+        if (::futimens(out_fd, times) != 0)
+        {
+            res = std::unexpected(Error::from_errno("could not preserve times of '{}'", to));
+        }
+    }
+#endif
+    if (::close(out_fd) != 0 && res)
     {
         res = std::unexpected(Error::from_errno("could not close '{}'", to));
     }

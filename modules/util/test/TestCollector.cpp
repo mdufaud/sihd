@@ -83,6 +83,17 @@ TEST_F(TestCollector, test_collector_service_lifecycle)
     collector.remove_observer(&handler);
 }
 
+TEST_F(TestCollector, test_collector_stop_after_ready)
+{
+    IntProvider provider(42);
+    Collector<int> collector(&provider);
+    std::thread worker([&] { collector.start(); });
+    EXPECT_TRUE(collector.wait_ready(std::chrono::seconds(1)));
+    EXPECT_TRUE(collector.stop());
+    worker.join();
+    EXPECT_FALSE(collector.is_running());
+}
+
 TEST_F(TestCollector, test_collector_set_timeout)
 {
     IntProvider provider(0);

@@ -16,8 +16,8 @@ class LoggerSystem: public sihd::util::ALogger
 {
     public:
         // default syslog facility/options (linux); meaningless on windows event log
-        static constexpr int default_facility = 1;   // syslog.h LOG_USER
-        static constexpr int default_options = 0x09; // syslog.h LOG_NDELAY | LOG_PID
+        static constexpr int default_facility = 1 << 3; // syslog.h LOG_USER
+        static constexpr int default_options = 0x09;    // syslog.h LOG_NDELAY | LOG_PID
 
         LoggerSystem(const std::string & name, sihd::util::Node *parent = nullptr);
         LoggerSystem(std::string_view progname, int facility, int options);

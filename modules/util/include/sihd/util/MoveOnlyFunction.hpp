@@ -39,6 +39,7 @@ class MoveOnlyFunction<R(A...)>
         MoveOnlyFunction & operator=(const MoveOnlyFunction &) = delete;
 
         template <typename F>
+            requires(!std::is_same_v<std::remove_cvref_t<F>, MoveOnlyFunction>)
         MoveOnlyFunction(F && functor): _impl(std::make_unique<Model<std::decay_t<F>>>(std::forward<F>(functor)))
         {
         }
@@ -51,13 +52,13 @@ class MoveOnlyFunction<R(A...)>
 
         explicit operator bool() const { return _impl != nullptr; }
 
-        friend bool operator==(const MoveOnlyFunction & fn, std::nullptr_t) { return fn._impl == nullptr; }
+        bool operator==(std::nullptr_t) const { return _impl == nullptr; }
 
         R operator()(A... args)
         {
             if (_impl == nullptr)
                 throw std::bad_function_call();
-            return _impl->call(args...);
+            return _impl->call(std::forward<A>(args)...);
         }
 
     private:
@@ -72,9 +73,15 @@ class MoveOnlyFunction<R(A...)>
         {
                 F functor;
 
-                explicit Model(F && functor): functor(std::move(functor)) {}
+                explicit Model(F functor): functor(std::move(functor)) {}
 
-                R call(A... args) override { return this->functor(args...); }
+                R call(A... args) override
+                {
+                    if constexpr (std::is_void_v<R>)
+                        std::invoke(this->functor, std::forward<A>(args)...);
+                    else
+                        return std::invoke(this->functor, std::forward<A>(args)...);
+                }
         };
 
         std::unique_ptr<Base> _impl;

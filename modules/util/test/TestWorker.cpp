@@ -43,6 +43,14 @@ TEST_F(TestWorker, test_worker_simple)
     EXPECT_EQ(ran, 2);
 }
 
+TEST_F(TestWorker, test_worker_repeated_sync_start)
+{
+    Worker worker([] { return true; });
+    EXPECT_TRUE(worker.start_sync_worker("repeat-worker"));
+    EXPECT_TRUE(worker.start_sync_worker("repeat-worker"));
+    EXPECT_TRUE(worker.stop_worker());
+}
+
 TEST_F(TestWorker, test_stepworker_multiple)
 {
     if (test::is_run_by_valgrind())

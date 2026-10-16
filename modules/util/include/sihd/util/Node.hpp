@@ -142,6 +142,7 @@ class Node: public Named
         virtual void on_remove_child(const std::string & name, Named *child);
 
     private:
+        sihd::util::Result<Named *> _resolve_link(const std::string & path, size_t recursion);
         void _log_add_child_error(const Error & error);
         bool _remove_child_entry(ChildEntry *entry);
 

@@ -24,12 +24,17 @@ class CrashHandler
 
         ~CrashHandler();
 
+        CrashHandler(const CrashHandler &) = delete;
+        CrashHandler & operator=(const CrashHandler &) = delete;
+
         // false when a handler is already installed, by this instance or another
         bool install(const Options & options);
         void uninstall();
         bool is_installed() const { return _installed; }
 
     private:
+        struct Impl;
+        Impl *_impl = nullptr;
         Options _options;
         bool _installed = false;
 };

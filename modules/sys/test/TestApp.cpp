@@ -1,3 +1,4 @@
+#include <csignal>
 #include <cstdlib>
 #include <string>
 #include <vector>
@@ -13,6 +14,7 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
@@ -121,8 +123,22 @@ TEST_F(TestApp, test_conf_file_missing)
     EXPECT_FALSE(ran);
 }
 
+TEST_F(TestApp, test_signal_out_of_range)
+{
+    struct ConfigApp: sihd::sys::App
+    {
+            using App::App;
+            using App::apply_sihd_conf;
+    } app({.name = "invalid-signal", .setup_logging = false});
+    auto conf = sihd::json::Json::parse(R"({"signals":{"ignore":[0]}})");
+    ASSERT_TRUE(conf);
+    EXPECT_FALSE(app.apply_sihd_conf(*conf));
+}
+
 TEST_F(TestApp, test_log_sinks_file_conf)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
     const std::string log_path = tmp_path("sinks.log");
     const std::string conf_path = tmp_path("sinks.json");
     (void)fs::remove_file(log_path);
@@ -321,6 +337,28 @@ TEST_F(TestApp, test_signal_added_on_reload)
 #endif
 
 #if defined(SIGUSR1)
+TEST_F(TestApp, test_signal_removed_on_reload)
+{
+    struct ConfigApp: sihd::sys::App
+    {
+            using App::App;
+            using App::apply_sihd_conf;
+            using App::on_conf_reloaded;
+    } app({.name = "signal-reload", .setup_logging = false});
+    auto conf = sihd::json::Json::parse(fmt::format(R"({{"signals":{{"ignore":[{}]}}}})", SIGUSR1));
+    ASSERT_TRUE(conf);
+    ASSERT_TRUE(app.apply_sihd_conf(*conf));
+    app.on_conf_reloaded();
+    auto empty = sihd::json::Json::parse("{}");
+    ASSERT_TRUE(empty);
+    ASSERT_TRUE(app.apply_sihd_conf(*empty));
+    app.on_conf_reloaded();
+    signal::sig_handler previous = nullptr;
+    EXPECT_TRUE(signal::handle(SIGUSR1, &previous));
+    EXPECT_EQ(previous, SIG_DFL);
+    EXPECT_TRUE(signal::unhandle(SIGUSR1));
+}
+
 TEST_F(TestApp, test_signal_ignore)
 {
     std::string path = tmp_path("ignore.json");
@@ -417,6 +455,8 @@ TEST_F(TestApp, test_service_loop)
 
 TEST_F(TestApp, test_log_file)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("app.log");
     std::string path = tmp_path("logconf.json");
     ASSERT_TRUE(
@@ -443,6 +483,8 @@ TEST_F(TestApp, test_log_file)
 
 TEST_F(TestApp, test_log_file_level)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("filevel.log");
     std::string path = tmp_path("filevel.json");
     ASSERT_TRUE(fs::write(
@@ -472,6 +514,8 @@ TEST_F(TestApp, test_log_file_level)
 
 TEST_F(TestApp, test_log_file_reload)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path1 = tmp_path("reload1.log");
     std::string log_path2 = tmp_path("reload2.log");
     std::string path = tmp_path("logreload.json");
@@ -515,6 +559,8 @@ TEST_F(TestApp, test_log_file_reload)
 
 TEST_F(TestApp, test_log_console_opt_out)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("noconsole.log");
     std::string path = tmp_path("noconsole.json");
     ASSERT_TRUE(fs::write(

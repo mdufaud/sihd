@@ -2,7 +2,6 @@ name = 'sihd'
 version = "0.1.0"
 git_url = "https://github.com/mdufaud/sihd.git"
 
-# modules live under modules/ instead of the project root
 modules_path = "modules"
 
 # files to include into this module (paths relative to site_scons/)
@@ -17,11 +16,10 @@ includes = [
 # mingw gcc-13: libstdc++ tinfo.o clashes with TU comdats of type_info::operator==
 windows_static_link = ['-Wl,--allow-multiple-definition']
 
-###############################################################################
-# modules
-###############################################################################
-
 modules = {
+    "pch": {
+        "extlibs": ['fmt'],
+    },
     "json": {
         "extlibs": ['simdjson'],
         "export-libs": ['simdjson'],
@@ -30,176 +28,174 @@ modules = {
         "export-web-flags": ["-pthread"],
     },
     "util": {
-        "depends": ['json'],
-        "linux-libs": ['pthread'], # threading (bionic has it in libc)
-        "windows-libs": ['pthread'], # mingw winpthread
+        "depends": ['json', 'pch'],
+        "linux-libs": ['pthread'], # bionic has threading in libc
+        "windows-libs": ['pthread'],
         "extlibs": ['fmt', 'cli11'],
         "libs": ['CLI11'], # vcpkg builds cli11 as a static lib
-        # CLI11 is a static lib: consumers of a static sihd_util must link it too
         "export-libs": ['fmt', 'CLI11'],
-        # === Android specific ===
         "android-libs": ['log'],
-        # === Emscripten specific ===
         "web-flags": [
             "-Wno-deprecated-literal-operator",
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
         ],
         "web-link": [
-            "-sFORCE_FILESYSTEM", # use filesystem
+            "-sFORCE_FILESYSTEM",
         ],
-        # === Export every flags for convenience ===
         "export-all-flags": True,
     },
     "sys": {
-        "depends": ['util'],
+        "depends": ['util', 'pch'],
         "env": {
-            "x11": 0, # x11=1 to compile with X11
-            "wayland": 0, # wayland=1 to compile with Wayland
+            "x11": 0,
+            "wayland": 0,
         },
-        # === Linux specific ===
         "linux-extlibs": ['libuuid', 'libcap'],
-        "linux-libs": [
-            'dl', # dlopen
-            'uuid', # libuuid
-            'cap', # libcap (Capabilities)
-        ],
-        # === Android specific ===
+        "linux-libs": ['dl', 'uuid', 'cap'],
         "android-extlibs": ['libuuid'],
         "android-libs": ['log', 'android', 'uuid'],
-        # === Windows specific ===
         "windows-libs": [
-            'rpcrt4', # Uuid
-            'psapi', # GetProcessMemoryInfo
-            'ssp', # winsock (Poll)
-            'ws2_32', # windows socket api (Poll)
-            'gdi32', # wingdi (screenshot/clipboard)
-            'user32', # SendInput (input injection)
-            'imagehlp', # backtrace / SymFromAddr
-            'advapi32', # token privileges (Capabilities) / GetUserName
-            'shell32', # SHGetKnownFolderPath (fs known folders)
-            'ole32', # CoTaskMemFree (fs known folders)
-            'uuid', # FOLDERID_* guids (fs known folders)
-            'powrprof', # GetSystemPowerStatus (power)
-            'wtsapi32', # WTSEnumerateSessions (session)
-            'dbghelp', # MiniDumpWriteDump (CrashHandler)
+            'rpcrt4',
+            'psapi',
+            'ssp',
+            'ws2_32',
+            'gdi32',
+            'user32',
+            'imagehlp',
+            'advapi32',
+            'shell32',
+            'ole32',
+            'uuid',
+            'powrprof',
+            'wtsapi32',
+            'dbghelp',
             # ! never add libucrt with mingw
         ],
-        # === Export every libs for convenience ===
         "export-all-libs": True,
     },
     "core": {
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
     },
     "crypto": {
-        "depends": ['util'],
+        "depends": ['util', 'pch'],
         "extlibs": ['openssl'],
         "export-libs": ['ssl', 'crypto'],
         "export-windows-libs": ['crypt32', 'bcrypt', 'ws2_32', 'mincore'],
     },
     "curl": {
-        # curl has no emscripten/android port
+        # no curl port for web/android
         "exclude-platforms": ["web", "android"],
-        "depends": ['util'],
-        # zlib/openssl are installed transitively by the curl port
+        "depends": ['util', 'pch'],
+        # openssl/zlib come transitively from the curl port
         "extlibs": ['curl'],
-        # vcpkg builds libcurl shared on every triplet used here: its transitive
-        # deps resolve inside the library itself, except for static libtype
+        # shared libcurl resolves its transitive deps internally; the archive does not
         "linux-libs": ["curl"],
         "linux-static-libs": ["ssl", "crypto", "z"],
-        # static archives carry no deps: consumers need libcurl then ssl/crypto/z
         "export-linux-libs": ["curl"],
         "export-linux-static-libs": ["ssl", "crypto", "z"],
-        "export-windows-static-libs": ['curl', 'zlib', 'winmm', 'advapi32', 'ssl', 'crypto', 'crypt32', 'bcrypt'],
-        # Windows static linking: all transitive deps must be explicit
-        # order matters: higher-level libs first, their deps after; ssl/crypto last
-        "windows-static-libs": [
-            'curl',     # libcurl
-            'zlib',     # vcpkg zlib installs libzlib.a on mingw
-            'winmm',    # Multimedia (curl)
-            'advapi32', # Advanced API (curl)
-            'ssl',      # OpenSSL TLS - mingw uses openssl not schannel
-            'crypto',   # OpenSSL (ssl dep)
-            'crypt32',  # Windows crypto (openssl backend)
-            'bcrypt',   # Windows crypto (openssl backend)
+        "export-windows-static-libs": [
+            'curl', 'zlib', 'winmm', 'advapi32', 'ws2_32', 'iphlpapi', 'secur32',
+            'ssl', 'crypto', 'crypt32', 'bcrypt',
         ],
-        # Windows dynamic linking: import libs (.dll.a) resolve transitive deps
-        # inside each DLL, so only the directly-used libs are needed
+        # order matters: dependencies after dependents
+        "windows-static-libs": [
+            'curl',
+            'zlib',     # vcpkg installs libzlib.a on mingw
+            'winmm',
+            'advapi32',
+            'ws2_32',
+            'iphlpapi',
+            'secur32',
+            'ssl',      # mingw uses openssl, not schannel
+            'crypto',
+            'crypt32',
+            'bcrypt',
+        ],
         "windows-shared-libs": ['curl'],
     },
     "net": {
-        # poll()/select() not proxied by emscripten + no raw sockets/getifaddrs: net unusable on web
+        # emscripten proxies neither poll() nor raw sockets
         "exclude-platforms": ["web"],
         "depends": ['sys', 'core', 'crypto'],
         "windows-libs": ['iphlpapi'],
         "export-windows-libs": ['iphlpapi'],
     },
     "http": {
-        # depends net (web-excluded) + libwebsockets has no emscripten port
-        # curl exports must resolve before net's: dedup keeps first occurrence
+        # no libwebsockets port for web/android
         "exclude-platforms": ["web", "android"],
         "depends": ['curl', 'net'],
         "extlibs": [
             'libwebsockets',
             'zlib',
             'libuv',
-            'openssl', # TLS for libwebsockets
+            'openssl',
         ],
         "linux-extlibs": ["libcap"],
         "linux-libs": ["websockets", "uv", "cap"],
-        # Windows static linking: all transitive deps must be explicit
-        # order matters: higher-level libs first, their deps after; ssl/crypto last
+        # an .a records no deps: consumers link websockets/uv themselves
+        "export-linux-libs": ["websockets", "uv"],
+        "export-windows-static-libs": [
+            'websockets_static',
+            'pthread',
+            'uv',
+            'zlib',
+            'winmm',
+            'iphlpapi',
+            'userenv',
+            'advapi32',
+            'user32',
+            'dbghelp',
+            'ole32',
+            'uuid',
+            'ssl',
+            'crypto',
+            'crypt32',
+            'bcrypt',
+        ],
+        # order matters: dependencies after dependents
         "windows-static-libs": [
             'websockets_static', # vcpkg builds libwebsockets_static.a on mingw
-            'pthread',           # PThreads4W (libwebsockets SMP)
-            'uv',                # libuv (libwebsockets uses it)
-            'zlib',              # vcpkg zlib installs libzlib.a on mingw
-            'winmm',             # Multimedia (libuv)
-            'iphlpapi',          # IP Helper (libwebsockets, libuv)
-            'userenv',           # User environment (libwebsockets, libuv)
-            'advapi32',          # Advanced API (libuv)
-            'user32',            # User interface (libuv)
-            'dbghelp',           # Debug (libuv)
-            'ole32',             # COM (libuv)
-            'uuid',              # UUID (libuv)
-            'ssl',               # OpenSSL TLS (libwebsockets) - mingw uses openssl not schannel
-            'crypto',            # OpenSSL (ssl dep)
-            'crypt32',           # Windows crypto (openssl backend)
-            'bcrypt',            # Windows crypto (openssl backend)
+            'pthread',
+            'uv',
+            'zlib',
+            'winmm',
+            'iphlpapi',
+            'userenv',
+            'advapi32',
+            'user32',
+            'dbghelp',
+            'ole32',
+            'uuid',
+            'ssl',
+            'crypto',
+            'crypt32',
+            'bcrypt',
         ],
-        # Windows dynamic linking: import libs (.dll.a) resolve transitive deps
-        # inside each DLL, so only the directly-used libs are needed
-        "windows-shared-libs": [
-            'websockets',        # libwebsockets.dll.a
-        ],
+        "windows-shared-libs": ['websockets'],
     },
     "pcap": {
         "exclude-platforms": ["android"],
         "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
-        # if lib is installed on system
         "parse-configs": [
             "pcap-config --cflags --libs",
         ],
-        # Windows static linking: libpcap needs winsock
     },
     "zip": {
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
-        # Windows static linking: libzip's transitive deps must be explicit
-        # (dynamic build resolves them inside libzip.dll via the plain 'zip' lib)
         "windows-static-libs": [
-            'zlib',   # vcpkg zlib installs libzlib.a on mingw (deflate/inflate/crc32)
-            'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
-            'bcrypt', # Windows CNG crypto (zip_crypto_win.c)
+            'zlib',
+            'bz2',
+            'bcrypt',
         ],
-        # emscripten static linking: libzip's transitive deps must be explicit
         "web-libs": [
-            'z',      # vcpkg zlib installs libz.a on wasm (deflate/inflate/crc32/zError)
-            'bz2',    # bzip2 compression (zip_algorithm_bzip2.c)
-            'crypto', # openssl crypto for AES/HMAC (zip_crypto_openssl.c, zip_winzip_aes.c)
+            'z',
+            'bz2',
+            'crypto',
         ],
         "linux-static-libs": ['z', 'bz2', 'crypto'],
         "export-linux-libs": ['zip'],
@@ -208,35 +204,34 @@ modules = {
     },
     "tui": {
         "exclude-platforms": ["android"],
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
         "exclude-platforms": ["android"],
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
         "linux-static-libs": ['ssl', 'crypto'],
-        # static: libssh.a's transitive deps must be explicit
-        # (dynamic build resolves them inside libssh.dll via the plain 'ssh' lib)
         "windows-static-libs": [
-            'ssh',               # libssh
-            'pthread',           # PThreads4W (libssh threads)
-            'ssl', 'crypto',     # OpenSSL (libssh dep)
-            'crypt32',           # CryptoAPI (OpenSSL)
-            'bcrypt',            # BCrypt (OpenSSL)
-            'iphlpapi',          # if_nametoindex (libssh)
+            'ssh',
+            'pthread',
+            'ssl',
+            'crypto',
+            'crypt32',
+            'bcrypt',
+            'iphlpapi',
         ],
     },
     "usb": {
         # the usb test lists devices through udev, a linux-only api
         "exclude-platforms": ["android", "windows"],
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ['libusb'],
-        # native linux: udev is a system transitive dep of libusb, parse-config provides libusb flags
+        # native linux: system libusb via pkg-config (udev is a system transitive dep)
         "native-libs": ['udev'],
-        # cross linux: vcpkg libusb built without udev, parse-configs skipped in cross
+        # cross linux: vcpkg libusb built without udev
         "cross-libs": ['usb-1.0'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",
@@ -245,41 +240,36 @@ modules = {
     "bt": {
         "exclude-platforms": ["android"],
         "allow-platforms": ["linux"],
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ['simpleble'],
         "libs": ['simpleble'],
-        # dbus-1 is a transitive dep of simpleble on Linux (needed for static linking)
+        # dbus-1: simpleble transitive dep on linux (static linking)
         "linux-libs": ['dbus-1'],
     },
     "csv": {
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
     },
     "imgui": {
-        "depends": ['util', 'sys'],
+        "depends": ['util', 'sys', 'pch'],
         # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android.
         "allow-link-shared": True,
         "android-allow-link-shared": False,
         "extlibs": ['imgui', 'opengl'],
-        # libxcrypt only supports linux|osx (autotools, no Windows/web port)
+        # libxcrypt: autotools, no windows/web port
         "linux-extlibs": ['ncurses', 'libxcrypt'],
         "libs": ["imgui"],
         "linux-libs": ['glfw', 'SDL3', 'ncursesw'],
-        # native linux: system provides libglfw.so, libGLEW.so, libGL.so
+        # native linux: system GL/GLEW; cross linux: vcpkg glfw (imgui loads GL itself, GLEW unused)
         "linux-native-libs": ['GLEW', 'GL'],
-        # cross linux: vcpkg provides libglfw.so (dynamic) / libglfw3.a (static)
-        # (imgui has its own GL loader via dlopen, GLEW is unused)
         "linux-cross-libs": ['glfw'],
-        # === Android specific ===
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
-        # == Windows specific ===
         "windows-link": [
-            "-mwindows" # no shell window opening
+            "-mwindows"
         ],
         "windows-libs": [
             "glfw3",
             "opengl32",
-            # SDL NEEDED
             "SDL3",
             "kernel32",
             "user32",
@@ -293,30 +283,24 @@ modules = {
             "setupapi",
             "shell32",
             "dinput8",
-            # END
-            # desktop window manager api
             "dwmapi",
-            # direct x11
             "d3d11",
-            # shader compiler
             "d3dcompiler",
-            # directx graphics infrastructure
             "dxgi",
         ],
-        # === Web/Emscripten specific ===
         "web-libs": ['SDL3'],
         "web-flags": [
-            "-pthread", # enable threads
+            "-pthread",
             "-Wno-deprecated-literal-operator",
             "-Wno-unknown-pragmas",
             "-Wno-deprecated-declarations",
             "-sDISABLE_EXCEPTION_CATCHING=1",
         ],
         "web-link": [
-            "-sUSE_PTHREADS=1", # enable threads
-            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency", # use max cpu threads
+            "-sUSE_PTHREADS=1",
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
             "-sWASM=1",
-            "-sALLOW_MEMORY_GROWTH=1", # dynamic heap growth
+            "-sALLOW_MEMORY_GROWTH=1",
         ],
         "web-defines": ["IMGUI_IMPL_OPENGL_ES2"],
     },
@@ -327,7 +311,7 @@ conditional_modules = {
     "lua": {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
-        "depends": ['util'],
+        "depends": ['util', 'pch'],
         "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
@@ -346,41 +330,26 @@ conditional_modules = {
         "depends": [],
         "conditional-depends": ['util', 'sys', 'core', 'net', 'http'],
         "libs": ["python3.12"],
-        "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # Undefine _FORTIFY_SOURCE for py module since it requires optimization from builds using -O0
+        "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # pybind11 requires optimization: FORTIFY breaks -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],
     }
 }
-
-###############################################################################
-# cppcheck
-###############################################################################
 
 cppcheck = {
     "std": "c++23",
     "undefines": ["SIHD_LOGGING_OFF"],
 }
 
-###############################################################################
-# after build
-###############################################################################
-
-# linux extension is something like -> cpython-3Xm-x86_64-linux-gnu.so
-# windows extension -> cp3X-win_amd64.pyd
-# though python cannot be used with mingw
-
 
 def __get_python_libname():
     import subprocess
-    # Use the vcpkg Python version for the extension suffix, not the system one.
-    # python3-config --extension-suffix returns the system Python suffix which may
-    # differ from the vcpkg-provided Python version we actually link against.
+    # python3-config reports the SYSTEM python suffix, we link vcpkg's python
     major_minor = "312"
     try:
         proc = subprocess.Popen("python3-config --extension-suffix",
                                 shell=True, stdout=subprocess.PIPE)
         suffix = proc.stdout.read().decode().strip()
         if suffix:
-            # Replace the version in the suffix (e.g. cpython-314 -> cpython-312)
             import re
             suffix = re.sub(r'cpython-\d+', 'cpython-{}'.format(major_minor), suffix)
             return suffix
@@ -392,8 +361,7 @@ def __get_python_libname():
 def on_build_success(build_modules, builder):
     if "py" not in build_modules:
         return
-    # for pybind11 shared lib to be usable by python interpreter
-    # it needs to be like lib*.cpython-VER-ARCH-VENDOR-OS.so
+    # importable by the interpreter only as sihd.cpython-VER-ARCH.so
     python_libname = __get_python_libname()
     if not python_libname:
         return

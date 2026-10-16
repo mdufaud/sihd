@@ -235,11 +235,21 @@ bool Node::remove_link(const std::string & link)
 
 Named *Node::resolve_link(const std::string & path, size_t recursion)
 {
+    auto resolved = this->_resolve_link(path, recursion);
+    if (!resolved && resolved.error().code == invalid_argument)
+        throw std::length_error(resolved.error().message);
+    if (SIHD_UNEXPECTED_LOG(resolved))
+        return nullptr;
+    return *resolved;
+}
+
+sihd::util::Result<Named *> Node::_resolve_link(const std::string & path, size_t recursion)
+{
     Named *child = this->find(path);
     if (child != nullptr)
         return child;
-    if (recursion == SIHD_NODE_MAX_LINK_RECURSION)
-        throw std::length_error("Maximum link recursion");
+    if (recursion >= SIHD_NODE_MAX_LINK_RECURSION)
+        return std::unexpected(Error(invalid_argument, "maximum link recursion in '{}'", this->full_name()));
     const auto [parent_path, child_name] = this->parent_path(path);
     (void)child_name;
     Named *named = this->find(parent_path);
@@ -248,8 +258,10 @@ Named *Node::resolve_link(const std::string & path, size_t recursion)
         Node *parent = dynamic_cast<Node *>(named);
         if (parent != nullptr)
         {
-            SIHD_UNEXPECTED_LOG(parent->resolve_links(recursion + 1));
+            auto resolved = parent->resolve_links(recursion + 1);
             child = this->find(path);
+            if (child == nullptr)
+                SIHD_UNEXPECTED_RETURN(resolved);
         }
     }
     return child;
@@ -281,7 +293,13 @@ sihd::util::Result<void> Node::resolve_links(size_t recursion)
     for (const auto & link : _link_keys)
     {
         const auto & path = _link_map.at(link);
-        Named *child = this->resolve_link(path, recursion);
+        auto resolved = this->_resolve_link(path, recursion);
+        if (!resolved)
+        {
+            ret = std::unexpected(std::move(resolved).error());
+            continue;
+        }
+        Named *child = *resolved;
         if (child == nullptr)
         {
             ret = std::unexpected(

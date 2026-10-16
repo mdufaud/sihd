@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <set>
 
 #include <sihd/sys/info.hpp>
@@ -66,8 +67,9 @@ bool ProcessMonitor::poll()
         std::lock_guard lock(_impl->mutex);
         name_filter = _impl->name_filter;
     }
+    const Timestamp wall_now = SteadyClock().now();
     std::vector<ProcessSample> fresh = _impl->collect(name_filter);
-    _impl->finish_pass(std::move(fresh));
+    _impl->finish_pass(std::move(fresh), wall_now);
     this->notify_observers(this);
     std::lock_guard lock(_impl->mutex);
     return _impl->samples.empty() == false;
@@ -97,11 +99,10 @@ std::optional<ProcessSample> ProcessMonitor::sample(int pid) const
     return std::nullopt;
 }
 
-void ProcessMonitor::Impl::finish_pass(std::vector<ProcessSample> fresh)
+void ProcessMonitor::Impl::finish_pass(std::vector<ProcessSample> fresh, Timestamp wall_now)
 {
-    auto system_times = info::cpu_times();
-    const uint64_t busy_now = system_times.has_value() ? system_times->busy() : 0;
     const Timestamp now = SystemClock().now();
+    const double cores = std::max<uint32_t>(info::cpu_count(), 1);
 
     std::lock_guard lock(mutex);
     for (ProcessSample & sample : fresh)
@@ -109,14 +110,14 @@ void ProcessMonitor::Impl::finish_pass(std::vector<ProcessSample> fresh)
         sample.timestamp = now;
         const uint64_t cpu_now = process_cpu_ns(sample.metrics);
         auto prev = cpu_history.find(sample.metrics.pid);
-        if (prev != cpu_history.end() && busy_now > prev->second.second)
+        if (prev != cpu_history.end() && wall_now > prev->second.second)
         {
             // a reused pid can rewind its cpu time: the delta clamps to zero
             const uint64_t cpu_delta = cpu_now > prev->second.first ? cpu_now - prev->second.first : 0;
-            sample.cpu_percent = 100.0 * static_cast<double>(cpu_delta)
-                                 / static_cast<double>(busy_now - prev->second.second);
+            const double wall_delta = static_cast<double>((wall_now - prev->second.second).nanoseconds());
+            sample.cpu_percent = std::min(100.0, 100.0 * static_cast<double>(cpu_delta) / (wall_delta * cores));
         }
-        cpu_history[sample.metrics.pid] = {cpu_now, busy_now};
+        cpu_history[sample.metrics.pid] = {cpu_now, wall_now};
     }
     std::set<int> alive;
     for (const ProcessSample & sample : fresh)

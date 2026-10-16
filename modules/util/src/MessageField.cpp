@@ -35,7 +35,7 @@ IMessageField *MessageField::clone() const
     const IArray *arr = this->array();
     if (arr != nullptr && cloned != nullptr)
     {
-        if (!cloned->build_array(arr->data_type(), arr->size()))
+        if (!cloned->build_array(_dt, _size))
         {
             delete cloned;
             cloned = nullptr;

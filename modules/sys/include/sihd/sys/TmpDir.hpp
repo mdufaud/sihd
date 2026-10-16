@@ -15,6 +15,9 @@ class TmpDir
         // deletes the directory in destructor
         ~TmpDir();
 
+        TmpDir(const TmpDir &) = delete;
+        TmpDir & operator=(const TmpDir &) = delete;
+
         operator bool() const;
         operator std::string() const;
         operator std::string_view() const;

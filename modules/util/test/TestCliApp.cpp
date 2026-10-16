@@ -17,6 +17,7 @@
 #include <sihd/util/LoggerConsole.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -438,8 +439,8 @@ TEST_F(TestCliApp, test_completion_dump)
 
 TEST_F(TestCliApp, test_completion_static_script)
 {
-    if (std::system("command -v bash > /dev/null 2>&1") != 0)
-        GTEST_SKIP() << "bash not available";
+    if (build::is_emscripten || std::system("command -v bash > /dev/null 2>&1") != 0)
+        GTEST_SKIP() << "Bash subprocesses are not available";
     CompletionVars vars;
     CliApp app({.name = "my-app", .description = "an app", .version = "1.0", .setup_logging = false});
     add_completion_commands(app, vars);

@@ -105,6 +105,7 @@ class PosixPty: public Pty
         void send_eof() override;
 
     private:
+        pid_t _wait_child(int & status, int options) const;
         std::string _shell;             ///< Shell executable path
         std::vector<std::string> _args; ///< Shell arguments
         Environment _env;               ///< Environment variables
@@ -256,7 +257,7 @@ bool PosixPty::is_running() const
 
     // waitpid(WNOHANG): 0 = still running, _pid = exited (status set), -1 = error
     int status;
-    pid_t result = waitpid(_pid, &status, WNOHANG);
+    const pid_t result = this->_wait_child(status, WNOHANG);
 
     if (result == _pid)
     {
@@ -291,7 +292,7 @@ int PosixPty::wait()
 
     // Block until child exits
     int status;
-    pid_t result = waitpid(_pid, &status, 0);
+    const pid_t result = this->_wait_child(status, 0);
 
     if (result == _pid)
     {
@@ -307,6 +308,16 @@ int PosixPty::wait()
     }
 
     return _exit_status;
+}
+
+pid_t PosixPty::_wait_child(int & status, int options) const
+{
+    while (true)
+    {
+        const pid_t result = waitpid(_pid, &status, options);
+        if (result >= 0 || errno != EINTR)
+            return result;
+    }
 }
 
 void PosixPty::terminate()

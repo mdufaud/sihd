@@ -35,6 +35,72 @@ class TestFileWatcher: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestFileWatcher, test_watch_renamed_file)
+{
+    if (!FileWatcher::supported)
+        GTEST_SKIP();
+    TmpDir directory;
+    ASSERT_TRUE(directory);
+    const std::string path = fs::combine(directory.path(), "file-\xc3\xa9.txt");
+    const std::string renamed = fs::combine(directory.path(), "renamed.txt");
+    const std::filesystem::path native_path(reinterpret_cast<const char8_t *>(path.c_str()));
+    const std::filesystem::path native_renamed(reinterpret_cast<const char8_t *>(renamed.c_str()));
+    {
+        std::ofstream file(native_path);
+        ASSERT_TRUE(file);
+        file << "data";
+    }
+    FileWatcher watcher(path, 1000);
+    std::filesystem::rename(native_path, native_renamed);
+    EXPECT_TRUE(watcher.run());
+    EXPECT_FALSE(watcher.events().empty());
+    if constexpr (build::is_windows)
+    {
+        const auto event = std::ranges::find_if(watcher.events(), [](const FileWatcherEvent & event) {
+            return event.type == FileWatcherEventType::renamed;
+        });
+        ASSERT_NE(event, watcher.events().end());
+        EXPECT_EQ(event->old_filename, "file-\xc3\xa9.txt");
+        EXPECT_EQ(event->filename, "renamed.txt");
+    }
+}
+
+TEST_F(TestFileWatcher, test_watch_separate_buffers)
+{
+    if (!FileWatcher::supported)
+        GTEST_SKIP();
+    TmpDir first;
+    TmpDir second;
+    ASSERT_TRUE(first);
+    ASSERT_TRUE(second);
+    FileWatcher watcher;
+    watcher.set_run_timeout(1000);
+    ASSERT_TRUE(watcher.watch(first.path()));
+    ASSERT_TRUE(watcher.watch(second.path()));
+    ASSERT_TRUE(fs::write(fs::combine(first.path(), "first.txt"), "first"));
+    ASSERT_TRUE(fs::write(fs::combine(second.path(), "second.txt"), "second"));
+    EXPECT_TRUE(watcher.run());
+    bool found_first = false;
+    bool found_second = false;
+    for (const FileWatcherEvent & event : watcher.events())
+    {
+        if (event.type != FileWatcherEventType::created)
+            continue;
+        if (event.watch_path == first.path())
+        {
+            EXPECT_EQ(event.filename, "first.txt");
+            found_first = true;
+        }
+        if (event.watch_path == second.path())
+        {
+            EXPECT_EQ(event.filename, "second.txt");
+            found_second = true;
+        }
+    }
+    EXPECT_TRUE(found_first);
+    EXPECT_TRUE(found_second);
+}
+
 TEST_F(TestFileWatcher, test_filewatcher_file)
 {
     sihd::sys::TmpDir tmp_dir;

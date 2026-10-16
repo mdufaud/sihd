@@ -75,7 +75,7 @@ void _set_signal_received(int sig)
         // clock_gettime is async-signal-safe
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
-        status.time_received.store(Timestamp(time::sec(ts.tv_sec) + ts.tv_nsec), std::memory_order_relaxed);
+        status.time_received.store(Timestamp(ts), std::memory_order_relaxed);
 #else
         status.time_received.store(os::filetime_now(), std::memory_order_relaxed);
 #endif

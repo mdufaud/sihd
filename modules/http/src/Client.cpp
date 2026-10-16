@@ -151,11 +151,16 @@ struct Client::Impl
                 if (!new_headers.append(fmt::format("Authorization: Bearer {}", options.token)))
                     return std::unexpected(Error(out_of_memory, "could not add authentication header"));
             }
+            bool has_expect = false;
             for (const auto & [header_name, header_value] : options.headers)
             {
+                has_expect = has_expect || str::iequals(header_name, "expect");
                 if (!new_headers.append(fmt::format("{}: {}", header_name, header_value)))
                     return std::unexpected(Error(out_of_memory, "could not add header '{}'", header_name));
             }
+            // empty Expect stops curl waiting 1s for a 100 Continue the server never sends
+            if (!has_expect && !new_headers.append("Expect:"))
+                return std::unexpected(Error(out_of_memory, "could not add header 'Expect'"));
             request.set_headers(new_headers);
 
             // only HEAD has no response body: an OPTIONS response carries one

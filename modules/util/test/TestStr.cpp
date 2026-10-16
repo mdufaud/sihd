@@ -729,6 +729,9 @@ TEST_F(TestStr, test_str_time2str)
     EXPECT_EQ(nano_time_str, "+0us:123ns");
     nano_time_str = str::timeoffset_str(Timestamp(-123), true, true);
     EXPECT_EQ(nano_time_str, "-0us:123ns (-123)");
+    EXPECT_EQ(str::timeoffset_str(Timestamp(-1234567), false, true), "-1ms:234us:567ns");
+    EXPECT_EQ(str::timeoffset_str(Timestamp(std::numeric_limits<int64_t>::min()), false, true),
+              "-292y:3m:10d 23h:47m:16s:854ms:775us:808ns");
 }
 
 TEST_F(TestStr, test_str_escapes)
@@ -972,6 +975,10 @@ TEST_F(TestStr, test_str_trim)
     EXPECT_EQ(str::ltrim("     h "), "h ");
     EXPECT_EQ(str::rtrim("h       "), "h");
     EXPECT_EQ(str::rtrim(" h       "), " h");
+    EXPECT_EQ(str::rtrim(""), "");
+    EXPECT_EQ(str::rtrim(" "), "");
+    EXPECT_EQ(str::rtrim(" \t "), "");
+    EXPECT_EQ(str::rtrim("\r\n"), "");
     EXPECT_EQ(str::trim(" \t hello  world      \t "), "hello  world");
 }
 
@@ -1319,6 +1326,9 @@ TEST_F(TestStr, test_str_localtimeoffset)
 
 TEST_F(TestStr, test_str_to_signed_unsigned_float)
 {
+    EXPECT_EQ(str::to_signed("-9223372036854775808", 10).value(), LLONG_MIN);
+    EXPECT_FALSE(str::to_signed("9223372036854775808", 10));
+    EXPECT_FALSE(str::to_signed("-9223372036854775809", 10));
     EXPECT_EQ(str::to_signed("42", 10).value_or(-1), 42);
     EXPECT_EQ(str::to_signed("-42", 10).value_or(0), -42);
     EXPECT_EQ(str::to_signed("0x2a", 16).value_or(0), 42);

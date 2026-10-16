@@ -124,7 +124,7 @@ TEST_F(TestThreadPool, test_threadpool_multi_producer)
     std::atomic<int> count = 0;
 
     {
-        std::vector<std::jthread> producers;
+        std::vector<std::thread> producers;
         for (size_t producer = 0; producer < 4; ++producer)
         {
             producers.emplace_back([&pool, &count] {
@@ -132,6 +132,8 @@ TEST_F(TestThreadPool, test_threadpool_multi_producer)
                     pool.add_job([&count] { ++count; });
             });
         }
+        for (std::thread & producer : producers)
+            producer.join();
     }
 
     pool.wait_all_jobs();

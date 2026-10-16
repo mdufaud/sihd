@@ -5,13 +5,23 @@
 
 #include <atomic>
 #include <cstring>
+#include <new>
 
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
 
+#if defined(__GLIBC__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+# include <execinfo.h>
+#endif
+
 namespace sihd::sys
 {
+
+struct CrashHandler::Impl
+{
+        stack_t previous_stack;
+};
 
 // the signal dispositions are process state: like signal.cpp, the handler's
 // values live at file scope, guarded by g_installed
@@ -106,7 +116,6 @@ void write_registers(int fd, ucontext_t *uc)
 
 void write_report(int fd, int sig, siginfo_t *info, void *ctx)
 {
-    // os::backtrace takes a mutex: a crash while holding it deadlocks instead of dumping
     write_str(fd, "fatal signal ");
     write_num(fd, (uint64_t)sig);
     // a positive si_code is a kernel-generated fault, where si_addr is valid
@@ -139,22 +148,18 @@ void crash_handler(int sig, siginfo_t *info, void *ctx)
         _exit(128 + sig);
 }
 
-bool setup_alt_stack()
+bool setup_alt_stack(stack_t *previous)
 {
     stack_t stack;
     stack.ss_sp = g_alt_stack;
     stack.ss_size = sizeof(g_alt_stack);
     stack.ss_flags = 0;
-    return sigaltstack(&stack, nullptr) == 0;
+    return sigaltstack(&stack, previous) == 0;
 }
 
-void disable_alt_stack()
+void restore_alt_stack(const stack_t & previous)
 {
-    stack_t stack;
-    stack.ss_sp = nullptr;
-    stack.ss_size = 0;
-    stack.ss_flags = SS_DISABLE;
-    sigaltstack(&stack, nullptr);
+    sigaltstack(&previous, nullptr);
 }
 
 void restore_previous(int max_sig)
@@ -172,8 +177,21 @@ bool CrashHandler::install(const Options & options)
 {
     if (_installed || g_installed.exchange(true))
         return false;
-    if (setup_alt_stack() == false)
+#if defined(__GLIBC__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
+    // Load the unwinder before a signal can interrupt the allocator.
+    void *frame;
+    ::backtrace(&frame, 1);
+#endif
+    _impl = new (std::nothrow) Impl;
+    if (_impl == nullptr)
     {
+        g_installed.store(false);
+        return false;
+    }
+    if (setup_alt_stack(&_impl->previous_stack) == false)
+    {
+        delete _impl;
+        _impl = nullptr;
         g_installed.store(false);
         return false;
     }
@@ -200,7 +218,9 @@ bool CrashHandler::install(const Options & options)
     if (ok == false)
     {
         restore_previous(last_installed);
-        disable_alt_stack();
+        restore_alt_stack(_impl->previous_stack);
+        delete _impl;
+        _impl = nullptr;
         g_installed.store(false);
         return false;
     }
@@ -214,7 +234,9 @@ void CrashHandler::uninstall()
     if (_installed == false)
         return;
     restore_previous(signal::max_signal - 1);
-    disable_alt_stack();
+    restore_alt_stack(_impl->previous_stack);
+    delete _impl;
+    _impl = nullptr;
     _installed = false;
     g_installed.store(false);
 }

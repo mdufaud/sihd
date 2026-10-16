@@ -8,6 +8,7 @@
 #include <sihd/sys/program.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
+#include <sihd/util/build.hpp>
 
 namespace test
 {
@@ -293,12 +294,24 @@ TEST_F(TestDevice, test_factories_registered)
                                                     {"DevSampler", "sihd::core::DevSampler"},
                                                     {"MemRecorder", "sihd::core::MemRecorder"}})
     {
-        auto found = sihd::sys::program::find_symbol(std::string("sihd_factory_") + symbol_suffix);
-        ASSERT_TRUE(found.has_value()) << symbol_suffix;
-        using CreateFn = Named *(*)(const std::string &, Node *);
-        const auto create = reinterpret_cast<CreateFn>(*found);
-        Named *named = create(symbol_suffix, nullptr);
-        ASSERT_NE(named, nullptr) << symbol_suffix;
+        Named *named = nullptr;
+        if constexpr (SIHD_FACTORY_TABLE)
+        {
+            // dlsym is dead in static builds: the factory table carries the entries
+            named = create_from_factory_table(symbol_suffix, symbol_suffix, nullptr);
+            ASSERT_NE(named, nullptr) << symbol_suffix;
+        }
+        else
+        {
+            if constexpr (sihd::util::build::is_statically_linked)
+                GTEST_SKIP() << "no factory resolution in this build";
+            auto found = sihd::sys::program::find_symbol(std::string("sihd_factory_") + symbol_suffix);
+            ASSERT_TRUE(found.has_value()) << symbol_suffix;
+            using CreateFn = Named *(*)(const std::string &, Node *);
+            const auto create = reinterpret_cast<CreateFn>(*found);
+            named = create(symbol_suffix, nullptr);
+            ASSERT_NE(named, nullptr) << symbol_suffix;
+        }
         EXPECT_EQ(named->class_name(), full_name) << symbol_suffix;
         delete named;
     }

@@ -317,7 +317,7 @@ Duration uptime()
     const auto secs = str::convert_from_string<double>(parts.first);
     if (!secs)
         return Duration {};
-    return Duration(std::chrono::nanoseconds((int64_t)(*secs * 1e9)));
+    return Duration(time::from_double(*secs));
 }
 
 std::array<double, 3> load_average()

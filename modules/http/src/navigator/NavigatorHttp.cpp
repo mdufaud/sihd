@@ -45,8 +45,11 @@ Url parse_navigator_url(std::string_view url)
     return parsed;
 }
 
-std::string extract_meta_refresh_url(const std::string & body)
+constexpr size_t meta_refresh_scan_limit = 64 * 1024;
+
+std::string extract_meta_refresh_url(std::string_view body)
 {
+    body = body.substr(0, meta_refresh_scan_limit);
     static const std::string meta_pattern = R"(<meta[^>]+http-equiv\s*=\s*["']?refresh["']?[^>]*>)";
     auto metas = sihd::util::str::regex_search(body, meta_pattern);
     if (metas.empty())
@@ -373,9 +376,11 @@ sihd::util::Result<NavigatorResponse> Navigator::Impl::perform(const Navigation 
 
         if (!do_redirect)
         {
-            if (redirects.follow && redirect_count < redirects.max && !sr.response.content().empty())
+            const auto content_type = sr.response.http_header().content_type();
+            const bool maybe_html = !content_type || content_type->find("html") != std::string_view::npos;
+            if (redirects.follow && redirect_count < redirects.max && maybe_html && !sr.response.content().empty())
             {
-                std::string meta_url = extract_meta_refresh_url(sr.response.content().cpp_str());
+                std::string meta_url = extract_meta_refresh_url(sr.response.content().cpp_str_view());
                 if (!meta_url.empty() && check_redirect_policy(navigation.url, meta_url))
                 {
                     if (!ssrf_guard || !sihd::net::ip::is_private_host(parse_navigator_url(meta_url).host))

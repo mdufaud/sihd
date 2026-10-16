@@ -176,9 +176,9 @@ void FileWatcher::Impl::terminate()
 #endif
 }
 
-#if defined(INOTIFY_ENABLED)
 void FileWatcher::Impl::handle(Poll *poll)
 {
+#if defined(INOTIFY_ENABLED)
     for (const auto & event : poll->events())
     {
         if (event.readable)
@@ -212,6 +212,13 @@ void FileWatcher::Impl::handle(Poll *poll)
             while (offset < length)
             {
                 struct inotify_event *event = (struct inotify_event *)&_buffer.data()[offset];
+
+                if (event->mask & IN_Q_OVERFLOW)
+                {
+                    _events.emplace_back(FileWatcherEvent {.type = FileWatcherEventType::overflow, .watch_path = ""});
+                    offset += EVENT_SIZE + event->len;
+                    continue;
+                }
 
                 auto it = std::find_if(_watchers.begin(), _watchers.end(), [event](const Watcher & w) {
                     return w.watch_fd == event->wd;
@@ -269,7 +276,7 @@ void FileWatcher::Impl::handle(Poll *poll)
                 }
 
                 else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF || event->mask & IN_UNMOUNT
-                         || event->mask & IN_Q_OVERFLOW || event->mask & IN_IGNORED)
+                         || event->mask & IN_IGNORED)
                 {
                     // not supported or termination events
                     fw_event.type = FileWatcherEventType::terminated;
@@ -298,8 +305,10 @@ void FileWatcher::Impl::handle(Poll *poll)
             this->terminate();
         }
     }
-}
+#else
+    (void)poll;
 #endif
+}
 
 FileWatcher::FileWatcher()
 {

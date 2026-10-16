@@ -23,6 +23,7 @@
 #include <sihd/util/container.hpp>
 #include <sihd/util/time.hpp>
 
+#include "internal/command_line.hpp"
 #include "internal/environment.hpp"
 
 namespace sihd::sys
@@ -607,15 +608,14 @@ sihd::util::Result<void> Process::_do_child_process(const std::vector<const char
 
     start_info.dwFlags |= STARTF_USESTDHANDLES;
 
-    std::string cmd_line;
+    std::vector<std::string_view> arguments;
     for (const char *arg : argv)
     {
         if (arg == nullptr)
             break;
-        if (!cmd_line.empty())
-            cmd_line += " ";
-        cmd_line += arg;
+        arguments.emplace_back(arg);
     }
+    std::string cmd_line = internal::command_line(arguments);
 
     const std::string env_block = internal::to_windows_block(_env);
 

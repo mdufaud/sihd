@@ -52,6 +52,17 @@ TEST_F(TestMoveOnlyFunction, test_call)
     EXPECT_EQ(value, 2);
 }
 
+TEST_F(TestMoveOnlyFunction, test_forwarding)
+{
+    auto callable = [](std::unique_ptr<int> value) {
+        return *value;
+    };
+    MoveOnlyFunction<int(std::unique_ptr<int>)> fn(callable);
+    EXPECT_EQ(fn(std::make_unique<int>(42)), 42);
+    MoveOnlyFunction<int(std::unique_ptr<int> &&)> moved(callable);
+    EXPECT_EQ(moved(std::make_unique<int>(7)), 7);
+}
+
 TEST_F(TestMoveOnlyFunction, test_move_only_callable)
 {
     auto make = []() {

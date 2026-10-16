@@ -138,6 +138,12 @@ TEST_F(TestSlice, test_from_size_zero_offset)
     EXPECT_EQ(range.size(), 3u);
 }
 
+TEST_F(TestSlice, test_from_size_zero_length)
+{
+    EXPECT_TRUE(Slice::from_size(0, 0).resolve(8).empty());
+    EXPECT_TRUE(Slice::from_size(3, 0).resolve(8).empty());
+}
+
 TEST_F(TestSlice, test_from_size_single)
 {
     auto s = Slice::from_size(5, 1);

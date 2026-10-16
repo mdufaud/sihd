@@ -16,9 +16,8 @@ Message::Message(const std::string & name, Node *parent): Node(name, parent)
 
 bool Message::on_check_link(const std::string & name, Named *child)
 {
+    (void)name;
     IMessageField *field = dynamic_cast<IMessageField *>(child);
-    if (field == nullptr)
-        SIHD_LOG(error, "Message: cannot add child {} - is not a IMessageField", name);
     return field != nullptr;
 }
 
@@ -26,7 +25,10 @@ bool Message::on_add_child(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field != nullptr)
+    {
         _fields[name] = field;
+        this->_update_field_size();
+    }
     return field != nullptr;
 }
 
@@ -34,14 +36,19 @@ void Message::on_remove_child(const std::string & name, Named *child)
 {
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field != nullptr)
+    {
         _fields.erase(name);
+        this->_update_field_size();
+    }
 }
 
 bool Message::finish()
 {
     if (this->is_finished())
         return false;
-    _arr.resize(_total_size);
+    this->_update_field_size();
+    if (!_arr.resize(_total_size))
+        return false;
     __assign_arr_at = 0;
     _finished = this->field_assign_buffer(_arr.buf());
     return _finished;
@@ -55,6 +62,8 @@ bool Message::field_resize(size_t size)
 
 bool Message::_assign_field_array(IMessageField *field)
 {
+    if (field->field_byte_size() > _total_size - __assign_arr_at)
+        return false;
     bool ret = field->field_assign_buffer(_arr.buf() + __assign_arr_at);
     if (ret)
     {
@@ -110,7 +119,7 @@ bool Message::add_field(const std::string & name, IMessageField *msg)
     }
     if (SIHD_UNEXPECTED_LOG(this->add_child(name, named, true)))
         return false;
-    return this->_add_field_size(msg);
+    return true;
 }
 
 bool Message::add_field(const std::string & name, Type dt, size_t size)
@@ -118,14 +127,16 @@ bool Message::add_field(const std::string & name, Type dt, size_t size)
     MessageField *field = this->add_child<MessageField>(name);
     bool ret = field != nullptr;
     ret = ret && field->build_array(dt, size);
-    ret = ret && this->_add_field_size(field);
+    if (ret)
+        this->_update_field_size();
     return ret;
 }
 
-bool Message::_add_field_size(IMessageField *field)
+void Message::_update_field_size()
 {
-    _total_size += field->field_byte_size();
-    return true;
+    _total_size = 0;
+    for (const auto & [name, field] : _fields)
+        _total_size += field->field_byte_size();
 }
 
 IMessageField *Message::clone() const

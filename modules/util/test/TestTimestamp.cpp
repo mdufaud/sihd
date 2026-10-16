@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
@@ -37,10 +39,53 @@ TEST_F(TestTimestamp, test_timestamp_modulo)
     EXPECT_EQ(clocktime_mod_60.hour, 1);
     EXPECT_EQ(clocktime_mod_60.minute, 0);
     EXPECT_EQ(clocktime_mod_60.second, 0);
+    EXPECT_THROW(ts_mod.modulo_min(0), std::invalid_argument);
+}
+
+TEST_F(TestTimestamp, test_timestamp_before_epoch)
+{
+    Timestamp timestamp(std::chrono::milliseconds(-500));
+    EXPECT_EQ(timestamp.format("%Y-%m-%d %H:%M:%S"), "1969-12-31 23:59:59");
+    EXPECT_EQ(timestamp.calendar().year, 1969);
+    EXPECT_EQ(timestamp.clocktime().millisecond, 500);
+}
+
+TEST_F(TestTimestamp, test_timestamp_utc_range)
+{
+    Timestamp maximum(std::numeric_limits<int64_t>::max());
+    Timestamp minimum(std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(maximum.format("%Y-%m-%d %H:%M:%S"), "2262-04-11 23:47:16");
+    EXPECT_EQ(minimum.format("%Y-%m-%d %H:%M:%S"), "1677-09-21 00:12:43");
+    if constexpr (sizeof(time_t) < sizeof(int64_t))
+    {
+        EXPECT_THROW(maximum.local_tm(), std::out_of_range);
+        EXPECT_THROW(Timestamp(Calendar {.day = 1, .month = 1, .year = 2262}), std::out_of_range);
+    }
+    EXPECT_THROW(Timestamp(Calendar {.day = 1, .month = 1, .year = 3000}), std::out_of_range);
+}
+
+TEST_F(TestTimestamp, test_timestamp_calendar_milliseconds)
+{
+    Timestamp timestamp(Calendar {.day = 1, .month = 1, .year = 2020}, Clocktime {.millisecond = 123});
+    EXPECT_EQ(timestamp.local_clocktime().millisecond, 123);
 }
 
 TEST_F(TestTimestamp, test_timestamp_from_str)
 {
+    EXPECT_FALSE(Timestamp::from_str("3000-01-01", "%Y-%m-%d").has_value());
+#if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
+    const auto fractional = Timestamp::from_str("2022-02-01 00:00:00.123456789", "%Y-%m-%d %H:%M:%S");
+    ASSERT_TRUE(fractional.has_value());
+    EXPECT_EQ(fractional->get() % time::seconds(1), 123456789);
+    const auto minimum = Timestamp::from_str("1677-09-21 00:12:43.145224192", "%Y-%m-%d %H:%M:%S");
+    const auto maximum = Timestamp::from_str("2262-04-11 23:47:16.854775807", "%Y-%m-%d %H:%M:%S");
+    ASSERT_TRUE(minimum.has_value());
+    ASSERT_TRUE(maximum.has_value());
+    EXPECT_EQ(minimum->get(), std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(maximum->get(), std::numeric_limits<int64_t>::max());
+    EXPECT_FALSE(Timestamp::from_str("1677-09-21 00:12:43.145224191", "%Y-%m-%d %H:%M:%S").has_value());
+    EXPECT_FALSE(Timestamp::from_str("2262-04-11 23:47:16.854775808", "%Y-%m-%d %H:%M:%S").has_value());
+#endif
     auto conversion = Timestamp::from_str("2022-02-01", "%Y-%m-%d");
     ASSERT_TRUE(conversion.has_value());
 

@@ -1,14 +1,16 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 #define __SIHD_UTIL_ARRAY_HPP__
 
-#include <cstdint>   // int8_t
-#include <cstring>   // mem* str*
+#include <cstdint> // int8_t
+#include <cstring> // mem* str*
+#include <functional>
 #include <limits>    // numeric_limits
 #include <stdexcept> // out of range
 #include <type_traits>
 #include <utility> // std::enable_if
 
 #include <sihd/util/ArrayIterator.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/ICloneable.hpp>
 #include <sihd/util/Slice.hpp>
@@ -43,11 +45,7 @@ class Array: public IArray,
             _has_ownership = false;
         };
 
-        Array(const T *data, size_t size): Array()
-        {
-            this->_internal_reserve(size, false);
-            this->push_back(data, size);
-        }
+        Array(const T *data, size_t size): Array() { this->from(data, size); }
 
         Array(size_t capacity): Array()
         {
@@ -66,11 +64,7 @@ class Array: public IArray,
         {
         }
 
-        Array(std::initializer_list<T> list): Array()
-        {
-            auto it = list.begin();
-            this->push_back(&(*it), list.size());
-        }
+        Array(std::initializer_list<T> list): Array() { this->push_back(list.begin(), list.size()); }
 
         template <traits::Iterable Container>
         Array(const Container & container): Array()
@@ -381,67 +375,17 @@ class Array: public IArray,
 
         std::string hexdump(char delimiter = ' ') const { return str::hexdump(_buf_ptr, this->byte_size(), delimiter); }
 
-        std::string str() const
-        {
-            if constexpr (std::same_as<T, char>)
-            {
-                if (this->size() > 0 && this->data()[this->size() - 1] == '\0')
-                    return std::string(this->data(), this->size() - 1);
-                return std::string(this->data(), this->size());
-            }
-            else if constexpr (std::is_fundamental_v<T>)
-            {
-                std::string s;
-                s.reserve(_size);
-                size_t i = 0;
-                while (i < _size)
-                {
-                    s += std::to_string(_buf_ptr[i]);
-                    ++i;
-                }
-                return s;
-            }
-            else
-                return str::hexdump(_buf_ptr, this->byte_size(), 0);
-        }
+        std::string str() const { return ArrayView<T>(*this).str(); }
 
-        std::string str(char delimiter) const
-        {
-            if constexpr (std::is_fundamental_v<T>)
-            {
-                std::string s;
-                // trying to reserve at least 1 char by element + delimiters (if there are)
-                s.reserve(_size + (delimiter != '\0' ? std::max(0, int(_size - 2)) : 0));
-                size_t i = 0;
-                while (i < _size)
-                {
-                    if (i > 0)
-                        s += delimiter;
-                    if constexpr (std::same_as<T, char>)
-                        s += _buf_ptr[i];
-                    else
-                        s += std::to_string(_buf_ptr[i]);
-                    ++i;
-                }
-                return s;
-            }
-            else
-                return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
-        }
+        std::string str(char delimiter) const { return ArrayView<T>(*this).str(delimiter); }
 
         /*********************************************************************/
         /* to std containers */
         /*********************************************************************/
 
-        std::string cpp_str() const
-        {
-            return _buf_ptr != nullptr ? std::string((const char *)_buf_ptr, this->byte_size()) : "";
-        }
+        std::string cpp_str() const { return ArrayView<T>(*this).cpp_str(); }
 
-        std::string_view cpp_str_view() const
-        {
-            return _buf_ptr != nullptr ? std::string_view((const char *)_buf_ptr, this->byte_size()) : "";
-        }
+        std::string_view cpp_str_view() const { return ArrayView<T>(*this).cpp_str_view(); }
 
         /*********************************************************************/
         /* formatting */
@@ -509,8 +453,7 @@ class Array: public IArray,
 
         bool is_equal(std::initializer_list<T> init, size_t byte_offset = 0) const
         {
-            auto it = init.begin();
-            return this->is_equal(&(*it), init.size(), byte_offset);
+            return this->is_equal(init.begin(), init.size(), byte_offset);
         }
 
         // compares memory from internal buffer and array of size
@@ -535,24 +478,18 @@ class Array: public IArray,
             return this->from(view.data(), view.size());
         }
 
-        bool from(std::initializer_list<T> init)
-        {
-            auto it = init.begin();
-            return this->from(&(*it), init.size());
-        }
+        bool from(std::initializer_list<T> init) { return this->from(init.begin(), init.size()); }
 
         bool from(const T *arr, size_t size)
         {
             if (!_has_ownership)
                 this->delete_buffer();
 
-            if (this->_internal_resize(size, false))
-            {
+            if (!this->_internal_resize(size, false))
+                return false;
+            if (size != 0)
                 memmove(_buf_ptr, arr, size * sizeof(T));
-                _size = size;
-            }
-
-            return _buf_ptr != nullptr;
+            return true;
         }
 
         /*********************************************************************/
@@ -575,8 +512,7 @@ class Array: public IArray,
 
         bool copy_from(std::initializer_list<T> init, size_t byte_offset = 0)
         {
-            auto it = init.begin();
-            return this->copy_from(&(*it), init.size(), byte_offset);
+            return this->copy_from(init.begin(), init.size(), byte_offset);
         }
 
         // copies values from array
@@ -646,22 +582,13 @@ class Array: public IArray,
             return this->push_back(str.data(), str.size());
         }
 
-        bool push_back(std::initializer_list<T> init)
-        {
-            auto it = init.begin();
-            return this->push_back(&(*it), init.size());
-        }
+        bool push_back(std::initializer_list<T> init) { return this->push_back(init.begin(), init.size()); }
 
         // push whole array buf of size at the end of the internal buffer
         bool push_back(const T *buf, size_t size) { return this->insert(buf, size, _size); }
 
         // push a single value at the end of the array
-        bool push_back(const T & value)
-        {
-            if (this->_internal_resize(_size + 1, false))
-                _buf_ptr[_size - 1] = value;
-            return _buf_ptr != nullptr;
-        }
+        bool push_back(const T & value) { return this->insert(value, _size); }
 
         /*********************************************************************/
         /* push_front */
@@ -680,11 +607,7 @@ class Array: public IArray,
             return this->push_front(str.data(), str.size());
         }
 
-        bool push_front(std::initializer_list<T> init)
-        {
-            auto it = init.begin();
-            return this->push_front(&(*it), init.size());
-        }
+        bool push_front(std::initializer_list<T> init) { return this->push_front(init.begin(), init.size()); }
 
         // push whole array buf of size at the front of the internal buffer
         bool push_front(const T *buf, size_t size) { return this->insert(buf, size, 0); }
@@ -703,8 +626,18 @@ class Array: public IArray,
 
             if (idx > _size)
                 return false;
-            if (_size + size > _capacity)
-                this->_internal_reserve(_size + size, false);
+            if (size == 0)
+                return true;
+            if (size > std::numeric_limits<size_t>::max() / sizeof(T) - _size)
+                return false;
+            const std::less<const T *> less;
+            if (_buf_ptr != nullptr && less(buf, _buf_ptr + _size) && less(_buf_ptr, buf + size))
+            {
+                Array<T> copy(buf, size);
+                return copy.size() == size && this->insert(copy.data(), size, idx);
+            }
+            if (_size + size > _capacity && !this->_internal_reserve(_size + size, false))
+                return false;
             if (_buf_ptr != nullptr)
             {
                 // have to move 2 and 3 -> 3 * sizeof(int) to the right to leave room for insertion
@@ -902,22 +835,27 @@ class Array: public IArray,
     protected:
         bool _internal_reserve(size_t capacity, bool clear_mem = true)
         {
+            const size_t max_capacity = std::numeric_limits<size_t>::max() / sizeof(T);
+            if (capacity > max_capacity)
+                return false;
+            if (capacity == 0)
+                return true;
             if (Array::mult_resize_capacity > 1 && _capacity > 0)
             {
                 size_t new_capacity = _capacity;
-                while (new_capacity < capacity
-                       && new_capacity <= std::numeric_limits<size_t>::max() / Array::mult_resize_capacity)
+                while (new_capacity < capacity && new_capacity <= max_capacity / Array::mult_resize_capacity)
                 {
                     new_capacity = new_capacity * Array::mult_resize_capacity;
                 }
-                if (new_capacity < capacity)
-                    return false;
-                capacity = new_capacity;
+                capacity = std::max(capacity, new_capacity);
             }
 
-            T *new_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
+            T *new_ptr = _has_ownership ? (T *)realloc(_buf_ptr, capacity * sizeof(T))
+                                        : (T *)malloc(capacity * sizeof(T));
             if (new_ptr == nullptr)
                 return false;
+            if (!_has_ownership && _buf_ptr != nullptr)
+                memcpy(new_ptr, _buf_ptr, std::min(_capacity, capacity) * sizeof(T));
             _buf_ptr = new_ptr;
 
             if (clear_mem && capacity > _capacity)

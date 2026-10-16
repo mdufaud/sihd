@@ -88,7 +88,7 @@ class Message: public Node,
         std::unordered_map<std::string, IMessageField *> _fields;
 
     private:
-        bool _add_field_size(IMessageField *field);
+        void _update_field_size();
         bool _assign_field_array(IMessageField *field);
         const MessageField *_require_field(const std::string & name) const;
 

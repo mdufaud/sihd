@@ -22,6 +22,15 @@ class TestSched: public ::testing::Test
 TEST_F(TestSched, test_sched_nice)
 {
     auto current = sched::nice(os::pid());
+    if constexpr (sihd::util::build::is_emscripten)
+    {
+        ASSERT_FALSE(current.has_value());
+        EXPECT_EQ(current.error().code, not_supported);
+        auto applied = sched::set_nice(os::pid(), 0);
+        ASSERT_FALSE(applied.has_value());
+        EXPECT_EQ(applied.error().code, not_supported);
+        return;
+    }
     ASSERT_TRUE(current.has_value());
 
     // raising the niceness (lower priority) needs no privilege
@@ -41,7 +50,18 @@ TEST_F(TestSched, test_sched_nice)
 TEST_F(TestSched, test_sched_scheduler)
 {
     if constexpr (sihd::util::build::is_windows || sihd::util::build::is_emscripten)
-        GTEST_SKIP() << "scheduler policies are a linux feature";
+    {
+        auto policy = sched::scheduler(os::pid());
+        ASSERT_FALSE(policy.has_value());
+        EXPECT_EQ(policy.error().code, not_supported);
+        auto priority = sched::scheduler_priority(os::pid());
+        ASSERT_FALSE(priority.has_value());
+        EXPECT_EQ(priority.error().code, not_supported);
+        auto applied = sched::set_scheduler(os::pid(), sched::Policy::other, {});
+        ASSERT_FALSE(applied.has_value());
+        EXPECT_EQ(applied.error().code, not_supported);
+        return;
+    }
 
     auto probe = sched::scheduler(os::pid());
     if (probe.has_value() == false)
@@ -66,6 +86,15 @@ TEST_F(TestSched, test_sched_scheduler)
 TEST_F(TestSched, test_sched_affinity)
 {
     auto mask = sched::affinity(os::pid());
+    if constexpr (sihd::util::build::is_emscripten)
+    {
+        ASSERT_FALSE(mask.has_value());
+        EXPECT_EQ(mask.error().code, not_supported);
+        auto applied = sched::set_affinity(os::pid(), {true});
+        ASSERT_FALSE(applied.has_value());
+        EXPECT_EQ(applied.error().code, not_supported);
+        return;
+    }
     ASSERT_TRUE(mask.has_value()) << mask.error().message;
     EXPECT_FALSE(mask->empty());
 

@@ -46,6 +46,9 @@ class TestPoll: public ::testing::Test
 
 TEST_F(TestPoll, test_poll)
 {
+    Poll empty(2);
+    EXPECT_FALSE(empty.rm_read_fd(42));
+    EXPECT_FALSE(empty.rm_write_fd(42));
     Poll poll;
     poll.set_limit(2);
 
@@ -55,6 +58,10 @@ TEST_F(TestPoll, test_poll)
     _to_close.push_back(fd[1]);
     poll.set_read_fd(fd[0]);
     poll.set_write_fd(fd[1]);
+    EXPECT_EQ(poll.read_fds_size(), 1u);
+    EXPECT_EQ(poll.write_fds_size(), 1u);
+    EXPECT_FALSE(poll.rm_read_fd(-2));
+    EXPECT_FALSE(poll.rm_write_fd(-2));
 
     char buffer[20];
     memset(buffer, 0, 20);
@@ -96,6 +103,8 @@ TEST_F(TestPoll, test_poll)
     EXPECT_EQ(res, 1);
     // clearing the write fd so it does not write again
     poll.clear_fd(fd[1]);
+    EXPECT_FALSE(poll.rm_read_fd(-1));
+    EXPECT_FALSE(poll.rm_write_fd(-1));
 
     // nothing read yet
     EXPECT_EQ(strlen(buffer), 0u);

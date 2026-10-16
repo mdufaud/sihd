@@ -10,6 +10,55 @@ using namespace sihd::util;
 namespace sihd::sys::sched
 {
 
+#if defined(__SIHD_EMSCRIPTEN__)
+
+namespace
+{
+
+std::unexpected<Error> unsupported()
+{
+    return std::unexpected(Error(not_supported, "OS scheduling is not available on Web"));
+}
+
+} // namespace
+
+sihd::util::Result<int> nice(pid_t)
+{
+    return unsupported();
+}
+
+sihd::util::Result<void> set_nice(pid_t, int)
+{
+    return unsupported();
+}
+
+sihd::util::Result<Policy> scheduler(pid_t)
+{
+    return unsupported();
+}
+
+sihd::util::Result<Priority> scheduler_priority(pid_t)
+{
+    return unsupported();
+}
+
+sihd::util::Result<void> set_scheduler(pid_t, Policy, Priority)
+{
+    return unsupported();
+}
+
+sihd::util::Result<std::vector<bool>> affinity(pid_t)
+{
+    return unsupported();
+}
+
+sihd::util::Result<void> set_affinity(pid_t, const std::vector<bool> &)
+{
+    return unsupported();
+}
+
+#else
+
 namespace
 {
 
@@ -135,5 +184,7 @@ sihd::util::Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_m
         return std::unexpected(Error::from_errno("sched_setaffinity({})", pid));
     return {};
 }
+
+#endif
 
 } // namespace sihd::sys::sched

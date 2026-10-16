@@ -1,3 +1,4 @@
+#include <array>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -6,9 +7,14 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <signal.h>
+#endif
 
 #include "test_helper.hpp"
 
@@ -29,6 +35,28 @@ class TestCrashHandler: public ::testing::Test
 
         virtual void TearDown() {}
 };
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestCrashHandler, test_previous_alt_stack_restored)
+{
+    stack_t original;
+    ASSERT_EQ(sigaltstack(nullptr, &original), 0);
+    std::array<char, 65536> buffer;
+    stack_t previous {};
+    previous.ss_sp = buffer.data();
+    previous.ss_size = buffer.size();
+    ASSERT_EQ(sigaltstack(&previous, nullptr), 0);
+    Defer restore([&] { sigaltstack(&original, nullptr); });
+    CrashHandler handler;
+    ASSERT_TRUE(handler.install({}));
+    handler.uninstall();
+    stack_t restored;
+    ASSERT_EQ(sigaltstack(nullptr, &restored), 0);
+    EXPECT_EQ(restored.ss_sp, buffer.data());
+    EXPECT_EQ(restored.ss_size, 65536u);
+    EXPECT_EQ(restored.ss_flags, 0);
+}
+#endif
 
 TEST_F(TestCrashHandler, test_crash_handler_raii)
 {
@@ -91,6 +119,7 @@ TEST_F(TestCrashHandler, test_crash_handler_dump)
         }
     }
     EXPECT_NE(output.find("fatal "), std::string::npos);
+    EXPECT_EQ(output.find("ThreadSanitizer"), std::string::npos);
     SIHD_LOG(debug, "crash output: {}", output);
 
     (void)fs::remove_file(dump_path);

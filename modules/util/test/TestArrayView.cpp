@@ -58,6 +58,15 @@ TEST_F(TestArrayView, test_arrayview_fundamental)
     ASSERT_EQ(view_double.size(), sizeof(double));
 }
 
+TEST_F(TestArrayView, test_arrayview_byte_count)
+{
+    const int32_t values[] = {1, 2, 3, 4};
+    ArrayView<int32_t> view(static_cast<const void *>(values), sizeof(values));
+    EXPECT_EQ(view.size(), 4u);
+    EXPECT_EQ(view.byte_size(), 16u);
+    EXPECT_EQ(view[3], 4);
+}
+
 TEST_F(TestArrayView, test_arrayview_struct)
 {
     struct Test

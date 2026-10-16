@@ -4,6 +4,7 @@
 #include <sihd/sys/PluginLoader.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/build.hpp>
 
@@ -66,6 +67,9 @@ TEST_F(TestPluginLoader, test_pluginloader)
 
 TEST_F(TestPluginLoader, test_pluginloader_create_from_linked)
 {
+    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
+
     auto unknown = PluginLoader::create_from_linked("Nope", "nope_obj");
     ASSERT_FALSE(unknown.has_value());
     EXPECT_EQ(unknown.error().code, ErrorCode::not_found);

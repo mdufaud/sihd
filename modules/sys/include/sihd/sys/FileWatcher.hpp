@@ -27,6 +27,7 @@ enum class FileWatcherEventType
     accessed,
     closed,
 #endif
+    overflow,
 };
 
 struct FileWatcherEvent

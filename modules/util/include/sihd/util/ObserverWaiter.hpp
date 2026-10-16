@@ -93,7 +93,7 @@ class ObserverWaiter: public IHandler<T *>
         // use this if you write and wait in the same thread
         void prev_wait(uint32_t notifications = 1)
         {
-            const uint32_t total = _current_count.load() + notifications;
+            const uint32_t total = _last_waited_count.load() + notifications;
             this->wait_nb(total);
         }
 

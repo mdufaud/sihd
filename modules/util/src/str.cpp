@@ -158,7 +158,9 @@ std::string format_time(Timestamp timestamp,
 
 std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bool nano_resolution, bool localtime)
 {
-    const struct tm tm = localtime ? timestamp.local_tm() : timestamp.tm();
+    const auto nano = timestamp.get();
+    const uint64_t magnitude = nano < 0 ? uint64_t(0) - static_cast<uint64_t>(nano) : static_cast<uint64_t>(nano);
+    const struct tm tm = time::to_tm(time::seconds(magnitude / 1000000000), localtime);
     std::string s;
     s.reserve(64);
     bool next_step;
@@ -176,14 +178,14 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
         fmt::format_to(std::back_inserter(s), "{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
         fmt::format_to(std::back_inserter(s), "{}s:", tm.tm_sec);
-    time::UnixTime ms = time::to_milli(timestamp) % 1000;
+    const auto ms = magnitude / 1000000 % 1000;
     if ((next_step = next_step || ms > 0))
         fmt::format_to(std::back_inserter(s), "{}ms:", ms);
-    time::UnixTime us = time::to_micro(timestamp) % 1000;
+    const auto us = magnitude / 1000 % 1000;
     fmt::format_to(std::back_inserter(s), "{}us", us);
     if (nano_resolution)
     {
-        time::UnixTime ns = std::abs(timestamp) % 1000;
+        const auto ns = magnitude % 1000;
         fmt::format_to(std::back_inserter(s), ":{}ns", ns);
     }
     if (total_parenthesis)
@@ -850,9 +852,9 @@ std::string_view rtrim(std::string_view s)
 {
     size_t j = s.size();
 
-    while (j > 0 && std::isspace(static_cast<unsigned char>(s[--j])))
-        ;
-    return s.substr(0, j + 1);
+    while (j > 0 && std::isspace(static_cast<unsigned char>(s[j - 1])))
+        --j;
+    return s.substr(0, j);
 }
 
 std::string_view ltrim(std::string_view s)
@@ -1270,10 +1272,16 @@ sihd::util::Result<long long> to_signed(std::string_view str, uint16_t base)
         str.remove_prefix(1);
     }
     base = resolve_base_prefix(str, base);
-    const auto parsed = from_chars_to<long long>(str, static_cast<int>(base));
+    const auto parsed = from_chars_to<unsigned long long>(str, static_cast<int>(base));
     if (!parsed)
         return std::unexpected(parse_error(parsed.error(), input, "signed"));
-    return negate ? -*parsed : *parsed;
+    const auto maximum = static_cast<unsigned long long>(LLONG_MAX);
+    if (*parsed > maximum + static_cast<unsigned>(negate))
+        return std::unexpected(parse_error(std::errc::result_out_of_range, input, "signed"));
+    if (negate && *parsed == maximum + 1)
+        return LLONG_MIN;
+    const auto value = static_cast<long long>(*parsed);
+    return negate ? -value : value;
 }
 
 sihd::util::Result<unsigned long long> to_unsigned(std::string_view str, uint16_t base)

@@ -45,11 +45,20 @@ class TestTlsTcp: public ::testing::Test
 
         virtual ~TestTlsTcp() { sihd::util::LoggerManager::clear_loggers(); }
 
-        void SetUp() override
+        static void SetUpTestSuite()
         {
             ASSERT_TRUE(_key.generate_rsa(2048));
             ASSERT_TRUE(_cert.generate_self_signed(_key, "localhost"));
+        }
 
+        static void TearDownTestSuite()
+        {
+            _cert = Certificate();
+            _key = PrivateKey();
+        }
+
+        void SetUp() override
+        {
             (void)_server_ctx.init(true);
             ASSERT_TRUE(_server_ctx.set_certificate(_cert));
             ASSERT_TRUE(_server_ctx.set_private_key(_key));
@@ -58,8 +67,8 @@ class TestTlsTcp: public ::testing::Test
             _client_ctx.set_verify_peer(false);
         }
 
-        PrivateKey _key;
-        Certificate _cert;
+        static inline PrivateKey _key;
+        static inline Certificate _cert;
         TlsContext _server_ctx;
         TlsContext _client_ctx;
 };
@@ -435,7 +444,8 @@ TEST_F(TestTlsTcp, tls_socket_connect_failure_closes_socket)
     TlsSocket client;
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     client.set_tls_context(_client_ctx);
-    auto res = client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms);
+    constexpr int timeout_ms = 300;
+    auto res = client.connect(IpAddr("127.0.0.1", port), timeout_ms);
     EXPECT_FALSE(res.has_value());
     EXPECT_FALSE(client.is_open());
 

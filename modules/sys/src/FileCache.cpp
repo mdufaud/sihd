@@ -75,6 +75,9 @@ void FileCache::handle(FileWatcher *file_watcher)
     {
         switch (event.type)
         {
+            case FileWatcherEventType::overflow:
+                _cache.invalidate_all();
+                break;
             case FileWatcherEventType::created:
             case FileWatcherEventType::deleted:
             case FileWatcherEventType::modified:
@@ -95,6 +98,7 @@ void FileCache::handle(FileWatcher *file_watcher)
             }
             case FileWatcherEventType::terminated:
             {
+                _cache.invalidate(event.watch_path);
                 SIHD_LOG(debug, "File watcher terminated for file: {}", event.watch_path);
                 break;
             }

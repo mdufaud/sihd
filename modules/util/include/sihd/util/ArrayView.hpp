@@ -37,7 +37,7 @@ class ArrayView: public IArrayView
         // view would be empty (e.g. vector<int8_t> of size 3 into ArrayView<int32_t>)
         template <traits::HasConstDataSize Container, typename ValueType = typename Container::value_type>
         ArrayView(const Container & container):
-            ArrayView(container.data(), (container.size() * sizeof(ValueType)) / sizeof(T))
+            ArrayView(static_cast<const void *>(container.data()), container.size() * sizeof(ValueType))
         {
         }
 
@@ -45,7 +45,7 @@ class ArrayView: public IArrayView
         // view would be empty (e.g. int8_t into ArrayView<int32_t>)
         template <traits::TriviallyCopyable Fundamental>
             requires(!traits::Pointer<Fundamental> && !traits::HasConstDataSize<Fundamental>)
-        ArrayView(const Fundamental & value): ArrayView(&value, sizeof(Fundamental) / sizeof(T))
+        ArrayView(const Fundamental & value): ArrayView(static_cast<const void *>(&value), sizeof(Fundamental))
         {
         }
 
@@ -69,15 +69,15 @@ class ArrayView: public IArrayView
 
         // make sure IArrayView size is divisible by type size.
         // ex: ArrayView<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        ArrayView(const IArrayView & arr): ArrayView((const T *)arr.buf(), arr.byte_size() / sizeof(T)) {}
+        ArrayView(const IArrayView & arr): ArrayView(static_cast<const void *>(arr.buf()), arr.byte_size()) {}
 
         // make sure IArray size is divisible by type size.
         // ex: Array<int8_t> of size 3 may not go into an ArrayView<int32_t> which will be size 0
-        ArrayView(const IArray & arr): ArrayView((const T *)arr.buf(), arr.byte_size() / sizeof(T)) {}
+        ArrayView(const IArray & arr): ArrayView(static_cast<const void *>(arr.buf()), arr.byte_size()) {}
 
         // make sure buffer size is divisible by type size.
         // ex: int8_t[3] may not go into an ArrayView<int32_t> which will be size 0
-        ArrayView(const void *data, size_t byte_size): ArrayView((const T *)data, byte_size) {}
+        ArrayView(const void *data, size_t byte_size): ArrayView((const T *)data, byte_size / sizeof(T)) {}
 
         // WARNING: using braces initializer must only be used passed in functions,
         // where scope allows std::initializer_list's buffer to live

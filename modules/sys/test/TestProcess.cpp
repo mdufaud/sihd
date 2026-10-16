@@ -182,6 +182,22 @@ TEST_F(TestProcess, test_process_simple)
     EXPECT_EQ((int)proc.return_code(), 0);
 }
 
+TEST_F(TestProcess, test_process_argument_boundaries)
+{
+    std::string output;
+    proc::Options options;
+    options.stdout_callback = [&](std::string_view text) {
+        output += text;
+    };
+    const std::vector<std::string> args = {helper_path(), "args", "a b", "", "a\"b", "tail\\", "a b\\"};
+    auto result = proc::execute(args, options);
+    EXPECT_EQ(result.get(), 0);
+    if constexpr (sihd::util::build::is_windows)
+        EXPECT_EQ(output, "a b\r\n\r\na\"b\r\ntail\\\r\na b\\\r\n");
+    else
+        EXPECT_EQ(output, "a b\n\na\"b\ntail\\\na b\\\n");
+}
+
 TEST_F(TestProcess, test_process_out)
 {
     std::string output;

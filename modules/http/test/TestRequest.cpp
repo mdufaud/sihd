@@ -10,7 +10,9 @@
 #include <sihd/http/request.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Worker.hpp>
 
 #include "http_test_helpers.hpp"
 
@@ -323,6 +325,48 @@ TEST_F(TestRequest, test_stateless_connections)
     ASSERT_TRUE(r2.has_value());
     EXPECT_EQ(r2->content().cpp_str(), "hit-2");
     EXPECT_EQ(get_count, 2);
+}
+
+TEST_F(TestRequest, test_post_large_body_sends_no_expect_header)
+{
+    sihd::net::Socket listener;
+    ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, 0).has_value());
+    ASSERT_TRUE(listener.set_reuseaddr(true).has_value());
+    ASSERT_TRUE(listener.bind(sihd::net::IpAddr::localhost(0)).has_value());
+    ASSERT_TRUE(listener.listen(1).has_value());
+    const int port = listener.local_port();
+    ASSERT_GT(port, 0);
+
+    const std::string body(2 * 1024 * 1024, 'x');
+    std::string request_head;
+    Worker worker([&] {
+        sihd::net::Socket conn(listener.accept(5000).value_or(-1));
+        if (!conn.is_open() || !conn.set_recv_timeout(5000).has_value())
+            return false;
+        std::string received;
+        char buffer[65536];
+        size_t head_end = std::string::npos;
+        while (head_end == std::string::npos || received.size() < head_end + 4 + body.size())
+        {
+            const auto size = conn.receive(buffer, sizeof(buffer));
+            if (!size || *size == 0)
+                return false;
+            received.append(buffer, *size);
+            if (head_end == std::string::npos)
+                head_end = received.find("\r\n\r\n");
+        }
+        request_head = received.substr(0, head_end);
+        constexpr std::string_view reply = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
+        return conn.send_all({reply.data(), reply.size()}).has_value();
+    });
+    ASSERT_TRUE(worker.start_sync_worker("expect-capture"));
+    sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
+
+    auto resp = http::post(fmt::format("localhost:{}/upload", port), body);
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    ASSERT_TRUE(worker.stop_worker());
+    EXPECT_EQ(request_head.find("Expect"), std::string::npos);
 }
 
 TEST_F(TestRequest, test_put_file)

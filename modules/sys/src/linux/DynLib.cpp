@@ -59,8 +59,6 @@ sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_n
     {
         if (try_load_lib(fmt::format(fmt::runtime(patterns[i]), lib_name), &_handle, _name))
             return {};
-        if (i + 1 < std::size(patterns))
-            SIHD_LOG(debug, "DynLib: {}", get_error());
     }
     return lib_error(get_error());
 #else

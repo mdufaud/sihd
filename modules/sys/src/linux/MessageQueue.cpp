@@ -1,5 +1,4 @@
 #include <fcntl.h> // O_*
-#include <mqueue.h>
 
 #include <cerrno>
 #include <vector>
@@ -11,6 +10,10 @@
 #include <sihd/util/Timestamp.hpp>
 
 #include "internal/deadline.hpp"
+
+#if defined(__SIHD_UNIX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_APPLE__) && !defined(__SIHD_EMSCRIPTEN__)
+# include <mqueue.h>
+#endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;

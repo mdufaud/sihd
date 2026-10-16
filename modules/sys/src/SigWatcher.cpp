@@ -298,10 +298,7 @@ void SigWatcher::_run_sigwait_loop()
     while (_running.load(std::memory_order_relaxed))
     {
         const Duration interval = _polling_interval_ns.load(std::memory_order_relaxed);
-        struct timespec ts = {
-            static_cast<time_t>(interval.nanoseconds() / time::sec(1)),
-            static_cast<long>(interval.nanoseconds() % time::sec(1)),
-        };
+        struct timespec ts = time::to_ts(interval.nanoseconds());
 
         siginfo_t info;
         int sig = sigtimedwait(&_sigset, &info, &ts);

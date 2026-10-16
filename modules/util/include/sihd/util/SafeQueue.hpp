@@ -145,8 +145,11 @@ class SafeQueue
 
         void clear()
         {
-            auto l = _waitable.guard();
-            _queue = {};
+            {
+                auto l = _waitable.guard();
+                _queue = {};
+            }
+            _waitable.notify_all();
         }
 
     private:

@@ -1,36 +1,20 @@
 #include <filesystem>
-#include <random>
+#include <stdexcept>
+#include <utility>
 
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 
 namespace sihd::sys
 {
 
-namespace
-{
-
-std::string make_tmp_dir()
-{
-    auto base = std::filesystem::temp_directory_path();
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<uint32_t> dist;
-    for (int i = 0; i < 100; ++i)
-    {
-        auto path = base / ("sihd_" + std::to_string(dist(gen)));
-        std::error_code ec;
-        if (std::filesystem::create_directory(path, ec) && !ec)
-            return path.string();
-    }
-    return {};
-}
-
-} // namespace
-
 TmpDir::TmpDir()
 {
-    _path = make_tmp_dir();
+    auto path = fs::make_tmp_directory(fs::combine(fs::tmp_path(), "sihd_"));
+    if (!path)
+        throw std::runtime_error(path.error().message);
+    _path = std::move(*path);
 }
 
 TmpDir::~TmpDir()

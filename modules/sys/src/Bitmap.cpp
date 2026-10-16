@@ -72,6 +72,33 @@ struct BitmapInfoHeader
 };
 #pragma pack(pop)
 
+void convert_headers(BitmapFileHeader & file, BitmapInfoHeader & info)
+{
+    file.filesize = endian::convert(file.filesize, std::endian::little);
+    file.reserved = endian::convert(file.reserved, std::endian::little);
+    file.fileoffset_to_pixelarray = endian::convert(file.fileoffset_to_pixelarray, std::endian::little);
+    info.header_size = endian::convert(info.header_size, std::endian::little);
+    info.width = endian::convert(info.width, std::endian::little);
+    info.height = endian::convert(info.height, std::endian::little);
+    info.planes = endian::convert(info.planes, std::endian::little);
+    info.bits_per_pixel = endian::convert(info.bits_per_pixel, std::endian::little);
+    info.compression = endian::convert(info.compression, std::endian::little);
+    info.image_size = endian::convert(info.image_size, std::endian::little);
+    info.pixel_per_meter_x = endian::convert(info.pixel_per_meter_x, std::endian::little);
+    info.pixel_per_meter_y = endian::convert(info.pixel_per_meter_y, std::endian::little);
+    info.nb_colors = endian::convert(info.nb_colors, std::endian::little);
+    info.nb_important_colors = endian::convert(info.nb_important_colors, std::endian::little);
+}
+
+void store_pixel(uint8_t *data, uint8_t size, Color pixel)
+{
+    data[0] = pixel.blue;
+    data[1] = pixel.green;
+    data[2] = pixel.red;
+    if (size == 4)
+        data[3] = pixel.alpha;
+}
+
 uint8_t channel_from_mask(uint32_t value, uint32_t mask)
 {
     if (mask == 0)
@@ -106,14 +133,13 @@ void Bitmap::create(size_t width, size_t height, uint8_t bit_per_pixel)
     if (bit_per_pixel != 24 && bit_per_pixel != 32)
         throw std::invalid_argument("Bitmaps not of 24 or 32 bit per pixels are not yet supported");
 
+    const size_t pixel_size = bit_per_pixel / 8;
+    if (height != 0 && width > _data.max_size() / pixel_size / height)
+        throw std::length_error("bitmap dimensions exceed the buffer limit");
+    _data.resize(width * height * pixel_size);
     _bit_per_pixel = bit_per_pixel;
     _width = width;
     _height = height;
-
-    if (bit_per_pixel >= 8)
-        _data.resize((width * height) * this->byte_per_pixel());
-    else
-        _data.resize(std::ceil((width * height) / (float)(8 / bit_per_pixel)));
 }
 
 void Bitmap::fill(Color pixel)
@@ -123,7 +149,7 @@ void Bitmap::fill(Color pixel)
     const size_t byte_size = this->byte_per_pixel();
     for (size_t i = 0; i < _data.size(); i += byte_size)
     {
-        memcpy((void *)(this->c_data() + i), &pixel.value, byte_size);
+        store_pixel(_data.data() + i, byte_size, pixel);
     }
 }
 
@@ -141,7 +167,11 @@ Color Bitmap::get(size_t row, size_t line) const
     }
     const size_t idx = this->coordinate_to_pixel(row, line);
     Color ret = 0;
-    memcpy(&ret.value, &_data[idx], this->byte_per_pixel());
+    ret.blue = _data[idx];
+    ret.green = _data[idx + 1];
+    ret.red = _data[idx + 2];
+    if (this->byte_per_pixel() == 4)
+        ret.alpha = _data[idx + 3];
     return ret;
 }
 
@@ -162,7 +192,7 @@ void Bitmap::set(size_t row, size_t line, Color pixel)
             fmt::format("pixels[{}][{}] is out of bounds (pixels[{}][{}])", line, row, _height, _width));
     }
     const size_t idx = this->coordinate_to_pixel(row, line);
-    memcpy((void *)(_data.data() + idx), &pixel.value, this->byte_per_pixel());
+    store_pixel(_data.data() + idx, this->byte_per_pixel(), pixel);
 }
 
 void Bitmap::clear()
@@ -187,9 +217,16 @@ Bitmap::PixelBuffer Bitmap::to_bmp_data() const
     if (this->empty())
         return {};
 
+    constexpr size_t header_size = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader);
+    constexpr size_t max_image_size = std::numeric_limits<uint32_t>::max() - header_size;
+    if (_width > std::numeric_limits<int32_t>::max() || _height > std::numeric_limits<int32_t>::max()
+        || _width > max_image_size / this->byte_per_pixel())
+        throw std::length_error("bitmap dimensions exceed the BMP limit");
     // BMP rows must be padded to 4-byte boundaries
     const size_t bytes_per_row = _width * this->byte_per_pixel();
     const size_t padded_row_size = ((bytes_per_row + 3) / 4) * 4;
+    if (_height > max_image_size / padded_row_size)
+        throw std::length_error("bitmap size exceeds the BMP limit");
     const size_t image_size = padded_row_size * _height;
     const size_t file_size = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader) + image_size;
 
@@ -217,7 +254,8 @@ Bitmap::PixelBuffer Bitmap::to_bmp_data() const
     info_hdr->nb_colors = 0;
     info_hdr->nb_important_colors = 0;
 
-    uint8_t *pixels = bmp_data.data() + file_hdr->fileoffset_to_pixelarray;
+    convert_headers(*file_hdr, *info_hdr);
+    uint8_t *pixels = bmp_data.data() + header_size;
     for (size_t y = 0; y < _height; ++y)
     {
         const size_t src_row = _height - 1 - y;
@@ -276,8 +314,13 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
         return false;
 
     const auto *bytes = reinterpret_cast<const uint8_t *>(data.data());
-    const auto *file_hdr = reinterpret_cast<const BitmapFileHeader *>(bytes);
-    const auto *info_hdr = reinterpret_cast<const BitmapInfoHeader *>(bytes + sizeof(BitmapFileHeader));
+    BitmapFileHeader file_header;
+    BitmapInfoHeader info_header;
+    memcpy(&file_header, bytes, sizeof(file_header));
+    memcpy(&info_header, bytes + sizeof(file_header), sizeof(info_header));
+    convert_headers(file_header, info_header);
+    const auto *file_hdr = &file_header;
+    const auto *info_hdr = &info_header;
 
     // Validate signature
     if (((unsigned char *)&file_hdr->signature)[0] != 'B' || ((unsigned char *)&file_hdr->signature)[1] != 'M')
@@ -301,29 +344,30 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
     // undefined on the signed int32 the header stores.
     const bool top_down = static_cast<int32_t>(info_hdr->height) < 0;
     const uint32_t abs_height = top_down ? 0u - info_hdr->height : info_hdr->height;
-    if (width == 0 || abs_height == 0)
+    if (static_cast<int32_t>(width) <= 0 || abs_height == 0)
         return false;
 
     const size_t info_start = sizeof(BitmapFileHeader);
+    if (info_hdr->header_size > data.size() - info_start)
+        return false;
     const size_t header_end = info_start + info_hdr->header_size;
     const size_t pixel_offset = file_hdr->fileoffset_to_pixelarray;
     const bool indexed = bpp <= 8;
     const bool bitfields = compression == BI_BITFIELDS;
 
-    // Masks: +40 after a 40-byte header, +108 in a V5 header.
     uint32_t red_mask = 0, green_mask = 0, blue_mask = 0, alpha_mask = 0;
     size_t masks_end = header_end;
     if (bitfields)
     {
-        const size_t mask_off = info_hdr->header_size >= 124 ? info_start + 108 : info_start + 40;
+        const size_t mask_off = info_start + sizeof(BitmapInfoHeader);
         if (mask_off + 12 > data.size())
             return false;
-        std::memcpy(&red_mask, bytes + mask_off, 4);
-        std::memcpy(&green_mask, bytes + mask_off + 4, 4);
-        std::memcpy(&blue_mask, bytes + mask_off + 8, 4);
-        if (mask_off + 16 <= data.size())
-            std::memcpy(&alpha_mask, bytes + mask_off + 12, 4);
-        masks_end = mask_off + 12;
+        red_mask = endian::read_le<uint32_t>(bytes + mask_off, 4);
+        green_mask = endian::read_le<uint32_t>(bytes + mask_off + 4, 4);
+        blue_mask = endian::read_le<uint32_t>(bytes + mask_off + 8, 4);
+        if (mask_off + 16 <= pixel_offset && mask_off + 16 <= data.size())
+            alpha_mask = endian::read_le<uint32_t>(bytes + mask_off + 12, 4);
+        masks_end = std::max(header_end, mask_off + 12);
     }
 
     // Palette entries are RGBQUAD, or RGB when the space is tight.
@@ -333,14 +377,16 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
         const size_t palette_start = std::max(header_end, masks_end);
         const size_t palette_count = info_hdr->nb_colors != 0 ? info_hdr->nb_colors : (1u << bpp);
         const size_t palette_span = pixel_offset > palette_start ? (pixel_offset - palette_start) : 0;
-        if (palette_span >= palette_count * 4)
+        if (palette_count <= palette_span / 4)
             palette_entry_size = 4;
-        else if (palette_span >= palette_count * 3)
+        else if (palette_count <= palette_span / 3)
             palette_entry_size = 3;
         else
             return false;
     }
 
+    if (width > (std::numeric_limits<size_t>::max() - 7) / bpp)
+        return false;
     const size_t bits_per_row = static_cast<size_t>(width) * bpp;
     const size_t bytes_per_row = (bits_per_row + 7) / 8;
     const size_t padded_row_size = ((bytes_per_row + 3) / 4) * 4;

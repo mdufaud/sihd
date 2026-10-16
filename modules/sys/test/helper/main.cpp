@@ -1,9 +1,16 @@
 #include <chrono>
+#include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <optional>
 #include <string>
 #include <thread>
+
+#include <sihd/util/build.hpp>
+
+#if defined(__SIHD_WINDOWS__)
+# include <windows.h>
+#endif
 
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/Daemon.hpp>
@@ -152,13 +159,23 @@ int do_crash(const char *dump_path)
     // rethrow would trigger the system core dump machinery, which a test must not depend on
     options.rethrow = false;
     sihd::sys::CrashHandler handler(options);
-    *(volatile int *)0 = 0;
+#if defined(__SIHD_WINDOWS__)
+    RaiseException(EXCEPTION_ACCESS_VIOLATION, 0, 0, nullptr);
+#else
+    std::raise(SIGSEGV);
+#endif
     return 0;
 }
 } // namespace
 
 int main(int argc, char **argv)
 {
+    if (argc >= 2 && strcmp(argv[1], "args") == 0)
+    {
+        for (int i = 2; i < argc; ++i)
+            printf("%s\n", argv[i]);
+        return 0;
+    }
     if (argc >= 3 && strcmp(argv[1], "sleep") == 0)
         return do_sleep(argv[2]);
     if (argc >= 3 && strcmp(argv[1], "shm") == 0)
