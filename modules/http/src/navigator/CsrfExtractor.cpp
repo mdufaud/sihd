@@ -43,22 +43,24 @@ std::string extract_hidden_field(std::string_view html, std::string_view field_n
     // try: name attribute before value attribute
     std::string pattern = fmt::format(R"(<input[^>]+name\s*=\s*["']?{}["']?[^>]+>)", field);
     auto tags = sihd::util::str::regex_search(html_str, pattern);
+    if (SIHD_UNEXPECTED_LOG(tags))
+        return {};
 
-    if (tags.empty())
+    if (tags->empty())
     {
         // try: value attribute before name attribute
         pattern = fmt::format(R"(<input[^>]+value\s*=\s*["'][^"']*["'][^>]+name\s*=\s*["']?{}["']?[^>]*>)", field);
         tags = sihd::util::str::regex_search(html_str, pattern);
-        if (tags.empty())
+        if (SIHD_UNEXPECTED_LOG(tags) || tags->empty())
             return {};
     }
 
     // extract value="..." from the matched tag
-    auto val_matches = sihd::util::str::regex_search(tags[0], R"(value\s*=\s*["'][^"']*["'])");
-    if (val_matches.empty())
+    auto val_matches = sihd::util::str::regex_search((*tags)[0], R"(value\s*=\s*["'][^"']*["'])");
+    if (SIHD_UNEXPECTED_LOG(val_matches) || val_matches->empty())
         return {};
 
-    auto [_, raw] = sihd::util::str::split_pair_view(val_matches[0], "=");
+    auto [_, raw] = sihd::util::str::split_pair_view((*val_matches)[0], "=");
     raw = sihd::util::str::trim(raw);
     if (raw.size() >= 2 && (raw.front() == '"' || raw.front() == '\''))
         return std::string(raw.substr(1, raw.size() - 2));

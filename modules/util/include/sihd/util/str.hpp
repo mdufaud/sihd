@@ -9,6 +9,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
@@ -35,12 +36,24 @@ size_t table_len(const char **table);
 std::span<const char *> table_span(char **table);
 std::span<const char *> table_span(const char **table);
 
-bool regex_match(std::string_view str, const std::string & pattern);
-std::vector<std::string> regex_search(std::string_view str, const std::string & pattern);
-std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace);
-std::vector<std::string> regex_filter(std::span<const std::string> input, const std::string & pattern);
-std::vector<std::string> regex_filter(std::span<std::string_view> input, const std::string & pattern);
-std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern);
+// std::regex backtracks exponentially on hostile subjects: callers bound the subject size
+inline constexpr size_t default_regex_max_size = 1024 * 1024;
+
+Result<bool> regex_match(std::string_view str, const std::string & pattern, size_t max_size = default_regex_max_size);
+Result<std::vector<std::string>>
+    regex_search(std::string_view str, const std::string & pattern, size_t max_size = default_regex_max_size);
+Result<std::string> regex_replace(const std::string & str,
+                                  const std::string & pattern,
+                                  const std::string & replace,
+                                  size_t max_size = default_regex_max_size);
+Result<std::vector<std::string>> regex_filter(std::span<const std::string> input,
+                                              const std::string & pattern,
+                                              size_t max_size = default_regex_max_size);
+Result<std::vector<std::string>> regex_filter(std::span<std::string_view> input,
+                                              const std::string & pattern,
+                                              size_t max_size = default_regex_max_size);
+Result<std::vector<std::string>>
+    regex_filter(std::span<const char *> input, const std::string & pattern, size_t max_size = default_regex_max_size);
 
 // fnmatch syntax: '*', '?', '[set]' with '!' negation, a-z ranges, [:alpha:] classes and '\' escapes
 bool glob_match(std::string_view str, std::string_view pattern, bool ignore_case = false);
@@ -76,6 +89,7 @@ std::string generate_random_printable(size_t size);
 bool print(std::string_view str);
 bool println(std::string_view str);
 
+// you own the pointer
 char *csub(std::string_view str, Slice slice = {});
 
 std::string demangle(const std::string & name);
@@ -249,14 +263,18 @@ sihd::util::Result<T> convert_from_string(std::string_view str, uint16_t base = 
         {
             auto parsed = to_signed(str, base);
             SIHD_UNEXPECTED_RETURN(parsed);
-            return static_cast<T>(*parsed);
+            if (std::in_range<T>(*parsed))
+                return static_cast<T>(*parsed);
         }
         else
         {
             auto parsed_2 = to_unsigned(str, base);
             SIHD_UNEXPECTED_RETURN(parsed_2);
-            return static_cast<T>(*parsed_2);
+            if (std::in_range<T>(*parsed_2))
+                return static_cast<T>(*parsed_2);
         }
+        return std::unexpected(
+            Error(std::errc::result_out_of_range, "value '{}' out of range for the requested type", str));
     }
 }
 

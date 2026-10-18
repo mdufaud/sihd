@@ -432,6 +432,13 @@ bool Scheduler::remove_task(Task *task)
         found = true;
     }
 
+    const auto trash_it = container::find(_trash_task_list, task);
+    if (trash_it != _trash_task_list.end())
+    {
+        _trash_task_list.erase(trash_it);
+        found = true;
+    }
+
     _waitable_task.notify();
     return found;
 }

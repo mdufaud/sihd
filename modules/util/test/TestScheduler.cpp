@@ -625,4 +625,35 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     EXPECT_GT(clock.calls.load(), 1000);
 }
 
+TEST_F(TestScheduler, test_sched_remove_task_racing_play)
+{
+    if (test::is_run_by_valgrind())
+        GTEST_SKIP() << "Timing classification unstable under valgrind";
+    Scheduler sched("sched-remove-race");
+    ASSERT_TRUE(sched.start());
+
+    constexpr int task_count = 500;
+    std::atomic<int> played = 0;
+    int removed = 0;
+    for (int i = 0; i < task_count; ++i)
+    {
+        Task *task = new Task(
+            [&played] {
+                ++played;
+                return true;
+            },
+            {.run_in = Duration(time::us(50))});
+        sched.add_task(task);
+        std::this_thread::sleep_for(std::chrono::microseconds(50));
+        if (sched.remove_task(task))
+        {
+            ++removed;
+            delete task;
+        }
+    }
+    ASSERT_TRUE(sched.stop());
+
+    EXPECT_GE(played.load() + removed, task_count);
+}
+
 } // namespace test

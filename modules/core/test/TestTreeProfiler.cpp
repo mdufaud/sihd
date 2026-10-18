@@ -2,7 +2,6 @@
 #include <chrono>
 #include <clock_helper.hpp>
 #include <functional>
-#include <future>
 #include <thread>
 #include <wait_for.hpp>
 
@@ -14,6 +13,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 
@@ -237,6 +237,38 @@ class EventCollector: public sihd::util::IHandler<TreeProfiler::Event *>
         std::vector<std::string> whats;
         std::vector<std::string> sources;
         std::vector<TreeProfiler::Event::Kind> kinds;
+};
+
+class GateObserver: public sihd::util::IHandler<TreeProfiler::Event *>
+{
+    public:
+        GateObserver() { entered.init_sync(2); }
+
+        void handle([[maybe_unused]] TreeProfiler::Event *event) override
+        {
+            if (_first.exchange(false) == false)
+                return;
+            entered.sync();
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        }
+
+        Synchronizer entered;
+
+    private:
+        std::atomic<bool> _first = true;
+};
+
+class LateCallCounter: public sihd::util::IHandler<TreeProfiler::Event *>
+{
+    public:
+        void handle([[maybe_unused]] TreeProfiler::Event *event) override
+        {
+            if (removed)
+                ++late_calls;
+        }
+
+        std::atomic<bool> removed = false;
+        std::atomic<int> late_calls = 0;
 };
 
 class TestTreeProfiler: public ::testing::Test
@@ -1897,6 +1929,28 @@ TEST_F(TestTreeProfiler, test_report_opts_recursion_and_description)
     const std::string with_desc = profiler.report_str(desc);
     EXPECT_NE(with_desc.find("int["), std::string::npos);
     EXPECT_GT(with_desc.size(), full.size());
+}
+
+TEST_F(TestTreeProfiler, test_removed_observer_not_called)
+{
+    Node root("root");
+    new Channel("c1", "int", &root);
+    Channel *c1 = root.get_child<Channel>("c1");
+    ASSERT_NE(c1, nullptr);
+
+    TreeProfiler profiler;
+    GateObserver gate;
+    LateCallCounter counter;
+    profiler.add_observer(&gate);
+    profiler.add_observer(&counter);
+    ASSERT_TRUE(profiler.observe(&root));
+
+    EXPECT_TRUE(c1->write<int>(0, 1));
+    ASSERT_TRUE(gate.entered.sync(Duration(time::sec(1))));
+    profiler.remove_observer(&counter);
+    counter.removed = true;
+    ASSERT_TRUE(profiler.flush());
+    EXPECT_EQ(counter.late_calls, 0);
 }
 
 } // namespace test

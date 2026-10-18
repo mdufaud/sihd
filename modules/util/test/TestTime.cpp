@@ -60,6 +60,10 @@ TEST_F(TestTime, test_time_freq)
 {
     EXPECT_DOUBLE_EQ(time::freq(10), time::milli(100));
     EXPECT_DOUBLE_EQ(time::to_hz(time::milli(100)), 10);
+
+    EXPECT_EQ(time::freq(0), 0);
+    EXPECT_EQ(time::freq(-1), 0);
+    EXPECT_DOUBLE_EQ(time::to_freq(0), 0);
 }
 
 TEST_F(TestTime, test_time_double)

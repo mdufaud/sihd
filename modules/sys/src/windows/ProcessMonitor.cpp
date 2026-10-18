@@ -5,6 +5,7 @@
 
 #include <map>
 
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 #include "../internal/process_monitor.hpp"
@@ -14,6 +15,8 @@ namespace sihd::sys
 {
 
 using namespace sihd::util;
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -50,7 +53,13 @@ std::vector<ProcessSample> ProcessMonitor::Impl::collect(const std::string & nam
     BOOL has_entry = Process32First(process_snap, &pe32);
     while (has_entry)
     {
-        if (name_filter.empty() || str::regex_match(pe32.szExeFile, name_filter))
+        bool selected = name_filter.empty();
+        if (selected == false)
+        {
+            const auto matched = str::regex_match(pe32.szExeFile, name_filter);
+            selected = !SIHD_UNEXPECTED_LOG(matched) && *matched;
+        }
+        if (selected)
         {
             ProcessSample sample;
             sample.name = pe32.szExeFile;

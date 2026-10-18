@@ -63,7 +63,7 @@ class Command
         // the created branch belongs to its parent
         Command & add_command(const std::string & name, const std::string & description = "");
         // mounts a deep copy of another command (bindings, callback, whole subtree); copies keep writing
-        // the bound variables and running the callbacks of the original
+        // the bound variables and running the callbacks of the original - the original must outlive them
         Command & add_command(const Command & other, const std::string & name = "");
         bool remove_command(const std::string & name);
         bool has_command(const std::string & name) const;

@@ -204,6 +204,13 @@ bool TreeProfiler::add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_
     return ret;
 }
 
+void TreeProfiler::remove_observer(sihd::util::IHandler<Event *> *obs)
+{
+    Observable<Event>::remove_observer(obs);
+    // an in-flight dispatch may still hold obs in its snapshot
+    std::lock_guard dispatching(_dispatch_mutex);
+}
+
 bool TreeProfiler::flush(sihd::util::Duration timeout) const
 {
     return _dispatch_queue.waitable.wait_for(timeout, [this] { return _dispatch_queue.pending == 0; });
@@ -307,10 +314,14 @@ void TreeProfiler::_dispatch_loop()
         {
             // snapshot per event: hooks may add or remove observers, and run without holding the observable
             // lock so producers never stall on a slow observer
+            std::lock_guard dispatching(_dispatch_mutex);
             std::vector<sihd::util::IHandler<Event *> *> observers;
             this->for_each_observer([&observers](sihd::util::IHandler<Event *> *obs) { observers.push_back(obs); });
             for (sihd::util::IHandler<Event *> *obs : observers)
-                obs->handle(&event);
+            {
+                if (this->is_observer(obs))
+                    obs->handle(&event);
+            }
         }
         {
             auto l = _dispatch_queue.waitable.guard();

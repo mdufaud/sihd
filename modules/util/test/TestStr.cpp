@@ -101,22 +101,22 @@ TEST_F(TestStr, test_str_to_wstr)
 TEST_F(TestStr, test_str_regex_filter)
 {
     std::vector<std::string> input = {"apple", "banana", "cherry", "date", "elderberry", "fig", "grape"};
-    std::vector<std::string> filtered = str::regex_filter(input, "a.*e");
+    std::vector<std::string> filtered = str::regex_filter(input, "a.*e").value();
     std::vector<std::string> expected = {"apple", "date", "grape"};
 
     EXPECT_EQ(filtered, expected);
 
-    filtered = str::regex_filter(input, "b.*a");
+    filtered = str::regex_filter(input, "b.*a").value();
     expected = {"banana"};
 
     EXPECT_EQ(filtered, expected);
 
-    filtered = str::regex_filter(input, ".*r.*y$");
+    filtered = str::regex_filter(input, ".*r.*y$").value();
     expected = {"cherry", "elderberry"};
 
     EXPECT_EQ(filtered, expected);
 
-    filtered = str::regex_filter(input, "z.*");
+    filtered = str::regex_filter(input, "z.*").value();
     expected = {};
 
     EXPECT_EQ(filtered, expected);
@@ -124,57 +124,57 @@ TEST_F(TestStr, test_str_regex_filter)
 
 TEST_F(TestStr, test_str_regex_replace)
 {
-    EXPECT_EQ(str::regex_replace("hello world", "world", "universe"), "hello universe");
-    EXPECT_EQ(str::regex_replace("hello world", "o", "0"), "hell0 w0rld");
-    EXPECT_EQ(str::regex_replace("hello world", "l+", "L"), "heLo worLd");
-    EXPECT_EQ(str::regex_replace("123-456-7890", "\\d{3}", "XXX"), "XXX-XXX-XXX0");
-    EXPECT_EQ(str::regex_replace("hello world", "z", "Z"), "hello world"); // No match
-    EXPECT_EQ(str::regex_replace("hello world", "(hello) (world)", "$2 $1"), "world hello");
+    EXPECT_EQ(str::regex_replace("hello world", "world", "universe").value(), "hello universe");
+    EXPECT_EQ(str::regex_replace("hello world", "o", "0").value(), "hell0 w0rld");
+    EXPECT_EQ(str::regex_replace("hello world", "l+", "L").value(), "heLo worLd");
+    EXPECT_EQ(str::regex_replace("123-456-7890", "\\d{3}", "XXX").value(), "XXX-XXX-XXX0");
+    EXPECT_EQ(str::regex_replace("hello world", "z", "Z").value(), "hello world"); // No match
+    EXPECT_EQ(str::regex_replace("hello world", "(hello) (world)", "$2 $1").value(), "world hello");
 }
 
 TEST_F(TestStr, test_str_regex_match)
 {
-    EXPECT_TRUE(str::regex_match("hello world", "hello world"));
-    EXPECT_FALSE(str::regex_match("hello world", "hello"));
-    EXPECT_TRUE(str::regex_match("hello world", ".*world"));
-    EXPECT_TRUE(str::regex_match("hello world", ".*world$"));
-    EXPECT_TRUE(str::regex_match("hello world", "^hello.*"));
-    EXPECT_FALSE(str::regex_match("hello world", "^world"));
-    EXPECT_TRUE(str::regex_match("123-456-7890", "\\d{3}-\\d{3}-\\d{4}"));
-    EXPECT_FALSE(str::regex_match("123-456-7890", "\\d{4}-\\d{3}-\\d{4}"));
+    EXPECT_TRUE(str::regex_match("hello world", "hello world").value());
+    EXPECT_FALSE(str::regex_match("hello world", "hello").value());
+    EXPECT_TRUE(str::regex_match("hello world", ".*world").value());
+    EXPECT_TRUE(str::regex_match("hello world", ".*world$").value());
+    EXPECT_TRUE(str::regex_match("hello world", "^hello.*").value());
+    EXPECT_FALSE(str::regex_match("hello world", "^world").value());
+    EXPECT_TRUE(str::regex_match("123-456-7890", "\\d{3}-\\d{3}-\\d{4}").value());
+    EXPECT_FALSE(str::regex_match("123-456-7890", "\\d{4}-\\d{3}-\\d{4}").value());
 }
 
 TEST_F(TestStr, test_str_regex_search)
 {
     std::vector<std::string> results;
 
-    results = str::regex_search("hello world", "hello");
+    results = str::regex_search("hello world", "hello").value();
     ASSERT_EQ(results.size(), 1u);
     EXPECT_EQ(results[0], "hello");
 
-    results = str::regex_search("hello world", "world");
+    results = str::regex_search("hello world", "world").value();
     ASSERT_EQ(results.size(), 1u);
     EXPECT_EQ(results[0], "world");
 
-    results = str::regex_search("hello world", "o");
+    results = str::regex_search("hello world", "o").value();
     ASSERT_EQ(results.size(), 2u);
     EXPECT_EQ(results[0], "o");
     EXPECT_EQ(results[1], "o");
 
-    results = str::regex_search("hello world", "l+");
+    results = str::regex_search("hello world", "l+").value();
     ASSERT_EQ(results.size(), 2u);
     EXPECT_EQ(results[0], "ll");
     EXPECT_EQ(results[1], "l");
 
-    results = str::regex_search("hello world", "z");
+    results = str::regex_search("hello world", "z").value();
     ASSERT_TRUE(results.empty());
 
-    results = str::regex_search("The quick brown fox jumps over the lazy dog", "\\b\\w{4}\\b");
+    results = str::regex_search("The quick brown fox jumps over the lazy dog", "\\b\\w{4}\\b").value();
     ASSERT_EQ(results.size(), 2u);
     EXPECT_EQ(results[0], "over");
     EXPECT_EQ(results[1], "lazy");
 
-    results = str::regex_search("The quick brown fox jumps over the lazy dog", "(\\b\\w{3}\\b)|(\\b\\w{5}\\b)");
+    results = str::regex_search("The quick brown fox jumps over the lazy dog", "(\\b\\w{3}\\b)|(\\b\\w{5}\\b)").value();
     ASSERT_EQ(results.size(), 7u);
     EXPECT_EQ(results[0], "The");
     EXPECT_EQ(results[1], "quick");
@@ -811,14 +811,12 @@ TEST_F(TestStr, test_str_from_string)
 
     EXPECT_EQ(str::convert_from_string<int16_t>("123"), 123);
     EXPECT_EQ(str::convert_from_string<int16_t>("-321"), -321);
-    // truncation to a smaller type wraps around
-    EXPECT_EQ(str::convert_from_string<int16_t>("32768"), -32768);
+    EXPECT_FALSE(str::convert_from_string<int16_t>("32768").has_value());
 
     EXPECT_EQ(str::convert_from_string<uint32_t>("1000"), 1000u);
     // trailing data is ignored
     EXPECT_EQ(str::convert_from_string<uint32_t>("1000,hello world"), 1000u);
-    // a leading '-' wraps around
-    EXPECT_EQ(str::convert_from_string<uint32_t>("-1"), 4294967295u);
+    EXPECT_FALSE(str::convert_from_string<uint32_t>("-1").has_value());
 
     EXPECT_EQ(str::convert_from_string<int64_t>("100"), 100);
     EXPECT_EQ(str::convert_from_string<int64_t>("-1"), -1);
@@ -860,13 +858,24 @@ TEST_F(TestStr, test_str_tonumber)
     // hexadecimal without prefix
     EXPECT_TRUE(this->test_long("2a", 16));
     EXPECT_EQ(_val, 0x2a);
-    EXPECT_TRUE(this->test_long("DEADCAFE", 16));
-    EXPECT_EQ(_val, (long)0xDEADCAFE);
-    // a prefix matching the base is stripped
-    EXPECT_TRUE(this->test_long("0x2a", 16));
-    EXPECT_EQ(_val, 0x2a);
-    EXPECT_TRUE(this->test_long("0XdeadCAFE", 16));
-    EXPECT_EQ(_val, (long)0xDEADCAFE);
+    if constexpr (sizeof(long) == 8)
+    {
+        EXPECT_TRUE(this->test_long("DEADCAFE", 16));
+        EXPECT_EQ(_val, (long)0xDEADCAFE);
+        // a prefix matching the base is stripped
+        EXPECT_TRUE(this->test_long("0x2a", 16));
+        EXPECT_EQ(_val, 0x2a);
+        EXPECT_TRUE(this->test_long("0XdeadCAFE", 16));
+        EXPECT_EQ(_val, (long)0xDEADCAFE);
+    }
+    else
+    {
+        EXPECT_FALSE(this->test_long("DEADCAFE", 16));
+        EXPECT_FALSE(this->test_long("0XdeadCAFE", 16));
+        // a prefix matching the base is stripped
+        EXPECT_TRUE(this->test_long("0x2a", 16));
+        EXPECT_EQ(_val, 0x2a);
+    }
     EXPECT_TRUE(this->test_long("0b101", 2));
     EXPECT_EQ(_val, 0b101);
     EXPECT_TRUE(this->test_long("0o17", 8));
@@ -886,8 +895,15 @@ TEST_F(TestStr, test_str_tonumber)
     // unsigned long
     EXPECT_TRUE(this->test_ulong("1234"));
     EXPECT_EQ(_uval, 1234u);
-    EXPECT_TRUE(this->test_ulong("-1"));
-    EXPECT_EQ(_uval, ULONG_MAX);
+    if constexpr (sizeof(unsigned long) == sizeof(unsigned long long))
+    {
+        EXPECT_TRUE(this->test_ulong("-1"));
+        EXPECT_EQ(_uval, ULONG_MAX);
+    }
+    else
+    {
+        EXPECT_FALSE(this->test_ulong("-1"));
+    }
 
     EXPECT_FALSE(this->test_ulong("toto"));
     EXPECT_FALSE(this->test_ulong("toto1234"));
@@ -1341,6 +1357,54 @@ TEST_F(TestStr, test_str_to_signed_unsigned_float)
     EXPECT_FLOAT_EQ(str::to_float("2.5").value_or(0.f), 2.5f);
     EXPECT_FLOAT_EQ(str::to_float("-2.5e2").value_or(0.f), -250.f);
     EXPECT_FALSE(str::to_float("nope").has_value());
+}
+
+TEST_F(TestStr, test_str_regex_invalid_pattern)
+{
+    EXPECT_EQ(str::regex_match("hello", "(").error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(str::regex_search("hello", "(").error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(str::regex_replace("hello", "(", "x").error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(str::regex_filter(std::vector<std::string> {"hello"}, "(").error().code, ErrorCode::invalid_argument);
+}
+
+TEST_F(TestStr, test_str_regex_subject_too_large)
+{
+    const std::string big(str::default_regex_max_size + 1, 'a');
+    EXPECT_EQ(str::regex_match(big, "a+").error().code, ErrorCode::overflow);
+    EXPECT_EQ(str::regex_search(big, "a").error().code, ErrorCode::overflow);
+
+    EXPECT_TRUE(str::regex_match("hello", "hello").value());
+}
+
+TEST_F(TestStr, test_str_regex_max_size_argument)
+{
+    const std::string subject(16, 'a');
+    EXPECT_TRUE(str::regex_match(subject, "a+").value());
+    EXPECT_EQ(str::regex_match(subject, "a+", 8).error().code, ErrorCode::overflow);
+    EXPECT_TRUE(str::regex_match(subject, "a+", 16).value());
+}
+
+TEST_F(TestStr, test_str_split_pair_truncated_delimiter)
+{
+    auto pair = str::split_pair_view("key=", "==");
+    EXPECT_EQ(pair.first, "key");
+    EXPECT_TRUE(pair.second.empty());
+
+    pair = str::split_pair_view("ab", "bcd");
+    EXPECT_EQ(pair.first, "a");
+    EXPECT_TRUE(pair.second.empty());
+}
+
+TEST_F(TestStr, test_str_convert_from_string_range)
+{
+    EXPECT_FALSE(str::convert_from_string<uint8_t>("300").has_value());
+    EXPECT_FALSE(str::convert_from_string<int8_t>("200").has_value());
+    EXPECT_FALSE(str::convert_from_string<uint8_t>("1FF", 16).has_value());
+    EXPECT_FALSE(str::convert_from_string<int16_t>("40000").has_value());
+
+    EXPECT_EQ(str::convert_from_string<uint8_t>("255").value_or(0), 255);
+    EXPECT_EQ(str::convert_from_string<int8_t>("-128").value_or(0), -128);
+    EXPECT_EQ(str::convert_from_string<uint8_t>("FF", 16).value_or(0), 255);
 }
 
 } // namespace test

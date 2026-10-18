@@ -47,17 +47,25 @@ Url parse_navigator_url(std::string_view url)
 
 constexpr size_t meta_refresh_scan_limit = 64 * 1024;
 
+bool maybe_html(std::optional<std::string_view> content_type)
+{
+    if (!content_type)
+        return true;
+    std::string lowered(*content_type);
+    return sihd::util::str::to_lower(lowered).find("html") != std::string::npos;
+}
+
 std::string extract_meta_refresh_url(std::string_view body)
 {
     body = body.substr(0, meta_refresh_scan_limit);
     static const std::string meta_pattern = R"(<meta[^>]+http-equiv\s*=\s*["']?refresh["']?[^>]*>)";
     auto metas = sihd::util::str::regex_search(body, meta_pattern);
-    if (metas.empty())
+    if (SIHD_UNEXPECTED_LOG(metas) || metas->empty())
         return {};
-    auto url_kv = sihd::util::str::regex_search(metas[0], R"(url\s*=\s*[^"'\s>;]+)");
-    if (url_kv.empty())
+    auto url_kv = sihd::util::str::regex_search((*metas)[0], R"(url\s*=\s*[^"'\s>;]+)");
+    if (SIHD_UNEXPECTED_LOG(url_kv) || url_kv->empty())
         return {};
-    auto [_, url] = sihd::util::str::split_pair_view(url_kv[0], "=");
+    auto [_, url] = sihd::util::str::split_pair_view((*url_kv)[0], "=");
     return std::string(sihd::util::str::trim(url));
 }
 
@@ -376,9 +384,8 @@ sihd::util::Result<NavigatorResponse> Navigator::Impl::perform(const Navigation 
 
         if (!do_redirect)
         {
-            const auto content_type = sr.response.http_header().content_type();
-            const bool maybe_html = !content_type || content_type->find("html") != std::string_view::npos;
-            if (redirects.follow && redirect_count < redirects.max && maybe_html && !sr.response.content().empty())
+            const bool html = maybe_html(sr.response.http_header().content_type());
+            if (redirects.follow && redirect_count < redirects.max && html && !sr.response.content().empty())
             {
                 std::string meta_url = extract_meta_refresh_url(sr.response.content().cpp_str_view());
                 if (!meta_url.empty() && check_redirect_policy(navigation.url, meta_url))

@@ -25,7 +25,6 @@ class Worker: protected IRunnable
         Worker(std::function<bool()> method);
         ~Worker();
 
-        void set_worker_detach(bool active);
         void set_method(std::function<bool()> method);
         void set_runnable(IRunnable *runnable);
         virtual bool start_worker(std::string_view name);
@@ -47,7 +46,6 @@ class Worker: protected IRunnable
 
         std::atomic<bool> _started;
         std::atomic<bool> _running;
-        bool _detach;
         bool _sync_start;
         Synchronizer _start_sync;
         std::thread _worker_thread;

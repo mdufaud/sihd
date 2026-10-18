@@ -397,6 +397,12 @@ TEST_F(TestNavigator, test_navigator_meta_refresh)
         ASSERT_TRUE(resp.set_content({meta_page.data(), meta_page.size()}).has_value());
         resp.set_content_type("text/html");
     });
+    scope.server._webservice->set_entry_point(
+        "meta_mixed_case",
+        [&meta_page](const HttpRequest &, HttpResponse & resp) {
+            ASSERT_TRUE(resp.set_content({meta_page.data(), meta_page.size()}).has_value());
+            resp.set_content_type("Text/HTML; charset=UTF-8");
+        });
     scope.server._webservice->set_entry_point("meta_plain", [&meta_page](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_plain_content(meta_page));
     });
@@ -413,6 +419,10 @@ TEST_F(TestNavigator, test_navigator_meta_refresh)
     ASSERT_TRUE(html.has_value());
     EXPECT_EQ(html->content().cpp_str(), "arrived");
     EXPECT_NE(html->final_url().find("/api/dest"), std::string::npos);
+
+    auto mixed_case = nav.get("localhost:3001/api/meta_mixed_case");
+    ASSERT_TRUE(mixed_case.has_value());
+    EXPECT_EQ(mixed_case->content().cpp_str(), "arrived");
 
     auto plain = nav.get("localhost:3001/api/meta_plain");
     ASSERT_TRUE(plain.has_value());

@@ -328,6 +328,7 @@ void PyCoreApi::PyChannelHandler::add_channel_obs(Channel *channel, pybind11::fu
         std::lock_guard l(g_mutex_channel_handler_map);
         g_single_channel_handler_map.insert({channel, fun});
     }
+    pybind11::gil_scoped_release release;
     channel->add_observer(&g_channel_handler);
 }
 
@@ -337,6 +338,7 @@ void PyCoreApi::PyChannelHandler::remove_channel_obs(Channel *channel)
         std::lock_guard l(g_mutex_channel_handler_map);
         g_single_channel_handler_map.erase(channel);
     }
+    pybind11::gil_scoped_release release;
     channel->remove_observer(&g_channel_handler);
 }
 

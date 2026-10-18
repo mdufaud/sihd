@@ -24,19 +24,17 @@ class Provider: public sihd::util::IProvider<Type>
         bool provide(Type *value)
         {
             std::lock_guard l(_mutex);
-            if (_iterator != _container_ptr->end())
-            {
-                *value = *_iterator;
-                ++_iterator;
-                return true;
-            }
-            return false;
+            if (_container_ptr == nullptr || _iterator == _container_ptr->end())
+                return false;
+            *value = *_iterator;
+            ++_iterator;
+            return true;
         }
 
         bool providing() const
         {
             std::lock_guard l(_mutex);
-            return _iterator != _container_ptr->end();
+            return _container_ptr != nullptr && _iterator != _container_ptr->end();
         }
 
         void set_container(Container<Type> *iterator)
@@ -57,12 +55,16 @@ class Provider: public sihd::util::IProvider<Type>
         }
 
         Container<Type> *container() const { return _container_ptr; }
-        typename Container<Type>::iterator iterator() const { return _iterator; }
+        typename Container<Type>::iterator iterator() const
+        {
+            std::lock_guard l(_mutex);
+            return _container_ptr == nullptr ? typename Container<Type>::iterator() : _iterator;
+        }
 
     private:
         mutable std::mutex _mutex;
-        typename Container<Type>::iterator _iterator;
-        Container<Type> *_container_ptr;
+        typename Container<Type>::iterator _iterator {};
+        Container<Type> *_container_ptr = nullptr;
 };
 
 template <typename T>

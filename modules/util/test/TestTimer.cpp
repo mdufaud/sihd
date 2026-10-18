@@ -1,4 +1,6 @@
 #include <atomic>
+#include <future>
+#include <stdexcept>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -54,6 +56,22 @@ TEST_F(TestTimer, test_timer_destructor_cancels)
 
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     EXPECT_FALSE(fired.load());
+}
+
+TEST_F(TestTimer, test_timer_throwing_callback)
+{
+    std::promise<void> fired;
+    std::future<void> fired_future = fired.get_future();
+
+    {
+        Timer t(
+            [&fired] {
+                fired.set_value();
+                throw std::runtime_error("timer callback failure");
+            },
+            std::chrono::milliseconds(20));
+        EXPECT_EQ(fired_future.wait_for(std::chrono::seconds(2)), std::future_status::ready);
+    }
 }
 
 } // namespace test

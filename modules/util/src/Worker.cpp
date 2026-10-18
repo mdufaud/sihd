@@ -9,7 +9,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-Worker::Worker(): _started(false), _running(false), _detach(false), _sync_start(false), _start_sync(2) {}
+Worker::Worker(): _started(false), _running(false), _sync_start(false), _start_sync(2) {}
 
 Worker::Worker(IRunnable *runnable): Worker()
 {
@@ -24,11 +24,6 @@ Worker::Worker(std::function<bool()> method): Worker()
 Worker::~Worker()
 {
     this->stop_worker();
-}
-
-void Worker::set_worker_detach(bool active)
-{
-    _detach = active;
 }
 
 void Worker::set_method(std::function<bool()> method)
@@ -61,8 +56,6 @@ bool Worker::start_worker(std::string_view name)
     {
         _worker_thread_name = name;
         _worker_thread = std::thread(&Worker::pre_run, this);
-        if (_detach)
-            _worker_thread.detach();
     }
 
     _started = ret;

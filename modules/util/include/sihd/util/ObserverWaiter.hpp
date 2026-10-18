@@ -15,7 +15,7 @@ template <typename T>
 class ObserverWaiter: public IHandler<T *>
 {
     public:
-        ObserverWaiter(Observable<T> *obs = nullptr): _current_count(0), _last_waited_count(0), _obs_ptr(nullptr)
+        ObserverWaiter(Observable<T> *obs): _current_count(0), _last_waited_count(0), _obs_ptr(nullptr)
         {
             if (this->observe(obs) == false)
                 throw std::runtime_error("Error while adding observer");
@@ -41,13 +41,16 @@ class ObserverWaiter: public IHandler<T *>
         {
             if (obs == nullptr)
                 return false;
-            if (_obs_ptr != obs)
             {
-                this->clear();
-                if (obs->add_observer(this) == false)
-                    return false;
-                _obs_ptr = obs;
+                auto l = _waitable.guard();
+                if (_obs_ptr == obs)
+                    return true;
             }
+            this->clear();
+            if (obs->add_observer(this) == false)
+                return false;
+            auto l = _waitable.guard();
+            _obs_ptr = obs;
             return true;
         }
 
@@ -105,7 +108,11 @@ class ObserverWaiter: public IHandler<T *>
             return this->wait_for_nb(duration, total);
         }
 
-        Observable<T> *observing() const { return _obs_ptr; }
+        Observable<T> *observing() const
+        {
+            auto l = _waitable.guard();
+            return _obs_ptr;
+        }
 
         uint32_t notifications() const { return _current_count.load(); }
 
@@ -114,7 +121,7 @@ class ObserverWaiter: public IHandler<T *>
     private:
         std::atomic<uint32_t> _current_count;
         std::atomic<uint32_t> _last_waited_count;
-        Waitable _waitable;
+        mutable Waitable _waitable;
         Observable<T> *_obs_ptr;
 };
 

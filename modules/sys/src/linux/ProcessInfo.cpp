@@ -45,7 +45,8 @@ void for_each_pid(const std::function<bool(int)> & predicate)
 {
     for (const std::string & child : fs::children("/proc"))
     {
-        if (str::regex_match(child, "\\d+/") == false)
+        const auto numeric = str::regex_match(child, "\\d+/");
+        if (SIHD_UNEXPECTED_LOG(numeric) || *numeric == false)
             continue;
         const int pid = std::stoi(child);
         if (proc_exists(pid) && predicate(pid))
@@ -172,10 +173,10 @@ std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::strin
 {
     std::vector<ProcessInfo> processes;
     list_processes([&regex, &processes](std::string_view process_name, int pid) {
-        if (str::regex_match(process_name, regex))
-        {
-            processes.emplace_back(pid);
-        }
+        const auto matched = str::regex_match(process_name, regex);
+        if (SIHD_UNEXPECTED_LOG(matched) || *matched == false)
+            return false;
+        processes.emplace_back(pid);
         return false;
     });
     return processes;

@@ -1,7 +1,10 @@
+#include <atomic>
 #include <iostream>
+#include <thread>
 
 #include <gtest/gtest.h>
 
+#include <sihd/core/Core.hpp>
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
@@ -67,5 +70,27 @@ TEST_F(TestLuaCoreApi, test_luacoreapi_devpulsation)
     LuaUtilApi::load_tools(_vm);
     LuaCoreApi::load(_vm);
     this->do_script("test/core/lua/test_devpulsation.lua");
+}
+
+TEST_F(TestLuaCoreApi, test_luacoreapi_observer_threads)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaUtilApi::load_tools(_vm);
+    LuaCoreApi::load(_vm);
+
+    sihd::core::Core service("service");
+    ASSERT_TRUE(service.init());
+    std::atomic<bool> running = true;
+    std::thread toggler([&] {
+        while (running)
+        {
+            service.start();
+            service.stop();
+        }
+    });
+    _vm.set_ref("service", &service);
+    this->do_script("test/core/lua/test_observer_threads.lua");
+    running = false;
+    toggler.join();
 }
 } // namespace test

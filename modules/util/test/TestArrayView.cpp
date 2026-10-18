@@ -327,4 +327,18 @@ TEST_F(TestArrayView, test_arrayview_access_out_of_range)
     EXPECT_THROW(view.at(3), std::out_of_range);
 }
 
+TEST_F(TestArrayView, test_arrayview_equality_requires_same_size)
+{
+    Array<int> arr({1, 2, 3});
+    Array<int> prefix({1, 2});
+    Array<int> same({1, 2, 3});
+    Array<int> diff({1, 2, 4});
+
+    const ArrayView<int> view(arr);
+    EXPECT_TRUE(view == ArrayView<int>(same));
+    EXPECT_FALSE(view == ArrayView<int>(prefix));
+    EXPECT_TRUE(view != ArrayView<int>(prefix));
+    EXPECT_FALSE(view == ArrayView<int>(diff));
+}
+
 } // namespace test

@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
+#include <regex>
 
 #include <fmt/format.h>
 
@@ -145,6 +146,11 @@ int CliApp::run(int argc, char **argv)
     if (_statemachine.state() != State::none)
     {
         SIHD_LOG(error, "CliApp: run() called in state '{}'", _statemachine.state_name(_statemachine.state()));
+        return EXIT_FAILURE;
+    }
+    if (argc <= 0 || argv == nullptr)
+    {
+        SIHD_LOG(error, "CliApp: invalid argument vector");
         return EXIT_FAILURE;
     }
     std::vector<std::string> args(argv + 1, argv + argc); // argv[0] is the program name
@@ -535,7 +541,15 @@ bool CliApp::apply_sink_filters(ALogger *logger) const
             }
             *target = *level;
         }
-        logger->add_filter(new LoggerFilter(opts));
+        try
+        {
+            logger->add_filter(new LoggerFilter(opts));
+        }
+        catch (const std::regex_error & e)
+        {
+            SIHD_LOG(error, "CliApp: invalid filter regex in logging conf: {}", e.what());
+            return false;
+        }
     }
     return true;
 }

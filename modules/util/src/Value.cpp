@@ -18,6 +18,8 @@ Value::Value(double val): data({.d = val}), type(TYPE_DOUBLE) {}
 Value::Value(const uint8_t *buf, Type type)
 {
     const size_t type_size = type::size(type);
+    if (buf == nullptr)
+        throw std::invalid_argument("Value: buffer cannot be nullptr");
     if (type_size == 0 || type_size > sizeof(PrimitiveTypeHolder))
         throw std::invalid_argument("Value: no buffer constructor for this type");
     this->type = type;

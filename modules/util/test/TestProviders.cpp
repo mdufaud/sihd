@@ -168,4 +168,20 @@ TEST_F(TestProviders, test_provider_deque)
     EXPECT_FALSE(provider.provide(&value));
 }
 
+TEST_F(TestProviders, test_provider_no_container)
+{
+    int value = 0;
+    VectorProvider<int> provider;
+
+    EXPECT_FALSE(provider.providing());
+    EXPECT_FALSE(provider.provide(&value));
+
+    std::vector<int> lst = {3};
+    provider.set_container(&lst);
+    EXPECT_TRUE(provider.providing());
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 3);
+    EXPECT_FALSE(provider.provide(&value));
+}
+
 } // namespace test

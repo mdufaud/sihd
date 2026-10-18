@@ -1,6 +1,7 @@
 #include <map>
 #include <memory>
 #include <regex>
+#include <vector>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/sys/console.hpp>
@@ -772,16 +773,23 @@ void LuaUtilApi::load_base(Vm & vm)
                     std::lock_guard l(g_service_obs_mutex);
                     g_service_observers.emplace(self, std::move(obs));
                 }
+                LuaGilRelease release(state);
                 self->add_observer(ptr);
             })
         .addFunction(
             "remove_observers",
-            +[](ServiceController *self) {
-                std::lock_guard l(g_service_obs_mutex);
-                auto range = g_service_observers.equal_range(self);
-                for (auto it = range.first; it != range.second; ++it)
-                    self->remove_observer(it->second.get());
-                g_service_observers.erase(self);
+            +[](ServiceController *self, lua_State *state) {
+                std::vector<std::unique_ptr<LuaServiceObserver>> removed;
+                {
+                    std::lock_guard l(g_service_obs_mutex);
+                    auto range = g_service_observers.equal_range(self);
+                    for (auto it = range.first; it != range.second; ++it)
+                        removed.push_back(std::move(it->second));
+                    g_service_observers.erase(self);
+                }
+                LuaGilRelease release(state);
+                for (const auto & obs : removed)
+                    self->remove_observer(obs.get());
             })
         .endClass()
         /**

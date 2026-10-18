@@ -22,7 +22,7 @@ class LuaCoreApi
         class LuaChannelHandler: public sihd::util::IHandler<sihd::core::Channel *>
         {
             public:
-                LuaChannelHandler();
+                LuaChannelHandler(lua_State *state);
                 ~LuaChannelHandler();
 
                 void handle(sihd::core::Channel *c) override;
@@ -46,6 +46,7 @@ class LuaCoreApi
                         LuaUtilApi::LuaThreadRunner thread_runner;
                 };
 
+                lua_State *_state;
                 std::map<sihd::core::Channel *, LuaSingleChannelHandler> _map_handler;
                 std::mutex _mutex_map;
         };

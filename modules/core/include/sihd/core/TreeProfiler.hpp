@@ -7,6 +7,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -148,6 +149,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         size_t dropped_events() const;
 
         bool add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_front = false);
+        void remove_observer(sihd::util::IHandler<Event *> *obs);
 
         // capture window: start conditions latch and open it when all fire (also once at attach), stop
         // conditions likewise close it; the opening/closing notification is captured; paths resolve to the roots
@@ -331,6 +333,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         std::set<std::string> _warned_sources;
         std::set<std::string> _errored_sources;
         mutable DispatchQueue _dispatch_queue;
+        std::recursive_mutex _dispatch_mutex;
         sihd::util::Worker _worker;
         sihd::util::IClock *_clock_ptr = nullptr;
         sihd::util::SteadyClock _clock;

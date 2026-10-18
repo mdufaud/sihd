@@ -46,7 +46,7 @@ void LuaCoreApi::load(Vm & vm)
     // Create a handler for this VM
     {
         std::lock_guard l(_handler_map_mutex);
-        _handler_map[vm.lua_state()] = std::make_unique<LuaChannelHandler>();
+        _handler_map[vm.lua_state()] = std::make_unique<LuaChannelHandler>(vm.lua_state());
     }
 
     luabridge::getGlobalNamespace(vm.lua_state())
@@ -116,11 +116,13 @@ void LuaCoreApi::load(Vm & vm)
                 if (fun.isNil())
                 {
                     handler->remove_channel_obs(self);
+                    LuaGilRelease release(state);
                     self->remove_observer(handler);
                 }
                 else if (fun.isFunction())
                 {
                     handler->add_channel_obs(self, state, fun);
+                    LuaGilRelease release(state);
                     self->add_observer(handler);
                 }
                 else
@@ -293,12 +295,14 @@ void LuaCoreApi::load(Vm & vm)
 /* LuaChannelHandler */
 /* ************************************************************************* */
 
-LuaCoreApi::LuaChannelHandler::LuaChannelHandler() = default;
+LuaCoreApi::LuaChannelHandler::LuaChannelHandler(lua_State *state): _state(state) {}
 
 LuaCoreApi::LuaChannelHandler::~LuaChannelHandler() = default;
 
 void LuaCoreApi::LuaChannelHandler::handle(Channel *c)
 {
+    // GIL before _mutex_map: set_observer takes the map with the GIL held
+    LuaGilGuard guard(_state);
     {
         std::lock_guard l(_mutex_map);
         // find lua method

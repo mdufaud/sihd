@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <vector>
 
 #include <sihd/py/util/PyUtilApi.hpp>
 #include <sihd/util/AService.hpp>
@@ -298,14 +299,21 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
                      std::lock_guard l(g_service_obs_mutex);
                      g_service_observers.emplace(&self, std::move(obs));
                  }
+                 pybind11::gil_scoped_release release;
                  self.add_observer(ptr);
              })
         .def("remove_observers", [](ServiceController & self) {
-            std::lock_guard l(g_service_obs_mutex);
-            auto range = g_service_observers.equal_range(&self);
-            for (auto it = range.first; it != range.second; ++it)
-                self.remove_observer(it->second.get());
-            g_service_observers.erase(&self);
+            std::vector<std::unique_ptr<PyServiceObserver>> removed;
+            {
+                std::lock_guard l(g_service_obs_mutex);
+                auto range = g_service_observers.equal_range(&self);
+                for (auto it = range.first; it != range.second; ++it)
+                    removed.push_back(std::move(it->second));
+                g_service_observers.erase(&self);
+            }
+            pybind11::gil_scoped_release release;
+            for (const auto & obs : removed)
+                self.remove_observer(obs.get());
         });
 
     pybind11::class_<AService>(m_util, "AService")

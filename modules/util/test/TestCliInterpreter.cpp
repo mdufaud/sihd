@@ -79,8 +79,16 @@ TEST_F(TestCliInterpreter, test_completion)
 
     // the static dump carries the nodes of the whole tree
     std::string script = cli.bash_completion();
-    EXPECT_NE(script.find("complete -F _my_app -o default my-app"), std::string::npos);
+    EXPECT_NE(script.find("complete -F _my_app -o default \"my-app\""), std::string::npos);
     EXPECT_NE(script.find("\"service add\")"), std::string::npos);
+}
+
+TEST_F(TestCliInterpreter, test_completion_name_quoted)
+{
+    CliInterpreter cli("my;app");
+
+    const std::string script = cli.bash_completion();
+    EXPECT_NE(script.find("complete -F _my_app -o default \"my;app\""), std::string::npos);
 }
 
 TEST_F(TestCliInterpreter, test_completion_loader)

@@ -172,7 +172,10 @@ class ArrayView: public IArrayView
         bool is_equal(ArrayView<T> arr) const { return this->is_equal(arr.data(), arr.size()); }
 
         // compares memory from internal buffer and array of size
-        bool is_equal(const T *arr, size_t size) const { return this->is_bytes_equal(arr, size * this->data_size()); }
+        bool is_equal(const T *arr, size_t size) const
+        {
+            return _size == size && this->is_bytes_equal(arr, size * this->data_size());
+        }
 
         /*********************************************************************/
         /* copy_to */

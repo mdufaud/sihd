@@ -321,22 +321,6 @@ std::vector<std::string> to_columns_impl(std::span<T> words, size_t max_width, s
     return ret;
 }
 
-template <typename T>
-std::vector<std::string> regex_filter_impl(std::span<T> input, const std::string & pattern)
-{
-    std::regex regex_pattern(pattern);
-    std::vector<std::string> output;
-    for (const auto & entry : input)
-    {
-        const std::string_view view(entry);
-        if (std::regex_search(view.begin(), view.end(), regex_pattern))
-        {
-            output.emplace_back(view);
-        }
-    }
-    return output;
-}
-
 char glob_lower(char c)
 {
     return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
@@ -600,6 +584,47 @@ std::pair<size_t, std::string_view>
     return {0, {}};
 }
 
+Result<void> check_regex_subject(size_t size, size_t max_size)
+{
+    if (size > max_size)
+        return std::unexpected(Error(overflow, "regex subject too large: {} > {}", size, max_size));
+    return {};
+}
+
+Result<std::regex> compile_regex(const std::string & pattern)
+{
+    try
+    {
+        return std::regex(pattern);
+    }
+    catch (const std::regex_error & e)
+    {
+        return std::unexpected(Error(invalid_argument, "invalid regex '{}': {}", pattern, e.what()));
+    }
+}
+
+template <typename T>
+Result<std::vector<std::string>> regex_filter_impl(std::span<T> input, const std::string & pattern, size_t max_size)
+{
+    for (const auto & entry : input)
+    {
+        Result<void> subject = check_regex_subject(std::string_view(entry).size(), max_size);
+        SIHD_UNEXPECTED_RETURN(subject);
+    }
+    Result<std::regex> regex_pattern = compile_regex(pattern);
+    SIHD_UNEXPECTED_RETURN(regex_pattern);
+    std::vector<std::string> output;
+    for (const auto & entry : input)
+    {
+        const std::string_view view(entry);
+        if (std::regex_search(view.begin(), view.end(), *regex_pattern))
+        {
+            output.emplace_back(view);
+        }
+    }
+    return output;
+}
+
 } // namespace
 
 #if defined(__SIHD_WINDOWS__)
@@ -670,17 +695,23 @@ std::span<const char *> table_span(const char **table)
     return std::span<const char *>(table, str::table_len(table));
 }
 
-bool regex_match(std::string_view str, const std::string & pattern)
+Result<bool> regex_match(std::string_view str, const std::string & pattern, size_t max_size)
 {
-    std::regex regex_pattern(pattern);
-    return std::regex_match(str.begin(), str.end(), regex_pattern);
+    Result<void> subject = check_regex_subject(str.size(), max_size);
+    SIHD_UNEXPECTED_RETURN(subject);
+    Result<std::regex> regex_pattern = compile_regex(pattern);
+    SIHD_UNEXPECTED_RETURN(regex_pattern);
+    return std::regex_match(str.begin(), str.end(), *regex_pattern);
 }
 
-std::vector<std::string> regex_search(std::string_view str, const std::string & pattern)
+Result<std::vector<std::string>> regex_search(std::string_view str, const std::string & pattern, size_t max_size)
 {
-    std::regex regex_pattern(pattern);
+    Result<void> subject = check_regex_subject(str.size(), max_size);
+    SIHD_UNEXPECTED_RETURN(subject);
+    Result<std::regex> regex_pattern = compile_regex(pattern);
+    SIHD_UNEXPECTED_RETURN(regex_pattern);
     using sv_iterator = std::string_view::const_iterator;
-    std::regex_iterator<sv_iterator> it(str.begin(), str.end(), regex_pattern);
+    std::regex_iterator<sv_iterator> it(str.begin(), str.end(), *regex_pattern);
     const decltype(it) end;
 
     std::vector<std::string> matches;
@@ -692,25 +723,32 @@ std::vector<std::string> regex_search(std::string_view str, const std::string & 
     return matches;
 }
 
-std::string regex_replace(const std::string & str, const std::string & pattern, const std::string & replace)
+Result<std::string>
+    regex_replace(const std::string & str, const std::string & pattern, const std::string & replace, size_t max_size)
 {
-    std::regex regex_pattern(pattern);
-    return std::regex_replace(str, regex_pattern, replace);
+    Result<void> subject = check_regex_subject(str.size(), max_size);
+    SIHD_UNEXPECTED_RETURN(subject);
+    Result<std::regex> regex_pattern = compile_regex(pattern);
+    SIHD_UNEXPECTED_RETURN(regex_pattern);
+    return std::regex_replace(str, *regex_pattern, replace);
 }
 
-std::vector<std::string> regex_filter(std::span<const std::string> input, const std::string & pattern)
+Result<std::vector<std::string>>
+    regex_filter(std::span<const std::string> input, const std::string & pattern, size_t max_size)
 {
-    return regex_filter_impl(input, pattern);
+    return regex_filter_impl(input, pattern, max_size);
 }
 
-std::vector<std::string> regex_filter(std::span<std::string_view> input, const std::string & pattern)
+Result<std::vector<std::string>>
+    regex_filter(std::span<std::string_view> input, const std::string & pattern, size_t max_size)
 {
-    return regex_filter_impl(input, pattern);
+    return regex_filter_impl(input, pattern, max_size);
 }
 
-std::vector<std::string> regex_filter(std::span<const char *> input, const std::string & pattern)
+Result<std::vector<std::string>>
+    regex_filter(std::span<const char *> input, const std::string & pattern, size_t max_size)
 {
-    return regex_filter_impl(input, pattern);
+    return regex_filter_impl(input, pattern, max_size);
 }
 
 bool glob_match(std::string_view str, std::string_view pattern, bool ignore_case)
@@ -765,7 +803,7 @@ std::pair<std::string_view, std::string_view> split_pair_view(std::string_view s
     if (idx != std::string_view::npos)
     {
         ret.first = str.substr(0, idx);
-        ret.second = str.substr(idx + delimiter.length());
+        ret.second = str.substr(std::min(idx + delimiter.length(), str.size()));
     }
     return ret;
 }

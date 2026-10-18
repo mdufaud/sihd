@@ -397,7 +397,7 @@ TEST_F(TestCliApp, test_completion_dump)
     testing::internal::CaptureStdout();
     EXPECT_EQ(eval(app, {"--generate-bash-completion"}), EXIT_SUCCESS);
     std::string script = testing::internal::GetCapturedStdout();
-    EXPECT_NE(script.find("complete -F _my_app -o default my-app"), std::string::npos);
+    EXPECT_NE(script.find("complete -F _my_app -o default \"my-app\""), std::string::npos);
     EXPECT_NE(script.find("__my_app_node"), std::string::npos);
     EXPECT_NE(script.find("__my_app_values"), std::string::npos);
     EXPECT_NE(script.find("commands=\"service help\""), std::string::npos);
@@ -417,7 +417,7 @@ TEST_F(TestCliApp, test_completion_dump)
     testing::internal::CaptureStdout();
     EXPECT_EQ(eval(app, {"--generate-bash-completion=dynamic"}), EXIT_SUCCESS);
     std::string loader = testing::internal::GetCapturedStdout();
-    EXPECT_NE(loader.find("complete -F _my_app -o default my-app"), std::string::npos);
+    EXPECT_NE(loader.find("complete -F _my_app -o default \"my-app\""), std::string::npos);
     EXPECT_NE(loader.find("__complete"), std::string::npos);
     EXPECT_EQ(loader.find("__my_app_node"), std::string::npos);
 
@@ -556,7 +556,7 @@ TEST_F(TestCliApp, test_bare_run_piped_emits_completion)
     testing::internal::CaptureStdout();
     EXPECT_EQ(run_app(app, {}), EXIT_SUCCESS);
     std::string out = testing::internal::GetCapturedStdout();
-    EXPECT_NE(out.find("complete -F _my_app -o default my-app"), std::string::npos);
+    EXPECT_NE(out.find("complete -F _my_app -o default \"my-app\""), std::string::npos);
     EXPECT_EQ(out.find("Usage"), std::string::npos);
     EXPECT_FALSE(ran);
 
@@ -932,6 +932,7 @@ TEST_F(TestCliApp, test_log_conf_refused)
         // a bare CliApp installs no file sink
         R"({"sihd": {"logging": {"sinks": [{"logger": "file", "name": "f"}]}}})",
         R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "nope": "x"}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "source_regex": "("}]}}})",
     };
     for (const std::string & conf : bad_sink_confs)
     {

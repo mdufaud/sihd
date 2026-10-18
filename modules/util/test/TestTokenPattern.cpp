@@ -201,6 +201,27 @@ TEST_F(TestTokenPattern, test_tokenpattern_raw_specs)
     EXPECT_EQ(tokens[4].options.width, 0u);
 }
 
+TEST_F(TestTokenPattern, test_tokenpattern_non_classical_width_refused)
+{
+    TokenPattern pattern;
+    const sihd::util::Result<void> res = pattern.compile("{utc:99999%H}");
+    ASSERT_FALSE(res.has_value());
+    EXPECT_NE(res.error().message.find("width too large"), std::string::npos);
+}
+
+TEST_F(TestTokenPattern, test_tokenpattern_reserve_hint_capped)
+{
+    std::string big;
+    for (int i = 0; i < 300; ++i)
+        big += "{a:4096}";
+
+    TokenPattern pattern;
+    const sihd::util::Result<void> res = pattern.compile(big);
+    ASSERT_FALSE(res.has_value());
+    EXPECT_NE(res.error().message.find("reserve"), std::string::npos);
+    EXPECT_EQ(pattern.reserve_hint(), 0u);
+}
+
 TEST_F(TestTokenPattern, test_tokenpattern_reserve_hint)
 {
     TokenPattern pattern;

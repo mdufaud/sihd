@@ -1,4 +1,5 @@
 #include <random>
+#include <utility>
 
 #include <sihd/util/num.hpp>
 
@@ -7,6 +8,8 @@ namespace sihd::util::num
 
 uint64_t rand(uint64_t from, uint64_t to)
 {
+    if (from > to)
+        std::swap(from, to);
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<uint64_t> dist(from, to);
@@ -15,6 +18,8 @@ uint64_t rand(uint64_t from, uint64_t to)
 
 float frand(float from, float to)
 {
+    if (from > to)
+        std::swap(from, to);
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_real_distribution<float> dist(from, to);
@@ -23,6 +28,8 @@ float frand(float from, float to)
 
 double drand(double from, double to)
 {
+    if (from > to)
+        std::swap(from, to);
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_real_distribution<double> dist(from, to);
@@ -31,6 +38,8 @@ double drand(double from, double to)
 
 size_t size(uint64_t number, uint16_t base)
 {
+    if (base < 2)
+        return 0;
     size_t ret = 0;
     while (number != 0)
     {

@@ -1,10 +1,13 @@
 #include <fmt/format.h>
 
 #include <sihd/http/navigator/LinkExtractor.hpp>
+#include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::http
 {
+
+SIHD_LOGGER;
 
 namespace
 {
@@ -46,10 +49,10 @@ std::string extract_attr(const std::string & tag, std::string_view attr_name)
 {
     std::string pattern = fmt::format(R"({}\s*=\s*["'][^"']*["'])", attr_name);
     auto matches = sihd::util::str::regex_search(tag, pattern);
-    if (matches.empty())
+    if (SIHD_UNEXPECTED_LOG(matches) || matches->empty())
         return {};
 
-    auto [_, raw] = sihd::util::str::split_pair_view(matches[0], "=");
+    auto [_, raw] = sihd::util::str::split_pair_view((*matches)[0], "=");
     raw = sihd::util::str::trim(raw);
     if (raw.size() >= 2 && (raw.front() == '"' || raw.front() == '\''))
         return std::string(raw.substr(1, raw.size() - 2));
@@ -69,8 +72,10 @@ void extract_tag(std::vector<ExtractedLink> & out,
         pattern = fmt::format(R"(<{}\s[^>]*{}\s*=\s*["'][^"']*["'][^>]*>)", tag_name, url_attr);
 
     auto tags = sihd::util::str::regex_search(html, pattern);
+    if (SIHD_UNEXPECTED_LOG(tags))
+        return;
 
-    for (const auto & tag : tags)
+    for (const auto & tag : *tags)
     {
         std::string href = extract_attr(tag, url_attr);
         if (href.empty())
@@ -84,8 +89,9 @@ void extract_tag(std::vector<ExtractedLink> & out,
         if (tag_name == "a")
         {
             auto text_matches = sihd::util::str::regex_search(tag, R"(>([^<]*)<)");
-            if (!text_matches.empty() && text_matches[0].size() > 2)
-                link.text = text_matches[0].substr(1, text_matches[0].size() - 2);
+            const bool text_found = !SIHD_UNEXPECTED_LOG(text_matches);
+            if (text_found && !text_matches->empty() && (*text_matches)[0].size() > 2)
+                link.text = (*text_matches)[0].substr(1, (*text_matches)[0].size() - 2);
         }
         else if (tag_name == "img")
         {

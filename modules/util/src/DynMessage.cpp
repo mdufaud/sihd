@@ -84,7 +84,9 @@ void DynMessage::_play_rules(const std::string & name, const IMessageField *fiel
     const auto it = _rules.find(name);
     if (it == _rules.end())
         return;
-    for (const auto & [id, callback] : it->second)
+    // callbacks may add or remove rules on this field
+    const auto entries = it->second;
+    for (const auto & [id, callback] : entries)
         callback(*this, *field);
 }
 
@@ -92,9 +94,14 @@ bool DynMessage::field_read_from(const void *buffer, size_t size)
 {
     size_t current = 0;
     _total_dyn_size = 0;
-    for (const auto & name : this->children_keys())
+    // rules may add or remove children
+    const std::vector<std::string> keys = this->children_keys();
+    for (const auto & name : keys)
     {
-        IMessageField *field = _fields.at(name);
+        const auto fit = _fields.find(name);
+        if (fit == _fields.end())
+            continue;
+        IMessageField *field = fit->second;
         if (this->_is_hidden(field))
             continue;
         if (current + field->field_byte_size() > size)
@@ -117,9 +124,13 @@ bool DynMessage::field_read_from(const void *buffer, size_t size)
 bool DynMessage::field_write_to(void *buffer, size_t size)
 {
     size_t current = 0;
-    for (const auto & name : this->children_keys())
+    const std::vector<std::string> keys = this->children_keys();
+    for (const auto & name : keys)
     {
-        IMessageField *field = _fields.at(name);
+        const auto fit = _fields.find(name);
+        if (fit == _fields.end())
+            continue;
+        IMessageField *field = fit->second;
         if (this->_is_hidden(field))
             continue;
         if (current + field->field_byte_size() > size)

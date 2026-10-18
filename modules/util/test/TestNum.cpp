@@ -82,4 +82,38 @@ TEST_F(TestNum, test_num_substract_no_overflow)
     EXPECT_EQ(num::substract_no_overflow(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::min()), 0l);
 }
 
+TEST_F(TestNum, test_num_size_invalid_base)
+{
+    EXPECT_EQ(num::size(0, 10), 1u);
+    EXPECT_EQ(num::size(0, 0), 0u);
+    EXPECT_EQ(num::size(12345, 0), 0u);
+    EXPECT_EQ(num::size(1, 1), 0u);
+    EXPECT_EQ(num::size(255, 16), 2u);
+}
+
+TEST_F(TestNum, test_num_rand_swapped_bounds)
+{
+    for (int i = 0; i < 100; ++i)
+    {
+        const uint64_t value = num::rand(100, 10);
+        EXPECT_GE(value, 10u);
+        EXPECT_LE(value, 100u);
+    }
+    for (int i = 0; i < 100; ++i)
+    {
+        const double value = num::drand(1.0, -1.0);
+        EXPECT_GE(value, -1.0);
+        EXPECT_LE(value, 1.0);
+    }
+}
+
+TEST_F(TestNum, test_num_near_signedness)
+{
+    EXPECT_TRUE(num::near<size_t>(3, 5, 4));
+    EXPECT_FALSE(num::near<size_t>(3, 5, 1));
+    EXPECT_TRUE(num::near<double>(3, 5, 4.0));
+    EXPECT_TRUE(num::near<int>(-3, 3, 7));
+    EXPECT_FALSE(num::near<int>(-3, 3, 5));
+}
+
 } // namespace test

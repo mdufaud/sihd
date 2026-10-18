@@ -5,6 +5,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <limits>
 #include <string>
 
 #include <sihd/util/traits.hpp>
@@ -51,7 +52,7 @@ static constexpr auto ms_to_tv = milli_to_tv;
 static constexpr auto milliseconds_to_tv = milli_to_tv;
 // nano -> timeval (micro resolution)
 struct timeval to_tv(UnixTime micro);
-// nano -> timeval (nano resolution)
+// nano -> timeval holding nanoseconds in tv_usec [0, 1E9): only round-trips through nano_tv
 struct timeval to_nano_tv(UnixTime nano);
 
 /*
@@ -145,9 +146,12 @@ constexpr UnixTime days(UnixTime day)
 // hz -> nano
 constexpr UnixTime freq(double hz)
 {
-    if (hz < 0.0)
+    if (hz <= 0.0)
         return 0;
-    return (double)(1. / hz) * 1E9;
+    const double period_nano = (1. / hz) * 1E9;
+    if (period_nano >= (double)std::numeric_limits<UnixTime>::max())
+        return std::numeric_limits<UnixTime>::max();
+    return (UnixTime)period_nano;
 }
 static constexpr auto frequency = freq;
 static constexpr auto hz = freq;

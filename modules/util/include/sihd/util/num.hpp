@@ -3,8 +3,10 @@
 
 #include <sys/types.h>
 
+#include <cmath>
 #include <cstdint>
 #include <limits>
+#include <type_traits>
 
 namespace sihd::util::num
 {
@@ -18,7 +20,15 @@ size_t size(uint64_t number, uint16_t base);
 template <typename T>
 bool near(const T & value, const T & expected, const T & abs_error)
 {
-    return std::abs(value - expected) <= std::abs(abs_error);
+    if constexpr (std::is_unsigned_v<T>)
+    {
+        const T diff = value > expected ? value - expected : expected - value;
+        return diff <= abs_error;
+    }
+    else
+    {
+        return std::abs(value - expected) <= std::abs(abs_error);
+    }
 }
 
 template <typename T>

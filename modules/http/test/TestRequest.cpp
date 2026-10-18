@@ -327,7 +327,10 @@ TEST_F(TestRequest, test_stateless_connections)
     EXPECT_EQ(get_count, 2);
 }
 
-TEST_F(TestRequest, test_post_large_body_sends_no_expect_header)
+namespace
+{
+
+void capture_post_head(std::string & request_head, const RequestOptions & options)
 {
     sihd::net::Socket listener;
     ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, 0).has_value());
@@ -338,7 +341,6 @@ TEST_F(TestRequest, test_post_large_body_sends_no_expect_header)
     ASSERT_GT(port, 0);
 
     const std::string body(2 * 1024 * 1024, 'x');
-    std::string request_head;
     Worker worker([&] {
         sihd::net::Socket conn(listener.accept(5000).value_or(-1));
         if (!conn.is_open() || !conn.set_recv_timeout(5000).has_value())
@@ -352,21 +354,46 @@ TEST_F(TestRequest, test_post_large_body_sends_no_expect_header)
             if (!size || *size == 0)
                 return false;
             received.append(buffer, *size);
+            if (head_end != std::string::npos)
+                continue;
+            head_end = received.find("\r\n\r\n");
             if (head_end == std::string::npos)
-                head_end = received.find("\r\n\r\n");
+                continue;
+            request_head = received.substr(0, head_end);
+            constexpr std::string_view proceed = "HTTP/1.1 100 Continue\r\n\r\n";
+            if (request_head.find("Expect: 100-continue") != std::string::npos
+                && !conn.send_all({proceed.data(), proceed.size()}).has_value())
+                return false;
         }
-        request_head = received.substr(0, head_end);
         constexpr std::string_view reply = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
         return conn.send_all({reply.data(), reply.size()}).has_value();
     });
     ASSERT_TRUE(worker.start_sync_worker("expect-capture"));
     sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
 
-    auto resp = http::post(fmt::format("localhost:{}/upload", port), body);
+    auto resp = http::post(fmt::format("127.0.0.1:{}/upload", port), body, options);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     ASSERT_TRUE(worker.stop_worker());
+    ASSERT_FALSE(request_head.empty());
+}
+
+} // namespace
+
+TEST_F(TestRequest, test_post_large_body_sends_no_expect_header)
+{
+    std::string request_head;
+    capture_post_head(request_head, RequestOptions::none());
     EXPECT_EQ(request_head.find("Expect"), std::string::npos);
+}
+
+TEST_F(TestRequest, test_post_keeps_caller_expect_header)
+{
+    RequestOptions options;
+    options.headers["Expect"] = "100-continue";
+    std::string request_head;
+    capture_post_head(request_head, options);
+    EXPECT_NE(request_head.find("Expect: 100-continue"), std::string::npos);
 }
 
 TEST_F(TestRequest, test_put_file)

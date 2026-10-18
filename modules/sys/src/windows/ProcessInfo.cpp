@@ -296,10 +296,10 @@ std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::strin
 {
     std::vector<ProcessInfo> processes;
     list_processes([&regex, &processes](std::string_view process_name, int pid) {
-        if (str::regex_match(process_name, regex))
-        {
-            processes.emplace_back(pid);
-        }
+        const auto matched = str::regex_match(process_name, regex);
+        if (SIHD_UNEXPECTED_LOG(matched) || *matched == false)
+            return false;
+        processes.emplace_back(pid);
         return false;
     });
     return processes;

@@ -49,4 +49,11 @@ TEST_F(TestPyCoreApi, test_pycore_observer)
     py_interpreter();
     EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer.py"));
 }
+
+TEST_F(TestPyCoreApi, test_pycore_observer_threads)
+{
+    DirectorySwitcher d(lib_path());
+    py_interpreter();
+    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer_threads.py"));
+}
 } // namespace test

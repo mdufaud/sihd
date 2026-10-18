@@ -36,7 +36,7 @@ struct LogInfo
         const char *strlevel;
         pthread_t thread_id;
         std::string thread_id_str;
-        std::string_view thread_name;
+        std::string thread_name;
         struct timespec timespec;
 
         static const char *level_str(LogLevel level);

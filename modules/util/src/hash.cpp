@@ -108,10 +108,10 @@ void sha1_update(SHA1Context *ctx, const uint8_t *data, size_t len)
 
     j = (ctx->count[0] >> 3) & 63;
 
-    if ((ctx->count[0] += len << 3) < (len << 3))
-        ctx->count[1]++;
-
-    ctx->count[1] += (len >> 29);
+    const uint64_t bits = (uint64_t)len << 3;
+    const uint32_t previous = ctx->count[0];
+    ctx->count[0] = previous + (uint32_t)bits;
+    ctx->count[1] += (uint32_t)(bits >> 32) + (ctx->count[0] < previous ? 1u : 0u);
 
     if ((j + len) > 63)
     {

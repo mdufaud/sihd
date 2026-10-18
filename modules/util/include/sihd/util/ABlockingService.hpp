@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_ABLOCKINGSERVICE_HPP__
 #define __SIHD_UTIL_ABLOCKINGSERVICE_HPP__
 
+#include <atomic>
 #include <mutex>
 
 #include <sihd/util/AService.hpp>
@@ -39,10 +40,10 @@ class ABlockingService: public sihd::util::AService
 
     private:
         mutable std::mutex _running_mutex;
-        bool _running;
+        std::atomic<bool> _running;
         mutable Waitable _waitable;
-        bool _ready;
-        bool _wait_stop;
+        std::atomic<bool> _ready;
+        std::atomic<bool> _wait_stop;
 };
 
 } // namespace sihd::util

@@ -189,4 +189,29 @@ TEST_F(TestNode, test_node_remove_children)
     EXPECT_EQ(root.get_child("c"), nullptr);
 }
 
+TEST_F(TestNode, test_node_add_child_guards)
+{
+    Node root("root");
+    Node *child = root.add_child<Node>("child");
+    ASSERT_NE(child, nullptr);
+
+    auto self = root.add_child("self", &root, false);
+    ASSERT_FALSE(self);
+    EXPECT_EQ(self.error().code, ErrorCode::invalid_argument);
+
+    auto twice = root.add_child("child_alias", child, true);
+    ASSERT_FALSE(twice);
+    EXPECT_EQ(twice.error().code, ErrorCode::already_exists);
+
+    Node other("other");
+    auto stolen = other.add_child("child", child, true);
+    ASSERT_FALSE(stolen);
+    EXPECT_EQ(stolen.error().code, ErrorCode::invalid_argument);
+    EXPECT_TRUE(other.add_child("child", child, false));
+
+    auto cycle = child->add_child("root", &root, false);
+    ASSERT_FALSE(cycle);
+    EXPECT_EQ(cycle.error().code, ErrorCode::invalid_argument);
+}
+
 } // namespace test

@@ -10,6 +10,7 @@ namespace
 {
 
 constexpr size_t max_width = 4096;
+constexpr size_t max_reserve_hint = 1024 * 1024;
 constexpr std::string_view digits = "0123456789";
 constexpr std::string_view name_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
 
@@ -83,7 +84,7 @@ sihd::util::Result<TokenPattern::Token> parse_field(std::string_view view, size_
             return std::unexpected(Error(ErrorCode::invalid_argument, "unterminated field at {}", token.offset));
         token.raw_spec = view.substr(spec_begin, index - spec_begin);
         token.classical = parse_classical(token.raw_spec, token.options);
-        if (token.classical && token.options.width > max_width)
+        if (token.options.width > max_width)
             return std::unexpected(Error(ErrorCode::invalid_argument, "width too large at {}", token.offset));
     }
     if (index == view.size() || view[index] != '}')
@@ -132,6 +133,8 @@ sihd::util::Result<void> TokenPattern::compile(std::string_view pattern)
     size_t reserve_hint = 0;
     for (const Token & token : tokens)
         reserve_hint += token.name.empty() ? token.text.size() : token.options.width;
+    if (reserve_hint > max_reserve_hint)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "pattern reserve too large: {}", reserve_hint));
     _pattern = std::move(owned);
     _tokens = std::move(tokens);
     _reserve_hint = reserve_hint;

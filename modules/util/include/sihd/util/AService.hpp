@@ -33,7 +33,7 @@ class AService
         virtual IServiceController *service_ctrl() { return nullptr; };
 
         // enable observation but prevent calling notify
-        ObservableDelegate<AService>::Protector service_state() { return _service_state.get_protected_obs(); }
+        Observable<AService> & service_state() { return _service_state; }
 
         virtual bool setup();
         virtual bool init();

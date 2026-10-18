@@ -189,6 +189,8 @@ double to_double_milliseconds(UnixTime nano)
 
 double to_freq(UnixTime nano)
 {
+    if (nano <= 0)
+        return 0;
     return (1 / (double)(nano / 1E9));
 }
 

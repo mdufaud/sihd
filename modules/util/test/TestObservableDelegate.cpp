@@ -34,8 +34,7 @@ TEST_F(TestObservableDelegate, test_observable_delegate_notify)
     int received_val = -1;
     Handler<DelegateSource *> handler([&](DelegateSource *ptr) { received_val = ptr->val; });
 
-    auto protector = delegate.get_protected_obs();
-    protector.add_observer(&handler);
+    delegate.add_observer(&handler);
     delegate.notify_observers_delegate();
 
     EXPECT_EQ(received_val, 42);
@@ -45,25 +44,25 @@ TEST_F(TestObservableDelegate, test_observable_delegate_notify)
     EXPECT_EQ(received_val, 99);
 }
 
-TEST_F(TestObservableDelegate, test_observable_delegate_protector)
+TEST_F(TestObservableDelegate, test_observable_delegate_base_view)
 {
     DelegateSource source {0};
     ObservableDelegate<DelegateSource> delegate(&source);
 
-    auto protector = delegate.get_protected_obs();
+    Observable<DelegateSource> & observable = delegate;
 
     int call_count = 0;
     Handler<DelegateSource *> handler([&]([[maybe_unused]] DelegateSource *ptr) { ++call_count; });
 
-    EXPECT_FALSE(protector.is_observer(&handler));
-    EXPECT_TRUE(protector.add_observer(&handler));
-    EXPECT_TRUE(protector.is_observer(&handler));
+    EXPECT_FALSE(observable.is_observer(&handler));
+    EXPECT_TRUE(observable.add_observer(&handler));
+    EXPECT_TRUE(observable.is_observer(&handler));
 
     delegate.notify_observers_delegate();
     EXPECT_EQ(call_count, 1);
 
-    protector.remove_observer(&handler);
-    EXPECT_FALSE(protector.is_observer(&handler));
+    observable.remove_observer(&handler);
+    EXPECT_FALSE(observable.is_observer(&handler));
 
     delegate.notify_observers_delegate();
     EXPECT_EQ(call_count, 1);

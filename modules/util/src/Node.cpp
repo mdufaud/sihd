@@ -59,6 +59,18 @@ void add_children_informations(const Node *node, std::string & s, Node::TreeOpts
     }
 }
 
+bool is_ancestor(const Named *node, const Named *child)
+{
+    const Named *parent = child->parent();
+    while (parent != nullptr)
+    {
+        if (parent == node)
+            return true;
+        parent = parent->parent();
+    }
+    return false;
+}
+
 void add_node_informations(const Node *node, std::string & s, Node::TreeOpts opts)
 {
     opts.current_recursion += 1;
@@ -103,6 +115,24 @@ sihd::util::Result<void> Node::add_child(const std::string & name, Named *child,
 {
     if (this->get_child(name) != nullptr)
         return std::unexpected(Error(already_exists, "child '{}' already exists in '{}'", name, this->full_name()));
+    if (child == this)
+        return std::unexpected(Error(invalid_argument, "'{}' cannot add itself as child", this->full_name()));
+    if (is_ancestor(child, this))
+        return std::unexpected(Error(invalid_argument,
+                                     "'{}' cannot add its ancestor '{}' as child",
+                                     this->full_name(),
+                                     child->full_name()));
+    if (ownership)
+    {
+        if (this->has_ownership(child))
+            return std::unexpected(Error(already_exists, "'{}' already owns '{}'", this->full_name(), child->name()));
+        if (child->parent() != nullptr && child->parent() != this)
+            return std::unexpected(Error(invalid_argument,
+                                         "'{}' cannot own '{}' which has parent '{}'",
+                                         this->full_name(),
+                                         child->full_name(),
+                                         child->parent()->full_name()));
+    }
     if (!this->on_add_child(name, child))
         return std::unexpected(
             Error(permission_denied, "'{}' refused child '{}' from '{}'", this->full_name(), name, child->name()));

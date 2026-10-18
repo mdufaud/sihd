@@ -161,7 +161,7 @@ std::string
     render_static_completion(std::string_view name, std::string_view func, const std::vector<std::string> & node_lines)
 {
     return str::replace(static_completion_template,
-                        {{"{name}", name},
+                        {{"{name}", bash_quote(name)},
                          {"{func}", func},
                          {"{log_level}", bash_quote("--log-level")},
                          {"{log_level_values}", str::join(completion_values("--log-level"), " ")},
@@ -184,7 +184,7 @@ complete -F _{func} -o default {name}
 std::string render_loader_completion(std::string_view name, std::string_view func)
 {
     return str::replace(loader_completion_template,
-                        {{"{name}", name}, {"{func}", func}, {"{complete_command}", complete_command}});
+                        {{"{name}", bash_quote(name)}, {"{func}", func}, {"{complete_command}", complete_command}});
 }
 
 } // namespace

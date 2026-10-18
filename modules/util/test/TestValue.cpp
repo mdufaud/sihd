@@ -268,4 +268,10 @@ TEST_F(TestValue, test_value_from_bool_char_float_strings)
     EXPECT_TRUE(Value::from_float_string("25").empty());
 }
 
+TEST_F(TestValue, test_value_null_buffer)
+{
+    EXPECT_THROW(Value(nullptr, TYPE_INT), std::invalid_argument);
+    EXPECT_THROW(Value(nullptr, TYPE_NONE), std::invalid_argument);
+}
+
 } // namespace test
