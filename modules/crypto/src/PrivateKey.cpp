@@ -40,9 +40,10 @@ sihd::util::Result<void> PrivateKey::generate_rsa(int bits)
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr));
     if (ctx == nullptr)
         return make_error("EVP_PKEY_CTX_new_id");
-    std::unique_ptr<EVP_PKEY, PkeyFree> key;
+    EVP_PKEY *raw = nullptr;
     const bool ok = EVP_PKEY_keygen_init(ctx.get()) > 0 && EVP_PKEY_CTX_set_rsa_keygen_bits(ctx.get(), bits) > 0
-                    && EVP_PKEY_keygen(ctx.get(), std::out_ptr(key)) > 0;
+                    && EVP_PKEY_keygen(ctx.get(), &raw) > 0;
+    std::unique_ptr<EVP_PKEY, PkeyFree> key(raw);
     if (!ok || key == nullptr)
         return make_error("RSA keygen");
     _handle = make_handle(key.release());
@@ -62,9 +63,10 @@ sihd::util::Result<void> PrivateKey::generate_ec(std::string_view curve_name)
         OSSL_PARAM_construct_utf8_string("group", curve.data(), 0),
         OSSL_PARAM_END,
     };
-    std::unique_ptr<EVP_PKEY, PkeyFree> key;
+    EVP_PKEY *raw = nullptr;
     const bool ok = EVP_PKEY_keygen_init(ctx.get()) > 0 && EVP_PKEY_CTX_set_params(ctx.get(), params) > 0
-                    && EVP_PKEY_keygen(ctx.get(), std::out_ptr(key)) > 0;
+                    && EVP_PKEY_keygen(ctx.get(), &raw) > 0;
+    std::unique_ptr<EVP_PKEY, PkeyFree> key(raw);
     if (!ok || key == nullptr)
         return make_error("EC keygen for curve '{}'", curve_name);
     _handle = make_handle(key.release());
