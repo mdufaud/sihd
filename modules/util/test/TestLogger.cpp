@@ -155,7 +155,11 @@ class BlockingSink: public ALogger
 
         void release()
         {
-            _released.store(true, std::memory_order_relaxed);
+            {
+                // under the mutex: a store between the waiter's check and its sleep would be a lost wakeup
+                auto lock = _waitable.guard();
+                _released.store(true, std::memory_order_relaxed);
+            }
             _waitable.notify_all();
         }
 

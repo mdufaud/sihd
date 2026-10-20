@@ -6,14 +6,18 @@
 namespace sihd::util::num
 {
 
+uint64_t seed()
+{
+    std::random_device dev;
+    return std::uniform_int_distribution<uint64_t>()(dev);
+}
+
 uint64_t rand(uint64_t from, uint64_t to)
 {
     if (from > to)
         std::swap(from, to);
     std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_int_distribution<uint64_t> dist(from, to);
-    return dist(rng);
+    return std::uniform_int_distribution<uint64_t>(from, to)(dev);
 }
 
 float frand(float from, float to)

@@ -124,6 +124,8 @@ std::string_view trim(std::string_view s);
 
 std::string & to_upper(std::string & s);
 std::string & to_lower(std::string & s);
+std::string to_upper_copy(std::string_view s);
+std::string to_lower_copy(std::string_view s);
 std::string replace(std::string_view s, std::string_view from, std::string_view to);
 // replaces every listed token in a single left-to-right pass, the first listed token winning at each position
 std::string replace(std::string_view s, std::initializer_list<std::pair<std::string_view, std::string_view>> pairs);

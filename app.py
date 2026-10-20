@@ -21,6 +21,7 @@ modules = {
         "extlibs": ['fmt'],
     },
     "json": {
+        "depends": ['pch'],
         "extlibs": ['simdjson'],
         "export-libs": ['simdjson'],
         # emscripten: build with atomics so objects are link-compatible
@@ -117,14 +118,14 @@ modules = {
     "net": {
         # emscripten proxies neither poll() nor raw sockets
         "exclude-platforms": ["web"],
-        "depends": ['sys', 'core', 'crypto'],
+        "depends": ['sys', 'core', 'crypto', 'pch'],
         "windows-libs": ['iphlpapi'],
         "export-windows-libs": ['iphlpapi'],
     },
     "http": {
         # no libwebsockets port for web/android
         "exclude-platforms": ["web", "android"],
-        "depends": ['curl', 'net'],
+        "depends": ['curl', 'net', 'pch'],
         "extlibs": [
             'libwebsockets',
             'zlib',
@@ -176,7 +177,7 @@ modules = {
     },
     "pcap": {
         "exclude-platforms": ["android"],
-        "depends": ['net'],
+        "depends": ['net', 'pch'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
         "parse-configs": [
@@ -320,7 +321,7 @@ conditional_modules = {
     },
     "luabin": {
         "conditional-env": "lua",
-        "depends": ['lua'],
+        "depends": ['lua', 'pch'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter"],
     },
@@ -340,6 +341,19 @@ cppcheck = {
     "std": "c++23",
     "undefines": ["SIHD_LOGGING_OFF"],
 }
+
+# max severity="error" findings tolerated; None = fail on any finding
+cppcheck_fail_under = 0
+
+# minimum coverage percent for make covtest; None = no gate
+gcov_fail_under = 80
+gcov_fail_under_branch = 70
+
+# False drops per-module gtest xml once merged into test/report.xml
+test_module_reports = False
+
+# seconds per test binary on non-interactive runs (itest, iasantest...): none takes 2 minutes, even emulated
+test_timeout = 120
 
 
 def __get_python_libname():

@@ -1003,6 +1003,11 @@ TEST_F(TestStr, test_str_lowerupper)
     std::string s = "Hello World @123";
     EXPECT_EQ(str::to_lower(s), "hello world @123");
     EXPECT_EQ(str::to_upper(s), "HELLO WORLD @123");
+
+    const std::string_view original = "Hello World @123";
+    EXPECT_EQ(str::to_lower_copy(original), "hello world @123");
+    EXPECT_EQ(str::to_upper_copy(original), "HELLO WORLD @123");
+    EXPECT_EQ(original, "Hello World @123");
 }
 
 TEST_F(TestStr, test_str_replace)

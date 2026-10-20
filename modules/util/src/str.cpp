@@ -924,6 +924,18 @@ std::string & to_lower(std::string & s)
     return s;
 }
 
+std::string to_upper_copy(std::string_view s)
+{
+    std::string copy(s);
+    return to_upper(copy);
+}
+
+std::string to_lower_copy(std::string_view s)
+{
+    std::string copy(s);
+    return to_lower(copy);
+}
+
 std::string replace(std::string_view s, std::string_view from, std::string_view to)
 {
     if (from.empty())

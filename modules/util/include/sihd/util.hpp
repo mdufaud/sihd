@@ -30,7 +30,6 @@
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/ILoggerFilter.hpp>
 #include <sihd/util/IMessageField.hpp>
-#include <sihd/util/IObservable.hpp>
 #include <sihd/util/IObserverWatcher.hpp>
 #include <sihd/util/IProvider.hpp>
 #include <sihd/util/IReader.hpp>
@@ -58,6 +57,7 @@
 #include <sihd/util/ObserverWaiter.hpp>
 #include <sihd/util/ObserverWatcher.hpp>
 #include <sihd/util/Providers.hpp>
+#include <sihd/util/Random.hpp>
 #include <sihd/util/RateLimiter.hpp>
 #include <sihd/util/RingBuffer.hpp>
 #include <sihd/util/Runnable.hpp>

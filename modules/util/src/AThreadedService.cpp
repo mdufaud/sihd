@@ -45,7 +45,7 @@ bool AThreadedService::do_stop()
 
 void AThreadedService::notify_service_thread_started()
 {
-    if (_sync_ptr)
+    if (_start_synchronised && _sync_ptr)
         _sync_ptr->sync();
 }
 

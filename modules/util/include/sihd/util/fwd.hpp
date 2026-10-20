@@ -20,9 +20,6 @@ template <typename... T>
 class IHandler;
 
 template <typename T>
-class IObservable;
-
-template <typename T>
 class IProvider;
 
 class ISteppable;

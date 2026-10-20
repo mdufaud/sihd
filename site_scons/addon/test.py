@@ -6,4 +6,6 @@ def generate_test_env(builder):
         # talk to local servers and must not be routed through a developer proxy
         "NO_PROXY": "*",
         "no_proxy": "*",
+        # the line test::TestWatchdog prints before killing a hung binary: names the test in brief runs
+        "TEST_INTERRUPT_PATTERN": r"^(\S+) timed out after \d+s$",
     }

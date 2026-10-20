@@ -1,3 +1,5 @@
+#include <atomic>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
@@ -209,7 +211,7 @@ TEST_F(TestScheduler, test_sched_pause)
 
     Scheduler sched("sched");
 
-    int lambda_ran = 0;
+    std::atomic<int> lambda_ran {0};
     sched.add_task(new Task(
         [&lambda_ran]() -> bool {
             ++lambda_ran;
@@ -362,7 +364,7 @@ class CountingSteadyClock: public sihd::util::IClock
 };
 
 // Classifies wakeups with a decade-wide chasm instead of latency tolerances: a queue change while
-// sleeping must wake the worker (~400ms) and the stale far deadline cannot play before ~900ms
+// sleeping must wake the worker (~160ms) and the stale far deadline cannot play before ~360ms
 TEST_F(TestScheduler, test_sched_wakeups_qualifying)
 {
     if (test::is_run_by_valgrind())
@@ -387,7 +389,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = Duration(time::sec(1))}));
+        {.run_in = Duration(time::milli(400))}));
 
     // a bulk of nearer one shots - only the first may wake the worker
     for (int i = 0; i < 200; ++i)
@@ -400,14 +402,14 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
                     bulk_seq = seq.fetch_add(1);
                 return true;
             },
-            {.run_in = Duration(time::milli(800))}));
+            {.run_in = Duration(time::milli(320))}));
     }
 
     sched.set_start_synchronised(true);
     sched.start();
 
     // let the worker fall asleep toward the far deadline
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
     const auto insert_tp = steady_clock::now();
 
     sched.add_task(new Task(
@@ -418,15 +420,15 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = Duration(time::milli(400))}));
+        {.run_in = Duration(time::milli(160))}));
 
-    // healthy: satisfied at ~500ms - 3s ceiling for slow machines
+    // healthy: satisfied at ~160ms after insert - 3s ceiling for slow machines
     ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return urgent_ran; }));
     const auto elapsed = duration_cast<milliseconds>(steady_clock::now() - insert_tp);
 
     ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return bulk_ran == 200 && far_ran; }));
 
-    EXPECT_LT(elapsed.count(), 650);
+    EXPECT_LT(elapsed.count(), 260);
     // ordering sanity: urgent before bulk before far
     EXPECT_GE(urgent_seq, 0);
     EXPECT_GE(bulk_seq, 0);
@@ -457,10 +459,10 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
             waitable.notify_all();
             return true;
         },
-        {.run_in = Duration(time::milli(50))}));
+        {.run_in = Duration(time::milli(20))}));
 
     // far behind the first: an idle gap the worker must sleep through
-    Task *second = new Task([] { return true; }, {.run_in = Duration(time::milli(300))});
+    Task *second = new Task([] { return true; }, {.run_in = Duration(time::milli(120))});
     sched.add_task(second);
 
     sched.set_start_synchronised(true);
@@ -472,7 +474,7 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
     EXPECT_TRUE(sched.remove_task(second));
     delete second;
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     sched.stop();
 
@@ -591,7 +593,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
     }
 }
 
-// sleep_then_spin must spend most of the wait on the cv, then poll over spin_window: a 100ms poll
+// sleep_then_spin must spend most of the wait on the cv, then poll over spin_window: a 40ms poll
 // costs hundreds of thousands of clock reads vs a pure cv sleep; wide enough for coarse timers
 TEST_F(TestScheduler, test_sched_spin_sleep_classification)
 {
@@ -601,7 +603,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     CountingSteadyClock clock;
     sched.set_clock(&clock);
     ASSERT_TRUE(sched.set_idle_policy(IdlePolicy::sleep_then_spin));
-    ASSERT_TRUE(sched.set_spin_window(Duration(time::milli(100))));
+    ASSERT_TRUE(sched.set_spin_window(Duration(time::milli(40))));
 
     Waitable waitable;
     bool ran = false;
@@ -613,7 +615,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
             waitable.notify_all();
             return true;
         },
-        {.run_in = Duration(time::milli(500))}));
+        {.run_in = Duration(time::milli(120))}));
 
     sched.set_start_synchronised(true);
     sched.start();
@@ -621,7 +623,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
     ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return ran; }));
     sched.stop();
 
-    // the last 10ms of the 50ms wait were polled
+    // the last 40ms of the 120ms wait were polled
     EXPECT_GT(clock.calls.load(), 1000);
 }
 

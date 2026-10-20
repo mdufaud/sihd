@@ -11,12 +11,16 @@
 namespace sihd::util::num
 {
 
+uint64_t seed();
 uint64_t rand(uint64_t from = 0, uint64_t to = std::numeric_limits<uint64_t>::max());
 float frand(float from = 0.0, float to = 1.0);
 double drand(double from = 0.0, double to = 1.0);
 
 size_t size(uint64_t number, uint16_t base);
 
+// windef.h defines near as an empty macro: this only protects the declaration, a call site must #undef it
+#pragma push_macro("near")
+#undef near
 template <typename T>
 bool near(const T & value, const T & expected, const T & abs_error)
 {
@@ -30,6 +34,7 @@ bool near(const T & value, const T & expected, const T & abs_error)
         return std::abs(value - expected) <= std::abs(abs_error);
     }
 }
+#pragma pop_macro("near")
 
 template <typename T>
 T add_no_overflow(T a, T b)

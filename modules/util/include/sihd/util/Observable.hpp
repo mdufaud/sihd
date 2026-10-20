@@ -8,7 +8,6 @@
 #include <vector>
 
 #include <sihd/util/IHandler.hpp>
-#include <sihd/util/IObservable.hpp>
 #include <sihd/util/IObserverWatcher.hpp>
 #include <sihd/util/ScopedModifier.hpp>
 
@@ -16,7 +15,7 @@ namespace sihd::util
 {
 
 template <typename T>
-class Observable: public IObservable<T>
+class Observable
 {
     private:
         struct ObserverIteration
@@ -28,7 +27,7 @@ class Observable: public IObservable<T>
 
     public:
         Observable() = default;
-        virtual ~Observable() = default;
+        ~Observable() = default;
 
         bool add_observer(IHandler<T *> *obs, bool add_to_front = false)
         {
@@ -101,7 +100,7 @@ class Observable: public IObservable<T>
         }
 
     protected:
-        virtual void notify_observers(T *sender)
+        void notify_observers(T *sender)
         {
             std::lock_guard lock(_mutex);
             if (_watcher != nullptr) [[unlikely]]
