@@ -25,11 +25,11 @@ using namespace sihd::http;
 class TestLuaHttpApi: public test::LuaFixture
 {
     protected:
-        void SetUp() override
+        void start_echo_server()
         {
             _server = std::make_unique<EchoServerScope>();
+            _server->server.set_cors_origin("https://app.com");
             _server->start(3011);
-            LuaFixture::SetUp();
         }
 
         void TearDown() override
@@ -43,6 +43,7 @@ class TestLuaHttpApi: public test::LuaFixture
 
 TEST_F(TestLuaHttpApi, test_luahttp_base)
 {
+    this->start_echo_server();
     // HttpServer derives Node, so the http bindings need util + core registered first
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);

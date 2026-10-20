@@ -267,15 +267,17 @@ void LuaHttpApi::load_base(Vm & vm)
         .addFunction(
             "set_cookie",
             +[](Navigator *self, const std::string & name, const std::string & value, luabridge::LuaRef domain) {
-                self->set_cookie(name, value, domain.isNil() ? "" : domain.tostring());
+                return self->set_cookie(name, value, domain.isNil() ? "" : domain.tostring()).has_value();
             })
-        .addFunction("clear_cookies", &Navigator::clear_cookies)
+        .addFunction(
+            "clear_cookies",
+            +[](Navigator *self) { return self->clear_cookies().has_value(); })
         .addFunction(
             "save_cookies",
-            +[](Navigator *self, const std::string & path) { self->save_cookies(path); })
+            +[](Navigator *self, const std::string & path) { return self->save_cookies(path).has_value(); })
         .addFunction(
             "load_cookies",
-            +[](Navigator *self, const std::string & path) { self->load_cookies(path); })
+            +[](Navigator *self, const std::string & path) { return self->load_cookies(path).has_value(); })
         // proxy
         .addFunction(
             "set_proxy",

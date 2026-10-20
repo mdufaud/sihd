@@ -12,10 +12,12 @@
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Node.hpp>
+#include <sihd/util/Random.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/endian.hpp>
+#include <sihd/util/num.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
@@ -375,6 +377,27 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("count_tokens", &Splitter::count_tokens)
         .endClass()
         /**
+         * Random: lua integers are signed, seeds and bounds cross as int64 bit patterns
+         */
+        .beginClass<Random>("Random")
+        .addFactory(
+            +[](lua_State *L) -> Random * {
+                return new Random(static_cast<uint64_t>(*luabridge::Stack<int64_t>::get(L, 2)));
+            },
+            +[](Random *random) { delete random; })
+        .addFunction(
+            "rand",
+            +[](Random *self, int64_t from, int64_t to) -> int64_t {
+                if (from > to)
+                    std::swap(from, to);
+                const uint64_t span = static_cast<uint64_t>(to) - static_cast<uint64_t>(from);
+                return static_cast<int64_t>(static_cast<uint64_t>(from) + self->rand(0, span));
+            })
+        .addFunction(
+            "drand",
+            +[](Random *self, double from, double to) { return self->drand(from, to); })
+        .endClass()
+        /**
          * Timestamp
          */
         .beginClass<Timestamp>("Timestamp")
@@ -524,6 +547,11 @@ void LuaUtilApi::load_tools(Vm & vm)
                 return splitter.split(str);
             })
         .endNamespace() // str
+        .beginNamespace("num")
+        .addFunction(
+            "seed",
+            +[] { return static_cast<int64_t>(num::seed()); })
+        .endNamespace() // num
         // path namespace removed - use PathManager class instead
         .beginNamespace("term")
         .addFunction("is_interactive", &sihd::sys::console::is_interactive)
@@ -843,7 +871,12 @@ bool LuaUtilApi::LuaCoroutine::create()
 
 LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent): Scheduler(name, parent) {}
 
-LuaUtilApi::LuaScheduler::~LuaScheduler() = default;
+LuaUtilApi::LuaScheduler::~LuaScheduler()
+{
+    // join before the coroutine anchor is destroyed
+    if (this->is_running())
+        this->stop();
+}
 
 bool LuaUtilApi::LuaScheduler::start()
 {
@@ -884,7 +917,12 @@ bool LuaUtilApi::LuaScheduler::start()
 
 bool LuaUtilApi::LuaScheduler::stop()
 {
-    const bool success = Scheduler::stop();
+    bool success = false;
+    {
+        // GIL released: a GC finalizer holds it while a running task waits on it
+        LuaGilRelease release(_lua_coroutine.state());
+        success = Scheduler::stop();
+    }
     if (success)
     {
         {
@@ -1039,8 +1077,12 @@ bool LuaUtilApi::LuaWorker::start_worker(const std::string_view name)
 
 bool LuaUtilApi::LuaWorker::stop_worker()
 {
-    // join first, the coroutine is then idle to close
-    const bool ret = Worker::stop_worker();
+    bool ret = false;
+    {
+        // GIL released: a GC finalizer holds it while the worker waits on it
+        LuaGilRelease release(_lua_coroutine.state());
+        ret = Worker::stop_worker();
+    }
     _lua_runnable.reset_lua_state();
     _lua_coroutine.destroy();
     return ret;
@@ -1079,8 +1121,12 @@ bool LuaUtilApi::LuaStepWorker::start_worker(const std::string_view name)
 
 bool LuaUtilApi::LuaStepWorker::stop_worker()
 {
-    // join first, the coroutine is then idle to close
-    const bool ret = StepWorker::stop_worker();
+    bool ret = false;
+    {
+        // GIL released: a GC finalizer holds it while the worker waits on it
+        LuaGilRelease release(_lua_coroutine.state());
+        ret = StepWorker::stop_worker();
+    }
     _lua_runnable.reset_lua_state();
     _lua_coroutine.destroy();
     return ret;

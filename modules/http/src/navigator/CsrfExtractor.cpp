@@ -3,7 +3,8 @@
 
 #include <sihd/http/navigator/CsrfExtractor.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
+
+#include "HtmlScanner.hpp"
 
 namespace sihd::http
 {
@@ -22,49 +23,15 @@ static const std::vector<std::string_view> KNOWN_CSRF_FIELDS = {
     "csrfmiddlewaretoken",
 };
 
-std::string regex_escape(std::string_view str)
-{
-    std::string result;
-    result.reserve(str.size() * 2);
-    for (char c : str)
-    {
-        if (std::string_view(R"(\^$.[]({})*+?|)").find(c) != std::string_view::npos)
-            result += '\\';
-        result += c;
-    }
-    return result;
-}
-
 std::string extract_hidden_field(std::string_view html, std::string_view field_name)
 {
-    std::string html_str(html);
-    std::string field = regex_escape(field_name);
-
-    // try: name attribute before value attribute
-    std::string pattern = fmt::format(R"(<input[^>]+name\s*=\s*["']?{}["']?[^>]+>)", field);
-    auto tags = sihd::util::str::regex_search(html_str, pattern);
-    if (SIHD_UNEXPECTED_LOG(tags))
-        return {};
-
-    if (tags->empty())
-    {
-        // try: value attribute before name attribute
-        pattern = fmt::format(R"(<input[^>]+value\s*=\s*["'][^"']*["'][^>]+name\s*=\s*["']?{}["']?[^>]*>)", field);
-        tags = sihd::util::str::regex_search(html_str, pattern);
-        if (SIHD_UNEXPECTED_LOG(tags) || tags->empty())
-            return {};
-    }
-
-    // extract value="..." from the matched tag
-    auto val_matches = sihd::util::str::regex_search((*tags)[0], R"(value\s*=\s*["'][^"']*["'])");
-    if (SIHD_UNEXPECTED_LOG(val_matches) || val_matches->empty())
-        return {};
-
-    auto [_, raw] = sihd::util::str::split_pair_view((*val_matches)[0], "=");
-    raw = sihd::util::str::trim(raw);
-    if (raw.size() >= 2 && (raw.front() == '"' || raw.front() == '\''))
-        return std::string(raw.substr(1, raw.size() - 2));
-    return std::string(raw);
+    std::string value;
+    htmlscan::scan_tags(html, [&](const htmlscan::Tag & tag) {
+        if (!value.empty() || tag.name != "input" || tag.attribute("name") != field_name)
+            return;
+        value = std::string(tag.attribute("value").value_or(std::string_view()));
+    });
+    return value;
 }
 
 } // namespace

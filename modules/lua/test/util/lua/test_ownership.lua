@@ -18,6 +18,58 @@ do
     assert(ran, "the forgotten worker function should still have run")
 end
 
+log.info("Worker blocked on the GIL while its finalizer joins")
+do
+    local ran = false
+    local wk = util.Worker(function()
+        time.msleep(100)
+        ran = true
+    end)
+    wk:start_sync_worker("slow_worker")
+    util.Waitable():wait_for(util.Duration(time.ms(20)))
+    wk = nil
+    collectgarbage("collect")
+    collectgarbage("collect")
+    assert(ran, "the slow worker function should have finished before the join returned")
+end
+
+log.info("StepWorker blocked on the GIL while its finalizer joins")
+do
+    local ran = false
+    local sw = util.StepWorker(function()
+        time.msleep(100)
+        ran = true
+        return true
+    end)
+    sw:set_frequency(1000.0)
+    sw:start_sync_worker("slow_step_worker")
+    util.Waitable():wait_for(util.Duration(time.ms(20)))
+    sw = nil
+    collectgarbage("collect")
+    collectgarbage("collect")
+    assert(ran, "the slow step function should have finished before the join returned")
+end
+
+log.info("Running Scheduler blocked on the GIL while its finalizer joins")
+do
+    local ran = false
+    local sched = util.Scheduler("slow_sched", nil)
+    sched:add_task({
+        task = function()
+            time.msleep(100)
+            ran = true
+            return false
+        end,
+        run_in = 0,
+    })
+    sched:start()
+    util.Waitable():wait_for(util.Duration(time.ms(20)))
+    sched = nil
+    collectgarbage("collect")
+    collectgarbage("collect")
+    assert(ran, "the slow scheduler task should have finished before the join returned")
+end
+
 log.info("Repeated create/destroy rounds with GC keep the universe consistent")
 do
     for round = 1, 5 do

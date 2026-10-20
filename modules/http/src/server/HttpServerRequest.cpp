@@ -37,6 +37,8 @@ class BufferedBodyStream: public IBodyStream
 
         bool on_chunk([[maybe_unused]] const HttpRequest & request, ArrCharView chunk) override
         {
+            if (_content.resize(_offset + chunk.size()) == false)
+                return false;
             const bool copied = _content.copy_from(chunk.data(), chunk.size(), _offset);
             _offset += chunk.size();
             return copied;
@@ -70,6 +72,11 @@ constexpr RequestHeader request_headers[] = {
     {WSI_TOKEN_HTTP_COOKIE, "cookie"},
     {WSI_TOKEN_HTTP_REFERER, "referer"},
 };
+
+bool has_line_break_or_nul(std::string_view str)
+{
+    return str.find_first_of(std::string_view("\r\n\0", 3)) != std::string_view::npos;
+}
 
 } // namespace
 
@@ -283,28 +290,24 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
             break;
         case LWS_CALLBACK_FILTER_HTTP_CONNECTION:
         {
-            if (http_filter != nullptr)
+            if (this->pass_http_filter(wsi, std::string_view((const char *)in, len)) == false)
             {
-                std::string_view uri((const char *)in, len);
-
-                HttpFilterInfo info;
-                info.uri = uri;
-                info.method = this->get_request_type(wsi);
-                info.client_ip = this->get_client_ip(wsi);
-
-                for (const RequestHeader & header : request_headers)
-                {
-                    auto val = this->get_header(wsi, header.token);
-                    if (val.has_value() && !val->empty())
-                        info.headers[header.name] = std::move(*val);
-                }
-
-                if (!http_filter->on_filter_connection(info))
-                {
-                    lws_return_http_status(wsi, HTTP_STATUS_FORBIDDEN, nullptr);
-                    rc = -1;
-                }
+                lws_return_http_status(wsi, HTTP_STATUS_FORBIDDEN, nullptr);
+                rc = -1;
             }
+            break;
+        }
+        case LWS_CALLBACK_HTTP_CONFIRM_UPGRADE:
+        {
+            // an h2c connection serves its requests past the filter and the websocket checks
+            if (in != nullptr && str::iequals((const char *)in, "h2c"))
+                rc = -1;
+            break;
+        }
+        case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
+        {
+            // an upgrade bound to the http protocol has no websocket handler behind it
+            rc = 1;
             break;
         }
         case LWS_CALLBACK_VERIFY_BASIC_AUTHORIZATION:
@@ -326,16 +329,6 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
                 rc = 1;
             break;
         }
-        case LWS_CALLBACK_FILTER_NETWORK_CONNECTION:
-        {
-            char client_name[128];
-            char client_ip[INET6_ADDRSTRLEN];
-            lws_sockfd_type fd = (size_t)in;
-            lws_get_peer_addresses(wsi, fd, client_name, sizeof(client_name), client_ip, sizeof(client_ip));
-            SIHD_LOG(debug, "HttpServer: received client connect from {} ({})", client_name, client_ip);
-            rc = 0;
-            break;
-        }
         case LWS_CALLBACK_SERVER_NEW_CLIENT_INSTANTIATED:
         {
             break;
@@ -344,6 +337,25 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
             break;
     }
     return rc;
+}
+
+bool HttpServer::Impl::pass_http_filter(struct lws *wsi, std::string_view uri)
+{
+    if (http_filter == nullptr)
+        return true;
+
+    HttpFilterInfo info;
+    info.uri = uri;
+    info.method = this->get_request_type(wsi);
+    info.client_ip = this->get_client_ip(wsi);
+
+    for (const RequestHeader & header : request_headers)
+    {
+        auto val = this->get_header(wsi, header.token);
+        if (val.has_value() && !val->empty())
+            info.headers[header.name] = std::move(*val);
+    }
+    return http_filter->on_filter_connection(info);
 }
 
 HttpRequest::RequestType HttpServer::Impl::get_request_type(struct lws *wsi)
@@ -637,15 +649,6 @@ bool HttpServer::Impl::prepare_body_stream(HttpSession *session,
                      this->max_buffered_request_size,
                      webservice_name);
             this->reject_body(session, HttpStatus::PayloadTooLarge);
-            return false;
-        }
-        if (session->content.resize(content_length) == false)
-        {
-            SIHD_LOG(error,
-                     "HttpServer: cannot allocate {} bytes for the body of request to '{}'",
-                     content_length,
-                     webservice_name);
-            this->reject_body(session, HttpStatus::InternalServerError);
             return false;
         }
         session->body_stream = std::make_unique<BufferedBodyStream>(session->content);
@@ -990,6 +993,11 @@ bool HttpServer::Impl::send_http_headers(struct lws *wsi, HttpResponse & respons
     }
     for (const auto & [name, value] : headers.headers())
     {
+        if (has_line_break_or_nul(name) || has_line_break_or_nul(value))
+        {
+            SIHD_LOG(error, "HttpServer: response header '{}' holds a line break, response dropped", name);
+            return false;
+        }
         if (name == "content-length:")
         {
             // lws needs the length to know the body ended and serve the next request
@@ -1016,6 +1024,11 @@ bool HttpServer::Impl::send_http_headers(struct lws *wsi, HttpResponse & respons
     }
     for (const auto & ck : response.set_cookie_headers())
     {
+        if (has_line_break_or_nul(ck))
+        {
+            SIHD_LOG(error, "HttpServer: cookie holds a line break, response dropped");
+            return false;
+        }
         rc = lws_add_http_header_by_name(wsi, (u_char *)"set-cookie:", (u_char *)ck.c_str(), ck.size(), &ptr, end);
         if (rc)
         {

@@ -1,14 +1,16 @@
 #include <cstring>
 
 #include <sihd/http/scheme.hpp>
+#include <sihd/net/ip.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
 
 #include "NavigatorImpl.hpp"
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
-
-using sihd::util::Url;
 
 SIHD_LOGGER;
 
@@ -54,7 +56,7 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
                 {
                     if (impl->owner->on_ws_binary)
                     {
-                        sihd::util::ArrByteView view(static_cast<const uint8_t *>(in), len);
+                        ArrByteView view(static_cast<const uint8_t *>(in), len);
                         impl->owner->on_ws_binary(view);
                     }
                 }
@@ -99,9 +101,9 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
         {
             const char *error_msg = (in != nullptr) ? static_cast<const char *>(in) : "unknown error";
-            SIHD_LOG(error, "Navigator: WebSocket connection error: {}", error_msg);
             {
                 auto lock = impl->ws.waitable.guard();
+                impl->ws.connect_error = error_msg;
                 impl->ws.connected = false;
                 impl->ws.handshake_done = true;
             }
@@ -141,21 +143,18 @@ int Navigator::Impl::ws_lws_callback(struct lws *wsi,
     return 0;
 }
 
-std::string Navigator::Impl::ws_proxy_address()
+Result<std::string> Navigator::Impl::ws_proxy_address()
 {
     if (proxy.disabled)
-        return "";
+        return std::string();
 
     auto selected = select_proxy();
     if (!selected.has_value())
-        return "";
+        return std::string();
 
     const auto & [pu, pt] = *selected;
     if (pt != ProxyType::Http)
-    {
-        SIHD_LOG(warning, "Navigator: WebSocket only supports HTTP proxy, ignoring proxy");
-        return "";
-    }
+        return std::unexpected(Error(ErrorCode::not_supported, "Navigator: WebSocket only supports an HTTP proxy"));
 
     std::string host = pu;
     if (host.rfind("http://", 0) == 0)
@@ -168,9 +167,34 @@ std::string Navigator::Impl::ws_proxy_address()
     return host;
 }
 
-bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view protocol)
+Result<void> Navigator::Impl::ws_do_connect(std::string_view url, std::string_view protocol)
 {
     Url parsed(url);
+    str::to_lower(parsed.scheme);
+    if (parsed.scheme != "ws" && parsed.scheme != "wss" && parsed.scheme != "http" && parsed.scheme != "https")
+    {
+        return std::unexpected(
+            Error(ErrorCode::invalid_argument, "Navigator: unsupported WebSocket URL scheme: {}", url));
+    }
+    std::string connect_address = parsed.host;
+    if (ssrf_guard)
+    {
+        auto vetted = sihd::net::ip::public_addresses(parsed.host);
+        if (!vetted)
+        {
+            return std::unexpected(Error(ErrorCode::permission_denied,
+                                         "SSRF guard blocked a WebSocket connection to a private host: {}",
+                                         url));
+        }
+        // lws would resolve the name again: the vetted address closes the rebinding window
+        connect_address = vetted->front();
+    }
+
+    // the parsed path has lost the query: keep the raw one, a fragment never reaches the server
+    std::string request_path = parsed.path.empty() ? "/" : parsed.path;
+    const std::string_view without_fragment = url.substr(0, url.find('#'));
+    if (const size_t query_start = without_fragment.find('?'); query_start != std::string_view::npos)
+        request_path += without_fragment.substr(query_start);
 
     std::string protocol_str(protocol);
     struct lws_protocols protocols[] = {
@@ -189,24 +213,23 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
 
     // Apply Navigator proxy config: lws otherwise silently uses the http_proxy env var.
     // A non-null http_proxy_address disables that env-var fallback ("" means no proxy).
-    std::string ws_proxy_addr = ws_proxy_address();
-    if (proxy.disabled || !ws_proxy_addr.empty())
-        ctx_info.http_proxy_address = ws_proxy_addr.c_str();
+    auto ws_proxy_addr = ws_proxy_address();
+    SIHD_UNEXPECTED_RETURN(ws_proxy_addr);
+    if (proxy.disabled || !ws_proxy_addr->empty())
+        ctx_info.http_proxy_address = ws_proxy_addr->c_str();
     // else: leave http_proxy_address null so lws uses the env proxy
 
     ws.context.reset(lws_create_context(&ctx_info));
     if (ws.context == nullptr)
-    {
-        SIHD_LOG(error, "Navigator: failed to create lws context for WebSocket client");
-        return false;
-    }
+        return std::unexpected(
+            Error(ErrorCode::unknown, "Navigator: failed to create lws context for WebSocket client"));
 
     struct lws_client_connect_info connect_info;
     memset(&connect_info, 0, sizeof(connect_info));
     connect_info.context = ws.context.get();
-    connect_info.address = parsed.host.c_str();
+    connect_info.address = connect_address.c_str();
     connect_info.port = parsed.port != 0 ? parsed.port : scheme_port(parsed.scheme);
-    connect_info.path = parsed.path.c_str();
+    connect_info.path = request_path.c_str();
     connect_info.host = parsed.host.c_str();
     connect_info.origin = parsed.host.c_str();
     connect_info.protocol = protocol_str.c_str();
@@ -224,13 +247,13 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
     ws.wsi = lws_client_connect_via_info(&connect_info);
     if (ws.wsi == nullptr)
     {
-        SIHD_LOG(error, "Navigator: failed to initiate WebSocket connection");
         ws.context.reset();
-        return false;
+        return std::unexpected(Error(ErrorCode::io_error, "Navigator: failed to initiate WebSocket connection"));
     }
 
     ws.handshake_done = false;
     ws.connected = false;
+    ws.connect_error.clear();
 
     ws.worker.set_method([this] {
         while (!ws.stop_requested && ws.worker.is_worker_started())
@@ -248,10 +271,16 @@ bool Navigator::Impl::ws_do_connect(std::string_view url, std::string_view proto
 
     ws.waitable.wait_for(options.timeout, [this] { return ws.handshake_done; });
 
-    if (!ws.connected)
-        ws_disconnect();
+    if (ws.connected)
+        return {};
 
-    return ws.connected;
+    std::string reason;
+    {
+        auto lock = ws.waitable.guard();
+        reason = ws.connect_error.empty() ? "handshake did not complete" : ws.connect_error;
+    }
+    ws_disconnect();
+    return std::unexpected(Error(ErrorCode::io_error, "Navigator: WebSocket connection failed: {}", reason));
 }
 
 void Navigator::Impl::ws_disconnect()

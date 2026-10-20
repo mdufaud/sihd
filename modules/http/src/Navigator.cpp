@@ -7,6 +7,7 @@
 #include "navigator/NavigatorImpl.hpp"
 
 using sihd::util::Error;
+using sihd::util::Result;
 using enum sihd::util::ErrorCode;
 
 namespace sihd::http
@@ -26,61 +27,71 @@ Navigator::~Navigator() = default;
 
 sihd::util::Result<NavigatorResponse> Navigator::get(std::string_view url)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url)});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::post(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .body = data});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::patch(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Patch, .body = data});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::head(std::string_view url)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Head});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::put(std::string_view url, sihd::util::ArrCharView data)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .body = data});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::del(std::string_view url)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Delete});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::options(std::string_view url)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Options});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::post_multipart(std::string_view url, const Multipart & multipart)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .multipart = multipart});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::download(std::string_view url, std::string_view path)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .download_path = std::string(path)});
 }
 
 sihd::util::Result<NavigatorResponse> Navigator::put_file(std::string_view url, std::string_view path)
 {
-    _impl->reset_for_request();
+    auto reset = _impl->reset_for_request();
+    SIHD_UNEXPECTED_RETURN(reset);
     return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .upload_path = std::string(path)});
 }
 
@@ -244,6 +255,11 @@ void Navigator::clear_headers()
     _impl->headers.clear();
 }
 
+void Navigator::set_cross_origin_headers(std::vector<std::string> names)
+{
+    _impl->cross_origin_headers = std::move(names);
+}
+
 // Cookies
 
 std::map<std::string, std::string> Navigator::cookies() const
@@ -251,26 +267,26 @@ std::map<std::string, std::string> Navigator::cookies() const
     return _impl->extract_cookies();
 }
 
-void Navigator::set_cookie(std::string_view name, std::string_view value, std::string_view domain)
+Result<void> Navigator::set_cookie(std::string_view name, std::string_view value, std::string_view domain)
 {
     std::string domain_str = domain.empty() ? "." : std::string(domain);
     std::string cookie_line = fmt::format("{}\tTRUE\t/\tFALSE\t0\t{}\t{}", domain_str, name, value);
-    _impl->client.add_cookie(cookie_line);
+    return _impl->client.add_cookie(cookie_line);
 }
 
-void Navigator::clear_cookies()
+Result<void> Navigator::clear_cookies()
 {
-    _impl->client.clear_cookies();
+    return _impl->client.clear_cookies();
 }
 
-void Navigator::save_cookies(std::string_view path)
+Result<void> Navigator::save_cookies(std::string_view path)
 {
-    _impl->client.save_cookies(path);
+    return _impl->client.save_cookies(path);
 }
 
-void Navigator::load_cookies(std::string_view path)
+Result<void> Navigator::load_cookies(std::string_view path)
 {
-    _impl->client.load_cookies(path);
+    return _impl->client.load_cookies(path);
 }
 
 // Proxy
@@ -310,10 +326,11 @@ void Navigator::set_proxy_rotation(ProxyRotation rotation)
 
 // Retry
 
-void Navigator::set_retry(int max_attempts, long initial_backoff_ms)
+void Navigator::set_retry(int max_attempts, long initial_backoff_ms, long max_wait_ms)
 {
     _impl->rate.retry_max = max_attempts;
     _impl->rate.retry_initial_backoff_ms = initial_backoff_ms;
+    _impl->rate.retry_max_wait_ms = max_wait_ms > 0 ? max_wait_ms : std::numeric_limits<long>::max();
 }
 
 // Rate limiting
@@ -337,7 +354,7 @@ void Navigator::set_user_agent_rotation(bool enable)
 
 // WebSocket
 
-bool Navigator::ws_connect(std::string_view url, std::string_view protocol)
+Result<void> Navigator::ws_connect(std::string_view url, std::string_view protocol)
 {
     return _impl->ws_do_connect(url, protocol);
 }

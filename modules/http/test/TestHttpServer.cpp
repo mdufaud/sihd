@@ -18,6 +18,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/console.hpp>
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -40,9 +41,9 @@ using namespace sihd::sys;
 class TestHttpServer: public ::testing::Test
 {
     protected:
-        TestHttpServer() { sihd::util::LoggerManager::stream(); }
+        TestHttpServer() { LoggerManager::stream(); }
 
-        virtual ~TestHttpServer() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestHttpServer() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -56,7 +57,7 @@ TEST_F(TestHttpServer, test_httpserver_auto)
 {
     SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
-    server.set_port(3000);
+    server.set_port(shard_port(3000));
 
     Worker worker([&server] {
         server.start();
@@ -72,10 +73,10 @@ TEST_F(TestHttpServer, test_httpserver_auto)
     RequestOptions options;
     options.proxy = "";
     // launch all requests async
-    auto get_future = sihd::http::async_get("localhost:3000/web/some_get", options);
-    auto post_future = sihd::http::async_post("localhost:3000/web/some_post", "hello world", options);
-    auto put_future = sihd::http::async_put("localhost:3000/web/some_put", tmpfile_path, options);
-    auto del_future = sihd::http::async_del("localhost:3000/web/some_delete", options);
+    auto get_future = sihd::http::async_get(shard_url("localhost:3000/web/some_get"), options);
+    auto post_future = sihd::http::async_post(shard_url("localhost:3000/web/some_post"), "hello world", options);
+    auto put_future = sihd::http::async_put(shard_url("localhost:3000/web/some_put"), tmpfile_path, options);
+    auto del_future = sihd::http::async_del(shard_url("localhost:3000/web/some_delete"), options);
 
     // wait all
     auto get_resp = get_future.get();
@@ -117,7 +118,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
 
     SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
-    server.set_port(3000);
+    server.set_port(shard_port(3000));
 
     SigWatcher watcher({SIGINT}, [&server]([[maybe_unused]] int sig) {
         SIHD_LOG(info, "Stopping http server...");
@@ -132,115 +133,12 @@ TEST_F(TestHttpServer, test_httpserver_websockets)
     server.start();
 }
 
-// Minimal WebSocket client for automated testing
-class SimpleWsClient
-{
-    public:
-        SimpleWsClient() { _client.set_poll_timeout(2000); }
-
-        bool connect(int port) { return _client.open_and_connect("127.0.0.1", port).has_value(); }
-
-        // Perform the HTTP -> WebSocket upgrade handshake.
-        bool handshake(const char *protocol)
-        {
-            // Fixed 16-byte WebSocket key (base64 of 0x01..0x10).
-            const char *key = "AQIDBAUGBwgJCgsMDQ4PEA==";
-            std::string req = "GET / HTTP/1.1\r\n"
-                              "Host: localhost\r\n"
-                              "Upgrade: websocket\r\n"
-                              "Connection: Upgrade\r\n"
-                              "Sec-WebSocket-Key: ";
-            req += key;
-            req += "\r\nSec-WebSocket-Version: 13\r\n"
-                   "Sec-WebSocket-Protocol: ";
-            req += protocol;
-            req += "\r\n\r\n";
-
-            if (_client.send_all(sihd::util::ArrCharView(req.data(), req.size())).has_value() == false)
-                return false;
-
-            std::string response;
-            char buf[1];
-            while (response.find("\r\n\r\n") == std::string::npos)
-            {
-                if (_recv_exact((uint8_t *)buf, 1) == false)
-                    return false;
-                response += buf[0];
-            }
-            return response.find(" 101 ") != std::string::npos;
-        }
-
-        // Send a masked WebSocket text frame (len <= 125).
-        bool send_text(std::string_view text)
-        {
-            std::vector<uint8_t> frame;
-            frame.push_back(0x81);                        // FIN + opcode=text
-            frame.push_back(0x80 | (uint8_t)text.size()); // MASK + len
-            const uint8_t mask[4] = {0x11, 0x22, 0x33, 0x44};
-            frame.insert(frame.end(), mask, mask + 4);
-            for (size_t i = 0; i < text.size(); ++i)
-                frame.push_back((uint8_t)text[i] ^ mask[i % 4]);
-            return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size())).has_value();
-        }
-
-        // Receive one unmasked text frame from the server.
-        std::optional<std::string> recv_text()
-        {
-            uint8_t header[2];
-            if (_recv_exact(header, 2) == false)
-                return {};
-
-            uint8_t opcode = header[0] & 0x0F;
-            if (opcode != 0x01) // not a text frame
-                return {};
-
-            size_t len = header[1] & 0x7F;
-            if (len == 126)
-            {
-                uint8_t ext[2];
-                if (_recv_exact(ext, 2) == false)
-                    return {};
-                len = ((size_t)ext[0] << 8) | ext[1];
-            }
-
-            std::string payload(len, '\0');
-            if (len > 0 && _recv_exact((uint8_t *)payload.data(), len) == false)
-                return {};
-            return payload;
-        }
-
-        // Send a masked WebSocket close frame with no payload.
-        void send_close()
-        {
-            const uint8_t frame[] = {0x88, 0x80, 0x00, 0x00, 0x00, 0x00};
-            (void)_client.send_all(sihd::util::ArrCharView((const char *)frame, sizeof(frame)));
-        }
-
-    private:
-        bool _recv_exact(uint8_t *buf, size_t n)
-        {
-            size_t received = 0;
-            while (received < n)
-            {
-                if (_client.poll() == false)
-                    return false;
-                const auto r = _client.receive(buf + received, n - received);
-                if (!r || r.value() == 0)
-                    return false;
-                received += r.value();
-            }
-            return true;
-        }
-
-        sihd::net::TcpClient _client {"ws-client"};
-};
-
 TEST_F(TestHttpServer, test_httpserver_websockets_auto)
 {
     SimpleHttpServer server;
     server.set_service_wait_stop(true);
     server.set_root_dir("test/resources/mount_point");
-    server.set_port(3002);
+    server.set_port(shard_port(3002));
 
     Worker worker([&server] {
         server.start();
@@ -250,7 +148,7 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
 
     SimpleWsClient client;
-    ASSERT_TRUE(client.connect(3002));
+    ASSERT_TRUE(client.connect(shard_port(3002)));
     ASSERT_TRUE(client.handshake("proto-two"));
     ASSERT_TRUE(server.wait_for_open());
 
@@ -292,14 +190,14 @@ TEST_F(TestHttpServer, test_routing_params)
     scope.start();
 
     // single param
-    auto resp = sihd::http::get("localhost:3001/api/users/42");
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/users/42"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "user:42");
     EXPECT_EQ(captured_id, "42");
 
     // multi params — more specific route matches
-    resp = sihd::http::get("localhost:3001/api/users/7/edit");
+    resp = sihd::http::get(shard_url("localhost:3001/api/users/7/edit"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "7:edit");
     EXPECT_EQ(captured_id, "7");
@@ -319,7 +217,7 @@ TEST_F(TestHttpServer, test_routing_catchall)
 
     scope.start();
 
-    auto resp = sihd::http::get("localhost:3001/api/files/dir/subdir/file.txt");
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/files/dir/subdir/file.txt"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(captured_path, "dir/subdir/file.txt");
@@ -342,14 +240,14 @@ TEST_F(TestHttpServer, test_http_filter)
     scope.start();
 
     // allowed request
-    auto resp = sihd::http::get("localhost:3001/api/public");
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/public"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "ok");
     EXPECT_GE(filter.filter_calls, 1);
 
     // blocked request → 403
-    resp = sihd::http::get("localhost:3001/api/secret");
+    resp = sihd::http::get(shard_url("localhost:3001/api/secret"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Forbidden);
 }
@@ -374,9 +272,9 @@ TEST_F(TestHttpServer, test_basic_auth)
     scope.start();
 
     // no credentials → 401 for GET, POST and DELETE
-    auto no_auth_get = sihd::http::async_get("localhost:3001/api/protected");
-    auto no_auth_post = sihd::http::async_post("localhost:3001/api/protected_post", "data");
-    auto no_auth_del = sihd::http::async_del("localhost:3001/api/protected");
+    auto no_auth_get = sihd::http::async_get(shard_url("localhost:3001/api/protected"));
+    auto no_auth_post = sihd::http::async_post(shard_url("localhost:3001/api/protected_post"), "data");
+    auto no_auth_del = sihd::http::async_del(shard_url("localhost:3001/api/protected"));
 
     auto resp_get = no_auth_get.get();
     auto resp_post = no_auth_post.get();
@@ -393,7 +291,7 @@ TEST_F(TestHttpServer, test_basic_auth)
     RequestOptions bad_creds;
     bad_creds.username = "admin";
     bad_creds.password = "wrong";
-    auto resp = sihd::http::get("localhost:3001/api/protected", bad_creds);
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/protected"), bad_creds);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
@@ -401,7 +299,7 @@ TEST_F(TestHttpServer, test_basic_auth)
     RequestOptions bad_user;
     bad_user.username = "nobody";
     bad_user.password = "secret";
-    resp = sihd::http::get("localhost:3001/api/protected", bad_user);
+    resp = sihd::http::get(shard_url("localhost:3001/api/protected"), bad_user);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
@@ -410,8 +308,8 @@ TEST_F(TestHttpServer, test_basic_auth)
     good_creds.username = "admin";
     good_creds.password = "secret";
 
-    auto auth_get = sihd::http::async_get("localhost:3001/api/protected", good_creds);
-    auto auth_post = sihd::http::async_post("localhost:3001/api/protected_post", "hello", good_creds);
+    auto auth_get = sihd::http::async_get(shard_url("localhost:3001/api/protected"), good_creds);
+    auto auth_post = sihd::http::async_post(shard_url("localhost:3001/api/protected_post"), "hello", good_creds);
 
     auto good_get = auth_get.get();
     auto good_post = auth_post.get();
@@ -444,27 +342,27 @@ TEST_F(TestHttpServer, test_token_auth)
     scope.start();
 
     // no token → 401
-    auto resp = sihd::http::get("localhost:3001/api/secure");
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
     // wrong token → 401
     RequestOptions bad_token;
     bad_token.token = "invalid-token";
-    resp = sihd::http::get("localhost:3001/api/secure", bad_token);
+    resp = sihd::http::get(shard_url("localhost:3001/api/secure"), bad_token);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
     // correct token → 200
     RequestOptions good_token;
     good_token.token = "my-secret-token-123";
-    resp = sihd::http::get("localhost:3001/api/secure", good_token);
+    resp = sihd::http::get(shard_url("localhost:3001/api/secure"), good_token);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "token-ok");
 
     // token works for POST too
-    auto post_resp = sihd::http::post("localhost:3001/api/secure_post", "data", good_token);
+    auto post_resp = sihd::http::post(shard_url("localhost:3001/api/secure_post"), "data", good_token);
     ASSERT_TRUE(post_resp.has_value());
     EXPECT_EQ(post_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(post_resp->content().cpp_str(), "posted:data");
@@ -473,7 +371,7 @@ TEST_F(TestHttpServer, test_token_auth)
     RequestOptions basic_creds;
     basic_creds.username = "admin";
     basic_creds.password = "secret";
-    resp = sihd::http::get("localhost:3001/api/secure", basic_creds);
+    resp = sihd::http::get(shard_url("localhost:3001/api/secure"), basic_creds);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "token-ok");
@@ -498,7 +396,7 @@ TEST_F(TestHttpServer, test_streaming)
 
     scope.start();
 
-    auto resp = sihd::http::get("localhost:3001/api/stream");
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/stream"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     // chunked transfer: all chunks concatenated
@@ -511,16 +409,16 @@ TEST_F(TestHttpServer, test_streaming)
 TEST_F(TestHttpServer, test_streaming_file_response)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
-    const std::string path = fs::combine(tmp.path(), "stream.bin");
+    const std::string path = fs::combine(tmp_dir.path(), "stream.bin");
     std::string content(4 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
     ASSERT_TRUE(fs::write(path, content, false, true).has_value());
 
-    const std::string empty_path = fs::combine(tmp.path(), "empty.bin");
+    const std::string empty_path = fs::combine(tmp_dir.path(), "empty.bin");
     ASSERT_TRUE(fs::write(empty_path, "", false, true).has_value());
 
     scope.server._webservice->set_entry_point("file", [&path](const HttpRequest &, HttpResponse & resp) {
@@ -533,19 +431,19 @@ TEST_F(TestHttpServer, test_streaming_file_response)
     scope.start();
 
     Navigator nav;
-    nav.clear_proxy();
+    allow_local_targets(nav);
 
-    auto first = nav.get("localhost:3001/api/file");
+    auto first = nav.get(shard_url("localhost:3001/api/file"));
     ASSERT_TRUE(first.has_value());
     EXPECT_EQ(first->status(), HttpStatus::Ok);
     EXPECT_EQ(first->http_header().content_length(), content.size());
     EXPECT_EQ(first->content().cpp_str(), content);
 
-    auto second = nav.get("localhost:3001/api/file");
+    auto second = nav.get(shard_url("localhost:3001/api/file"));
     ASSERT_TRUE(second.has_value());
     EXPECT_EQ(second->content().cpp_str(), content);
 
-    auto empty = nav.get("localhost:3001/api/empty");
+    auto empty = nav.get(shard_url("localhost:3001/api/empty"));
     ASSERT_TRUE(empty.has_value());
     EXPECT_EQ(empty->status(), HttpStatus::Ok);
     EXPECT_EQ(empty->http_header().content_length(), 0u);
@@ -555,8 +453,8 @@ TEST_F(TestHttpServer, test_streaming_file_response)
 TEST_F(TestHttpServer, test_streaming_upload_to_file)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
     std::string body(3 * 1024 * 1024, '\0');
     for (size_t i = 0; i < body.size(); ++i)
@@ -566,8 +464,8 @@ TEST_F(TestHttpServer, test_streaming_upload_to_file)
     int hits = 0;
 
     BodyStreamFile upload_stream;
-    upload_stream.set_path_provider([&upload_path, &tmp](const HttpRequest &) {
-        upload_path = fs::combine(tmp.path(), "upload.bin");
+    upload_stream.set_path_provider([&upload_path, &tmp_dir](const HttpRequest &) {
+        upload_path = fs::combine(tmp_dir.path(), "upload.bin");
         return upload_path;
     });
     scope.server._webservice->set_body_stream(&upload_stream);
@@ -582,7 +480,7 @@ TEST_F(TestHttpServer, test_streaming_upload_to_file)
 
     scope.start();
 
-    auto resp = sihd::http::post("localhost:3001/api/upload", body);
+    auto resp = sihd::http::post(shard_url("localhost:3001/api/upload"), body);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(hits, 1);
@@ -607,7 +505,7 @@ TEST_F(TestHttpServer, test_streaming_upload_chunks)
     size_t streamed = 0;
     size_t announced = 0;
 
-    BodyStreamFunc chunk_stream([&](const HttpRequest & req, sihd::util::ArrCharView chunk) {
+    BodyStreamFunc chunk_stream([&](const HttpRequest & req, ArrCharView chunk) {
         ++chunks;
         streamed += chunk.size();
         announced = req.http_header().content_length().value_or(0);
@@ -624,7 +522,7 @@ TEST_F(TestHttpServer, test_streaming_upload_chunks)
 
     scope.start();
 
-    auto resp = sihd::http::post("localhost:3001/api/upload", body);
+    auto resp = sihd::http::post(shard_url("localhost:3001/api/upload"), body);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_GT(chunks, 1);
@@ -635,10 +533,10 @@ TEST_F(TestHttpServer, test_streaming_upload_chunks)
 TEST_F(TestHttpServer, test_streaming_upload_stream_failure)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
-    const std::string bad_path = fs::combine({tmp.path(), "missing_dir", "upload.bin"});
+    const std::string bad_path = fs::combine({tmp_dir.path(), "missing_dir", "upload.bin"});
     int hits = 0;
 
     BodyStreamFile bad_stream(bad_path);
@@ -653,7 +551,7 @@ TEST_F(TestHttpServer, test_streaming_upload_stream_failure)
 
     scope.start();
 
-    auto resp = sihd::http::post("localhost:3001/api/upload", std::string(4096, 'x'));
+    auto resp = sihd::http::post(shard_url("localhost:3001/api/upload"), std::string(4096, 'x'));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::InternalServerError);
     EXPECT_EQ(hits, 0);
@@ -674,10 +572,10 @@ TEST_F(TestHttpServer, test_streaming_upload_stream_not_set)
 TEST_F(TestHttpServer, test_streaming_upload_multipart)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
-    const std::string file_path = fs::combine(tmp.path(), "doc.bin");
+    const std::string file_path = fs::combine(tmp_dir.path(), "doc.bin");
     std::string content(2 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 13 % 251);
@@ -706,13 +604,13 @@ TEST_F(TestHttpServer, test_streaming_upload_multipart)
     scope.start();
 
     Navigator nav;
-    nav.clear_proxy();
+    allow_local_targets(nav);
 
     Multipart form;
     form.add_field("note", "hello");
     form.add_file("doc", file_path, "doc.bin", "application/octet-stream");
 
-    auto resp = nav.post_multipart("localhost:3001/api/form", form);
+    auto resp = nav.post_multipart(shard_url("localhost:3001/api/form"), form);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(seen_field, "hello");
@@ -723,12 +621,14 @@ TEST_F(TestHttpServer, test_streaming_upload_multipart)
 TEST_F(TestHttpServer, test_streaming_upload_multipart_rejected)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
     int hits = 0;
+
     BodyStreamFile upload_stream;
-    upload_stream.set_path_provider([&tmp](const HttpRequest &) { return fs::combine(tmp.path(), "upload.bin"); });
+    upload_stream.set_path_provider(
+        [&tmp_dir](const HttpRequest &) { return fs::combine(tmp_dir.path(), "upload.bin"); });
     scope.server._webservice->set_body_stream(&upload_stream);
     scope.server._webservice->set_entry_point(
         "form",
@@ -741,17 +641,17 @@ TEST_F(TestHttpServer, test_streaming_upload_multipart_rejected)
     scope.start();
 
     Navigator nav;
-    nav.clear_proxy();
+    allow_local_targets(nav);
 
     Multipart form;
     form.add_field("note", "hello");
 
     // the webservice streams its body: multipart cannot also be parsed
-    auto resp = nav.post_multipart("localhost:3001/api/form", form);
+    auto resp = nav.post_multipart(shard_url("localhost:3001/api/form"), form);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::InternalServerError);
     EXPECT_EQ(hits, 0);
-    EXPECT_FALSE(fs::is_file(fs::combine(tmp.path(), "upload.bin")));
+    EXPECT_FALSE(fs::is_file(fs::combine(tmp_dir.path(), "upload.bin")));
 }
 
 TEST_F(TestHttpServer, test_max_request_size)
@@ -770,106 +670,22 @@ TEST_F(TestHttpServer, test_max_request_size)
 
     scope.start();
 
-    auto too_big = sihd::http::post("localhost:3001/api/small", std::string(4096, 'x'));
+    auto too_big = sihd::http::post(shard_url("localhost:3001/api/small"), std::string(4096, 'x'));
     ASSERT_TRUE(too_big.has_value());
     EXPECT_EQ(too_big->status(), HttpStatus::PayloadTooLarge);
     EXPECT_EQ(hits, 0);
 
-    auto ok = sihd::http::post("localhost:3001/api/small", std::string(512, 'x'));
+    auto ok = sihd::http::post(shard_url("localhost:3001/api/small"), std::string(512, 'x'));
     ASSERT_TRUE(ok.has_value());
     EXPECT_EQ(ok->status(), HttpStatus::Ok);
     EXPECT_EQ(hits, 1);
 
     // exactly at the limit is still served
-    auto at_limit = sihd::http::post("localhost:3001/api/small", std::string(1024, 'x'));
+    auto at_limit = sihd::http::post(shard_url("localhost:3001/api/small"), std::string(1024, 'x'));
     ASSERT_TRUE(at_limit.has_value());
     EXPECT_EQ(at_limit->status(), HttpStatus::Ok);
     EXPECT_EQ(hits, 2);
 }
-
-// raw request client: the http client cannot send a chunked body nor reuse a refused connection
-class RawHttpClient
-{
-    public:
-        bool connect(int port = 3001)
-        {
-            _client.set_poll_timeout(2000);
-            return _client.open_and_connect("127.0.0.1", port).has_value();
-        }
-
-        bool send(std::string_view request)
-        {
-            return _client.send_all(ArrCharView(request.data(), request.size())).has_value();
-        }
-
-        bool connected() const { return _client.connected(); }
-
-        std::optional<HttpResponse> read_response()
-        {
-            const size_t head_size = this->_read_head();
-            if (head_size == 0)
-                return std::nullopt;
-            const size_t body_size = this->_announced_size(_buffer.substr(0, head_size));
-            while (_buffer.size() < head_size + body_size)
-            {
-                if (this->_read_more() == false)
-                    break;
-            }
-            auto response = HttpResponse::from_string(_buffer.substr(0, head_size + body_size));
-            _buffer.erase(0, head_size + body_size);
-            if (!response)
-                return std::nullopt;
-            return std::move(*response);
-        }
-
-        bool wait_closed()
-        {
-            while (this->_read_more())
-                ;
-            return _client.connected() == false;
-        }
-
-        void close() { (void)_client.close(); }
-
-    private:
-        size_t _read_head()
-        {
-            size_t head_size = _buffer.find("\r\n\r\n");
-            while (head_size == std::string::npos)
-            {
-                if (this->_read_more() == false)
-                    return 0;
-                head_size = _buffer.find("\r\n\r\n");
-            }
-            return head_size + 4;
-        }
-
-        bool _read_more()
-        {
-            if (_client.poll() == false)
-                return false;
-            char buf[4096];
-            const auto read = _client.receive(buf, sizeof(buf));
-            if (!read || read.value() == 0)
-                return false;
-            _buffer.append(buf, read.value());
-            return true;
-        }
-
-        static size_t _announced_size(std::string_view head)
-        {
-            for (const std::string_view line : str::split(head, "\r\n"))
-            {
-                const auto [name, value] = str::split_pair_view(line, ":");
-                if (str::iequals(str::trim(name), "content-length"))
-                    return str::convert_from_string<size_t>(str::trim(value)).value_or(0);
-            }
-            return 0;
-        }
-
-        sihd::net::TcpClient _client {"raw-http-client"};
-        std::string _buffer;
-};
 
 TEST_F(TestHttpServer, test_upload_chunked_not_supported)
 {
@@ -1038,14 +854,15 @@ TEST_F(TestHttpServer, test_stream_shorter_than_announced)
 TEST_F(TestHttpServer, test_custom_404_page)
 {
     ServerScope scope;
-    TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
 
-    const std::string page = fs::combine(tmp.path(), "404.html");
+    const std::string page = fs::combine(tmp_dir.path(), "404.html");
     ASSERT_TRUE(fs::write(page, "<html>custom not found</html>").has_value());
     scope.server.set_404_path(page);
 
     int hits = 0;
+
     scope.server._webservice->set_entry_point(
         "known",
         [&hits](const HttpRequest &, HttpResponse & resp) {
@@ -1056,13 +873,13 @@ TEST_F(TestHttpServer, test_custom_404_page)
 
     scope.start();
 
-    auto missing = sihd::http::get("localhost:3001/api/unknown");
+    auto missing = sihd::http::get(shard_url("localhost:3001/api/unknown"));
     ASSERT_TRUE(missing.has_value());
     EXPECT_EQ(missing->status(), HttpStatus::NotFound);
     EXPECT_EQ(missing->content().cpp_str(), "<html>custom not found</html>");
 
     // the same page answers a body carrying request to an unknown route
-    auto posted = sihd::http::post("localhost:3001/api/unknown", "body");
+    auto posted = sihd::http::post(shard_url("localhost:3001/api/unknown"), "body");
     ASSERT_TRUE(posted.has_value());
     EXPECT_EQ(posted->status(), HttpStatus::NotFound);
     EXPECT_EQ(posted->content().cpp_str(), "<html>custom not found</html>");
@@ -1093,7 +910,7 @@ TEST_F(TestHttpServer, test_streaming_response_to_body_request)
 
     scope.start();
 
-    auto resp = sihd::http::post("localhost:3001/api/stream", "payload");
+    auto resp = sihd::http::post(shard_url("localhost:3001/api/stream"), "payload");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "streamed-payload");
@@ -1149,12 +966,12 @@ TEST_F(TestHttpServer, test_cors_preflight)
     RequestOptions opts;
     opts.headers["Origin"] = "https://example.com";
     opts.headers["Access-Control-Request-Method"] = "POST";
-    auto resp = sihd::http::options("localhost:3001/api/data", opts);
+    auto resp = sihd::http::options(shard_url("localhost:3001/api/data"), opts);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::NoContent);
 
     // a normal request answers with the CORS header too
-    resp = sihd::http::get("localhost:3001/api/data", opts);
+    resp = sihd::http::get(shard_url("localhost:3001/api/data"), opts);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->http_header().find("access-control-allow-origin"), "https://example.com");
@@ -1175,24 +992,25 @@ TEST_F(TestHttpServer, test_per_webservice_auth)
         resp.set_plain_content("private-ok");
     });
 
-    Worker w([&server] {
+    Worker worker([&server] {
         server.start();
         return true;
     });
-    server.set_port(3001);
-    ASSERT_TRUE(w.start_sync_worker("test-server"));
-    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(100)));
+    server.set_port(shard_port(3001));
+    ASSERT_TRUE(worker.start_sync_worker("test-server"));
+    ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
 
     RequestOptions no_proxy;
     no_proxy.proxy = "";
+
     // public webservice accessible without credentials
-    auto pub_resp = sihd::http::get("localhost:3001/public/hello", no_proxy);
+    auto pub_resp = sihd::http::get(shard_url("localhost:3001/public/hello"), no_proxy);
     ASSERT_TRUE(pub_resp.has_value());
     EXPECT_EQ(pub_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(pub_resp->content().cpp_str(), "public-ok");
 
     // protected webservice rejects without credentials
-    auto priv_resp = sihd::http::get("localhost:3001/api/secure", no_proxy);
+    auto priv_resp = sihd::http::get(shard_url("localhost:3001/api/secure"), no_proxy);
     ASSERT_TRUE(priv_resp.has_value());
     EXPECT_EQ(priv_resp->status(), HttpStatus::Unauthorized);
 
@@ -1200,7 +1018,8 @@ TEST_F(TestHttpServer, test_per_webservice_auth)
     RequestOptions good_token;
     good_token.proxy = "";
     good_token.token = "my-secret-token-123";
-    priv_resp = sihd::http::get("localhost:3001/api/secure", good_token);
+
+    priv_resp = sihd::http::get(shard_url("localhost:3001/api/secure"), good_token);
     ASSERT_TRUE(priv_resp.has_value());
     EXPECT_EQ(priv_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(priv_resp->content().cpp_str(), "private-ok");
@@ -1231,7 +1050,7 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     basic_creds.username = "admin";
     basic_creds.password = "secret";
     basic_creds.proxy = "";
-    auto resp = sihd::http::get("localhost:3001/api/whoami", basic_creds);
+    auto resp = sihd::http::get(shard_url("localhost:3001/api/whoami"), basic_creds);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(captured_user, "admin");
@@ -1243,7 +1062,7 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     RequestOptions token_opts;
     token_opts.token = "my-secret-token-123";
     token_opts.proxy = "";
-    resp = sihd::http::get("localhost:3001/api/whoami", token_opts);
+    resp = sihd::http::get(shard_url("localhost:3001/api/whoami"), token_opts);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_TRUE(captured_user.empty());
@@ -1252,7 +1071,7 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
 
 TEST_F(TestHttpServer, test_concurrent_service)
 {
-    if constexpr (sihd::util::build::is_run_with_tsan)
+    if constexpr (build::is_run_with_tsan)
         GTEST_SKIP_("has weird interaction with lws and tsan");
 
     constexpr bool run_monothreaded = false;
@@ -1260,15 +1079,14 @@ TEST_F(TestHttpServer, test_concurrent_service)
     constexpr int num_threads = 4;
     constexpr int num_requests = 10000;
     constexpr int batch_size = 50; // stay well below ulimit -n (default 1024)
-    constexpr int port = 3002;
+    const int port = shard_port(3002);
     const std::string url = "localhost:" + std::to_string(port) + "/api/task";
     Stopwatch stopwatch;
 
-    auto filter = std::make_unique<sihd::util::LoggerFilter>(
-        sihd::util::LoggerFilter::Options {.level_lower = sihd::util::LogLevel::warning});
-    sihd::util::TmpLoggerFilterAdder filter_adder(filter.get());
+    auto filter = std::make_unique<LoggerFilter>(LoggerFilter::Options {.level_lower = LogLevel::warning});
+    TmpLoggerFilterAdder filter_adder(filter.get());
 
-    auto run_batched = [&](int handler_calls_expected, auto & handler_calls) -> sihd::util::time::UnixTime {
+    auto run_batched = [&](int handler_calls_expected, auto & handler_calls) -> time::UnixTime {
         stopwatch.reset();
         int completed = 0;
         while (completed < num_requests)
@@ -1291,7 +1109,7 @@ TEST_F(TestHttpServer, test_concurrent_service)
             completed += batch;
         }
         EXPECT_EQ(handler_calls.load(), handler_calls_expected);
-        return sihd::util::time::to_milli(stopwatch.time());
+        return time::to_milli(stopwatch.time());
     };
 
     // --- Baseline: single service thread ---

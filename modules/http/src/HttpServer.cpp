@@ -5,6 +5,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 
 #include "server/HttpServerImpl.hpp"
 
@@ -20,9 +21,7 @@ using namespace sihd::sys;
 
 int write_protocol_to_lws(WriteProtocol protocol);
 
-HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Node(name, parent),
-    _impl(std::make_unique<Impl>(this))
+HttpServer::HttpServer(const std::string & name, Node *parent): Node(name, parent), _impl(std::make_unique<Impl>(this))
 {
     this->add_conf("encoding", &HttpServer::set_encoding);
     this->add_conf("port", &HttpServer::set_port);
@@ -33,8 +32,10 @@ HttpServer::HttpServer(const std::string & name, sihd::util::Node *parent):
     this->add_conf("404_path", &HttpServer::set_404_path);
     this->add_conf("server_name", &HttpServer::set_server_name);
     this->add_conf("cors_origin", &HttpServer::set_cors_origin);
+    this->add_conf("interface", &HttpServer::set_interface);
     this->add_conf("max_request_size", &HttpServer::set_max_request_size);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
+    this->add_conf("websocket_origin", &HttpServer::add_websocket_origin);
     this->add_conf("service_thread_count", &HttpServer::set_service_thread_count);
 }
 
@@ -123,6 +124,12 @@ bool HttpServer::set_cors_origin(std::string_view origin)
     return true;
 }
 
+bool HttpServer::set_interface(std::string_view iface)
+{
+    _impl->iface = iface;
+    return true;
+}
+
 bool HttpServer::set_max_request_size(size_t size)
 {
     _impl->max_request_size = size;
@@ -168,7 +175,7 @@ bool HttpServer::on_start()
     struct lws_context_creation_info lws_info;
     memset(&lws_info, 0, sizeof(lws_context_creation_info));
     lws_info.port = _impl->port;
-    lws_info.iface = nullptr;
+    lws_info.iface = _impl->iface.empty() ? nullptr : _impl->iface.c_str();
     lws_info.protocols = _impl->lws_protocols_ptr;
     lws_info.gid = -1;
     lws_info.uid = -1;
@@ -178,6 +185,11 @@ bool HttpServer::on_start()
         lws_info.error_document_404 = _impl->page_404_path.c_str();
     if (_impl->lws_mount_ptr != nullptr)
         lws_info.mounts = _impl->lws_mount_ptr;
+    if (_impl->ssl_cert_path.empty() != _impl->ssl_cert_key.empty())
+    {
+        SIHD_LOG(error, "HttpServer: ssl cert and ssl key must be set together, refusing to serve in clear");
+        return false;
+    }
     if (_impl->ssl_cert_path.empty() == false && _impl->ssl_cert_key.empty() == false)
     {
         lws_info.ssl_cert_filepath = _impl->ssl_cert_path.c_str();
@@ -229,19 +241,23 @@ bool HttpServer::on_start()
     return true;
 }
 
-sihd::util::Result<std::string> HttpServer::get_resource_path(std::string_view path)
+Result<std::string> HttpServer::get_resource_path(std::string_view path)
 {
     if (path.size() > 0 && path[0] == '/')
         path = path.substr(1);
 
+    // windows takes '\' as a separator and ':' as a drive or stream marker
+    if (build::is_windows && path.find_first_of("\\:") != std::string_view::npos)
+        return std::unexpected(Error(ErrorCode::permission_denied, "refused resource '{}'", path));
+
     if (!_impl->root_dir.empty())
     {
-        std::string full_path = fs::combine(_impl->root_dir, path);
+        std::string full_path = fs::jail(_impl->root_dir, path);
         if (fs::is_file(full_path))
             return full_path;
         if (path.empty() || fs::is_dir(full_path))
         {
-            std::string index_path = fs::combine(full_path, "index.html");
+            std::string index_path = fs::jail(_impl->root_dir, fs::combine(path, "index.html"));
             if (fs::is_file(index_path))
                 return index_path;
         }
@@ -249,12 +265,18 @@ sihd::util::Result<std::string> HttpServer::get_resource_path(std::string_view p
 
     for (const std::string & resource_path : _impl->resources_path)
     {
-        std::string tmp_path = fs::combine(resource_path, path);
+        std::string tmp_path = fs::jail(resource_path, path);
         if (fs::is_file(tmp_path))
             return tmp_path;
     }
 
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_found, "no resource for '{}'", path));
+    return std::unexpected(Error(ErrorCode::not_found, "no resource for '{}'", path));
+}
+
+bool HttpServer::add_websocket_origin(std::string_view origin)
+{
+    _impl->websocket_origins.insert(str::to_lower_copy(origin));
+    return true;
 }
 
 bool HttpServer::add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)

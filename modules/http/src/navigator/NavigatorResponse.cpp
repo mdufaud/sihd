@@ -49,4 +49,24 @@ void NavigatorResponse::set_method_downgraded(bool downgraded)
     _method_downgraded = downgraded;
 }
 
+const std::string & NavigatorResponse::redirect_refusal() const
+{
+    return _redirect_refusal;
+}
+
+void NavigatorResponse::set_redirect_refusal(std::string && reason)
+{
+    _redirect_refusal = std::move(reason);
+}
+
+bool NavigatorResponse::truncated() const
+{
+    return _truncated;
+}
+
+void NavigatorResponse::set_truncated(bool truncated)
+{
+    _truncated = truncated;
+}
+
 } // namespace sihd::http

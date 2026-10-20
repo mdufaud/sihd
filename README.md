@@ -266,6 +266,12 @@ Repeat tests
 make test repeat=NUMBER
 ```
 
+Run each module's tests as concurrent shards (faster on big modules; the `http` tests shift their loopback ports by the shard index)
+
+```shell
+make test jtest=4
+```
+
 Execute non interactive tests
 
 ```shell

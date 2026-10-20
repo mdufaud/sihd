@@ -6,6 +6,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <sihd/http/Multipart.hpp>
 #include <sihd/util/Duration.hpp>
@@ -29,6 +30,14 @@ struct Progress
         long upload_now = 0;
 };
 
+// dials host:port at these vetted addresses, no DNS lookup (CURLOPT_RESOLVE): rebinding cannot swap them
+struct ResolvePin
+{
+        std::string host;
+        int port = 0;
+        std::vector<std::string> addresses;
+};
+
 struct RequestOptions
 {
         bool verbose = false;
@@ -39,7 +48,7 @@ struct RequestOptions
         sihd::util::Duration connect_timeout = sihd::util::Duration(sihd::util::time::sec(10));
         bool ssl_verify_peer = true;
         bool ssl_verify_host = true;
-        size_t max_response_size = 0;
+        size_t max_response_size = 64 * 1024 * 1024; // 0 means no limit
         std::map<std::string, std::string> parameters = {};
         std::map<std::string, std::string> headers = {};
         std::string username = {};
@@ -47,6 +56,7 @@ struct RequestOptions
         bool digest = false;
         std::string token = {};
         std::string user_agent = {};
+        std::optional<ResolvePin> resolve = {};
 
         // nullopt: use environment proxy (default) - empty string: disable any proxy (overrides
         // environment) - non-empty: use given proxy url

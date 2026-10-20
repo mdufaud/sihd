@@ -206,6 +206,10 @@ struct HttpServer::Impl
                                     void *in,
                                     size_t len);
         int on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session);
+        // an upgrade skips the http callbacks: the checks of a plain request are redone here
+        bool allow_websocket_upgrade(struct lws *wsi);
+        bool is_websocket_origin_allowed(struct lws *wsi);
+        bool pass_http_filter(struct lws *wsi, std::string_view uri);
 
         // protocol management
         bool add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size);
@@ -228,11 +232,13 @@ struct HttpServer::Impl
         lws_protocols *lws_protocols_ptr;
 
         std::vector<IWebsocketHandler *> websocket_handler_lst;
+        std::set<std::string> websocket_origins;
         IHttpFilter *http_filter;
         IHttpAuthenticator *http_authenticator;
         std::string encoding;
         std::string default_server_name;
         std::string default_cors_origin;
+        std::string iface = "127.0.0.1";
 
         std::string page_404_path;
 

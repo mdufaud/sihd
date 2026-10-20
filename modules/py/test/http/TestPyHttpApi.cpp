@@ -27,6 +27,7 @@ class TestPyHttpApi: public ::testing::Test
         virtual void SetUp()
         {
             _server = std::make_unique<EchoServerScope>();
+            _server->server.set_cors_origin("https://app.com");
             _server->start(3012);
         }
 

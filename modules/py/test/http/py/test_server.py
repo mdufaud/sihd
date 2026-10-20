@@ -27,6 +27,7 @@ try:
 
     nav = sihd.http.Navigator()
     nav.clear_proxy()
+    nav.set_ssrf_guard(False)
     nav.set_timeout(sihd.util.time.sec(5))
 
     resp = nav.post("localhost:3013/api/compute", "payload")

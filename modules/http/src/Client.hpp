@@ -57,12 +57,12 @@ class Client
         std::string redirect_url() const;
         long new_connection_count() const;
 
-        bool enable_cookie_engine();
-        bool add_cookie(std::string_view cookie_line);
-        bool clear_cookies();
+        Result enable_cookie_engine();
+        Result add_cookie(std::string_view cookie_line);
+        Result clear_cookies();
         std::vector<std::string> cookie_list() const;
-        bool save_cookies(std::string_view path);
-        bool load_cookies(std::string_view path);
+        Result save_cookies(std::string_view path);
+        Result load_cookies(std::string_view path);
 
     private:
         struct Streams

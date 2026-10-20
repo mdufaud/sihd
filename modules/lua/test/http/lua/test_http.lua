@@ -2,6 +2,7 @@ local http = sihd.http
 
 local nav = http.Navigator()
 nav:clear_proxy()
+nav:set_ssrf_guard(false)
 nav:set_timeout(sihd.util.time.sec(5))
 
 -- GET
@@ -13,6 +14,12 @@ assert(type(resp.headers) == "table")
 assert(resp.headers["content-type"] == "text/plain; charset=utf-8")
 assert(type(resp.cookies) == "table")
 assert(type(resp.redirect_history) == "table")
+
+-- cookie jar
+assert(nav:set_cookie("flavor", "chocolate", "localhost") == true)
+assert(nav:cookies()["flavor"] == "chocolate")
+assert(nav:clear_cookies() == true)
+assert(next(nav:cookies()) == nil)
 
 -- POST echo
 local echoed = nav:post("localhost:3011/api/echo", "hello lua")
@@ -28,6 +35,7 @@ assert(missing.status == 404)
 -- Navigator: sequential requests on one connection pool
 local reuse = http.Navigator()
 reuse:clear_proxy()
+reuse:set_ssrf_guard(false)
 reuse:set_timeout(sihd.util.time.sec(5))
 local r1 = reuse:get("localhost:3011/api/hello")
 assert(r1 ~= nil)
@@ -45,7 +53,7 @@ assert(r3 ~= nil)
 assert(r3.content == "hello navigator")
 assert(reuse:new_connection_count() == 0)
 
--- CORS is on by default: a preflight carries origin and access-control-request-method
+-- the server allows https://app.com: a preflight carries origin and access-control-request-method
 local preflight = http.RequestOptions()
 preflight:set_header("Origin", "https://app.com")
 preflight:set_header("Access-Control-Request-Method", "POST")

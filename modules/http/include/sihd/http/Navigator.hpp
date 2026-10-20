@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <sihd/http/Multipart.hpp>
 #include <sihd/http/RequestOptions.hpp>
@@ -104,13 +105,16 @@ class Navigator
         void set_header(std::string_view name, std::string_view value);
         void remove_header(std::string_view name);
         void clear_headers();
+        // names of the headers sent along a redirect to another origin, every other one is dropped
+        void set_cross_origin_headers(std::vector<std::string> names);
 
         // Cookies (in-memory cookie jar)
         std::map<std::string, std::string> cookies() const;
-        void set_cookie(std::string_view name, std::string_view value, std::string_view domain = "");
-        void clear_cookies();
-        void save_cookies(std::string_view path);
-        void load_cookies(std::string_view path);
+        sihd::util::Result<void>
+            set_cookie(std::string_view name, std::string_view value, std::string_view domain = "");
+        sihd::util::Result<void> clear_cookies();
+        sihd::util::Result<void> save_cookies(std::string_view path);
+        sihd::util::Result<void> load_cookies(std::string_view path);
 
         // Proxy
         void set_proxy(std::string_view url, ProxyType type = ProxyType::Http);
@@ -119,8 +123,8 @@ class Navigator
         void add_proxy(std::string_view url, ProxyType type = ProxyType::Http);
         void set_proxy_rotation(ProxyRotation rotation);
 
-        // Retry
-        void set_retry(int max_attempts, long initial_backoff_ms = 500);
+        // Retry (max_wait_ms caps each backoff and each Retry-After wait, 0 = no cap)
+        void set_retry(int max_attempts, long initial_backoff_ms = 500, long max_wait_ms = 0);
 
         // Per-domain rate limiting
         void set_domain_delay_ms(long ms);
@@ -130,7 +134,7 @@ class Navigator
         void set_user_agent_rotation(bool enable);
 
         // WebSocket
-        bool ws_connect(std::string_view url, std::string_view protocol = "");
+        sihd::util::Result<void> ws_connect(std::string_view url, std::string_view protocol = "");
         bool ws_send(std::string_view text);
         bool ws_send_binary(sihd::util::ArrByteView data);
         void ws_close();

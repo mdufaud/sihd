@@ -23,6 +23,8 @@
 #include <sihd/util/SmartNodePtr.hpp>
 #include <sihd/util/str.hpp>
 
+#include "../expected_caster.hpp"
+
 namespace sihd::py
 {
 

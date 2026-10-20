@@ -37,6 +37,8 @@ class HttpServer: public sihd::util::Node,
         bool set_404_path(std::string_view path);
         bool set_server_name(std::string_view path);
         bool set_cors_origin(std::string_view origin);
+        // loopback by default, empty means every interface
+        bool set_interface(std::string_view iface);
         // 0 means no limit
         bool set_max_request_size(size_t size);
 
@@ -52,6 +54,8 @@ class HttpServer: public sihd::util::Node,
         virtual sihd::util::Result<std::string> get_resource_path(std::string_view path);
 
         bool add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
+        // "*" allows any; unlisted origins pass only as the literal host the server was reached at
+        bool add_websocket_origin(std::string_view origin);
 
     protected:
         bool on_start() override;

@@ -1,7 +1,6 @@
 #include <algorithm>
 
 #include <sihd/http/Route.hpp>
-#include <sihd/util/Url.hpp>
 #include <sihd/util/str.hpp>
 
 namespace sihd::http
@@ -28,8 +27,6 @@ std::string normalize_path(std::string_view raw)
     auto segments = sihd::util::str::split(raw, '/');
     if (segments.empty())
         return "";
-    for (auto & seg : segments)
-        seg = sihd::util::Url::str_decode(seg);
     return sihd::util::str::join(std::span<const std::string>(segments), "/");
 }
 
@@ -91,7 +88,7 @@ RouteMatch Route::match(std::string_view path) const
             {
                 if (!joined.empty())
                     joined += '/';
-                joined += sihd::util::Url::str_decode(parts[j]);
+                joined += parts[j];
             }
             result.params[_segments[i].value] = std::move(joined);
             result.matched = true;
@@ -99,9 +96,9 @@ RouteMatch Route::match(std::string_view path) const
         }
         else if (_segments[i].is_param)
         {
-            result.params[_segments[i].value] = sihd::util::Url::str_decode(parts[i]);
+            result.params[_segments[i].value] = parts[i];
         }
-        else if (_segments[i].value != sihd::util::Url::str_decode(parts[i]))
+        else if (_segments[i].value != parts[i])
         {
             return RouteMatch {};
         }

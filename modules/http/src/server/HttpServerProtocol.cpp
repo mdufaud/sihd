@@ -23,7 +23,6 @@ HttpServer::Impl::Impl(HttpServer *server):
     stepworker.set_frequency(10);
 
     default_server_name = server->name();
-    default_cors_origin = "*";
     encoding = "utf-8";
 
     this->add_protocol("http-server", Impl::_global_http_lws_callback, sizeof(HttpSession), 0);

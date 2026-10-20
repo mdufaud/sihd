@@ -39,3 +39,23 @@ assert(split[2] == "world")
 
 -- endian: exactly one is true
 assert(util.endian.is_big() ~= util.endian.is_little())
+
+-- random: one seed, one sequence
+local seed = util.num.seed()
+assert(seed ~= util.num.seed())
+
+local first = util.Random(seed)
+local second = util.Random(seed)
+for _ = 1, 100 do
+    assert(first:rand(-5, 5) == second:rand(-5, 5))
+    assert(first:drand(0.0, 1.0) == second:drand(0.0, 1.0))
+end
+
+local random = util.Random(-1)
+for _ = 1, 1000 do
+    local value = random:rand(10, -10)
+    assert(value >= -10 and value <= 10)
+    local full = random:rand(math.mininteger, math.maxinteger)
+    assert(math.type(full) == "integer")
+end
+assert(random:rand(7, 7) == 7)

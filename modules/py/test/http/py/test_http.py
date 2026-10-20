@@ -2,6 +2,7 @@ import sihd
 
 nav = sihd.http.Navigator()
 nav.clear_proxy()
+nav.set_ssrf_guard(False)
 nav.set_timeout(sihd.util.time.sec(5))
 
 # GET
@@ -13,6 +14,12 @@ assert(resp.content() == b"navigator-ok")
 assert(isinstance(resp.headers(), dict))
 assert(isinstance(resp.cookies(), dict))
 assert(isinstance(resp.redirect_history(), list))
+
+# cookie jar
+nav.set_cookie("flavor", "chocolate", "localhost")
+assert(nav.cookies() == {"flavor": "chocolate"})
+nav.clear_cookies()
+assert(nav.cookies() == {})
 
 # POST echo
 echoed = nav.post("localhost:3012/api/echo", "hello py")
@@ -58,7 +65,7 @@ assert(patched is not None)
 assert(patched.status() == 200)
 assert(patched.text() == "hello patch")
 
-# CORS is on by default: a preflight carries origin and access-control-request-method
+# the server allows https://app.com: a preflight carries origin and access-control-request-method
 preflight = sihd.http.RequestOptions()
 preflight.headers = {"Origin": "https://app.com", "Access-Control-Request-Method": "POST"}
 pre = sihd.http.options("localhost:3012/api/echo", preflight)
@@ -104,6 +111,7 @@ assert(sent.text() == "multipart-value")
 # Navigator: sequential requests on one connection pool
 reuse = sihd.http.Navigator()
 reuse.clear_proxy()
+reuse.set_ssrf_guard(False)
 reuse.set_timeout(sihd.util.time.sec(5))
 r1 = reuse.get("localhost:3012/api/hello")
 assert(r1 is not None)

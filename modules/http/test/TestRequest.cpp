@@ -10,9 +10,7 @@
 #include <sihd/http/request.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
-#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Worker.hpp>
 
 #include "http_test_helpers.hpp"
 
@@ -79,77 +77,88 @@ TEST_F(TestRequest, test_http_methods)
         [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("options-ok"); },
         HttpRequest::Options);
     scope.server.set_cors_origin("https://app.com");
-    scope.start(3004);
+    scope.start(shard_port(3004));
 
     {
-        auto r = http::get("localhost:3004/api/res");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        auto response = http::get(shard_url("localhost:3004/api/res"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
     }
+
     {
-        auto r = http::post("localhost:3004/api/res", "body");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "body");
+        auto response = http::post(shard_url("localhost:3004/api/res"), "body");
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "body");
     }
+
     {
-        auto r = http::del("localhost:3004/api/res");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        auto response = http::del(shard_url("localhost:3004/api/res"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
     }
 
     RequestOptions cors;
     cors.headers["Origin"] = "https://app.com";
     cors.headers["Access-Control-Request-Method"] = "POST";
-    EXPECT_EQ(http::options("localhost:3004/api/res", cors)->status(), HttpStatus::NoContent);
+
+    EXPECT_EQ(http::options(shard_url("localhost:3004/api/res"), cors)->status(), HttpStatus::NoContent);
+
     {
-        auto r = http::patch("localhost:3004/api/res", "patched");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "patched");
+        auto response = http::patch(shard_url("localhost:3004/api/res"), "patched");
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "patched");
     }
+
     {
-        auto r = http::head("localhost:3004/api/res");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        auto response = http::head(shard_url("localhost:3004/api/res"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
     }
+
     {
         // a preflight is an OPTIONS carrying origin and access-control-request-method
-        auto r = http::options("localhost:3004/api/opts", cors);
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::NoContent);
-        EXPECT_EQ(r->http_header().find("access-control-allow-methods"),
+        auto response = http::options(shard_url("localhost:3004/api/opts"), cors);
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::NoContent);
+        EXPECT_EQ(response->http_header().find("access-control-allow-methods"),
                   "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS");
     }
+
     {
-        auto r = http::get("localhost:3004/api/opts", cors);
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->http_header().find("access-control-allow-origin"), "https://app.com");
+        auto response = http::get(shard_url("localhost:3004/api/opts"), cors);
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->http_header().find("access-control-allow-origin"), "https://app.com");
     }
+
     {
         // a plain OPTIONS reaches the routes
-        auto r = http::options("localhost:3004/api/opts");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
-        EXPECT_EQ(r->content().cpp_str(), "options-ok");
+        auto response = http::options(shard_url("localhost:3004/api/opts"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
+        EXPECT_EQ(response->content().cpp_str(), "options-ok");
     }
+
     {
         // the path is known, the method is not: the answer carries what is allowed
-        auto r = http::options("localhost:3004/api/res");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::MethodNotAllowed);
-        EXPECT_EQ(r->http_header().find("allow"), "GET, POST, DELETE, PATCH, HEAD");
+        auto response = http::options(shard_url("localhost:3004/api/res"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::MethodNotAllowed);
+        EXPECT_EQ(response->http_header().find("allow"), "GET, POST, DELETE, PATCH, HEAD");
     }
+
     {
         // the same answer is reached through the body path
-        auto r = http::post("localhost:3004/api/opts", "body");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::MethodNotAllowed);
-        EXPECT_EQ(r->http_header().find("allow"), "OPTIONS");
+        auto response = http::post(shard_url("localhost:3004/api/opts"), "body");
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::MethodNotAllowed);
+        EXPECT_EQ(response->http_header().find("allow"), "OPTIONS");
     }
+
     {
         // nothing routes that path
-        auto r = http::options("localhost:3004/api/missing");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::NotFound);
+        auto response = http::options(shard_url("localhost:3004/api/missing"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::NotFound);
     }
 }
 
@@ -169,22 +178,22 @@ TEST_F(TestRequest, test_async_requests)
         ++calls;
         resp.set_plain_content("pong");
     });
-    scope.start(3004);
+    scope.start(shard_port(3004));
 
-    auto f1 = http::async_get("localhost:3004/api/ping");
-    auto f2 = http::async_post("localhost:3004/api/echo", "hello");
-    EXPECT_EQ(f1.get()->content().cpp_str(), "pong");
-    EXPECT_EQ(f2.get()->content().cpp_str(), "hello");
+    auto ping_future = http::async_get(shard_url("localhost:3004/api/ping"));
+    auto echo_future = http::async_post(shard_url("localhost:3004/api/echo"), "hello");
+    EXPECT_EQ(ping_future.get()->content().cpp_str(), "pong");
+    EXPECT_EQ(echo_future.get()->content().cpp_str(), "hello");
 
     // fan-out: 10 concurrent GETs all succeed
-    constexpr int n = 10;
+    constexpr int request_count = 10;
     std::vector<FutureHttpResponse> futures;
-    futures.reserve(n);
-    for (int i = 0; i < n; ++i)
-        futures.push_back(http::async_get("localhost:3004/api/ping"));
-    for (auto & f : futures)
-        EXPECT_EQ(f.get()->status(), HttpStatus::Ok);
-    EXPECT_EQ(calls.load(), 2 + n);
+    futures.reserve(request_count);
+    for (int i = 0; i < request_count; ++i)
+        futures.push_back(http::async_get(shard_url("localhost:3004/api/ping")));
+    for (auto & future : futures)
+        EXPECT_EQ(future.get()->status(), HttpStatus::Ok);
+    EXPECT_EQ(calls.load(), 2 + request_count);
 }
 
 // basic-auth and bearer-token enforce access and propagate identity to the handler
@@ -199,23 +208,23 @@ TEST_F(TestRequest, test_auth)
         captured_token = req.auth_token();
         resp.set_plain_content("ok");
     });
-    scope.start(3004);
+    scope.start(shard_port(3004));
 
     // no credentials → 401
     {
-        auto r = http::get("localhost:3004/api/who");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Unauthorized);
+        auto response = http::get(shard_url("localhost:3004/api/who"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Unauthorized);
     }
 
     // wrong password → 401
-    RequestOptions bad;
-    bad.username = "admin";
-    bad.password = "wrong";
+    RequestOptions wrong_credentials;
+    wrong_credentials.username = "admin";
+    wrong_credentials.password = "wrong";
     {
-        auto r = http::get("localhost:3004/api/who", bad);
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Unauthorized);
+        auto response = http::get(shard_url("localhost:3004/api/who"), wrong_credentials);
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Unauthorized);
     }
 
     // basic auth → 200, user propagated
@@ -223,9 +232,9 @@ TEST_F(TestRequest, test_auth)
     basic.username = "admin";
     basic.password = "secret";
     {
-        auto r = http::get("localhost:3004/api/who", basic);
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        auto response = http::get(shard_url("localhost:3004/api/who"), basic);
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
     }
     EXPECT_EQ(captured_user, "admin");
     EXPECT_TRUE(captured_token.empty());
@@ -235,9 +244,9 @@ TEST_F(TestRequest, test_auth)
     RequestOptions token;
     token.token = "my-secret-token-123";
     {
-        auto r = http::get("localhost:3004/api/who", token);
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::Ok);
+        auto response = http::get(shard_url("localhost:3004/api/who"), token);
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::Ok);
     }
     EXPECT_TRUE(captured_user.empty());
     EXPECT_EQ(captured_token, "my-secret-token-123");
@@ -256,31 +265,34 @@ TEST_F(TestRequest, test_routing)
     scope.server._webservice->set_entry_point("fs/{path...}", [](const HttpRequest & req, HttpResponse & resp) {
         resp.set_plain_content(std::string(req.path_param("path").value_or("")));
     });
-    scope.start(3004);
+    scope.start(shard_port(3004));
 
     // parameterized route
     {
-        auto r = http::get("localhost:3004/api/items/42");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "42");
+        auto response = http::get(shard_url("localhost:3004/api/items/42"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "42");
     }
+
     // literal beats {id}
     {
-        auto r = http::get("localhost:3004/api/items/special");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "literal");
+        auto response = http::get(shard_url("localhost:3004/api/items/special"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "literal");
     }
+
     // catchall
     {
-        auto r = http::get("localhost:3004/api/fs/a/b/c.txt");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "a/b/c.txt");
+        auto response = http::get(shard_url("localhost:3004/api/fs/a/b/c.txt"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "a/b/c.txt");
     }
+
     // unmatched route → 404
     {
-        auto r = http::get("localhost:3004/api/missing");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->status(), HttpStatus::NotFound);
+        auto response = http::get(shard_url("localhost:3004/api/missing"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->status(), HttpStatus::NotFound);
     }
 }
 
@@ -315,15 +327,15 @@ TEST_F(TestRequest, test_stateless_connections)
     scope.server._webservice->set_entry_point("counter", [&get_count](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("hit-" + std::to_string(++get_count));
     });
-    scope.start(3005);
+    scope.start(shard_port(3005));
 
-    auto r1 = http::get("localhost:3005/api/counter");
-    ASSERT_TRUE(r1.has_value());
-    EXPECT_EQ(r1->content().cpp_str(), "hit-1");
+    auto first_response = http::get(shard_url("localhost:3005/api/counter"));
+    ASSERT_TRUE(first_response.has_value());
+    EXPECT_EQ(first_response->content().cpp_str(), "hit-1");
 
-    auto r2 = http::get("localhost:3005/api/counter");
-    ASSERT_TRUE(r2.has_value());
-    EXPECT_EQ(r2->content().cpp_str(), "hit-2");
+    auto second_response = http::get(shard_url("localhost:3005/api/counter"));
+    ASSERT_TRUE(second_response.has_value());
+    EXPECT_EQ(second_response->content().cpp_str(), "hit-2");
     EXPECT_EQ(get_count, 2);
 }
 
@@ -332,49 +344,14 @@ namespace
 
 void capture_post_head(std::string & request_head, const RequestOptions & options)
 {
-    sihd::net::Socket listener;
-    ASSERT_TRUE(listener.open(AF_INET, SOCK_STREAM, 0).has_value());
-    ASSERT_TRUE(listener.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(listener.bind(sihd::net::IpAddr::localhost(0)).has_value());
-    ASSERT_TRUE(listener.listen(1).has_value());
-    const int port = listener.local_port();
-    ASSERT_GT(port, 0);
-
     const std::string body(2 * 1024 * 1024, 'x');
-    Worker worker([&] {
-        sihd::net::Socket conn(listener.accept(5000).value_or(-1));
-        if (!conn.is_open() || !conn.set_recv_timeout(5000).has_value())
-            return false;
-        std::string received;
-        char buffer[65536];
-        size_t head_end = std::string::npos;
-        while (head_end == std::string::npos || received.size() < head_end + 4 + body.size())
-        {
-            const auto size = conn.receive(buffer, sizeof(buffer));
-            if (!size || *size == 0)
-                return false;
-            received.append(buffer, *size);
-            if (head_end != std::string::npos)
-                continue;
-            head_end = received.find("\r\n\r\n");
-            if (head_end == std::string::npos)
-                continue;
-            request_head = received.substr(0, head_end);
-            constexpr std::string_view proceed = "HTTP/1.1 100 Continue\r\n\r\n";
-            if (request_head.find("Expect: 100-continue") != std::string::npos
-                && !conn.send_all({proceed.data(), proceed.size()}).has_value())
-                return false;
-        }
-        constexpr std::string_view reply = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok";
-        return conn.send_all({reply.data(), reply.size()}).has_value();
-    });
-    ASSERT_TRUE(worker.start_sync_worker("expect-capture"));
-    sihd::util::Defer stop_worker([&] { worker.stop_worker(); });
+    HeadCaptureServer capture(body.size());
+    ASSERT_TRUE(capture.start());
 
-    auto resp = http::post(fmt::format("127.0.0.1:{}/upload", port), body, options);
+    auto resp = http::post(fmt::format("127.0.0.1:{}/upload", capture.port()), body, options);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
-    ASSERT_TRUE(worker.stop_worker());
+    request_head = capture.finish();
     ASSERT_FALSE(request_head.empty());
 }
 
@@ -399,32 +376,32 @@ TEST_F(TestRequest, test_post_keeps_caller_expect_header)
 TEST_F(TestRequest, test_put_file)
 {
     ServerScope scope;
-    sihd::sys::TmpDir tmp;
-    ASSERT_TRUE(tmp);
+    sihd::sys::TmpDir dir;
+    ASSERT_TRUE(dir);
 
     scope.server._webservice->set_entry_point(
         "upload",
         [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
         HttpRequest::Put);
-    scope.start(3005);
+    scope.start(shard_port(3005));
 
     // larger than one curl read buffer: the file must stream through the read callback
     std::string content(256 * 1024, 'x');
     for (size_t i = 0; i < content.size(); i += 16)
         std::memcpy(content.data() + i, "0123456789abcdef", 16);
 
-    const std::string path = sihd::sys::fs::combine(tmp.path(), "put.bin");
+    const std::string path = sihd::sys::fs::combine(dir.path(), "put.bin");
     {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         file.write(content.data(), (std::streamsize)content.size());
     }
 
-    auto resp = http::put("localhost:3005/api/upload", path);
+    auto resp = http::put(shard_url("localhost:3005/api/upload"), path);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), 200u);
     EXPECT_EQ(resp->content().cpp_str(), content);
 
-    EXPECT_FALSE(http::put("localhost:3005/api/upload", "/no/such/file/here").has_value());
+    EXPECT_FALSE(http::put(shard_url("localhost:3005/api/upload"), "/no/such/file/here").has_value());
 }
 
 // a response cut short by max_response_size is still returned, truncated
@@ -434,19 +411,19 @@ TEST_F(TestRequest, test_max_response_size_overflow)
     scope.server._webservice->set_entry_point("big", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content(std::string(8192, 'x'));
     });
-    scope.start(3005);
+    scope.start(shard_port(3005));
 
     RequestOptions options;
     options.max_response_size = 1024;
-    auto r = http::get("localhost:3005/api/big", options);
-    ASSERT_TRUE(r.has_value());
-    EXPECT_EQ(r->status(), HttpStatus::Ok);
-    EXPECT_LE(r->content().size(), 1024u);
+    auto response = http::get(shard_url("localhost:3005/api/big"), options);
+    ASSERT_TRUE(response.has_value());
+    EXPECT_EQ(response->status(), HttpStatus::Ok);
+    EXPECT_LE(response->content().size(), 1024u);
 
     // without the limit the whole body comes through
-    auto full = http::get("localhost:3005/api/big");
-    ASSERT_TRUE(full.has_value());
-    EXPECT_EQ(full->content().size(), 8192u);
+    auto unlimited_response = http::get(shard_url("localhost:3005/api/big"));
+    ASSERT_TRUE(unlimited_response.has_value());
+    EXPECT_EQ(unlimited_response->content().size(), 8192u);
 }
 
 // query parameters reach the handler and the progress callback observes the transfer
@@ -459,7 +436,7 @@ TEST_F(TestRequest, test_request_options_parameters_and_progress)
             resp.set_plain_content(req.query_param("q").value_or("missing"));
         },
         HttpRequest::Post);
-    scope.start(3005);
+    scope.start(shard_port(3005));
 
     RequestOptions options;
     options.parameters["q"] = "sihd";
@@ -471,10 +448,10 @@ TEST_F(TestRequest, test_request_options_parameters_and_progress)
         return true;
     };
 
-    auto r = http::post("localhost:3005/api/params", "body", options);
-    ASSERT_TRUE(r.has_value());
-    EXPECT_EQ(r->status(), HttpStatus::Ok);
-    EXPECT_EQ(r->content().cpp_str(), "sihd");
+    auto response = http::post(shard_url("localhost:3005/api/params"), "body", options);
+    ASSERT_TRUE(response.has_value());
+    EXPECT_EQ(response->status(), HttpStatus::Ok);
+    EXPECT_EQ(response->content().cpp_str(), "sihd");
     EXPECT_TRUE(saw_upload_total);
     EXPECT_TRUE(saw_download_total);
 }

@@ -31,12 +31,13 @@ SIHD_NEW_LOGGER("test");
 
 using namespace sihd::http;
 using namespace sihd::util;
+using namespace sihd::sys;
 
 class TestNavigator: public ::testing::Test
 {
     protected:
-        TestNavigator() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestNavigator() { sihd::util::LoggerManager::clear_loggers(); }
+        TestNavigator() { LoggerManager::stream(); }
+        virtual ~TestNavigator() { LoggerManager::clear_loggers(); }
         virtual void SetUp() {}
         virtual void TearDown() {}
 };
@@ -68,25 +69,25 @@ TEST_F(TestNavigator, test_navigator_basic)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.get("localhost:3001/api/hello");
+    auto resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "navigator-ok");
 
-    resp = nav.post("localhost:3001/api/echo", "hello navigator");
+    resp = navigator.post(shard_url("localhost:3001/api/echo"), "hello navigator");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "hello navigator");
 
-    resp = nav.put("localhost:3001/api/echo_put", "put data");
+    resp = navigator.put(shard_url("localhost:3001/api/echo_put"), "put data");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "put data");
 
-    resp = nav.del("localhost:3001/api/del_ok");
+    resp = navigator.del(shard_url("localhost:3001/api/del_ok"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "deleted");
@@ -104,27 +105,27 @@ TEST_F(TestNavigator, test_navigator_auth)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.get("localhost:3001/api/secure");
+    auto resp = navigator.get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
-    nav.set_basic_auth("admin", "secret");
-    resp = nav.get("localhost:3001/api/secure");
+    navigator.set_basic_auth("admin", "secret");
+    resp = navigator.get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "auth-ok");
 
-    nav.set_token_auth("my-secret-token-123");
-    resp = nav.get("localhost:3001/api/secure");
+    navigator.set_token_auth("my-secret-token-123");
+    resp = navigator.get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "auth-ok");
 
-    nav.clear_auth();
-    resp = nav.get("localhost:3001/api/secure");
+    navigator.clear_auth();
+    resp = navigator.get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 }
@@ -143,19 +144,19 @@ TEST_F(TestNavigator, test_navigator_cookies)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.get("localhost:3001/api/set_cookie");
+    auto resp = navigator.get(shard_url("localhost:3001/api/set_cookie"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
-    resp = nav.get("localhost:3001/api/check_cookie");
+    resp = navigator.get(shard_url("localhost:3001/api/check_cookie"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "abc123");
 
-    auto jar = nav.cookies();
+    auto jar = navigator.cookies();
     EXPECT_FALSE(jar.empty());
     EXPECT_EQ(jar["session"], "abc123");
 }
@@ -165,16 +166,12 @@ TEST_F(TestNavigator, test_navigator_redirect)
 {
     ServerScope scope;
 
-    scope.server._webservice->set_entry_point("hop1", [](const HttpRequest &, HttpResponse & resp) {
-        resp.set_status(HttpStatus::Found);
-        resp.http_header().set_header("location", "http://localhost:3001/api/dest");
-    });
+    scope.server._webservice->set_entry_point(
+        "hop1",
+        redirect_to(HttpStatus::Found, shard_url("http://localhost:3001/api/dest")));
     scope.server._webservice->set_entry_point(
         "post_hop",
-        [](const HttpRequest &, HttpResponse & resp) {
-            resp.set_status(HttpStatus::Found);
-            resp.http_header().set_header("location", "http://localhost:3001/api/dest");
-        },
+        redirect_to(HttpStatus::Found, shard_url("http://localhost:3001/api/dest")),
         HttpRequest::Post);
     scope.server._webservice->set_entry_point("dest", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("arrived");
@@ -182,20 +179,20 @@ TEST_F(TestNavigator, test_navigator_redirect)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
     // GET → 302 → GET
-    auto resp = nav.get("localhost:3001/api/hop1");
+    auto resp = navigator.get(shard_url("localhost:3001/api/hop1"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
     EXPECT_FALSE(resp->redirect_history().empty());
-    EXPECT_NE(resp->final_url().find("/api/dest"), std::string::npos);
+    EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/dest"));
     EXPECT_FALSE(resp->was_method_downgraded());
 
     // POST → 302 → GET (method downgrade)
-    resp = nav.post("localhost:3001/api/post_hop", "body");
+    resp = navigator.post(shard_url("localhost:3001/api/post_hop"), "body");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
@@ -222,15 +219,50 @@ TEST_F(TestNavigator, test_navigator_retry)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
-    nav.set_retry(3, 1); // up to 3 attempts, 1 ms initial backoff
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_retry(3, 1); // up to 3 attempts, 1 ms initial backoff
 
-    auto resp = nav.get("localhost:3001/api/flaky");
+    auto resp = navigator.get(shard_url("localhost:3001/api/flaky"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "ok");
     EXPECT_EQ(calls.load(), 3);
+}
+
+// Retry-After far beyond the configured max wait is capped
+TEST_F(TestNavigator, test_navigator_retry_after_capped_by_max_wait)
+{
+    ServerScope scope;
+    std::atomic<int> calls {0};
+
+    scope.server._webservice->set_entry_point("limited", [&calls](const HttpRequest &, HttpResponse & resp) {
+        if (calls.fetch_add(1) < 1)
+        {
+            resp.set_status(HttpStatus::TooManyRequests);
+            resp.http_header().set_header("retry-after", "3600");
+            resp.set_plain_content("slow down");
+        }
+        else
+        {
+            resp.set_plain_content("ok");
+        }
+    });
+
+    scope.start();
+
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_retry(1, 1, 20);
+
+    Stopwatch stopwatch;
+    auto resp = navigator.get(shard_url("localhost:3001/api/limited"));
+    const Duration elapsed = stopwatch.time();
+
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->content().cpp_str(), "ok");
+    EXPECT_EQ(calls.load(), 2);
+    EXPECT_LT(elapsed, Duration(time::sec(5)));
 }
 
 // Max response size cap
@@ -244,13 +276,20 @@ TEST_F(TestNavigator, test_navigator_max_response_size)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
-    nav.set_max_response_size(64);
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_max_response_size(64);
 
-    auto resp = nav.get("localhost:3001/api/big");
+    auto resp = navigator.get(shard_url("localhost:3001/api/big"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_LT(resp->content().size(), 4096u);
+    EXPECT_TRUE(resp->truncated());
+
+    navigator.set_max_response_size(0);
+    auto whole = navigator.get(shard_url("localhost:3001/api/big"));
+    ASSERT_TRUE(whole.has_value());
+    EXPECT_EQ(whole->content().size(), 4096u);
+    EXPECT_FALSE(whole->truncated());
 }
 
 // CSRF token extraction from HTML without any network
@@ -355,10 +394,10 @@ TEST_F(TestNavigator, test_navigator_head)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.head("localhost:3001/api/hello");
+    auto resp = navigator.head(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().size(), 0u);
 }
@@ -367,21 +406,20 @@ TEST_F(TestNavigator, test_navigator_redirect_policy_none)
 {
     ServerScope scope;
 
-    scope.server._webservice->set_entry_point("redir", [](const HttpRequest &, HttpResponse & resp) {
-        resp.set_status(HttpStatus::Found);
-        resp.http_header().set_header("location", "http://localhost:3001/api/dest");
-    });
+    scope.server._webservice->set_entry_point(
+        "redir",
+        redirect_to(HttpStatus::Found, shard_url("http://localhost:3001/api/dest")));
     scope.server._webservice->set_entry_point("dest", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("arrived");
     });
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
-    nav.set_redirect_policy(RedirectPolicy::None);
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_redirect_policy(RedirectPolicy::None);
 
-    auto resp = nav.get("localhost:3001/api/redir");
+    auto resp = navigator.get(shard_url("localhost:3001/api/redir"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Found);
     EXPECT_TRUE(resp->redirect_history().empty());
@@ -391,8 +429,8 @@ TEST_F(TestNavigator, test_navigator_meta_refresh)
 {
     ServerScope scope;
 
-    const std::string meta_page =
-        R"(<html><head><meta http-equiv="refresh" content="0; url=http://localhost:3001/api/dest"></head></html>)";
+    const std::string meta_page = shard_url(
+        R"(<html><head><meta http-equiv="refresh" content="0; url=http://localhost:3001/api/dest"></head></html>)");
     scope.server._webservice->set_entry_point("meta_html", [&meta_page](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_content({meta_page.data(), meta_page.size()}).has_value());
         resp.set_content_type("text/html");
@@ -412,19 +450,19 @@ TEST_F(TestNavigator, test_navigator_meta_refresh)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto html = nav.get("localhost:3001/api/meta_html");
+    auto html = navigator.get(shard_url("localhost:3001/api/meta_html"));
     ASSERT_TRUE(html.has_value());
     EXPECT_EQ(html->content().cpp_str(), "arrived");
-    EXPECT_NE(html->final_url().find("/api/dest"), std::string::npos);
+    EXPECT_EQ(html->final_url(), shard_url("http://localhost:3001/api/dest"));
 
-    auto mixed_case = nav.get("localhost:3001/api/meta_mixed_case");
+    auto mixed_case = navigator.get(shard_url("localhost:3001/api/meta_mixed_case"));
     ASSERT_TRUE(mixed_case.has_value());
     EXPECT_EQ(mixed_case->content().cpp_str(), "arrived");
 
-    auto plain = nav.get("localhost:3001/api/meta_plain");
+    auto plain = navigator.get(shard_url("localhost:3001/api/meta_plain"));
     ASSERT_TRUE(plain.has_value());
     EXPECT_EQ(plain->content().cpp_str(), meta_page);
 }
@@ -439,23 +477,23 @@ TEST_F(TestNavigator, test_navigator_custom_headers)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
-    nav.set_header("X-Custom", "test-value");
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_header("X-Custom", "test-value");
 
-    auto resp = nav.get("localhost:3001/api/echo");
+    auto resp = navigator.get(shard_url("localhost:3001/api/echo"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
-    nav.remove_header("X-Custom");
-    resp = nav.get("localhost:3001/api/echo");
+    navigator.remove_header("X-Custom");
+    resp = navigator.get(shard_url("localhost:3001/api/echo"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
-    nav.set_header("X-A", "1");
-    nav.set_header("X-B", "2");
-    nav.clear_headers();
-    resp = nav.get("localhost:3001/api/echo");
+    navigator.set_header("X-A", "1");
+    navigator.set_header("X-B", "2");
+    navigator.clear_headers();
+    resp = navigator.get(shard_url("localhost:3001/api/echo"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 }
@@ -472,51 +510,51 @@ TEST_F(TestNavigator, test_navigator_user_agent_reaches_the_request)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
-    nav.set_user_agent("sihd-navigator/1.0");
+    Navigator navigator;
+    allow_local_targets(navigator);
+    navigator.set_user_agent("sihd-navigator/1.0");
 
-    auto resp = nav.get("localhost:3001/api/echo");
+    auto resp = navigator.get(shard_url("localhost:3001/api/echo"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(seen_agent, "sihd-navigator/1.0");
 }
 
 TEST_F(TestNavigator, test_navigator_ws_send_receive)
 {
-    if constexpr (sihd::util::build::is_run_with_tsan)
+    if constexpr (build::is_run_with_tsan)
         GTEST_SKIP_("has weird interaction with lws and tsan");
 
     SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
-    server.set_port(3003);
+    server.set_port(shard_port(3003));
 
     Worker worker([&server] {
         server.start();
         return true;
     });
-    ASSERT_TRUE(worker.start_sync_worker("ws-nav-server"));
+    ASSERT_TRUE(worker.start_sync_worker("ws-navigator-server"));
     ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
     std::optional<std::string> ws_reply;
     Waitable reply_waitable;
 
-    nav.on_ws_text = [&](std::string_view msg) {
-        auto l = reply_waitable.guard();
+    navigator.on_ws_text = [&](std::string_view msg) {
+        auto reply_lock = reply_waitable.guard();
         ws_reply = std::string(msg);
         reply_waitable.notify_all();
     };
 
-    ASSERT_TRUE(nav.ws_connect("ws://localhost:3003", "proto-two"));
-    ASSERT_TRUE(nav.ws_send("hello from navigator"));
+    ASSERT_TRUE(navigator.ws_connect(shard_url("ws://localhost:3003"), "proto-two"));
+    ASSERT_TRUE(navigator.ws_send("hello from navigator"));
 
-    reply_waitable.wait_for(sihd::util::Duration(time::sec(2)), [&] { return ws_reply.has_value(); });
+    reply_waitable.wait_for(Duration(time::sec(2)), [&] { return ws_reply.has_value(); });
     ASSERT_TRUE(ws_reply.has_value());
     EXPECT_EQ(*ws_reply, "hello world");
 
-    nav.ws_close();
+    navigator.ws_close();
 
     server.set_service_wait_stop(true);
     server.stop();
@@ -539,21 +577,17 @@ TEST_F(TestNavigator, test_navigator_download)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    const std::string path = "/tmp/sihd_test_download.txt";
-    auto resp = nav.download("localhost:3001/api/file", path);
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine({tmp_dir.path(), "download.txt"});
+    auto resp = navigator.download(shard_url("localhost:3001/api/file"), path);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().size(), 0u);
-
-    std::ifstream ifs(path);
-    ASSERT_TRUE(ifs.is_open());
-    std::string content((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-    EXPECT_EQ(content, payload);
-
-    std::remove(path.c_str());
+    EXPECT_EQ(fs::read_all(path), payload);
 }
 
 TEST_F(TestNavigator, test_navigator_put_file)
@@ -576,23 +610,23 @@ TEST_F(TestNavigator, test_navigator_put_file)
     for (size_t i = 0; i < content.size(); i += 16)
         content.replace(i, 16, "0123456789abcdef");
 
-    sihd::sys::TmpDir tmp;
-    ASSERT_TRUE(tmp);
-    const std::string path = sihd::sys::fs::combine(tmp.path(), "upload.bin");
+    sihd::sys::TmpDir dir;
+    ASSERT_TRUE(dir);
+    const std::string path = sihd::sys::fs::combine(dir.path(), "upload.bin");
     {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         file.write(content.data(), (std::streamsize)content.size());
     }
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.put_file("localhost:3001/api/upload", path);
+    auto resp = navigator.put_file(shard_url("localhost:3001/api/upload"), path);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(received, content);
 
-    EXPECT_FALSE(nav.put_file("localhost:3001/api/upload", "/no/such/file/here").has_value());
+    EXPECT_FALSE(navigator.put_file(shard_url("localhost:3001/api/upload"), "/no/such/file/here").has_value());
 }
 
 // one navigator: the transfer handle is reused, connections stay alive
@@ -609,29 +643,31 @@ TEST_F(TestNavigator, test_navigator_connection_reuse)
         [](const HttpRequest & req, HttpResponse & resp) { resp.set_plain_content(req.content().cpp_str()); },
         HttpRequest::Post);
 
-    scope.start(3005);
+    scope.start(shard_port(3005));
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
     for (int i = 1; i <= 3; ++i)
     {
-        auto r = nav.get("localhost:3005/api/counter");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "hit-" + std::to_string(i));
-        EXPECT_EQ(nav.new_connection_count(), i == 1 ? 1 : 0);
+        auto response = navigator.get(shard_url("localhost:3005/api/counter"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "hit-" + std::to_string(i));
+        EXPECT_EQ(navigator.new_connection_count(), i == 1 ? 1 : 0);
     }
+
     {
-        auto r = nav.post("localhost:3005/api/counter", "posted");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "posted");
-        EXPECT_EQ(nav.new_connection_count(), 0);
+        auto response = navigator.post(shard_url("localhost:3005/api/counter"), "posted");
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "posted");
+        EXPECT_EQ(navigator.new_connection_count(), 0);
     }
+
     {
-        auto r = nav.get("localhost:3005/api/counter");
-        ASSERT_TRUE(r.has_value());
-        EXPECT_EQ(r->content().cpp_str(), "hit-4");
-        EXPECT_EQ(nav.new_connection_count(), 0);
+        auto response = navigator.get(shard_url("localhost:3005/api/counter"));
+        ASSERT_TRUE(response.has_value());
+        EXPECT_EQ(response->content().cpp_str(), "hit-4");
+        EXPECT_EQ(navigator.new_connection_count(), 0);
     }
     EXPECT_EQ(get_count, 4);
 }
@@ -646,25 +682,25 @@ TEST_F(TestNavigator, test_navigator_interceptor_observe)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
     int before_calls = 0;
     int after_calls = 0;
     std::string seen_method;
     int seen_status = 0;
 
-    nav.on_before_request = [&](RequestInfo & info) {
+    navigator.on_before_request = [&](RequestInfo & info) {
         before_calls++;
         seen_method = info.method;
         return true;
     };
-    nav.on_after_response = [&](const NavigatorResponse & resp) {
+    navigator.on_after_response = [&](const NavigatorResponse & resp) {
         after_calls++;
         seen_status = resp.status();
     };
 
-    auto resp = nav.get("localhost:3001/api/hello");
+    auto resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(before_calls, 1);
@@ -689,17 +725,17 @@ TEST_F(TestNavigator, test_navigator_interceptor_rewrite)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    nav.on_before_request = [](RequestInfo & info) {
-        info.url = "localhost:3001/api/echo";
+    navigator.on_before_request = [](RequestInfo & info) {
+        info.url = shard_url("localhost:3001/api/echo");
         info.method = "POST";
         info.headers["content-type"] = "application/sihd";
         return true;
     };
 
-    auto resp = nav.get("localhost:3001/api/unused");
+    auto resp = navigator.get(shard_url("localhost:3001/api/unused"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(seen_content_type, "application/sihd");
@@ -709,14 +745,12 @@ TEST_F(TestNavigator, test_navigator_multipart)
 {
     ServerScope scope;
 
-    std::string received_body;
     std::string seen_username;
     std::string seen_bio;
 
     scope.server._webservice->set_entry_point(
         "upload",
         [&](const HttpRequest & req, HttpResponse & resp) {
-            received_body = req.content().cpp_str();
             if (const Multipart *multipart = req.multipart(); multipart != nullptr)
             {
                 seen_username = multipart->value("username").value_or("");
@@ -728,21 +762,16 @@ TEST_F(TestNavigator, test_navigator_multipart)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
     Multipart form;
     form.add_field("username", "testuser");
     form.add_field("bio", "hello world");
 
-    auto resp = nav.post_multipart("localhost:3001/api/upload", form);
+    auto resp = navigator.post_multipart(shard_url("localhost:3001/api/upload"), form);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
-
-    EXPECT_NE(received_body.find("username"), std::string::npos);
-    EXPECT_NE(received_body.find("testuser"), std::string::npos);
-    EXPECT_NE(received_body.find("bio"), std::string::npos);
-    EXPECT_NE(received_body.find("hello world"), std::string::npos);
 
     EXPECT_EQ(seen_username, "testuser");
     EXPECT_EQ(seen_bio, "hello world");
@@ -776,9 +805,9 @@ TEST_F(TestNavigator, test_navigator_multipart_file)
 
     scope.start();
 
-    sihd::sys::TmpDir tmp;
-    ASSERT_TRUE(tmp);
-    const std::string path = sihd::sys::fs::combine(tmp.path(), "multipart.txt");
+    sihd::sys::TmpDir dir;
+    ASSERT_TRUE(dir);
+    const std::string path = sihd::sys::fs::combine(dir.path(), "multipart.txt");
     {
         std::ofstream file(path, std::ios::binary | std::ios::trunc);
         file << "file payload";
@@ -788,10 +817,10 @@ TEST_F(TestNavigator, test_navigator_multipart_file)
     form.add_field("description", "a file");
     form.add_file("document", path, "document.txt", "text/plain");
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.post_multipart("localhost:3001/api/upload", form);
+    auto resp = navigator.post_multipart(shard_url("localhost:3001/api/upload"), form);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(seen_field, "a file");
@@ -819,7 +848,7 @@ TEST_F(TestNavigator, test_navigator_multipart_malformed)
     RequestOptions options;
     options.headers["content-type"] = "multipart/form-data; boundary=boundary";
 
-    auto resp = sihd::http::post("localhost:3001/api/upload", "not a multipart body", options);
+    auto resp = sihd::http::post(shard_url("localhost:3001/api/upload"), "not a multipart body", options);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::BadRequest);
     EXPECT_EQ(calls, 0);
@@ -835,19 +864,19 @@ TEST_F(TestNavigator, test_navigator_interceptor_cancel)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    nav.on_before_request = [](RequestInfo &) {
+    navigator.on_before_request = [](RequestInfo &) {
         return false;
     };
 
-    auto resp = nav.get("localhost:3001/api/hello");
+    auto resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_FALSE(resp.has_value());
     EXPECT_EQ(resp.error().message, "request cancelled by the on_before_request interceptor");
 
-    nav.on_before_request = nullptr;
-    resp = nav.get("localhost:3001/api/hello");
+    navigator.on_before_request = nullptr;
+    resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
 }
 
@@ -861,42 +890,45 @@ TEST_F(TestNavigator, test_navigator_error_message)
 
     scope.start();
 
-    Navigator nav;
-    nav.clear_proxy();
+    Navigator navigator;
+    allow_local_targets(navigator);
 
-    auto resp = nav.get("localhost:3001/api/hello");
+    auto resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
 
     // nothing listens on that port
-    resp = nav.get("localhost:19999/api/hello");
+    resp = navigator.get("localhost:19999/api/hello");
     ASSERT_FALSE(resp.has_value());
     EXPECT_FALSE(resp.error().message.empty());
 
-    resp = nav.get("localhost:3001/api/hello");
+    resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
 
-    nav.set_ssrf_guard(true);
-    resp = nav.get("http://127.0.0.1:3001/api/hello");
+    navigator.set_ssrf_guard(true);
+    resp = navigator.get(shard_url("http://127.0.0.1:3001/api/hello"));
     ASSERT_FALSE(resp.has_value());
-    EXPECT_NE(resp.error().message.find("SSRF guard blocked a request to a private host"), std::string::npos);
+    EXPECT_EQ(resp.error().message,
+              shard_url("SSRF guard blocked a request to a private host: http://127.0.0.1:3001/api/hello"));
 
     // curl takes a URL without scheme, the guard must see the host all the same
-    resp = nav.get("127.0.0.1:3001/api/hello");
+    resp = navigator.get(shard_url("127.0.0.1:3001/api/hello"));
     ASSERT_FALSE(resp.has_value());
-    EXPECT_NE(resp.error().message.find("SSRF guard blocked a request to a private host"), std::string::npos);
+    EXPECT_EQ(resp.error().message,
+              shard_url("SSRF guard blocked a request to a private host: 127.0.0.1:3001/api/hello"));
 }
 
 TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
 {
-    if constexpr (sihd::util::build::is_run_with_tsan)
+    if constexpr (build::is_run_with_tsan)
         GTEST_SKIP_("has weird interaction with lws and tsan");
 
     SimpleConnectProxy proxy("testuser", "testpass");
-    ASSERT_TRUE(proxy.start(3099));
+    ASSERT_TRUE(proxy.start(shard_port(3099)));
 
     SimpleHttpServer server;
     server.set_root_dir("test/resources/mount_point");
-    server.set_port(3013);
+    server.set_port(shard_port(3013));
+
     Worker worker([&server] {
         server.start();
         return true;
@@ -905,23 +937,24 @@ TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
     ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
 
     const auto run_ws = [](const std::string & user, const std::string & pass) {
-        Navigator nav;
-        nav.set_proxy("localhost:3099");
-        nav.set_proxy_auth(user, pass);
+        Navigator navigator;
+        navigator.set_ssrf_guard(false);
+        navigator.set_proxy(shard_url("localhost:3099"));
+        navigator.set_proxy_auth(user, pass);
 
         std::optional<std::string> reply;
         Waitable waitable;
-        nav.on_ws_text = [&](std::string_view msg) {
-            auto l = waitable.guard();
+        navigator.on_ws_text = [&](std::string_view msg) {
+            auto reply_lock = waitable.guard();
             reply = std::string(msg);
             waitable.notify_all();
         };
-        bool connected = nav.ws_connect("ws://localhost:3013", "proto-two");
+        const bool connected = navigator.ws_connect(shard_url("ws://localhost:3013"), "proto-two").has_value();
         if (connected)
         {
-            nav.ws_send("hello from navigator");
-            waitable.wait_for(sihd::util::Duration(time::sec(2)), [&] { return reply.has_value(); });
-            nav.ws_close();
+            navigator.ws_send("hello from navigator");
+            waitable.wait_for(Duration(time::sec(2)), [&] { return reply.has_value(); });
+            navigator.ws_close();
         }
         return std::make_pair(connected, reply);
     };

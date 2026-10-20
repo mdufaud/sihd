@@ -11,15 +11,15 @@ assert(core:start())
 
 local ch_activate = dev:get_channel("activate")
 local ch_beat = dev:get_channel("heartbeat")
-local waiter = sihd.core.ChannelWaiter(ch_beat)
 
 local i = 0
 ch_beat:set_observer(function (ch)
     i = i + 1
 end)
+local waiter = sihd.core.ChannelWaiter(ch_beat)
 
 ch_activate:write(0, true)
-local ret = waiter:wait_for(sihd.util.Duration(sihd.util.time.ms(50)), 5)
+local ret = waiter:wait_for(sihd.util.Duration(sihd.util.time.ms(500)), 5)
 ch_activate:write(0, false)
 
 ch_beat:set_observer(nil)

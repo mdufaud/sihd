@@ -1,7 +1,11 @@
+#include <array>
+
 #include <sihd/http/IWebsocketHandler.hpp>
 #include <sihd/http/WriteProtocol.hpp>
+#include <sihd/net/ip.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Url.hpp>
 
 #include "HttpServerImpl.hpp"
 
@@ -43,6 +47,11 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
     }
     switch (reason)
     {
+        case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
+        {
+            rc = this->allow_websocket_upgrade(wsi) ? 0 : 1;
+            break;
+        }
         case LWS_CALLBACK_ESTABLISHED:
         {
             if (handler != nullptr && session != nullptr)
@@ -105,6 +114,66 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
             break;
     }
     return rc;
+}
+
+bool HttpServer::Impl::allow_websocket_upgrade(struct lws *wsi)
+{
+    std::array<char, SIHD_HTTP_URI_BUFSIZE + 1> uri;
+    const int uri_len = lws_hdr_copy(wsi, uri.data(), SIHD_HTTP_URI_BUFSIZE, WSI_TOKEN_GET_URI);
+    if (uri_len < 0)
+    {
+        SIHD_LOG(warning, "HttpServer: websocket upgrade refused, uri too long");
+        return false;
+    }
+
+    if (this->pass_http_filter(wsi, std::string_view(uri.data(), uri_len)) == false)
+    {
+        SIHD_LOG(warning,
+                 "HttpServer: websocket upgrade of '{}' refused by the filter",
+                 std::string_view(uri.data(), uri_len));
+        return false;
+    }
+
+    if (this->is_websocket_origin_allowed(wsi) == false)
+    {
+        SIHD_LOG(warning, "HttpServer: websocket upgrade refused, origin not allowed");
+        return false;
+    }
+
+    if (http_authenticator != nullptr)
+    {
+        const std::optional<std::string> authorization = this->get_header(wsi, WSI_TOKEN_HTTP_AUTHORIZATION);
+
+        if (authorization.has_value() == false
+            || this->parse_authorization(*authorization, http_authenticator).authorized == false)
+        {
+            SIHD_LOG(warning, "HttpServer: websocket upgrade refused, not authorized");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool HttpServer::Impl::is_websocket_origin_allowed(struct lws *wsi)
+{
+    const std::optional<std::string> origin = this->get_header(wsi, WSI_TOKEN_ORIGIN);
+    // a client without an Origin is not a browser: the cross-site risk is the browser's
+    if (origin.has_value() == false || origin->empty())
+        return true;
+
+    const std::string lowered = str::to_lower_copy(*origin);
+    if (websocket_origins.contains("*") || websocket_origins.contains(lowered))
+        return true;
+
+    const std::optional<std::string> host = this->get_header(wsi, WSI_TOKEN_HOST);
+    const Url origin_url(lowered);
+    if (host.has_value() == false || origin_url.has_authority == false)
+        return false;
+    const Url host_url("//" + *host);
+    // a domain can be rebound to this server: only a literal address or localhost proves the page is ours
+    const bool literal_host = sihd::net::ip::is_valid_ip(host_url.host) || str::iequals(host_url.host, "localhost");
+    return literal_host && str::iequals(origin_url.host, host_url.host) && origin_url.port == host_url.port;
 }
 
 int HttpServer::Impl::on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
