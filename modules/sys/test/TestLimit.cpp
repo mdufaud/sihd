@@ -33,16 +33,20 @@ class TestLimit: public ::testing::Test
             auto core = limit::get(limit::Resource::core);
             ASSERT_TRUE(core.has_value()) << core.error().message;
             _core = *core;
+            _saved = true;
         }
 
         virtual void TearDown()
         {
+            if (!_saved)
+                return;
             (void)limit::set(limit::Resource::nofile, _nofile.current, _nofile.maximum);
             (void)limit::set(limit::Resource::core, _core.current, _core.maximum);
         }
 
         limit::Limit _nofile;
         limit::Limit _core;
+        bool _saved = false;
 };
 
 TEST_F(TestLimit, test_set_nofile)

@@ -128,7 +128,6 @@ TEST_F(TestNs, test_unshare_and_setns)
     const int code = static_cast<int>(proc.return_code());
     if (code == child_code(ErrorCode::permission_denied))
         GTEST_SKIP() << "user namespaces denied";
-    // qemu-user runs the forked child multithreaded: unshare(CLONE_NEWUSER) is EINVAL
     if (code == child_code(ErrorCode::invalid_argument))
         GTEST_SKIP() << "process is not single-threaded (qemu-user)";
     EXPECT_EQ(code, child_ok);
