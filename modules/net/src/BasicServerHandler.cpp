@@ -4,10 +4,12 @@
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
-SIHD_LOGGER;
+SIHD_NEW_LOGGER("sihd::net");
 
 namespace
 {
@@ -19,13 +21,15 @@ constexpr size_t max_read_array = max_read_per_poll * 2;
 
 BasicServerHandler::BasicServerHandler()
 {
-    _last_time = sihd::util::Timestamp(0);
-    _poll_time = sihd::util::Duration(0);
+    _last_time = Timestamp(0);
+    _poll_time = Duration(0);
     _server = nullptr;
     this->set_max_clients(512);
     this->set_tls_accept_timeout(5000);
+    this->set_idle_timeout(0);
     this->add_conf("max_clients", &BasicServerHandler::set_max_clients);
     this->add_conf("tls_accept_timeout", &BasicServerHandler::set_tls_accept_timeout);
+    this->add_conf("idle_timeout", &BasicServerHandler::set_idle_timeout);
 }
 
 BasicServerHandler::~BasicServerHandler() = default;
@@ -41,6 +45,14 @@ bool BasicServerHandler::set_tls_accept_timeout(int milliseconds)
     if (milliseconds < 0)
         return false;
     _tls_accept_timeout = milliseconds;
+    return true;
+}
+
+bool BasicServerHandler::set_idle_timeout(int milliseconds)
+{
+    if (milliseconds < 0)
+        return false;
+    _idle_timeout = milliseconds;
     return true;
 }
 
@@ -64,12 +76,12 @@ void BasicServerHandler::_add_time_to_clients()
         return;
     std::lock_guard lock(_mutex);
     const auto now = _clock.now();
-    const sihd::util::Duration t = now - _last_time;
-    if (t <= 0)
+    const Duration elapsed = now - _last_time;
+    if (elapsed <= 0)
         return;
     for (auto & [fd, client] : _client_map)
     {
-        client->time_total += t;
+        client->time_total += elapsed;
     }
     _last_time = now;
 }
@@ -117,7 +129,7 @@ std::vector<BasicServerHandler::ClientPtr> BasicServerHandler::clients() const
     return result;
 }
 
-bool BasicServerHandler::send_to_client(const ClientPtr & client, const sihd::util::IArray & arr)
+bool BasicServerHandler::send_to_client(const ClientPtr & client, const IArray & arr)
 {
     if (!client)
         return false;
@@ -170,7 +182,7 @@ bool BasicServerHandler::remove_client(const ClientPtr & client)
     return true;
 }
 
-bool BasicServerHandler::send_to_client(int socket, const sihd::util::IArray & arr)
+bool BasicServerHandler::send_to_client(int socket, const IArray & arr)
 {
     std::lock_guard lock(_mutex);
     auto it = _client_map.find(socket);
@@ -188,19 +200,20 @@ bool BasicServerHandler::remove_client(int socket)
     return this->remove_client(it->second);
 }
 
-void BasicServerHandler::handle_no_activity(INetServer *server, sihd::util::time::UnixTime milliseconds)
+void BasicServerHandler::handle_no_activity(INetServer *server, time::UnixTime milliseconds)
 {
     this->handle_activity(server, milliseconds);
 }
 
-void BasicServerHandler::handle_activity(INetServer *server, sihd::util::time::UnixTime milliseconds)
+void BasicServerHandler::handle_activity(INetServer *server, time::UnixTime milliseconds)
 {
     if (_last_time <= 0)
-        _last_time = _clock.now() + sihd::util::Duration(milliseconds);
+        _last_time = _clock.now() + Duration(milliseconds);
     this->_reset();
     this->_add_time_to_clients();
     this->_expire_tls_handshakes(server, _steady_clock.now());
-    _poll_time = sihd::util::Duration(milliseconds);
+    this->_expire_idle_clients(server, _steady_clock.now());
+    _poll_time = Duration(milliseconds);
 }
 
 void BasicServerHandler::handle_new_client(INetServer *server)
@@ -224,18 +237,20 @@ void BasicServerHandler::handle_new_client(INetServer *server)
     client->write_array.reserve(4096);
     client->addr = addr;
     client->time_connected = _clock.now();
+    client->last_activity = _steady_clock.now();
+    SIHD_UNEXPECTED_LOG(client->socket.set_keepalive(true));
     if (_tls_ctx)
     {
         client->socket.set_tls_context(*_tls_ctx);
-        const TlsHandshakeStep step = client->socket.tls_accept_step();
-        if (step == TlsHandshakeStep::failed)
+        const Result<TlsHandshakeStep> stepped = client->socket.tls_accept_step();
+        if (SIHD_UNEXPECTED_LOG(stepped))
             return;
+        const TlsHandshakeStep step = *stepped;
         if (step != TlsHandshakeStep::complete)
         {
             client->state = Client::State::handshaking;
             client->handshake_step = step;
-            client->handshake_deadline = _steady_clock.now()
-                                         + sihd::util::Duration(sihd::util::time::ms(_tls_accept_timeout));
+            client->handshake_deadline = _steady_clock.now() + Duration(time::ms(_tls_accept_timeout));
             std::lock_guard lock(_mutex);
             if (this->_client_limit_reached())
                 return;
@@ -276,12 +291,13 @@ void BasicServerHandler::_advance_tls_handshake(INetServer *server,
         || (client->handshake_step == TlsHandshakeStep::want_write && !writable))
         return;
 
-    const TlsHandshakeStep step = client->socket.tls_accept_step();
-    if (step == TlsHandshakeStep::failed)
+    const Result<TlsHandshakeStep> stepped = client->socket.tls_accept_step();
+    if (SIHD_UNEXPECTED_LOG(stepped))
     {
         this->_drop_client(server, it);
         return;
     }
+    const TlsHandshakeStep step = *stepped;
     if (step == TlsHandshakeStep::complete)
     {
         server->remove_client_write(socket);
@@ -322,7 +338,7 @@ BasicServerHandler::ClientMap::iterator BasicServerHandler::_drop_client(INetSer
     return _client_map.erase(it);
 }
 
-void BasicServerHandler::_expire_tls_handshakes(INetServer *server, sihd::util::Timestamp now)
+void BasicServerHandler::_expire_tls_handshakes(INetServer *server, Timestamp now)
 {
     std::lock_guard lock(_mutex);
     for (auto it = _client_map.begin(); it != _client_map.end();)
@@ -334,6 +350,27 @@ void BasicServerHandler::_expire_tls_handshakes(INetServer *server, sihd::util::
         }
         SIHD_LOG(warning, "BasicServerHandler: TLS handshake timed out, dropping client '{}'", it->second->addr.str());
         it = this->_drop_client(server, it);
+    }
+}
+
+void BasicServerHandler::_expire_idle_clients(INetServer *server, Timestamp now)
+{
+    if (_idle_timeout == 0)
+        return;
+    std::lock_guard lock(_mutex);
+    const Duration idle_limit(time::ms(_idle_timeout));
+    for (auto it = _client_map.begin(); it != _client_map.end();)
+    {
+        const ClientPtr client = it->second;
+        if (client->state != Client::State::ready || now - client->last_activity < idle_limit)
+        {
+            ++it;
+            continue;
+        }
+        SIHD_LOG(warning, "BasicServerHandler: client '{}' idle, dropping it", client->addr.str());
+        client->disconnected = true;
+        it = this->_drop_client(server, it);
+        _read_event_lst.push_back(client);
     }
 }
 
@@ -394,6 +431,8 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
     it = _client_map.find(socket);
     if (it == _client_map.end() || it->second != client)
         return;
+    if (total_read > 0)
+        client->last_activity = _steady_clock.now();
     if (client->error || client->disconnected)
     {
         this->_drop_client(server, it);
@@ -437,6 +476,8 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
             else
             {
                 client->write_offset += sent.value();
+                if (sent.value() > 0)
+                    client->last_activity = _steady_clock.now();
                 // a zero send with bytes left would spin a level-triggered poll
                 client->error = sent.value() == 0;
             }

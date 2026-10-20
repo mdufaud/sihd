@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Result.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // shutdown function corresponding values unix -> windows
@@ -38,7 +40,10 @@ bool is_valid_ipv6(const std::string & ip);
 bool is_valid_ip(const std::string & ip);
 
 bool is_private_ipv4(uint32_t addr);
-bool is_private_host(const std::string & host);
+// not_found when the host does not resolve
+sihd::util::Result<bool> is_private_host(const std::string & host);
+// permission_denied when one address is private, not_found when unresolved
+sihd::util::Result<std::vector<std::string>> public_addresses(const std::string & host);
 
 std::string to_str(const sockaddr *addr);
 std::string to_str(const sockaddr_in *addr_in);

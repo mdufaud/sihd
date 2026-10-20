@@ -4,7 +4,6 @@
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
 // missing mingw getsockopt action
@@ -15,12 +14,9 @@
 namespace sihd::net
 {
 
-using sihd::util::Error;
-using sihd::util::ErrorCode;
+using namespace sihd::util;
 
-SIHD_LOGGER;
-
-bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
+Result<void> Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
 {
     // SO_BSP_STATE returns a CSADDR_INFO whose LocalAddr/RemoteAddr point into the same buffer right
     // after the struct: it must fit both appended sockaddrs or getsockopt fails with WSAEFAULT
@@ -28,28 +24,27 @@ bool Socket::get_socket_infos(int socket, int *domain, int *type, int *protocol)
     CSADDR_INFO *addrinfo = reinterpret_cast<CSADDR_INFO *>(buffer);
     socklen_t length = sizeof(buffer);
     auto found = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BSP_STATE, addrinfo, &length);
-    if (found)
-    {
-        *protocol = addrinfo->iProtocol;
-        *type = addrinfo->iSocketType;
-        if (addrinfo->LocalAddr.lpSockaddr != nullptr)
-            *domain = addrinfo->LocalAddr.lpSockaddr->sa_family;
-        else if (addrinfo->RemoteAddr.lpSockaddr != nullptr)
-            *domain = addrinfo->RemoteAddr.lpSockaddr->sa_family;
-        else
-            *domain = AF_INET;
-    }
-    return found.has_value();
+    SIHD_UNEXPECTED_RETURN_CTX(found, "get socket infos");
+
+    *protocol = addrinfo->iProtocol;
+    *type = addrinfo->iSocketType;
+    if (addrinfo->LocalAddr.lpSockaddr != nullptr)
+        *domain = addrinfo->LocalAddr.lpSockaddr->sa_family;
+    else if (addrinfo->RemoteAddr.lpSockaddr != nullptr)
+        *domain = addrinfo->RemoteAddr.lpSockaddr->sa_family;
+    else
+        *domain = AF_INET;
+    return {};
 }
 
-sihd::util::Result<void> Socket::bind_socket_to_device(int socket, std::string_view name)
+Result<void> Socket::bind_socket_to_device(int socket, std::string_view name)
 {
     (void)socket;
     (void)name;
     return std::unexpected(Error(ErrorCode::not_supported, "bind to device unsupported on windows"));
 }
 
-sihd::util::Result<void> Socket::set_socket_blocking(int socket, bool active)
+Result<void> Socket::set_socket_blocking(int socket, bool active)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::closed, "cannot set blocking on a closed socket"));
@@ -59,15 +54,12 @@ sihd::util::Result<void> Socket::set_socket_blocking(int socket, bool active)
     return {};
 }
 
-bool Socket::is_socket_blocking(int socket)
+Result<bool> Socket::is_socket_blocking([[maybe_unused]] int socket)
 {
-    if (socket < 0)
-        return false;
-    // winsock provides no way to read the mode back: the default is reported
-    return true;
+    return std::unexpected(Error(ErrorCode::not_supported, "winsock cannot read the blocking mode back"));
 }
 
-sihd::util::Result<void> Socket::set_socket_recv_timeout(int socket, int milliseconds)
+Result<void> Socket::set_socket_recv_timeout(int socket, int milliseconds)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::closed, "cannot set recv timeout on a closed socket"));

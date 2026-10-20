@@ -34,6 +34,11 @@ void TcpClient::set_tls_context(sihd::crypto::TlsContext ctx)
     _socket.set_tls_context(std::move(ctx));
 }
 
+void TcpClient::set_tls_server_name(std::string name)
+{
+    _socket.set_tls_server_name(std::move(name));
+}
+
 bool TcpClient::set_poll_timeout(int milliseconds)
 {
     return _poll.set_timeout(milliseconds);
@@ -207,11 +212,10 @@ void TcpClient::handle(sihd::sys::Poll *poll)
     const auto event = events[0];
     if (event.error)
     {
-        const std::optional<int> so_error = _socket.get_error();
-        if (so_error && *so_error != 0)
+        const auto so_error = _socket.get_error();
+        SIHD_UNEXPECTED_LOG(so_error);
+        if (so_error.has_value() && *so_error != 0)
             SIHD_LOG(error, "TcpClient: socket error: {}", sihd::sys::os::error_str(*so_error));
-        else if (!so_error)
-            SIHD_LOG(error, "TcpClient: socket error: {}", sihd::sys::os::last_socket_error_str());
         poll->clear_fd(event.fd);
         (void)this->close();
         return;

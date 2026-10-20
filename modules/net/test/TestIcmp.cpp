@@ -15,6 +15,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/ansi.hpp>
+#include <sihd/util/build.hpp>
 
 #include "sihd/net/IpAddr.hpp"
 
@@ -158,6 +159,9 @@ class TestIcmp: public ::testing::Test
 
 TEST_F(TestIcmp, test_icmp_ipv4)
 {
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+
     _host_ipaddr = dns::find("google.com", false).value();
     IcmpSender sender("icmp-sender");
     sender.set_echo();
@@ -166,11 +170,7 @@ TEST_F(TestIcmp, test_icmp_ipv4)
         GTEST_SKIP() << "Must be root or have capabilities to do the test\n"
                      << "execute command: 'sudo setcap cap_net_raw=pe " << program::path() << "'";
     }
-#if defined(__SIHD_WINDOWS__)
-    GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
-#else
     this->test_icmp(sender);
-#endif
 }
 
 TEST_F(TestIcmp, test_icmp_ipv6)

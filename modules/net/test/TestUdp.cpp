@@ -3,17 +3,15 @@
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/UdpReceiver.hpp>
 #include <sihd/net/UdpSender.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Array.hpp>
-#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/build.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
-# include <unistd.h>
-
-# include <sihd/sys/fs.hpp>
-#endif
+using namespace sihd::util;
 
 namespace test
 {
@@ -72,8 +70,8 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
-    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}).has_value());
-    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4242)).has_value());
+    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4252}).has_value());
+    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4252)).has_value());
 
     EXPECT_TRUE(receiver.socket_opened());
     EXPECT_TRUE(receiver.socket().set_blocking(false));
@@ -110,13 +108,13 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     EXPECT_TRUE(sender.socket_opened());
     EXPECT_TRUE(sender.socket().set_broadcast(true));
 
-    IpAddr any_ip(4242);
+    IpAddr any_ip(4253);
     UdpReceiver receiver("udp-receiver");
     EXPECT_TRUE(receiver.open_and_bind(any_ip).has_value());
     EXPECT_TRUE(receiver.socket_opened());
 
     // send to broadcast ip
-    EXPECT_EQ(sender.send_to({"127.255.255.255", 4242}, helloworld), (ssize_t)strlen(helloworld));
+    EXPECT_EQ(sender.send_to({"127.255.255.255", 4253}, helloworld), (ssize_t)strlen(helloworld));
 
     IpAddr iprcv;
     (void)receiver.receive(iprcv, array_rcv);
@@ -138,7 +136,7 @@ TEST_F(TestUdp, test_udp_receiver_poll_timeout_and_unbound_errors)
     EXPECT_FALSE(receiver.poll(20));
 
     ASSERT_TRUE(receiver.open_and_bind(IpAddr("127.0.0.1", 0)).has_value());
-    const int port = receiver.socket().local_port();
+    const int port = receiver.socket().local_port().value();
     ASSERT_GT(port, 0);
 
     EXPECT_FALSE(receiver.poll(20));
@@ -153,11 +151,25 @@ TEST_F(TestUdp, test_udp_receiver_poll_timeout_and_unbound_errors)
     EXPECT_TRUE(sender.close().has_value());
 }
 
-#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestUdp, test_udp_receiver_shares_its_port_unless_disabled)
+{
+    UdpReceiver first("udp-first");
+    UdpReceiver second("udp-second");
+    UdpReceiver exclusive("udp-exclusive");
+
+    ASSERT_TRUE(first.open_and_bind(IpAddr::localhost(4243)).has_value());
+    EXPECT_TRUE(second.open_and_bind(IpAddr::localhost(4243)).has_value());
+    EXPECT_TRUE(exclusive.set_reuseaddr(false));
+    EXPECT_FALSE(exclusive.open_and_bind(IpAddr::localhost(4243)).has_value());
+}
+
 TEST_F(TestUdp, test_udp_unix_roundtrip)
 {
-    const std::string path = "/tmp/sihd_test_udp_unix_" + std::to_string(getpid()) + ".sock";
-    sihd::util::Defer remove_file([&] { (void)sihd::sys::fs::remove_file(path); });
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "AF_UNIX datagram is not supported by winsock";
+
+    sihd::sys::TmpDir dir;
+    const std::string path = sihd::sys::fs::combine({dir.path(), "udp.sock"});
 
     UdpSender sender("udp-unix-sender");
     UdpReceiver receiver("udp-unix-receiver");
@@ -174,6 +186,5 @@ TEST_F(TestUdp, test_udp_unix_roundtrip)
     EXPECT_TRUE(receiver.close().has_value());
     EXPECT_TRUE(sender.close().has_value());
 }
-#endif
 
 } // namespace test

@@ -79,7 +79,7 @@ modules = {
         "depends": ['util', 'sys', 'pch'],
     },
     "crypto": {
-        "depends": ['util', 'pch'],
+        "depends": ['util', 'sys', 'pch'],
         "extlibs": ['openssl'],
         "export-libs": ['ssl', 'crypto'],
         "export-windows-libs": ['crypt32', 'bcrypt', 'ws2_32', 'mincore'],

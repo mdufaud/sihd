@@ -17,12 +17,22 @@ UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent): si
     _poll.add_observer(this);
     _poll.set_service_wait_stop(true);
     this->add_conf("poll_timeout", &UdpReceiver::set_poll_timeout);
+    this->add_conf("reuseaddr", &UdpReceiver::set_reuseaddr);
+    this->set_reuseaddr(true);
 }
 
 UdpReceiver::~UdpReceiver()
 {
     if (this->is_running())
         this->stop();
+}
+
+bool UdpReceiver::set_reuseaddr(bool active)
+{
+    _reuseaddr = active;
+    if (_socket.is_open())
+        return !SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(active));
+    return true;
 }
 
 bool UdpReceiver::set_poll_timeout(int milliseconds)
@@ -42,7 +52,7 @@ sihd::util::Result<void> UdpReceiver::open_socket(bool ipv6)
     if (_socket.is_open())
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (res)
+    if (res && _reuseaddr)
         SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
     return res;
 }

@@ -4,6 +4,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 
 namespace sihd::net
 {
@@ -23,7 +24,7 @@ TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent): sihd::
 
     this->set_queue_size(50);
     this->set_poll_timeout(10);
-    this->set_poll_limit(10);
+    this->set_poll_limit(-1);
 
     this->add_conf("queue_size", &TcpServer::set_queue_size);
     this->add_conf("poll_timeout", &TcpServer::set_poll_timeout);
@@ -71,7 +72,13 @@ sihd::util::Result<void> TcpServer::open_socket(bool ipv6)
         return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
     auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (res)
-        SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
+    {
+        // SO_REUSEADDR lets another process bind the same port and steal connections on windows
+        if constexpr (build::is_windows)
+            SIHD_UNEXPECTED_LOG(_socket.set_exclusiveaddruse(true));
+        else
+            SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
+    }
     return res;
 }
 

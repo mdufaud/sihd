@@ -5,6 +5,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <string_view>
 
 #include <sihd/util/Result.hpp>
 
@@ -22,8 +23,7 @@ enum class TlsHandshakeStep
 {
     complete,
     want_read,
-    want_write,
-    failed
+    want_write
 };
 
 class TlsConnection
@@ -39,7 +39,14 @@ class TlsConnection
         operator bool() const { return _handle != nullptr; }
 
         sihd::util::Result<void> init(sihd::crypto::TlsContext & ctx, Socket & socket);
+        // between init and connect
+        sihd::util::Result<void> set_server_name(std::string_view host);
         sihd::util::Result<void> connect(int timeout_ms);
+        // null until the client has read the server's tickets; freeing the connection before shutdown() drops it
+        std::shared_ptr<void> session() const;
+        // before connect; the server may still refuse it
+        sihd::util::Result<void> set_session(const std::shared_ptr<void> & session);
+        bool session_reused() const;
         sihd::util::Result<void> accept(int timeout_ms);
         sihd::util::Result<TlsHandshakeStep> accept_step();
 

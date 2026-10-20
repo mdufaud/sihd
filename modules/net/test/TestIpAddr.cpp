@@ -18,6 +18,9 @@
 #include <sihd/net/dns.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
+
+using namespace sihd::util;
 
 namespace test
 {
@@ -26,9 +29,9 @@ using namespace sihd::net;
 class TestIpAddr: public ::testing::Test
 {
     protected:
-        TestIpAddr() { sihd::util::LoggerManager::stream(); }
+        TestIpAddr() { LoggerManager::stream(); }
 
-        virtual ~TestIpAddr() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestIpAddr() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -70,36 +73,42 @@ TEST_F(TestIpAddr, test_ipaddr_ip_name)
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_google)
 {
     // requires internet
-    auto dns = dns::lookup("google.com");
+    auto dns_result = dns::lookup("google.com");
+    if (!dns_result.has_value())
+        GTEST_SKIP() << "no internet: " << dns_result.error().message;
 
-    SIHD_LOG(debug, "Nb IPs: {}", dns.results.size());
-    fmt::print("{}\n", dns.dump());
+    SIHD_LOG(debug, "Nb IPs: {}", dns_result->results.size());
+    fmt::print("{}\n", dns_result->dump());
 }
 
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_error)
 {
-    auto dns = dns::lookup("notgoogleatall.dot.com");
-    EXPECT_TRUE(dns.results.empty());
+    auto dns_result = dns::lookup("notgoogleatall.dot.com");
+    ASSERT_FALSE(dns_result.has_value());
+    EXPECT_EQ(dns_result.error().code, ErrorCode::not_found);
 }
 
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_local)
 {
-    auto dns = dns::lookup("localhost");
-    EXPECT_FALSE(dns.results.empty());
-    fmt::print("{}\n", dns.dump());
-    EXPECT_EQ(dns.host, "localhost");
-    const IpAddr & first_ip = dns.results.at(0).addr;
+    auto dns_result = dns::lookup("localhost");
+    ASSERT_TRUE(dns_result.has_value());
+    EXPECT_FALSE(dns_result->results.empty());
+    fmt::print("{}\n", dns_result->dump());
+    EXPECT_EQ(dns_result->host, "localhost");
+
+    const IpAddr & first_ip = dns_result->results.at(0).addr;
     if (first_ip.is_ipv6())
         EXPECT_EQ(first_ip.str(), "::1");
     else
         EXPECT_EQ(first_ip.str(), "127.0.0.1");
 
-    dns = dns::lookup("127.0.0.1");
-    EXPECT_FALSE(dns.results.empty());
-    fmt::print("{}\n", dns.dump());
-    EXPECT_EQ(dns.host, "127.0.0.1");
-    EXPECT_EQ(dns.results.at(0).addr.str(), "127.0.0.1");
-    EXPECT_EQ(dns.results.at(0).addr.is_ipv6(), false);
+    dns_result = dns::lookup("127.0.0.1");
+    ASSERT_TRUE(dns_result.has_value());
+    EXPECT_FALSE(dns_result->results.empty());
+    fmt::print("{}\n", dns_result->dump());
+    EXPECT_EQ(dns_result->host, "127.0.0.1");
+    EXPECT_EQ(dns_result->results.at(0).addr.str(), "127.0.0.1");
+    EXPECT_EQ(dns_result->results.at(0).addr.is_ipv6(), false);
 }
 
 TEST_F(TestIpAddr, test_ipaddr6_subnet)
@@ -203,21 +212,88 @@ TEST_F(TestIpAddr, test_is_private_ipv4)
     // public
     EXPECT_FALSE(ip::is_private_ipv4(0x08080808)); // 8.8.8.8
     EXPECT_FALSE(ip::is_private_ipv4(0xD83AD32E)); // 216.58.211.46
+    EXPECT_TRUE(ip::is_private_ipv4(0x64400001));  // 100.64.0.1
+    EXPECT_TRUE(ip::is_private_ipv4(0x646464C8));  // 100.100.100.200
+    EXPECT_FALSE(ip::is_private_ipv4(0x643FFFFF)); // 100.63.255.255
+    EXPECT_FALSE(ip::is_private_ipv4(0x64800000)); // 100.128.0.0
+    EXPECT_TRUE(ip::is_private_ipv4(0xC6120001));  // 198.18.0.1
+    EXPECT_TRUE(ip::is_private_ipv4(0xC613FFFF));  // 198.19.255.255
+    EXPECT_FALSE(ip::is_private_ipv4(0xC6140000)); // 198.20.0.0
+    EXPECT_TRUE(ip::is_private_ipv4(0xC0000001));  // 192.0.0.1
+    EXPECT_FALSE(ip::is_private_ipv4(0xC0000101)); // 192.0.1.1
+    EXPECT_TRUE(ip::is_private_ipv4(0xE0000001));  // 224.0.0.1
+    EXPECT_TRUE(ip::is_private_ipv4(0xFFFFFFFF));  // 255.255.255.255
+    EXPECT_FALSE(ip::is_private_ipv4(0xDFFFFFFF)); // 223.255.255.255
 }
 
 TEST_F(TestIpAddr, test_is_private_host)
 {
-    EXPECT_TRUE(ip::is_private_host("localhost"));
-    EXPECT_TRUE(ip::is_private_host("127.0.0.1"));
+    EXPECT_EQ(ip::is_private_host("localhost"), true);
+    EXPECT_EQ(ip::is_private_host("127.0.0.1"), true);
+    EXPECT_EQ(ip::is_private_host("100.100.100.200"), true);
+    EXPECT_EQ(ip::is_private_host("8.8.8.8"), false);
+}
+
+TEST_F(TestIpAddr, test_is_private_host_ipv6)
+{
+    EXPECT_EQ(ip::is_private_host("::1"), true);
+    EXPECT_EQ(ip::is_private_host("::"), true);
+    EXPECT_EQ(ip::is_private_host("fe80::1"), true);
+    EXPECT_EQ(ip::is_private_host("fd00:ec2::254"), true);
+    EXPECT_EQ(ip::is_private_host("fc00::1"), true);
+    EXPECT_EQ(ip::is_private_host("ff02::1"), true);
+    EXPECT_EQ(ip::is_private_host("::ffff:127.0.0.1"), true);
+    EXPECT_EQ(ip::is_private_host("::ffff:169.254.169.254"), true);
+    EXPECT_EQ(ip::is_private_host("64:ff9b::7f00:1"), true);
+    EXPECT_EQ(ip::is_private_host("2002:7f00:1::1"), true);
+    EXPECT_EQ(ip::is_private_host("::ffff:8.8.8.8"), false);
+    EXPECT_EQ(ip::is_private_host("2001:4860:4860::8888"), false);
+}
+
+TEST_F(TestIpAddr, test_is_private_host_unresolvable_is_an_error)
+{
+    const auto empty = ip::is_private_host("");
+    ASSERT_FALSE(empty.has_value());
+    EXPECT_EQ(empty.error().code, ErrorCode::not_found);
+
+    const auto embedded_nul = ip::is_private_host(std::string("127.0.0.1\0.example.com", 22));
+    ASSERT_FALSE(embedded_nul.has_value());
+    EXPECT_EQ(embedded_nul.error().code, ErrorCode::not_found);
+}
+
+TEST_F(TestIpAddr, test_public_addresses)
+{
+    const auto v4 = ip::public_addresses("8.8.8.8");
+    ASSERT_TRUE(v4.has_value());
+    EXPECT_EQ(*v4, std::vector<std::string>({"8.8.8.8"}));
+
+    const auto v6 = ip::public_addresses("2001:4860:4860::8888");
+    ASSERT_TRUE(v6.has_value());
+    EXPECT_EQ(*v6, std::vector<std::string>({"2001:4860:4860::8888"}));
+}
+
+TEST_F(TestIpAddr, test_public_addresses_refuses_private_and_unresolvable)
+{
+    const auto loopback = ip::public_addresses("127.0.0.1");
+    ASSERT_FALSE(loopback.has_value());
+    EXPECT_EQ(loopback.error().code, ErrorCode::permission_denied);
+
+    const auto mapped = ip::public_addresses("::ffff:10.0.0.1");
+    ASSERT_FALSE(mapped.has_value());
+    EXPECT_EQ(mapped.error().code, ErrorCode::permission_denied);
+
+    const auto empty = ip::public_addresses("");
+    ASSERT_FALSE(empty.has_value());
+    EXPECT_EQ(empty.error().code, ErrorCode::not_found);
 }
 
 TEST_F(TestIpAddr, test_ipaddr_dns_lookup_async)
 {
     auto future = dns::lookup_async("localhost");
-    auto dns = future.get();
-    EXPECT_TRUE(dns.success);
-    EXPECT_FALSE(dns.results.empty());
-    EXPECT_EQ(dns.host, "localhost");
+    auto dns_result = future.get();
+    ASSERT_TRUE(dns_result.has_value());
+    EXPECT_FALSE(dns_result->results.empty());
+    EXPECT_EQ(dns_result->host, "localhost");
 }
 
 TEST_F(TestIpAddr, test_ipaddr_operators)
@@ -296,17 +372,17 @@ TEST_F(TestIpAddr, test_ipaddr_assign_empty)
 
 TEST_F(TestIpAddr, test_ipaddr_subnet_edges)
 {
-    IpAddr a("10.0.0.1");
-    a.set_subnet_mask(32);
+    IpAddr addr("10.0.0.1");
+    addr.set_subnet_mask(32);
     // /32 has a zero wildcard: hosts must not underflow
-    EXPECT_EQ(a.subnet().hosts, 0u);
+    EXPECT_EQ(addr.subnet().hosts, 0u);
 
     // subnet math is ipv4 only
     IpAddr v6("2001:db8::1/64");
     Subnet zeroed;
     memset(&zeroed, 0, sizeof(zeroed));
-    Subnet sub = v6.subnet();
-    EXPECT_EQ(memcmp(&sub, &zeroed, sizeof(Subnet)), 0);
+    Subnet subnet = v6.subnet();
+    EXPECT_EQ(memcmp(&subnet, &zeroed, sizeof(Subnet)), 0);
 }
 
 TEST_F(TestIpAddr, test_ipaddr_name_mappings)
@@ -385,15 +461,15 @@ TEST_F(TestIpAddr, test_dns_find_filters)
 {
     auto empty = dns::find("");
     ASSERT_FALSE(empty.has_value());
-    EXPECT_EQ(empty.error().code, sihd::util::ErrorCode::invalid_argument);
+    EXPECT_EQ(empty.error().code, ErrorCode::invalid_argument);
 
     auto icmp = dns::find("localhost", false, -1, IPPROTO_ICMP);
     ASSERT_FALSE(icmp.has_value());
-    EXPECT_EQ(icmp.error().code, sihd::util::ErrorCode::invalid_argument);
+    EXPECT_EQ(icmp.error().code, ErrorCode::invalid_argument);
 
     auto icmpv6 = dns::find("localhost", false, -1, IPPROTO_ICMPV6);
     ASSERT_FALSE(icmpv6.has_value());
-    EXPECT_EQ(icmpv6.error().code, sihd::util::ErrorCode::invalid_argument);
+    EXPECT_EQ(icmpv6.error().code, ErrorCode::invalid_argument);
 
     auto ipv4 = dns::find("localhost");
     ASSERT_TRUE(ipv4.has_value());
@@ -405,23 +481,24 @@ TEST_F(TestIpAddr, test_dns_find_filters)
 
     auto unknown = dns::find("no-such-host-sihd-dns-find");
     ASSERT_FALSE(unknown.has_value());
-    EXPECT_EQ(unknown.error().code, sihd::util::ErrorCode::not_found);
+    EXPECT_EQ(unknown.error().code, ErrorCode::not_found);
 }
 
 TEST_F(TestIpAddr, test_dns_lookup_error_and_dump)
 {
     // windows getaddrinfo("") resolves to the local host: the empty-name refusal is unix-only
-#if !defined(__SIHD_WINDOWS__)
-    auto failed = dns::lookup("");
-    EXPECT_FALSE(failed.success);
-    EXPECT_TRUE(failed.results.empty());
-#endif
+    if constexpr (!build::is_windows)
+    {
+        auto failed = dns::lookup("");
+        ASSERT_FALSE(failed.has_value());
+        EXPECT_EQ(failed.error().code, ErrorCode::not_found);
+    }
 
-    auto dns = dns::lookup("localhost");
-    EXPECT_TRUE(dns.success);
-    EXPECT_FALSE(dns.results.empty());
+    auto dns_result = dns::lookup("localhost");
+    ASSERT_TRUE(dns_result.has_value());
+    EXPECT_FALSE(dns_result->results.empty());
 
-    const std::string dump = dns.dump();
+    const std::string dump = dns_result->dump();
     EXPECT_NE(dump.find("host: localhost"), std::string::npos);
     EXPECT_NE(dump.find("ipv"), std::string::npos);
 }

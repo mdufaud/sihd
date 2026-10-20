@@ -10,12 +10,12 @@
 # include <unistd.h>
 #endif
 
-#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/num.hpp>
 #include <sihd/util/time.hpp>
 
 #define ICMP_ECHO_REQUEST_LENGTH 56
@@ -33,25 +33,26 @@ using namespace sihd::util;
 namespace
 {
 
-void set_internal_data_size(IcmpSender & sender, std::unique_ptr<sihd::util::ArrByte> & data_ptr, size_t len)
+void set_internal_data_size(IcmpSender & sender, std::unique_ptr<ArrByte> & data_ptr, size_t len)
 {
     // Initialize data buffer now that socket type is known
     sender.set_data_size(len);
-    data_ptr = std::make_unique<sihd::util::ArrByte>();
+    data_ptr = std::make_unique<ArrByte>();
     data_ptr->resize(len);
     // set gibberish values like ping in packet
     char values = 10;
-    for (size_t j = sizeof(sihd::util::Timestamp); j < len; ++j)
+    for (size_t j = sizeof(Timestamp); j < len; ++j)
     {
         data_ptr->get(j) = values++;
     }
 }
 
+constexpr int icmp_echo_reply = 0;
+constexpr int icmp6_echo_reply = 129;
+
 } // namespace
 
-Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
-    _sender("icmp-sender")
+Pinger::Pinger(const std::string & name, Node *parent): Named(name, parent), _sender("icmp-sender")
 {
     _ping_count = 0;
 
@@ -63,7 +64,7 @@ Pinger::Pinger(const std::string & name, sihd::util::Node *parent):
     _ping_ms_interval = 1000;
     _sender.set_poll_timeout(1000);
 
-    _clock_ptr = &sihd::util::Clock::default_clock;
+    _clock_ptr = &Clock::default_clock;
 
     this->add_conf("ttl", &Pinger::set_ttl);
     this->add_conf("timeout", &Pinger::set_timeout);
@@ -78,13 +79,13 @@ Pinger::~Pinger()
         this->stop();
 }
 
-sihd::util::Result<void> Pinger::open_unix()
+Result<void> Pinger::open_unix()
 {
     set_internal_data_size(_sender, _data_ptr, ICMP_ECHO_REQUEST_LENGTH);
     return _sender.open_socket_unix();
 }
 
-sihd::util::Result<void> Pinger::open(bool ipv6)
+Result<void> Pinger::open(bool ipv6)
 {
     if (ipv6)
         set_internal_data_size(_sender, _data_ptr, ICMP6_ECHO_REQUEST_LENGTH);
@@ -113,12 +114,12 @@ bool Pinger::set_ttl(int ttl)
     return true;
 }
 
-bool Pinger::set_timeout(sihd::util::time::UnixTime milliseconds_interval)
+bool Pinger::set_timeout(time::UnixTime milliseconds_interval)
 {
     return _sender.set_poll_timeout(milliseconds_interval);
 }
 
-bool Pinger::set_interval(sihd::util::time::UnixTime milliseconds_interval)
+bool Pinger::set_interval(time::UnixTime milliseconds_interval)
 {
     if (milliseconds_interval < 0)
         return false;
@@ -148,7 +149,7 @@ bool Pinger::on_start()
     this->_clear_event();
     _result.clear();
 
-    _expected_id = sihd::sys::os::pid() & 0xFFFF;
+    _expected_id = static_cast<uint16_t>(num::rand(0, 0xFFFF));
     _sender.set_id(_expected_id);
     _sender.set_ttl(_ttl);
     _sender.set_echo();
@@ -175,6 +176,8 @@ bool Pinger::on_start()
         _sender.set_seq(_current_seq);
         _result.last_time_sent = _clock_ptr->now();
         _data_ptr->copy_from_bytes(&_result.last_time_sent, sizeof(_result.last_time_sent));
+        _nonce = num::rand();
+        _data_ptr->copy_from_bytes(&_nonce, sizeof(_nonce), {(ssize_t)sizeof(_result.last_time_sent)});
         _sender.set_data(*_data_ptr);
         // send icmp echo
         auto sent = _sender.send_to(_client);
@@ -214,30 +217,28 @@ void Pinger::handle(IcmpSender *sender)
 {
     const IcmpResponse & response = sender->response();
 
-    if (_current_seq != response.seq)
+    // the raw socket sees every icmp packet of the host: only the target's echo reply to our request counts
+    const bool echo_reply = response.type == icmp_echo_reply || response.type == icmp6_echo_reply;
+    if (!echo_reply || response.client != _client)
         return;
 
-    // For IPv4 SOCK_RAW: also verify ID matches our PID (truncated to 16 bits)
-    // For IPv6 SOCK_DGRAM: kernel assigns its own ID
-    if (sender->socket().is_ipv6() && response.seq == 1)
-    {
-        // First response, store expected ID
-        _expected_id = response.id;
-    }
-
+    if (static_cast<uint16_t>(_current_seq) != response.seq)
+        return;
     if (_expected_id != response.id)
+        return;
+
+    constexpr size_t nonce_offset = sizeof(Timestamp);
+    if (response.size < nonce_offset + sizeof(_nonce)
+        || memcmp((const uint8_t *)response.data + nonce_offset, &_nonce, sizeof(_nonce)) != 0)
         return;
 
     _received_icmp_response = true;
 
-    if (response.size < sizeof(sihd::util::Timestamp))
-        return;
-
     // icmp payload is not guaranteed to be aligned for an 8 bytes read
-    sihd::util::Timestamp timestamp {};
+    Timestamp timestamp {};
     memcpy(&timestamp, response.data, sizeof(timestamp));
-    const sihd::util::Timestamp now = _clock_ptr->now();
-    const sihd::util::Duration triptime = now - timestamp;
+    const Timestamp now = _clock_ptr->now();
+    const Duration triptime = now - timestamp;
 
     _result.received++;
     _result.last_time_received = now;
@@ -265,10 +266,10 @@ void Pinger::_clear_event()
 
 void PingResult::clear()
 {
-    time_start = sihd::util::Timestamp(0);
-    last_time_sent = sihd::util::Timestamp(0);
-    last_time_received = sihd::util::Timestamp(0);
-    time_end = sihd::util::Timestamp(0);
+    time_start = Timestamp(0);
+    last_time_sent = Timestamp(0);
+    last_time_received = Timestamp(0);
+    time_end = Timestamp(0);
     transmitted = 0;
     received = 0;
     rtt.clear();

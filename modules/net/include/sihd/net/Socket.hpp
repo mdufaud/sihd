@@ -44,10 +44,10 @@ class Socket
 
         // return an IpAdress from socket using get_socket_peername; if ipv6 is true, checks for an ipv6 addr
         // first
-        static std::optional<IpAddr> socket_ip(int socket, bool ipv6 = false);
-        static bool get_socket_infos(int socket, int *domain, int *type, int *protocol);
-        // nullopt when the probe failed, the pending SO_ERROR otherwise (0 = none)
-        static std::optional<int> get_socket_error(int socket);
+        static sihd::util::Result<IpAddr> socket_ip(int socket, bool ipv6 = false);
+        static sihd::util::Result<void> get_socket_infos(int socket, int *domain, int *type, int *protocol);
+        // the pending SO_ERROR (0 = none)
+        static sihd::util::Result<int> get_socket_error(int socket);
 
         static sihd::util::Result<void> close_socket(int socket);
         static sihd::util::Result<void> set_socket_tcp_nodelay(int socket, bool active);
@@ -56,27 +56,26 @@ class Socket
         static sihd::util::Result<void> set_socket_reuseaddr(int socket, bool active);
         static sihd::util::Result<void> set_socket_broadcast(int socket, bool active);
         static sihd::util::Result<void> bind_socket_to_device(int socket, std::string_view name);
-        static bool is_socket_tcp_nodelay(int socket);
-        static bool is_socket_blocking(int socket);
-        static bool is_socket_broadcast(int socket);
+        static sihd::util::Result<bool> is_socket_tcp_nodelay(int socket);
+        static sihd::util::Result<bool> is_socket_blocking(int socket);
+        static sihd::util::Result<bool> is_socket_broadcast(int socket);
         static sihd::util::Result<void> set_socket_ttl(int socket, int ttl, bool ipv6 = false);
         static sihd::util::Result<void> set_socket_keepalive(int socket, bool active);
-        static bool is_socket_keepalive(int socket);
-#ifdef SO_REUSEPORT
+        static sihd::util::Result<bool> is_socket_keepalive(int socket);
         static sihd::util::Result<void> set_socket_reuseport(int socket, bool active);
-        static bool is_socket_reuseport(int socket);
-#endif
+        static sihd::util::Result<bool> is_socket_reuseport(int socket);
+        static sihd::util::Result<void> set_socket_exclusiveaddruse(int socket, bool active);
         static sihd::util::Result<void> set_socket_rcvbuf(int socket, int size);
         static sihd::util::Result<void> set_socket_sndbuf(int socket, int size);
-        static int get_socket_rcvbuf(int socket);
-        static int get_socket_sndbuf(int socket);
+        static sihd::util::Result<int> get_socket_rcvbuf(int socket);
+        static sihd::util::Result<int> get_socket_sndbuf(int socket);
 
         // an Error from the platform last error code: the message carries the system description
         static sihd::util::Error make_error(std::string_view message);
 
         // Operations on internal socket //
 
-        bool get_infos();
+        sihd::util::Result<void> get_infos();
 
         sihd::util::Result<void> set_tcp_nodelay(bool active) const;
         sihd::util::Result<void> set_blocking(bool active) const;
@@ -84,20 +83,19 @@ class Socket
         sihd::util::Result<void> set_reuseaddr(bool active) const;
         sihd::util::Result<void> set_broadcast(bool active) const;
         sihd::util::Result<void> bind_to_device(std::string_view name) const;
-        bool is_tcp_nodelay() const;
-        bool is_blocking() const;
-        bool is_broadcast() const;
+        sihd::util::Result<bool> is_tcp_nodelay() const;
+        sihd::util::Result<bool> is_blocking() const;
+        sihd::util::Result<bool> is_broadcast() const;
         sihd::util::Result<void> set_ttl(int ttl) const;
         sihd::util::Result<void> set_keepalive(bool active) const;
-        bool is_keepalive() const;
-#ifdef SO_REUSEPORT
+        sihd::util::Result<bool> is_keepalive() const;
         sihd::util::Result<void> set_reuseport(bool active) const;
-        bool is_reuseport() const;
-#endif
+        sihd::util::Result<bool> is_reuseport() const;
+        sihd::util::Result<void> set_exclusiveaddruse(bool active) const;
         sihd::util::Result<void> set_rcvbuf(int size) const;
         sihd::util::Result<void> set_sndbuf(int size) const;
-        int get_rcvbuf() const;
-        int get_sndbuf() const;
+        sihd::util::Result<int> get_rcvbuf() const;
+        sihd::util::Result<int> get_sndbuf() const;
 
         sihd::util::Result<void> join_multicast(const IpAddr & group, const std::string & iface = "");
         sihd::util::Result<void> leave_multicast(const IpAddr & group, const std::string & iface = "");
@@ -110,8 +108,7 @@ class Socket
         virtual sihd::util::Result<void> shutdown() const;
         bool is_open() const { return _socket >= 0; }
 
-        // A dead peer raises SIGPIPE: the process must ignore or handle it, or pass MSG_NOSIGNAL through
-        // set_send_flags - the library never touches signal dispositions
+        // MSG_NOSIGNAL by default where it exists: a dead peer gives EPIPE, not SIGPIPE
         virtual sihd::util::Result<size_t> send(sihd::util::ArrCharView view);
         sihd::util::Result<void> send_all(sihd::util::ArrCharView view);
 
@@ -126,8 +123,8 @@ class Socket
 
         // Utilities for internal socket //
 
-        std::optional<IpAddr> peeraddr(bool ipv6 = false) const;
-        int local_port() const;
+        sihd::util::Result<IpAddr> peeraddr(bool ipv6 = false) const;
+        sihd::util::Result<int> local_port() const;
 
         // Operations on IP adresses //
 
@@ -153,7 +150,7 @@ class Socket
 
         // Operations on unix sockets //
 
-        static std::string unix_socket_peername(int socket);
+        static sihd::util::Result<std::string> unix_socket_peername(int socket);
         sihd::util::Result<void> bind_unix(std::string_view path);
         sihd::util::Result<void> connect_unix(std::string_view path);
         sihd::util::Result<size_t> send_to_unix(std::string_view path, sihd::util::ArrCharView view);
@@ -163,7 +160,6 @@ class Socket
 
         // Configuration //
 
-        void set_verbose(bool active) { _verbose = active; }
         void set_send_flags(int flags) { _send_flags = flags; }
         void set_receive_flags(int flags) { _rcv_flags = flags; }
 
@@ -179,8 +175,7 @@ class Socket
         bool is_ipv4() const;
         bool is_ipv6() const;
 
-        std::optional<int> get_error() const;
-        std::string get_error_str() const;
+        sihd::util::Result<int> get_error() const;
 
         sihd::util::Result<void> reconnect(int timeout_ms = -1);
 
@@ -201,7 +196,6 @@ class Socket
         IpAddr _connect_addr;
         std::string _connect_unix_path;
 
-        bool _verbose;
         int _send_flags;
         int _rcv_flags;
         // tracked instance state: windows cannot probe a socket's blocking mode

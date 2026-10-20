@@ -236,7 +236,7 @@ bool IcmpSender::set_data(sihd::util::ArrByteView view)
     _config_applied = false;
     if (!_data_to_set)
         _data_to_set = std::make_unique<util::ArrByte>();
-    return _data_to_set && _data_to_set->copy_from_bytes(view);
+    return _data_to_set && _data_to_set->byte_resize(view.byte_size()) && _data_to_set->copy_from_bytes(view);
 }
 
 void IcmpSender::_apply_config()
@@ -460,7 +460,8 @@ void IcmpSender::_process_ipv6()
     _icmp_response.type = icmp6hdr->icmp6_type;
     _icmp_response.code = icmp6hdr->icmp6_code;
     _icmp_response.ttl = ttl;
-    _icmp_response.id = ntohs(icmp6hdr->icmp6_id);
+    // a ping socket rewrites the echo id and only delivers the replies to its own requests
+    _icmp_response.id = _socket_type == SOCK_DGRAM ? _id : ntohs(icmp6hdr->icmp6_id);
     _icmp_response.seq = ntohs(icmp6hdr->icmp6_seq);
 
     this->notify_observers(this);
@@ -514,7 +515,7 @@ void IcmpSender::_process_ipv4()
     _icmp_response.type = icmphdr->icmp_type;
     _icmp_response.code = icmphdr->icmp_code;
     _icmp_response.ttl = iphdr->ip_ttl;
-    _icmp_response.id = ntohs(icmphdr->icmp_id);
+    _icmp_response.id = _socket_type == SOCK_DGRAM ? _id : ntohs(icmphdr->icmp_id);
     _icmp_response.seq = ntohs(icmphdr->icmp_seq);
 
     this->notify_observers(this);

@@ -11,7 +11,6 @@
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
@@ -29,8 +28,6 @@
 namespace sihd::net
 {
 
-SIHD_NEW_LOGGER("sihd::net");
-
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 using namespace sihd::net;
@@ -38,63 +35,46 @@ using namespace sihd::net;
 namespace
 {
 
-std::optional<uint32_t> netmask_value_from_str(std::string_view mask_value_str)
+Result<uint32_t> netmask_value_from_str(std::string_view mask_value_str)
 {
     if (str::is_number(mask_value_str))
     {
         if (const auto mask_value = str::convert_from_string<uint32_t>(mask_value_str))
             return *mask_value;
     }
-    SIHD_LOG(error, "IpAddr: not a subnet mask: {}", mask_value_str);
-    return std::nullopt;
+    return std::unexpected(Error(invalid_argument, "not a subnet mask: {}", mask_value_str));
 }
 
-uint32_t netmask_value_for_family(std::optional<uint32_t> mask_value, int family)
+Result<uint32_t> netmask_value_for_family(uint32_t mask_value, int family)
 {
-    if (!mask_value.has_value())
-        return 0;
     const uint32_t max_value = (family == AF_INET6) ? 128 : 32;
-    if (*mask_value > max_value)
-    {
-        SIHD_LOG(error, "IpAddr: subnet mask out of range: {}", *mask_value);
-        return 0;
-    }
-    return *mask_value;
+    if (mask_value > max_value)
+        return std::unexpected(Error(invalid_argument, "subnet mask out of range: {}", mask_value));
+    return mask_value;
 }
 
-bool to_sockaddr_in(sockaddr_in *addr, const std::string & ip, int port = 0)
+Result<void> to_sockaddr_in(sockaddr_in *addr, const std::string & ip, int port = 0)
 {
     int ret = inet_pton(AF_INET, ip.c_str(), &addr->sin_addr);
-    if (ret <= 0)
-    {
-        // 0 is returned if src does not contain a character string representing a valid network address in
-        // the specified address family
-        if (ret == -1)
-            SIHD_LOG(error, "IpAddr: to_sockaddr_in error for ip '{}': {}", ip, sihd::sys::os::last_socket_error_str());
-        return false;
-    }
+    if (ret == 0)
+        return std::unexpected(Error(invalid_argument, "not an ipv4 address: {}", ip));
+    if (ret < 0)
+        return std::unexpected(Error(io_error, "ipv4 address '{}': {}", ip, sihd::sys::os::last_socket_error_str()));
     addr->sin_family = AF_INET;
     addr->sin_port = htons(port);
-    return true;
+    return {};
 }
 
-bool to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int port = 0)
+Result<void> to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int port = 0)
 {
     int ret = inet_pton(AF_INET6, ip.c_str(), &addr->sin6_addr);
-    if (ret <= 0)
-    {
-        // 0 is returned if src does not contain a character string representing a valid network address in
-        // the specified address family
-        if (ret == -1)
-            SIHD_LOG(error,
-                     "IpAddr: to_sockaddr_in6 error for ip '{}': {}",
-                     ip,
-                     sihd::sys::os::last_socket_error_str());
-        return false;
-    }
+    if (ret == 0)
+        return std::unexpected(Error(invalid_argument, "not an ipv6 address: {}", ip));
+    if (ret < 0)
+        return std::unexpected(Error(io_error, "ipv6 address '{}': {}", ip, sihd::sys::os::last_socket_error_str()));
     addr->sin6_family = AF_INET6;
     addr->sin6_port = htons(port);
-    return true;
+    return {};
 }
 
 }; // namespace
@@ -128,12 +108,12 @@ IpAddr::IpAddr(int port, bool ipv6): IpAddr()
 IpAddr::IpAddr(std::string_view host, int port): IpAddr()
 {
     std::string ip;
-    std::optional<uint32_t> mask_value;
+    uint32_t mask_value = 0;
     const size_t idx = host.find('/');
     if (idx != std::string::npos)
     {
         ip = host.substr(0, idx);
-        mask_value = netmask_value_from_str(host.substr(idx + 1));
+        mask_value = netmask_value_from_str(host.substr(idx + 1)).value_or(0);
     }
     else
     {
@@ -141,9 +121,9 @@ IpAddr::IpAddr(std::string_view host, int port): IpAddr()
     }
 
     if (to_sockaddr_in(&_addr.sockaddr_in, ip, port))
-        _netmask_value = netmask_value_for_family(mask_value, AF_INET);
+        _netmask_value = netmask_value_for_family(mask_value, AF_INET).value_or(0);
     else if (to_sockaddr_in6(&_addr.sockaddr_in6, ip, port))
-        _netmask_value = netmask_value_for_family(mask_value, AF_INET6);
+        _netmask_value = netmask_value_for_family(mask_value, AF_INET6).value_or(0);
 }
 
 IpAddr::IpAddr(std::string_view host): IpAddr(host, 0) {}
@@ -230,7 +210,7 @@ IpAddr IpAddr::localhost(int port, bool ipv6)
 sihd::util::Result<void> IpAddr::set_subnet_mask(const std::string & mask)
 {
     struct sockaddr_in sockaddr_mask;
-    if (to_sockaddr_in(&sockaddr_mask, mask) == false)
+    if (to_sockaddr_in(&sockaddr_mask, mask).has_value() == false)
         return std::unexpected(Error(invalid_argument, "cannot parse mask '{}'", mask));
     if (ip::is_valid_netmask(htonl(sockaddr_mask.sin_addr.s_addr)) == false)
         return std::unexpected(Error(invalid_argument, "not a valid mask: {}", mask));
@@ -290,10 +270,10 @@ bool IpAddr::set_subnet_mask(uint32_t mask_value)
     const int family = this->addr().sa_family;
     if (family != AF_INET && family != AF_INET6)
         return false;
-    const uint32_t validated = netmask_value_for_family(mask_value, family);
-    if (validated != mask_value)
+    const auto validated = netmask_value_for_family(mask_value, family);
+    if (validated.has_value() == false)
         return false;
-    _netmask_value = validated;
+    _netmask_value = *validated;
     return true;
 }
 

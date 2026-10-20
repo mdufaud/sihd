@@ -20,7 +20,6 @@ struct DnsEntry
 
 struct DnsLookup
 {
-        bool success = false;
         std::string host;
         std::string hostname;
         std::vector<DnsEntry> results;
@@ -28,8 +27,8 @@ struct DnsLookup
         std::string dump() const;
 };
 
-DnsLookup lookup(const std::string & host);
-std::future<DnsLookup> lookup_async(const std::string & host);
+sihd::util::Result<DnsLookup> lookup(const std::string & host);
+std::future<sihd::util::Result<DnsLookup>> lookup_async(const std::string & host);
 
 } // namespace sihd::net::dns
 

@@ -48,6 +48,7 @@ class BasicServerHandler: public INetServerHandler,
                 sihd::util::Timestamp handshake_deadline;
 
                 sihd::util::Timestamp time_connected;
+                sihd::util::Timestamp last_activity;
                 sihd::util::Timestamp time_total;
                 bool error;
                 // set with the last payload left in read_array on a peer FIN
@@ -63,6 +64,7 @@ class BasicServerHandler: public INetServerHandler,
 
         bool set_max_clients(size_t max);
         bool set_tls_accept_timeout(int milliseconds);
+        bool set_idle_timeout(int milliseconds);
 
         bool send_to_client(const ClientPtr & client, const sihd::util::IArray & arr);
         bool remove_client(const ClientPtr & client);
@@ -96,6 +98,7 @@ class BasicServerHandler: public INetServerHandler,
         void _advance_tls_handshake(INetServer *server, ClientMap::iterator it, bool readable, bool writable);
         ClientMap::iterator _drop_client(INetServer *server, ClientMap::iterator it);
         void _expire_tls_handshakes(INetServer *server, sihd::util::Timestamp now);
+        void _expire_idle_clients(INetServer *server, sihd::util::Timestamp now);
 
         mutable std::recursive_mutex _mutex;
         ClientMap _client_map;
@@ -111,6 +114,7 @@ class BasicServerHandler: public INetServerHandler,
 
         std::optional<sihd::crypto::TlsContext> _tls_ctx;
         int _tls_accept_timeout;
+        int _idle_timeout;
         size_t _max_clients;
 };
 

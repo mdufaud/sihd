@@ -29,6 +29,8 @@ class UdpReceiver: public INetReceiver,
 
         bool socket_opened() { return _socket.is_open(); }
 
+        bool set_reuseaddr(bool active);
+
         sihd::util::Result<void> bind(const IpAddr & addr);
         sihd::util::Result<void> bind_unix(std::string_view path);
 
@@ -62,6 +64,7 @@ class UdpReceiver: public INetReceiver,
         void _setup_poll();
 
         Socket _socket;
+        bool _reuseaddr;
         std::mutex _poll_mutex;
         sihd::sys::Poll _poll;
 };

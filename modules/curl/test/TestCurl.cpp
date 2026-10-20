@@ -18,6 +18,7 @@ namespace test
 {
 
 using namespace sihd::curl;
+using namespace sihd::util;
 
 namespace
 {
@@ -63,6 +64,20 @@ TEST(TestCurl, test_version)
     EXPECT_TRUE(version().rfind("libcurl/", 0) == 0);
 }
 
+TEST(TestCurl, test_resolve_url)
+{
+    const std::string base = "http://a/b/c/d;p?q";
+
+    EXPECT_EQ(resolve_url(base, "g").value_or("error"), "http://a/b/c/g");
+    EXPECT_EQ(resolve_url(base, "../g").value_or("error"), "http://a/b/g");
+    EXPECT_EQ(resolve_url(base, "/g").value_or("error"), "http://a/g");
+    EXPECT_EQ(resolve_url(base, "//g").value_or("error"), "http://g/");
+    EXPECT_EQ(resolve_url(base, "?y").value_or("error"), "http://a/b/c/d;p?y");
+    EXPECT_EQ(resolve_url(base, "https://x/y").value_or("error"), "https://x/y");
+    EXPECT_EQ(resolve_url("localhost:3001/api/meta", "dest").value_or("error"), "http://localhost:3001/api/dest");
+    EXPECT_FALSE(resolve_url("", "g").has_value());
+}
+
 TEST(TestCurl, test_request_file_transfer)
 {
     TempDir dir;
@@ -72,11 +87,12 @@ TEST(TestCurl, test_request_file_transfer)
 
     Request request;
     std::string received;
-    request.set_write_callback([&received](sihd::util::ArrByteView data) {
+    auto callback_set = request.set_write_callback([&received](ArrByteView data) {
         received.append((const char *)data.buf(), data.size());
         return true;
     });
-    request.set_url(url);
+    ASSERT_TRUE(callback_set.has_value());
+    ASSERT_TRUE(request.set_url(url).has_value());
     EXPECT_TRUE(request.perform().has_value());
     EXPECT_EQ(received, content);
     EXPECT_TRUE(request.content_type().empty());
@@ -91,15 +107,16 @@ TEST(TestCurl, test_request_upload)
 
     Request request;
     size_t offset = 0;
-    request.set_read_callback([&content, &offset](char *buffer, size_t capacity) {
+    auto callback_set = request.set_read_callback([&content, &offset](char *buffer, size_t capacity) {
         size_t count = std::min(capacity, content.size() - offset);
         std::memcpy(buffer, content.data() + offset, count);
         offset += count;
         return count;
     });
+    ASSERT_TRUE(callback_set.has_value());
     EXPECT_TRUE(request.set_upload(true));
     EXPECT_TRUE(request.set_infilesize((int64_t)content.size()));
-    request.set_url(url);
+    ASSERT_TRUE(request.set_url(url).has_value());
     EXPECT_TRUE(request.perform().has_value());
     EXPECT_EQ(offset, content.size());
     EXPECT_EQ(read_file(dir, "upload.txt"), content);
@@ -113,19 +130,23 @@ TEST(TestCurl, test_request_move)
     const std::string url = make_file_url(dir, "move.txt", content);
 
     Request request;
-    request.set_url(url);
+    ASSERT_TRUE(request.set_url(url).has_value());
 
     Request moved(std::move(request));
     std::string received;
-    moved.set_write_callback([&received](sihd::util::ArrByteView data) {
+    auto callback_set = moved.set_write_callback([&received](ArrByteView data) {
         received.append((const char *)data.buf(), data.size());
         return true;
     });
+    ASSERT_TRUE(callback_set.has_value());
     EXPECT_TRUE(moved.perform().has_value());
     EXPECT_EQ(received, content);
 
     // the moved-from request fails every operation without crashing
-    EXPECT_FALSE(request.set_url(url));
+    auto defunct_set = request.set_url(url);
+    ASSERT_FALSE(defunct_set.has_value());
+    EXPECT_EQ(defunct_set.error().code, not_initialized);
+    EXPECT_EQ(defunct_set.error().message, "no curl handle");
     auto defunct = request.perform();
     ASSERT_FALSE(defunct.has_value());
     EXPECT_EQ(defunct.error().code, not_initialized);
@@ -145,11 +166,12 @@ TEST(TestCurl, test_request_write_abort)
 
     Request request;
     size_t received = 0;
-    request.set_write_callback([&received](sihd::util::ArrByteView data) {
+    auto callback_set = request.set_write_callback([&received](ArrByteView data) {
         received += data.size();
         return false;
     });
-    request.set_url(url);
+    ASSERT_TRUE(callback_set.has_value());
+    ASSERT_TRUE(request.set_url(url).has_value());
     EXPECT_FALSE(request.perform().has_value());
     EXPECT_GT(received, 0u);
 }
@@ -159,8 +181,8 @@ TEST(TestCurl, test_request_error)
     Request request;
     // environment proxies would answer for the unreachable endpoint
     EXPECT_TRUE(request.set_proxy(""));
-    request.set_url("http://127.0.0.1:1/");
-    request.set_connect_timeout(sihd::util::Duration(std::chrono::milliseconds(500)));
+    ASSERT_TRUE(request.set_url("http://127.0.0.1:1/").has_value());
+    ASSERT_TRUE(request.set_connect_timeout(Duration(std::chrono::milliseconds(500))).has_value());
     auto failed = request.perform();
     ASSERT_FALSE(failed.has_value());
     EXPECT_EQ(failed.error().code, io_error);
@@ -189,7 +211,7 @@ TEST(TestCurl, test_request_options)
     Request request;
     EXPECT_TRUE(request.set_verbose(false));
     EXPECT_TRUE(request.set_follow_location(true));
-    EXPECT_TRUE(request.set_timeout(sihd::util::Duration(std::chrono::seconds(3))));
+    EXPECT_TRUE(request.set_timeout(Duration(std::chrono::seconds(3))));
     EXPECT_TRUE(request.set_user_agent("sihd"));
     EXPECT_TRUE(request.set_ssl_verify(true, true));
     EXPECT_TRUE(request.set_userpass("user", "pass"));
@@ -201,6 +223,31 @@ TEST(TestCurl, test_request_options)
     EXPECT_TRUE(request.set_accept_encoding(""));
     EXPECT_TRUE(request.set_http_2_tls(false));
     request.reset();
+}
+
+TEST(TestCurl, test_request_resolve)
+{
+    Request request;
+    EXPECT_FALSE(request.set_resolve("", 80, {"127.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("a:b", 80, {"127.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("a,b", 80, {"127.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("host", 0, {"127.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("host", 70000, {"127.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("host", 80, {"127.0.0.1,10.0.0.1"}));
+    EXPECT_FALSE(request.set_resolve("host", 80, {"127.0.0.1", ""}));
+
+    EXPECT_TRUE(request.set_resolve("host.example", 80, {"127.0.0.1", "::1"}));
+    EXPECT_TRUE(request.set_resolve({}, 0, {}));
+}
+
+TEST(TestCurl, test_header_list_refuses_line_breaks)
+{
+    HeaderList list;
+    auto refused = list.append("X: a\r\nY: b");
+    ASSERT_FALSE(refused.has_value());
+    EXPECT_EQ(refused.error().code, invalid_argument);
+    EXPECT_EQ(refused.error().message, "header line holds a line break or NUL byte");
+    EXPECT_TRUE(list.empty());
 }
 
 TEST(TestCurl, test_header_list)
@@ -248,8 +295,8 @@ TEST(TestCurl, test_mime)
     EXPECT_TRUE(request.set_mime(mime));
     // a file:// transfer never produces the mime body: the wire format is
     // asserted by the http module tests against a real server
-    request.set_url(make_file_url(dir, "mime.txt", "unused"));
-    request.set_write_callback([](sihd::util::ArrByteView) { return true; });
+    ASSERT_TRUE(request.set_url(make_file_url(dir, "mime.txt", "unused")).has_value());
+    ASSERT_TRUE(request.set_write_callback([](ArrByteView) { return true; }).has_value());
     EXPECT_TRUE(request.perform().has_value());
 
     // a default-constructed part has no target: its setters do not crash

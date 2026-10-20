@@ -98,6 +98,7 @@ class Pinger: public sihd::util::Named,
         PingEvent _event;
 
         uint16_t _expected_id;
+        uint64_t _nonce = 0;
 };
 
 } // namespace sihd::net

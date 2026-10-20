@@ -6,6 +6,8 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 
+#include "crypto_test_helpers.hpp"
+
 namespace test
 {
 SIHD_LOGGER;
@@ -19,7 +21,8 @@ class TestUtils: public ::testing::Test
 
         void SetUp() override
         {
-            ASSERT_TRUE(_key.generate_rsa(2048));
+            _key = rsa_key();
+            ASSERT_TRUE(_key);
             ASSERT_TRUE(_cert.generate_self_signed(_key, "test.local"));
         }
 
@@ -59,8 +62,8 @@ TEST_F(TestUtils, verify_wrong_cert)
     auto signature = utils::sign_data(_key, data, message.size());
     ASSERT_TRUE(signature.has_value());
 
-    PrivateKey other_key;
-    ASSERT_TRUE(other_key.generate_rsa(2048));
+    PrivateKey other_key = other_rsa_key();
+    ASSERT_TRUE(other_key);
     Certificate other_cert;
     ASSERT_TRUE(other_cert.generate_self_signed(other_key, "other.local"));
 

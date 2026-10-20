@@ -1,10 +1,15 @@
 #include <cstdio>
+#include <limits>
 
 #include <gtest/gtest.h>
 
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include "crypto_test_helpers.hpp"
+
+using namespace sihd::util;
 
 namespace test
 {
@@ -14,10 +19,14 @@ using namespace sihd::crypto;
 class TestCertificate: public ::testing::Test
 {
     protected:
-        TestCertificate() { sihd::util::LoggerManager::stream(); }
-        ~TestCertificate() { sihd::util::LoggerManager::clear_loggers(); }
+        TestCertificate() { LoggerManager::stream(); }
+        ~TestCertificate() { LoggerManager::clear_loggers(); }
 
-        void SetUp() override { ASSERT_TRUE(_key.generate_rsa(2048)); }
+        void SetUp() override
+        {
+            _key = rsa_key();
+            ASSERT_TRUE(_key);
+        }
 
         PrivateKey _key;
 };
@@ -75,8 +84,95 @@ TEST_F(TestCertificate, generate_self_signed_invalid_san)
     Certificate cert;
     auto res = cert.generate_self_signed(_key, opts);
     ASSERT_FALSE(res);
-    EXPECT_EQ(res.error().code, sihd::util::ErrorCode::invalid_argument);
+    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
     EXPECT_FALSE(cert);
+}
+
+TEST_F(TestCertificate, generate_self_signed_rejects_alt_name_injection)
+{
+    for (const char *entry : {"DNS:a.com,DNS:*.victim.com",
+                              "DNS:a.com\nDNS:b.com",
+                              "otherName:1.2.3.4;UTF8:x",
+                              "dirName:dir_sect",
+                              "RID:1.2.3.4"})
+    {
+        CertOptions opts;
+        opts.common_name = "a.com";
+        opts.subject_alt_names = {entry};
+
+        Certificate cert;
+        auto res = cert.generate_self_signed(_key, opts);
+        ASSERT_FALSE(res) << entry;
+        EXPECT_EQ(res.error().code, ErrorCode::invalid_argument) << entry;
+        EXPECT_EQ(res.error().message, std::string("invalid subject alt name: ") + entry);
+        EXPECT_FALSE(cert);
+    }
+
+    CertOptions opted_out;
+    opted_out.common_name = "a.com";
+    opted_out.any_alt_name_kind = true;
+
+    opted_out.subject_alt_names = {"RID:1.2.3.4"};
+    Certificate registered;
+    EXPECT_TRUE(registered.generate_self_signed(_key, opted_out).has_value());
+
+    opted_out.subject_alt_names = {"RID:1.2.3.4,DNS:*.victim.com"};
+    Certificate smuggled;
+    auto refused = smuggled.generate_self_signed(_key, opted_out);
+    ASSERT_FALSE(refused.has_value());
+    EXPECT_EQ(refused.error().message, "invalid subject alt name: RID:1.2.3.4,DNS:*.victim.com");
+}
+
+TEST_F(TestCertificate, generate_self_signed_rejects_bad_validity)
+{
+    for (const int days : {0, -1})
+    {
+        Certificate cert;
+        auto res = cert.generate_self_signed(_key, "localhost", days);
+        ASSERT_FALSE(res) << days;
+        EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+        EXPECT_EQ(res.error().message, "certificate validity must be at least 1 day");
+    }
+
+    Certificate cert;
+    EXPECT_TRUE(cert.generate_self_signed(_key, "localhost", 36500));
+}
+
+TEST_F(TestCertificate, generate_self_signed_fails_on_unencodable_validity)
+{
+    Certificate cert;
+    auto res = cert.generate_self_signed(_key, "localhost", std::numeric_limits<int>::max());
+    ASSERT_FALSE(res);
+    EXPECT_FALSE(cert);
+}
+
+TEST_F(TestCertificate, generate_self_signed_rejects_unencodable_subject)
+{
+    CertOptions opts;
+    opts.common_name = std::string(70, 'a');
+
+    Certificate cert;
+    auto res = cert.generate_self_signed(_key, opts);
+    ASSERT_FALSE(res);
+    EXPECT_FALSE(cert);
+
+    opts.common_name = std::string("good.com\0.evil.com", 18);
+    res = cert.generate_self_signed(_key, opts);
+    ASSERT_FALSE(res);
+    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(res.error().message, "subject field CN contains a NUL byte");
+    EXPECT_FALSE(cert);
+}
+
+TEST_F(TestCertificate, verify_requires_matching_issuer)
+{
+    Certificate first;
+    Certificate second;
+    ASSERT_TRUE(first.generate_self_signed(_key, "first.example"));
+    ASSERT_TRUE(second.generate_self_signed(_key, "second.example"));
+
+    EXPECT_TRUE(first.verify(first));
+    EXPECT_FALSE(first.verify(second));
 }
 
 TEST_F(TestCertificate, pem_roundtrip)
@@ -121,8 +217,8 @@ TEST_F(TestCertificate, verify_wrong_ca)
     Certificate cert;
     EXPECT_TRUE(cert.generate_self_signed(_key, "test.local"));
 
-    PrivateKey other_key;
-    EXPECT_TRUE(other_key.generate_rsa(2048));
+    PrivateKey other_key = other_rsa_key();
+    ASSERT_TRUE(other_key);
     Certificate other_cert;
     EXPECT_TRUE(other_cert.generate_self_signed(other_key, "other.local"));
 

@@ -25,12 +25,18 @@ class TlsContext
 
         operator bool() const { return _handle != nullptr; }
 
+        // TLS 1.2 minimum, renegotiation disabled, a client verifies the server certificate against the default CAs
         sihd::util::Result<void> init(bool server_mode);
 
         sihd::util::Result<void> set_certificate(const Certificate & cert);
         sihd::util::Result<void> set_private_key(const PrivateKey & key);
         sihd::util::Result<void> load_ca_cert(std::string_view path);
-        void set_verify_peer(bool verify);
+        // client: verify the server certificate (on by default) - server: require a client certificate
+        sihd::util::Result<void> set_verify_peer(bool verify);
+        // server: scope of resumable sessions (1 to 32 bytes); unset with set_verify_peer, a resuming client fails
+        sihd::util::Result<void> set_session_id_context(std::string_view context);
+        // opt out of the default refusal: TLS 1.2 renegotiation has a history of CVEs and lets a peer burn server CPU
+        sihd::util::Result<void> set_renegotiation(bool allow);
 
         void clear();
 
@@ -40,6 +46,7 @@ class TlsContext
         // type-erased SSL_CTX: the deleter freeing it is bound at acquisition,
         // keeping openssl types out of this header
         std::shared_ptr<void> _handle;
+        bool _server_mode = false;
 };
 
 } // namespace sihd::crypto

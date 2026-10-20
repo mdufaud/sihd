@@ -1,3 +1,4 @@
+#include <climits>
 #include <memory>
 
 #include <sihd/crypto/cipher.hpp>
@@ -36,7 +37,9 @@ struct CtxFree
 sihd::util::Result<std::vector<uint8_t>> do_cipher(bool encrypt,
                                                    std::string_view algorithm,
                                                    const uint8_t *key,
+                                                   size_t key_len,
                                                    const uint8_t *iv,
+                                                   size_t iv_len,
                                                    const uint8_t *data,
                                                    size_t data_len)
 {
@@ -45,6 +48,26 @@ sihd::util::Result<std::vector<uint8_t>> do_cipher(bool encrypt,
     std::unique_ptr<const EVP_CIPHER, CiphFree> ciph(EVP_CIPHER_fetch(nullptr, algo.c_str(), nullptr));
     if (ciph == nullptr)
         return unknown_algorithm(algorithm);
+
+    const int key_size = EVP_CIPHER_get_key_length(ciph.get());
+    const int iv_size = EVP_CIPHER_get_iv_length(ciph.get());
+
+    if (key_size <= 0)
+        return std::unexpected(Error(invalid_argument, "cipher '{}' does not encrypt", algorithm));
+    if (key == nullptr)
+        return std::unexpected(Error(invalid_argument, "cipher '{}' needs a key", algorithm));
+    if (key_len != static_cast<size_t>(key_size))
+        return std::unexpected(
+            Error(invalid_argument, "cipher '{}' needs a {} bytes key, got {}", algorithm, key_size, key_len));
+
+    if (iv_size > 0 && iv == nullptr)
+        return std::unexpected(Error(invalid_argument, "cipher '{}' needs an iv", algorithm));
+    if (iv_size > 0 && iv_len != static_cast<size_t>(iv_size))
+        return std::unexpected(
+            Error(invalid_argument, "cipher '{}' needs a {} bytes iv, got {}", algorithm, iv_size, iv_len));
+
+    if (data_len > static_cast<size_t>(INT_MAX))
+        return std::unexpected(Error(invalid_argument, "cipher input is too large: {} bytes", data_len));
 
     std::unique_ptr<EVP_CIPHER_CTX, CtxFree> ctx(EVP_CIPHER_CTX_new());
     if (ctx == nullptr)
@@ -88,24 +111,24 @@ sihd::util::Result<std::vector<uint8_t>> do_cipher(bool encrypt,
 
 sihd::util::Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,
                                                  const uint8_t *key,
-                                                 [[maybe_unused]] size_t key_len,
+                                                 size_t key_len,
                                                  const uint8_t *iv,
-                                                 [[maybe_unused]] size_t iv_len,
+                                                 size_t iv_len,
                                                  const uint8_t *data,
                                                  size_t data_len)
 {
-    return do_cipher(true, algorithm, key, iv, data, data_len);
+    return do_cipher(true, algorithm, key, key_len, iv, iv_len, data, data_len);
 }
 
 sihd::util::Result<std::vector<uint8_t>> decrypt(std::string_view algorithm,
                                                  const uint8_t *key,
-                                                 [[maybe_unused]] size_t key_len,
+                                                 size_t key_len,
                                                  const uint8_t *iv,
-                                                 [[maybe_unused]] size_t iv_len,
+                                                 size_t iv_len,
                                                  const uint8_t *data,
                                                  size_t data_len)
 {
-    return do_cipher(false, algorithm, key, iv, data, data_len);
+    return do_cipher(false, algorithm, key, key_len, iv, iv_len, data, data_len);
 }
 
 sihd::util::Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,

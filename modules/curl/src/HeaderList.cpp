@@ -37,7 +37,9 @@ HeaderList & HeaderList::operator=(HeaderList && other)
 
 sihd::util::Result<void> HeaderList::append(std::string_view line)
 {
-    // curl_slist_append takes a null-terminated string and copies it
+    // curl sends the line as is: a line break would smuggle another header or request
+    if (line.find_first_of(std::string_view("\r\n\0", 3)) != std::string_view::npos)
+        return std::unexpected(Error(invalid_argument, "header line holds a line break or NUL byte"));
     std::string str(line);
     curl_slist *list = curl_slist_append(_impl->list, str.c_str());
     if (list == nullptr)

@@ -1,3 +1,5 @@
+#include <array>
+
 #include <gtest/gtest.h>
 
 #include <sihd/crypto/cipher.hpp>
@@ -155,6 +157,63 @@ TEST_F(TestCipherUtils, unknown_algorithm)
     ASSERT_FALSE(encrypted.has_value());
     EXPECT_EQ(encrypted.error().code, invalid_argument);
     EXPECT_EQ(encrypted.error().message, "unknown cipher 'UNKNOWN-CIPHER'");
+}
+
+TEST_F(TestCipherUtils, key_and_iv_lengths_are_checked)
+{
+    const std::array<uint8_t, 32> buf {};
+    const std::array<uint8_t, 16> data {};
+
+    auto short_key = sihd::crypto::cipher::encrypt("AES-256-CBC",
+                                                   buf.data(),
+                                                   16,
+                                                   buf.data(),
+                                                   16,
+                                                   data.data(),
+                                                   data.size());
+    ASSERT_FALSE(short_key.has_value());
+    EXPECT_EQ(short_key.error().code, invalid_argument);
+    EXPECT_EQ(short_key.error().message, "cipher 'AES-256-CBC' needs a 32 bytes key, got 16");
+
+    auto long_key = sihd::crypto::cipher::decrypt("AES-256-CBC",
+                                                  buf.data(),
+                                                  33,
+                                                  buf.data(),
+                                                  16,
+                                                  data.data(),
+                                                  data.size());
+    ASSERT_FALSE(long_key.has_value());
+    EXPECT_EQ(long_key.error().message, "cipher 'AES-256-CBC' needs a 32 bytes key, got 33");
+
+    auto short_iv = sihd::crypto::cipher::encrypt("AES-256-CBC",
+                                                  buf.data(),
+                                                  32,
+                                                  buf.data(),
+                                                  8,
+                                                  data.data(),
+                                                  data.size());
+    ASSERT_FALSE(short_iv.has_value());
+    EXPECT_EQ(short_iv.error().message, "cipher 'AES-256-CBC' needs a 16 bytes iv, got 8");
+
+    auto no_key = sihd::crypto::cipher::encrypt("AES-256-CBC", nullptr, 32, buf.data(), 16, data.data(), data.size());
+    ASSERT_FALSE(no_key.has_value());
+    EXPECT_EQ(no_key.error().message, "cipher 'AES-256-CBC' needs a key");
+
+    auto no_iv = sihd::crypto::cipher::encrypt("AES-256-CBC", buf.data(), 32, nullptr, 16, data.data(), data.size());
+    ASSERT_FALSE(no_iv.has_value());
+    EXPECT_EQ(no_iv.error().message, "cipher 'AES-256-CBC' needs an iv");
+
+    auto ok = sihd::crypto::cipher::encrypt("AES-256-CBC", buf.data(), 32, buf.data(), 16, data.data(), data.size());
+    EXPECT_TRUE(ok.has_value());
+}
+
+TEST_F(TestCipherUtils, null_cipher_is_refused)
+{
+    const std::array<uint8_t, 16> buf {};
+    auto res = sihd::crypto::cipher::encrypt("NULL", buf.data(), 0, buf.data(), 0, buf.data(), buf.size());
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, invalid_argument);
+    EXPECT_EQ(res.error().message, "cipher 'NULL' does not encrypt");
 }
 
 } // namespace test

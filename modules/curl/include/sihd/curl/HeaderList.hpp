@@ -22,7 +22,6 @@ class HeaderList
         HeaderList(HeaderList &&);
         HeaderList & operator=(HeaderList &&);
 
-        // no embedded NUL byte: curl stores C strings
         sihd::util::Result<void> append(std::string_view line);
         bool empty() const;
         size_t size() const;

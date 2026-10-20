@@ -1,26 +1,57 @@
+#include <algorithm>
 #include <expected>
 #include <mutex>
 
 #include <fmt/core.h>
+#include <fmt/ranges.h>
 
 #include <sihd/curl/HeaderList.hpp>
 #include <sihd/curl/Mime.hpp>
 #include <sihd/curl/Request.hpp>
 #include <sihd/util/AtExit.hpp>
 #include <sihd/util/Defer.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
 #include "impl.hpp"
 
-using sihd::util::Error;
-using sihd::util::error_from;
+using namespace sihd::util;
 using enum sihd::util::ErrorCode;
+
+namespace sihd::util
+{
+template <>
+struct ErrorResolver<CURLcode>
+{
+        static ErrorCode code(CURLcode native)
+        {
+            switch (native)
+            {
+                case CURLE_OPERATION_TIMEDOUT:
+                    return ErrorCode::timeout;
+                case CURLE_COULDNT_RESOLVE_HOST:
+                case CURLE_COULDNT_RESOLVE_PROXY:
+                    return ErrorCode::not_found;
+                case CURLE_COULDNT_CONNECT:
+                case CURLE_RECV_ERROR:
+                case CURLE_SEND_ERROR:
+                    return ErrorCode::io_error;
+                case CURLE_REMOTE_ACCESS_DENIED:
+                    return ErrorCode::permission_denied;
+                case CURLE_UNSUPPORTED_PROTOCOL:
+                    return ErrorCode::not_supported;
+                case CURLE_URL_MALFORMAT:
+                    return ErrorCode::invalid_argument;
+                case CURLE_ABORTED_BY_CALLBACK:
+                    return ErrorCode::interrupted;
+                default:
+                    return ErrorCode::io_error;
+            }
+        }
+};
+} // namespace sihd::util
 
 namespace sihd::curl
 {
-
-SIHD_NEW_LOGGER("sihd::curl");
 
 namespace
 {
@@ -71,20 +102,17 @@ sihd::util::Result<void> global_init()
 // the implementation type is deduced: setters record every curl failure into
 // it so last_error() covers option setting, not only perform()
 template <typename Impl, typename T>
-bool set_opt(Impl & impl, CURLoption option, const T & value)
+Result<void> set_opt(Impl & impl, CURLoption option, const T & value)
 {
     if (impl.curl == nullptr)
-    {
-        SIHD_LOG(error, "Request: no curl handle");
-        return false;
-    }
+        return err(not_initialized, impl.init_error.empty() ? "no curl handle" : impl.init_error);
     CURLcode code = curl_easy_setopt(impl.curl, option, value);
     if (code != CURLE_OK)
     {
         impl.code = code;
-        SIHD_LOG(error, "Request: could not set curl option: {}", curl_easy_strerror(code));
+        return err(error_from(code), "could not set curl option: {}", curl_easy_strerror(code));
     }
-    return code == CURLE_OK;
+    return {};
 }
 
 template <typename T>
@@ -134,53 +162,50 @@ int progress_trampoline(void *userdata, curl_off_t dltotal, curl_off_t dlnow, cu
 }
 
 // curl_mime setters only report through their return code
-bool mime_check(CURLcode code, std::string_view what)
+Result<void> mime_check(CURLcode code, std::string_view what)
 {
     if (code == CURLE_OK)
-        return true;
-    SIHD_LOG(error, "Request: could not {}: {}", what, curl_easy_strerror(code));
-    return false;
+        return {};
+    return err(error_from(code), "could not {}: {}", what, curl_easy_strerror(code));
+}
+
+Result<void> add_mime_part(curl_mime *handle, const MimePart & part)
+{
+    curl_mimepart *mime_part = curl_mime_addpart(handle);
+    if (mime_part == nullptr)
+        return err(out_of_memory, "could not add mime part");
+
+    if (!part.name.empty())
+    {
+        auto named = mime_check(curl_mime_name(mime_part, part.name.c_str()), "set part name");
+        SIHD_UNEXPECTED_RETURN(named);
+    }
+
+    if (!part.data.empty())
+    {
+        auto filled = mime_check(curl_mime_data(mime_part, (const char *)part.data.data(), part.data.size()),
+                                 "set part data");
+        SIHD_UNEXPECTED_RETURN(filled);
+    }
+
+    if (!part.path.empty())
+    {
+        auto filed = mime_check(curl_mime_filedata(mime_part, part.path.c_str()), "set part file");
+        SIHD_UNEXPECTED_RETURN(filed);
+    }
+
+    if (!part.filename.empty())
+    {
+        auto filenamed = mime_check(curl_mime_filename(mime_part, part.filename.c_str()), "set part filename");
+        SIHD_UNEXPECTED_RETURN(filenamed);
+    }
+
+    if (!part.content_type.empty())
+        return mime_check(curl_mime_type(mime_part, part.content_type.c_str()), "set part content type");
+    return {};
 }
 
 } // namespace
-
-} // namespace sihd::curl
-
-namespace sihd::util
-{
-template <>
-struct ErrorResolver<CURLcode>
-{
-        static ErrorCode code(CURLcode native)
-        {
-            switch (native)
-            {
-                case CURLE_OPERATION_TIMEDOUT:
-                    return ErrorCode::timeout;
-                case CURLE_COULDNT_RESOLVE_HOST:
-                case CURLE_COULDNT_RESOLVE_PROXY:
-                    return ErrorCode::not_found;
-                case CURLE_COULDNT_CONNECT:
-                case CURLE_RECV_ERROR:
-                case CURLE_SEND_ERROR:
-                    return ErrorCode::io_error;
-                case CURLE_REMOTE_ACCESS_DENIED:
-                    return ErrorCode::permission_denied;
-                case CURLE_UNSUPPORTED_PROTOCOL:
-                    return ErrorCode::not_supported;
-                case CURLE_URL_MALFORMAT:
-                    return ErrorCode::invalid_argument;
-                case CURLE_ABORTED_BY_CALLBACK:
-                    return ErrorCode::interrupted;
-                default:
-                    return ErrorCode::io_error;
-            }
-        }
-};
-} // namespace sihd::util
-
-namespace sihd::curl
-{
 
 struct SlistFree
 {
@@ -195,6 +220,7 @@ struct Request::Impl
         std::string init_error;
 
         std::unique_ptr<curl_slist, SlistFree> header_list;
+        std::unique_ptr<curl_slist, SlistFree> resolve_list;
         curl_mime *mime = nullptr;
 
         std::string url;
@@ -250,33 +276,61 @@ Request & Request::operator=(Request && other)
     return *this;
 }
 
-bool Request::set_url(std::string_view url)
+Result<void> Request::set_url(std::string_view url)
 {
     _impl->url = std::string(url);
     return set_opt(*_impl, CURLOPT_URL, _impl->url.c_str());
 }
 
-bool Request::set_verbose(bool on)
+Result<void> Request::set_verbose(bool on)
 {
     return set_opt(*_impl, CURLOPT_VERBOSE, (long)on);
 }
 
-bool Request::set_follow_location(bool on)
+Result<void> Request::set_follow_location(bool on)
 {
     return set_opt(*_impl, CURLOPT_FOLLOWLOCATION, (long)on);
 }
 
-bool Request::set_timeout(sihd::util::Duration duration)
+Result<void> Request::set_resolve(std::string_view host, int port, const std::vector<std::string> & addresses)
+{
+    std::unique_ptr<curl_slist, SlistFree> list;
+    if (!addresses.empty())
+    {
+        constexpr std::string_view host_forbidden(":,\0", 3);
+        constexpr std::string_view address_forbidden(",\0", 2);
+
+        const bool valid_host = !host.empty() && host.find_first_of(host_forbidden) == std::string_view::npos;
+        const bool valid_port = port > 0 && port <= 65535;
+        const bool valid_addresses = std::ranges::all_of(addresses, [&](const std::string & address) {
+            return !address.empty() && address.find_first_of(address_forbidden) == std::string::npos;
+        });
+        if (!valid_host || !valid_port || !valid_addresses)
+            return std::unexpected(Error(invalid_argument, "invalid resolve entry for '{}'", host));
+
+        std::string entry = fmt::format("{}:{}:{}", host, port, fmt::join(addresses, ","));
+        list.reset(curl_slist_append(nullptr, entry.c_str()));
+        if (list == nullptr)
+            return std::unexpected(Error(out_of_memory, "could not allocate the resolve entry"));
+    }
+
+    auto resolved = set_opt(*_impl, CURLOPT_RESOLVE, list.get());
+    SIHD_UNEXPECTED_RETURN(resolved);
+    _impl->resolve_list = std::move(list);
+    return {};
+}
+
+Result<void> Request::set_timeout(Duration duration)
 {
     return set_opt(*_impl, CURLOPT_TIMEOUT_MS, (long)duration.milliseconds());
 }
 
-bool Request::set_connect_timeout(sihd::util::Duration duration)
+Result<void> Request::set_connect_timeout(Duration duration)
 {
     return set_opt(*_impl, CURLOPT_CONNECTTIMEOUT_MS, (long)duration.milliseconds());
 }
 
-bool Request::set_user_agent(std::string_view user_agent)
+Result<void> Request::set_user_agent(std::string_view user_agent)
 {
     if (user_agent.empty())
         // an empty agent means no header: only a null value clears the option
@@ -285,23 +339,23 @@ bool Request::set_user_agent(std::string_view user_agent)
     return set_opt(*_impl, CURLOPT_USERAGENT, _impl->user_agent.c_str());
 }
 
-bool Request::set_ssl_verify(bool verify_peer, bool verify_host)
+Result<void> Request::set_ssl_verify(bool verify_peer, bool verify_host)
 {
-    bool peer_ok = set_opt(*_impl, CURLOPT_SSL_VERIFYPEER, (long)verify_peer);
-    bool host_ok = set_opt(*_impl, CURLOPT_SSL_VERIFYHOST, verify_host ? 2L : 0L);
-    return peer_ok && host_ok;
+    auto peer_set = set_opt(*_impl, CURLOPT_SSL_VERIFYPEER, (long)verify_peer);
+    SIHD_UNEXPECTED_RETURN(peer_set);
+    return set_opt(*_impl, CURLOPT_SSL_VERIFYHOST, verify_host ? 2L : 0L);
 }
 
-bool Request::set_userpass(std::string_view user, std::string_view password)
+Result<void> Request::set_userpass(std::string_view user, std::string_view password)
 {
     _impl->user = std::string(user);
     _impl->password = std::string(password);
-    bool user_ok = set_opt(*_impl, CURLOPT_USERNAME, _impl->user.c_str());
-    bool pass_ok = set_opt(*_impl, CURLOPT_PASSWORD, _impl->password.c_str());
-    return user_ok && pass_ok;
+    auto user_set = set_opt(*_impl, CURLOPT_USERNAME, _impl->user.c_str());
+    SIHD_UNEXPECTED_RETURN(user_set);
+    return set_opt(*_impl, CURLOPT_PASSWORD, _impl->password.c_str());
 }
 
-bool Request::set_auth(Auth auth)
+Result<void> Request::set_auth(Auth auth)
 {
     long mask = CURLAUTH_ANY;
     if (auth == Auth::Basic)
@@ -311,7 +365,7 @@ bool Request::set_auth(Auth auth)
     return set_opt(*_impl, CURLOPT_HTTPAUTH, mask);
 }
 
-bool Request::set_proxy(std::string_view url, Proxy type)
+Result<void> Request::set_proxy(std::string_view url, Proxy type)
 {
     _impl->proxy_url = std::string(url);
 
@@ -321,29 +375,29 @@ bool Request::set_proxy(std::string_view url, Proxy type)
     else if (type == Proxy::Socks5)
         proxy_type = CURLPROXY_SOCKS5;
 
-    bool url_ok = set_opt(*_impl, CURLOPT_PROXY, _impl->proxy_url.c_str());
-    bool type_ok = set_opt(*_impl, CURLOPT_PROXYTYPE, proxy_type);
-    return url_ok && type_ok;
+    auto url_set = set_opt(*_impl, CURLOPT_PROXY, _impl->proxy_url.c_str());
+    SIHD_UNEXPECTED_RETURN(url_set);
+    return set_opt(*_impl, CURLOPT_PROXYTYPE, proxy_type);
 }
 
-bool Request::set_proxy_auth(std::string_view user, std::string_view password)
+Result<void> Request::set_proxy_auth(std::string_view user, std::string_view password)
 {
     _impl->proxy_user = std::string(user);
     _impl->proxy_password = std::string(password);
-    bool user_ok = set_opt(*_impl, CURLOPT_PROXYUSERNAME, _impl->proxy_user.c_str());
-    bool pass_ok = set_opt(*_impl, CURLOPT_PROXYPASSWORD, _impl->proxy_password.c_str());
-    return user_ok && pass_ok;
+    auto user_set = set_opt(*_impl, CURLOPT_PROXYUSERNAME, _impl->proxy_user.c_str());
+    SIHD_UNEXPECTED_RETURN(user_set);
+    return set_opt(*_impl, CURLOPT_PROXYPASSWORD, _impl->proxy_password.c_str());
 }
 
-bool Request::clear_proxy()
+Result<void> Request::clear_proxy()
 {
     // an empty url disables the proxy: only a null value restores the environment's
-    bool url_ok = set_opt(*_impl, CURLOPT_PROXY, (const char *)nullptr);
-    bool type_ok = set_opt(*_impl, CURLOPT_PROXYTYPE, (long)CURLPROXY_HTTP);
-    return url_ok && type_ok;
+    auto url_set = set_opt(*_impl, CURLOPT_PROXY, (const char *)nullptr);
+    SIHD_UNEXPECTED_RETURN(url_set);
+    return set_opt(*_impl, CURLOPT_PROXYTYPE, (long)CURLPROXY_HTTP);
 }
 
-bool Request::set_headers(const HeaderList & headers)
+Result<void> Request::set_headers(const HeaderList & headers)
 {
     curl_slist *list = nullptr;
     for (const std::string & line : headers.lines())
@@ -353,8 +407,7 @@ bool Request::set_headers(const HeaderList & headers)
         if (appended == nullptr)
         {
             curl_slist_free_all(list);
-            SIHD_LOG(error, "Request: could not build header list");
-            return false;
+            return err(out_of_memory, "could not build the header list");
         }
         list = appended;
     }
@@ -362,44 +415,18 @@ bool Request::set_headers(const HeaderList & headers)
     return set_opt(*_impl, CURLOPT_HTTPHEADER, list);
 }
 
-bool Request::set_mime(const Mime & mime)
+Result<void> Request::set_mime(const Mime & mime)
 {
     if (_impl->curl == nullptr)
-    {
-        SIHD_LOG(error, "Request: no curl handle");
-        return false;
-    }
+        return err(not_initialized, _impl->init_error.empty() ? "no curl handle" : _impl->init_error);
     curl_mime *handle = curl_mime_init(_impl->curl);
     if (handle == nullptr)
-    {
-        SIHD_LOG(error, "Request: could not init mime");
-        return false;
-    }
+        return err(out_of_memory, "could not init mime");
     sihd::util::Defer free_mime([&handle] { curl_mime_free(handle); });
     for (const MimePart & part : mime.parts())
     {
-        curl_mimepart *mime_part = curl_mime_addpart(handle);
-        if (mime_part == nullptr)
-        {
-            SIHD_LOG(error, "Request: could not add mime part");
-            return false;
-        }
-        if (part.name.empty() == false
-            && mime_check(curl_mime_name(mime_part, part.name.c_str()), "set part name") == false)
-            return false;
-        if (part.data.empty() == false
-            && mime_check(curl_mime_data(mime_part, (const char *)part.data.data(), part.data.size()), "set part data")
-                   == false)
-            return false;
-        if (part.path.empty() == false
-            && mime_check(curl_mime_filedata(mime_part, part.path.c_str()), "set part file") == false)
-            return false;
-        if (part.filename.empty() == false
-            && mime_check(curl_mime_filename(mime_part, part.filename.c_str()), "set part filename") == false)
-            return false;
-        if (part.content_type.empty() == false
-            && mime_check(curl_mime_type(mime_part, part.content_type.c_str()), "set part content type") == false)
-            return false;
+        auto added = add_mime_part(handle, part);
+        SIHD_UNEXPECTED_RETURN(added);
     }
     if (_impl->mime != nullptr)
         curl_mime_free(_impl->mime);
@@ -408,7 +435,7 @@ bool Request::set_mime(const Mime & mime)
     return set_opt(*_impl, CURLOPT_MIMEPOST, handle);
 }
 
-bool Request::clear_mime()
+Result<void> Request::clear_mime()
 {
     if (_impl->mime != nullptr)
     {
@@ -418,130 +445,132 @@ bool Request::clear_mime()
     return set_opt(*_impl, CURLOPT_MIMEPOST, (const void *)nullptr);
 }
 
-bool Request::set_body(sihd::util::ArrCharView data)
+Result<void> Request::set_body(ArrCharView data)
 {
     // an empty body still declares its size: without it curl has no
     // content-length and falls back to a chunked upload
-    bool size_ok = set_opt(*_impl, CURLOPT_POSTFIELDSIZE, (long)data.size());
+    auto size_set = set_opt(*_impl, CURLOPT_POSTFIELDSIZE, (long)data.size());
+    SIHD_UNEXPECTED_RETURN(size_set);
     // COPYPOSTFIELDS must come after POSTFIELDSIZE to copy binary data fully
-    bool copy_ok = set_opt(*_impl, CURLOPT_COPYPOSTFIELDS, data.buf());
-    return size_ok && copy_ok;
+    return set_opt(*_impl, CURLOPT_COPYPOSTFIELDS, data.buf());
 }
 
-bool Request::set_upload(bool on)
+Result<void> Request::set_upload(bool on)
 {
     return set_opt(*_impl, CURLOPT_UPLOAD, (long)on);
 }
 
-bool Request::set_infilesize(int64_t size)
+Result<void> Request::set_infilesize(int64_t size)
 {
     return set_opt(*_impl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)size);
 }
 
-bool Request::set_http_get(bool on)
+Result<void> Request::set_http_get(bool on)
 {
     return set_opt(*_impl, CURLOPT_HTTPGET, (long)on);
 }
 
-bool Request::set_http_post(bool on)
+Result<void> Request::set_http_post(bool on)
 {
     return set_opt(*_impl, CURLOPT_POST, (long)on);
 }
 
-bool Request::set_nobody(bool on)
+Result<void> Request::set_nobody(bool on)
 {
     return set_opt(*_impl, CURLOPT_NOBODY, (long)on);
 }
 
-bool Request::set_custom_request(std::string_view method)
+Result<void> Request::set_custom_request(std::string_view method)
 {
     _impl->custom_request = std::string(method);
     return set_opt(*_impl, CURLOPT_CUSTOMREQUEST, _impl->custom_request.c_str());
 }
 
-bool Request::set_accept_encoding(std::string_view encoding)
+Result<void> Request::set_accept_encoding(std::string_view encoding)
 {
     _impl->accept_encoding = std::string(encoding);
     return set_opt(*_impl, CURLOPT_ACCEPT_ENCODING, _impl->accept_encoding.c_str());
 }
 
-bool Request::clear_accept_encoding()
+Result<void> Request::clear_accept_encoding()
 {
     // an empty encoding enables every supported one: only a null value disables
     return set_opt(*_impl, CURLOPT_ACCEPT_ENCODING, (const char *)nullptr);
 }
 
-bool Request::set_http_2_tls(bool on)
+Result<void> Request::set_http_2_tls(bool on)
 {
     if (on)
         return set_opt(*_impl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_2TLS);
     return set_opt(*_impl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_1_1);
 }
 
-bool Request::set_cookie_engine()
+Result<void> Request::set_cookie_engine()
 {
     _impl->cookies_file = "";
     return set_opt(*_impl, CURLOPT_COOKIEFILE, _impl->cookies_file.c_str());
 }
 
-bool Request::add_cookie(std::string_view cookie_line)
+Result<void> Request::add_cookie(std::string_view cookie_line)
 {
     _impl->cookie_line = std::string(cookie_line);
     return set_opt(*_impl, CURLOPT_COOKIELIST, _impl->cookie_line.c_str());
 }
 
-bool Request::save_cookies(std::string_view path)
+Result<void> Request::save_cookies(std::string_view path)
 {
     _impl->cookie_jar = std::string(path);
-    bool jar_ok = set_opt(*_impl, CURLOPT_COOKIEJAR, _impl->cookie_jar.c_str());
-    return jar_ok && add_cookie("FLUSH");
+    auto jar_set = set_opt(*_impl, CURLOPT_COOKIEJAR, _impl->cookie_jar.c_str());
+    SIHD_UNEXPECTED_RETURN(jar_set);
+    return add_cookie("FLUSH");
 }
 
-bool Request::load_cookies(std::string_view path)
+Result<void> Request::load_cookies(std::string_view path)
 {
     _impl->cookies_file = std::string(path);
     return set_opt(*_impl, CURLOPT_COOKIEFILE, _impl->cookies_file.c_str());
 }
 
-bool Request::clear_cookies()
+Result<void> Request::clear_cookies()
 {
     return add_cookie("ALL");
 }
 
-bool Request::set_write_callback(WriteFn callback)
+Result<void> Request::set_write_callback(WriteFn callback)
 {
     _impl->callbacks.write = std::move(callback);
-    bool fn_ok = set_opt(*_impl, CURLOPT_WRITEFUNCTION, data_trampoline<&Callbacks::write>);
-    bool data_ok = set_opt(*_impl, CURLOPT_WRITEDATA, &_impl->callbacks);
-    return fn_ok && data_ok;
+    auto fn_set = set_opt(*_impl, CURLOPT_WRITEFUNCTION, data_trampoline<&Callbacks::write>);
+    SIHD_UNEXPECTED_RETURN(fn_set);
+    return set_opt(*_impl, CURLOPT_WRITEDATA, &_impl->callbacks);
 }
 
-bool Request::set_header_callback(WriteFn callback)
+Result<void> Request::set_header_callback(WriteFn callback)
 {
     _impl->callbacks.header = std::move(callback);
-    bool fn_ok = set_opt(*_impl, CURLOPT_HEADERFUNCTION, data_trampoline<&Callbacks::header>);
-    bool data_ok = set_opt(*_impl, CURLOPT_HEADERDATA, &_impl->callbacks);
-    return fn_ok && data_ok;
+    auto fn_set = set_opt(*_impl, CURLOPT_HEADERFUNCTION, data_trampoline<&Callbacks::header>);
+    SIHD_UNEXPECTED_RETURN(fn_set);
+    return set_opt(*_impl, CURLOPT_HEADERDATA, &_impl->callbacks);
 }
 
-bool Request::set_read_callback(ReadFn callback)
+Result<void> Request::set_read_callback(ReadFn callback)
 {
     _impl->callbacks.read = std::move(callback);
-    bool fn_ok = set_opt(*_impl, CURLOPT_READFUNCTION, read_trampoline);
-    bool data_ok = set_opt(*_impl, CURLOPT_READDATA, &_impl->callbacks);
-    return fn_ok && data_ok;
+    auto fn_set = set_opt(*_impl, CURLOPT_READFUNCTION, read_trampoline);
+    SIHD_UNEXPECTED_RETURN(fn_set);
+    return set_opt(*_impl, CURLOPT_READDATA, &_impl->callbacks);
 }
 
-bool Request::set_progress_callback(ProgressFn callback)
+Result<void> Request::set_progress_callback(ProgressFn callback)
 {
     _impl->callbacks.progress = std::move(callback);
     // empty callback restores the default: no progress reporting
     if (!_impl->callbacks.progress)
         return set_opt(*_impl, CURLOPT_NOPROGRESS, 1L);
-    bool noprogress_ok = set_opt(*_impl, CURLOPT_NOPROGRESS, 0L);
-    bool fn_ok = set_opt(*_impl, CURLOPT_XFERINFOFUNCTION, progress_trampoline);
-    bool data_ok = set_opt(*_impl, CURLOPT_XFERINFODATA, &_impl->callbacks);
-    return noprogress_ok && fn_ok && data_ok;
+    auto progress_set = set_opt(*_impl, CURLOPT_NOPROGRESS, 0L);
+    SIHD_UNEXPECTED_RETURN(progress_set);
+    auto fn_set = set_opt(*_impl, CURLOPT_XFERINFOFUNCTION, progress_trampoline);
+    SIHD_UNEXPECTED_RETURN(fn_set);
+    return set_opt(*_impl, CURLOPT_XFERINFODATA, &_impl->callbacks);
 }
 
 long Request::response_code() const
@@ -604,6 +633,7 @@ void Request::reset()
         return;
     curl_easy_reset(_impl->curl);
     _impl->header_list.reset();
+    _impl->resolve_list.reset();
     if (_impl->mime != nullptr)
     {
         curl_mime_free(_impl->mime);

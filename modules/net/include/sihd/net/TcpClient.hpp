@@ -64,6 +64,7 @@ class TcpClient: public INetReceiver,
         sihd::util::Result<void> send_all(sihd::util::ArrCharView view) override;
 
         void set_tls_context(sihd::crypto::TlsContext ctx);
+        void set_tls_server_name(std::string name);
 
         // to set blocking/broadcast
         const TlsSocket & socket() const { return _socket; }

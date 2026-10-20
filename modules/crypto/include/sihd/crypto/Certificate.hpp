@@ -29,6 +29,8 @@ struct CertOptions
         int days = 365;                             // validity from now
         uint64_t serial = 0;                        // 0 => random
         bool is_ca = false;
+        // opt out of the DNS/IP/email/URI kinds: otherName, RID, dirName pass, separators never do
+        bool any_alt_name_kind = false;
 };
 
 class Certificate

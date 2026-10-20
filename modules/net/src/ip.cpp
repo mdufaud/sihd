@@ -1,10 +1,11 @@
 #include <strings.h>
 
+#include <algorithm>
 #include <cstring>
 
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Logger.hpp>
+#include <sihd/util/endian.hpp>
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -22,7 +23,34 @@ namespace sihd::net::ip
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::net::ip");
+namespace
+{
+
+bool is_private_ipv6(const in6_addr & addr)
+{
+    const uint8_t *bytes = addr.s6_addr;
+
+    if (IN6_IS_ADDR_UNSPECIFIED(&addr) || IN6_IS_ADDR_LOOPBACK(&addr) || IN6_IS_ADDR_LINKLOCAL(&addr)
+        || IN6_IS_ADDR_SITELOCAL(&addr) || IN6_IS_ADDR_MULTICAST(&addr))
+        return true;
+
+    if ((bytes[0] & 0xFE) == 0xFC) // fc00::/7 unique local
+        return true;
+
+    if (IN6_IS_ADDR_V4MAPPED(&addr) || IN6_IS_ADDR_V4COMPAT(&addr)) // ::ffff:a.b.c.d and ::a.b.c.d
+        return is_private_ipv4(endian::read_be<uint32_t>(bytes + 12, 4));
+
+    if (bytes[0] == 0x00 && bytes[1] == 0x64 && bytes[2] == 0xFF && bytes[3] == 0x9B // 64:ff9b::/96 NAT64
+        && std::all_of(bytes + 4, bytes + 12, [](uint8_t byte) { return byte == 0; }))
+        return is_private_ipv4(endian::read_be<uint32_t>(bytes + 12, 4));
+
+    if (bytes[0] == 0x20 && bytes[1] == 0x02) // 2002::/16 6to4
+        return is_private_ipv4(endian::read_be<uint32_t>(bytes + 2, 4));
+
+    return false;
+}
+
+} // namespace
 
 const char *domain_str(int domain)
 {
@@ -177,20 +205,26 @@ bool is_private_ipv4(uint32_t addr)
     return (addr >> 24) == 0                    // 0.0.0.0/8 ("this network")
            || (addr >> 24) == 127               // 127.0.0.0/8 (loopback)
            || (addr >> 24) == 10                // 10.0.0.0/8 (class A)
+           || (addr >> 22) == 0x191             // 100.64.0.0/10 (carrier-grade NAT)
            || ((addr >> 16) & 0xFFFF) == 0xA9FE // 169.254.0.0/16 (link-local)
            || (addr >> 20) == 0xAC1             // 172.16.0.0/12 (class B)
-           || (addr >> 16) == 0xC0A8;           // 192.168.0.0/16 (class C)
+           || (addr >> 8) == 0xC00000           // 192.0.0.0/24 (IETF protocol assignments)
+           || (addr >> 16) == 0xC0A8            // 192.168.0.0/16 (class C)
+           || (addr >> 17) == 0x6309            // 198.18.0.0/15 (benchmarking)
+           || (addr >> 28) >= 0xE;              // 224.0.0.0/4 multicast, 240.0.0.0/4 reserved, broadcast
 }
 
-bool is_private_host(const std::string & host)
+Result<std::vector<std::string>> public_addresses(const std::string & host)
 {
     struct addrinfo hints {};
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     struct addrinfo *res = nullptr;
-    if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0)
-        return false;
+    // fail closed: a host the resolver cannot parse may still be resolved by the actual client
+    if (host.empty() || host.find('\0') != std::string::npos || getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0)
+        return std::unexpected(Error(ErrorCode::not_found, "cannot resolve host '{}'", host));
 
+    std::vector<std::string> addresses;
     bool found = false;
     for (auto *r = res; r && !found; r = r->ai_next)
     {
@@ -200,14 +234,27 @@ bool is_private_host(const std::string & host)
             found = is_private_ipv4(addr);
         }
         else if (r->ai_family == AF_INET6)
-        {
-            auto *s6 = reinterpret_cast<sockaddr_in6 *>(r->ai_addr);
-            found = IN6_IS_ADDR_LOOPBACK(&s6->sin6_addr) || IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr)
-                    || IN6_IS_ADDR_SITELOCAL(&s6->sin6_addr);
-        }
+            found = is_private_ipv6(reinterpret_cast<sockaddr_in6 *>(r->ai_addr)->sin6_addr);
+        else
+            continue;
+        addresses.push_back(to_str(r->ai_addr));
     }
     freeaddrinfo(res);
-    return found;
+    if (addresses.empty())
+        return std::unexpected(Error(ErrorCode::not_found, "host '{}' has no ip address", host));
+    if (found)
+        return std::unexpected(Error(ErrorCode::permission_denied, "host '{}' resolves to a private address", host));
+    return addresses;
+}
+
+Result<bool> is_private_host(const std::string & host)
+{
+    const auto addresses = public_addresses(host);
+    if (addresses.has_value())
+        return false;
+    if (addresses.error().code == ErrorCode::permission_denied)
+        return true;
+    return std::unexpected(addresses.error());
 }
 
 uint32_t to_netmask(uint32_t value)

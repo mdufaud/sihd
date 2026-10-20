@@ -1,5 +1,9 @@
+#include <cstdio>
+
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/error.hpp>
+#include <sihd/sys/File.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Result.hpp>
 
 #include <openssl/bio.h>
@@ -7,7 +11,7 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 
-using sihd::util::Error;
+using namespace sihd::util;
 using enum sihd::util::ErrorCode;
 
 namespace sihd::crypto
@@ -26,6 +30,11 @@ struct PkeyCtxFree
         void operator()(EVP_PKEY_CTX *ctx) const { EVP_PKEY_CTX_free(ctx); }
 };
 
+int refuse_passphrase(char *, int, int, void *)
+{
+    return -1;
+}
+
 std::shared_ptr<void> make_handle(EVP_PKEY *key)
 {
     return std::shared_ptr<void>(key, PkeyFree {});
@@ -33,7 +42,7 @@ std::shared_ptr<void> make_handle(EVP_PKEY *key)
 
 } // namespace
 
-sihd::util::Result<void> PrivateKey::generate_rsa(int bits)
+Result<void> PrivateKey::generate_rsa(int bits)
 {
     ERR_clear_error();
     this->clear();
@@ -50,7 +59,7 @@ sihd::util::Result<void> PrivateKey::generate_rsa(int bits)
     return {};
 }
 
-sihd::util::Result<void> PrivateKey::generate_ec(std::string_view curve_name)
+Result<void> PrivateKey::generate_ec(std::string_view curve_name)
 {
     ERR_clear_error();
     this->clear();
@@ -73,14 +82,14 @@ sihd::util::Result<void> PrivateKey::generate_ec(std::string_view curve_name)
     return {};
 }
 
-sihd::util::Result<void> PrivateKey::load_pem(std::string_view path)
+Result<void> PrivateKey::load_pem(std::string_view path)
 {
     ERR_clear_error();
     this->clear();
     FILE *fp = fopen(std::string(path).c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
-    std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_PrivateKey(fp, nullptr, nullptr, nullptr));
+    std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_PrivateKey(fp, nullptr, refuse_passphrase, nullptr));
     fclose(fp);
     if (key == nullptr)
         return make_error("read PEM from '{}'", path);
@@ -88,31 +97,47 @@ sihd::util::Result<void> PrivateKey::load_pem(std::string_view path)
     return {};
 }
 
-sihd::util::Result<void> PrivateKey::save_pem(std::string_view path) const
+Result<void> PrivateKey::save_pem(std::string_view path) const
 {
     ERR_clear_error();
     if (!_handle)
         return std::unexpected(Error(not_initialized, "no key loaded"));
-    FILE *fp = fopen(std::string(path).c_str(), "w");
-    if (!fp)
-        return std::unexpected(Error::from_errno("could not open '{}'", path));
-    const bool
-        ok = PEM_write_PrivateKey(fp, static_cast<EVP_PKEY *>(_handle.get()), nullptr, nullptr, 0, nullptr, nullptr)
-             > 0;
-    fclose(fp);
-    if (!ok)
+
+    const std::string pem = this->to_pem_string();
+    if (pem.empty())
         return make_error("write PEM to '{}'", path);
-    return {};
+
+    // owner-only temp renamed over the target: links are replaced, never written through
+    sihd::sys::File file;
+    auto opened = file.open_tmp(std::string(path) + ".", true);
+    SIHD_UNEXPECTED_RETURN(opened);
+    const std::string tmp_path = file.path();
+    auto wrote = file.write(pem.data(), pem.size());
+    auto closed = file.close();
+
+    Result<void> saved;
+    if (!wrote)
+        saved = std::unexpected(std::move(wrote).error());
+    else if (*wrote != pem.size())
+        saved = std::unexpected(Error(io_error, "short write to '{}'", tmp_path));
+    else if (!closed)
+        saved = std::unexpected(std::move(closed).error());
+    else
+        saved = sihd::sys::fs::rename(tmp_path, std::string(path));
+
+    if (!saved)
+        (void)sihd::sys::fs::remove_file(tmp_path);
+    return saved;
 }
 
-sihd::util::Result<void> PrivateKey::load_pem_string(std::string_view pem)
+Result<void> PrivateKey::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
     this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
         return make_error("BIO_new_mem_buf");
-    std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_bio_PrivateKey(bio, nullptr, nullptr, nullptr));
+    std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_bio_PrivateKey(bio, nullptr, refuse_passphrase, nullptr));
     BIO_free(bio);
     if (key == nullptr)
         return make_error("read PEM from string");

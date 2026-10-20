@@ -7,8 +7,8 @@
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include <netinet/tcp.h> // tcp nodelay
@@ -21,18 +21,15 @@
 
 #endif
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
-
-SIHD_LOGGER;
 
 namespace
 {
 
-using sihd::util::Error;
-using sihd::util::ErrorCode;
-
-void adapt_array_size(sihd::util::IArray & arr, size_t sent)
+void adapt_array_size(IArray & arr, size_t sent)
 {
     if (sent <= arr.byte_capacity() && sent != arr.byte_size())
         arr.byte_resize(sent);
@@ -57,40 +54,103 @@ auto retry_interrupted(Syscall && syscall)
     return ret;
 }
 
-sihd::util::Result<ssize_t> socket_call(std::string_view op, auto && syscall)
+Result<ssize_t> socket_call(std::string_view op, auto && syscall)
 {
     auto ret = retry_interrupted(syscall);
     if (ret >= 0)
         return ret;
+
     const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(Error(sihd::util::error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
+    return std::unexpected(Error(error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
 }
 
-sihd::util::Result<size_t> size_result(sihd::util::Result<ssize_t> && res)
+Result<size_t> size_result(Result<ssize_t> && res)
 {
     if (res)
         return (size_t)*res;
     return std::unexpected(std::move(res).error());
 }
 
-sihd::util::Result<void> opt_result(std::string_view op, sihd::util::Result<void> res)
+Result<void> opt_result(std::string_view op, Result<void> res)
 {
-    if (res.has_value())
-        return res;
-    return std::unexpected(Error(res.error().code, "{}: {}", op, std::move(res).error().message));
+    SIHD_UNEXPECTED_RETURN_CTX(res, "{}", op);
+    return {};
 }
 
-sihd::util::Result<void> opt_result(std::string_view op, bool ok)
+Result<void> opt_result(std::string_view op, bool ok)
 {
     if (ok)
         return {};
+
     const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(Error(sihd::util::error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
+    return std::unexpected(Error(error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
 }
 
 Error closed_socket_error(std::string_view op)
 {
     return Error(ErrorCode::closed, "cannot {} on a closed socket", op);
+}
+
+Result<int> get_int_option(int socket, int level, int option, std::string_view op)
+{
+    int value = 0;
+    socklen_t len = sizeof(value);
+
+    auto res = sihd::sys::os::getsockopt(socket, level, option, &value, &len);
+    SIHD_UNEXPECTED_RETURN_CTX(res, "{}", op);
+    return value;
+}
+
+Error os_error(std::string_view message)
+{
+    const int err = sihd::sys::os::last_socket_error();
+    return Error(error_errno(err), "{}: {}", message, sihd::sys::os::error_str(err));
+}
+
+bool connect_in_progress([[maybe_unused]] int err)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return err == EINPROGRESS || err == EALREADY;
+#else
+    return err == WSAEWOULDBLOCK || err == WSAEALREADY;
+#endif
+}
+
+bool connect_already_done([[maybe_unused]] int err)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return err == EISCONN;
+#else
+    return err == WSAEISCONN;
+#endif
+}
+
+Result<void> wait_connect(const Socket & socket, int timeout_ms)
+{
+    sihd::sys::Poll poll;
+    poll.set_limit(1);
+    poll.set_write_fd(socket.socket());
+    poll.poll(timeout_ms);
+
+    if (poll.polling_error())
+        return std::unexpected(os_error("connect poll error"));
+    if (poll.polling_timeout())
+        return std::unexpected(Error(ErrorCode::timeout, "connect timeout after {}ms", timeout_ms));
+
+    Result<int> so_error = socket.get_error();
+    SIHD_UNEXPECTED_RETURN(so_error);
+    if (*so_error != 0)
+        return std::unexpected(Error(error_errno(*so_error), "connect error: {}", sihd::sys::os::error_str(*so_error)));
+    return {};
+}
+
+Result<void> connect_outcome(const Socket & socket, int err, bool use_timeout, int timeout_ms)
+{
+    if (connect_already_done(err))
+        return {};
+    if (connect_in_progress(err) && use_timeout)
+        return wait_connect(socket, timeout_ms);
+    return std::unexpected(Error(error_errno(err), "connect error: {}", sihd::sys::os::error_str(err)));
 }
 
 bool atomic_datagram_type(int type)
@@ -109,10 +169,12 @@ std::optional<socklen_t> unix_path_to_sockaddr(sockaddr_un *addr, std::string_vi
 {
     if (path.empty())
         return std::nullopt;
+
     // addr_len separates pathname (terminator included) from abstract (leading null kept)
     const size_t terminator = (path[0] != '\0');
     if (path.size() + terminator > sizeof(addr->sun_path))
         return std::nullopt;
+
     memset(addr, 0, sizeof(*addr));
     addr->sun_family = AF_UNIX;
     memcpy(addr->sun_path, path.data(), path.size());
@@ -133,28 +195,39 @@ Socket::Socket()
 {
     this->_clear_socket_info();
     _rcv_flags = 0;
+#ifdef MSG_NOSIGNAL
+    _send_flags = MSG_NOSIGNAL;
+#else
     _send_flags = 0;
-    _verbose = false;
+#endif
 }
 
 Socket::Socket(int domain, int socket_type, int protocol): Socket()
 {
-    SIHD_UNEXPECTED_LOG(this->open(domain, socket_type, protocol));
+    auto opened = this->open(domain, socket_type, protocol);
+    if (!opened)
+        throw std::runtime_error(opened.error().message);
 }
 
 Socket::Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
-    SIHD_UNEXPECTED_LOG(this->open(domain, socket_type, protocol));
+    auto opened = this->open(domain, socket_type, protocol);
+    if (!opened)
+        throw std::runtime_error(opened.error().message);
 }
 
 Socket::Socket(int socket, bool get_infos): Socket()
 {
-    if (socket >= 0)
+    if (socket < 0)
+        return;
+    if (get_infos)
     {
-        _socket = socket;
-        if (get_infos)
-            (void)this->get_infos();
+        // queried before adopting: a throw leaves the descriptor to the caller
+        auto infos = Socket::get_socket_infos(socket, &_domain, &_type, &_protocol);
+        if (!infos)
+            throw std::runtime_error(infos.error().message);
     }
+    _socket = socket;
 }
 
 Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
@@ -167,16 +240,18 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
 
 Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
 {
-    _socket = socket;
     _domain = ip::domain(domain);
     _type = ip::socktype(socket_type);
     _protocol = ip::protocol(std::string(protocol));
+
     if (_domain == -1)
-        SIHD_LOG(error, "Socket: domain unknown: {}", domain);
+        throw std::invalid_argument(fmt::format("socket domain unknown: {}", domain));
     if (_type == -1)
-        SIHD_LOG(error, "Socket: socket type unknown: {}", socket_type);
+        throw std::invalid_argument(fmt::format("socket type unknown: {}", socket_type));
     if (_protocol == -1)
-        SIHD_LOG(error, "Socket: protocol unknown: {}", protocol);
+        throw std::invalid_argument(fmt::format("socket protocol unknown: {}", protocol));
+
+    _socket = socket;
 }
 
 Socket::Socket(Socket && other): Socket()
@@ -188,13 +263,13 @@ Socket & Socket::operator=(Socket && other)
 {
     if (this != &other)
     {
-        SIHD_UNEXPECTED_LOG(this->shutdown());
-        SIHD_UNEXPECTED_LOG(this->close());
+        (void)this->shutdown();
+        (void)this->close();
+
         _socket = other._socket;
         _domain = other._domain;
         _type = other._type;
         _protocol = other._protocol;
-        _verbose = other._verbose;
         _send_flags = other._send_flags;
         _rcv_flags = other._rcv_flags;
         _unix_bind_path = std::move(other._unix_bind_path);
@@ -228,11 +303,10 @@ void Socket::_clear_socket_info()
 
 Error Socket::make_error(std::string_view message)
 {
-    const int err = sihd::sys::os::last_socket_error();
-    return Error(sihd::util::error_errno(err), "{}: {}", message, sihd::sys::os::error_str(err));
+    return os_error(message);
 }
 
-sihd::util::Result<void> Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
+Result<void> Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
 {
     return opt_result("set ttl",
                       sihd::sys::os::setsockopt(socket,
@@ -242,263 +316,278 @@ sihd::util::Result<void> Socket::set_socket_ttl(int socket, int ttl, bool ipv6)
                                                 sizeof(int)));
 }
 
-sihd::util::Result<void> Socket::set_socket_reuseaddr(int socket, bool active)
+Result<void> Socket::set_socket_reuseaddr(int socket, bool active)
 {
     int opt = active ? 1 : 0;
     return opt_result("set reuseaddr", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)));
 }
 
-sihd::util::Result<void> Socket::set_socket_broadcast(int socket, bool active)
+Result<void> Socket::set_socket_broadcast(int socket, bool active)
 {
     int opt = active ? 1 : 0;
     return opt_result("set broadcast", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(int)));
 }
 
-sihd::util::Result<void> Socket::set_socket_tcp_nodelay(int socket, bool active)
+Result<void> Socket::set_socket_tcp_nodelay(int socket, bool active)
 {
     int opt = (active ? 1 : 0);
     return opt_result("set tcp nodelay",
                       sihd::sys::os::setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, sizeof(opt)));
 }
 
-bool Socket::is_socket_tcp_nodelay(int socket)
+Result<bool> Socket::is_socket_tcp_nodelay(int socket)
 {
-    int opt;
-    socklen_t len = sizeof(opt);
-    auto res = sihd::sys::os::getsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &opt, &len);
-    if (SIHD_UNEXPECTED_LOG(res))
-        return false;
-    return opt != 0;
+    auto opt = get_int_option(socket, IPPROTO_TCP, TCP_NODELAY, "get tcp nodelay");
+    SIHD_UNEXPECTED_RETURN(opt);
+    return *opt != 0;
 }
 
-bool Socket::is_socket_broadcast(int socket)
+Result<bool> Socket::is_socket_broadcast(int socket)
 {
-    int res_opt;
-    socklen_t length = sizeof(int);
-    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_BROADCAST, &res_opt, &length);
-    if (SIHD_UNEXPECTED_LOG(res))
-        return false;
-    return res_opt != 0;
+    auto opt = get_int_option(socket, SOL_SOCKET, SO_BROADCAST, "get broadcast");
+    SIHD_UNEXPECTED_RETURN(opt);
+    return *opt != 0;
 }
 
-sihd::util::Result<void> Socket::set_socket_keepalive(int socket, bool active)
+Result<void> Socket::set_socket_keepalive(int socket, bool active)
 {
     int opt = active ? 1 : 0;
     return opt_result("set keepalive", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &opt, sizeof(int)));
 }
 
-bool Socket::is_socket_keepalive(int socket)
+Result<bool> Socket::is_socket_keepalive(int socket)
 {
-#if defined(__SIHD_WINDOWS__)
-    // Winsock getsockopt(SO_KEEPALIVE) writes a single byte boolean, not a 4-byte int
-    char opt = 0;
-#else
-    int opt = 0;
-#endif
+    // winsock getsockopt(SO_KEEPALIVE) writes a single byte boolean, not a 4-byte int
+    std::conditional_t<build::is_windows, char, int> opt = 0;
     socklen_t len = sizeof(opt);
+
     auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_KEEPALIVE, &opt, &len);
-    if (SIHD_UNEXPECTED_LOG(res))
-        return false;
+    SIHD_UNEXPECTED_RETURN_CTX(res, "get keepalive");
     return opt != 0;
 }
 
-#ifdef SO_REUSEPORT
-sihd::util::Result<void> Socket::set_socket_reuseport(int socket, bool active)
+Result<void> Socket::set_socket_reuseport([[maybe_unused]] int socket, [[maybe_unused]] bool active)
 {
+#ifdef SO_REUSEPORT
     int opt = active ? 1 : 0;
     return opt_result("set reuseport", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(int)));
-}
-
-bool Socket::is_socket_reuseport(int socket)
-{
-    int opt;
-    socklen_t len = sizeof(opt);
-    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_REUSEPORT, &opt, &len);
-    if (SIHD_UNEXPECTED_LOG(res))
-        return false;
-    return opt != 0;
-}
+#else
+    return std::unexpected(Error(ErrorCode::not_supported, "set reuseport: SO_REUSEPORT not supported"));
 #endif
+}
 
-sihd::util::Result<void> Socket::set_socket_rcvbuf(int socket, int size)
+Result<bool> Socket::is_socket_reuseport([[maybe_unused]] int socket)
+{
+#ifdef SO_REUSEPORT
+    auto opt = get_int_option(socket, SOL_SOCKET, SO_REUSEPORT, "get reuseport");
+    SIHD_UNEXPECTED_RETURN(opt);
+    return *opt != 0;
+#else
+    return std::unexpected(Error(ErrorCode::not_supported, "get reuseport: SO_REUSEPORT not supported"));
+#endif
+}
+
+Result<void> Socket::set_socket_rcvbuf(int socket, int size)
 {
     return opt_result("set rcvbuf", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_RCVBUF, &size, sizeof(int)));
 }
 
-sihd::util::Result<void> Socket::set_socket_sndbuf(int socket, int size)
+Result<void> Socket::set_socket_sndbuf(int socket, int size)
 {
     return opt_result("set sndbuf", sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_SNDBUF, &size, sizeof(int)));
 }
 
-int Socket::get_socket_rcvbuf(int socket)
+Result<int> Socket::get_socket_rcvbuf(int socket)
 {
-    int val = -1;
-    socklen_t len = sizeof(val);
-    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_RCVBUF, &val, &len);
-    SIHD_UNEXPECTED_LOG(res);
-    return val;
+    return get_int_option(socket, SOL_SOCKET, SO_RCVBUF, "get rcvbuf");
 }
 
-int Socket::get_socket_sndbuf(int socket)
+Result<int> Socket::get_socket_sndbuf(int socket)
 {
-    int val = -1;
-    socklen_t len = sizeof(val);
-    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_SNDBUF, &val, &len);
-    SIHD_UNEXPECTED_LOG(res);
-    return val;
+    return get_int_option(socket, SOL_SOCKET, SO_SNDBUF, "get sndbuf");
 }
 
-std::optional<int> Socket::get_socket_error(int socket)
+Result<int> Socket::get_socket_error(int socket)
 {
-    int so_error = 0;
-    socklen_t len = sizeof(so_error);
-    auto res = sihd::sys::os::getsockopt(socket, SOL_SOCKET, SO_ERROR, &so_error, &len);
-    if (!res)
-        return std::nullopt;
-    return so_error;
+    return get_int_option(socket, SOL_SOCKET, SO_ERROR, "get socket error");
 }
 
-sihd::util::Result<void> Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
+Result<void> Socket::get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot get peer name on a negative socket"));
     return opt_result("get peer name", ::getpeername(socket, addr, addr_len) == 0);
 }
 
-std::optional<IpAddr> Socket::socket_ip(int socket, bool ipv6)
+Result<IpAddr> Socket::socket_ip(int socket, bool ipv6)
 {
-    sockaddr_in addr_in;
-    sockaddr_in6 addr_in6;
-    socklen_t len;
     if (ipv6)
     {
-        len = sizeof(addr_in6);
-        if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len))
-            return IpAddr(addr_in6);
+        sockaddr_in6 addr_in6;
+        socklen_t len = sizeof(addr_in6);
+        auto peer = Socket::get_socket_peername(socket, (sockaddr *)&addr_in6, &len);
+        SIHD_UNEXPECTED_RETURN(peer);
+        return IpAddr(addr_in6);
     }
-    else
-    {
-        len = sizeof(addr_in);
-        if (Socket::get_socket_peername(socket, (sockaddr *)&addr_in, &len))
-            return IpAddr(addr_in);
-    }
-    return std::nullopt;
+
+    sockaddr_in addr_in;
+    socklen_t len = sizeof(addr_in);
+    auto peer = Socket::get_socket_peername(socket, (sockaddr *)&addr_in, &len);
+    SIHD_UNEXPECTED_RETURN(peer);
+    return IpAddr(addr_in);
 }
 
-std::optional<IpAddr> Socket::peeraddr(bool ipv6) const
+Result<IpAddr> Socket::peeraddr(bool ipv6) const
 {
     return Socket::socket_ip(_socket, ipv6);
 }
 
-int Socket::local_port() const
+Result<int> Socket::local_port() const
 {
     sockaddr_in6 addr6;
     socklen_t len = sizeof(addr6);
+
     if (::getsockname(_socket, (sockaddr *)&addr6, &len) != 0)
-        return -1;
+    {
+        const int err = sihd::sys::os::last_socket_error();
+        return std::unexpected(Error(error_errno(err), "local port error: {}", sihd::sys::os::error_str(err)));
+    }
+
     if (addr6.sin6_family == AF_INET6)
         return ntohs(addr6.sin6_port);
+
     sockaddr_in *addr4 = reinterpret_cast<sockaddr_in *>(&addr6);
     if (addr4->sin_family == AF_INET)
         return ntohs(addr4->sin_port);
-    return -1;
+    return std::unexpected(Error(ErrorCode::not_supported, "local port: not an ip socket"));
 }
 
 /* ************************************************************************* */
 /* Socket open/close */
 /* ************************************************************************* */
 
-bool Socket::get_infos()
+Result<void> Socket::get_infos()
 {
-    return _socket >= 0 && Socket::get_socket_infos(_socket, &_domain, &_type, &_protocol);
+    if (_socket < 0)
+        return std::unexpected(closed_socket_error("get infos"));
+    return Socket::get_socket_infos(_socket, &_domain, &_type, &_protocol);
 }
 
-sihd::util::Result<void> Socket::set_tcp_nodelay(bool active) const
+Result<void> Socket::set_tcp_nodelay(bool active) const
 {
     return Socket::set_socket_tcp_nodelay(_socket, active);
 }
-sihd::util::Result<void> Socket::set_blocking(bool active) const
+
+Result<void> Socket::set_blocking(bool active) const
 {
     auto res = Socket::set_socket_blocking(_socket, active);
     if (res)
         _blocking = active;
     return res;
 }
-sihd::util::Result<void> Socket::set_recv_timeout(int milliseconds) const
+
+Result<void> Socket::set_recv_timeout(int milliseconds) const
 {
     return Socket::set_socket_recv_timeout(_socket, milliseconds);
 }
-sihd::util::Result<void> Socket::set_reuseaddr(bool active) const
+
+Result<void> Socket::set_reuseaddr(bool active) const
 {
     return Socket::set_socket_reuseaddr(_socket, active);
 }
-sihd::util::Result<void> Socket::set_broadcast(bool active) const
+
+Result<void> Socket::set_broadcast(bool active) const
 {
     return Socket::set_socket_broadcast(_socket, active);
 }
-sihd::util::Result<void> Socket::bind_to_device(std::string_view name) const
+
+Result<void> Socket::bind_to_device(std::string_view name) const
 {
     return Socket::bind_socket_to_device(_socket, name);
 }
-bool Socket::is_tcp_nodelay() const
+
+Result<bool> Socket::is_tcp_nodelay() const
 {
     return Socket::is_socket_tcp_nodelay(_socket);
 }
-bool Socket::is_blocking() const
+
+Result<bool> Socket::is_blocking() const
 {
     if (_socket < 0)
-        return false;
-#if defined(__SIHD_WINDOWS__)
+        return std::unexpected(closed_socket_error("get blocking"));
     // winsock cannot report the mode: the tracked state is authoritative
-    return _blocking;
-#else
+    if constexpr (build::is_windows)
+        return _blocking;
     return Socket::is_socket_blocking(_socket);
-#endif
 }
-bool Socket::is_broadcast() const
+
+Result<bool> Socket::is_broadcast() const
 {
     return Socket::is_socket_broadcast(_socket);
 }
-sihd::util::Result<void> Socket::set_ttl(int ttl) const
+
+Result<void> Socket::set_ttl(int ttl) const
 {
     return Socket::set_socket_ttl(_socket, ttl, this->is_ipv6());
 }
-sihd::util::Result<void> Socket::set_keepalive(bool active) const
+
+Result<void> Socket::set_keepalive(bool active) const
 {
     return Socket::set_socket_keepalive(_socket, active);
 }
-bool Socket::is_keepalive() const
+
+Result<bool> Socket::is_keepalive() const
 {
     return Socket::is_socket_keepalive(_socket);
 }
-#ifdef SO_REUSEPORT
-sihd::util::Result<void> Socket::set_reuseport(bool active) const
+
+Result<void> Socket::set_reuseport(bool active) const
 {
     return Socket::set_socket_reuseport(_socket, active);
 }
-bool Socket::is_reuseport() const
+
+Result<bool> Socket::is_reuseport() const
 {
     return Socket::is_socket_reuseport(_socket);
 }
+
+Result<void> Socket::set_socket_exclusiveaddruse([[maybe_unused]] int socket, [[maybe_unused]] bool active)
+{
+#ifdef SO_EXCLUSIVEADDRUSE
+    int opt = active ? 1 : 0;
+    return opt_result("set exclusiveaddruse",
+                      sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, &opt, sizeof(int)));
+#else
+    return std::unexpected(Error(ErrorCode::not_supported, "set exclusiveaddruse: SO_EXCLUSIVEADDRUSE not supported"));
 #endif
-sihd::util::Result<void> Socket::set_rcvbuf(int size) const
+}
+
+Result<void> Socket::set_exclusiveaddruse(bool active) const
+{
+    return Socket::set_socket_exclusiveaddruse(_socket, active);
+}
+
+Result<void> Socket::set_rcvbuf(int size) const
 {
     return Socket::set_socket_rcvbuf(_socket, size);
 }
-sihd::util::Result<void> Socket::set_sndbuf(int size) const
+
+Result<void> Socket::set_sndbuf(int size) const
 {
     return Socket::set_socket_sndbuf(_socket, size);
 }
-int Socket::get_rcvbuf() const
+
+Result<int> Socket::get_rcvbuf() const
 {
     return Socket::get_socket_rcvbuf(_socket);
 }
-int Socket::get_sndbuf() const
+
+Result<int> Socket::get_sndbuf() const
 {
     return Socket::get_socket_sndbuf(_socket);
 }
 
-sihd::util::Result<void> Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
+Result<void> Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
 {
     int sockdomain = ip::domain(domain);
     int socktype = ip::socktype(type);
@@ -508,10 +597,11 @@ sihd::util::Result<void> Socket::open(std::string_view domain, std::string_view 
     return std::unexpected(Error(ErrorCode::invalid_argument, "unknown domain, type or protocol"));
 }
 
-sihd::util::Result<void> Socket::open(int domain, int type, int protocol)
+Result<void> Socket::open(int domain, int type, int protocol)
 {
     if (this->is_open())
         return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
+
     _socket = ::socket(domain, type, protocol);
     _domain = domain;
     _type = type;
@@ -521,7 +611,7 @@ sihd::util::Result<void> Socket::open(int domain, int type, int protocol)
     return {};
 }
 
-sihd::util::Result<void> Socket::close_socket(int socket)
+Result<void> Socket::close_socket(int socket)
 {
 #if defined(__SIHD_WINDOWS__)
     return opt_result("close", ::closesocket(socket) == 0);
@@ -530,21 +620,26 @@ sihd::util::Result<void> Socket::close_socket(int socket)
 #endif
 }
 
-sihd::util::Result<void> Socket::close()
+Result<void> Socket::close()
 {
     if (_socket < 0)
         return {};
-    sihd::util::Result<void> res = Socket::close_socket(_socket);
+
+    Result<void> closed = Socket::close_socket(_socket);
+    Result<void> unlinked = {};
     if (!_unix_bind_path.empty())
     {
-        SIHD_UNEXPECTED_LOG(sihd::sys::fs::remove_file(_unix_bind_path));
+        unlinked = sihd::sys::fs::remove_file(_unix_bind_path);
         _unix_bind_path.clear();
     }
     this->_clear_socket_info();
-    return res;
+
+    if (!closed)
+        return closed;
+    return unlinked;
 }
 
-sihd::util::Result<void> Socket::shutdown() const
+Result<void> Socket::shutdown() const
 {
     if (_socket < 0)
         return {};
@@ -557,138 +652,107 @@ sihd::util::Result<void> Socket::shutdown() const
 /* Socket sockaddr operations */
 /* ************************************************************************* */
 
-sihd::util::Result<int> Socket::accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms)
+Result<int> Socket::accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("accept"));
+
     if (timeout_ms >= 0)
     {
         sihd::sys::Poll poll;
         poll.set_limit(1);
         poll.set_read_fd(_socket);
         poll.poll(timeout_ms);
+
         if (poll.polling_error())
             return std::unexpected(make_error("accept poll error"));
         if (poll.polling_timeout())
             return std::unexpected(Error(ErrorCode::timeout, "accept timeout after {}ms", timeout_ms));
     }
+
     return size_result(socket_call("accept", [&] { return (int)::accept(_socket, addr, addr_len); }));
 }
 
-sihd::util::Result<void> Socket::listen(uint16_t queue_size)
+Result<void> Socket::listen(uint16_t queue_size)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("listen"));
     return opt_result("listen", ::listen(_socket, queue_size) != -1);
 }
 
-sihd::util::Result<void> Socket::bind(const sockaddr *addr, socklen_t addr_len)
+Result<void> Socket::bind(const sockaddr *addr, socklen_t addr_len)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("bind"));
     return opt_result("bind", ::bind(_socket, addr, addr_len) != -1);
 }
 
-sihd::util::Result<void> Socket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
+Result<void> Socket::connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("connect"));
-    bool use_timeout = (timeout_ms >= 0);
+
+    const bool use_timeout = (timeout_ms >= 0);
     bool was_blocking = false;
     if (use_timeout)
     {
-        was_blocking = this->is_blocking();
+        auto blocking = this->is_blocking();
+        SIHD_UNEXPECTED_RETURN_CTX(blocking, "preparing non-blocking connect, timeout {}ms", timeout_ms);
+        was_blocking = *blocking;
         if (was_blocking)
         {
-            auto blocking = this->set_blocking(false);
-            SIHD_UNEXPECTED_RETURN_CTX(blocking, "preparing non-blocking connect, timeout {}ms", timeout_ms);
+            auto non_blocking = this->set_blocking(false);
+            SIHD_UNEXPECTED_RETURN_CTX(non_blocking, "preparing non-blocking connect, timeout {}ms", timeout_ms);
         }
     }
+
     // the slot is clobbered by any win32 call, message formatting included: read once per syscall
-    sihd::util::Result<void> res = {};
     const int err = ::connect(_socket, addr, addr_len) == 0 ? 0 : sihd::sys::os::last_socket_error();
-    if (err != 0)
-    {
-#if !defined(__SIHD_WINDOWS__)
-        bool in_progress = (err == EINPROGRESS || err == EALREADY);
-        bool already_connected = (err == EISCONN);
-#else
-        bool in_progress = (err == WSAEWOULDBLOCK || err == WSAEALREADY);
-        bool already_connected = (err == WSAEISCONN);
-#endif
-        if (already_connected)
-        {
-            res = {};
-        }
-        else if (in_progress && use_timeout)
-        {
-            sihd::sys::Poll poll;
-            poll.set_limit(1);
-            poll.set_write_fd(_socket);
-            poll.poll(timeout_ms);
-            if (poll.polling_error())
-                res = std::unexpected(make_error("connect poll error"));
-            else if (poll.polling_timeout())
-                res = std::unexpected(Error(ErrorCode::timeout, "connect timeout after {}ms", timeout_ms));
-            else
-            {
-                const std::optional<int> so_error = this->get_error();
-                if (so_error == std::nullopt)
-                    res = std::unexpected(make_error("connect error"));
-                else if (*so_error != 0)
-                    res = std::unexpected(Error(sihd::util::error_errno(*so_error),
-                                                "connect error: {}",
-                                                sihd::sys::os::error_str(*so_error)));
-                else
-                    res = {};
-            }
-        }
-        else
-            res = std::unexpected(
-                Error(sihd::util::error_errno(err), "connect error: {}", sihd::sys::os::error_str(err)));
-    }
+    Result<void> res = err == 0 ? Result<void> {} : connect_outcome(*this, err, use_timeout, timeout_ms);
+
     if (use_timeout && was_blocking)
-        SIHD_UNEXPECTED_LOG(this->set_blocking(true));
+    {
+        auto restored = this->set_blocking(true);
+        if (res && !restored)
+            return restored;
+    }
     return res;
 }
 
-std::optional<int> Socket::get_error() const
+Result<int> Socket::get_error() const
 {
     return Socket::get_socket_error(_socket);
 }
 
-std::string Socket::get_error_str() const
-{
-    const std::optional<int> so_error = this->get_error();
-    if (so_error == std::nullopt)
-        return "";
-    return sihd::sys::os::error_str(*so_error);
-}
-
-sihd::util::Result<void> Socket::reconnect(int timeout_ms)
+Result<void> Socket::reconnect(int timeout_ms)
 {
     int domain = _domain;
     int type = _type;
     int protocol = _protocol;
     bool unix = this->is_unix();
+
     (void)this->shutdown();
     auto closed = this->close();
     if (!closed)
         return closed;
+
     auto opened = this->open(domain, type, protocol);
     if (!opened)
         return opened;
+
     if (unix)
         return this->connect_unix(_connect_unix_path);
+
     if (_connect_addr.empty())
         return std::unexpected(Error(ErrorCode::not_initialized, "no address to reconnect to"));
     return this->connect(_connect_addr, timeout_ms);
 }
 
-sihd::util::Result<size_t> Socket::send(sihd::util::ArrCharView view)
+Result<size_t> Socket::send(ArrCharView view)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("send"));
+
     return size_result(socket_call("send", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::send(_socket, view.data(), view.size(), _send_flags);
@@ -698,7 +762,7 @@ sihd::util::Result<size_t> Socket::send(sihd::util::ArrCharView view)
     }));
 }
 
-sihd::util::Result<void> Socket::send_all(sihd::util::ArrCharView view)
+Result<void> Socket::send_all(ArrCharView view)
 {
     // datagrams are atomic: the remainder would be a second datagram
     if (atomic_datagram_type(_type))
@@ -709,6 +773,7 @@ sihd::util::Result<void> Socket::send_all(sihd::util::ArrCharView view)
             return std::unexpected(Error(ErrorCode::io_error, "datagram sent partially"));
         return {};
     }
+
     size_t sent = 0;
     while (sent < view.size())
     {
@@ -721,10 +786,11 @@ sihd::util::Result<void> Socket::send_all(sihd::util::ArrCharView view)
     return {};
 }
 
-sihd::util::Result<size_t> Socket::receive(void *data, size_t size)
+Result<size_t> Socket::receive(void *data, size_t size)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("receive"));
+
     return size_result(socket_call("receive", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::recv(_socket, data, size, _rcv_flags);
@@ -734,7 +800,7 @@ sihd::util::Result<size_t> Socket::receive(void *data, size_t size)
     }));
 }
 
-sihd::util::Result<size_t> Socket::receive(sihd::util::IArray & arr)
+Result<size_t> Socket::receive(IArray & arr)
 {
     auto res = this->receive(arr.buf(), arr.byte_capacity());
     if (res)
@@ -742,10 +808,11 @@ sihd::util::Result<size_t> Socket::receive(sihd::util::IArray & arr)
     return res;
 }
 
-sihd::util::Result<size_t> Socket::send_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view)
+Result<size_t> Socket::send_to(const sockaddr *addr, socklen_t addr_len, ArrCharView view)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("send_to"));
+
     return size_result(socket_call("send_to", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::sendto(_socket, view.data(), view.size(), _send_flags, addr, addr_len);
@@ -755,7 +822,7 @@ sihd::util::Result<size_t> Socket::send_to(const sockaddr *addr, socklen_t addr_
     }));
 }
 
-sihd::util::Result<void> Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, sihd::util::ArrCharView view)
+Result<void> Socket::send_all_to(const sockaddr *addr, socklen_t addr_len, ArrCharView view)
 {
     // datagrams are atomic: the remainder would be a second datagram
     if (atomic_datagram_type(_type))
@@ -766,6 +833,7 @@ sihd::util::Result<void> Socket::send_all_to(const sockaddr *addr, socklen_t add
             return std::unexpected(Error(ErrorCode::io_error, "datagram sent partially"));
         return {};
     }
+
     size_t sent = 0;
     while (sent < view.size())
     {
@@ -778,10 +846,11 @@ sihd::util::Result<void> Socket::send_all_to(const sockaddr *addr, socklen_t add
     return {};
 }
 
-sihd::util::Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size)
+Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *data, size_t size)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("receive_from"));
+
     return size_result(socket_call("receive_from", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::recvfrom(_socket, data, size, _rcv_flags, addr, addr_len);
@@ -791,7 +860,7 @@ sihd::util::Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_
     }));
 }
 
-sihd::util::Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, sihd::util::IArray & arr)
+Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, IArray & arr)
 {
     auto res = this->receive_from(addr, addr_len, arr.buf(), arr.byte_capacity());
     if (res)
@@ -799,7 +868,7 @@ sihd::util::Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_
     return res;
 }
 
-sihd::util::Result<size_t> Socket::receive_from(IpAddr & addr, sihd::util::IArray & arr)
+Result<size_t> Socket::receive_from(IpAddr & addr, IArray & arr)
 {
     auto res = this->receive_from(addr, arr.buf(), arr.byte_capacity());
     if (res)
@@ -807,7 +876,7 @@ sihd::util::Result<size_t> Socket::receive_from(IpAddr & addr, sihd::util::IArra
     return res;
 }
 
-sihd::util::Result<size_t> Socket::receive_from_unix(std::string & path, sihd::util::IArray & arr)
+Result<size_t> Socket::receive_from_unix(std::string & path, IArray & arr)
 {
     auto res = this->receive_from_unix(path, arr.buf(), arr.byte_capacity());
     if (res)
@@ -839,22 +908,23 @@ bool Socket::is_ipv6() const
 /* Socket IpAddr operations */
 /* ************************************************************************* */
 
-sihd::util::Result<size_t> Socket::send_to(const IpAddr & addr, sihd::util::ArrCharView view)
+Result<size_t> Socket::send_to(const IpAddr & addr, ArrCharView view)
 {
     return this->send_to(&addr.addr(), addr.addr_len(), view);
 }
 
-sihd::util::Result<void> Socket::send_all_to(const IpAddr & addr, sihd::util::ArrCharView view)
+Result<void> Socket::send_all_to(const IpAddr & addr, ArrCharView view)
 {
     return this->send_all_to(&addr.addr(), addr.addr_len(), view);
 }
 
-sihd::util::Result<size_t> Socket::receive_from(IpAddr & ipaddr, void *data, size_t size)
+Result<size_t> Socket::receive_from(IpAddr & ipaddr, void *data, size_t size)
 {
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
     socklen_t len;
+
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
@@ -865,18 +935,19 @@ sihd::util::Result<size_t> Socket::receive_from(IpAddr & ipaddr, void *data, siz
         addr = (sockaddr *)&addr_in;
         len = sizeof(struct sockaddr_in);
     }
+
     auto res = this->receive_from(addr, &len, data, size);
     if (res)
         ipaddr = IpAddr(*addr, len);
     return res;
 }
 
-sihd::util::Result<void> Socket::bind(const IpAddr & addr)
+Result<void> Socket::bind(const IpAddr & addr)
 {
     return this->bind(&addr.addr(), addr.addr_len());
 }
 
-sihd::util::Result<void> Socket::connect(const IpAddr & addr, int timeout_ms)
+Result<void> Socket::connect(const IpAddr & addr, int timeout_ms)
 {
     auto res = this->connect(&addr.addr(), addr.addr_len(), timeout_ms);
     if (res)
@@ -887,12 +958,13 @@ sihd::util::Result<void> Socket::connect(const IpAddr & addr, int timeout_ms)
     return res;
 }
 
-sihd::util::Result<int> Socket::accept(IpAddr & ipaddr, int timeout_ms)
+Result<int> Socket::accept(IpAddr & ipaddr, int timeout_ms)
 {
     sockaddr *addr;
     sockaddr_in addr_in;
     sockaddr_in6 addr_in6;
     socklen_t len;
+
     if (_domain == AF_INET6)
     {
         addr = (sockaddr *)&addr_in6;
@@ -903,13 +975,14 @@ sihd::util::Result<int> Socket::accept(IpAddr & ipaddr, int timeout_ms)
         addr = (sockaddr *)&addr_in;
         len = sizeof(struct sockaddr_in);
     }
+
     auto res = this->accept(addr, &len, timeout_ms);
     if (res)
         ipaddr = IpAddr(*addr, len);
     return res;
 }
 
-sihd::util::Result<int> Socket::accept(int timeout_ms)
+Result<int> Socket::accept(int timeout_ms)
 {
     return this->accept(nullptr, nullptr, timeout_ms);
 }
@@ -918,15 +991,16 @@ sihd::util::Result<int> Socket::accept(int timeout_ms)
 /* Socket multicast */
 /* ************************************************************************* */
 
-sihd::util::Result<void>
-    Socket::_multicast_membership(const IpAddr & group, const std::string & iface, int ipv4_opt, int ipv6_opt)
+Result<void> Socket::_multicast_membership(const IpAddr & group, const std::string & iface, int ipv4_opt, int ipv6_opt)
 {
     if (!this->is_open())
         return std::unexpected(closed_socket_error("multicast membership"));
+
     if (group.is_ipv4())
     {
         struct ip_mreq mreq;
         mreq.imr_multiaddr = group.addr4().sin_addr;
+
         if (iface.empty())
             mreq.imr_interface.s_addr = htonl(INADDR_ANY);
         else
@@ -934,6 +1008,7 @@ sihd::util::Result<void>
             IpAddr iface_addr(iface);
             mreq.imr_interface = iface_addr.addr4().sin_addr;
         }
+
         return opt_result("multicast membership",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IP, ipv4_opt, &mreq, sizeof(mreq)));
     }
@@ -942,6 +1017,7 @@ sihd::util::Result<void>
         struct ipv6_mreq mreq;
         mreq.ipv6mr_multiaddr = group.addr6().sin6_addr;
         mreq.ipv6mr_interface = 0;
+
 #if !defined(__SIHD_WINDOWS__)
         if (!iface.empty())
         {
@@ -950,43 +1026,48 @@ sihd::util::Result<void>
                 return std::unexpected(Error(ErrorCode::not_found, "no interface named: {}", iface));
         }
 #endif
+
         return opt_result("multicast membership",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, ipv6_opt, &mreq, sizeof(mreq)));
     }
     return std::unexpected(Error(ErrorCode::invalid_argument, "multicast group is not an ip address"));
 }
 
-sihd::util::Result<void> Socket::join_multicast(const IpAddr & group, const std::string & iface)
+Result<void> Socket::join_multicast(const IpAddr & group, const std::string & iface)
 {
     return this->_multicast_membership(group, iface, IP_ADD_MEMBERSHIP, IPV6_JOIN_GROUP);
 }
 
-sihd::util::Result<void> Socket::leave_multicast(const IpAddr & group, const std::string & iface)
+Result<void> Socket::leave_multicast(const IpAddr & group, const std::string & iface)
 {
     return this->_multicast_membership(group, iface, IP_DROP_MEMBERSHIP, IPV6_LEAVE_GROUP);
 }
 
-sihd::util::Result<void> Socket::set_multicast_ttl(int ttl)
+Result<void> Socket::set_multicast_ttl(int ttl)
 {
     if (!this->is_open())
         return std::unexpected(closed_socket_error("set multicast ttl"));
+
     if (_domain == AF_INET6)
         return opt_result("set multicast ttl",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, IPV6_MULTICAST_HOPS, &ttl, sizeof(ttl)));
+
     return opt_result("set multicast ttl",
                       sihd::sys::os::setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl)));
 }
 
-sihd::util::Result<void> Socket::set_multicast_loop(bool active)
+Result<void> Socket::set_multicast_loop(bool active)
 {
     if (!this->is_open())
         return std::unexpected(closed_socket_error("set multicast loop"));
+
     if (_domain == AF_INET6)
     {
         int val = active ? 1 : 0;
         return opt_result("set multicast loop",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, IPV6_MULTICAST_LOOP, &val, sizeof(val)));
     }
+
     int val = active ? 1 : 0;
     return opt_result("set multicast loop",
                       sihd::sys::os::setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &val, sizeof(val)));
@@ -996,12 +1077,13 @@ sihd::util::Result<void> Socket::set_multicast_loop(bool active)
 /* Socket UNIX operations */
 /* ************************************************************************* */
 
-sihd::util::Result<void> Socket::bind_unix(std::string_view path)
+Result<void> Socket::bind_unix(std::string_view path)
 {
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
+
     auto res = this->bind((sockaddr *)&addr, *addr_len);
     if (res)
     {
@@ -1012,12 +1094,13 @@ sihd::util::Result<void> Socket::bind_unix(std::string_view path)
     return res;
 }
 
-sihd::util::Result<void> Socket::connect_unix(std::string_view path)
+Result<void> Socket::connect_unix(std::string_view path)
 {
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
+
     auto res = this->connect((sockaddr *)&addr, *addr_len);
     if (res)
     {
@@ -1027,44 +1110,48 @@ sihd::util::Result<void> Socket::connect_unix(std::string_view path)
     return res;
 }
 
-sihd::util::Result<size_t> Socket::send_to_unix(std::string_view path, sihd::util::ArrCharView view)
+Result<size_t> Socket::send_to_unix(std::string_view path, ArrCharView view)
 {
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
+
     return this->send_to((sockaddr *)&addr, *addr_len, view);
 }
 
-sihd::util::Result<void> Socket::send_all_to_unix(std::string_view path, sihd::util::ArrCharView view)
+Result<void> Socket::send_all_to_unix(std::string_view path, ArrCharView view)
 {
     sockaddr_un addr;
     std::optional<socklen_t> addr_len = unix_path_to_sockaddr(&addr, path);
     if (addr_len == std::nullopt)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid unix path: {}", path));
+
     return this->send_all_to((sockaddr *)&addr, *addr_len, view);
 }
 
-sihd::util::Result<size_t> Socket::receive_from_unix(std::string & path, void *data, size_t size)
+Result<size_t> Socket::receive_from_unix(std::string & path, void *data, size_t size)
 {
     sockaddr_un addr;
     memset(&addr, 0, sizeof(sockaddr_un));
     addr.sun_family = AF_UNIX;
     socklen_t addr_len = sizeof(sockaddr_un);
+
     auto res = this->receive_from((sockaddr *)&addr, &addr_len, data, size);
     if (res && *res > 0)
         path = unix_path_from_addr(addr, addr_len);
     return res;
 }
 
-std::string Socket::unix_socket_peername(int socket)
+Result<std::string> Socket::unix_socket_peername(int socket)
 {
     sockaddr_un addr_un;
     memset(&addr_un, 0, sizeof(addr_un));
     socklen_t len = sizeof(addr_un);
-    if (Socket::get_socket_peername(socket, (sockaddr *)&addr_un, &len))
-        return unix_path_from_addr(addr_un, len);
-    return "";
+
+    auto peer = Socket::get_socket_peername(socket, (sockaddr *)&addr_un, &len);
+    SIHD_UNEXPECTED_RETURN(peer);
+    return unix_path_from_addr(addr_un, len);
 }
 
 /* ************************************************************************* */

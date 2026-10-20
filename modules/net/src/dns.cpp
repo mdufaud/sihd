@@ -6,7 +6,6 @@
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Defer.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -21,8 +20,6 @@
 
 namespace sihd::net::dns
 {
-
-SIHD_NEW_LOGGER("sihd::net::dns");
 
 using namespace sihd::util;
 using enum sihd::util::ErrorCode;
@@ -111,7 +108,7 @@ sihd::util::Result<IpAddr> find(const std::string & host, bool ipv6, int socktyp
     return ret;
 }
 
-DnsLookup lookup(const std::string & host)
+Result<DnsLookup> lookup(const std::string & host)
 {
     DnsLookup ret;
 
@@ -128,8 +125,7 @@ DnsLookup lookup(const std::string & host)
         // get all results by sending false
         return false;
     });
-    SIHD_UNEXPECTED_LOG(asked);
-    ret.success = asked.has_value();
+    SIHD_UNEXPECTED_RETURN(asked);
 
     return ret;
 }
@@ -150,7 +146,7 @@ std::string DnsLookup::dump() const
     return dump;
 }
 
-std::future<DnsLookup> lookup_async(const std::string & host)
+std::future<Result<DnsLookup>> lookup_async(const std::string & host)
 {
     return std::async(std::launch::async, [h = host] { return lookup(h); });
 }
