@@ -544,7 +544,7 @@ TEST_F(TestCliApp, test_completion_interception_edges)
     EXPECT_EQ(conf, "--generate-bash-completion");
 }
 
-TEST_F(TestCliApp, test_bare_run_piped_emits_completion)
+TEST_F(TestCliApp, test_bare_run_piped_never_emits_completion)
 {
     CompletionVars vars;
     CliApp app({.name = "my-app", .description = "an app", .setup_logging = false});
@@ -552,13 +552,19 @@ TEST_F(TestCliApp, test_bare_run_piped_emits_completion)
     bool ran = false;
     app.root().add_command("serve", "serve").on_run([&] { ran = true; });
 
-    // captured stdout is not a tty: a bare run loads the completion, the root help stays out
+    // captured stdout is not a tty: a bare run prints the root help, only the dump flag emits the script
     testing::internal::CaptureStdout();
     EXPECT_EQ(run_app(app, {}), EXIT_SUCCESS);
     std::string out = testing::internal::GetCapturedStdout();
-    EXPECT_NE(out.find("complete -F _my_app -o default \"my-app\""), std::string::npos);
-    EXPECT_EQ(out.find("Usage"), std::string::npos);
+    EXPECT_EQ(out.find("complete -F"), std::string::npos);
+    EXPECT_NE(out.find("SUBCOMMANDS:"), std::string::npos);
     EXPECT_FALSE(ran);
+
+    CliApp dump({.name = "my-app", .setup_logging = false});
+    testing::internal::CaptureStdout();
+    EXPECT_EQ(run_app(dump, {"--generate-bash-completion"}), EXIT_SUCCESS);
+    EXPECT_NE(testing::internal::GetCapturedStdout().find("complete -F _my_app -o default \"my-app\""),
+              std::string::npos);
 
     // a run with arguments is untouched
     CliApp app2({.name = "my-app", .setup_logging = false});

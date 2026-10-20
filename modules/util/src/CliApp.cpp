@@ -174,16 +174,8 @@ int CliApp::run(int argc, char **argv)
         this->_transition(Event::halt);
         return completion_status;
     }
-    if (args.empty())
-    {
-        if (stdout_is_tty() == false)
-        {
-            fmt::print("{}", this->bash_completion());
-            this->_transition(Event::halt);
-            return EXIT_SUCCESS;
-        }
+    if (args.empty() && stdout_is_tty())
         fmt::print(stderr, completion_tip, argv[0], "");
-    }
     int status = this->_parse(args);
     if (status != 0)
     {
