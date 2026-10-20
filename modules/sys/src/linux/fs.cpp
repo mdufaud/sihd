@@ -567,6 +567,13 @@ std::string realpath(const std::string & path)
     return result;
 }
 
+Result<void> rename(const std::string & from, const std::string & to)
+{
+    if (::rename(from.c_str(), to.c_str()) != 0)
+        return std::unexpected(Error::from_errno("could not rename '{}' to '{}'", from, to));
+    return {};
+}
+
 sihd::util::Result<void> chdir(const std::string & path)
 {
     if (::chdir(path.c_str()) != 0)

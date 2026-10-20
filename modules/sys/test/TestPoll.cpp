@@ -1,8 +1,13 @@
+#include <array>
+#include <csignal>
 #include <cstring>
+#include <thread>
 
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/os.hpp>
+#include <sihd/sys/signal.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
@@ -18,9 +23,9 @@ using namespace sihd::sys;
 class TestPoll: public ::testing::Test
 {
     protected:
-        TestPoll() { sihd::util::LoggerManager::stream(); }
+        TestPoll() { LoggerManager::stream(); }
 
-        virtual ~TestPoll() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPoll() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -52,7 +57,7 @@ TEST_F(TestPoll, test_poll)
     Poll poll;
     poll.set_limit(2);
 
-    int fd[2];
+    std::array<int, 2> fd;
     EXPECT_TRUE(make_fd_pair(fd));
     _to_close.push_back(fd[0]);
     _to_close.push_back(fd[1]);
@@ -138,4 +143,54 @@ TEST_F(TestPoll, test_poll)
     EXPECT_EQ(_read_count, 2);
     EXPECT_EQ(_timedout, 1);
 }
+
+TEST_F(TestPoll, test_poll_rm_fd_releases_slot)
+{
+    Poll poll(1);
+
+    std::array<int, 2> closed_pair;
+    ASSERT_TRUE(make_fd_pair(closed_pair));
+    _to_close.push_back(closed_pair[1]);
+    ASSERT_TRUE(poll.set_read_fd(closed_pair[0]));
+    ASSERT_TRUE(poll.rm_read_fd(closed_pair[0]));
+    close_fd(closed_pair[0]);
+    EXPECT_EQ(poll.poll(10), 0);
+
+    std::array<int, 2> other_pair;
+    ASSERT_TRUE(make_fd_pair(other_pair));
+    _to_close.push_back(other_pair[0]);
+    _to_close.push_back(other_pair[1]);
+    EXPECT_TRUE(poll.set_read_fd(other_pair[0]));
+    EXPECT_EQ(poll.read_fds_size(), 1u);
+}
+#if defined(SIGUSR2)
+TEST_F(TestPoll, test_poll_resumes_after_signal)
+{
+    std::array<int, 2> fd;
+    ASSERT_TRUE(make_fd_pair(fd));
+    _to_close.push_back(fd[0]);
+    _to_close.push_back(fd[1]);
+    Poll poll(1);
+    ASSERT_TRUE(poll.set_read_fd(fd[0]));
+    signal::reset_received(SIGUSR2);
+    ASSERT_TRUE(signal::handle(SIGUSR2));
+
+    std::jthread killer([] {
+        // the signal must land on the polling thread
+        (void)signal::block_thread(SIGUSR2);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        (void)signal::kill(os::pid(), SIGUSR2);
+    });
+    EXPECT_EQ(poll.poll(150), 0);
+    killer.join();
+
+    EXPECT_FALSE(poll.polling_error());
+    EXPECT_TRUE(poll.polling_timeout());
+    const auto status = signal::status(SIGUSR2);
+    ASSERT_TRUE(status.has_value());
+    EXPECT_EQ(status->received, 1u);
+    EXPECT_GE(poll.polling_time(), Duration(time::milli(150)));
+    (void)signal::unhandle(SIGUSR2);
+}
+#endif
 } // namespace test

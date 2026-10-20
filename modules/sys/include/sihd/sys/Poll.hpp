@@ -51,7 +51,7 @@ class Poll: public sihd::util::Observable<Poll>,
         bool rm_write_fd(int fd);
         bool set_timeout(int milliseconds);
 
-        // returns number of polleable fds
+        // returns number of polleable fds - a signal interrupt polls again for what is left of the timeout
         int poll(int milliseconds_timeout = -1);
 
         // ends the loop after the current poll: safe from the polling thread, unlike stop()

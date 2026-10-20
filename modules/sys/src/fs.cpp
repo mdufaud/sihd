@@ -491,15 +491,6 @@ sihd::util::Result<void> remove_file(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> rename(const std::string & from, const std::string & to)
-{
-    if (::rename(from.c_str(), to.c_str()) != 0)
-    {
-        return std::unexpected(Error::from_errno("could not rename '{}' to '{}'", from, to));
-    }
-    return {};
-}
-
 std::string jail(std::string_view root_view, std::string_view path_view)
 {
     if (root_view.empty())

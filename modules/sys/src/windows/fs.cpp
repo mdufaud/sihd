@@ -358,6 +358,14 @@ sihd::util::Result<void>
 #endif
 }
 
+// the C rename refuses an existing destination, posix replaces it
+Result<void> rename(const std::string & from, const std::string & to)
+{
+    if (::MoveFileExA(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING) == 0)
+        return std::unexpected(Error(io_error, "could not rename '{}' to '{}': {}", from, to, os::last_error_str()));
+    return {};
+}
+
 std::string realpath(const std::string & path)
 {
     // POSIX realpath requires every path component to exist; _fullpath is purely

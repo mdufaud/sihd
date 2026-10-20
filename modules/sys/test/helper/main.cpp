@@ -106,9 +106,6 @@ int do_mq_send(const char *name, const char *payload)
         return ret;
     }
 
-    // let the receiver post its read before this process drops the pipe
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
-
     return ret + (1 << 2);
 }
 

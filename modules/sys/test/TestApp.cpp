@@ -281,7 +281,7 @@ TEST_F(TestApp, test_signal_reload)
     app.on_reload([&](void) { reloads++; });
     app.root().add_command("serve", "serve").bind("port", opts.port, "").on_run([&] {
         (void)signal::kill(os::pid(), SIGHUP);
-        app.wait_for_termination(Duration(time::milli(500)));
+        app.wait_for_termination(Duration(time::milli(200)));
         if (reloads == 0 || app.should_stop())
             app.exit(EXIT_FAILURE);
     });
@@ -302,7 +302,7 @@ TEST_F(TestApp, test_signal_reload_custom)
     app.on_reload([&](void) { reloads++; });
     app.root().add_command("run", "run").on_run([&] {
         (void)signal::kill(os::pid(), SIGUSR2);
-        app.wait_for_termination(Duration(time::milli(300)));
+        app.wait_for_termination(Duration(time::milli(150)));
         if (reloads == 0 || app.should_stop())
             app.exit(EXIT_FAILURE);
     });
@@ -326,7 +326,7 @@ TEST_F(TestApp, test_signal_added_on_reload)
         ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"], "ignore": ["USR1"]}}})").has_value());
         ASSERT_TRUE(app.reload());
         (void)signal::kill(os::pid(), SIGUSR1);
-        app.wait_for_termination(Duration(time::milli(300)));
+        app.wait_for_termination(Duration(time::milli(150)));
         if (app.should_stop())
             app.exit(EXIT_FAILURE);
     });
@@ -368,7 +368,7 @@ TEST_F(TestApp, test_signal_ignore)
     sihd::sys::App app({.name = "ignore", .setup_logging = false});
     app.root().add_command("run", "run").on_run([&] {
         (void)signal::kill(os::pid(), SIGUSR1);
-        app.wait_for_termination(Duration(time::milli(300)));
+        app.wait_for_termination(Duration(time::milli(150)));
         if (app.should_stop())
             app.exit(EXIT_FAILURE);
     });
@@ -409,7 +409,7 @@ TEST_F(TestApp, test_signal_callback)
     });
     app.root().add_command("run", "run").on_run([&] {
         (void)signal::kill(os::pid(), SIGUSR2);
-        app.wait_for_termination(Duration(time::milli(300)));
+        app.wait_for_termination(Duration(time::milli(150)));
         if (signaled == 0)
             app.exit(EXIT_FAILURE);
     });
@@ -444,7 +444,7 @@ TEST_F(TestApp, test_service_loop)
     TestService service;
     app.root().add_command("run", "run").on_run([&] {
         EXPECT_TRUE(service.start());
-        app.wait_for_termination(Duration(time::milli(300)));
+        app.wait_for_termination(Duration(time::milli(150)));
         EXPECT_TRUE(service.stop());
         if (service.started == false || service.stopped == false)
             app.exit(EXIT_FAILURE);

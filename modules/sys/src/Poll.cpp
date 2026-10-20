@@ -1,12 +1,15 @@
 // sterror errno
 #include <algorithm>
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <ranges>
+#include <thread>
 
 #include <sihd/sys/Poll.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/time.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 // getrlimit
@@ -32,6 +35,23 @@ int get_fd_index(const std::vector<struct pollfd> & lst_fds, int fd)
     if (it == lst_fds.end())
         return -1;
     return (int)(it - lst_fds.begin());
+}
+
+int native_poll(std::vector<struct pollfd> & lst_fds, int milliseconds_timeout)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return ::poll(lst_fds.data(), lst_fds.size(), milliseconds_timeout);
+#else
+    // WSAPoll fails when no entry holds a socket, where poll waits the timeout out
+    const bool has_socket = std::ranges::any_of(lst_fds,
+                                                [](const struct pollfd & entry) { return entry.fd != INVALID_SOCKET; });
+    if (!has_socket && milliseconds_timeout >= 0)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds_timeout));
+        return 0;
+    }
+    return ::WSAPoll(lst_fds.data(), lst_fds.size(), milliseconds_timeout);
+#endif
 }
 
 size_t count_fds_events(const std::vector<struct pollfd> & lst_fds, int mask)
@@ -191,6 +211,8 @@ bool Poll::rm_read_fd(int fd)
     if (idx >= 0)
     {
         _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLIN));
+        if (_lst_fds[idx].events == 0)
+            _lst_fds[idx].fd = -1;
     }
     return idx >= 0;
 }
@@ -202,6 +224,8 @@ bool Poll::rm_write_fd(int fd)
     if (idx >= 0)
     {
         _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLOUT));
+        if (_lst_fds[idx].events == 0)
+            _lst_fds[idx].fd = -1;
     }
     return idx >= 0;
 }
@@ -238,28 +262,28 @@ bool Poll::on_start()
 
     this->service_set_ready();
     int ret = 0;
-    bool interrupted = false;
-    while (_stop == false && (ret >= 0 || interrupted))
-    {
+    while (_stop == false && ret >= 0)
         ret = this->poll(_timeout_milliseconds);
-        interrupted = ret < 0 && this->polling_error() == false;
-    }
-    return interrupted || ret >= 0;
+    return ret >= 0;
 }
 
 int Poll::poll(int milliseconds_timeout)
 {
     Timestamp before = _clock.now();
+    const time::UnixTime deadline = before + time::ms(std::max(milliseconds_timeout, 0));
     int ret;
     int saved_errno;
     {
         std::lock_guard lock(_fds_mutex);
-#if !defined(__SIHD_WINDOWS__)
-        ret = ::poll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
-#else
-        ret = ::WSAPoll(_lst_fds.data(), _lst_fds.size(), milliseconds_timeout);
-#endif
+        ret = native_poll(_lst_fds, milliseconds_timeout);
         saved_errno = os::last_socket_error();
+        while (ret < 0 && error_errno(saved_errno) == ErrorCode::interrupted)
+        {
+            // rounded up: a truncated remainder would time out before the deadline
+            const time::UnixTime remaining = std::max<time::UnixTime>(deadline - _clock.now().nanoseconds(), 0);
+            ret = native_poll(_lst_fds, milliseconds_timeout < 0 ? -1 : (int)time::to_ms(remaining + time::ms(1) - 1));
+            saved_errno = os::last_socket_error();
+        }
         _last_poll_time = _clock.now() - before;
         this->process_poll_results(ret, saved_errno);
     }
@@ -271,8 +295,7 @@ void Poll::process_poll_results(int poll_return, int saved_errno)
 {
     _lst_events.clear();
     _timedout = poll_return == 0;
-    // A signal interrupt is not a polling error: callers may just retry.
-    _error = poll_return < 0 && error_errno(saved_errno) != ErrorCode::interrupted;
+    _error = poll_return < 0;
     if (_error)
         SIHD_LOG(error, "Poll: {}", os::error_str(saved_errno));
     if (poll_return > 0)

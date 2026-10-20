@@ -1,6 +1,7 @@
 #ifndef __SIHD_SYS_TEST_HELPER_HPP__
 #define __SIHD_SYS_TEST_HELPER_HPP__
 
+#include <array>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -75,7 +76,7 @@ inline bool ensure_wsa()
 
 // WSAPoll only polls sockets, so build a connected loopback TCP socket pair:
 // fds[0] = read end (server), fds[1] = write end (client)
-inline bool make_fd_pair(int fds[2])
+inline bool make_fd_pair(std::array<int, 2> & fds)
 {
     if (!ensure_wsa())
         return false;
@@ -165,9 +166,9 @@ inline off_t seek_file_fd(int fd, off_t offset, int whence)
 
 #else
 
-inline bool make_fd_pair(int fds[2])
+inline bool make_fd_pair(std::array<int, 2> & fds)
 {
-    return ::pipe(fds) == 0;
+    return ::pipe(fds.data()) == 0;
 }
 
 inline ssize_t read_fd(int fd, void *buf, size_t count)

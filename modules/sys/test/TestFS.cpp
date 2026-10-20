@@ -588,6 +588,22 @@ TEST_F(TestFS, test_fs_hard_link_and_rename)
     EXPECT_TRUE(fs::are_equals(target, renamed));
 }
 
+TEST_F(TestFS, test_fs_rename_replaces_existing_file)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+
+    const std::string from = tmp_dir.path() + "/from.txt";
+    const std::string to = tmp_dir.path() + "/to.txt";
+    ASSERT_TRUE(fs::write(from, "new").has_value());
+    ASSERT_TRUE(fs::write(to, "old").has_value());
+
+    ASSERT_TRUE(fs::rename(from, to).has_value());
+
+    EXPECT_FALSE(fs::exists(from));
+    EXPECT_EQ(fs::read_all(to), "new");
+}
+
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestFS, test_fs_dir_link_and_read_link)
 {

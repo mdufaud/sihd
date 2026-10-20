@@ -55,13 +55,19 @@ class TestMessageQueue: public ::testing::Test
             }
             // queue names are kernel-wide: a concurrent test runner must not collide
             _prefix = "/sihd_mq_" + std::to_string((int)sihd::sys::os::pid());
-            for (const char *suffix : {"_bounds", "_full", "_nonblocking", "_attr", "_priority", "_unlink", "_process"})
+        }
+
+        virtual void TearDown()
+        {
+            if (_prefix.empty())
+                return;
+            // posix queues outlive the process: unlink even when an assertion cut the test short
+            for (const char *suffix :
+                 {"", "_bounds", "_full", "_nonblocking", "_attr", "_priority", "_unlink", "_process"})
             {
                 (void)MessageQueue::unlink(_prefix + suffix);
             }
         }
-
-        virtual void TearDown() {}
 
         std::string _prefix;
 };

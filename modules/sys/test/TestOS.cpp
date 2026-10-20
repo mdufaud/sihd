@@ -1,3 +1,4 @@
+#include <array>
 #include <cstdlib>
 
 #include <gtest/gtest.h>
@@ -162,7 +163,7 @@ TEST_F(TestOs, test_os_fd_dup)
 
 TEST_F(TestOs, test_os_fd_pair)
 {
-    int fds[2] = {-1, -1};
+    std::array<int, 2> fds = {-1, -1};
     ASSERT_TRUE(make_fd_pair(fds));
 
 #if defined(__SIHD_WINDOWS__)

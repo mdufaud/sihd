@@ -40,7 +40,16 @@ void SigThreadBlocker::_block(std::span<const int> sigs)
     for (int sig : sigs)
         sigaddset(&_blocked_set, sig);
 
-    _blocking = pthread_sigmask(SIG_BLOCK, &_blocked_set, &_old_set) == 0;
+    if (pthread_sigmask(SIG_BLOCK, &_blocked_set, &_old_set) != 0)
+        return;
+    // a signal the caller already blocked stays its own: neither drained nor unblocked here
+    for (int sig : sigs)
+    {
+        if (sigismember(&_old_set, sig) == 1)
+            sigdelset(&_blocked_set, sig);
+        else
+            _blocking = true;
+    }
 }
 
 } // namespace sihd::sys
