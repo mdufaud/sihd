@@ -11,12 +11,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
-// getrlimit
-# include <sys/resource.h>
-# include <sys/time.h>
-#endif
-
 namespace sihd::sys
 {
 

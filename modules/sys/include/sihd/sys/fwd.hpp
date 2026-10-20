@@ -46,6 +46,12 @@ namespace info
 class CpuUsage;
 }
 
+namespace linux_
+{
+class EventFd;
+class TimerFd;
+} // namespace linux_
+
 } // namespace sihd::sys
 
 #endif
