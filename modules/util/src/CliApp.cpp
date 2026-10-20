@@ -158,8 +158,6 @@ int CliApp::run(int argc, char **argv)
     int help_status = this->_intercept_help(args);
     if (help_status >= 0)
     {
-        if (help_status == EXIT_SUCCESS && stdout_is_tty())
-            fmt::print(stderr, completion_tip, argv[0], "");
         this->_transition(Event::halt);
         return help_status;
     }
@@ -174,8 +172,6 @@ int CliApp::run(int argc, char **argv)
         this->_transition(Event::halt);
         return completion_status;
     }
-    if (args.empty() && stdout_is_tty())
-        fmt::print(stderr, completion_tip, argv[0], "");
     int status = this->_parse(args);
     if (status != 0)
     {

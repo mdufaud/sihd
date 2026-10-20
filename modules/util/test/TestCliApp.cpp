@@ -1,8 +1,10 @@
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -21,6 +23,11 @@
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
+# include <fcntl.h>
+# include <unistd.h>
+#endif
+
 namespace test
 {
 SIHD_LOGGER;
@@ -34,6 +41,55 @@ static int run_app(CliApp & app, const std::vector<std::string> & args)
         argv.push_back(const_cast<char *>(arg.c_str()));
     return app.run((int)argv.size(), argv.data());
 }
+
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
+struct TtyRun
+{
+        int status = -1;
+        std::string output;
+};
+
+// runs the app with stdout and stderr on a pseudo terminal, nullopt when none can be opened
+static std::optional<TtyRun> run_app_on_tty(CliApp & app, const std::vector<std::string> & args)
+{
+    const int master = posix_openpt(O_RDWR | O_NOCTTY);
+    if (master < 0)
+        return std::nullopt;
+    const int slave = grantpt(master) == 0 && unlockpt(master) == 0 ? open(ptsname(master), O_RDWR | O_NOCTTY) : -1;
+    if (slave < 0)
+    {
+        close(master);
+        return std::nullopt;
+    }
+
+    TtyRun run;
+    std::jthread reader([master, &run] {
+        std::array<char, 4096> buffer {};
+        ssize_t size = 0;
+        while ((size = read(master, buffer.data(), buffer.size())) > 0)
+            run.output.append(buffer.data(), static_cast<size_t>(size));
+    });
+    std::fflush(stdout);
+    std::fflush(stderr);
+    const int saved_stdout = dup(STDOUT_FILENO);
+    const int saved_stderr = dup(STDERR_FILENO);
+    dup2(slave, STDOUT_FILENO);
+    dup2(slave, STDERR_FILENO);
+
+    run.status = run_app(app, args);
+
+    std::fflush(stdout);
+    std::fflush(stderr);
+    dup2(saved_stdout, STDOUT_FILENO);
+    dup2(saved_stderr, STDERR_FILENO);
+    close(saved_stdout);
+    close(saved_stderr);
+    close(slave);
+    reader.join();
+    close(master);
+    return run;
+}
+#endif
 
 static int eval(CliApp & app, std::vector<std::string> args)
 {
@@ -574,6 +630,33 @@ TEST_F(TestCliApp, test_bare_run_piped_never_emits_completion)
     EXPECT_EQ(run_app(app2, {"serve"}), EXIT_SUCCESS);
     EXPECT_EQ(testing::internal::GetCapturedStdout(), "");
     EXPECT_TRUE(ran2);
+}
+
+TEST_F(TestCliApp, test_completion_tip_only_on_dump_flag_in_terminal)
+{
+    if constexpr (build::is_windows || build::is_emscripten)
+        GTEST_SKIP() << "no pseudo terminal";
+#if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
+    CliApp bare_app({.name = "my-app", .setup_logging = false});
+    bare_app.root().add_command("serve", "serve").on_run([] {});
+    CliApp help_app({.name = "my-app", .setup_logging = false});
+    CliApp dump_app({.name = "my-app", .setup_logging = false});
+
+    auto bare_run = run_app_on_tty(bare_app, {});
+    if (!bare_run.has_value())
+        GTEST_SKIP() << "no pseudo terminal";
+    auto help_run = run_app_on_tty(help_app, {"-h"});
+    auto dump_run = run_app_on_tty(dump_app, {"--generate-bash-completion"});
+
+    EXPECT_EQ(bare_run->status, EXIT_SUCCESS);
+    EXPECT_EQ(bare_run->output.find("enable bash completion"), std::string::npos);
+    ASSERT_TRUE(help_run.has_value());
+    EXPECT_EQ(help_run->status, EXIT_SUCCESS);
+    EXPECT_EQ(help_run->output.find("enable bash completion"), std::string::npos);
+    ASSERT_TRUE(dump_run.has_value());
+    EXPECT_EQ(dump_run->status, EXIT_SUCCESS);
+    EXPECT_EQ(dump_run->output, "enable bash completion with:\r\n\tsource <(prog --generate-bash-completion)\r\n");
+#endif
 }
 
 TEST_F(TestCliApp, test_options_scope_and_fallthrough)
