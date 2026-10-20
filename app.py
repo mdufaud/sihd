@@ -264,6 +264,7 @@ modules = {
         "linux-cross-libs": ['glfw'],
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
+        "android-pch": False,
         "windows-link": [
             "-mwindows"
         ],
