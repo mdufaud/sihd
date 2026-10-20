@@ -1,17 +1,21 @@
-#include <string>
+#include <sihd/util/build.hpp>
 
-#include <sihd/sys/linux/ns.hpp>
-#include <sihd/sys/os.hpp>
+#if defined(__SIHD_LINUX__)
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <fcntl.h>
-# include <sched.h>
-# include <sys/stat.h>
-# include <unistd.h>
-# ifndef CLONE_NEWTIME
-#  define CLONE_NEWTIME 0x00000080
+# include <string>
+
+# include <sihd/sys/linux/ns.hpp>
+# include <sihd/sys/os.hpp>
+
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <fcntl.h>
+#  include <sched.h>
+#  include <sys/stat.h>
+#  include <unistd.h>
+#  ifndef CLONE_NEWTIME
+#   define CLONE_NEWTIME 0x00000080
+#  endif
 # endif
-#endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -52,7 +56,7 @@ Result<uint64_t> id(Type type)
     return id(type, os::pid());
 }
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# if !defined(__SIHD_EMSCRIPTEN__)
 
 namespace
 {
@@ -129,7 +133,7 @@ Result<void> setns(int fd, Type type)
     return {};
 }
 
-#else
+# else
 
 Result<uint64_t> id(Type, pid_t)
 {
@@ -156,6 +160,8 @@ Result<void> setns(int, Type)
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-#endif
+# endif
 
 } // namespace sihd::sys::linux_::ns
+
+#endif

@@ -6,7 +6,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_LINUX__)
 
 # include <sihd/sys/linux/prctl.hpp>
 

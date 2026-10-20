@@ -1,8 +1,12 @@
-#include <sihd/sys/linux/prctl.hpp>
+#include <sihd/util/build.hpp>
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <sys/prctl.h>
-#endif
+#if defined(__SIHD_LINUX__)
+
+# include <sihd/sys/linux/prctl.hpp>
+
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <sys/prctl.h>
+# endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -10,7 +14,7 @@ using namespace sihd::util;
 namespace sihd::sys::linux_::prctl
 {
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# if !defined(__SIHD_EMSCRIPTEN__)
 
 Result<void> set_pdeathsig(int sig)
 {
@@ -72,7 +76,7 @@ Result<bool> child_subreaper()
     return subreaper != 0;
 }
 
-#else
+# else
 
 Result<void> set_pdeathsig(int)
 {
@@ -114,6 +118,8 @@ Result<bool> child_subreaper()
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-#endif
+# endif
 
 } // namespace sihd::sys::linux_::prctl
+
+#endif

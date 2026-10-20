@@ -1,13 +1,17 @@
-#include <cerrno>
-#include <utility>
+#include <sihd/util/build.hpp>
 
-#include <sihd/sys/linux/TimerFd.hpp>
-#include <sihd/util/time.hpp>
+#if defined(__SIHD_LINUX__)
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <sys/timerfd.h>
-# include <unistd.h>
-#endif
+# include <cerrno>
+# include <utility>
+
+# include <sihd/sys/linux/TimerFd.hpp>
+# include <sihd/util/time.hpp>
+
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <sys/timerfd.h>
+#  include <unistd.h>
+# endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -49,7 +53,7 @@ TimerFd::operator int() const
     return _fd;
 }
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# if !defined(__SIHD_EMSCRIPTEN__)
 
 Result<void> TimerFd::open(bool nonblocking)
 {
@@ -113,7 +117,7 @@ Result<uint64_t> TimerFd::wait()
     return expirations;
 }
 
-#else
+# else
 
 Result<void> TimerFd::open(bool)
 {
@@ -140,6 +144,8 @@ Result<uint64_t> TimerFd::wait()
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-#endif
+# endif
 
 } // namespace sihd::sys::linux_
+
+#endif

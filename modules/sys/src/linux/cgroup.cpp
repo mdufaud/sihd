@@ -1,12 +1,16 @@
-#include <array>
-#include <string_view>
-#include <vector>
+#include <sihd/util/build.hpp>
 
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/linux/cgroup.hpp>
-#include <sihd/util/str.hpp>
+#if defined(__SIHD_LINUX__)
 
-#include "internal/sysfs.hpp"
+# include <array>
+# include <string_view>
+# include <vector>
+
+# include <sihd/sys/fs.hpp>
+# include <sihd/sys/linux/cgroup.hpp>
+# include <sihd/util/str.hpp>
+
+# include "internal/sysfs.hpp"
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -140,3 +144,5 @@ Result<void> write_cpu_max(std::optional<uint64_t> quota_us, uint64_t period_us)
 }
 
 } // namespace sihd::sys::linux_::cgroup
+
+#endif

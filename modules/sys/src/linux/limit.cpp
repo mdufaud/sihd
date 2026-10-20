@@ -1,8 +1,12 @@
-#include <sihd/sys/linux/limit.hpp>
+#include <sihd/util/build.hpp>
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <sys/resource.h>
-#endif
+#if defined(__SIHD_LINUX__)
+
+# include <sihd/sys/linux/limit.hpp>
+
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <sys/resource.h>
+# endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -10,7 +14,7 @@ using namespace sihd::util;
 namespace sihd::sys::linux_::limit
 {
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# if !defined(__SIHD_EMSCRIPTEN__)
 
 static_assert(infinity == RLIM_INFINITY);
 
@@ -76,7 +80,7 @@ Result<void> set(Resource resource, rlim_t current, rlim_t maximum)
     return {};
 }
 
-#else
+# else
 
 Result<Limit> get(Resource)
 {
@@ -88,6 +92,8 @@ Result<void> set(Resource, rlim_t, rlim_t)
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-#endif
+# endif
 
 } // namespace sihd::sys::linux_::limit
+
+#endif

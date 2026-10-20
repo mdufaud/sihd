@@ -8,7 +8,7 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
-#if defined(__SIHD_WINDOWS__)
+#if !defined(__SIHD_LINUX__)
 # error "sihd/sys/linux headers are linux only"
 #endif
 

@@ -1,12 +1,16 @@
-#include <cerrno>
-#include <utility>
+#include <sihd/util/build.hpp>
 
-#include <sihd/sys/linux/EventFd.hpp>
+#if defined(__SIHD_LINUX__)
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <sys/eventfd.h>
-# include <unistd.h>
-#endif
+# include <cerrno>
+# include <utility>
+
+# include <sihd/sys/linux/EventFd.hpp>
+
+# if !defined(__SIHD_EMSCRIPTEN__)
+#  include <sys/eventfd.h>
+#  include <unistd.h>
+# endif
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -48,7 +52,7 @@ EventFd::operator int() const
     return _fd;
 }
 
-#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
+# if !defined(__SIHD_EMSCRIPTEN__)
 
 Result<void> EventFd::open(bool nonblocking)
 {
@@ -98,7 +102,7 @@ Result<uint64_t> EventFd::read()
     return count;
 }
 
-#else
+# else
 
 Result<void> EventFd::open(bool)
 {
@@ -120,6 +124,8 @@ Result<uint64_t> EventFd::read()
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-#endif
+# endif
 
 } // namespace sihd::sys::linux_
+
+#endif

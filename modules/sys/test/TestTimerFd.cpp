@@ -5,7 +5,7 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
+#if defined(__SIHD_LINUX__)
 
 # include <sihd/sys/linux/TimerFd.hpp>
 
