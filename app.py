@@ -52,8 +52,8 @@ modules = {
             "x11": 0,
             "wayland": 0,
         },
-        "linux-extlibs": ['libuuid', 'libcap'],
-        "linux-libs": ['dl', 'uuid', 'cap'],
+        "linux-extlibs": ['libuuid', 'libcap', 'dbus'],
+        "linux-libs": ['dl', 'uuid', 'cap', 'dbus-1'],
         "android-extlibs": ['libuuid'],
         "android-libs": ['log', 'android', 'uuid'],
         "windows-libs": [
@@ -239,13 +239,10 @@ modules = {
         ],
     },
     "bt": {
-        "exclude-platforms": ["android"],
-        "allow-platforms": ["linux"],
+        "allow-platforms": ["linux", "windows"],
         "depends": ['util', 'sys', 'pch'],
-        "extlibs": ['simpleble'],
-        "libs": ['simpleble'],
-        # dbus-1: simpleble transitive dep on linux (static linking)
-        "linux-libs": ['dbus-1'],
+        # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString)
+        "windows-libs": ['runtimeobject'],
     },
     "csv": {
         "depends": ['util', 'sys', 'pch'],

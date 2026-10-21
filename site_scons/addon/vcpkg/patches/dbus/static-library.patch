@@ -1,0 +1,26 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -99,8 +99,10 @@
+ set(DBUS_LIBEXECDIR          ${CMAKE_INSTALL_FULL_LIBEXECDIR})
+ set(DBUS_DATADIR             ${CMAKE_INSTALL_FULL_DATADIR})
+ 
+-#enable building of shared library
+-set(BUILD_SHARED_LIBS ON)
++#enable building of shared library, unless the caller asks for a static one
++if(NOT DEFINED BUILD_SHARED_LIBS)
++    set(BUILD_SHARED_LIBS ON)
++endif()
+ 
+ set(INSTALL_TARGETS_DEFAULT_ARGS EXPORT DBus1Targets RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+ 
+--- a/dbus/CMakeLists.txt
++++ b/dbus/CMakeLists.txt
+@@ -263,7 +263,7 @@
+ find_library(LIBSOCKET socket)
+ 
+ ### Client library
+-add_library(dbus-1 SHARED
++add_library(dbus-1
+     ${libdbus_SOURCES}
+     ${libdbus_HEADERS}
+ )

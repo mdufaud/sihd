@@ -1,0 +1,30 @@
+--- a/dbus/CMakeLists.txt
++++ b/dbus/CMakeLists.txt
+@@ -300,7 +300,7 @@
+ endif()
+ 
+ # target definitions passed to the clients
+-target_include_directories(dbus-1 INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/dbus-1.0>;$<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/dbus-1.0/include>)
++target_include_directories(dbus-1 INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+ target_compile_definitions(dbus-1 INTERFACE "")
+ 
+ # Assume that Linux has -Wl,--version-script and other platforms do not
+@@ -311,8 +311,8 @@
+ endif()
+ 
+ install(TARGETS dbus-1 ${INSTALL_TARGETS_DEFAULT_ARGS})
+-install(FILES ${dbusinclude_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dbus-1.0/dbus)
+-install(FILES ${dbusinclude_ARCH_HEADERS} DESTINATION ${CMAKE_INSTALL_LIBDIR}/dbus-1.0/include/dbus)
++install(FILES ${dbusinclude_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dbus)
++install(FILES ${dbusinclude_ARCH_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dbus)
+ 
+ ### Internal library, used for the daemon, tools and tests, compiled statically.
+ 
+--- a/dbus-1.pc.in
++++ b/dbus-1.pc.in
+@@ -18,4 +18,4 @@
+ Version: @VERSION@
+ Libs: -L${libdir} -ldbus-1
+ Libs.private: @LIBDBUS_LIBS@
+-Cflags: -I${includedir}/dbus-1.0 -I${libdir}/dbus-1.0/include @DBUS_STATIC_BUILD_CPPFLAGS@
++Cflags: -I${includedir} @DBUS_STATIC_BUILD_CPPFLAGS@

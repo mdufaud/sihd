@@ -183,7 +183,7 @@ IncludeCategories:
     SortPriority: 2
     CaseSensitive: true
   # External dependencies used by the repository.
-  - Regex: '^<(android|curl|EGL|fmt|ftxui|GLES3|GLFW|gtest|libssh|libusb-1\.0|luabridge3|ncursesw|SDL3|simpleble)/[^>]+>$'
+  - Regex: '^<(android|curl|EGL|fmt|ftxui|GLES3|GLFW|gtest|libssh|libusb-1\.0|dbus|luabridge3|ncursesw|SDL3|wrl)/[^>]+>$'
     Priority: 3
     SortPriority: 3
     CaseSensitive: true

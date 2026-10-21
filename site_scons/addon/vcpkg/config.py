@@ -32,6 +32,8 @@ vcpkg_cxxflags = []
 vcpkg_cmake_configure_options = {
     "dbus": [
         "-DDBUS_SESSION_SOCKET_DIR=/tmp",
+        # dbus 1.16 derives it from the install prefix (vcpkg staging dir): use the spec default
+        "-DDBUS_SYSTEM_BUS_DEFAULT_ADDRESS=unix:path=/var/run/dbus/system_bus_socket",
     ],
     # SDL3: disable system-dependent features by default.
     "sdl3": [
@@ -84,11 +86,6 @@ vcpkg_cmake_configure_options_windows = {
     "curl": [
         "-DHAVE_IOCTLSOCKET_FIONBIO=ON",
     ],
-    # simpleble Windows backend requires WinRT C++/CX headers (winrt/Windows.Devices.Bluetooth.*)
-    # which are only available with MSVC. Use the "plain" stub backend for mingw cross-compilation.
-    "simpleble": [
-        "-DSIMPLEBLE_PLAIN=ON",
-    ],
 }
 
 # Emscripten/web: SDL3 via emscripten port system, imgui uses OpenGL ES2
@@ -130,7 +127,7 @@ vcpkg_no_default_features = [
 # cross build of unrelated modules drags in e.g. libusb (fails on riscv64-musl).
 #   no entry -> always (legacy). [] -> never. [requirer,...] -> only if a requirer present.
 vcpkg_no_default_features_requires = {
-    "dbus": ["simpleble"],  # transitive dep of simpleble; never a direct extlib
+    "dbus": [],             # always a direct extlib (sys module); never a hidden transitive
     "libusb": [],           # always a direct extlib (usb module); never a hidden transitive
 }
 

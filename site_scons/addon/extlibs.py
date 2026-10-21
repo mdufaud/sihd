@@ -37,8 +37,8 @@ extlibs = {
     "libjpeg": "9d",
     "lua": "5.3.5-5",
     "luabridge3": "3.0-rc3",
-    # bt
-    "simpleble": "0.8.1#1",
+    # sys (linux)
+    "dbus": "1.16.2#2",
 }
 
 # glfw needs: libxi-dev libxinerama-dev libxcursor-dev xorg libglu1-mesa pkg-config
@@ -66,7 +66,6 @@ extlibs_features_web = {
 extlibs_skip_windows = [
     "dbus",
     "libcap",
-    "simpleble",
 ]
 
 # on web: those libs don't compile properly with emscripten threading
@@ -82,7 +81,6 @@ extlibs_skip_web = [
     "opengl",
     "glfw3",
     "dbus",
-    "simpleble",
     "libcap",
 ]
 
@@ -99,7 +97,6 @@ extlibs_skip_android = [
     "ftxui",
     "opengl",
     "glfw3",
-    "simpleble",
 ]
 
 vcpkg_baseline = "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
@@ -108,9 +105,10 @@ vcpkg_baseline = "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
 # Schema: patches / remove_patches / manifest / files / recipe_patches (see sbt/vcpkg/patches.py).
 vcpkg_ports = {
     "dbus": {
+        "patches": ["patches/dbus/static-library.patch", "patches/dbus/flat-headers.patch"],
         "remove_patches": ["session-socket-dir.diff"],
         "manifest": {"port-version": 2, "default-features": []},
-        "recipe_patches": ["patches/dbus/recipe.patch"],
+        "recipe_patches": ["patches/dbus/recipe.patch", "patches/dbus/static-linkage.patch"],
     },
     "libwebsockets": {
         "patches": [
