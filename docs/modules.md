@@ -17,7 +17,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`zip`](modules/zip.md) | Archive compression and encryption | util, sys, libzip |
 | [`tui`](modules/tui.md) | Terminal UI components (ftxui) | util, sys, ftxui |
 | [`ssh`](modules/ssh.md) | SSH client and server, SFTP | util, sys, libssh |
-| [`usb`](modules/usb.md) | USB device access (placeholder) | util, sys, libusb |
+| [`usb`](modules/usb.md) | USB device enumeration, udev hardware names | util, sys, libusb |
 | [`bt`](modules/bt.md) | Bluetooth LE scanning | util, sys |
 | [`imgui`](modules/imgui.md) | Dear ImGui runner (GLFW, SDL3, Win32, Android, ncurses / OpenGL3, DirectX11, ncurses) | util, sys, imgui, opengl |
 | [`lua`](modules/lua.md) | Lua bindings (conditional: `lua=1`) | util, lua 5.3, luabridge3 |

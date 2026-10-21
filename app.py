@@ -226,13 +226,10 @@ modules = {
         ],
     },
     "usb": {
-        # the usb test lists devices through udev, a linux-only api
-        "exclude-platforms": ["android", "windows"],
+        "exclude-platforms": ["android", "web"],
         "depends": ['util', 'sys', 'pch'],
         "extlibs": ['libusb'],
-        # native linux: system libusb via pkg-config (udev is a system transitive dep)
-        "native-libs": ['udev'],
-        # cross linux: vcpkg libusb built without udev
+        # cross linux + windows: vcpkg libusb
         "cross-libs": ['usb-1.0'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",

@@ -14,14 +14,14 @@ export brief=1
 export lua=0
 export py=0
 # native configs run every module's tests
-export m="json,util,sys,core,csv,zip,net,curl,http"
+export m="json,util,sys,core,csv,zip,net,curl,http,usb"
 
 build_target "clang" compiler=clang
 build_target "gcc-musl" libc=musl mode=size
 
 # http tests deadlock under emulated runtimes (qemu-user, wine): run them on
 # native configs only. curl tests are file:// based and qemu-safe.
-export m="json,util,sys,core,csv,zip,net,curl"
+export m="json,util,sys,core,csv,zip,net,curl,usb"
 
 build_target "aarch64" machine=aarch64
 build_target "riscv64" machine=riscv64
