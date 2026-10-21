@@ -18,7 +18,10 @@ AService::AService(): _service_state(this) {}
             ret = this->do_##OP();                                                                                     \
         else                                                                                                           \
         {                                                                                                              \
-            if (ctrl->op_start(ID))                                                                                    \
+            const Transition transition = ctrl->op_start(ID);                                                          \
+            if (transition == Transition::done)                                                                        \
+                return true;                                                                                           \
+            if (transition == Transition::proceed)                                                                     \
             {                                                                                                          \
                 ret = this->do_##OP();                                                                                 \
                 ctrl->op_end(ID, ret);                                                                                 \

@@ -3,34 +3,38 @@
 namespace sihd::util
 {
 
+using Transition = AService::Transition;
+
 ThreadedServiceController::ThreadedServiceController()
 {
     current_state = Stopped;
 }
 
-bool ThreadedServiceController::op_start(AService::Operation op)
+Transition ThreadedServiceController::op_start(AService::Operation op)
 {
     std::lock_guard l(_state_mutex);
     switch (op)
     {
         case AService::Operation::Start:
-            if (current_state == Stopped || current_state == Failure)
+            if (current_state == Stopped || current_state == StartFailure)
             {
                 current_state = Starting;
-                return true;
+                return Transition::proceed;
             }
-            return false;
+            return Transition::refused;
         case AService::Operation::Stop:
-            if (current_state == Running)
+            if (current_state == Running || current_state == StopFailure)
             {
                 current_state = Stopping;
-                return true;
+                return Transition::proceed;
             }
-            return false;
+            if (current_state == Stopped || current_state == Stopping)
+                return Transition::done;
+            return Transition::refused;
         default:
             break;
     }
-    return true;
+    return Transition::proceed;
 }
 
 bool ThreadedServiceController::op_end(AService::Operation op, bool status)
@@ -39,12 +43,16 @@ bool ThreadedServiceController::op_end(AService::Operation op, bool status)
     switch (op)
     {
         case AService::Operation::Start:
-            current_state = status ? Running : Failure;
+            current_state = status ? Running : StartFailure;
             break;
         case AService::Operation::Stop:
-            current_state = status ? Stopped : Failure;
+            current_state = status ? Stopped : StopFailure;
             break;
         default:
+            if (!status)
+                current_state = Failure;
+            else if (current_state == Failure)
+                current_state = Stopped;
             break;
     }
     return true;

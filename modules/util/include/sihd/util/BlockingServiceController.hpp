@@ -16,10 +16,12 @@ class BlockingServiceController: public sihd::util::AService::IServiceController
         {
             Running,
             Stopped,
+            StartFailure,
+            StopFailure,
             Failure,
         };
 
-        virtual bool op_start(AService::Operation op);
+        virtual AService::Transition op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);
 
         State current_state;

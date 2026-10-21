@@ -286,6 +286,8 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .value("Stopping", ServiceController::State::Stopping)
         .value("Stopped", ServiceController::State::Stopped)
         .value("Resetting", ServiceController::State::Resetting)
+        .value("StartFailure", ServiceController::State::StartFailure)
+        .value("StopFailure", ServiceController::State::StopFailure)
         .value("Failure", ServiceController::State::Failure);
 
     pybind11::class_<ServiceController>(m_util, "ServiceController")

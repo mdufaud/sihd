@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <filesystem>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -10,8 +11,10 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/time.hpp>
 
 #include "test_helper.hpp"
 
@@ -167,6 +170,37 @@ TEST_F(TestProcess, test_process_service)
     ASSERT_FALSE(res.empty());
     EXPECT_EQ(res.back(), "helloworldhowareyou");
 #endif
+}
+
+TEST_F(TestProcess, test_process_service_runs_to_exit)
+{
+    Process proc({helper_path(), "sleep", "0"});
+
+    const bool first = proc.start();
+    const bool exited = proc.has_exited();
+    const bool second = proc.start();
+
+    EXPECT_TRUE(first);
+    EXPECT_TRUE(exited);
+    EXPECT_TRUE(second);
+    EXPECT_TRUE(proc.has_exited());
+    EXPECT_EQ((int)proc.return_code(), 0);
+}
+
+TEST_F(TestProcess, test_process_service_stop_kills_child)
+{
+    Process proc({helper_path(), "sleep", "60"});
+    bool started = false;
+    Stopwatch watch;
+
+    std::jthread runner([&proc, &started] { started = proc.start(); });
+    EXPECT_TRUE(proc.wait_ready(Duration(time::sec(5))));
+    EXPECT_TRUE(proc.stop());
+    runner.join();
+
+    EXPECT_TRUE(started);
+    EXPECT_FALSE(proc.is_process_running());
+    EXPECT_LT(watch.time(), Duration(time::sec(30)));
 }
 
 TEST_F(TestProcess, test_process_simple)

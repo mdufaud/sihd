@@ -844,8 +844,8 @@ bool Process::on_start()
         return false;
 
     this->service_set_ready();
-    if (_poll.max_fds() > 0)
-        _poll.start();
+    // without any captured pipe the poll times out, which reaps the child and ends the loop
+    _poll.start();
 
     return true;
 }

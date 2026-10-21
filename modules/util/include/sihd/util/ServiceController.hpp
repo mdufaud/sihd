@@ -24,6 +24,8 @@ class ServiceController: public AService::IServiceController,
             Stopping,
             Stopped,
             Resetting,
+            StartFailure,
+            StopFailure,
             Failure = 255,
         };
 
@@ -31,7 +33,7 @@ class ServiceController: public AService::IServiceController,
         ServiceController(const StateMachine<State, AService::Operation> & to_copy_statemachine);
         virtual ~ServiceController() = default;
 
-        virtual bool op_start(AService::Operation op);
+        virtual AService::Transition op_start(AService::Operation op);
         virtual bool op_end(AService::Operation op, bool status);
 
         State state() const;

@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <thread>
 
 #include <sihd/util/AService.hpp>
 #include <sihd/util/BlockingServiceController.hpp>
@@ -41,6 +42,7 @@ class ABlockingService: public sihd::util::AService
     private:
         mutable std::mutex _running_mutex;
         std::atomic<bool> _running;
+        std::atomic<std::thread::id> _running_thread;
         mutable Waitable _waitable;
         std::atomic<bool> _ready;
         std::atomic<bool> _wait_stop;

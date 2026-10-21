@@ -41,9 +41,11 @@ bool ABlockingService::do_start()
         auto l = _waitable.guard();
         this->_ready = false;
     }
+    _running_thread = std::this_thread::get_id();
     _running = true;
     const bool ret = this->on_start();
     _running = false;
+    _running_thread = std::thread::id();
     return ret;
 }
 
@@ -54,7 +56,8 @@ bool ABlockingService::do_stop()
         auto l = _waitable.guard();
         this->_ready = false;
     }
-    if (_wait_stop)
+    // stopped from its own on_start (an observer of the service): it ends when that call returns
+    if (_wait_stop && _running_thread.load() != std::this_thread::get_id())
         this->service_wait_stop();
     return ret;
 }

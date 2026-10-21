@@ -22,12 +22,15 @@ const SM & default_statemachine()
             {SM::pack_key(St::Initializing, Op::Success), St::Stopped},
             // stopped -> start -> running
             {SM::pack_key(St::Stopped, Op::Start), St::Starting},
-            {SM::pack_key(St::Starting, Op::Failure), St::Failure},
+            {SM::pack_key(St::Starting, Op::Failure), St::StartFailure},
             {SM::pack_key(St::Starting, Op::Success), St::Running},
             // running -> stop -> stopped
             {SM::pack_key(St::Running, Op::Stop), St::Stopping},
-            {SM::pack_key(St::Stopping, Op::Failure), St::Failure},
+            {SM::pack_key(St::Stopping, Op::Failure), St::StopFailure},
             {SM::pack_key(St::Stopping, Op::Success), St::Stopped},
+            // a failed start or stop is retried by the same operation
+            {SM::pack_key(St::StartFailure, Op::Start), St::Starting},
+            {SM::pack_key(St::StopFailure, Op::Stop), St::Stopping},
             // configured/stopped -> reset -> none
             {SM::pack_key(St::Configured, Op::Reset), St::Resetting},
             {SM::pack_key(St::Stopped, Op::Reset), St::Resetting},
@@ -81,16 +84,20 @@ void ServiceController::optional_init()
     statemachine.add_transition(None, AService::Start, Starting);
 }
 
-bool ServiceController::op_start(AService::Operation op)
+AService::Transition ServiceController::op_start(AService::Operation op)
 {
     bool ret;
     {
         std::lock_guard l(_state_mutex);
+        const State state = statemachine.state();
+        if (op == AService::Stop && (state == Stopping || state == Stopped))
+            return AService::Transition::done;
         ret = statemachine.transition(op);
     }
-    if (ret)
-        this->notify_observers(this);
-    return ret;
+    if (!ret)
+        return AService::Transition::refused;
+    this->notify_observers(this);
+    return AService::Transition::proceed;
 }
 
 bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool status)
@@ -136,6 +143,10 @@ const char *ServiceController::state_str(State state)
             return "stopped";
         case Resetting:
             return "resetting";
+        case StartFailure:
+            return "start error";
+        case StopFailure:
+            return "stop error";
         case Failure:
             return "error";
         default:

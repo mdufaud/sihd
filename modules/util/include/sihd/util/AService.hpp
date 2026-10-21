@@ -24,10 +24,18 @@ class AService
             Failure = 255,
         };
 
+        // done: the operation's target state is already reached, nothing to run
+        enum class Transition
+        {
+            proceed,
+            refused,
+            done
+        };
+
         class IServiceController
         {
             public:
-                virtual bool op_start(Operation op) = 0;
+                virtual Transition op_start(Operation op) = 0;
                 virtual bool op_end(Operation op, bool status) = 0;
         };
         virtual IServiceController *service_ctrl() { return nullptr; };

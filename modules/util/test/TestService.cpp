@@ -8,9 +8,12 @@
 #include <sihd/util/AStepWorkerService.hpp>
 #include <sihd/util/AThreadedService.hpp>
 #include <sihd/util/AWorkerService.hpp>
+#include <sihd/util/BlockingServiceController.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/Synchronizer.hpp>
+#include <sihd/util/ThreadedServiceController.hpp>
+#include <sihd/util/Waitable.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
 
@@ -65,17 +68,29 @@ class FakeBlockingService: public ABlockingService
         bool on_start() override
         {
             this->service_set_ready();
-            started = true;
+            if (stop_from_own_thread)
+                this->stop();
+            _waitable.wait([this] { return _stop_requested || ends_by_itself; });
+            _stop_requested = false;
             return true;
         }
+
         bool on_stop() override
         {
-            started = false;
+            {
+                auto lock = _waitable.guard();
+                _stop_requested = true;
+            }
+            _waitable.notify_all();
             return true;
         }
-        bool is_running() const override { return started; }
 
-        bool started = false;
+        bool ends_by_itself = false;
+        bool stop_from_own_thread = false;
+
+    private:
+        Waitable _waitable;
+        bool _stop_requested = false;
 };
 
 class FakeService: public AService
@@ -86,6 +101,9 @@ class FakeService: public AService
         int n_start = 0;
         int n_stop = 0;
         int n_reset = 0;
+        bool fail_init = false;
+        bool fail_start = false;
+        bool fail_stop = false;
 
         bool is_running() const { return n_start > 0; }
 
@@ -97,17 +115,17 @@ class FakeService: public AService
         bool do_init()
         {
             ++n_init;
-            return true;
+            return !fail_init;
         }
         bool do_start()
         {
             ++n_start;
-            return true;
+            return !fail_start;
         }
         bool do_stop()
         {
             ++n_stop;
-            return true;
+            return !fail_stop;
         }
         bool do_reset()
         {
@@ -248,7 +266,7 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_EQ(obs_changed, 4);
 
     // cannot do anything else than start (except reset)
-    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.stop());
     EXPECT_EQ(service.n_start, 0);
     EXPECT_EQ(service.n_stop, 0);
     EXPECT_FALSE(service.setup());
@@ -310,6 +328,90 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_TRUE(service.reset());
 }
 
+TEST_F(TestService, test_service_ctrl_failures)
+{
+    FakeServiceWithController init_failed;
+    init_failed.fail_init = true;
+    FakeServiceWithController start_failed;
+    start_failed.fail_start = true;
+    FakeServiceWithController stop_failed;
+    stop_failed.fail_stop = true;
+
+    EXPECT_TRUE(init_failed.setup());
+    EXPECT_FALSE(init_failed.init());
+    EXPECT_EQ(init_failed.ctrl.state(), ServiceController::Failure);
+    EXPECT_FALSE(init_failed.start());
+    EXPECT_FALSE(init_failed.stop());
+    EXPECT_EQ(init_failed.n_start, 0);
+    EXPECT_EQ(init_failed.n_stop, 0);
+
+    EXPECT_TRUE(start_failed.setup());
+    EXPECT_TRUE(start_failed.init());
+    EXPECT_FALSE(start_failed.start());
+    EXPECT_EQ(start_failed.ctrl.state(), ServiceController::StartFailure);
+    EXPECT_FALSE(start_failed.stop());
+    start_failed.fail_start = false;
+    EXPECT_TRUE(start_failed.start());
+    EXPECT_EQ(start_failed.n_start, 2);
+    EXPECT_EQ(start_failed.n_stop, 0);
+
+    EXPECT_TRUE(stop_failed.setup());
+    EXPECT_TRUE(stop_failed.init());
+    EXPECT_TRUE(stop_failed.start());
+    EXPECT_FALSE(stop_failed.stop());
+    EXPECT_FALSE(stop_failed.start());
+    EXPECT_EQ(stop_failed.ctrl.state(), ServiceController::StopFailure);
+    stop_failed.fail_stop = false;
+    EXPECT_TRUE(stop_failed.stop());
+    EXPECT_TRUE(stop_failed.stop());
+    EXPECT_EQ(stop_failed.n_stop, 2);
+    EXPECT_EQ(stop_failed.ctrl.state(), ServiceController::Stopped);
+}
+
+TEST_F(TestService, test_service_controllers_failures)
+{
+    BlockingServiceController blocking;
+    ThreadedServiceController threaded;
+
+    EXPECT_EQ(blocking.op_start(AService::Init), AService::Transition::proceed);
+    EXPECT_TRUE(blocking.op_end(AService::Init, false));
+    EXPECT_EQ(blocking.op_start(AService::Start), AService::Transition::refused);
+    EXPECT_EQ(blocking.op_start(AService::Stop), AService::Transition::refused);
+
+    EXPECT_TRUE(blocking.op_end(AService::Init, true));
+    EXPECT_EQ(blocking.op_start(AService::Start), AService::Transition::proceed);
+    EXPECT_EQ(blocking.op_start(AService::Start), AService::Transition::refused);
+
+    EXPECT_EQ(blocking.op_start(AService::Stop), AService::Transition::proceed);
+    EXPECT_TRUE(blocking.op_end(AService::Stop, false));
+    EXPECT_EQ(blocking.op_start(AService::Start), AService::Transition::refused);
+    EXPECT_EQ(blocking.op_start(AService::Stop), AService::Transition::proceed);
+    EXPECT_TRUE(blocking.op_end(AService::Stop, true));
+
+    EXPECT_TRUE(blocking.op_end(AService::Start, false));
+    EXPECT_EQ(blocking.op_start(AService::Stop), AService::Transition::refused);
+    EXPECT_EQ(blocking.op_start(AService::Start), AService::Transition::proceed);
+
+    EXPECT_EQ(threaded.op_start(AService::Init), AService::Transition::proceed);
+    EXPECT_TRUE(threaded.op_end(AService::Init, false));
+    EXPECT_EQ(threaded.op_start(AService::Start), AService::Transition::refused);
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::refused);
+
+    EXPECT_TRUE(threaded.op_end(AService::Init, true));
+    EXPECT_EQ(threaded.op_start(AService::Start), AService::Transition::proceed);
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::refused);
+    EXPECT_TRUE(threaded.op_end(AService::Start, false));
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::refused);
+
+    EXPECT_EQ(threaded.op_start(AService::Start), AService::Transition::proceed);
+    EXPECT_TRUE(threaded.op_end(AService::Start, true));
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::proceed);
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::done);
+    EXPECT_TRUE(threaded.op_end(AService::Stop, false));
+    EXPECT_EQ(threaded.op_start(AService::Start), AService::Transition::refused);
+    EXPECT_EQ(threaded.op_start(AService::Stop), AService::Transition::proceed);
+}
+
 TEST_F(TestService, test_service_normal_impl)
 {
     FakeService service;
@@ -339,29 +441,54 @@ TEST_F(TestService, test_service_blocking)
 {
     FakeBlockingService service;
     service.set_service_wait_stop(true);
-
-    EXPECT_FALSE(service.stop());
-    EXPECT_FALSE(service.is_running());
-
-    EXPECT_TRUE(service.start());
-    EXPECT_TRUE(service.wait_ready(Duration(time::ms(500))));
-    EXPECT_TRUE(service.is_ready());
-    EXPECT_TRUE(service.is_running());
-    EXPECT_FALSE(service.start());
-
     EXPECT_TRUE(service.stop());
     EXPECT_FALSE(service.is_running());
-    EXPECT_FALSE(service.is_ready());
-    EXPECT_FALSE(service.stop());
 
-    EXPECT_TRUE(service.start());
-    EXPECT_TRUE(service.wait_ready(Duration(time::ms(500))));
-    EXPECT_TRUE(service.is_ready());
-    EXPECT_TRUE(service.is_running());
-    EXPECT_FALSE(service.start());
+    for (int run = 0; run < 2; ++run)
+    {
+        bool started = false;
+        std::jthread runner([&service, &started] { started = service.start(); });
 
-    service.service_ctrl();
-    service.service_state();
+        EXPECT_TRUE(service.wait_ready(Duration(time::ms(500))));
+        EXPECT_TRUE(service.is_ready());
+        EXPECT_TRUE(service.is_running());
+        EXPECT_FALSE(service.start());
+
+        EXPECT_TRUE(service.stop());
+        runner.join();
+
+        EXPECT_TRUE(started);
+        EXPECT_FALSE(service.is_running());
+        EXPECT_FALSE(service.is_ready());
+        EXPECT_TRUE(service.stop());
+    }
+}
+
+TEST_F(TestService, test_service_blocking_ends_by_itself)
+{
+    FakeBlockingService service;
+    service.ends_by_itself = true;
+
+    const bool first = service.start();
+    const bool second = service.start();
+
+    EXPECT_TRUE(first);
+    EXPECT_TRUE(second);
+    EXPECT_FALSE(service.is_running());
+    EXPECT_TRUE(service.stop());
+}
+
+TEST_F(TestService, test_service_blocking_stop_from_own_thread)
+{
+    FakeBlockingService service;
+    service.set_service_wait_stop(true);
+    service.stop_from_own_thread = true;
+
+    const bool started = service.start();
+
+    EXPECT_TRUE(started);
+    EXPECT_FALSE(service.is_running());
+    EXPECT_TRUE(service.stop());
 }
 
 TEST_F(TestService, test_service_threaded)
@@ -370,7 +497,7 @@ TEST_F(TestService, test_service_threaded)
 
     dynamic_cast<AThreadedService *>(service_ptr.get())->set_start_synchronised(true);
 
-    EXPECT_FALSE(service_ptr->stop());
+    EXPECT_TRUE(service_ptr->stop());
 
     EXPECT_TRUE(service_ptr->start());
     EXPECT_FALSE(service_ptr->start());
@@ -378,7 +505,7 @@ TEST_F(TestService, test_service_threaded)
 
     EXPECT_TRUE(service_ptr->stop());
     EXPECT_FALSE(service_ptr->is_running());
-    EXPECT_FALSE(service_ptr->stop());
+    EXPECT_TRUE(service_ptr->stop());
 
     EXPECT_TRUE(service_ptr->reset());
 }
@@ -388,7 +515,7 @@ TEST_F(TestService, test_service_worker)
     FakeWorkerService service;
     service.set_start_synchronised(true);
 
-    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.stop());
     EXPECT_TRUE(service.start());
     EXPECT_TRUE(service.is_running());
     EXPECT_TRUE(wait_for([&] { return service.work_started.load(); }));
@@ -397,7 +524,7 @@ TEST_F(TestService, test_service_worker)
     EXPECT_TRUE(service.stop());
     EXPECT_FALSE(service.is_running());
     EXPECT_TRUE(service.work_stopped.load());
-    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.stop());
     EXPECT_TRUE(service.reset());
 }
 
@@ -407,7 +534,7 @@ TEST_F(TestService, test_service_step_worker)
     EXPECT_TRUE(service.set_step_frequency(200));
     service.set_start_synchronised(true);
 
-    EXPECT_FALSE(service.stop());
+    EXPECT_TRUE(service.stop());
     EXPECT_TRUE(service.start());
     EXPECT_TRUE(service.is_running());
     EXPECT_TRUE(service.work_setup_done.load());
