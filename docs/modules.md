@@ -12,7 +12,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`curl`](modules/curl.md) | libcurl transfer wrapper | util, curl |
 | [`net`](modules/net.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, interfaces | sys, core, crypto |
 | [`http`](modules/http.md) | HTTP/WebSocket server, HTTP client | curl, net, libwebsockets, libuv, zlib, openssl |
-| [`pcap`](modules/pcap.md) | Packet capture and capture files | net, libpcap |
+| [`pcap`](modules/pcap.md) | Packet capture, injection and capture files | net, libpcap |
 | [`csv`](modules/csv.md) | CSV reading/writing | util, sys |
 | [`zip`](modules/zip.md) | Archive compression and encryption | util, sys, libzip |
 | [`tui`](modules/tui.md) | Terminal UI components (ftxui) | util, sys, ftxui |

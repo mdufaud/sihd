@@ -43,4 +43,15 @@ TEST_F(TestSniffer, test_sniffer_interfaces)
     }
 }
 
+TEST_F(TestSniffer, test_sniffer_inject_not_open)
+{
+    Sniffer sniffer("sniffer");
+    const std::string frame = "frame";
+
+    auto injected = sniffer.inject({frame.data(), frame.size()});
+
+    ASSERT_FALSE(injected.has_value());
+    EXPECT_EQ(injected.error().code, ErrorCode::not_initialized);
+}
+
 } // namespace test

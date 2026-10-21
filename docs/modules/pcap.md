@@ -1,6 +1,6 @@
 # pcap
 
-Packet capture and capture-file I/O on top of libpcap. It offers live capture through a blocking service that delivers packets to observers, reading and writing of pcap and pcapng files, and enumeration of capture interfaces.
+Packet capture, packet injection and capture-file I/O on top of libpcap. It offers live capture through a blocking service that delivers packets to observers, raw frame injection on a capture handle, reading and writing of pcap and pcapng files, and enumeration of capture interfaces.
 
 | | |
 |---|---|
@@ -17,6 +17,7 @@ Packet capture and capture-file I/O on top of libpcap. It offers live capture th
 - `Sniffer`: `Configurable`, `IReaderTimestamp`, blocking service and `Observable<Sniffer>`. Typical sequence, from the demo: `open(source)`, configure, `activate()`, `set_filter(bpf)`, `sniff()`, `close()`.
   - Lifecycle: `open`, `close`, `is_open`, `activate`, `is_active`, `pollable_fd`.
   - Reading: `sniff` (one buffer of packets), `read_next` (one packet), `get_read_data`, `get_read_timestamp`, `array` / `data`.
+  - Injection: `inject(frame)` sends a raw link-layer frame (Ethernet header included on `DLT_EN10MB`) and returns the number of bytes sent. Errors: `not_initialized` when the handle is not open or not activated, `io_error` with the libpcap message otherwise. It needs the same privileges as capturing (`CAP_NET_RAW` on Linux). A libpcap handle is not thread-safe: while `start()` captures on another thread, inject from a second `Sniffer` opened on the same device.
   - Capture options: `set_filter` (BPF), `set_promiscuous`, `set_monitor`, `set_immediate`, `set_nonblock`, `set_timeout`, `set_snaplen`, `set_buffer_size`, `set_direction`, `set_datalink`, `set_timestamp_type`, `set_timestamp_nano`, `set_max_sniff`, `set_linux_protocol`.
   - Queries: `datalinks`, `datalink`, `timestamp_types`, `timestamp_type`, `snaplen`, `can_monitor`, `is_nonblock`, `timestamp_nano`, `timestamp_micro`, `stats` (`received`, `dropped`, `if_dropped`), `error`.
 
@@ -65,7 +66,25 @@ size_t count_packets(const std::string & path)
 }
 ```
 
-Adapted from `modules/pcap/test/TestPcap.cpp`.
+Adapted from `modules/pcap/test/linux/TestSnifferInject.cpp`.
+
+```cpp
+#include <sihd/pcap/Sniffer.hpp>
+#include <sihd/util/Error.hpp>
+
+using namespace sihd::pcap;
+
+sihd::util::Result<size_t> send_frame(const std::string & device, const std::string & frame)
+{
+    Sniffer injector("injector");
+
+    auto opened = injector.open(device);
+    SIHD_UNEXPECTED_RETURN(opened);
+    auto activated = injector.activate();
+    SIHD_UNEXPECTED_RETURN(activated);
+    return injector.inject({frame.data(), frame.size()});
+}
+```
 
 ## Scripting
 

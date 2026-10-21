@@ -44,6 +44,7 @@ class Sniffer: public sihd::util::Named,
         bool sniff();
         // sniff one packet: false means no packet, an error means the read failed
         sihd::util::Result<bool> read_next() override;
+        sihd::util::Result<size_t> inject(sihd::util::ArrCharView frame);
         // get datas
         bool get_read_data(sihd::util::ArrCharView & view) const override;
         sihd::util::Result<sihd::util::Timestamp> get_read_timestamp() const override;

@@ -8,6 +8,7 @@
 #include <sihd/util/time.hpp>
 
 using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::pcap
 {
@@ -162,6 +163,18 @@ sihd::util::Result<bool> Sniffer::read_next()
     if (ret > 0)
         this->_new_packet(hdr, data);
     return ret > 0;
+}
+
+Result<size_t> Sniffer::inject(ArrCharView frame)
+{
+    if (this->is_open() == false)
+        return std::unexpected(Error(not_initialized, "not open"));
+    int ret = pcap_inject(_impl_ptr->pcap_ptr, frame.data(), frame.size());
+    if (ret == PCAP_ERROR_NOT_ACTIVATED)
+        return std::unexpected(Error(not_initialized, "capture not activated"));
+    if (ret < 0)
+        return std::unexpected(Error(io_error, "{}", this->error()));
+    return static_cast<size_t>(ret);
 }
 
 // data retrieval
