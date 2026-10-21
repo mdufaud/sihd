@@ -73,7 +73,7 @@ TEST_F(TestPcap, test_pcap_writer)
     EXPECT_TRUE(writer.write({hw, sizeof(hw)}));
     EXPECT_TRUE(writer.close());
 
-    std::string content = fs::read_all(path).value();
+    std::string content = fs::read_all(path, true).value();
     EXPECT_EQ(memcmp(content.c_str() + content.size() - sizeof(hw), hw, sizeof(hw)), 0);
 }
 } // namespace test
