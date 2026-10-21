@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
@@ -30,7 +31,9 @@ constexpr std::array<ns::Type, 10> all_types = {
 };
 
 constexpr int child_ok = 0;
-constexpr int child_wrong_state = 1;
+constexpr int child_id_failed = 1;
+constexpr int child_ns_unchanged = 2;
+constexpr int child_wrong_joined_ns = 3;
 constexpr int child_error_base = 10;
 
 int child_code(ErrorCode code)
@@ -95,6 +98,10 @@ TEST_F(TestNs, test_id)
 
 TEST_F(TestNs, test_unshare_and_setns)
 {
+    auto apparmor_restrict = fs::read_all("/proc/sys/kernel/apparmor_restrict_unprivileged_userns");
+    if (apparmor_restrict && apparmor_restrict->starts_with('1'))
+        GTEST_SKIP() << "user namespaces confined by apparmor";
+
     Process proc([]() -> int {
         auto user_before = ns::id(ns::Type::user);
         auto uts_before = ns::id(ns::Type::uts);
@@ -104,16 +111,19 @@ TEST_F(TestNs, test_unshare_and_setns)
             return child_code(unshared.error().code);
         auto user_after = ns::id(ns::Type::user);
         auto uts_after = ns::id(ns::Type::uts);
-        if (!user_before || !uts_before || !user_after || !uts_after || *user_before == *user_after
-            || *uts_before == *uts_after)
-            return child_wrong_state;
+        if (!user_before || !uts_before || !user_after || !uts_after)
+            return child_id_failed;
+        if (*user_before == *user_after || *uts_before == *uts_after)
+            return child_ns_unchanged;
 
         auto joined = ns::setns("/proc/self/ns/uts", ns::Type::uts);
         if (!joined)
             return child_code(joined.error().code);
         auto uts_joined = ns::id(ns::Type::uts);
-        if (!uts_joined || *uts_joined != *uts_after)
-            return child_wrong_state;
+        if (!uts_joined)
+            return child_id_failed;
+        if (*uts_joined != *uts_after)
+            return child_wrong_joined_ns;
         return child_ok;
     });
     proc.set_force_fork(true);
