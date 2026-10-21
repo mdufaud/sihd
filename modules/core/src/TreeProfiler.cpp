@@ -569,8 +569,7 @@ std::string
         this->_emit_enter(entry->op_begin, name, what);
 
     const ServiceController::State state = ctrl->state();
-    const bool success = state != ServiceController::Failure
-                         && state != ServiceController::StartFailure
+    const bool success = state != ServiceController::Failure && state != ServiceController::StartFailure
                          && state != ServiceController::StopFailure;
     this->_emit_exit(this->_now(), name, what, elapsed, success);
 
