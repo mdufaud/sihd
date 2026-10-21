@@ -19,6 +19,7 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 apt_packages = {
     "gtest": "libgtest-dev",
     "fmt": "libfmt-dev",
+    "pcre2": "libpcre2-dev",
     "libuuid": "uuid-dev",
     "openssl": "libssl-dev",
     "curl": "libcurl4-openssl-dev",
@@ -52,6 +53,7 @@ pacman_packages = {
     "gtest": "gtest",
     "simdjson": "simdjson",
     "fmt": "fmt",
+    "pcre2": "pcre2",
     "libuuid": "util-linux-libs",
     "cli11": "cli11",
     "openssl": "openssl",
@@ -85,6 +87,7 @@ pacman_packages = {
 # Note: simdjson excluded — runtime lib must match the vcpkg-built version.
 apk_packages = {
     "fmt": "fmt",
+    "pcre2": "pcre2",
     "libuuid": "util-linux",
     "openssl": "openssl",
     "curl": "libcurl",
@@ -113,6 +116,7 @@ yum_packages = {
     "gtest": "gtest-devel",
     "simdjson": "simdjson-devel",
     "fmt": "fmt-devel",
+    "pcre2": "pcre2-devel",
     "libuuid": "libuuid-devel",
     "cli11": "cli11-devel",
     "openssl": "openssl-devel",

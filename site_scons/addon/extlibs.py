@@ -10,6 +10,7 @@ extlibs = {
     # util
     "cli11": "2.6.1",
     "fmt": "12.1.0",
+    "pcre2": "10.47",
     "libuuid": "1.0.3#15",
     # http
     "libwebsockets": "4.5.2",

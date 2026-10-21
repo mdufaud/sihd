@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iterator>
-#include <regex>
+#include <stdexcept>
 
 #include <fmt/format.h>
 
@@ -533,7 +533,7 @@ bool CliApp::apply_sink_filters(ALogger *logger) const
         {
             logger->add_filter(new LoggerFilter(opts));
         }
-        catch (const std::regex_error & e)
+        catch (const std::invalid_argument & e)
         {
             SIHD_LOG(error, "CliApp: invalid filter regex in logging conf: {}", e.what());
             return false;

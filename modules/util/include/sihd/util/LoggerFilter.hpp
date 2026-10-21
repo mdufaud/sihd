@@ -2,9 +2,9 @@
 #define __SIHD_UTIL_LOGGERFILTER_HPP__
 
 #include <optional>
-#include <regex>
 
 #include <sihd/util/ILoggerFilter.hpp>
+#include <sihd/util/Regex.hpp>
 
 namespace sihd::util
 {
@@ -33,9 +33,9 @@ class LoggerFilter: public ILoggerFilter
 
     private:
         Options _options;
-        std::optional<std::regex> _message_regex;
-        std::optional<std::regex> _source_regex;
-        std::optional<std::regex> _thread_regex;
+        std::optional<Regex> _message_regex;
+        std::optional<Regex> _source_regex;
+        std::optional<Regex> _thread_regex;
 };
 
 } // namespace sihd::util

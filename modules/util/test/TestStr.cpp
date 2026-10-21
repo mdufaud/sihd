@@ -1389,6 +1389,40 @@ TEST_F(TestStr, test_str_regex_max_size_argument)
     EXPECT_TRUE(str::regex_match(subject, "a+", 16).value());
 }
 
+TEST_F(TestStr, test_str_regex_catastrophic_backtracking)
+{
+    const std::string hostile = std::string(64, 'a') + "!";
+    EXPECT_EQ(str::regex_search(hostile, "(a+)+$").error().code, ErrorCode::overflow);
+    EXPECT_EQ(str::regex_match(hostile, "(a+)+$").error().code, ErrorCode::overflow);
+    EXPECT_EQ(str::regex_filter(std::vector<std::string> {hostile}, "(a+)+$").error().code, ErrorCode::overflow);
+}
+
+TEST_F(TestStr, test_str_regex_long_subject)
+{
+    const std::string subject(500000, 'a');
+    EXPECT_TRUE(str::regex_match(subject, "(a|b)*").value());
+    EXPECT_EQ(str::regex_search(subject, "a{1000}").value().size(), 500u);
+}
+
+TEST_F(TestStr, test_str_regex_empty_matches)
+{
+    EXPECT_TRUE(str::regex_match("", "").value());
+    EXPECT_TRUE(str::regex_match("", "a*").value());
+    EXPECT_FALSE(str::regex_match("", "a").value());
+    EXPECT_EQ(str::regex_search("", "a*").value(), (std::vector<std::string> {""}));
+    EXPECT_EQ(str::regex_search("b", "a*").value(), (std::vector<std::string> {"", ""}));
+    EXPECT_EQ(str::regex_replace("", "a*", "x").value(), "x");
+}
+
+TEST_F(TestStr, test_str_regex_replace_groups)
+{
+    EXPECT_EQ(str::regex_replace("hello", "l+", "[$0]").value(), "he[ll]o");
+    EXPECT_EQ(str::regex_replace("hello world", "(hello) (world)", "${2}_${1}").value(), "world_hello");
+    EXPECT_EQ(str::regex_replace("ab", "(a)|(b)", "<$2>").value(), "<><b>");
+    EXPECT_EQ(str::regex_replace("a.b", "\\.", "\\").value(), "a\\b");
+    EXPECT_EQ(str::regex_replace("hello", "xyz", "$1").value(), "hello");
+}
+
 TEST_F(TestStr, test_str_split_pair_truncated_delimiter)
 {
     auto pair = str::split_pair_view("key=", "==");

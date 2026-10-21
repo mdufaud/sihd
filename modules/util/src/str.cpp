@@ -14,13 +14,13 @@
 #include <locale>
 #include <random>
 #include <ranges>
-#include <regex>
 #include <sstream>
 
 #include <fmt/ranges.h>
 
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/IArrayView.hpp>
+#include <sihd/util/Regex.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
@@ -591,18 +591,6 @@ Result<void> check_regex_subject(size_t size, size_t max_size)
     return {};
 }
 
-Result<std::regex> compile_regex(const std::string & pattern)
-{
-    try
-    {
-        return std::regex(pattern);
-    }
-    catch (const std::regex_error & e)
-    {
-        return std::unexpected(Error(invalid_argument, "invalid regex '{}': {}", pattern, e.what()));
-    }
-}
-
 template <typename T>
 Result<std::vector<std::string>> regex_filter_impl(std::span<T> input, const std::string & pattern, size_t max_size)
 {
@@ -611,13 +599,15 @@ Result<std::vector<std::string>> regex_filter_impl(std::span<T> input, const std
         Result<void> subject = check_regex_subject(std::string_view(entry).size(), max_size);
         SIHD_UNEXPECTED_RETURN(subject);
     }
-    Result<std::regex> regex_pattern = compile_regex(pattern);
+    Result<Regex> regex_pattern = Regex::compile(pattern);
     SIHD_UNEXPECTED_RETURN(regex_pattern);
     std::vector<std::string> output;
     for (const auto & entry : input)
     {
         const std::string_view view(entry);
-        if (std::regex_search(view.begin(), view.end(), *regex_pattern))
+        Result<bool> found = regex_pattern->matches(view);
+        SIHD_UNEXPECTED_RETURN(found);
+        if (*found)
         {
             output.emplace_back(view);
         }
@@ -699,28 +689,18 @@ Result<bool> regex_match(std::string_view str, const std::string & pattern, size
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<std::regex> regex_pattern = compile_regex(pattern);
+    Result<Regex> regex_pattern = Regex::compile(pattern, Regex::Mode::full);
     SIHD_UNEXPECTED_RETURN(regex_pattern);
-    return std::regex_match(str.begin(), str.end(), *regex_pattern);
+    return regex_pattern->matches(str);
 }
 
 Result<std::vector<std::string>> regex_search(std::string_view str, const std::string & pattern, size_t max_size)
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<std::regex> regex_pattern = compile_regex(pattern);
+    Result<Regex> regex_pattern = Regex::compile(pattern);
     SIHD_UNEXPECTED_RETURN(regex_pattern);
-    using sv_iterator = std::string_view::const_iterator;
-    std::regex_iterator<sv_iterator> it(str.begin(), str.end(), *regex_pattern);
-    const decltype(it) end;
-
-    std::vector<std::string> matches;
-    while (it != end)
-    {
-        matches.push_back(it->str());
-        ++it;
-    }
-    return matches;
+    return regex_pattern->find_all(str);
 }
 
 Result<std::string>
@@ -728,9 +708,9 @@ Result<std::string>
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<std::regex> regex_pattern = compile_regex(pattern);
+    Result<Regex> regex_pattern = Regex::compile(pattern);
     SIHD_UNEXPECTED_RETURN(regex_pattern);
-    return std::regex_replace(str, *regex_pattern, replace);
+    return regex_pattern->replace_all(str, replace);
 }
 
 Result<std::vector<std::string>>

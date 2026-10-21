@@ -36,7 +36,7 @@ size_t table_len(const char **table);
 std::span<const char *> table_span(char **table);
 std::span<const char *> table_span(const char **table);
 
-// std::regex backtracks exponentially on hostile subjects: callers bound the subject size
+// pcre2 bounds backtracking with its match limits: the subject size only bounds the memory spent per call
 inline constexpr size_t default_regex_max_size = 1024 * 1024;
 
 Result<bool> regex_match(std::string_view str, const std::string & pattern, size_t max_size = default_regex_max_size);

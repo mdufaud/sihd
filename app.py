@@ -32,9 +32,9 @@ modules = {
         "depends": ['json', 'pch'],
         "linux-libs": ['pthread'], # bionic has threading in libc
         "windows-libs": ['pthread'],
-        "extlibs": ['fmt', 'cli11'],
-        "libs": ['CLI11'], # vcpkg builds cli11 as a static lib
-        "export-libs": ['fmt', 'CLI11'],
+        "extlibs": ['fmt', 'cli11', 'pcre2'],
+        "libs": ['CLI11', 'pcre2-8'], # vcpkg builds cli11 as a static lib
+        "export-libs": ['fmt', 'CLI11', 'pcre2-8'],
         "android-libs": ['log'],
         "web-flags": [
             "-Wno-deprecated-literal-operator",
