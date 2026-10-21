@@ -8,12 +8,10 @@ on:
     branches: [master]
     paths-ignore:
       - '**.md'
-      - '.internal/**'
       - 'tmp/**'
   pull_request:
     paths-ignore:
       - '**.md'
-      - '.internal/**'
       - 'tmp/**'
 
 concurrency:
