@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared base for compile.sh / dependencies.sh / test.sh.
+# Shared base for compile.sh / dependencies.sh / test.sh / compile_android.sh.
 #
 # A consumer sets:
 #   ACTION         (array)  make invocation, e.g. ACTION=(make) / (make dep) / (make itest)
@@ -45,6 +45,7 @@ ensure_android_sign_config() {
     local dir
     dir="$(dirname "$props")"
     mkdir -p "$dir/keystores"
+    # throwaway local keystore: the password is a placeholder, not a secret
     keytool -genkeypair -keystore "$dir/keystores/release.keystore" -storepass sihd-android \
         -keypass sihd-android -alias sihd-release -keyalg RSA -keysize 2048 \
         -validity 10000 -dname "CN=sihd,O=sihd,C=FR" >/dev/null 2>&1 || return 1
@@ -101,6 +102,8 @@ build_target() {
     fi
 }
 
+ANDROID_TARGET=(platform=android machine=aarch64 static=1 m=util,imgui demo=1)
+
 # Build matrix shared by compile.sh and dependencies.sh.
 # The caller exports the base flags (lua/py/demo/test) beforehand.
 default_matrix() {
@@ -126,7 +129,7 @@ default_matrix() {
 
     # Android: only when ANDROID_NDK_PATH is set
     if [[ -n "${ANDROID_NDK_PATH:-}" ]]; then
-        build_target "android-arm64" platform=android machine=aarch64 static=1 m=util,imgui demo=1
+        build_target "android-arm64" "${ANDROID_TARGET[@]}"
     fi
 }
 
