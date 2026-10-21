@@ -3,12 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/linux/prctl.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/prctl.hpp>
 
 namespace test
 {
@@ -106,5 +102,3 @@ TEST_F(TestPrctl, test_no_new_privs)
 }
 
 } // namespace test
-
-#endif

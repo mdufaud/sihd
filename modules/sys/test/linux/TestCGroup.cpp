@@ -1,12 +1,8 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/linux/cgroup.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/cgroup.hpp>
 
 namespace test
 {
@@ -93,5 +89,3 @@ TEST_F(TestCGroup, test_cpu)
 }
 
 } // namespace test
-
-#endif

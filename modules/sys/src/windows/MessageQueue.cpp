@@ -7,8 +7,11 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
+#include "internal/wait.hpp"
+
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using sihd::sys::internal::deadline_ms;
 
 namespace sihd::sys
 {
@@ -21,16 +24,6 @@ namespace
 std::string pipe_path(std::string_view name)
 {
     return "\\\\.\\pipe\\" + std::string(name);
-}
-
-DWORD deadline_ms(Duration remaining)
-{
-    if (remaining.get() < 0)
-        return INFINITE;
-    if (remaining.get() <= 0)
-        return 0;
-    const int64_t milliseconds = (remaining.get() + 999999) / 1000000;
-    return milliseconds >= static_cast<int64_t>(INFINITE) ? INFINITE - 1 : static_cast<DWORD>(milliseconds);
 }
 
 bool is_disconnect(DWORD last_error)

@@ -52,6 +52,23 @@ class EventFd;
 class TimerFd;
 } // namespace linux_
 
+namespace windows_
+{
+class ComInit;
+class Job;
+
+namespace registry
+{
+class Key;
+}
+
+namespace scm
+{
+class Service;
+}
+
+} // namespace windows_
+
 } // namespace sihd::sys
 
 #endif

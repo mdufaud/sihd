@@ -5,8 +5,11 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
+#include "internal/wait.hpp"
+
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using sihd::sys::internal::deadline_ms;
 
 namespace sihd::sys
 {
@@ -81,8 +84,7 @@ bool Semaphore::wait_for(Duration duration)
     if (_sem == nullptr)
         return false;
 
-    const DWORD milliseconds = static_cast<DWORD>((duration.get() + 999999) / 1000000);
-    return WaitForSingleObject(static_cast<HANDLE>(_sem), milliseconds) == WAIT_OBJECT_0;
+    return WaitForSingleObject(static_cast<HANDLE>(_sem), deadline_ms(duration)) == WAIT_OBJECT_0;
 }
 
 bool Semaphore::post()

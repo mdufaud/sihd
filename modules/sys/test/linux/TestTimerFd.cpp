@@ -1,13 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/linux/TimerFd.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/TimerFd.hpp>
 
 namespace test
 {
@@ -107,5 +103,3 @@ TEST_F(TestTimerFd, test_move)
 }
 
 } // namespace test
-
-#endif

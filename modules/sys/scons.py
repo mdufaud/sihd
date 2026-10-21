@@ -46,7 +46,15 @@ if builder.build_platform != "web":
     env.build_demo("demo/fs_info.cpp", name = "fs_info", libs = [sihd_sys_libname])
     env.build_demo("demo/sys_info.cpp", name = "sys_info", libs = [sihd_sys_libname])
 
-test = env.build_test(Glob('test/*.cpp'), libs = [sihd_sys_libname])
+test_sources = Glob('test/*.cpp')
+if builder.build_platform == "windows":
+    test_sources += Glob('test/windows/*.cpp')
+else:
+    test_sources += Glob('test/linux/*.cpp')
+
+test = env.build_test(test_sources, libs = [sihd_sys_libname])
 
 if builder.build_tests:
     env.build_bin("test/helper/main.cpp", name = "sihd_sys_test_helper", libs = [sihd_sys_libname])
+    if builder.build_platform == "windows":
+        env.build_bin("test/windows/service/main.cpp", name = "sihd_sys_test_service", libs = [sihd_sys_libname])

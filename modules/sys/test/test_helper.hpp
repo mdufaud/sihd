@@ -6,6 +6,8 @@
 #include <string>
 #include <string_view>
 
+#include <fmt/format.h>
+
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
@@ -23,17 +25,22 @@
 namespace test
 {
 
-// path to the sihd_sys_test_helper binary built next to the module binaries
-inline std::string helper_path()
+// path to a test binary built next to the module binaries
+inline std::string bin_path(std::string_view name)
 {
     namespace fs = sihd::sys::fs;
-    // program::path() -> <build>/test/bin/sihd_sys[.exe], helper -> <build>/bin/sihd_sys_test_helper
+    // program::path() -> <build>/test/bin/sihd_sys[.exe], helpers -> <build>/bin/<name>[.exe]
     const std::string build_dir = fs::parent(fs::parent(fs::parent(sihd::sys::program::path())));
 #if defined(__SIHD_WINDOWS__)
-    return fs::combine(build_dir, "bin/sihd_sys_test_helper.exe");
+    return fs::combine(build_dir, fmt::format("bin/{}.exe", name));
 #else
-    return fs::combine(build_dir, "bin/sihd_sys_test_helper");
+    return fs::combine(build_dir, fmt::format("bin/{}", name));
 #endif
+}
+
+inline std::string helper_path()
+{
+    return bin_path("sihd_sys_test_helper");
 }
 
 // sets the variable for the scope; a nullopt value unsets it; the previous state is restored

@@ -22,6 +22,8 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
+#include "internal/drive_type.hpp"
+
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
@@ -67,16 +69,16 @@ COPYFILE2_MESSAGE_ACTION CALLBACK copy_progress_cb(const COPYFILE2_MESSAGE *mess
 
 MountType drive_type_to_mount(UINT type)
 {
-    switch (type)
+    switch (internal::media_type_from_native(type))
     {
-        case DRIVE_REMOTE:
+        case windows_::volume::MediaType::remote:
             return MountType::network;
-        case DRIVE_RAMDISK:
+        case windows_::volume::MediaType::ramdisk:
             return MountType::ram;
-        case DRIVE_CDROM:
+        case windows_::volume::MediaType::cdrom:
             return MountType::readonly;
-        case DRIVE_FIXED:
-        case DRIVE_REMOVABLE:
+        case windows_::volume::MediaType::fixed:
+        case windows_::volume::MediaType::removable:
             return MountType::local;
         default:
             return MountType::unknown;

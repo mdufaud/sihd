@@ -3,13 +3,9 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/ns.hpp>
 
 namespace test
 {
@@ -145,5 +141,3 @@ TEST_F(TestNs, test_setns_errors)
 }
 
 } // namespace test
-
-#endif

@@ -1,12 +1,8 @@
 #include <gtest/gtest.h>
 
+#include <sihd/sys/linux/limit.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/limit.hpp>
 
 namespace test
 {
@@ -86,5 +82,3 @@ TEST_F(TestLimit, test_errors)
 }
 
 } // namespace test
-
-#endif

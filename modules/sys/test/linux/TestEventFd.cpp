@@ -3,12 +3,8 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/linux/EventFd.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/build.hpp>
-
-#if defined(__SIHD_LINUX__)
-
-# include <sihd/sys/linux/EventFd.hpp>
 
 namespace test
 {
@@ -95,5 +91,3 @@ TEST_F(TestEventFd, test_move)
 }
 
 } // namespace test
-
-#endif
