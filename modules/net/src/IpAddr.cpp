@@ -15,21 +15,21 @@
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <arpa/inet.h>  // inet_pton...
-# include <netdb.h>      // getnameinfo
-# include <netinet/in.h> // sockaddr
-# include <sys/socket.h> // getnameinfo
+# include <arpa/inet.h>
+# include <netdb.h>
+# include <netinet/in.h>
+# include <sys/socket.h>
 #else
 # include <winsock2.h>
 
-# include <ws2tcpip.h> // addrinfo
+# include <ws2tcpip.h>
 #endif
 
 namespace sihd::net
 {
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum ErrorCode;
 using namespace sihd::net;
 
 namespace
@@ -77,7 +77,7 @@ Result<void> to_sockaddr_in6(sockaddr_in6 *addr, const std::string & ip, int por
     return {};
 }
 
-}; // namespace
+} // namespace
 
 IpAddr::IpAddr()
 {
@@ -207,7 +207,7 @@ IpAddr IpAddr::localhost(int port, bool ipv6)
     return {ipv6 ? "::1" : "127.0.0.1", port};
 }
 
-sihd::util::Result<void> IpAddr::set_subnet_mask(const std::string & mask)
+Result<void> IpAddr::set_subnet_mask(const std::string & mask)
 {
     struct sockaddr_in sockaddr_mask;
     if (to_sockaddr_in(&sockaddr_mask, mask).has_value() == false)
@@ -312,7 +312,6 @@ bool IpAddr::is_same_subnet(const sockaddr_in6 & addr) const
     struct in6_addr masked_addr1;
     struct in6_addr masked_addr2;
 
-    // Create the subnet mask
     memset(&mask, 0, sizeof(mask));
     for (uint32_t i = 0; i < _netmask_value / 8; i++)
     {
@@ -323,14 +322,12 @@ bool IpAddr::is_same_subnet(const sockaddr_in6 & addr) const
         mask.s6_addr[_netmask_value / 8] = (uint8_t)(0xFF << (8 - (_netmask_value % 8)));
     }
 
-    // Apply the subnet mask to both addresses
     for (int i = 0; i < 16; i++)
     {
         masked_addr1.s6_addr[i] = _addr.sockaddr_in6.sin6_addr.s6_addr[i] & mask.s6_addr[i];
         masked_addr2.s6_addr[i] = addr.sin6_addr.s6_addr[i] & mask.s6_addr[i];
     }
 
-    // Compare the masked addresses
     return memcmp(&masked_addr1, &masked_addr2, sizeof(masked_addr1)) == 0;
 }
 
@@ -363,11 +360,10 @@ const std::string & IpAddr::hostname() const
     return _hostname;
 }
 
-sihd::util::Result<void> IpAddr::fetch_hostname()
+Result<void> IpAddr::fetch_hostname()
 {
     if (!this->has_ip())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot fetch name of IpAddr with no ip"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot fetch name of IpAddr with no ip"));
 
     const size_t addr_len = this->is_ipv6() ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in);
 

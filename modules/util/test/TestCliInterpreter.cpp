@@ -13,17 +13,22 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 
-static int eval(CliInterpreter & cli, std::vector<std::string> args)
+namespace
+{
+
+int eval(CliInterpreter & cli, std::vector<std::string> args)
 {
     return cli.evaluate(args);
 }
 
+} // namespace
+
 class TestCliInterpreter: public ::testing::Test
 {
     protected:
-        TestCliInterpreter() { sihd::util::LoggerManager::stream(); }
+        TestCliInterpreter() { LoggerManager::stream(); }
 
-        virtual ~TestCliInterpreter() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCliInterpreter() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestCliInterpreter, test_evaluate_without_runtime)
@@ -44,7 +49,6 @@ TEST_F(TestCliInterpreter, test_exit_status)
     CliInterpreter cli("interp");
     cli.root().add_command("quit", "quit").on_run([] { throw CliInterpreter::Exit(7); });
     EXPECT_EQ(eval(cli, {"quit"}), 7);
-    // the evaluation state did not stick
     cli.root().add_command("ok", "ok").on_run([] {});
     EXPECT_EQ(eval(cli, {"ok"}), EXIT_SUCCESS);
 }

@@ -128,11 +128,9 @@ TEST_F(TestTcp, test_tcp_server)
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    // connection not accepted
     EXPECT_EQ(server_handler.client_count(), 4u);
     if (server_handler.client_count() == 4u)
     {
-        // disconnected
         EXPECT_EQ(client5.receive(hello_world_arr), 0);
     }
 
@@ -156,21 +154,17 @@ TEST_F(TestTcp, test_tcp_client)
 
     make_listener(server, localhost);
 
-    // client connect
     EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.socket_opened());
     EXPECT_TRUE(client.connected());
 
-    // server accept
     int accepted_socket = server.accept(connect_timeout_ms).value_or(-1);
     Socket accepted(accepted_socket);
 
-    // client send hello world
     EXPECT_EQ(client.send(hello), (ssize_t)hello.size());
     EXPECT_EQ(accepted.receive(recv_arr), (ssize_t)hello.size());
     EXPECT_TRUE(hello.is_equal(recv_arr));
 
-    // client receive bye
     Handler<INetReceiver *> handler([&recv_arr](INetReceiver *receiver) {
         (void)receiver->receive(recv_arr);
         SIHD_LOG(debug, "Data received: {} - {} bytes", recv_arr.str(), recv_arr.byte_size());
@@ -180,7 +174,6 @@ TEST_F(TestTcp, test_tcp_client)
     EXPECT_TRUE(client.poll(1));
     EXPECT_TRUE(bye.is_equal(recv_arr));
 
-    // shutdown and close
     (void)accepted.shutdown();
     EXPECT_EQ(client.receive(recv_arr), 0);
     EXPECT_FALSE(client.connected());
@@ -534,6 +527,7 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
 
     ArrChar recv_arr(payload_size);
     size_t received = 0;
+
     // non-blocking with a deadline: a dead server must fail the test, not hang it
     ASSERT_TRUE(client.socket().set_blocking(false));
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -550,6 +544,7 @@ TEST_F(TestTcp, test_tcp_server_partial_write)
         ASSERT_GT(received_bytes, 0);
         received += (size_t)received_bytes;
     }
+
     EXPECT_EQ(received, payload_size);
     EXPECT_EQ(memcmp(recv_arr.buf(), payload.buf(), payload_size), 0);
 

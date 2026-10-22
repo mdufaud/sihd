@@ -12,8 +12,7 @@
 namespace sihd::sys
 {
 
-// linux naming kept on every platform: libcap platforms carry the full kernel list, the
-// others only the subset with a portable spelling
+// linux naming on every platform: libcap platforms carry the full kernel list, the others a portable subset
 enum class Cap
 {
     chown,
@@ -62,8 +61,6 @@ enum class Cap
 #endif
 };
 
-// Stateless live-process capability helpers (mirror of sihd::sys::user);
-// the snapshot editor is sihd::sys::CapabilitySet.
 namespace cap
 {
 
@@ -71,7 +68,6 @@ constexpr bool supported = sihd::util::build::is_windows
                            || (sihd::util::build::is_linux && !sihd::util::build::is_android
                                && !sihd::util::build::is_emscripten);
 
-// every value of Cap, in declaration order
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 constexpr size_t count = 41;
 #else
@@ -79,19 +75,15 @@ constexpr size_t count = 12;
 #endif
 std::span<const Cap> all();
 
-// "cap_net_raw" <-> Cap::net_raw
 std::string_view to_name(Cap cap);
 std::optional<Cap> from_name(std::string_view name);
 
-// true if the capability has a counterpart on the running platform - the windows
-// counterparts only approximate the linux effect
+// true if the capability has a counterpart on this platform (windows ones only approximate the linux effect)
 bool available(Cap cap);
 
-// live state: the capability is effective right now, without building a snapshot
 bool has(Cap cap);
 
-// linux only, no-op returning false elsewhere; acts on the live process, no snapshot nor apply().
-// ambient is per-thread (kept across execve), bounding is process-wide (irreversible)
+// linux only, false elsewhere; ambient is per-thread and kept across execve, bounding is process-wide, irreversible
 bool set_ambient(Cap cap, bool active);
 bool ambient(Cap cap);
 bool drop_bounding(Cap cap);

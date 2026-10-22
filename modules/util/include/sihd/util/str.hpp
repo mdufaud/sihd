@@ -145,12 +145,10 @@ std::string hexdump(const IArray & arr, char delim);
 std::string hexdump(const IArrayView & arr, char delim);
 std::string hexdump(const void *mem, size_t size, char delim);
 
-// formatted hexdump
 std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols = 8);
 
-// rfc 4648 base64
 std::string to_base64(const void *mem, size_t size);
 std::string to_base64(const IArray & arr);
 std::string to_base64(const IArrayView & arr);
@@ -190,9 +188,7 @@ constexpr int escape_char()
     return '\\';
 }
 
-// simple wrapped find
 bool is_char_enclose_start(int c, const char *authorized_start_enclose = encloses_start());
-// simple wrapped find
 bool is_char_enclose_stop(int c, const char *authorized_stop_enclose = encloses_stop());
 
 /**

@@ -17,9 +17,9 @@ using namespace sihd::util;
 class TestWorker: public ::testing::Test
 {
     protected:
-        TestWorker() { sihd::util::LoggerManager::stream(); }
+        TestWorker() { LoggerManager::stream(); }
 
-        virtual ~TestWorker() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestWorker() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -63,13 +63,13 @@ TEST_F(TestWorker, test_stepworker_multiple)
         return true;
     });
     StepWorker worker(&runnable);
-    // 1 / ms
     EXPECT_TRUE(worker.set_frequency(500));
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
     std::this_thread::sleep_for(std::chrono::milliseconds(15));
     EXPECT_TRUE(worker.stop_worker());
     int really_ran = ran;
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
     EXPECT_GE(really_ran, 2);
     EXPECT_EQ(ran, really_ran);
 }
@@ -84,7 +84,6 @@ TEST_F(TestWorker, test_stepworker_once)
         return true;
     });
     StepWorker worker(&runnable);
-    // 10 hz
     EXPECT_TRUE(worker.set_frequency(0.1));
     EXPECT_TRUE(worker.start_sync_worker("stepworker-thread"));
     std::this_thread::sleep_for(std::chrono::milliseconds(5));

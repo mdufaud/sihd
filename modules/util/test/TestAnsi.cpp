@@ -35,9 +35,9 @@ void unset_env(const char *name)
 class TestAnsi: public ::testing::Test
 {
     protected:
-        TestAnsi() { sihd::util::LoggerManager::stream(); }
+        TestAnsi() { LoggerManager::stream(); }
 
-        virtual ~TestAnsi() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestAnsi() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -74,6 +74,7 @@ TEST_F(TestAnsi, test_term_colors)
     EXPECT_EQ(ansi::fmt("text", ansi::attr::RED2), "\x1B[91mtext\x1B[0m");
     EXPECT_EQ(ansi::fmt("text", ansi::attr::GREEN2), "\x1B[92mtext\x1B[0m");
     EXPECT_EQ(ansi::fmt("text", ansi::attr::YELLOW2), "\x1B[93mtext\x1B[0m");
+
     EXPECT_EQ(ansi::fmt("text", ansi::attr::BLUE2), "\x1B[94mtext\x1B[0m");
     EXPECT_EQ(ansi::fmt("text", ansi::attr::VIOLET2), "\x1B[95mtext\x1B[0m");
     EXPECT_EQ(ansi::fmt("text", ansi::attr::CYAN2), "\x1B[96mtext\x1B[0m");
@@ -112,6 +113,7 @@ TEST_F(TestAnsi, test_term_colors)
         SIHD_LOG(debug, "{}", ansi::fmt("RED2", ansi::attr::RED2));
         SIHD_LOG(debug, "{}", ansi::fmt("GREEN2", ansi::attr::GREEN2));
         SIHD_LOG(debug, "{}", ansi::fmt("YELLOW2", ansi::attr::YELLOW2));
+
         SIHD_LOG(debug, "{}", ansi::fmt("BLUE2", ansi::attr::BLUE2));
         SIHD_LOG(debug, "{}", ansi::fmt("VIOLET2", ansi::attr::VIOLET2));
         SIHD_LOG(debug, "{}", ansi::fmt("CYAN2", ansi::attr::CYAN2));

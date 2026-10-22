@@ -11,6 +11,37 @@ std::string parse_error(const simdjson::simdjson_error & e)
     return std::string("parse error: ") + e.what();
 }
 
+constexpr size_t idx_null = 0;
+constexpr size_t idx_bool = 1;
+constexpr size_t idx_int = 2;
+constexpr size_t idx_uint = 3;
+constexpr size_t idx_float = 4;
+constexpr size_t idx_string = 5;
+constexpr size_t idx_array = 6;
+constexpr size_t idx_object = 7;
+
+struct CopyVisitor
+{
+        Json::Value operator()(std::nullptr_t) const { return nullptr; }
+        Json::Value operator()(bool v) const { return v; }
+        Json::Value operator()(int64_t v) const { return v; }
+        Json::Value operator()(uint64_t v) const { return v; }
+        Json::Value operator()(double v) const { return v; }
+        Json::Value operator()(const std::string & v) const { return v; }
+        Json::Value operator()(const Json::ArrayPtr & v) const
+        {
+            if (!v)
+                return Json::ArrayPtr(nullptr);
+            return std::make_unique<Json::Array>(*v);
+        }
+        Json::Value operator()(const Json::ObjectPtr & v) const
+        {
+            if (!v)
+                return Json::ObjectPtr(nullptr);
+            return std::make_unique<Json::Object>(*v);
+        }
+};
+
 } // namespace
 
 Json::Json(): _value(nullptr), _discarded(false) {}
@@ -83,27 +114,6 @@ Json::Json(const Json & other):
     _dom_holder(other._dom_holder),
     _dom_element(other._dom_element)
 {
-    struct CopyVisitor
-    {
-            Value operator()(std::nullptr_t) const { return nullptr; }
-            Value operator()(bool v) const { return v; }
-            Value operator()(int64_t v) const { return v; }
-            Value operator()(uint64_t v) const { return v; }
-            Value operator()(double v) const { return v; }
-            Value operator()(const std::string & v) const { return v; }
-            Value operator()(const ArrayPtr & v) const
-            {
-                if (!v)
-                    return ArrayPtr(nullptr);
-                return std::make_unique<Array>(*v);
-            }
-            Value operator()(const ObjectPtr & v) const
-            {
-                if (!v)
-                    return ObjectPtr(nullptr);
-                return std::make_unique<Object>(*v);
-            }
-    };
     _value = std::visit(CopyVisitor {}, other._value);
 }
 
@@ -240,21 +250,21 @@ Json::Type Json::type() const
     }
     switch (_value.index())
     {
-        case 0:
+        case idx_null:
             return Type::Null;
-        case 1:
+        case idx_bool:
             return Type::Bool;
-        case 2:
+        case idx_int:
             return Type::Int;
-        case 3:
+        case idx_uint:
             return Type::Uint;
-        case 4:
+        case idx_float:
             return Type::Float;
-        case 5:
+        case idx_string:
             return Type::String;
-        case 6:
+        case idx_array:
             return std::get<ArrayPtr>(_value) ? Type::Array : Type::Null;
-        case 7:
+        case idx_object:
             return std::get<ObjectPtr>(_value) ? Type::Object : Type::Null;
         default:
             return Type::Null;
@@ -387,12 +397,12 @@ int64_t Json::get<int64_t>() const
 {
     if (_dom_holder != nullptr)
     {
-        auto t = _dom_element.type();
-        if (t == simdjson::dom::element_type::INT64)
+        auto dom_type = _dom_element.type();
+        if (dom_type == simdjson::dom::element_type::INT64)
             return int64_t(_dom_element);
-        if (t == simdjson::dom::element_type::UINT64)
+        if (dom_type == simdjson::dom::element_type::UINT64)
             return static_cast<int64_t>(uint64_t(_dom_element));
-        if (t == simdjson::dom::element_type::DOUBLE)
+        if (dom_type == simdjson::dom::element_type::DOUBLE)
             return static_cast<int64_t>(double(_dom_element));
         throw std::runtime_error("Json: not a number");
     }
@@ -410,12 +420,12 @@ uint64_t Json::get<uint64_t>() const
 {
     if (_dom_holder != nullptr)
     {
-        auto t = _dom_element.type();
-        if (t == simdjson::dom::element_type::UINT64)
+        auto dom_type = _dom_element.type();
+        if (dom_type == simdjson::dom::element_type::UINT64)
             return uint64_t(_dom_element);
-        if (t == simdjson::dom::element_type::INT64)
+        if (dom_type == simdjson::dom::element_type::INT64)
             return static_cast<uint64_t>(int64_t(_dom_element));
-        if (t == simdjson::dom::element_type::DOUBLE)
+        if (dom_type == simdjson::dom::element_type::DOUBLE)
             return static_cast<uint64_t>(double(_dom_element));
         throw std::runtime_error("Json: not a number");
     }
@@ -469,12 +479,12 @@ float Json::get<float>() const
 {
     if (_dom_holder != nullptr)
     {
-        auto t = _dom_element.type();
-        if (t == simdjson::dom::element_type::DOUBLE)
+        auto dom_type = _dom_element.type();
+        if (dom_type == simdjson::dom::element_type::DOUBLE)
             return static_cast<float>(double(_dom_element));
-        if (t == simdjson::dom::element_type::INT64)
+        if (dom_type == simdjson::dom::element_type::INT64)
             return static_cast<float>(int64_t(_dom_element));
-        if (t == simdjson::dom::element_type::UINT64)
+        if (dom_type == simdjson::dom::element_type::UINT64)
             return static_cast<float>(uint64_t(_dom_element));
         throw std::runtime_error("Json: not a number");
     }
@@ -492,12 +502,12 @@ double Json::get<double>() const
 {
     if (_dom_holder != nullptr)
     {
-        auto t = _dom_element.type();
-        if (t == simdjson::dom::element_type::DOUBLE)
+        auto dom_type = _dom_element.type();
+        if (dom_type == simdjson::dom::element_type::DOUBLE)
             return double(_dom_element);
-        if (t == simdjson::dom::element_type::INT64)
+        if (dom_type == simdjson::dom::element_type::INT64)
             return static_cast<double>(int64_t(_dom_element));
-        if (t == simdjson::dom::element_type::UINT64)
+        if (dom_type == simdjson::dom::element_type::UINT64)
             return static_cast<double>(uint64_t(_dom_element));
         throw std::runtime_error("Json: not a number");
     }
@@ -532,8 +542,6 @@ std::vector<std::string> Json::get<std::vector<std::string>>() const
     return out;
 }
 
-// the DOM is kept as-is: the variant is built lazily
-
 std::expected<Json, std::string> Json::parse(std::string_view str)
 {
     return parse(str.data(), str.data() + str.size());
@@ -560,10 +568,10 @@ std::expected<Json, std::string> Json::parse(const char *begin, const char *end)
 
 bool Json::operator==(const Json & other) const
 {
-    Type t = type();
-    if (t != other.type())
+    Type this_type = type();
+    if (this_type != other.type())
         return false;
-    switch (t)
+    switch (this_type)
     {
         case Type::Null:
         case Type::Discarded:
@@ -723,25 +731,25 @@ void Json::_dump_to_builder(simdjson::builder::string_builder & sb, int indent, 
 
     switch (_value.index())
     {
-        case 0: // nullptr_t
+        case idx_null:
             sb.append_null();
             break;
-        case 1: // bool
+        case idx_bool:
             sb.append(std::get<bool>(_value));
             break;
-        case 2: // int64_t
+        case idx_int:
             sb.append(std::get<int64_t>(_value));
             break;
-        case 3: // uint64_t
+        case idx_uint:
             sb.append(std::get<uint64_t>(_value));
             break;
-        case 4: // double
+        case idx_float:
             sb.append(std::get<double>(_value));
             break;
-        case 5: // string
+        case idx_string:
             sb.escape_and_append_with_quotes(std::string_view(std::get<std::string>(_value)));
             break;
-        case 6: // ArrayPtr
+        case idx_array:
         {
             const auto & ptr = std::get<ArrayPtr>(_value);
             if (!ptr)
@@ -762,7 +770,7 @@ void Json::_dump_to_builder(simdjson::builder::string_builder & sb, int indent, 
             sb.end_array();
             break;
         }
-        case 7: // ObjectPtr
+        case idx_object:
         {
             const auto & ptr = std::get<ObjectPtr>(_value);
             if (!ptr)

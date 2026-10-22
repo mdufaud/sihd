@@ -18,9 +18,9 @@ using namespace sihd::sys;
 class TestPluginLoader: public ::testing::Test
 {
     protected:
-        TestPluginLoader() { sihd::util::LoggerManager::stream(); }
+        TestPluginLoader() { LoggerManager::stream(); }
 
-        virtual ~TestPluginLoader() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPluginLoader() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -29,7 +29,7 @@ class TestPluginLoader: public ::testing::Test
 
 TEST_F(TestPluginLoader, test_pluginloader)
 {
-    if (sihd::util::build::is_run_with_sanitizer)
+    if (build::is_run_with_sanitizer)
         GTEST_SKIP() << "test does not work with sanitizers";
 
     auto unknown_lib = PluginLoader::create_from_library("unknown_lib", "symbol", "err");
@@ -46,7 +46,7 @@ TEST_F(TestPluginLoader, test_pluginloader)
         EXPECT_NE(unknown_factory.error().code, none);
     }
 
-    if constexpr (!sihd::util::build::is_statically_linked)
+    if constexpr (!build::is_statically_linked)
     {
         // plugin loading needs a dynamic build — static links have no loadable module
         auto loaded = PluginLoader::create_from_library("sihd_util", "Node", "test_node");
@@ -67,7 +67,7 @@ TEST_F(TestPluginLoader, test_pluginloader)
 
 TEST_F(TestPluginLoader, test_pluginloader_create_from_linked)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
 
     auto unknown = PluginLoader::create_from_linked("Nope", "nope_obj");

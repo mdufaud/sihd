@@ -8,14 +8,15 @@ namespace test
 
 SIHD_NEW_LOGGER("test");
 
+using namespace sihd::util;
 using namespace sihd::http;
 using namespace std::literals;
 
 class TestMultipart: public ::testing::Test
 {
     protected:
-        TestMultipart() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestMultipart() { sihd::util::LoggerManager::clear_loggers(); }
+        TestMultipart() { LoggerManager::stream(); }
+        virtual ~TestMultipart() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestMultipart, test_boundary)
@@ -75,7 +76,6 @@ TEST_F(TestMultipart, test_parse)
     EXPECT_EQ(file->data, "hello file");
     EXPECT_EQ(multipart->file("username"), nullptr);
 
-    // no part at all
     auto empty = Multipart::parse("--boundary--\r\n", "multipart/form-data; boundary=boundary");
     ASSERT_TRUE(empty.has_value());
     EXPECT_TRUE(empty->parts().empty());
@@ -103,7 +103,7 @@ TEST_F(TestMultipart, test_build)
 
     multipart.add_field("username", "sihd");
     multipart.add_field("json", "{}", "application/json");
-    multipart.add_file("document", "/tmp/doc.txt", "doc.txt", "text/plain");
+    multipart.add_file("document", "data/doc.txt", "doc.txt", "text/plain");
 
     ASSERT_EQ(multipart.parts().size(), 3u);
     EXPECT_FALSE(multipart.empty());
@@ -113,7 +113,7 @@ TEST_F(TestMultipart, test_build)
 
     const Multipart::Part *file = multipart.file("document");
     ASSERT_NE(file, nullptr);
-    EXPECT_EQ(file->path, "/tmp/doc.txt");
+    EXPECT_EQ(file->path, "data/doc.txt");
     EXPECT_EQ(file->filename, "doc.txt");
     EXPECT_EQ(file->content_type, "text/plain");
     EXPECT_TRUE(file->is_file());
@@ -122,7 +122,7 @@ TEST_F(TestMultipart, test_build)
     // the navigator copies its payload around: parts must survive a copy
     Multipart copy = multipart;
     EXPECT_EQ(copy.value("username").value_or(""), "sihd");
-    EXPECT_EQ(copy.file("document")->path, "/tmp/doc.txt");
+    EXPECT_EQ(copy.file("document")->path, "data/doc.txt");
 
     multipart.clear();
     EXPECT_TRUE(multipart.empty());
@@ -185,9 +185,7 @@ TEST_F(TestMultipart, test_parse_malformed)
     EXPECT_FALSE(Multipart::parse("", "multipart/form-data; boundary=b").has_value());
     EXPECT_FALSE(Multipart::parse(valid, "multipart/form-data").has_value());
     EXPECT_FALSE(Multipart::parse(valid, "multipart/form-data; boundary=other").has_value());
-    // no closing delimiter
     EXPECT_FALSE(Multipart::parse(valid.substr(0, valid.size() - 2), "multipart/form-data; boundary=b").has_value());
-    // header line without colon
     EXPECT_FALSE(
         Multipart::parse("--b\r\nbroken header\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b").has_value());
     EXPECT_FALSE(Multipart::parse("--b", "multipart/form-data; boundary=b").has_value());
@@ -198,7 +196,6 @@ TEST_F(TestMultipart, test_first_delimiter_must_start_a_line)
     // a delimiter inside the preamble line does not start the parts
     EXPECT_FALSE(Multipart::parse("xx--b\r\nxx--b--", "multipart/form-data; boundary=b").has_value());
 
-    // one at the very start still does
     auto at_start = Multipart::parse("--b\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b");
     ASSERT_TRUE(at_start.has_value());
     ASSERT_EQ(at_start->parts().size(), 1u);
@@ -224,11 +221,11 @@ TEST_F(TestMultipart, test_add_rejects_control_characters)
     ASSERT_EQ(multipart.parts().size(), 1u);
     EXPECT_EQ(multipart.parts()[0].name, "ok");
 
-    multipart.add_file("doc", "/tmp/f.txt", "a\"b.txt");
+    multipart.add_file("doc", "data/f.txt", "a\"b.txt");
     EXPECT_EQ(multipart.parts().size(), 1u);
 
     // a file added without filename stays retrievable
-    multipart.add_file("doc", "/tmp/f.txt");
+    multipart.add_file("doc", "data/f.txt");
     ASSERT_EQ(multipart.parts().size(), 2u);
     EXPECT_NE(multipart.file("doc"), nullptr);
 }

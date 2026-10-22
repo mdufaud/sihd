@@ -29,9 +29,9 @@ using namespace sihd::sys;
 class TestIcmp: public ::testing::Test
 {
     protected:
-        TestIcmp() { sihd::util::LoggerManager::stream(); }
+        TestIcmp() { LoggerManager::stream(); }
 
-        virtual ~TestIcmp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestIcmp() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() { _seq = 1; }
 
@@ -39,21 +39,21 @@ class TestIcmp: public ::testing::Test
 
         void test_icmp(IcmpSender & sender)
         {
-            sender.set_poll_timeout(500); // Augmente le timeout pour IPv6
+            sender.set_poll_timeout(500);
             sender.set_id(os::pid());
             sender.set_ttl(64);
             sender.set_data_size(56u);
-            sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
+            Timestamp now = Clock::default_clock.now();
             sender.set_data({&now, sizeof(now)});
             sender.set_seq(1);
 
             bool reached = false;
             std::atomic<bool> response_received {false};
 
-            sihd::util::Handler<IcmpSender *> handler([&](IcmpSender *sender) {
+            Handler<IcmpSender *> handler([&](IcmpSender *sender) {
                 const IcmpResponse & response = sender->response();
                 EXPECT_EQ(response.size, 56u);
-                EXPECT_EQ(response.seq, 1); // Sequence is what identifies the ping
+                EXPECT_EQ(response.seq, 1);
                 // For IPv6 SOCK_DGRAM, kernel assigns its own ID (socket identifier)
                 // For IPv4 SOCK_RAW, we control the ID and it should match getpid() (truncated to 16 bits)
                 if (!sender->socket().is_ipv6())
@@ -61,8 +61,8 @@ class TestIcmp: public ::testing::Test
                     EXPECT_EQ(response.id, os::pid() & 0xFFFF);
                 }
 
-                sihd::util::Timestamp timestamp = ((sihd::util::Timestamp *)response.data)[0];
-                sihd::util::Duration elapsed_ms = sihd::util::Clock::default_clock.now() - timestamp;
+                Timestamp timestamp = ((Timestamp *)response.data)[0];
+                Duration elapsed_ms = Clock::default_clock.now() - timestamp;
 
                 SIHD_LOG(info,
                          "ICMP response: type={} code={} ttl={} id={} seq={} time={}ms from {}",
@@ -74,16 +74,14 @@ class TestIcmp: public ::testing::Test
                          elapsed_ms.milliseconds(),
                          response.client.str());
 
-                // Sequence identifies the ping; ID only matters for IPv4
                 reached = (response.seq == 1) && (sender->socket().is_ipv6() || response.id == (os::pid() & 0xFFFF));
                 response_received = true;
             });
             sender.add_observer(&handler);
 
-            sihd::util::Worker worker([&sender] { return sender.start(); });
+            Worker worker([&sender] { return sender.start(); });
             ASSERT_TRUE(worker.start_sync_worker("receiver"));
 
-            // Give receiver time to start
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
             EXPECT_TRUE(this->send(sender, _host_ipaddr));
@@ -104,7 +102,7 @@ class TestIcmp: public ::testing::Test
 
             for (int attempt = 0; attempt <= max_retries; ++attempt)
             {
-                sihd::util::Timestamp now = sihd::util::Clock::default_clock.now();
+                Timestamp now = Clock::default_clock.now();
                 sender.set_data({&now, sizeof(now)});
 
                 sender.set_seq(_seq);
@@ -116,7 +114,7 @@ class TestIcmp: public ::testing::Test
                 }
 
                 // capture error before logging - logging may overwrite errno
-                const int err = _last_send_error();
+                const int err = os::last_socket_error();
                 if (_is_transient_send_error(err) == false || attempt == max_retries)
                 {
                     SIHD_LOG(error, "Failed to send ICMP packet to {}: {}", host.str(), os::error_str(err));
@@ -131,15 +129,6 @@ class TestIcmp: public ::testing::Test
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             return false;
-        }
-
-        static int _last_send_error()
-        {
-#if defined(__SIHD_WINDOWS__)
-            return WSAGetLastError();
-#else
-            return errno;
-#endif
         }
 
         static bool _is_transient_send_error(int err)

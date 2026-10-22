@@ -1,9 +1,6 @@
 #ifndef __SIHD_SYS_WAYLAND_OUTPUTS_HPP__
 #define __SIHD_SYS_WAYLAND_OUTPUTS_HPP__
 
-// Shared wl_output binding of the wayland backends: every output global bound,
-// their announced state collected during the connection roundtrips.
-
 #include <string>
 #include <string_view>
 #include <vector>
@@ -33,8 +30,7 @@ class Outputs
 
         const std::vector<OutputState> & states() const;
 
-        // The logical layout extents of every announced output; valid is false
-        // when no output announced a mode.
+        // logical layout extents of every announced output: valid is false when none announced a mode
         struct Extents
         {
                 bool valid = false;
@@ -46,7 +42,6 @@ class Outputs
 
         Extents extents() const;
 
-        // The output whose announced name (v4) is `name`.
         wl_output *find(std::string_view name) const;
 
     private:

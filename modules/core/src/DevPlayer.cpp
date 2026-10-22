@@ -18,7 +18,7 @@ SIHD_LOGGER;
 
 using namespace sihd::util;
 
-DevPlayer::DevPlayer(const std::string & name, sihd::util::Node *parent):
+DevPlayer::DevPlayer(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
     _end_notified(false),
@@ -55,20 +55,20 @@ bool DevPlayer::set_provider(std::string_view path)
     return true;
 }
 
-bool DevPlayer::set_provider_wait_time(sihd::util::time::UnixTime milliseconds)
+bool DevPlayer::set_provider_wait_time(time::UnixTime milliseconds)
 {
     if (milliseconds <= 0)
     {
         SIHD_LOG(error, "DevPlayer: cannot wait for {} milliseconds", milliseconds);
         return false;
     }
-    _collector.set_timeout(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds)));
+    _collector.set_timeout(Duration(time::milliseconds(milliseconds)));
     return true;
 }
 
 bool DevPlayer::add_alias(std::string_view alias_conf)
 {
-    sihd::util::Splitter splitter("=");
+    Splitter splitter("=");
     std::vector<std::string> conf = splitter.split(alias_conf);
 
     if (conf.size() != 2)
@@ -78,8 +78,6 @@ bool DevPlayer::add_alias(std::string_view alias_conf)
                  alias_conf);
         return false;
     }
-    // conf[0] = record_channel_name
-    // conf[1] = channel_path
     _map_channels_alias[conf[0]] = conf[1];
     return true;
 }
@@ -100,7 +98,7 @@ bool DevPlayer::on_init()
     this->add_unlinked_channel(CHANNEL_PLAY, TYPE_BOOL, 1);
     this->add_unlinked_channel(CHANNEL_END, TYPE_BOOL, 1);
 
-    _scheduler_ptr = this->add_child<sihd::util::Scheduler>(fmt::format("{}-scheduler", this->name()));
+    _scheduler_ptr = this->add_child<Scheduler>(fmt::format("{}-scheduler", this->name()));
     if (_scheduler_ptr != nullptr)
     {
         _scheduler_ptr->set_start_synchronised(true);
@@ -111,7 +109,6 @@ bool DevPlayer::on_init()
 
 bool DevPlayer::on_start()
 {
-    // provider
     IProvider<PlayableRecord> *provider = this->find<IProvider<PlayableRecord>>(_provider_path);
     if (provider == nullptr)
     {
@@ -120,21 +117,18 @@ bool DevPlayer::on_start()
     }
     _collector.set_provider(provider);
 
-    // channel play
     auto play = this->get_channel(CHANNEL_PLAY);
     if (!play)
         return !SIHD_UNEXPECTED_LOG(play);
     _channel_play_ptr = *play;
     this->observe_channel(_channel_play_ptr);
 
-    // channel end
     auto end = this->get_channel(CHANNEL_END);
     if (!end)
         return !SIHD_UNEXPECTED_LOG(end);
     _channel_end_ptr = *end;
     _channel_end_ptr->write<bool>(0, false);
 
-    // channels to play to
     Channel *channel_ptr;
     for (const auto & pair : _map_channels_alias)
     {
@@ -147,11 +141,9 @@ bool DevPlayer::on_start()
         _map_channels[pair.first] = channel_ptr;
     }
 
-    // check if must play
     if (_channel_play_ptr->read<bool>(0) == true)
         _scheduler_ptr->resume();
 
-    // start thread
     _running = true;
     if (_worker.start_worker(this->name()) == false)
     {
@@ -177,7 +169,7 @@ bool DevPlayer::run()
         SIHD_LOG(error, "DevPlayer: could not write record into channel '{}'", record.name);
 
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _waitable.notify();
     }
     if (_last_record)
@@ -200,9 +192,7 @@ void DevPlayer::handle(Collector<PlayableRecord> *collector)
     if (_running == false)
         return;
 
-    // calls DevPlayer::run to execute record at setted time
-    _scheduler_ptr->add_task(
-        new Task(this, {.run_in = sihd::util::Duration(record.timestamp - _first_timestamp.value())}));
+    _scheduler_ptr->add_task(new Task(this, {.run_in = Duration(record.timestamp - _first_timestamp.value())}));
 }
 
 bool DevPlayer::_main_loop()
@@ -210,7 +200,6 @@ bool DevPlayer::_main_loop()
     _first_timestamp.reset();
     _last_record = false;
     _end_notified = false;
-    // run collector loop which calls DevPlayer::handle for each record
     const bool collector_started = _collector.start();
     // last record to be played in scheduler thread can have no next record
     _last_record = true;
@@ -229,7 +218,7 @@ void DevPlayer::_provider_ended()
 bool DevPlayer::on_stop()
 {
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _running = false;
         _waitable.notify();
     }

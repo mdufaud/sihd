@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <sihd/sys/Environment.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::sys::internal
 {
@@ -16,8 +17,7 @@ struct ExecEnviron
 };
 
 ExecEnviron to_exec_environ(const Environment & env);
-// sets the current process environment from the instance
-void apply(const Environment & env);
+sihd::util::Result<void> apply(const Environment & env);
 
 } // namespace sihd::sys::internal
 

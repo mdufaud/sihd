@@ -10,7 +10,6 @@
 namespace
 {
 
-// asserts no read error and returns whether a line was read
 bool read_next_ok(sihd::csv::CsvReader & reader)
 {
     auto res = reader.read_next();
@@ -33,9 +32,9 @@ using namespace sihd::sys;
 class TestCsv: public ::testing::Test
 {
     protected:
-        TestCsv() { sihd::util::LoggerManager::stream(); }
+        TestCsv() { LoggerManager::stream(); }
 
-        virtual ~TestCsv() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCsv() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -104,15 +103,19 @@ TEST_F(TestCsv, test_csv_writer)
     EXPECT_TRUE(writer.open(path));
     EXPECT_TRUE(writer.write_commentary(""));
     EXPECT_TRUE(writer.write_commentary("hello world"));
+
     EXPECT_TRUE(writer.write_row({"1", "2", "3"}));
+
     EXPECT_TRUE(writer.write("1"));
     EXPECT_TRUE(writer.write("2"));
     EXPECT_TRUE(writer.write("3"));
     EXPECT_TRUE(writer.write("4"));
     EXPECT_TRUE(writer.new_row());
+
     EXPECT_TRUE(writer.write({"1", "2", "3"}));
     EXPECT_TRUE(writer.write_row({"4", "5"}));
     EXPECT_TRUE(writer.new_row());
+
     EXPECT_TRUE(writer.write_row(utils::escape_str("hello \"world\"")));
     EXPECT_TRUE(writer.write_commentary("bye"));
     EXPECT_TRUE(writer.close());
@@ -129,10 +132,8 @@ TEST_F(TestCsv, test_csv_reader)
 
     SIHD_LOG(info, "Reading csv: {}", path);
     EXPECT_TRUE(reader.open(path));
-    // must skip the comments
     EXPECT_TRUE(read_next_ok(reader));
 
-    // copy values as they will change at next read
     const auto values1 = reader.columns();
     fmt::print("first values: '{}'\n", fmt::join(values1, ","));
 
@@ -149,7 +150,6 @@ TEST_F(TestCsv, test_csv_reader)
 
     EXPECT_TRUE(read_next_ok(reader));
 
-    // copy values as they will change at next read
     const auto values2 = reader.columns();
     fmt::print("second values: '{}'\n", fmt::join(values2, ","));
 
@@ -164,7 +164,6 @@ TEST_F(TestCsv, test_csv_reader)
 
     EXPECT_TRUE(read_next_ok(reader));
 
-    // copy values as they will change at next read
     const auto values3 = reader.columns();
     fmt::print("third values: '{}'\n", fmt::join(values3, ","));
 
@@ -233,7 +232,6 @@ TEST_F(TestCsv, test_csv_custom_delimiter)
         EXPECT_TRUE(reader.close());
     }
 
-    // space delimiter
     std::string space_path = fs::combine(tmp_dir.path(), "space.csv");
     {
         CsvWriter writer;
@@ -258,7 +256,6 @@ TEST_F(TestCsv, test_csv_custom_delimiter)
         EXPECT_FALSE(read_next_ok(reader));
     }
 
-    // pipe delimiter
     std::string pipe_path = fs::combine(tmp_dir.path(), "pipe.csv");
     {
         CsvWriter writer;
@@ -312,7 +309,6 @@ TEST_F(TestCsv, test_csv_custom_commentary)
 
 TEST_F(TestCsv, test_csv_error_paths)
 {
-    // reader: open nonexistent file
     {
         CsvReader reader;
         EXPECT_FALSE(reader.open("/nonexistent/path/file.csv"));
@@ -320,33 +316,28 @@ TEST_F(TestCsv, test_csv_error_paths)
         EXPECT_FALSE(reader.read_next().has_value());
     }
 
-    // reader: constructor with nonexistent file
     {
         CsvReader reader("/nonexistent/path/file.csv");
         EXPECT_FALSE(reader.is_open());
         EXPECT_FALSE(reader.read_next().has_value());
     }
 
-    // reader: columns on closed reader
     {
         CsvReader reader;
         EXPECT_TRUE(reader.columns().empty());
     }
 
-    // writer: open nonexistent directory
     {
         CsvWriter writer;
         EXPECT_FALSE(writer.open("/nonexistent/path/file.csv"));
         EXPECT_FALSE(writer.is_open());
     }
 
-    // writer: constructor with nonexistent directory
     {
         CsvWriter writer("/nonexistent/path/file.csv");
         EXPECT_FALSE(writer.is_open());
     }
 
-    // write_csv: fails on bad path
     {
         using Data = std::tuple<int>;
         std::vector<Data> rows;
@@ -354,7 +345,6 @@ TEST_F(TestCsv, test_csv_error_paths)
         EXPECT_FALSE(utils::write_csv("/nonexistent/path/file.csv", {"col"}, rows).has_value());
     }
 
-    // set_delimiter: reject non-printable
     {
         CsvReader reader;
         EXPECT_FALSE(reader.set_delimiter(0));
@@ -362,7 +352,6 @@ TEST_F(TestCsv, test_csv_error_paths)
         EXPECT_FALSE(writer.set_delimiter(0));
     }
 
-    // set_commentary: reject non-printable
     {
         CsvReader reader;
         EXPECT_FALSE(reader.set_commentary(0));
@@ -478,7 +467,6 @@ TEST_F(TestCsv, test_csv_timestamp_not_set)
 
     ASSERT_TRUE(read_next_ok(reader));
 
-    // no timestamp column set -> error
     EXPECT_FALSE(reader.get_read_timestamp().has_value());
 }
 
@@ -540,6 +528,7 @@ TEST_F(TestCsv, test_csv_writer_col_tracking)
     EXPECT_EQ(writer.current_col(), 2u);
 
     EXPECT_TRUE(writer.new_row());
+
     EXPECT_EQ(writer.current_col(), 0u);
     EXPECT_EQ(writer.current_row(), 1u);
     EXPECT_EQ(writer.max_col(), 2u);

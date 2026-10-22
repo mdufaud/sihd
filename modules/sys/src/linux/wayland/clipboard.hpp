@@ -1,8 +1,7 @@
 #ifndef __SIHD_SYS_WAYLAND_CLIPBOARD_HPP__
 #define __SIHD_SYS_WAYLAND_CLIPBOARD_HPP__
 
-// Wayland clipboard backend of the dispatcher in src/linux/clipboard.cpp: one-shot set (serves
-// the first consumer then drops ownership), bounded get; deadline computed by the dispatcher
+// Wayland clipboard backend: one-shot set (serves the first consumer, then drops ownership), bounded get
 
 #include <optional>
 #include <string>

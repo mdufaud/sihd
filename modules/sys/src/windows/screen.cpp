@@ -60,8 +60,7 @@ Monitor assemble(HMONITOR monitor_handle, const MONITORINFOEXW & info)
         monitor.height_mm = GetDeviceCaps(hdc, VERTSIZE);
         UINT dpi_x = 0;
         UINT dpi_y = 0;
-        // Pre 8.1 systems have no shcore: the device context reports the
-        // system dpi instead.
+        // Pre 8.1 systems have no shcore: the device context reports the system dpi instead
         static const GetDpiForMonitorFn dpi_fn = get_dpi_for_monitor();
         if (dpi_fn == nullptr || dpi_fn(monitor_handle, mdt_effective_dpi, &dpi_x, &dpi_y) != S_OK)
             dpi_x = static_cast<UINT>(GetDeviceCaps(hdc, LOGPIXELSX));
@@ -73,6 +72,7 @@ Monitor assemble(HMONITOR monitor_handle, const MONITORINFOEXW & info)
         monitor.dpi = internal::dpi_from(monitor.width, monitor.width_mm);
     }
     monitor.scale = monitor.dpi > 0.0 ? monitor.dpi / 96.0 : 1.0;
+
     return monitor;
 }
 

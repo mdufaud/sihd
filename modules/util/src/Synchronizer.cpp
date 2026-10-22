@@ -45,17 +45,14 @@ bool Synchronizer::sync(Duration timeout)
     const int32_t current_sync_round = _total_sync_round.load();
     if (_sync_count.fetch_add(1) + 1 >= _wanted_count)
     {
-        // the last thread to sync - reset count and wake everyone
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             _sync_count = 0;
-            // new round of sync unlocks
             _total_sync_round.fetch_add(1);
         }
         _waitable.notify_all();
         return true;
     }
-    // wait for the current round to finish
     const auto pred = [this, current_sync_round] {
         return _total_sync_round.load() != current_sync_round;
     };
@@ -64,7 +61,6 @@ bool Synchronizer::sync(Duration timeout)
         _waitable.wait(pred);
         return true;
     }
-    // false for timeout
     return _waitable.wait_for(timeout, pred);
 }
 

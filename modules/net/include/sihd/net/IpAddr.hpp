@@ -11,11 +11,11 @@
 #include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <netinet/in.h> // sockaddr
+# include <netinet/in.h>
 #else
 # include <winsock2.h>
 
-# include <ws2ipdef.h> // sockaddr_in6
+# include <ws2ipdef.h>
 #endif
 
 namespace sihd::net
@@ -23,19 +23,12 @@ namespace sihd::net
 
 struct Subnet
 {
-        // number of hosts
         unsigned int hosts;
-        // true network id
         struct in_addr netid;
-        // netmask
         struct in_addr netmask;
-        // lowest host
         struct in_addr hostmin;
-        // highest host
         struct in_addr hostmax;
-        // broadcast mask
         struct in_addr broadcast;
-        // wildcard mask
         struct in_addr wildcard;
 };
 
@@ -59,7 +52,6 @@ class IpAddr
 
         bool operator==(const IpAddr & other) const;
 
-        // build IpAddr from localhost
         static IpAddr localhost(int port, bool ipv6 = false);
 
         void set_hostname(std::string_view hostname);
@@ -80,7 +72,6 @@ class IpAddr
         std::string str() const;
         const std::string & hostname() const;
 
-        // subnets
         Subnet subnet() const;
 
         sihd::util::Result<void> set_subnet_mask(const std::string & mask);

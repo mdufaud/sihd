@@ -64,6 +64,7 @@ IArray *create_from_type(Type dt, size_t size)
             return new Array<float>(size);
         case TYPE_DOUBLE:
             return new Array<double>(size);
+
         default:
             break;
     }

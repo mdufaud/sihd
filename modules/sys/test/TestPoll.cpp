@@ -80,6 +80,7 @@ TEST_F(TestPoll, test_poll)
             {
                 SIHD_LOG(debug, "Reading in fd: {}", fd);
                 int ret = read_fd(fd, buffer, 20);
+
                 buffer[ret] = 0;
                 SIHD_LOG(debug, "Read {} bytes: '{}'", ret, buffer);
                 _read_count += 1;
@@ -102,33 +103,25 @@ TEST_F(TestPoll, test_poll)
 
     constexpr int timeout_milliseconds = 10;
 
-    // first write from writing end of pipe
     int res = poll.poll(timeout_milliseconds);
-    // expect the write fd
     EXPECT_EQ(res, 1);
-    // clearing the write fd so it does not write again
     poll.clear_fd(fd[1]);
     EXPECT_FALSE(poll.rm_read_fd(-1));
     EXPECT_FALSE(poll.rm_write_fd(-1));
 
-    // nothing read yet
     EXPECT_EQ(strlen(buffer), 0u);
     EXPECT_EQ(_write_count, 1);
     EXPECT_EQ(_read_count, 0);
     EXPECT_EQ(_timedout, 0);
 
-    // read from reading end of pipe
     res = poll.poll(timeout_milliseconds);
-    // expect the read fd
     EXPECT_EQ(res, 1);
 
-    // buffer filed
     EXPECT_EQ(strcmp(buffer, "hello world"), 0);
     EXPECT_EQ(_write_count, 1);
     EXPECT_EQ(_read_count, 1);
     EXPECT_EQ(_timedout, 0);
 
-    // expect timeout
     res = poll.poll(timeout_milliseconds);
     EXPECT_EQ(res, 0);
 

@@ -7,10 +7,9 @@
 # define SIHD_NODE_MAX_LINK_RECURSION 20
 #endif
 
-using enum sihd::util::ErrorCode;
-
 namespace sihd::util
 {
+using enum ErrorCode;
 
 namespace
 {
@@ -106,12 +105,12 @@ void Node::_log_add_child_error(const Error & error)
     SIHD_LOG(error, "{}", error.message);
 }
 
-sihd::util::Result<void> Node::add_child(Named *child, bool ownership)
+Result<void> Node::add_child(Named *child, bool ownership)
 {
     return this->add_child(child->name(), child, ownership);
 }
 
-sihd::util::Result<void> Node::add_child(const std::string & name, Named *child, bool ownership)
+Result<void> Node::add_child(const std::string & name, Named *child, bool ownership)
 {
     if (this->get_child(name) != nullptr)
         return std::unexpected(Error(already_exists, "child '{}' already exists in '{}'", name, this->full_name()));
@@ -143,6 +142,7 @@ sihd::util::Result<void> Node::add_child(const std::string & name, Named *child,
     entry->obj = child;
     entry->ownership = ownership;
     _children_map[name] = entry;
+
     _children_keys.push_back(name);
     return {};
 }
@@ -243,7 +243,7 @@ std::pair<std::string, std::string> Node::parent_path(const std::string & path)
 
 bool Node::is_link(const std::string & name) const
 {
-    return _link_map.count(name) > 0;
+    return _link_map.contains(name);
 }
 
 bool Node::add_link(const std::string & link, const std::string & path)
@@ -273,7 +273,7 @@ Named *Node::resolve_link(const std::string & path, size_t recursion)
     return *resolved;
 }
 
-sihd::util::Result<Named *> Node::_resolve_link(const std::string & path, size_t recursion)
+Result<Named *> Node::_resolve_link(const std::string & path, size_t recursion)
 {
     Named *child = this->find(path);
     if (child != nullptr)
@@ -317,9 +317,9 @@ void Node::on_remove_child(const std::string & name, Named *child)
     (void)child;
 }
 
-sihd::util::Result<void> Node::resolve_links(size_t recursion)
+Result<void> Node::resolve_links(size_t recursion)
 {
-    sihd::util::Result<void> ret;
+    Result<void> ret;
     for (const auto & link : _link_keys)
     {
         const auto & path = _link_map.at(link);
@@ -338,6 +338,7 @@ sihd::util::Result<void> Node::resolve_links(size_t recursion)
         else if (this->on_check_link(link, child))
         {
             auto res = this->add_child(link, child, false);
+
             // a repeat resolve_links finds the link already a child: same target is a no-op
             if (!res && !(res.error().code == already_exists && this->get_child(link) == child))
             {
@@ -376,11 +377,11 @@ std::string Node::tree_str(TreeOpts opts) const
     opts.indent += opts.indent_by_iter;
     opts.current_recursion = 0;
 
-    std::string s = fmt::format("{}{}: {}", indent, this->name(), this->class_name());
-    add_named_description(this, s, opts);
-    s += "\n";
-    add_node_informations(this, s, opts);
-    return s;
+    std::string text = fmt::format("{}{}: {}", indent, this->name(), this->class_name());
+    add_named_description(this, text, opts);
+    text += "\n";
+    add_node_informations(this, text, opts);
+    return text;
 }
 
 SIHD_REGISTER_FACTORY(Node);

@@ -49,7 +49,6 @@ TEST(TestTokenBucket, test_token_bucket_refill)
     EXPECT_TRUE(bucket.try_consume(1.0));
     EXPECT_DOUBLE_EQ(bucket.tokens(), 0.0);
 
-    // clamped at capacity
     clock.advance(time::hours(1));
     EXPECT_DOUBLE_EQ(bucket.tokens(), 2.0);
 }

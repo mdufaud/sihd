@@ -126,7 +126,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_refused_patterns)
     for (const std::string & bad : bad_patterns)
     {
         TokenPattern pattern;
-        const sihd::util::Result<void> res = pattern.compile(bad);
+        const Result<void> res = pattern.compile(bad);
         ASSERT_FALSE(res.has_value()) << bad;
         EXPECT_NE(res.error().message.find("at "), std::string::npos) << bad;
     }
@@ -165,7 +165,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_escapes)
 TEST_F(TestTokenPattern, test_tokenpattern_field_name_boundary)
 {
     TokenPattern pattern;
-    const sihd::util::Result<void> res = pattern.compile("{a-b}");
+    const Result<void> res = pattern.compile("{a-b}");
     ASSERT_FALSE(res.has_value());
     EXPECT_NE(res.error().message.find("at "), std::string::npos);
 }
@@ -204,7 +204,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_raw_specs)
 TEST_F(TestTokenPattern, test_tokenpattern_non_classical_width_refused)
 {
     TokenPattern pattern;
-    const sihd::util::Result<void> res = pattern.compile("{utc:99999%H}");
+    const Result<void> res = pattern.compile("{utc:99999%H}");
     ASSERT_FALSE(res.has_value());
     EXPECT_NE(res.error().message.find("width too large"), std::string::npos);
 }
@@ -216,7 +216,7 @@ TEST_F(TestTokenPattern, test_tokenpattern_reserve_hint_capped)
         big += "{a:4096}";
 
     TokenPattern pattern;
-    const sihd::util::Result<void> res = pattern.compile(big);
+    const Result<void> res = pattern.compile(big);
     ASSERT_FALSE(res.has_value());
     EXPECT_NE(res.error().message.find("reserve"), std::string::npos);
     EXPECT_EQ(pattern.reserve_hint(), 0u);

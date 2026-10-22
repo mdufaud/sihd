@@ -39,7 +39,6 @@ class ProcessMonitor: public sihd::util::Observable<ProcessMonitor>,
         bool start();
         bool stop();
         bool is_running() const;
-        // one sampling pass, notifying observers; also the worker thread step
         bool poll();
 
         // copies: the worker thread refreshes the samples between two calls

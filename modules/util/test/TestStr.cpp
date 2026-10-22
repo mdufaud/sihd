@@ -20,9 +20,9 @@ SIHD_LOGGER;
 class TestStr: public ::testing::Test
 {
     protected:
-        TestStr() { sihd::util::LoggerManager::stream(); }
+        TestStr() { LoggerManager::stream(); }
 
-        virtual ~TestStr() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestStr() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -225,6 +225,7 @@ TEST_F(TestStr, test_str_glob_match)
     EXPECT_FALSE(str::glob_match("m", "[!a-z]"));
     EXPECT_TRUE(str::glob_match("]", "[]]"));
     EXPECT_FALSE(str::glob_match("[", "[]]"));
+
     EXPECT_TRUE(str::glob_match("-", "[a-]"));
     EXPECT_TRUE(str::glob_match("-", "[-a]"));
     EXPECT_TRUE(str::glob_match("[abc", "[abc"));
@@ -269,6 +270,7 @@ TEST_F(TestStr, test_str_glob_match)
     EXPECT_TRUE(str::glob_match("a9", "[[:alpha:]][[:digit:]]"));
     EXPECT_TRUE(str::glob_match("a", "[[:alpha:][:digit:]]"));
     EXPECT_TRUE(str::glob_match("3", "[[:alpha:][:digit:]]"));
+
     EXPECT_FALSE(str::glob_match("x", "[[:foo:]]"));
     EXPECT_TRUE(str::glob_match("[[:alpha", "[[:alpha"));
     EXPECT_FALSE(str::glob_match("a", "[[:alpha"));
@@ -378,7 +380,6 @@ TEST_F(TestStr, test_str_split_pair)
     EXPECT_EQ(pair.first, "a");
     EXPECT_EQ(pair.second, ":b");
 
-    // an empty first part gives an empty pair
     auto empty_pair = str::split_pair("=titi", "=");
     EXPECT_EQ(empty_pair.first, "");
     EXPECT_EQ(empty_pair.second, "");
@@ -399,6 +400,7 @@ TEST_F(TestStr, test_str_word_wrap)
     EXPECT_EQ(str::word_wrap("hello world", 5), "hello\nworld");
     EXPECT_EQ(str::word_wrap("hello world", 10), "hello\nworld");
     EXPECT_EQ(str::word_wrap("abc + def ghi", 10), "abc + def\nghi");
+
     EXPECT_EQ(str::word_wrap("iamfartoolong", 5), "iamf-\narto-\nolong");
     EXPECT_EQ(str::word_wrap("helloworld!!", 6), "hello-\nworld-\n!!");
     EXPECT_EQ(str::word_wrap("abc\n\ndef\nghi\n", 4), "abc\n\ndef\nghi\n");
@@ -406,7 +408,6 @@ TEST_F(TestStr, test_str_word_wrap)
     EXPECT_EQ(str::word_wrap("ab", 2), "ab");
     EXPECT_EQ(str::word_wrap("a  b", 2), "a\nb");
     EXPECT_EQ(str::word_wrap("a\tb", 3), "a b");
-    // a long word after already placed content
     EXPECT_EQ(str::word_wrap("x iamfartoolong", 5), "x\niamf-\narto-\nolong");
 
     const char *str = "The quick brown fox jumped over the lazy dog";
@@ -475,11 +476,11 @@ TEST_F(TestStr, test_str_base)
     EXPECT_EQ(str::to_oct(8), "10");
     EXPECT_EQ(str::num_str(5, 2), "101");
     EXPECT_EQ(str::num_str(255, 36), "73");
-    // out of range bases yield an empty string
     EXPECT_EQ(str::num_str(255, 37), "");
     EXPECT_EQ(str::num_to_char(0), '0');
     EXPECT_EQ(str::num_to_char(9), '9');
     EXPECT_EQ(str::num_to_char(10), 'a');
+
     EXPECT_EQ(str::num_to_char(35), 'z');
     EXPECT_EQ(str::num_to_char(36), '\0');
     EXPECT_EQ(str::hex_digit('0'), 0);
@@ -529,32 +530,26 @@ TEST_F(TestStr, test_str_base64_array)
 
 TEST_F(TestStr, test_str_base64_lenient)
 {
-    // missing padding
     auto decoded = str::from_base64("Zg");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
 
-    // single padding char
     decoded = str::from_base64("Zg=");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
 
-    // non-canonical trailing bits
     decoded = str::from_base64("Zh==");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_EQ(*decoded, std::vector<uint8_t> {'f'});
 
-    // whitespace anywhere
     decoded = str::from_base64("Zm 9v\n\tYg==");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_EQ(*decoded, (std::vector<uint8_t> {'f', 'o', 'o', 'b'}));
 
-    // every ascii whitespace byte
     decoded = str::from_base64("Zm\v9\fv");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_EQ(*decoded, (std::vector<uint8_t> {'f', 'o', 'o'}));
 
-    // whitespace only
     decoded = str::from_base64("  \n");
     ASSERT_TRUE(decoded.has_value());
     EXPECT_TRUE(decoded->empty());
@@ -688,6 +683,7 @@ TEST_F(TestStr, test_str_bytes)
     EXPECT_EQ(str::bytes_str(gbyte), "1G");
     EXPECT_EQ(str::bytes_str((gbyte) + (gbyte - mbyte)), "1.9G");
     int64_t tbyte = 1024LL * 1024LL * 1024LL * 1024LL;
+
     EXPECT_EQ(str::bytes_str(tbyte), "1T");
     EXPECT_EQ(str::bytes_str((tbyte) + (tbyte - gbyte)), "1.9T");
 
@@ -695,7 +691,6 @@ TEST_F(TestStr, test_str_bytes)
     // negative sizes have no representation (pinned behavior)
     EXPECT_EQ(str::bytes_str(-1), "");
 
-    // SI units
     EXPECT_EQ(str::bytes_str(999, false), "999B");
     EXPECT_EQ(str::bytes_str(1000, false), "1K");
     EXPECT_EQ(str::bytes_str(1500, false), "1.5K");
@@ -716,6 +711,7 @@ TEST_F(TestStr, test_str_time2str)
     time_str = str::timeoffset_str(Timestamp(time::days(24)));
     EXPECT_EQ(time_str, "+24d 0h:0m:0s:0ms:0us");
     time_str = str::timeoffset_str(Timestamp(time::days(31)));
+
     EXPECT_EQ(time_str, "+1m:0d 0h:0m:0s:0ms:0us");
     time_str = str::timeoffset_str(Timestamp(time::days(365)));
     EXPECT_EQ(time_str, "+1y:0m:0d 0h:0m:0s:0ms:0us");
@@ -772,20 +768,13 @@ TEST_F(TestStr, test_str_enclosures)
 
     EXPECT_EQ(str::stopping_enclose_index("'hello'", 0, "'"), 7);
     EXPECT_EQ(str::stopping_enclose_index("'hello'", 0, "'", '\''), 7);
-    // not an enclosure
     EXPECT_EQ(str::stopping_enclose_index("", 0, "'", '\''), -1);
-    // not an enclosure
     EXPECT_EQ(str::stopping_enclose_index("hello", 0, "'", '\''), -1);
-    // never ends
     EXPECT_EQ(str::stopping_enclose_index("'hello\\'", 0, "'"), -2);
     EXPECT_EQ(str::stopping_enclose_index("'hello", 0, "'", '\''), -2);
-    // ending is escaped, never ends
     EXPECT_EQ(str::stopping_enclose_index("'hello''", 0, "'", '\''), -2);
-    // pointing to an escape
     EXPECT_EQ(str::stopping_enclose_index("'hello''", 6, "'", '\''), -1);
-    // pointing to an escaped escape
     EXPECT_EQ(str::stopping_enclose_index("'hello''", 7, "'", '\''), -1);
-    // never ends
     EXPECT_EQ(str::stopping_enclose_index("'hello'''", 8, "'", '\''), -2);
 }
 
@@ -838,7 +827,6 @@ TEST_F(TestStr, test_str_from_string)
 
 TEST_F(TestStr, test_str_tonumber)
 {
-    // long
     EXPECT_TRUE(this->test_long("1234"));
     EXPECT_EQ(_val, 1234);
     EXPECT_TRUE(this->test_long("-1234"));
@@ -849,7 +837,6 @@ TEST_F(TestStr, test_str_tonumber)
     EXPECT_FALSE(this->test_long("toto"));
     EXPECT_FALSE(this->test_long("toto123"));
     EXPECT_FALSE(this->test_long("toto -1234"));
-    // overflow
     EXPECT_FALSE(this->test_long("151615165151561132133554654"));
 
     // a prefix that does not match the base is left untouched, "0x2a" in base 10 stops at 'x'
@@ -858,6 +845,7 @@ TEST_F(TestStr, test_str_tonumber)
     // hexadecimal without prefix
     EXPECT_TRUE(this->test_long("2a", 16));
     EXPECT_EQ(_val, 0x2a);
+
     if constexpr (sizeof(long) == 8)
     {
         EXPECT_TRUE(this->test_long("DEADCAFE", 16));
@@ -876,12 +864,14 @@ TEST_F(TestStr, test_str_tonumber)
         EXPECT_TRUE(this->test_long("0x2a", 16));
         EXPECT_EQ(_val, 0x2a);
     }
+
     EXPECT_TRUE(this->test_long("0b101", 2));
     EXPECT_EQ(_val, 0b101);
     EXPECT_TRUE(this->test_long("0o17", 8));
     EXPECT_EQ(_val, 017);
     EXPECT_TRUE(this->test_long("-0xff", 16));
     EXPECT_EQ(_val, -0xff);
+
     // base 0 auto-detects from the prefix
     EXPECT_TRUE(this->test_long("0xff", 0));
     EXPECT_EQ(_val, 0xff);
@@ -892,7 +882,6 @@ TEST_F(TestStr, test_str_tonumber)
     EXPECT_TRUE(this->test_ulong("0xff", 16));
     EXPECT_EQ(_uval, 0xffu);
 
-    // unsigned long
     EXPECT_TRUE(this->test_ulong("1234"));
     EXPECT_EQ(_uval, 1234u);
     if constexpr (sizeof(unsigned long) == sizeof(unsigned long long))
@@ -907,14 +896,11 @@ TEST_F(TestStr, test_str_tonumber)
 
     EXPECT_FALSE(this->test_ulong("toto"));
     EXPECT_FALSE(this->test_ulong("toto1234"));
-    // overflow
     EXPECT_FALSE(this->test_ulong("15151651651651515113132132132132132"));
 
-    // invalid bases are rejected
     EXPECT_FALSE(this->test_long("101", 1));
     EXPECT_FALSE(this->test_ulong("ff", 37));
 
-    // double
     EXPECT_TRUE(this->test_double("1234"));
     EXPECT_DOUBLE_EQ(_dval, 1234);
     EXPECT_TRUE(this->test_double("1234.456"));
@@ -1000,9 +986,9 @@ TEST_F(TestStr, test_str_trim)
 
 TEST_F(TestStr, test_str_lowerupper)
 {
-    std::string s = "Hello World @123";
-    EXPECT_EQ(str::to_lower(s), "hello world @123");
-    EXPECT_EQ(str::to_upper(s), "HELLO WORLD @123");
+    std::string text = "Hello World @123";
+    EXPECT_EQ(str::to_lower(text), "hello world @123");
+    EXPECT_EQ(str::to_upper(text), "HELLO WORLD @123");
 
     const std::string_view original = "Hello World @123";
     EXPECT_EQ(str::to_lower_copy(original), "hello world @123");
@@ -1046,31 +1032,24 @@ TEST_F(TestStr, test_str_to_columns)
         return columns;
     };
 
-    // no room
     EXPECT_EQ(create_and_print(5), std::vector<std::string> {});
 
-    // 1 column
     const std::vector<std::string>
         one_col {"The   ", "quick ", "brown ", "fox   ", "jumped", "over  ", "the   ", "lazy  ", "dog   "};
     EXPECT_EQ(create_and_print(6), one_col);
 
-    // 2 columns
     const std::vector<std::string> two_col {"The    over", "quick  the ", "brown  lazy", "fox    dog ", "jumped"};
     EXPECT_EQ(create_and_print(12), two_col);
 
-    // 3 columns
     const std::vector<std::string> three_col {"The   fox    the ", "quick jumped lazy", "brown over   dog "};
     EXPECT_EQ(create_and_print(17), three_col);
 
-    // 5 columns
     const std::vector<std::string> five_col {"The   brown jumped the  dog", "quick fox   over   lazy"};
     EXPECT_EQ(create_and_print(27), five_col);
 
-    // 6 columns
     const std::vector<std::string> six_col {"The quick brown fox jumped over the lazy dog"};
     EXPECT_EQ(create_and_print(str.size()), six_col);
 
-    // other overloads
     std::vector<std::string_view> word_views = {"aaa", "b", "cc"};
     EXPECT_EQ(str::to_columns(std::span<std::string_view>(word_views), 7),
               (std::vector<std::string> {"aaa cc", "b  "}));
@@ -1081,17 +1060,18 @@ TEST_F(TestStr, test_str_to_columns)
 
 TEST_F(TestStr, test_str_hexdump)
 {
-    const std::string s = "hello world - how are you";
-    SIHD_LOG(debug, "{}", str::addr_str(s.data()));
+    const std::string text = "hello world - how are you";
+    SIHD_LOG(debug, "{}", str::addr_str(text.data()));
     EXPECT_EQ(str::addr_str(0x0, 5), "0x00000");
     EXPECT_EQ(str::num_str(312, 10), "312");
     EXPECT_EQ(str::num_str(16, 16), "10");
     EXPECT_EQ(str::num_str(15, 16), "f");
     EXPECT_EQ(str::num_str(255, 16), "ff");
-    EXPECT_EQ(str::hexdump(s.data(), s.length(), ','),
+    EXPECT_EQ(str::hexdump(text.data(), text.length(), ','),
               "68,65,6c,6c,6f,20,77,6f,72,6c,64,20,2d,20,68,6f,77,20,61,72,65,20,79,6f,75");
-    std::vector<std::string> dump = str::hexdump_fmt(s.data(), s.length(), 8);
+    std::vector<std::string> dump = str::hexdump_fmt(text.data(), text.length(), 8);
     fmt::print("{}\n", str::join(dump));
+
     ASSERT_EQ(dump.size(), 4u);
     EXPECT_EQ(dump[0], "0x0:  68 65 6c 6c 6f 20 77 6f   hello wo");
     EXPECT_EQ(dump[1], "0x8:  72 6c 64 20 2d 20 68 6f   rld - ho");
@@ -1099,12 +1079,12 @@ TEST_F(TestStr, test_str_hexdump)
     EXPECT_EQ(dump[3], "0x18: 75                        u       ");
 
     // zero columns would divide by zero
-    EXPECT_TRUE(str::hexdump_fmt(s.data(), s.length(), 0).empty());
+    EXPECT_TRUE(str::hexdump_fmt(text.data(), text.length(), 0).empty());
 
     const Array<char> arr = {'h', 'e'};
     EXPECT_EQ(str::hexdump(arr, ','), "68,65");
-    const ArrayView<char> view(s);
-    EXPECT_EQ(str::hexdump(view, ','), str::hexdump(s.data(), s.length(), ','));
+    const ArrayView<char> view(text);
+    EXPECT_EQ(str::hexdump(view, ','), str::hexdump(text.data(), text.length(), ','));
 }
 
 TEST_F(TestStr, test_str_with)
@@ -1143,7 +1123,6 @@ TEST_F(TestStr, test_str_predicates)
     EXPECT_FALSE(str::iequals("hello", "hello "));
 
     EXPECT_TRUE(str::is_all_spaces(" \t\n "));
-    // an empty string is all spaces
     EXPECT_TRUE(str::is_all_spaces(""));
     EXPECT_FALSE(str::is_all_spaces("a "));
 

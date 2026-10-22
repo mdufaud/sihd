@@ -10,9 +10,9 @@ using namespace sihd::util;
 class TestSplitter: public ::testing::Test
 {
     protected:
-        TestSplitter() { sihd::util::LoggerManager::stream(); }
+        TestSplitter() { LoggerManager::stream(); }
 
-        virtual ~TestSplitter() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSplitter() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -21,13 +21,11 @@ class TestSplitter: public ::testing::Test
 
 TEST_F(TestSplitter, test_splitter_from_view)
 {
-    std::string_view s = "toto;titi;tata";
-    // "toto;titi;tata"
-    s.remove_suffix(5);
-    // "toto;titi"
+    std::string_view text = "toto;titi;tata";
+    text.remove_suffix(5);
 
     Splitter splitter(";");
-    std::vector<std::string_view> split = splitter.split_view(s);
+    std::vector<std::string_view> split = splitter.split_view(text);
     ASSERT_EQ(split.size(), 2u);
     EXPECT_EQ(split[0], "toto");
     EXPECT_EQ(split[1], "titi");
@@ -190,7 +188,6 @@ TEST_F(TestSplitter, test_splitter_escapes)
 
 TEST_F(TestSplitter, test_splitter_char_delimiter)
 {
-    // Test constructor with char delimiter
     Splitter splitter(':');
     std::vector<std::string> split = splitter.split("one:two:three");
     ASSERT_EQ(split.size(), 3u);
@@ -198,7 +195,6 @@ TEST_F(TestSplitter, test_splitter_char_delimiter)
     EXPECT_EQ(split[1], "two");
     EXPECT_EQ(split[2], "three");
 
-    // Test set_delimiter_char
     splitter.set_delimiter_char('|');
     std::vector<std::string> split2 = splitter.split("a|b|c|d");
     ASSERT_EQ(split2.size(), 4u);
@@ -210,13 +206,11 @@ TEST_F(TestSplitter, test_splitter_count_tokens)
 {
     Splitter splitter(",");
 
-    // Test count_tokens
     EXPECT_EQ(splitter.count_tokens("a,b,c"), 3);
     EXPECT_EQ(splitter.count_tokens("a"), 1);
     EXPECT_EQ(splitter.count_tokens(""), 0);
     EXPECT_EQ(splitter.count_tokens("a,b,"), 2);
 
-    // With empty delimitations
     splitter.set_empty_delimitations(true);
     EXPECT_EQ(splitter.count_tokens("a,b,c"), 3);
     EXPECT_EQ(splitter.count_tokens("a,,c"), 3);
@@ -230,16 +224,13 @@ TEST_F(TestSplitter, test_splitter_next_token)
     std::string_view view = "first;second;third";
     int idx = 0;
 
-    // Get first token
     std::string_view token1 = splitter.next_token(view, &idx);
     EXPECT_EQ(token1, "first");
     EXPECT_EQ(idx, 5); // position after "first;"
 
-    // Get second token
     std::string_view token2 = splitter.next_token(view, &idx);
     EXPECT_EQ(token2, "second");
 
-    // Get third token
     std::string_view token3 = splitter.next_token(view, &idx);
     EXPECT_EQ(token3, "third");
 }
@@ -248,25 +239,21 @@ TEST_F(TestSplitter, test_splitter_delimiter_at_edges)
 {
     Splitter splitter(",");
 
-    // Leading delimiter
     std::vector<std::string> split1 = splitter.split(",hello,world");
     ASSERT_EQ(split1.size(), 2u);
     EXPECT_EQ(split1[0], "hello");
     EXPECT_EQ(split1[1], "world");
 
-    // Trailing delimiter
     std::vector<std::string> split2 = splitter.split("hello,world,");
     ASSERT_EQ(split2.size(), 2u);
     EXPECT_EQ(split2[0], "hello");
     EXPECT_EQ(split2[1], "world");
 
-    // Leading and trailing delimiters
     std::vector<std::string> split3 = splitter.split(",hello,world,");
     ASSERT_EQ(split3.size(), 2u);
     EXPECT_EQ(split3[0], "hello");
     EXPECT_EQ(split3[1], "world");
 
-    // Only delimiters
     std::vector<std::string> split4 = splitter.split(",,,");
     ASSERT_EQ(split4.size(), 0u);
 }
@@ -276,27 +263,23 @@ TEST_F(TestSplitter, test_splitter_delimiter_at_edges_with_empty_delimitations)
     Splitter splitter(",");
     splitter.set_empty_delimitations(true);
 
-    // Leading delimiter - doesn't create empty token at the very start (leading is skipped)
     std::vector<std::string> split1 = splitter.split(",hello,world");
     ASSERT_EQ(split1.size(), 2u);
     EXPECT_EQ(split1[0], "hello");
     EXPECT_EQ(split1[1], "world");
 
-    // Trailing delimiter - creates empty token at the end
     std::vector<std::string> split2 = splitter.split("hello,world,");
     ASSERT_EQ(split2.size(), 3u);
     EXPECT_EQ(split2[0], "hello");
     EXPECT_EQ(split2[1], "world");
     EXPECT_EQ(split2[2], "");
 
-    // Consecutive delimiters in the middle
     std::vector<std::string> split3 = splitter.split("hello,,world");
     ASSERT_EQ(split3.size(), 3u);
     EXPECT_EQ(split3[0], "hello");
     EXPECT_EQ(split3[1], "");
     EXPECT_EQ(split3[2], "world");
 
-    // Only delimiters
     std::vector<std::string> split4 = splitter.split(",,,");
     ASSERT_EQ(split4.size(), 3u);
     EXPECT_EQ(split4[0], "");
@@ -314,7 +297,6 @@ TEST_F(TestSplitter, test_splitter_multi_char_delimiter)
     EXPECT_EQ(split1[1], "two");
     EXPECT_EQ(split1[2], "three");
 
-    // Multi-char delimiter with consecutive occurrences
     splitter.set_empty_delimitations(true);
     std::vector<std::string> split2 = splitter.split("a::::b");
     ASSERT_EQ(split2.size(), 3u);
@@ -325,7 +307,6 @@ TEST_F(TestSplitter, test_splitter_multi_char_delimiter)
 
 TEST_F(TestSplitter, test_splitter_options_constructor)
 {
-    // Test SplitterOptions with delimiter_char
     Splitter splitter1({.delimiter_char = '|'});
     std::vector<std::string> split1 = splitter1.split("x|y|z");
     ASSERT_EQ(split1.size(), 3u);
@@ -333,7 +314,6 @@ TEST_F(TestSplitter, test_splitter_options_constructor)
     EXPECT_EQ(split1[1], "y");
     EXPECT_EQ(split1[2], "z");
 
-    // Test SplitterOptions with multiple settings
     Splitter splitter2({.delimiter_str = "-", .empty_delimitations = true});
     std::vector<std::string> split2 = splitter2.split("a--b");
     ASSERT_EQ(split2.size(), 3u);
@@ -344,13 +324,10 @@ TEST_F(TestSplitter, test_splitter_options_constructor)
 
 TEST_F(TestSplitter, test_splitter_options_invalid_multiple_delimiters)
 {
-    // Cannot specify both delimiter_char and delimiter_str
     EXPECT_THROW(Splitter splitter({.delimiter_char = ',', .delimiter_str = ";"}), std::logic_error);
 
-    // Cannot specify both delimiter_char and delimiter_method
     EXPECT_THROW(Splitter splitter({.delimiter_char = ',', .delimiter_method = &isspace}), std::logic_error);
 
-    // Cannot specify both delimiter_str and delimiter_method
     EXPECT_THROW(Splitter splitter({.delimiter_str = ";", .delimiter_method = &isspace}), std::logic_error);
 }
 
@@ -378,10 +355,8 @@ TEST_F(TestSplitter, test_splitter_split_view_consistency)
     std::vector<std::string> split_str = splitter.split(view);
     std::vector<std::string_view> split_view = splitter.split_view(view);
 
-    // Both methods should return same number of tokens
     ASSERT_EQ(split_str.size(), split_view.size());
 
-    // Content should match
     for (size_t i = 0; i < split_str.size(); ++i)
     {
         EXPECT_EQ(split_str[i], split_view[i]);
@@ -402,7 +377,6 @@ TEST_F(TestSplitter, test_splitter_escape_char_configuration)
         EXPECT_EQ(split[2], "test");
     }
 
-    // Change escape character
     splitter.set_escape_char('\\');
     std::vector<std::string> split2 = splitter.split("hello\\ world test");
     EXPECT_EQ(split2.size(), 3u);

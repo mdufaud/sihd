@@ -4,6 +4,8 @@
 
 #include <sihd/util/mime.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::sys::internal
 {
 
@@ -21,7 +23,7 @@ std::vector<MimeLabel> mimes_to_fetch(const std::vector<std::string> & offered,
 
     for (std::string_view mime_str : wanted_mimes)
     {
-        if (auto offered_mime = sihd::util::mime::match_offered(offered, mime_str))
+        if (auto offered_mime = mime::match_offered(offered, mime_str))
         {
             if (std::ranges::contains(fetch_list, *offered_mime, &MimeLabel::first) == false)
                 fetch_list.emplace_back(*offered_mime, std::string(mime_str));

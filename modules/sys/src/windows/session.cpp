@@ -54,12 +54,14 @@ std::vector<Session> sessions()
     {
         const WTS_SESSION_INFOW & info = infos[i];
         Session session;
+
         // no logon time exposed by WTS
         session.id = (uint32_t)info.SessionId;
         session.device = wide_to_utf8(info.pWinStationName);
         session.state = parse_state(info.State);
         LPWSTR buffer = nullptr;
         DWORD bytes = 0;
+
         if (WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, info.SessionId, WTSUserName, &buffer, &bytes) != 0)
         {
             session.username = wide_to_utf8(buffer);

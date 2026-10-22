@@ -64,7 +64,6 @@ class SigWatcher: public sihd::util::Named,
         bool stop();
         bool is_running() const;
 
-        // filled with catched signals - call in observable
         const std::vector<int> & catched_signals() const { return _signals_to_handle; };
 
     private:

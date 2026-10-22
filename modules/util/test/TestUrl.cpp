@@ -10,9 +10,9 @@ using namespace sihd::util;
 class TestUrl: public ::testing::Test
 {
     protected:
-        TestUrl() { sihd::util::LoggerManager::stream(); }
+        TestUrl() { LoggerManager::stream(); }
 
-        virtual ~TestUrl() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestUrl() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

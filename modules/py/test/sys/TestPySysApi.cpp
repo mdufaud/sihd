@@ -20,9 +20,9 @@ using namespace sihd::py;
 class TestPySysApi: public ::testing::Test
 {
     protected:
-        TestPySysApi() { sihd::util::LoggerManager::stream(); }
+        TestPySysApi() { LoggerManager::stream(); }
 
-        virtual ~TestPySysApi() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPySysApi() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -31,51 +31,51 @@ class TestPySysApi: public ::testing::Test
 
 TEST_F(TestPySysApi, test_pysys_fs)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_fs.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_fs.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_os)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_os.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_os.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_user)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_user.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_user.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_signal)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_signal.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_signal.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_uuid)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_uuid.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_uuid.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_process_info)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_process_info.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_process_info.py"));
 }
 
 TEST_F(TestPySysApi, test_pysys_bitmap)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/sys/py/test_bitmap.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/sys/py/test_bitmap.py"));
 }
 
 } // namespace test

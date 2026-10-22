@@ -12,6 +12,8 @@
 using sihd::util::Error;
 using enum sihd::util::ErrorCode;
 
+using namespace sihd::util;
+
 namespace sihd::sys
 {
 
@@ -93,17 +95,17 @@ std::string PathManager::find(std::string_view search, std::string_view mode_str
 
 void PathManager::push_back(std::string_view path_item)
 {
-    if (!sihd::util::container::contains(_path_lst, path_item))
+    if (!container::contains(_path_lst, path_item))
         _path_lst.emplace_back(path_item);
 }
 
 void PathManager::push_front(std::string_view path_item)
 {
-    if (!sihd::util::container::contains(_path_lst, path_item))
+    if (!container::contains(_path_lst, path_item))
         _path_lst.emplace(_path_lst.begin(), path_item);
 }
 
-sihd::util::Result<void> PathManager::remove(std::string_view path_item)
+Result<void> PathManager::remove(std::string_view path_item)
 {
     auto it = std::remove(_path_lst.begin(), _path_lst.end(), path_item);
     if (it == _path_lst.end())

@@ -21,6 +21,39 @@ using namespace sihd::sys;
 
 int write_protocol_to_lws(WriteProtocol protocol);
 
+void HttpServer::Impl::HttpSession::new_request()
+{
+    request.reset();
+    // a keep-alive connection must not pin the largest body it served
+    if (content.capacity() > max_retained_body_capacity)
+        content = ArrChar {};
+    else
+        content.clear();
+    body_stream.reset();
+    stream_provider = nullptr;
+    cached_auth_header.reset();
+
+    content_length = 0;
+    content_size = 0;
+    request_type = HttpRequest::None;
+    rc = 0;
+    stream_sent = 0;
+    stream_length = 0;
+
+    waiting_body = false;
+    response_pending = false;
+    reject_body = false;
+    close_after_stream = false;
+}
+
+HttpServer::Impl::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv) {}
+
+bool HttpServer::Impl::LwsPollingScheduler::run()
+{
+    server->_impl->check_all_protocols();
+    return true;
+}
+
 HttpServer::HttpServer(const std::string & name, Node *parent): Node(name, parent), _impl(std::make_unique<Impl>(this))
 {
     this->add_conf("encoding", &HttpServer::set_encoding);
@@ -161,7 +194,7 @@ bool HttpServer::on_stop()
 {
     _impl->stop = true;
     {
-        std::lock_guard l(_impl->mutex);
+        std::lock_guard lock(_impl->mutex);
         if (_impl->lws_context_ptr != nullptr)
             lws_cancel_service(_impl->lws_context_ptr);
     }
@@ -205,7 +238,7 @@ bool HttpServer::on_start()
     }
 
     Defer defer_context([this] {
-        std::lock_guard l(_impl->mutex);
+        std::lock_guard lock(_impl->mutex);
         if (_impl->lws_context_ptr != nullptr)
         {
             lws_context_destroy(_impl->lws_context_ptr);

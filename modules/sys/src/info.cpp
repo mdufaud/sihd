@@ -86,6 +86,7 @@ bool CpuUsage::sample()
         return false;
     }
     const auto per_core = per_core_cpu_times();
+
     if (_valid)
     {
         _usage = usage_percent(_global, *times);

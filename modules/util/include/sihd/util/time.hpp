@@ -37,20 +37,14 @@ void usleep(UnixTime micro);
 void msleep(UnixTime milli);
 void sleep(time_t sec);
 
-// tv (micro resolution) -> seconds,milliseconds
 double tv_to_double(const struct timeval & tv);
-// tv (nano resolution) -> seconds,milliseconds
 double nano_tv_to_double(const struct timeval & tv);
 
-// seconds,milliseconds -> timeval
 struct timeval double_to_tv(double time);
-// seconds,milliseconds -> timeval
 struct timeval double_to_nano_tv(double time);
-// milliseconds -> timeval (micro resolution)
 struct timeval milli_to_tv(UnixTime milliseconds);
 static constexpr auto ms_to_tv = milli_to_tv;
 static constexpr auto milliseconds_to_tv = milli_to_tv;
-// nano -> timeval (micro resolution)
 struct timeval to_tv(UnixTime micro);
 // nano -> timeval holding nanoseconds in tv_usec [0, 1E9): only round-trips through nano_tv
 struct timeval to_nano_tv(UnixTime nano);
@@ -61,44 +55,30 @@ struct timeval to_nano_tv(UnixTime nano);
  */
 struct tm to_tm(UnixTime nano, bool localtime = false);
 
-// nano -> micro
 UnixTime to_micro(UnixTime nano);
 static constexpr auto to_us = to_micro;
 static constexpr auto to_microseconds = to_micro;
-// nano -> milli
 UnixTime to_milli(UnixTime nano);
 static constexpr auto to_ms = to_milli;
 static constexpr auto to_milliseconds = to_milli;
-// nano -> sec
 UnixTime to_sec(UnixTime nano);
 static constexpr auto to_seconds = to_sec;
-// nano -> min
 UnixTime to_min(UnixTime nano);
 static constexpr auto to_minutes = to_min;
-// nano -> hour
 UnixTime to_hours(UnixTime nano);
-// nano -> day
 UnixTime to_days(UnixTime nano);
 // the running-unit clock components (the Clocktime fields), positive on negative timestamps
-// nano -> clock hour of the day
 int clock_hour(UnixTime nano);
-// nano -> clock minute of the hour
 int clock_minute(UnixTime nano);
-// nano -> clock second of the minute
 int clock_second(UnixTime nano);
-// nano -> clock millisecond of the second
 int clock_millisecond(UnixTime nano);
-// nano -> clock microsecond of the second
 int clock_microsecond(UnixTime nano);
-// nano -> seconds,milliseconds
 double to_double(UnixTime nano);
 double to_double_milliseconds(UnixTime nano);
-// nano -> hz
 double to_freq(UnixTime nano);
 static constexpr auto to_hz = to_freq;
 static constexpr auto to_frequency = to_freq;
 
-// chrono -> nano
 template <traits::Duration Duration>
 constexpr Duration to_duration(UnixTime nano)
 {
@@ -107,43 +87,36 @@ constexpr Duration to_duration(UnixTime nano)
                     / Duration::period::num);
 }
 
-// micro -> nano
 constexpr UnixTime micro(UnixTime micro)
 {
     return micro * 1000;
 }
 static constexpr auto us = micro;
 static constexpr auto microseconds = micro;
-// milli -> nano
 constexpr UnixTime milli(UnixTime milli)
 {
     return milli * 1000000;
 }
 static constexpr auto ms = milli;
 static constexpr auto milliseconds = milli;
-// sec -> nano
 constexpr UnixTime sec(UnixTime sec)
 {
     return sec * 1000000000;
 }
 static constexpr auto seconds = sec;
-// min -> nano
 constexpr UnixTime min(UnixTime min)
 {
     return sec(min) * 60;
 }
 static constexpr auto minutes = min;
-// hour -> nano
 constexpr UnixTime hours(UnixTime hour)
 {
     return min(hour) * 60;
 }
-// day -> nano
 constexpr UnixTime days(UnixTime day)
 {
     return hours(day) * 24;
 }
-// hz -> nano
 constexpr UnixTime freq(double hz)
 {
     if (hz <= 0.0)
@@ -155,11 +128,9 @@ constexpr UnixTime freq(double hz)
 }
 static constexpr auto frequency = freq;
 static constexpr auto hz = freq;
-// seconds,milliseconds -> nano
 UnixTime from_double(double sec_milli);
 UnixTime from_double_milliseconds(double milli_micro);
 
-// duration -> nano
 template <traits::Duration Duration>
 constexpr UnixTime duration(Duration duration)
 {
@@ -168,20 +139,15 @@ constexpr UnixTime duration(Duration duration)
            * Duration::period::num;
 }
 
-// timepoint -> nano
 template <traits::Duration Duration>
 constexpr UnixTime floor(UnixTime val)
 {
     return val - (val % time::duration<Duration>(Duration {1}));
 }
 
-// tm struct -> nano
 UnixTime tm(struct tm & tm);
-// tm struct -> nano
 UnixTime local_tm(struct tm & tm);
-// timeval with micro resolution -> nano
 UnixTime tv(const struct timeval & tv);
-// timeval with nano resolution -> nano
 UnixTime nano_tv(const struct timeval & tv);
 
 UnixTime ts(const struct timespec & ts);

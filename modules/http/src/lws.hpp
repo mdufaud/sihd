@@ -1,6 +1,7 @@
 // Wrapper for libwebsockets.h: it wraps everything in extern "C" then includes <stdint.h>,
 // which clang-21 maps to built-in C++ module imports - forbidden inside extern "C"
-#pragma once
+#ifndef __SIHD_HTTP_SRC_LWS_HPP__
+#define __SIHD_HTTP_SRC_LWS_HPP__
 
 #ifdef __clang__
 # pragma clang diagnostic push
@@ -9,4 +10,6 @@
 #include <libwebsockets.h>
 #ifdef __clang__
 # pragma clang diagnostic pop
+#endif
+
 #endif

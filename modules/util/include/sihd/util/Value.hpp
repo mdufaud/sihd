@@ -146,8 +146,6 @@ class Value
 template <>
 int Value::compare(const Value & val) const;
 
-// float
-
 template <>
 bool Value::operator==(const float & val) const;
 
@@ -165,8 +163,6 @@ bool Value::operator<(const float & val) const;
 
 template <>
 bool Value::operator<=(const float & val) const;
-
-// double
 
 template <>
 bool Value::operator==(const double & val) const;

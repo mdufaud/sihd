@@ -2,6 +2,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -9,7 +11,7 @@ SIHD_REGISTER_FACTORY(DeviceUdpSender)
 
 SIHD_LOGGER;
 
-DeviceUdpSender::DeviceUdpSender(const std::string & name, sihd::util::Node *parent):
+DeviceUdpSender::DeviceUdpSender(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _udp_sender("udp-sender"),
     _port(0),
@@ -47,7 +49,7 @@ bool DeviceUdpSender::set_unix_path(std::string_view path)
 
 bool DeviceUdpSender::on_init()
 {
-    this->add_unlinked_channel("tx", sihd::util::Type::TYPE_BYTE, 1);
+    this->add_unlinked_channel("tx", Type::TYPE_BYTE, 1);
     return true;
 }
 
@@ -93,7 +95,7 @@ void DeviceUdpSender::handle(sihd::core::Channel *c)
 {
     if (c == _channel_tx)
     {
-        SIHD_UNEXPECTED_LOG(_udp_sender.send_all(sihd::util::ArrCharView(*c->array())));
+        SIHD_UNEXPECTED_LOG(_udp_sender.send_all(ArrCharView(*c->array())));
     }
 }
 

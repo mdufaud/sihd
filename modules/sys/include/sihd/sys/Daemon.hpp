@@ -25,8 +25,7 @@ class Daemon: public sihd::util::Named,
         Daemon(const std::string & name, sihd::util::Node *parent = nullptr);
         ~Daemon();
 
-        // the account the daemon drops to once daemonized. By default the user's PRIMARY group is
-        // used; set_group() overrides it. The user is given by name or as an opaque UserId.
+        // drop target after daemonize: the user's PRIMARY group unless set_group() overrides it
         bool set_user(std::string_view user_name);
         bool set_user(const user::UserId & user_id);
         bool set_group(std::string_view group_name);
@@ -50,9 +49,7 @@ class Daemon: public sihd::util::Named,
         void _remove_pid_file();
         bool _handle_signals();
 
-        // resolves the drop target user and (unless set_group() was used) its primary group
         bool _set_drop_target(const user::UserId & user_id);
-        // records an explicit drop group
         bool _set_group(const user::GroupId & group_id);
 
         bool _signals_handled;

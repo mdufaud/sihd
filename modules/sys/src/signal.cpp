@@ -4,7 +4,7 @@
 #include <span>
 
 #if !defined(__SIHD_WINDOWS__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <unistd.h> // for _exit
+# include <unistd.h>
 #endif
 
 #include <sihd/sys/os.hpp>
@@ -19,7 +19,7 @@
 
 #if defined(__SIHD_WINDOWS__)
 # include <windows.h>
-typedef void (*sighandler_t)(int);
+using sighandler_t = void (*)(int);
 #endif
 
 #if defined(__SIHD_EMSCRIPTEN__)
@@ -37,7 +37,7 @@ namespace
 
 SigExitConfig g_exit_config;
 
-// important volatile tag: the processor should NOT use its cache here
+// volatile: the processor must NOT cache it
 volatile std::sig_atomic_t g_last_signal_received = -1;
 
 std::array<SigStatus, signal::max_signal> g_signals_status;
@@ -105,17 +105,14 @@ void _signal_callback(int sig)
     _set_signal_received(sig);
 
 #if defined(__SIHD_WINDOWS__)
-    // MSVCRT resets the handler to SIG_DFL on delivery; re-arm to mimic the
-    // persistent POSIX sigaction handler so repeated signals stay caught
+    // MSVCRT resets the handler to SIG_DFL on delivery: re-arm so repeated signals stay caught
     ::signal(sig, _signal_callback);
 #endif
 
-    // put errno back for program usage
     errno = tmp_errno;
 }
 
 #if defined(__SIHD_WINDOWS__)
-// Windows console control handler for better CTRL+C, CTRL+BREAK, etc. support
 BOOL WINAPI _console_ctrl_handler(DWORD ctrl_type)
 {
     switch (ctrl_type)
@@ -216,7 +213,7 @@ bool is_category_dump(int sig)
     }
 }
 
-sihd::util::Result<void> ignore(int sig)
+Result<void> ignore(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_IGN);
@@ -234,10 +231,9 @@ sihd::util::Result<void> ignore(int sig)
     return {};
 }
 
-sihd::util::Result<void> handle(int sig, sig_handler *previous_handler)
+Result<void> handle(int sig, sig_handler *previous_handler)
 {
 #if defined(__SIHD_WINDOWS__)
-    // Install console control handler for better CTRL+C/BREAK handling
     _install_console_handler();
 
     sighandler_t previous = ::signal(sig, _signal_callback);
@@ -262,7 +258,7 @@ sihd::util::Result<void> handle(int sig, sig_handler *previous_handler)
     return {};
 }
 
-sihd::util::Result<void> unhandle(int sig)
+Result<void> unhandle(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
     sighandler_t previous_handler = ::signal(sig, SIG_DFL);
@@ -352,9 +348,6 @@ void reset_all_received()
     }
 }
 
-// block_thread()/unblock_thread() live in src/linux/signal.cpp;
-// kill() and name() live in src/linux|windows/signal.cpp
-
 std::string status_str()
 {
     std::string ret;
@@ -367,7 +360,7 @@ std::string status_str()
             const size_t received = status->received.load(std::memory_order_relaxed);
             if (received > 0)
             {
-                const sihd::util::Timestamp time_received = status->time_received.load(std::memory_order_relaxed);
+                const Timestamp time_received = status->time_received.load(std::memory_order_relaxed);
                 ret += fmt::format("{} -> {} ({})\n", signal::name(sig), received, time_received.day_str());
             }
         }

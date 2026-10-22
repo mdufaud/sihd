@@ -21,7 +21,7 @@ enum class FileWatcherEventType
     deleted,
     modified,
     renamed,
-    terminated, // watch is finished
+    terminated,
 #if defined(__SIHD_UNIX__)
     opened,
     accessed,

@@ -18,9 +18,9 @@ using namespace sihd::sys;
 class TestSemaphore: public ::testing::Test
 {
     protected:
-        TestSemaphore() { sihd::util::LoggerManager::stream(); }
+        TestSemaphore() { LoggerManager::stream(); }
 
-        virtual ~TestSemaphore() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSemaphore() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {

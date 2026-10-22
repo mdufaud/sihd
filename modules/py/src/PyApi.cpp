@@ -10,6 +10,33 @@
 namespace sihd::py
 {
 
+using namespace sihd::util;
+
+namespace
+{
+
+pybind11::object & error_type()
+{
+    static pybind11::object type = pybind11::reinterpret_steal<pybind11::object>(
+        PyErr_NewException("sihd.Error", PyExc_RuntimeError, nullptr));
+    return type;
+}
+
+} // namespace
+
+// args = (message,), code attribute = ErrorCode
+void raise_error(const Error & error)
+{
+    // callers may release the GIL for the I/O (call_guard): raising touches the interpreter
+    pybind11::gil_scoped_acquire acquire;
+    // from the module, not a C++ static: libsihd_py.so and the sihd extension each have their own statics
+    pybind11::object type = pybind11::module_::import("sihd").attr("Error");
+    pybind11::object instance = type(error.message);
+    instance.attr("code") = static_cast<int>(error.code);
+    PyErr_SetObject(type.ptr(), instance.ptr());
+    throw pybind11::error_already_set();
+}
+
 std::map<std::string_view, std::function<void(PyApi::PyModule &)>> & PyApi::api_lst()
 {
     static std::map<std::string_view, std::function<void(PyModule &)>> instance;
@@ -42,6 +69,11 @@ void PyApi::add_api(std::string_view name, std::function<void(PyApi::PyModule &)
 PyApi::PyModule::PyModule(pybind11::module *module): _module_ptr(module) {}
 
 PyApi::PyModule::~PyModule() = default;
+
+pybind11::module & PyApi::PyModule::module() const
+{
+    return *_module_ptr;
+}
 
 bool PyApi::PyModule::is_loaded(std::string_view submodule_name)
 {

@@ -4,8 +4,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
-using sihd::util::Error;
-using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+using enum ErrorCode;
 
 namespace sihd::lua
 {
@@ -22,43 +22,42 @@ std::map<lua_State *, LuaGil *> g_map_gil;
 
 void register_vm(lua_State *state, Vm *vm)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     g_map_vm[state] = vm;
 }
 
 void unregister_vm(lua_State *state)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     g_map_vm.erase(state);
 }
 
 void register_gil(lua_State *state, LuaGil *gil)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     g_map_gil[state] = gil;
 }
 
 void unregister_gil(lua_State *state)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     g_map_gil.erase(state);
 }
 
-// drop every state bound to this GIL
 void unregister_gil_universe(LuaGil *gil)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     std::erase_if(g_map_gil, [gil](const auto & pair) { return pair.second == gil; });
 }
 
-sihd::util::Error pop_lua_error(sihd::util::ErrorCode code, lua_State *state)
+Error pop_lua_error(ErrorCode code, lua_State *state)
 {
     const char *msg = lua_tostring(state, -1);
     lua_pop(state, 1);
     return Error(code, msg == nullptr ? "unknown lua error" : msg);
 }
 
-sihd::util::Result<void> do_chunk(lua_State *state, int load_status, sihd::util::ErrorCode load_code)
+Result<void> do_chunk(lua_State *state, int load_status, ErrorCode load_code)
 {
     if (load_status != 0)
         return std::unexpected(pop_lua_error(load_code, state));
@@ -91,7 +90,6 @@ void Vm::set_state(lua_State *state)
     _state_ptr = state;
     if (state != nullptr)
     {
-        // borrow the universe GIL, nullptr if non-sihd state
         _gil = get_gil(state);
         register_vm(state, this);
     }
@@ -102,7 +100,6 @@ void Vm::close_state()
     if (_state_ptr != nullptr)
     {
         unregister_vm(_state_ptr);
-        // coroutine Vm: drop its registry anchor in the parent
         if (_coroutine_ref != LUA_NOREF && _coroutine_parent != nullptr)
         {
             {
@@ -215,11 +212,11 @@ bool Vm::refs_exists(const std::initializer_list<std::string> & lst)
     return ret;
 }
 
-sihd::util::Result<void> Vm::do_file(const std::string & path)
+Result<void> Vm::do_file(const std::string & path)
 {
     LuaGilGuard guard(_state_ptr);
     const int load_status = luaL_loadfile(_state_ptr, path.c_str());
-    sihd::util::ErrorCode load_code = out_of_memory;
+    ErrorCode load_code = out_of_memory;
     if (load_status == LUA_ERRFILE)
         load_code = not_found;
     else if (load_status == LUA_ERRSYNTAX)
@@ -227,63 +224,69 @@ sihd::util::Result<void> Vm::do_file(const std::string & path)
     return do_chunk(_state_ptr, load_status, load_code);
 }
 
-sihd::util::Result<void> Vm::do_string(const std::string & str)
+Result<void> Vm::do_string(const std::string & str)
 {
     LuaGilGuard guard(_state_ptr);
     const int load_status = luaL_loadstring(_state_ptr, str.c_str());
-    const sihd::util::ErrorCode load_code = load_status == LUA_ERRSYNTAX ? invalid_argument : out_of_memory;
+    const ErrorCode load_code = load_status == LUA_ERRSYNTAX ? invalid_argument : out_of_memory;
     return do_chunk(_state_ptr, load_status, load_code);
+}
+
+lua_State *Vm::lua_state() const
+{
+    return _state_ptr;
+}
+
+LuaGil *Vm::gil() const
+{
+    return _gil;
 }
 
 void Vm::print_stack(int max, FILE *output)
 {
-    fprintf(output, "%s", this->dump_stack(max).c_str());
+    fmt::print(output, "{}", this->dump_stack(max));
 }
 
 std::string Vm::dump_stack(int max)
 {
     if (_state_ptr == nullptr)
         return "";
-    std::string s;
+    std::string dump;
     int top = lua_gettop(_state_ptr);
     if (max >= 0)
         top = std::min(top, max);
-    s = fmt::format("lua stack {} ({}):\n", static_cast<void *>(_state_ptr), top);
+    dump = fmt::format("lua stack {} ({}):\n", static_cast<void *>(_state_ptr), top);
     int i = 1;
     while (i <= top)
     {
-        s += fmt::format("stack[{}]:\t", i);
+        dump += fmt::format("stack[{}]:\t", i);
         switch (lua_type(_state_ptr, i))
         {
             case LUA_TNUMBER:
-                s += fmt::format("{}", lua_tonumber(_state_ptr, i));
+                dump += fmt::format("{}", lua_tonumber(_state_ptr, i));
                 break;
             case LUA_TSTRING:
-                s += fmt::format("{}", lua_tostring(_state_ptr, i));
+                dump += fmt::format("{}", lua_tostring(_state_ptr, i));
                 break;
             case LUA_TBOOLEAN:
-                s += fmt::format("{}", (lua_toboolean(_state_ptr, i) ? "true" : "false"));
+                dump += fmt::format("{}", (lua_toboolean(_state_ptr, i) ? "true" : "false"));
                 break;
             case LUA_TNIL:
-                s += "nil";
+                dump += "nil";
                 break;
             default:
-                s += fmt::format("{}", lua_topointer(_state_ptr, i));
+                dump += fmt::format("{}", lua_topointer(_state_ptr, i));
                 break;
         }
-        s += fmt::format(" ({})\n", luaL_typename(_state_ptr, i));
+        dump += fmt::format(" ({})\n", luaL_typename(_state_ptr, i));
         ++i;
     }
-    return s;
+    return dump;
 }
-
-/* ************************************************************************* */
-/* Vm static methods */
-/* ************************************************************************* */
 
 Vm *Vm::get_vm(lua_State *state)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     auto it = g_map_vm.find(state);
     if (it != g_map_vm.end())
         return it->second;
@@ -292,7 +295,7 @@ Vm *Vm::get_vm(lua_State *state)
 
 LuaGil *Vm::get_gil(lua_State *state)
 {
-    std::lock_guard l(g_mutex);
+    std::lock_guard lock(g_mutex);
     auto it = g_map_gil.find(state);
     if (it != g_map_gil.end())
         return it->second;

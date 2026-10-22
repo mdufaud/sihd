@@ -135,7 +135,6 @@ class Json
 };
 
 // Json must be complete: the iterator holds one inline
-
 class Json::iterator
 {
     public:
@@ -180,7 +179,6 @@ class Json::iterator
                  simdjson::dom::object::iterator obj_end,
                  const std::shared_ptr<DomHolder> & holder);
 
-        // end sentinel, no shared_ptr copy
         struct EndTag
         {
         };

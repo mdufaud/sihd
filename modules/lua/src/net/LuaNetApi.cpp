@@ -20,8 +20,7 @@ namespace sihd::lua
 
 using namespace sihd::net;
 using sihd::core::Device;
-using sihd::util::Node;
-using sihd::util::SmartNodePtr;
+using namespace sihd::util;
 
 SIHD_LOGGER;
 
@@ -35,7 +34,6 @@ void LuaNetApi::load_base(Vm & vm)
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("net")
-        // address value type
         .beginClass<IpAddr>("IpAddr")
         .addConstructor<void (*)()>()
         .addFunction(
@@ -63,7 +61,6 @@ void LuaNetApi::load_base(Vm & vm)
             "is_same_subnet",
             +[](IpAddr *self, const IpAddr & other) -> bool { return self->is_same_subnet(other); })
         .endClass()
-        // factory: net.ip_addr("host") or net.ip_addr("host", port)
         .addFunction(
             "ip_addr",
             +[](const std::string & host, luabridge::LuaRef port) -> IpAddr {

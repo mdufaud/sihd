@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <optional>
 #include <stdexcept>
@@ -14,6 +15,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/CliApp.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/LoggerConsole.hpp>
@@ -33,7 +35,17 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::util;
 
-static int run_app(CliApp & app, const std::vector<std::string> & args)
+namespace
+{
+
+std::filesystem::path unique_temp_path(const std::string & suffix)
+{
+    const std::string test_name = ::testing::UnitTest::GetInstance()->current_test_info()->name();
+    return std::filesystem::temp_directory_path()
+           / fmt::format("sihd_{}_{}{}", test_name, str::generate_random_printable(8), suffix);
+}
+
+int run_app(CliApp & app, const std::vector<std::string> & args)
 {
     std::vector<char *> argv;
     argv.push_back(const_cast<char *>("prog"));
@@ -50,7 +62,7 @@ struct TtyRun
 };
 
 // runs the app with stdout and stderr on a pseudo terminal, nullopt when none can be opened
-static std::optional<TtyRun> run_app_on_tty(CliApp & app, const std::vector<std::string> & args)
+std::optional<TtyRun> run_app_on_tty(CliApp & app, const std::vector<std::string> & args)
 {
     const int master = posix_openpt(O_RDWR | O_NOCTTY);
     if (master < 0)
@@ -91,12 +103,12 @@ static std::optional<TtyRun> run_app_on_tty(CliApp & app, const std::vector<std:
 }
 #endif
 
-static int eval(CliApp & app, std::vector<std::string> args)
+int eval(CliApp & app, std::vector<std::string> args)
 {
     return app.evaluate(args);
 }
 
-static void set_env(const char *name, const char *value)
+void set_env(const char *name, const char *value)
 {
 #if defined(__SIHD_WINDOWS__)
     _putenv_s(name, value);
@@ -105,7 +117,7 @@ static void set_env(const char *name, const char *value)
 #endif
 }
 
-static void unset_env(const char *name)
+void unset_env(const char *name)
 {
 #if defined(__SIHD_WINDOWS__)
     _putenv_s(name, "");
@@ -113,6 +125,8 @@ static void unset_env(const char *name)
     unsetenv(name);
 #endif
 }
+
+} // namespace
 
 // sends the default logging to stdout; the base install_logging applies the level filter
 class TestLogApp: public CliApp
@@ -168,15 +182,15 @@ class TestCliApp: public ::testing::Test
     protected:
         TestCliApp()
         {
-            sihd::util::LoggerManager::set_level(sihd::util::LogLevel::debug);
-            sihd::util::LoggerManager::stream();
+            LoggerManager::set_level(LogLevel::debug);
+            LoggerManager::stream();
         }
 
         virtual ~TestCliApp()
         {
             // a --log-level app leaves the global gate tightened: reset it for the next suite
-            sihd::util::LoggerManager::set_level(sihd::util::LogLevel::debug);
-            sihd::util::LoggerManager::clear_loggers();
+            LoggerManager::set_level(LogLevel::debug);
+            LoggerManager::clear_loggers();
         }
 
         virtual void SetUp() {}
@@ -196,9 +210,7 @@ TEST_F(TestCliApp, test_evaluate_dispatch)
     // a node without on_run prints its help
     app.root().add_command("info", "info");
     EXPECT_EQ(eval(app, {"info"}), EXIT_SUCCESS);
-    // unknown command
     EXPECT_NE(eval(app, {"nope"}), EXIT_SUCCESS);
-    // unknown option
     EXPECT_NE(eval(app, {"--nope", "serve"}), EXIT_SUCCESS);
 }
 
@@ -295,17 +307,14 @@ TEST_F(TestCliApp, test_conf_and_set_errors)
     serve.bind("port", opts.port, "");
     serve.on_run([] {});
 
-    // unknown conf key
     app.set_conf_loader([] { return std::string(R"({"serve": {"nope": 1}})"); });
     EXPECT_EQ(run_app(app, {"serve"}), EXIT_FAILURE);
     EXPECT_EQ(app.state(), CliApp::State::error);
 
-    // unknown --set key
     CliApp app2({.name = "err", .setup_logging = false});
     app2.root().add_command("serve", "serve").bind("port", opts.port, "").on_run([] {});
     EXPECT_EQ(run_app(app2, {"--set", "serve.nope=1", "serve"}), EXIT_FAILURE);
 
-    // --set value of the wrong type
     CliApp app3({.name = "err", .setup_logging = false});
     app3.root().add_command("serve", "serve").bind("port", opts.port, "").on_run([] {});
     EXPECT_EQ(run_app(app3, {"--set", "serve.port=abc", "serve"}), EXIT_FAILURE);
@@ -346,7 +355,6 @@ TEST_F(TestCliApp, test_help_interception_option_value)
     EXPECT_EQ(conf, "help");
     EXPECT_EQ(ran, "stat");
 
-    // a standalone help token still prints the help
     testing::internal::CaptureStdout();
     EXPECT_EQ(eval(app, {"help"}), EXIT_SUCCESS);
     std::string root_help = testing::internal::GetCapturedStdout();
@@ -383,6 +391,9 @@ TEST_F(TestCliApp, test_option_value_dash_prefix)
     EXPECT_TRUE(ran);
 }
 
+namespace
+{
+
 struct CompletionVars
 {
         std::string name;
@@ -391,7 +402,7 @@ struct CompletionVars
         std::string removed;
 };
 
-static void add_completion_commands(CliApp & app, CompletionVars & vars)
+void add_completion_commands(CliApp & app, CompletionVars & vars)
 {
     Command & service = app.root().add_command("service", "manage services");
     service.bind("name", vars.name, "the service name").bind("force", vars.force, "force the action");
@@ -400,10 +411,14 @@ static void add_completion_commands(CliApp & app, CompletionVars & vars)
 }
 
 // the candidates the completion of the static script computes for words, the last one being completed
-static std::string complete_with_bash(const std::string & script, const std::vector<std::string> & words)
+std::string complete_with_bash(const std::string & script, const std::vector<std::string> & words)
 {
-    const char *script_path = "/tmp/sihd_cli_completion_test.sh";
-    const char *driver_path = "/tmp/sihd_cli_completion_test_driver.sh";
+    const std::filesystem::path script_path = unique_temp_path("_completion.sh");
+    const std::filesystem::path driver_path = unique_temp_path("_completion_driver.sh");
+    Defer cleanup([&] {
+        std::filesystem::remove(script_path);
+        std::filesystem::remove(driver_path);
+    });
     {
         std::ofstream file(script_path);
         file << script;
@@ -415,15 +430,16 @@ static std::string complete_with_bash(const std::string & script, const std::vec
         std::ofstream file(driver_path);
         file << fmt::format("source '{}'\nCOMP_WORDS=({})\nCOMP_CWORD={}\n_my_app\n"
                             "[[ ${{#COMPREPLY[@]}} -gt 0 ]] && printf '%s\\n' \"${{COMPREPLY[@]}}\"\n",
-                            script_path,
+                            script_path.string(),
                             quoted,
                             words.size() - 1);
     }
     std::string out;
-    FILE *pipe = popen(fmt::format("bash {}", driver_path).c_str(), "r");
+    FILE *pipe = popen(fmt::format("bash '{}'", driver_path.string()).c_str(), "r");
     if (pipe == nullptr)
         return "";
     char buffer[512];
+
     size_t read = 0;
     while ((read = fread(buffer, 1, sizeof(buffer), pipe)) > 0)
         out.append(buffer, read);
@@ -432,7 +448,7 @@ static std::string complete_with_bash(const std::string & script, const std::vec
 }
 
 // the candidates of a __complete call, trailing empty lines removed
-static std::vector<std::string> complete_lines(CliApp & app, const std::vector<std::string> & args)
+std::vector<std::string> complete_lines(CliApp & app, const std::vector<std::string> & args)
 {
     testing::internal::CaptureStdout();
     EXPECT_EQ(app.evaluate(args), EXIT_SUCCESS);
@@ -442,6 +458,8 @@ static std::vector<std::string> complete_lines(CliApp & app, const std::vector<s
         lines.pop_back();
     return lines;
 }
+
+} // namespace
 
 TEST_F(TestCliApp, test_completion_dump)
 {
@@ -477,7 +495,6 @@ TEST_F(TestCliApp, test_completion_dump)
     EXPECT_NE(loader.find("__complete"), std::string::npos);
     EXPECT_EQ(loader.find("__my_app_node"), std::string::npos);
 
-    // an unknown kind fails
     EXPECT_EQ(eval(app, {"--generate-bash-completion=zsh"}), EXIT_FAILURE);
 
     // the dump wins at any depth and snapshots the whole tree
@@ -486,7 +503,6 @@ TEST_F(TestCliApp, test_completion_dump)
     std::string deep = testing::internal::GetCapturedStdout();
     EXPECT_EQ(deep, script);
 
-    // an empty program name produces no script
     CliApp nameless({.name = "", .setup_logging = false});
     testing::internal::CaptureStdout();
     EXPECT_EQ(eval(nameless, {"--generate-bash-completion"}), EXIT_SUCCESS);
@@ -508,15 +524,15 @@ TEST_F(TestCliApp, test_completion_static_script)
     EXPECT_EQ(eval(app, {"--generate-bash-completion=dynamic"}), EXIT_SUCCESS);
     std::string loader = testing::internal::GetCapturedStdout();
 
+    const std::filesystem::path loader_path = unique_temp_path("_loader.sh");
     {
-        std::ofstream file("/tmp/sihd_cli_completion_loader_test.sh");
+        std::ofstream file(loader_path);
         file << loader;
     }
-    EXPECT_EQ(std::system("bash -n /tmp/sihd_cli_completion_loader_test.sh"), 0);
+    EXPECT_EQ(std::system(fmt::format("bash -n '{}'", loader_path.string()).c_str()), 0);
+    std::filesystem::remove(loader_path);
 
-    // subcommands and help
     EXPECT_EQ(complete_with_bash(script, {"my-app", ""}), "service\nhelp\n");
-    // prefix filtering
     EXPECT_EQ(complete_with_bash(script, {"my-app", "ser"}), "service\n");
     // options and flags on a dash, including the cli11 help option and the completion dump
     EXPECT_EQ(complete_with_bash(script, {"my-app", "--"}),
@@ -528,19 +544,15 @@ TEST_F(TestCliApp, test_completion_static_script)
     // known option values, plain and inline
     EXPECT_EQ(complete_with_bash(script, {"my-app", "--log-level", "de"}), "debug\n");
     EXPECT_EQ(complete_with_bash(script, {"my-app", "--log-level=de"}), "--log-level=debug\n");
-    // unknown values fall back to nothing
     EXPECT_EQ(complete_with_bash(script, {"my-app", "--set", ""}), "");
-    // a positional node offers no candidates
     EXPECT_EQ(complete_with_bash(script, {"my-app", "service", "remove", ""}), "");
+
     // a positional value keeps the node context: the node options are still offered after it
     std::string after_positional = complete_with_bash(script, {"my-app", "service", "remove", "foo", "--"});
     EXPECT_NE(after_positional.find("--name"), std::string::npos);
     EXPECT_NE(after_positional.find("--force"), std::string::npos);
-    // an option of a sibling node is not offered
     EXPECT_EQ(after_positional.find("--url"), std::string::npos);
-    // a positional node still offers no command after its value
     EXPECT_EQ(complete_with_bash(script, {"my-app", "service", "remove", "foo", ""}), "");
-    // after -- everything is positional
     EXPECT_EQ(complete_with_bash(script, {"my-app", "--", ""}), "");
 }
 
@@ -550,31 +562,25 @@ TEST_F(TestCliApp, test_completion_dynamic_candidates)
     CliApp app({.name = "my-app", .description = "an app", .version = "1.0", .setup_logging = false});
     add_completion_commands(app, vars);
 
-    // root commands and the help token
     EXPECT_EQ(complete_lines(app, {"__complete", ""}), (std::vector<std::string> {"service", "help"}));
     EXPECT_EQ(complete_lines(app, {"__complete", "ser"}), (std::vector<std::string> {"service"}));
-    // options on a dash, version among the flags
     EXPECT_EQ(complete_lines(app, {"__complete", "--v"}), (std::vector<std::string> {"--version"}));
     // depth: own options plus the root ones, fallthrough
     std::vector<std::string> add_opts = complete_lines(app, {"__complete", "service", "add", "--"});
     EXPECT_NE(std::find(add_opts.begin(), add_opts.end(), "--url"), add_opts.end());
     EXPECT_NE(std::find(add_opts.begin(), add_opts.end(), "--set"), add_opts.end());
-    // known values of --log-level
     EXPECT_EQ(
         complete_lines(app, {"__complete", "--log-level", ""}),
         (std::vector<std::string> {"emergency", "alert", "critical", "error", "warning", "notice", "info", "debug"}));
     EXPECT_EQ(complete_lines(app, {"__complete", "--log-level", "de"}), (std::vector<std::string> {"debug"}));
     EXPECT_EQ(complete_lines(app, {"__complete", "--log-level=de"}), (std::vector<std::string> {"--log-level=debug"}));
-    // unknown values yield nothing
     EXPECT_EQ(complete_lines(app, {"__complete", "--set", "x"}), (std::vector<std::string> {}));
     // a consumed value returns to the node candidates
     std::vector<std::string> after_value = complete_lines(app, {"__complete", "--log-level", "debug", ""});
+
     EXPECT_NE(std::find(after_value.begin(), after_value.end(), "service"), after_value.end());
-    // a positional node offers no commands
     EXPECT_EQ(complete_lines(app, {"__complete", "service", "remove", ""}), (std::vector<std::string> {}));
-    // after -- nothing is offered
     EXPECT_EQ(complete_lines(app, {"__complete", "--", ""}), (std::vector<std::string> {}));
-    // live branches are seen
     app.root().add_command("late", "added later");
     EXPECT_EQ(complete_lines(app, {"__complete", "la"}), (std::vector<std::string> {"late"}));
 }
@@ -622,7 +628,6 @@ TEST_F(TestCliApp, test_bare_run_piped_never_emits_completion)
     EXPECT_NE(testing::internal::GetCapturedStdout().find("complete -F _my_app -o default \"my-app\""),
               std::string::npos);
 
-    // a run with arguments is untouched
     CliApp app2({.name = "my-app", .setup_logging = false});
     bool ran2 = false;
     app2.root().add_command("serve", "serve").on_run([&] { ran2 = true; });
@@ -926,6 +931,7 @@ TEST_F(TestCliApp, test_logging_console_colors)
     {
         LogSpyApp app({.name = "nocolor", .setup_logging = false});
         app.install_logging();
+
         EXPECT_NE(dynamic_cast<LoggerStream *>(app.logger()), nullptr);
     }
     unset_env("NO_COLOR");
@@ -986,6 +992,7 @@ TEST_F(TestCliApp, test_log_sinks_conf)
     const std::string any_source = "any::src";
     ALogger *errors = app.sinks().get_child<ALogger>("errors");
     ALogger *quiet = app.sinks().get_child<ALogger>("quiet");
+
     ASSERT_NE(errors, nullptr);
     ASSERT_NE(quiet, nullptr);
     EXPECT_TRUE(errors->should_filter(LogInfo(any_source, LogLevel::info)));

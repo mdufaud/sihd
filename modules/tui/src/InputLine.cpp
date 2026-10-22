@@ -50,6 +50,16 @@ void InputLine::set_content(std::string content)
     _cursor_pos = (int)_content.size();
 }
 
+const std::string & InputLine::content() const
+{
+    return _content;
+}
+
+ftxui::Component InputLine::ActiveChild()
+{
+    return _input;
+}
+
 void InputLine::clear()
 {
     _content.clear();

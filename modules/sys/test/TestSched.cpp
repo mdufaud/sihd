@@ -6,6 +6,8 @@
 
 using enum sihd::util::ErrorCode;
 
+using namespace sihd::util;
+
 namespace test
 {
 using namespace sihd::sys;
@@ -22,7 +24,7 @@ class TestSched: public ::testing::Test
 TEST_F(TestSched, test_sched_nice)
 {
     auto current = sched::nice(os::pid());
-    if constexpr (sihd::util::build::is_emscripten)
+    if constexpr (build::is_emscripten)
     {
         ASSERT_FALSE(current.has_value());
         EXPECT_EQ(current.error().code, not_supported);
@@ -37,7 +39,7 @@ TEST_F(TestSched, test_sched_nice)
     ASSERT_TRUE(sched::set_nice(os::pid(), *current + 1).has_value());
     auto raised = sched::nice(os::pid());
     ASSERT_TRUE(raised.has_value());
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         // priority classes are coarse: the value may round to the same anchor
         EXPECT_GE(*raised, *current);
     else
@@ -49,7 +51,7 @@ TEST_F(TestSched, test_sched_nice)
 
 TEST_F(TestSched, test_sched_scheduler)
 {
-    if constexpr (sihd::util::build::is_windows || sihd::util::build::is_emscripten)
+    if constexpr (build::is_windows || build::is_emscripten)
     {
         auto policy = sched::scheduler(os::pid());
         ASSERT_FALSE(policy.has_value());
@@ -86,7 +88,7 @@ TEST_F(TestSched, test_sched_scheduler)
 TEST_F(TestSched, test_sched_affinity)
 {
     auto mask = sched::affinity(os::pid());
-    if constexpr (sihd::util::build::is_emscripten)
+    if constexpr (build::is_emscripten)
     {
         ASSERT_FALSE(mask.has_value());
         EXPECT_EQ(mask.error().code, not_supported);

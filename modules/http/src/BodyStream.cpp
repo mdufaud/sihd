@@ -3,6 +3,8 @@
 #include <sihd/http/BodyStream.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -23,7 +25,7 @@ IBodyStream *BodyStreamFunc::clone() const
     return new BodyStreamFunc(*this);
 }
 
-bool BodyStreamFunc::on_chunk(const HttpRequest & request, sihd::util::ArrCharView chunk)
+bool BodyStreamFunc::on_chunk(const HttpRequest & request, ArrCharView chunk)
 {
     if (_func == nullptr)
         throw std::logic_error("body stream func is not set");
@@ -57,7 +59,7 @@ IBodyStream *BodyStreamFile::clone() const
     return new BodyStreamFile(*this);
 }
 
-bool BodyStreamFile::on_chunk(const HttpRequest & request, sihd::util::ArrCharView chunk)
+bool BodyStreamFile::on_chunk(const HttpRequest & request, ArrCharView chunk)
 {
     if (_path_provider == nullptr)
         throw std::logic_error("body stream path is not set");

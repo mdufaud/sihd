@@ -8,7 +8,6 @@
 namespace sihd::sys::internal
 {
 
-// fetch list as (mime to request, content label)
 using MimeLabel = std::pair<std::string, std::string>;
 
 // offered-labeled when nothing is wanted, else the wanted mimes the offer advertises

@@ -18,8 +18,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Url.hpp>
 
-// Pixel decoding of image content (png, jpeg, ...) is for a future dedicated
-// image module: every format is exposed through get_raw() and served through set_raw().
 #pragma message(                                                                                                       \
     "clipboard: image formats are exposed as raw bytes only - pixel decoding comes later in a dedicated image module")
 
@@ -33,8 +31,7 @@ SIHD_NEW_LOGGER("sihd::sys::clipboard");
 namespace
 {
 
-// The clipboard is a shared resource - other apps and the Clipboard History
-// hold it briefly: retry a few times before giving up.
+// shared resource: other apps and the Clipboard History hold it briefly, retry before giving up
 bool open_clipboard()
 {
     int tries = 0;
@@ -47,7 +44,6 @@ bool open_clipboard()
     return true;
 }
 
-// Converts the utf-16 text held by `object` into an utf-8 string.
 std::optional<std::string> utf8_from_unicode_text(HANDLE object)
 {
     const WCHAR *buffer = static_cast<const WCHAR *>(GlobalLock(object));
@@ -71,8 +67,6 @@ std::optional<std::string> utf8_from_unicode_text(HANDLE object)
     return out;
 }
 
-// Wraps the CF_DIB held by `object` into a complete BMP file so the bytes
-// match what the linux backends serve for image/bmp.
 std::optional<ArrByte> bmp_file_from_dib(HANDLE object)
 {
     const uint8_t *dib = static_cast<const uint8_t *>(GlobalLock(object));
@@ -89,8 +83,7 @@ std::optional<ArrByte> bmp_file_from_dib(HANDLE object)
         return std::nullopt;
     if (info->biCompression != BI_RGB || (info->biBitCount != 24 && info->biBitCount != 32))
         return std::nullopt;
-    // Color table entries ride between the info header and the pixels: the
-    // pixel array offset must account for them or the pixels shift.
+    // color table entries sit between info header and pixels: the pixel offset must count them
     const size_t palette_bytes = static_cast<size_t>(info->biClrUsed) * sizeof(RGBQUAD);
     if (info->biSize + palette_bytes > dib_size)
         return std::nullopt;
@@ -99,8 +92,7 @@ std::optional<ArrByte> bmp_file_from_dib(HANDLE object)
     memset(&file_header, 0, sizeof(file_header));
     file_header.bfType = 0x4D42; // 'BM'
     file_header.bfSize = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + dib_size);
-    // The DIB header may be wider than BITMAPINFOHEADER (BITMAPV4/V5HEADER)
-    // and may be followed by a color table.
+    // the DIB header may be wider than BITMAPINFOHEADER (V4/V5) and may be followed by a color table
     file_header.bfOffBits = static_cast<DWORD>(sizeof(BITMAPFILEHEADER) + info->biSize + palette_bytes);
 
     ArrByte out;
@@ -110,8 +102,6 @@ std::optional<ArrByte> bmp_file_from_dib(HANDLE object)
     return out;
 }
 
-// Appends `path` to `out` as a file:// uri line: backslashes become slashes
-// and each path segment is percent-encoded with the shared util Url helper.
 void append_file_uri(std::string & out, std::string_view path)
 {
     out += "file:///";
@@ -130,8 +120,6 @@ void append_file_uri(std::string & out, std::string_view path)
     out += "\r\n";
 }
 
-// Converts the file list held by a CF_HDROP handle into a text/uri-list
-// payload.
 std::optional<std::string> uri_list_from_hdrop(HANDLE object)
 {
     const DROPFILES *drop = static_cast<const DROPFILES *>(GlobalLock(object));
@@ -188,7 +176,6 @@ std::optional<std::string> uri_list_from_hdrop(HANDLE object)
     return out;
 }
 
-// Raw bytes of the data `format` holds, requires an open clipboard.
 std::optional<ArrByte> bytes_from_format(UINT format)
 {
     HANDLE object = GetClipboardData(format);
@@ -209,8 +196,6 @@ std::optional<ArrByte> bytes_from_format(UINT format)
     return out;
 }
 
-// The canonical mime type a clipboard format is served as - nullopt for the
-// formats we do not expose.
 std::optional<std::string> mime_for_format(UINT format)
 {
     if (format == CF_UNICODETEXT)
@@ -219,8 +204,7 @@ std::optional<std::string> mime_for_format(UINT format)
         return std::string(mime::bmp_image);
     if (format == CF_HDROP)
         return std::string(mime::uri_list);
-    // Registered formats start at 0xC000; other predefined formats are
-    // synthesized or private, not worth listing.
+    // registered formats start at 0xC000; other predefined ones are synthesized or private
     if (format < 0xC000)
         return std::nullopt;
     char name[128];
@@ -238,8 +222,6 @@ ArrByte to_bytes(std::string_view str)
     return out;
 }
 
-// Fetches the bytes `format` holds, labeled with `mime_str`. Requires an open
-// clipboard.
 std::optional<RawContent> fetch_format(UINT format, const std::string & mime_str)
 {
     if (format == CF_UNICODETEXT)
@@ -270,7 +252,6 @@ std::optional<RawContent> fetch_format(UINT format, const std::string & mime_str
         [&mime_str](ArrByte && bytes) { return std::optional(RawContent {mime_str, std::move(bytes)}); });
 }
 
-// Copies `data` into a moveable global handle the clipboard can take.
 HANDLE copy_to_hglobal(ArrByteView data)
 {
     HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, data.size());
@@ -287,8 +268,6 @@ HANDLE copy_to_hglobal(ArrByteView data)
     return mem;
 }
 
-// Strips the BITMAPFILEHEADER of a complete BMP file, leaving the CF_DIB the
-// win32 clipboard expects.
 std::optional<std::vector<uint8_t>> dib_from_bmp_file(ArrByteView bmp)
 {
     if (bmp.size() < sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER))
@@ -303,16 +282,13 @@ std::optional<std::vector<uint8_t>> dib_from_bmp_file(ArrByteView bmp)
         return std::nullopt;
     if (info->biCompression != BI_RGB || (info->biBitCount != 24 && info->biBitCount != 32))
         return std::nullopt;
-    // The pixel array may sit after a color table: any offset past the info header works, the DIB
-    // handed to win32 keeps everything after the file header (info header + color table + pixels)
+    // keep everything after the file header: info header + color table + pixels
     if (header->bfOffBits < sizeof(BITMAPFILEHEADER) + info->biSize || header->bfOffBits >= bmp.size())
         return std::nullopt;
 
     return std::vector<uint8_t>(bmp.data() + sizeof(BITMAPFILEHEADER), bmp.data() + bmp.size());
 }
 
-// Builds a CF_HDROP handle from the file:// uris of a text/uri-list payload.
-// Returns nullptr when the list holds no file uri.
 HANDLE hdrop_from_uri_list(ArrByteView data)
 {
     const std::string text(reinterpret_cast<const char *>(data.data()), data.size());
@@ -338,8 +314,7 @@ HANDLE hdrop_from_uri_list(ArrByteView data)
         if (line.compare(0, file_scheme.size(), file_scheme) != 0)
             continue;
         line.remove_prefix(file_scheme.size());
-        // file://authority/path: an authority gives a UNC path, an empty one a local path - only local
-        // windows drives convert, other absolute paths have no windows equivalent
+        // file://authority/path: an authority gives a UNC path, an empty one a local path
         const size_t path_slash = line.find('/');
         if (path_slash == std::string_view::npos)
             continue;
@@ -350,8 +325,7 @@ HANDLE hdrop_from_uri_list(ArrByteView data)
         if (authority.empty())
         {
             windows_path = Url::str_decode(path);
-            // Only local windows drives convert, other absolute paths have no windows equivalent; decoded
-            // first, some producers escape the drive colon
+            // decoded first, some producers escape the drive colon
             if (windows_path.size() < 2 || windows_path[1] != ':')
                 continue;
         }
@@ -393,8 +367,6 @@ HANDLE hdrop_from_uri_list(ArrByteView data)
     return mem;
 }
 
-// Builds the win32 handle serving `content` and outputs the clipboard format
-// it maps to. Returns nullptr when the content cannot be served.
 HANDLE handle_for_content(const RawContentView & content, UINT & out_format)
 {
     if (content.mime == mime::utf8_text || content.mime == mime::plain_text)
@@ -422,6 +394,7 @@ HANDLE handle_for_content(const RawContentView & content, UINT & out_format)
         GlobalUnlock(mem);
         return mem;
     }
+
     if (content.mime == mime::bmp_image)
     {
         out_format = CF_DIB;
@@ -443,8 +416,6 @@ HANDLE handle_for_content(const RawContentView & content, UINT & out_format)
         return copy_to_hglobal(content.data);
     }
 
-    // Any other mime type is offered through a registered format of the same
-    // name, bytes served as they are.
     out_format = RegisterClipboardFormatA(std::string(content.mime).c_str());
     if (out_format == 0)
         return nullptr;
@@ -458,8 +429,6 @@ std::vector<RawContent> get_raw()
     return get_raw({});
 }
 
-// Fetches the wanted mime types - every exposed one when the wanted list is
-// empty - in `wanted_mimes` order. Requires an open clipboard.
 std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mimes)
 {
     if (!open_clipboard())
@@ -486,7 +455,6 @@ std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mim
 
     for (std::string_view wanted : wanted_mimes)
     {
-        // plain_text is served by the same utf-16 format as utf8_text.
         const std::string fetch_key = wanted == mime::plain_text ? std::string(mime::utf8_text) : std::string(wanted);
 
         UINT format = 0;
@@ -508,8 +476,7 @@ bool set_raw(const std::vector<RawContentView> & contents)
     if (contents.empty())
         return false;
 
-    // All handles are built before EmptyClipboard: when none is buildable the
-    // clipboard is left untouched instead of wiping the user's content.
+    // all handles are built before EmptyClipboard: when none is buildable the user's content stays
     std::vector<std::pair<UINT, HANDLE>> to_set;
     for (const RawContentView & content : contents)
     {
@@ -522,7 +489,6 @@ bool set_raw(const std::vector<RawContentView> & contents)
             SIHD_LOG(warning, "could not serve the clipboard mime '{}'", content.mime);
             continue;
         }
-        // Several mime types can map to one format: set it once.
         if (std::ranges::any_of(to_set,
                                 [format](const std::pair<UINT, HANDLE> & item) { return item.first == format; }))
         {
@@ -531,6 +497,7 @@ bool set_raw(const std::vector<RawContentView> & contents)
         }
         to_set.emplace_back(format, object);
     }
+
     if (to_set.empty())
     {
         SIHD_LOG(error, "failed to set any win32 clipboard data");

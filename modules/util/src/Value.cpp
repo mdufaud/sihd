@@ -98,8 +98,8 @@ Value Value::from_float_string(const std::string & str)
         return {};
     if (str::ends_with(str, "f"))
     {
-        if (const auto f = str::convert_from_string<float>(str))
-            return Value(*f);
+        if (const auto parsed = str::convert_from_string<float>(str))
+            return Value(*parsed);
     }
     else
     {
@@ -294,8 +294,6 @@ bool Value::operator<=(const float & val) const
 {
     return this->compare_float(val) <= 0;
 }
-
-// double
 
 template <>
 bool Value::operator==(const double & val) const

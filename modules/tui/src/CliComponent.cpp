@@ -20,6 +20,13 @@ using namespace ftxui;
 namespace
 {
 
+struct OutputLine
+{
+        std::string text;
+        OutputStyle style;
+        bool is_command = false;
+};
+
 class CliBase: public ComponentBase,
                public Cli
 {
@@ -63,13 +70,6 @@ class CliBase: public ComponentBase,
         }
 
     private:
-        struct OutputLine
-        {
-                std::string text;
-                OutputStyle style;
-                bool is_command = false;
-        };
-
         static Decorator style_decorator(OutputStyle style)
         {
             switch (style)
@@ -90,7 +90,6 @@ class CliBase: public ComponentBase,
 
         Element OnRender() override
         {
-            // Drain pending lines produced by other threads
             {
                 std::lock_guard<std::mutex> lock(_lines_mutex);
                 if (_cleared)
@@ -233,8 +232,7 @@ class CliBase: public ComponentBase,
             return true;
         }
 
-        // Expose the input as the focused leaf so that ftxui routes cursor rendering
-        // and focus state to it (required for Input::OnEvent to process characters).
+        // ftxui routes cursor and focus to the focused leaf: required for Input::OnEvent to process characters
         Component ActiveChild() override { return _input_cpt; }
 
         bool Focusable() const final { return ComponentBase::Focusable(); }
@@ -254,7 +252,6 @@ class CliBase: public ComponentBase,
                     _tab_idx = 0;
                     return;
                 }
-                // Multiple matches — complete up to their longest common prefix and show the list
                 apply_completion(longest_common_prefix());
                 _tab_idx = no_selection;
                 return;
@@ -375,14 +372,12 @@ class CliBase: public ComponentBase,
             // copied: the input is cleared before the callback returns
             const std::string input_str = _input->content();
 
-            // Echo directly on UI thread; trim is handled by OnRender after pending drain
             _lines.push_back(OutputLine {
                 .text = _options.prompt + input_str,
                 .style = OutputStyle::normal,
                 .is_command = true,
             });
 
-            // no consecutive duplicates
             if (!input_str.empty() && (_history.empty() || _history.back() != input_str))
             {
                 _history.push_back(input_str);
@@ -421,6 +416,11 @@ class CliBase: public ComponentBase,
 };
 
 } // namespace
+
+void Cli::add_output(std::string_view line)
+{
+    this->add_output(line, OutputStyle::normal);
+}
 
 ftxui::Component CliComponent(std::function<void(Cli *, std::string_view)> && on_input, CliOptions && options)
 {

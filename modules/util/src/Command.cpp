@@ -13,6 +13,21 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
+namespace
+{
+
+CLI::Option *find_option(const std::vector<CLI::Option *> & options, const std::string & name)
+{
+    for (CLI::Option *opt : options)
+    {
+        if (opt->check_name(name))
+            return opt;
+    }
+    return nullptr;
+}
+
+} // namespace
+
 Command::Command(CLI::App *cli): _cli(cli)
 {
     // sihd root options stay reachable from any subcommand depth
@@ -165,6 +180,7 @@ void Command::_add_binding(Binding && binding)
             names += ',';
         names += "--" + binding.name;
     }
+
     if (binding.flag)
         binding.option = _cli->add_flag_function(names, binding.apply_flag, binding.help);
     else if (binding.multi)
@@ -181,7 +197,6 @@ void Command::_add_binding(Binding && binding)
         binding.option->expected(1, -1);
     }
     else
-        // a name without dashes is a positional
         binding.option = _cli->add_option_function<std::string>(names, binding.apply_cli, binding.help);
     _bindings.push_back(std::move(binding));
 }
@@ -237,6 +252,7 @@ Command::Candidates Command::candidates() const
         bool bound = false;
         for (const Binding & binding : _bindings)
             bound = bound || binding.option == opt;
+
         if (bound || opt->get_positional())
             continue;
         std::vector<std::string> & list = opt->get_expected() == 0 ? candidates.flags : candidates.options;
@@ -254,25 +270,17 @@ bool Command::expects_value(const std::string & token) const
     if (token.size() < 2)
         return false;
     const std::vector<CLI::Option *> options = _cli->get_options();
-    auto find_option = [&options](const std::string & name) -> CLI::Option * {
-        for (CLI::Option *opt : options)
-        {
-            if (opt->check_name(name))
-                return opt;
-        }
-        return nullptr;
-    };
     if (token.starts_with("--"))
     {
         if (token.find('=') != std::string::npos)
             return false;
-        CLI::Option *opt = find_option(token);
+        CLI::Option *opt = find_option(options, token);
         return opt != nullptr && opt->get_expected() != 0;
     }
     // short cluster: an option takes the rest of the cluster or the next token
     for (size_t i = 1; i < token.size(); ++i)
     {
-        CLI::Option *opt = find_option("-" + std::string(1, token[i]));
+        CLI::Option *opt = find_option(options, "-" + std::string(1, token[i]));
         if (opt == nullptr)
             return false;
         if (opt->get_expected() != 0)

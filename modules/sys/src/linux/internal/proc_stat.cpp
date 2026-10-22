@@ -40,7 +40,6 @@ Duration ticks_to_duration(uint64_t ticks, uint64_t clock_ticks)
     return Duration(std::chrono::nanoseconds(static_cast<int64_t>(ticks * 1000000000ULL / clock_ticks)));
 }
 
-// splits the fields that follow the comm: nullopt when the process is gone or the line is truncated
 std::optional<std::vector<std::string>> read_stat_fields(int pid, std::string *name)
 {
     auto content = fs::read_all(fmt::format("/proc/{}/stat", pid));

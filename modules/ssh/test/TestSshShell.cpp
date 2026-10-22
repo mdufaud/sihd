@@ -12,12 +12,18 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::ssh;
 using namespace sihd::util;
+
+namespace
+{
+constexpr int ssh_log_protocol = 2;
+}
+
 class TestSshShell: public ::testing::Test
 {
     protected:
-        TestSshShell() { sihd::util::LoggerManager::stream(); }
+        TestSshShell() { LoggerManager::stream(); }
 
-        virtual ~TestSshShell() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSshShell() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -39,7 +45,7 @@ TEST_F(TestSshShell, test_sshshell_interactive)
         GTEST_SKIP_("no SSH server on localhost:22");
     if (session.auth_key_auto().success() == false)
         GTEST_SKIP_("SSH key authentication failed");
-    SIHD_UNEXPECTED_LOG(session.set_verbosity(2)); // SSH_LOG_PROTOCOL
+    SIHD_UNEXPECTED_LOG(session.set_verbosity(ssh_log_protocol));
 
     SshShell shell = session.make_shell();
     ASSERT_TRUE(shell.open(true).has_value());

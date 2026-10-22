@@ -38,11 +38,11 @@ class ISshSubsystemHandler
 
         // Called by the server to let the handler forward pending output to its channel.
         // Returns true if output was forwarded.
-        virtual bool forward_output() { return false; }
+        virtual bool forward_output();
 
         // When true, the server leaves channel data in libssh's buffers
         // for the handler to read directly (e.g. SFTP)
-        virtual bool manages_channel_io() const { return false; }
+        virtual bool manages_channel_io() const;
 };
 
 } // namespace sihd::ssh

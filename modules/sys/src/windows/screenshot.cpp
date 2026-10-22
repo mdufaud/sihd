@@ -77,7 +77,7 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
     bi.biWidth = width;
     bi.biHeight = height; // positive = bottom-up DIB (matches our Bitmap storage)
     bi.biPlanes = 1;
-    bi.biBitCount = 32; // 32-bit = no padding needed
+    bi.biBitCount = 32;
     bi.biCompression = BI_RGB;
     bi.biSizeImage = width * height * 4;
 
@@ -91,8 +91,7 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
     if (lines != height)
         return false;
 
-    // Windows returns BGRA, our Color struct in little-endian is {blue, green, red, alpha}
-    // So the byte order matches - we can copy directly
+    // Windows returns BGRA, which matches Color in little-endian {blue, green, red, alpha}: copy directly
     bm.create(width, height, 32);
     bm.set(pixels.data(), pixels.size());
     ret = true;
@@ -131,7 +130,6 @@ bool take_under_cursor(Bitmap & bm)
 bool take_screen(Bitmap & bm)
 {
     bm.clear();
-    // NULL gets the DC of the primary screen
     HDC hdcScreen = GetDC(NULL);
     if (hdcScreen == nullptr)
         return false;

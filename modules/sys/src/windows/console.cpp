@@ -31,7 +31,7 @@ HANDLE handle_from_fd(int fd)
 
 } // namespace
 
-sihd::util::Result<WindowSize> size(int fd)
+Result<WindowSize> size(int fd)
 {
     const HANDLE handle = handle_from_fd(fd);
     CONSOLE_SCREEN_BUFFER_INFO info;
@@ -108,7 +108,7 @@ bool NoEcho::valid() const
     return _impl->applied;
 }
 
-sihd::util::Result<void> enable_vt(int fd)
+Result<void> enable_vt(int fd)
 {
     const HANDLE handle = handle_from_fd(fd);
     DWORD mode = 0;

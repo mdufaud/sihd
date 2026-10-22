@@ -120,9 +120,11 @@ void ProcessInfo::Impl::load_time()
                     in jiffies.  Since Linux 2.6, the value is expressed
                     in clock ticks (divide by sysconf(_SC_CLK_TCK)).
      */
-    if (status.size() > 21)
+    constexpr size_t starttime_field = 21;
+    if (status.size() > starttime_field)
     {
-        this->creation_time = Duration(std::chrono::seconds(std::stoll(status[21]) / sysconf(_SC_CLK_TCK))) + boot_time;
+        this->creation_time = Duration(std::chrono::seconds(std::stoll(status[starttime_field]) / sysconf(_SC_CLK_TCK)))
+                              + boot_time;
     }
 }
 

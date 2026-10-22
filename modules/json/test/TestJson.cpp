@@ -183,14 +183,12 @@ TEST_F(TestJson, test_json_parse_get_string_array)
     EXPECT_EQ(out[1], "two");
     EXPECT_EQ(out[2], "three");
 
-    // an array of strings inside a parsed object
     auto obj_res = Json::parse(R"({"list": ["a", "b"]})");
     ASSERT_TRUE(obj_res.has_value());
     out = (*obj_res)["list"].get_or<std::vector<std::string>>({});
     ASSERT_EQ(out.size(), 2u);
     EXPECT_EQ(out[1], "b");
 
-    // non-string elements keep failing
     auto arr_res = Json::parse(R"(["a", 1])");
     ASSERT_TRUE(arr_res.has_value());
     EXPECT_THROW(arr_res->get<std::vector<std::string>>(), std::runtime_error);

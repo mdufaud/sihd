@@ -11,23 +11,28 @@ using namespace sihd::util;
 class TestCache: public ::testing::Test
 {
     protected:
-        TestCache() { sihd::util::LoggerManager::stream(); }
+        TestCache() { LoggerManager::stream(); }
 
-        virtual ~TestCache() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCache() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
 
+namespace
+{
+
+struct StructTest
+{
+        int a = 0;
+        std::string b;
+};
+
+} // namespace
+
 TEST_F(TestCache, test_override_ttl)
 {
-    struct StructTest
-    {
-            int a = 0;
-            std::string b;
-    };
-
     Cache<int, StructTest> cache;
 
     int counter = 0;
@@ -211,7 +216,6 @@ TEST_F(TestCache, test_get_cached)
 {
     Cache<int, int> cache;
 
-    // missing key returns nullopt
     EXPECT_FALSE(cache.get_cached(1));
 
     int counter = 0;
@@ -245,17 +249,14 @@ TEST_F(TestCache, test_refresh_and_stale_entries)
     ASSERT_EQ(stale.size(), 1u);
     EXPECT_EQ(stale[0], 2);
 
-    // refresh_stale only refreshes the stale entry
     cache.refresh_stale();
     EXPECT_EQ(cache.get_cached(1)->get(), 1);
     EXPECT_EQ(cache.get_cached(2)->get(), 2);
     EXPECT_TRUE(cache.stale_entries().empty());
 
-    // refresh_all refreshes everything regardless of freshness (values become 3 and 4)
     cache.refresh_all();
     EXPECT_EQ(cache.get_cached(1)->get() + cache.get_cached(2)->get(), 7);
 
-    // refresh does not affect hit/miss stats
     auto agg = cache.stats();
     EXPECT_EQ(agg.hit, 0u);
     EXPECT_EQ(agg.miss, 0u);

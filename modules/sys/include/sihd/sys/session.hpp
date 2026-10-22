@@ -21,7 +21,6 @@ enum class SessionState
 struct Session
 {
         std::string username;
-        // tty / terminal / workstation name
         std::string device;
         // empty for local sessions
         std::string hostname;

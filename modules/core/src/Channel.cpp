@@ -11,7 +11,7 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::core");
 
-sihd::util::IClock *Channel::_default_channel_clock_ptr = &sihd::util::Clock::default_clock;
+IClock *Channel::_default_channel_clock_ptr = &Clock::default_clock;
 
 Channel::Channel(const std::string & name, Type type, size_t size, Node *parent): Named(name, parent)
 {
@@ -103,7 +103,7 @@ void Channel::set_resizable(bool activate)
     _resizable = activate;
 }
 
-void Channel::set_clock(sihd::util::IClock *clock)
+void Channel::set_clock(IClock *clock)
 {
     std::lock_guard lock(_arr_mutex);
     _clock_ptr = clock;
@@ -233,7 +233,7 @@ bool Channel::write(const Channel & other)
     return this->write(*copy);
 }
 
-bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset)
+bool Channel::write(const ArrByteView & arr_view, size_t byte_offset)
 {
     std::unique_lock notify_lock(_notify_mutex, std::try_to_lock);
     if (!notify_lock.owns_lock())
@@ -264,6 +264,7 @@ bool Channel::write(const sihd::util::ArrByteView & arr_view, size_t byte_offset
         if ((ret = _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset})))
             this->do_timestamp();
     }
+
     if (ret)
     {
         _notifying = true;

@@ -1,8 +1,7 @@
 #ifndef __SIHD_PY_PYAPI_HPP__
 #define __SIHD_PY_PYAPI_HPP__
 
-// pybind11 (which includes Python.h) must come before standard headers
-// to avoid macro redefinition warnings with Python 3.14+ and glibc 2.42+
+// pybind11 (Python.h) must precede std headers: macro redefinition with Python 3.14+ and glibc 2.42+
 #include <pybind11/pybind11.h>
 
 #include <functional>
@@ -25,7 +24,7 @@ class PyApi
                 bool load(std::string_view submodule_name);
                 bool is_loaded(std::string_view submodule_name);
 
-                pybind11::module & module() const { return *_module_ptr; }
+                pybind11::module & module() const;
 
             protected:
 
@@ -34,10 +33,8 @@ class PyApi
                 std::vector<std::string_view> _modules_imported;
         };
 
-        // called when module is imported
         static void set_api_to_module(pybind11::module &);
 
-        // api to be added before main()
         static void add_api(std::string_view name, std::function<void(PyModule &)> f);
 
     protected:

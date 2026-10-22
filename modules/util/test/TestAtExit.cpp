@@ -28,6 +28,23 @@ class TestAtExit: public ::testing::Test
         virtual void TearDown() { atexit::clear_handlers(); }
 };
 
+namespace
+{
+
+struct OrderHandler: public IRunnable
+{
+        std::vector<int> & _order;
+        int _id;
+        OrderHandler(std::vector<int> & o, int id): _order(o), _id(id) {}
+        bool run() override
+        {
+            _order.push_back(_id);
+            return true;
+        }
+};
+
+} // namespace
+
 TEST_F(TestAtExit, test_atexit_add_remove)
 {
     bool called = false;
@@ -59,18 +76,6 @@ TEST_F(TestAtExit, test_atexit_callback_order)
 {
     std::vector<int> call_order;
 
-    struct OrderHandler: public IRunnable
-    {
-            std::vector<int> & _order;
-            int _id;
-            OrderHandler(std::vector<int> & o, int id): _order(o), _id(id) {}
-            bool run() override
-            {
-                _order.push_back(_id);
-                return true;
-            }
-    };
-
     atexit::install();
     atexit::add_handler(new OrderHandler(call_order, 1));
     atexit::add_handler(new OrderHandler(call_order, 2));
@@ -89,20 +94,19 @@ TEST_F(TestAtExit, test_atexit_removed_not_fired)
     bool fired_a = false;
     bool fired_b = false;
 
-    auto *a = new RunnableFlag(fired_a);
-    auto *b = new RunnableFlag(fired_b);
+    auto *flag_a = new RunnableFlag(fired_a);
+    auto *flag_b = new RunnableFlag(fired_b);
 
     atexit::install();
-    atexit::add_handler(a);
-    atexit::add_handler(b);
-    atexit::remove_handler(a);
-    delete a;
+    atexit::add_handler(flag_a);
+    atexit::add_handler(flag_b);
+    atexit::remove_handler(flag_a);
+    delete flag_a;
 
     atexit::exit_callback();
 
     EXPECT_FALSE(fired_a);
     EXPECT_TRUE(fired_b);
-    // b was deleted by exit_callback()
 }
 
 } // namespace test

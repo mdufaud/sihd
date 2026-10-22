@@ -9,6 +9,46 @@ NetInterface::NetInterface() = default;
 
 NetInterface::~NetInterface() = default;
 
+const std::string & NetInterface::name() const
+{
+    return _name;
+}
+
+const std::string & NetInterface::mac_addr() const
+{
+    return _mac_address;
+}
+
+const IpAddr & NetInterface::addr4() const
+{
+    return _addr4;
+}
+
+const IpAddr & NetInterface::netmask4() const
+{
+    return _netmask4;
+}
+
+const IpAddr & NetInterface::extra_addr4() const
+{
+    return _extra_addr4;
+}
+
+const IpAddr & NetInterface::addr6() const
+{
+    return _addr6;
+}
+
+const IpAddr & NetInterface::netmask6() const
+{
+    return _netmask6;
+}
+
+const IpAddr & NetInterface::extra_addr6() const
+{
+    return _extra_addr6;
+}
+
 void NetInterface::set_name(std::string_view name)
 {
     _name = name;

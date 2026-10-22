@@ -33,8 +33,7 @@ bool SigWaiter::_do_wait(int sig, Duration timeout)
     const bool has_timeout = timeout > 0;
 
 #if defined(__SIHD_WINDOWS__) || defined(__SIHD_ANDROID__) || defined(__SIHD_EMSCRIPTEN__)
-    // Polling-based implementation for Windows, Android and emscripten
-    // (emscripten has no working sigtimedwait/sigwaitinfo)
+    // Polling-based fallback for Windows, Android and emscripten (no working sigtimedwait/sigwaitinfo there)
     SteadyClock clock;
     const Timestamp begin = has_timeout ? clock.now() : Timestamp(0);
 
@@ -45,7 +44,6 @@ bool SigWaiter::_do_wait(int sig, Duration timeout)
         return false;
     }
 
-    // Get initial received count
     const auto initial_status = signal::status(sig);
     const size_t initial_received = initial_status.has_value()
                                         ? initial_status->received.load(std::memory_order_relaxed)
@@ -101,8 +99,7 @@ bool SigWaiter::_do_wait(int sig, Duration timeout)
             if (ret == -1)
             {
                 if (errno == EINTR)
-                    continue; // Interrupted, retry with remaining time
-                // EAGAIN = timeout, EINVAL = invalid args
+                    continue;
                 break;
             }
 

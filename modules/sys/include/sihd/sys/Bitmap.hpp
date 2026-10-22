@@ -15,8 +15,7 @@ union Color
 {
         uint32_t value;
 
-// glibc's __BYTE_ORDER is undefined on mingw: without a value both sides
-// evaluate to 0 and the big-endian branch gets selected on windows builds.
+// glibc's __BYTE_ORDER is undefined on mingw: both sides evaluate to 0 and the big-endian branch wins
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
         struct
         {
@@ -38,11 +37,11 @@ union Color
 
         static Color rgb(uint8_t red, uint8_t green, uint8_t blue)
         {
-            Color p;
-            p.red = red;
-            p.green = green;
-            p.blue = blue;
-            return p;
+            Color pixel;
+            pixel.red = red;
+            pixel.green = green;
+            pixel.blue = blue;
+            return pixel;
         }
 };
 
@@ -69,9 +68,7 @@ class Bitmap
         bool save_bmp(const std::string & path) const;
         bool read_bmp(const std::string & path);
 
-        // Serialize bitmap to BMP format in memory
         PixelBuffer to_bmp_data() const;
-        // Read BMP from memory buffer
         bool read_bmp_data(sihd::util::ArrByteView data);
 
         bool empty() const { return _data.empty(); };

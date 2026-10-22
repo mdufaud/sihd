@@ -13,9 +13,9 @@ using namespace sihd::sys;
 class TestUser: public ::testing::Test
 {
     protected:
-        TestUser() { sihd::util::LoggerManager::stream(); }
+        TestUser() { LoggerManager::stream(); }
 
-        virtual ~TestUser() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestUser() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -51,7 +51,6 @@ TEST_F(TestUser, test_user_id_valid)
     EXPECT_TRUE(user::real_user().valid());
     EXPECT_TRUE(user::real_group().valid());
 
-    // an invalid id never equals a real one
     EXPECT_NE(current, invalid);
     EXPECT_EQ(current, user::effective_user());
 }
@@ -113,8 +112,7 @@ TEST_F(TestUser, test_user_group_lookup)
 TEST_F(TestUser, test_user_primary_group)
 {
     const user::GroupId group = user::effective_group();
-    // the name the OS reports is not guaranteed to be resolvable back: windows names the
-    // default primary group "None", which LookupAccountName does not map (ERROR_NONE_MAPPED)
+    // windows names the default primary group "None", which LookupAccountName cannot resolve (ERROR_NONE_MAPPED)
     const auto group_name = user::name_of(group);
     ASSERT_TRUE(group_name.has_value());
     EXPECT_FALSE(group_name->empty());
@@ -126,7 +124,6 @@ TEST_F(TestUser, test_user_primary_group)
     ASSERT_TRUE(primary.has_value());
     EXPECT_EQ(*primary, group);
 
-    // the id overload resolves the same group as the name one
     const auto primary_by_id = user::primary_group_of(user::effective_user());
     ASSERT_TRUE(primary_by_id.has_value());
     EXPECT_EQ(*primary_by_id, group);
@@ -137,14 +134,12 @@ TEST_F(TestUser, test_user_primary_group)
 
 TEST_F(TestUser, test_user_groups)
 {
-    // a minimal environment may expose no supplementary group: only the returned content is asserted.
-    // duplicates are legitimate: in a user namespace every unmapped group reports the overflow gid
+    // duplicates are legitimate: unmapped groups in a user namespace all report the overflow gid
     const auto groups = user::groups();
     for (const user::GroupId & group : groups)
     {
         EXPECT_TRUE(group.valid());
         SIHD_LOG(info, "group: {}", group.to_string());
-        // every returned id is a usable one: it round-trips through the public string form
         const auto parsed = user::GroupId::from_string(group.to_string());
         ASSERT_TRUE(parsed.has_value());
         EXPECT_EQ(*parsed, group);
@@ -176,7 +171,6 @@ TEST_F(TestUser, test_user_is_root)
 
 TEST_F(TestUser, test_user_drop_privileges_denied)
 {
-    // an invalid id is never dropped to
     EXPECT_FALSE(user::drop_privileges(user::UserId {}, user::GroupId {}).has_value());
     EXPECT_FALSE(user::drop_privileges("sihd_no_such_user").has_value());
 
@@ -186,12 +180,10 @@ TEST_F(TestUser, test_user_drop_privileges_denied)
     if (before_user.native() == 0)
         GTEST_SKIP() << "running as root: dropping is permitted and irreversible in-process";
 
-    // an unprivileged process cannot become another user
     const user::UserId other_user = user::UserId::from_native(before_user.native() + 1);
     const user::GroupId other_group = user::GroupId::from_native(before_group.native() + 1);
     EXPECT_FALSE(user::drop_privileges(other_user, other_group).has_value());
 
-    // the failed attempt must not have changed the identity
     EXPECT_EQ(user::effective_user(), before_user);
     EXPECT_EQ(user::effective_group(), before_group);
 }

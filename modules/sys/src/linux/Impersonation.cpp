@@ -6,8 +6,7 @@
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
-// per-thread identity switch is a linux kernel behaviour: emscripten has no syscall(), apple/bsd
-// no setresuid - supports_privileged is false there and the identity switch is a no-op
+// per-thread identity switch is linux-only: emscripten has no syscall(), apple/bsd no setresuid -> no-op
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 
 # define SIHD_IMPERSONATION_SETRES
@@ -15,8 +14,7 @@ using namespace sihd::util;
 # include <sys/syscall.h>
 # include <unistd.h>
 
-// libc setresuid/setresgid wrappers broadcast process-wide (glibc setxid, musl __synccall); the
-// raw syscall keeps the kernel per-thread behaviour (kernel COPYING exempts normal syscalls)
+// libc setresuid/setresgid broadcast process-wide (glibc setxid, musl __synccall): raw syscall stays per-thread
 # if defined(SYS_setresuid32)
 #  define SIHD_SYS_SETRESUID SYS_setresuid32
 #  define SIHD_SYS_SETRESGID SYS_setresgid32
@@ -40,8 +38,7 @@ namespace
 constexpr uid_t keep_uid = static_cast<uid_t>(-1);
 constexpr gid_t keep_gid = static_cast<gid_t>(-1);
 
-// only the effective id is moved: leaving the real and saved ids untouched is what keeps the
-// switch reversible
+// only the effective id moves: real and saved ids stay untouched, which keeps the switch reversible
 bool set_thread_euid(uid_t uid)
 {
     return syscall(SIHD_SYS_SETRESUID, keep_uid, uid, keep_uid) == 0;
@@ -73,7 +70,7 @@ Impersonation::~Impersonation()
     }
 }
 
-sihd::util::Result<void> Impersonation::impersonate_as(const user::UserId & user_id, const user::GroupId & group_id)
+Result<void> Impersonation::impersonate_as(const user::UserId & user_id, const user::GroupId & group_id)
 {
     if (_impl->active)
         return std::unexpected(Error(not_initialized, "already impersonating"));
@@ -89,14 +86,12 @@ sihd::util::Result<void> Impersonation::impersonate_as(const user::UserId & user
     if (!set_thread_euid(user_id.native()))
     {
         auto error = Error::from_errno("could not set user {}", user_id.native());
-        // put the group back, the switch is aborted
         if (!set_thread_egid(previous_gid))
         {
             _impl->previous_uid = previous_uid;
             _impl->previous_gid = previous_gid;
             _impl->active = true;
-            sihd::util::Result<void> restore = std::unexpected(
-                Error::from_errno("could not restore group {}", previous_gid));
+            Result<void> restore = std::unexpected(Error::from_errno("could not restore group {}", previous_gid));
             SIHD_UNEXPECTED_RETURN_CTX(restore, "could not set user {}", user_id.native());
         }
         return std::unexpected(std::move(error));
@@ -108,7 +103,7 @@ sihd::util::Result<void> Impersonation::impersonate_as(const user::UserId & user
     return {};
 }
 
-sihd::util::Result<void> Impersonation::revert()
+Result<void> Impersonation::revert()
 {
     if (!_impl->active)
         return std::unexpected(Error(not_initialized, "not impersonating"));
@@ -137,13 +132,13 @@ Impersonation::Impersonation(): _impl(std::make_unique<Impl>()) {}
 
 Impersonation::~Impersonation() = default;
 
-sihd::util::Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
-                                                       [[maybe_unused]] const user::GroupId & group_id)
+Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
+                                           [[maybe_unused]] const user::GroupId & group_id)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> Impersonation::revert()
+Result<void> Impersonation::revert()
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
@@ -155,9 +150,9 @@ bool Impersonation::impersonating() const
 
 #endif
 
-sihd::util::Result<void> Impersonation::impersonate_with_credentials([[maybe_unused]] std::string_view user_name,
-                                                                     [[maybe_unused]] std::string_view password,
-                                                                     [[maybe_unused]] std::string_view domain)
+Result<void> Impersonation::impersonate_with_credentials([[maybe_unused]] std::string_view user_name,
+                                                         [[maybe_unused]] std::string_view password,
+                                                         [[maybe_unused]] std::string_view domain)
 {
     // unix authenticates through PAM, not through the identity switch: see impersonate_as
     return std::unexpected(Error(not_supported, "not supported on this platform"));

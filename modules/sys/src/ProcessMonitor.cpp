@@ -119,6 +119,7 @@ void ProcessMonitor::Impl::finish_pass(std::vector<ProcessSample> fresh, Timesta
         }
         cpu_history[sample.metrics.pid] = {cpu_now, wall_now};
     }
+
     std::set<int> alive;
     for (const ProcessSample & sample : fresh)
         alive.insert(sample.metrics.pid);

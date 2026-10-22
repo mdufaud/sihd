@@ -27,13 +27,11 @@ class SshSubsystemPty: public ISshSubsystemHandler
 
         static bool is_supported();
 
-        // Configuration (call before on_start)
         void set_shell(std::string_view shell);
         void set_args(std::vector<std::string> args);
         void set_env(std::string_view name, std::string_view value);
         void set_working_directory(std::string_view path);
 
-        // ISshSubsystemHandler
         bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) override;
         int on_data(const void *data, size_t len) override;
         void on_resize(const WinSize & winsize) override;
@@ -41,8 +39,8 @@ class SshSubsystemPty: public ISshSubsystemHandler
         int on_close() override;
 
         int stdout_fd() const override;
-        int stderr_fd() const override { return -1; }
-        SshChannel *channel() const override { return _channel; }
+        int stderr_fd() const override;
+        SshChannel *channel() const override;
         bool is_running() const override;
         bool forward_output() override;
 

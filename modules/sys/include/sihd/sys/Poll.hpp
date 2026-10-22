@@ -2,6 +2,7 @@
 #define __SIHD_SYS_POLL_HPP__
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -10,13 +11,6 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Timestamp.hpp>
-
-#if !defined(__SIHD_WINDOWS__)
-# include <poll.h>         //pollfd
-# include <sys/resource.h> //rlim_t
-#else
-# include <winsock2.h>
-#endif
 
 namespace sihd::sys
 {
@@ -38,7 +32,6 @@ class Poll: public sihd::util::Observable<Poll>,
         Poll(int limit);
         ~Poll();
 
-        // can size the poll array in advance
         void resize(int nfds);
         // if limit is negative, look for the soft curr rlimit for RLIMIT_NOFILE
         bool set_limit(int limit);
@@ -57,7 +50,6 @@ class Poll: public sihd::util::Observable<Poll>,
         // ends the loop after the current poll: safe from the polling thread, unlike stop()
         void request_stop();
 
-        // filled with file descriptors - call in observer
         const std::vector<PollEvent> & events() const { return _lst_events; };
 
         sihd::util::Duration polling_time() const { return _last_poll_time; }
@@ -66,7 +58,7 @@ class Poll: public sihd::util::Observable<Poll>,
 
         size_t read_fds_size() const;
         size_t write_fds_size() const;
-        size_t fds_size() const { return _lst_fds.size(); }
+        size_t fds_size() const;
 
         rlim_t max_fds() const { return _max_fds; };
         // in ms
@@ -80,12 +72,14 @@ class Poll: public sihd::util::Observable<Poll>,
         void process_poll_results(int poll_return, int saved_errno);
 
     private:
+        struct Impl;
+
+        std::unique_ptr<Impl> _impl;
         std::atomic<bool> _stop;
         int _timeout_milliseconds;
 
         mutable std::mutex _fds_mutex;
         rlim_t _max_fds;
-        std::vector<struct pollfd> _lst_fds;
         sihd::util::SteadyClock _clock;
 
         std::vector<PollEvent> _lst_events;

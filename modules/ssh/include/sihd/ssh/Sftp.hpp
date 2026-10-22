@@ -10,12 +10,6 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
 
-#if !defined(__SIHD_WINDOWS__)
-# include <sys/types.h> // mode_t, uid_t, gid_t
-#else
-typedef unsigned int gid_t;
-#endif
-
 namespace sihd::ssh
 {
 

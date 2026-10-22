@@ -56,7 +56,6 @@ class TimeBase
         template <traits::Duration Duration>
         constexpr TimeBase(Duration duration): _nano(time::duration(duration)) {};
 
-        // std::chrono::duration templates
         __TMP_TIMEBASE_DURATION_COMPARISION_OPERATION__(==);
         __TMP_TIMEBASE_DURATION_COMPARISION_OPERATION__(!=);
         __TMP_TIMEBASE_DURATION_COMPARISION_OPERATION__(>=);
@@ -76,14 +75,12 @@ class TimeBase
         __TMP_TIMEBASE_DURATION_ASSIGN_OPERATION__(/=);
         __TMP_TIMEBASE_DURATION_ASSIGN_OPERATION__(%=);
 
-        // time_t assign
         __TMP_TIMEBASE_ASSIGN_OPERATION__(+=);
         __TMP_TIMEBASE_ASSIGN_OPERATION__(-=);
         __TMP_TIMEBASE_ASSIGN_OPERATION__(*=);
         __TMP_TIMEBASE_ASSIGN_OPERATION__(/=);
         __TMP_TIMEBASE_ASSIGN_OPERATION__(%=);
 
-        // auto convert
         constexpr operator time::UnixTime() const { return _nano; }
         operator std::chrono::nanoseconds() const { return std::chrono::nanoseconds(_nano); }
         operator std::chrono::microseconds() const { return time::to_duration<std::chrono::microseconds>(_nano); }

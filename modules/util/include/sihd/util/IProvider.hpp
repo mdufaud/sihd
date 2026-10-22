@@ -10,9 +10,7 @@ class IProvider
     public:
         virtual ~IProvider() = default;
         ;
-        // provides a data
         virtual bool provide(T *data) = 0;
-        // checks if the provider is still providing
         virtual bool providing() const = 0;
 };
 

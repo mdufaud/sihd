@@ -41,7 +41,6 @@ class TestClipboardBackend: public ::testing::Test
 
 TEST(TestClipboardMime, test_best_match)
 {
-    // Wanted priority wins; parameters are ignored.
     EXPECT_EQ(mime::best_match({"text/plain;charset=utf-8", "text/plain"}, {mime::utf8_text, mime::plain_text}),
               mime::utf8_text);
     EXPECT_EQ(mime::best_match({"text/plain", "text/plain;charset=utf-8"}, {mime::utf8_text, mime::plain_text}),
@@ -49,12 +48,10 @@ TEST(TestClipboardMime, test_best_match)
     EXPECT_EQ(mime::best_match({"text/plain"}, {mime::utf8_text, mime::plain_text}), mime::utf8_text);
     EXPECT_EQ(mime::best_match({"text/html", "text/plain"}, {mime::utf8_text, mime::plain_text}), mime::utf8_text);
 
-    // Nothing wanted is offered or compatible.
     EXPECT_FALSE(mime::best_match({}, {mime::utf8_text}).has_value());
     EXPECT_FALSE(mime::best_match({"application/octet-stream"}, {mime::utf8_text}).has_value());
     EXPECT_FALSE(mime::best_match({"text/html"}, {mime::utf8_text, mime::plain_text}).has_value());
 
-    // match_offered returns the offered entry.
     EXPECT_EQ(mime::match_offered({"text/plain;charset=utf-8", "text/plain"}, mime::plain_text),
               std::string_view("text/plain;charset=utf-8"));
     EXPECT_FALSE(mime::match_offered({"text/html"}, mime::uri_list).has_value());
@@ -67,7 +64,6 @@ TEST(TestClipboardConvert, test_to_text)
     ASSERT_TRUE(text.has_value());
     EXPECT_EQ(*text, "hello");
 
-    // Only text mime types convert.
     clipboard::RawContent html {std::string(mime::html), {'<', 'b', '>'}};
     EXPECT_FALSE(clipboard::to_text(html).has_value());
 }
@@ -84,7 +80,6 @@ TEST(TestClipboardConvert, test_to_image)
     EXPECT_EQ(decoded->height(), 3u);
     EXPECT_EQ(decoded->data(), bm.data());
 
-    // Only image/bmp converts, and broken bytes do not.
     clipboard::RawContent wrong_mime {std::string(mime::uri_list), {}};
     EXPECT_FALSE(clipboard::to_image(wrong_mime).has_value());
     clipboard::RawContent garbage {std::string(mime::bmp_image), {1, 2, 3}};
@@ -97,6 +92,7 @@ TEST(TestClipboardConvert, test_to_image_indexed_bmp)
     auto write_u32 = [&bmp](size_t offset, uint32_t value) {
         memcpy(bmp.data() + offset, &value, sizeof(value));
     };
+
     auto write_u16 = [&bmp](size_t offset, uint16_t value) {
         memcpy(bmp.data() + offset, &value, sizeof(value));
     };
@@ -113,6 +109,7 @@ TEST(TestClipboardConvert, test_to_image_indexed_bmp)
     // color table (stored blue, green, red): entry0 = red, entry1 = blue
     bmp[54] = 0;
     bmp[55] = 0;
+
     bmp[56] = 255;
     bmp[57] = 0;
     bmp[58] = 255;
@@ -173,7 +170,6 @@ TEST_F(TestClipboardBackend, test_get_raw)
         EXPECT_FALSE(raw.mime.empty());
     }
 
-    // The filtered get only returns entries among the wanted mime types.
     auto wanted = clipboard::get_raw({mime::utf8_text, mime::bmp_image});
     for (const clipboard::RawContent & raw : wanted)
     {

@@ -26,7 +26,7 @@ class SigHandler
     protected:
 
     private:
-        typedef void (*sig_handler)(int);
+        using sig_handler = void (*)(int);
 
         int _sig;
         sig_handler _previous_handler;

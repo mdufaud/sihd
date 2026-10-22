@@ -25,18 +25,9 @@ bool for_each_child_service(Node *node, Callable && fn)
     return ret;
 }
 
-// permits copying of existent maps instead of instanciating every time the same maps
-sihd::util::ServiceController & default_service_controller()
-{
-    static sihd::util::ServiceController sc;
-    return sc;
-}
-
 } // namespace
 
-Device::Device(const std::string & name, Node *parent):
-    AChannelContainer(name, parent),
-    _service_controller(default_service_controller().statemachine)
+Device::Device(const std::string & name, Node *parent): AChannelContainer(name, parent)
 {
     _service_controller.optional_setup();
 }
@@ -108,10 +99,12 @@ bool Device::do_start()
                 started_services.push_back(service);
         }
     }
+
     if (ret && SIHD_UNEXPECTED_LOG(this->resolve_links()))
         ret = false;
     if (ret)
         ret = this->on_start();
+
     if (ret == false)
     {
         for (AService *service : started_services)
@@ -148,6 +141,40 @@ bool Device::do_reset()
     });
     this->remove_children();
     return this->on_reset() && ret;
+}
+
+void Device::handle(Channel *) {}
+
+void Device::handle(ServiceController *) {}
+
+bool Device::on_setup()
+{
+    return true;
+}
+
+bool Device::on_init()
+{
+    return true;
+}
+
+bool Device::on_start()
+{
+    return true;
+}
+
+bool Device::on_stop()
+{
+    return true;
+}
+
+bool Device::on_reset()
+{
+    return true;
+}
+
+AService::IServiceController *Device::service_ctrl()
+{
+    return &_service_controller;
 }
 
 } // namespace sihd::core

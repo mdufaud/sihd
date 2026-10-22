@@ -52,6 +52,17 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
+namespace
+{
+
+// forked child: the logger may be locked by another thread of the parent
+void child_write_stderr(const std::string & message)
+{
+    [[maybe_unused]] const ssize_t written = ::write(STDERR_FILENO, message.data(), message.size());
+}
+
+} // namespace
+
 /**
  * @brief POSIX PTY implementation using forkpty().
  *
@@ -84,20 +95,17 @@ class PosixPty: public Pty
         PosixPty();
         ~PosixPty() override;
 
-        // Configuration
         void set_shell(std::string_view shell) override;
         void set_args(std::vector<std::string> args) override;
         void set_env(std::string_view name, std::string_view value) override;
         void set_size(const PtySize & size) override;
         void set_working_directory(std::string_view path) override;
 
-        // Lifecycle
         bool spawn() override;
         bool is_running() const override;
         int wait() override;
         void terminate() override;
 
-        // I/O
         int read_fd() const override;
         ssize_t read(void *buffer, size_t size) override;
         ssize_t write(const void *data, size_t size) override;
@@ -106,16 +114,16 @@ class PosixPty: public Pty
 
     private:
         pid_t _wait_child(int & status, int options) const;
-        std::string _shell;             ///< Shell executable path
-        std::vector<std::string> _args; ///< Shell arguments
-        Environment _env;               ///< Environment variables
-        std::string _working_dir;       ///< Working directory
-        PtySize _size;                  ///< Terminal size
+        std::string _shell;
+        std::vector<std::string> _args;
+        Environment _env;
+        std::string _working_dir;
+        PtySize _size;
 
-        pid_t _pid;       ///< Child process ID (-1 if not spawned)
-        int _master_fd;   ///< Master side of the PTY (-1 if not spawned)
-        int _exit_status; ///< Exit status (valid after wait())
-        bool _exited;     ///< True if process has exited
+        pid_t _pid;
+        int _master_fd;
+        int _exit_status;
+        bool _exited;
 };
 
 PosixPty::PosixPty():
@@ -130,7 +138,6 @@ PosixPty::PosixPty():
 
 PosixPty::~PosixPty()
 {
-    // Ensure child is terminated and resources are cleaned up
     if (_pid > 0 && !_exited)
     {
         terminate();
@@ -177,14 +184,12 @@ bool PosixPty::spawn()
         return false;
     }
 
-    // Convert PtySize to struct winsize for forkpty()
     struct winsize ws;
     ws.ws_col = _size.cols;
     ws.ws_row = _size.rows;
     ws.ws_xpixel = _size.xpixel;
     ws.ws_ypixel = _size.ypixel;
 
-    // forkpty() creates the PTY pair and forks in one call
     // parent: _master_fd set, _pid = child; child: std streams on the slave, _pid == 0
     _pid = forkpty(&_master_fd, nullptr, nullptr, &ws);
 
@@ -196,46 +201,37 @@ bool PosixPty::spawn()
 
     if (_pid == 0)
     {
-        // Change working directory if specified
         if (!_working_dir.empty())
         {
             if (chdir(_working_dir.c_str()) != 0)
             {
-                // Log to stderr since we're in the child
-                fprintf(stderr, "chdir failed: %s\n", strerror(errno));
+                child_write_stderr(std::string("chdir failed: ") + strerror(errno) + "\n");
             }
         }
 
-        // Set environment variables
-        internal::apply(_env);
+        if (auto applied = internal::apply(_env); !applied)
+            child_write_stderr("failed to apply environment: " + applied.error().message + "\n");
 
-        // Set TERM if not already set by the caller
-        // xterm-256color provides good compatibility with most applications
-        if (!env::get("TERM").has_value())
+        if (env::get("TERM").has_value() == false)
         {
-            SIHD_UNEXPECTED_LOG(env::set("TERM", "xterm-256color"));
+            if (auto term = env::set("TERM", "xterm-256color"); !term)
+                child_write_stderr("failed to set TERM: " + term.error().message + "\n");
         }
 
         std::vector<char *> argv;
 
-        // Use the shell path as argv[0]
         argv.push_back(const_cast<char *>(_shell.c_str()));
 
-        // Add user-specified arguments
         for (auto & arg : _args)
         {
             argv.push_back(const_cast<char *>(arg.c_str()));
         }
 
-        // nullptr terminator required by execvp
         argv.push_back(nullptr);
 
-        // Replace this process with the shell
-        // execvp searches PATH for the executable
         execvp(_shell.c_str(), argv.data());
 
-        // If we get here, exec failed
-        fprintf(stderr, "exec %s failed: %s\n", _shell.c_str(), strerror(errno));
+        child_write_stderr("exec " + _shell + " failed: " + strerror(errno) + "\n");
         _exit(127); // Standard exit code for command not found
     }
 
@@ -261,13 +257,11 @@ bool PosixPty::is_running() const
 
     if (result == _pid)
     {
-        // Child has exited - update our state (const_cast needed for mutable state)
         auto *self = const_cast<PosixPty *>(this);
         self->_exited = true;
 
         if (WIFEXITED(status))
         {
-            // Normal exit: extract exit code
             self->_exit_status = WEXITSTATUS(status);
         }
         else if (WIFSIGNALED(status))
@@ -290,7 +284,6 @@ int PosixPty::wait()
     if (_exited)
         return _exit_status;
 
-    // Block until child exits
     int status;
     const pid_t result = this->_wait_child(status, 0);
 
@@ -327,19 +320,16 @@ void PosixPty::terminate()
 
     // graceful termination: SIGHUP (shells handle it), then SIGTERM, then SIGKILL
 
-    // Try SIGHUP first (what happens when terminal is closed)
     kill(_pid, SIGHUP);
-    usleep(50000); // 50ms grace period
+    usleep(50000);
 
     if (is_running())
     {
-        // SIGHUP didn't work, try SIGTERM
         kill(_pid, SIGTERM);
-        usleep(100000); // 100ms grace period
+        usleep(100000);
 
         if (is_running())
         {
-            // Last resort: SIGKILL
             kill(_pid, SIGKILL);
         }
     }
@@ -355,19 +345,18 @@ ssize_t PosixPty::read(void *buffer, size_t size)
     if (_master_fd < 0)
         return -1;
 
-    ssize_t n = ::read(_master_fd, buffer, size);
+    ssize_t bytes = ::read(_master_fd, buffer, size);
 
-    if (n < 0)
+    if (bytes < 0)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         { // No data available (non-blocking mode)
             return 0;
         }
-        // Real error
         return -1;
     }
 
-    return n;
+    return bytes;
 }
 
 ssize_t PosixPty::write(const void *data, size_t size)
@@ -375,19 +364,18 @@ ssize_t PosixPty::write(const void *data, size_t size)
     if (_master_fd < 0)
         return -1;
 
-    ssize_t n = ::write(_master_fd, data, size);
+    ssize_t bytes = ::write(_master_fd, data, size);
 
-    if (n < 0)
+    if (bytes < 0)
     {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
-            // Write would block
             return 0;
         }
         return -1;
     }
 
-    return n;
+    return bytes;
 }
 
 bool PosixPty::resize(const PtySize & size)
@@ -403,7 +391,6 @@ bool PosixPty::resize(const PtySize & size)
     ws.ws_xpixel = size.xpixel;
     ws.ws_ypixel = size.ypixel;
 
-    // TIOCSWINSZ sets the terminal size
     // The kernel will automatically send SIGWINCH to the foreground process group
     if (ioctl(_master_fd, TIOCSWINSZ, &ws) < 0)
     {
@@ -426,7 +413,6 @@ void PosixPty::send_eof()
 
 bool Pty::is_supported()
 {
-    // POSIX systems always support PTY
     return true;
 }
 

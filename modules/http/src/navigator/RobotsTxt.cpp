@@ -3,6 +3,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -35,8 +37,8 @@ namespace
 
 std::string to_lower_str(std::string_view sv)
 {
-    std::string s {sv};
-    return sihd::util::str::to_lower(s);
+    std::string lowered {sv};
+    return str::to_lower(lowered);
 }
 
 } // namespace
@@ -48,21 +50,19 @@ void RobotsTxt::parse(std::string_view content)
     std::vector<std::string> current_agents;
     bool in_block = false;
 
-    auto lines = sihd::util::str::split(content, "\n");
+    auto lines = str::split(content, "\n");
 
     for (const auto & line_buf : lines)
     {
-        std::string_view line = sihd::util::str::trim(line_buf);
+        std::string_view line = str::trim(line_buf);
 
-        // strip inline comment
         auto comment = line.find('#');
         if (comment != std::string_view::npos)
             line = line.substr(0, comment);
-        line = sihd::util::str::trim(line);
+        line = str::trim(line);
 
         if (line.empty())
         {
-            // empty line ends a block
             current_agents.clear();
             in_block = false;
             continue;
@@ -72,8 +72,8 @@ void RobotsTxt::parse(std::string_view content)
         if (colon == std::string_view::npos)
             continue;
 
-        std::string key = to_lower_str(sihd::util::str::trim(line.substr(0, colon)));
-        std::string_view value = sihd::util::str::trim(line.substr(colon + 1));
+        std::string key = to_lower_str(str::trim(line.substr(0, colon)));
+        std::string_view value = str::trim(line.substr(colon + 1));
 
         if (key == "user-agent")
         {
@@ -83,7 +83,6 @@ void RobotsTxt::parse(std::string_view content)
                 current_agents.clear();
             }
             current_agents.push_back(to_lower_str(value));
-            // ensure entry exists
             for (const auto & a : current_agents)
                 _agents.emplace(a, AgentRules {});
         }
@@ -101,7 +100,7 @@ void RobotsTxt::parse(std::string_view content)
         {
             if (!current_agents.empty())
             {
-                if (const auto delay = sihd::util::str::convert_from_string<long>(value))
+                if (const auto delay = str::convert_from_string<long>(value))
                 {
                     for (const auto & a : current_agents)
                         _agents[a].crawl_delay_s = *delay;
@@ -127,7 +126,6 @@ const RobotsTxt::AgentRules *RobotsTxt::find_rules(std::string_view user_agent) 
     if (it != _agents.end())
         return &it->second;
 
-    // fallback to wildcard
     auto wit = _agents.find("*");
     if (wit != _agents.end())
         return &wit->second;
@@ -149,7 +147,6 @@ bool RobotsTxt::is_allowed(std::string_view user_agent, std::string_view path) c
     {
         if (rule.path.empty())
         {
-            // empty Disallow means allow all
             if (!rule.allow)
             {
                 if (best_len < 0)

@@ -21,7 +21,6 @@ struct ProcIo
 ProcessState process_state_from_char(char state);
 
 // full metrics read; nullopt when the process is gone or its stat is unreadable
-// 'name' receives the process comm when given
 std::optional<ProcessMetrics> read_proc_metrics(int pid, std::string *name = nullptr);
 
 // nullopt when the io file is unreadable (permission denied or old kernel)

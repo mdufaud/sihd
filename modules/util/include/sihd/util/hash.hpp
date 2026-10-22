@@ -7,7 +7,9 @@
 namespace sihd::util::hash
 {
 
-void sha1(const uint8_t *data, size_t len, uint8_t output[20]);
+inline constexpr size_t sha1_size = 20;
+
+void sha1(const uint8_t *data, size_t len, uint8_t output[sha1_size]);
 
 } // namespace sihd::util::hash
 

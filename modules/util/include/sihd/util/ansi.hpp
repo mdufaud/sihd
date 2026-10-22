@@ -66,18 +66,12 @@ inline constexpr const char *WHITEBG2 = __ESC "[107m";
 
 inline constexpr const char *ENDC = __ESC "[0m";
 
-// clears from cursor until end of screen
 inline constexpr const char *CLEAR_SCREEN_END = __ESC "[0J";
-// clears from cursor to beginning of screen
 inline constexpr const char *CLEAR_SCREEN_BEG = __ESC "[1J";
-// clears entire screen
 inline constexpr const char *CLEAR_SCREEN = __ESC "[2J";
 
-// clears from cursor to end of line
 inline constexpr const char *CLEAR_LINE_END = __ESC "[0K";
-// clears from cursor to start of line
 inline constexpr const char *CLEAR_LINE_BEG = __ESC "[1K";
-// clears entire line
 inline constexpr const char *CLEAR_LINE = __ESC "[2K";
 
 inline constexpr const char *SAVE_CURSOR = __ESC "[s";
@@ -108,9 +102,7 @@ std::string move_cursor_down(int n);
 std::string move_cursor_right(int n);
 std::string move_cursor_left(int n);
 
-// moves cursor to beginning of line n lines down
 std::string next_line(int n);
-// moves cursor to beginning of line n lines up
 std::string prev_line(int n);
 
 std::string set_pos(int line, int col);

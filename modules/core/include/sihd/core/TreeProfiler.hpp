@@ -34,8 +34,7 @@
 namespace sihd::core
 {
 
-// a channel notification or service operation, traced strace-like: an enter event
-// is emitted when it starts and an exit event carries the measured duration
+// traced strace-like: an enter event at start, an exit event carrying the measured duration
 struct TreeProfilerEvent
 {
         enum Kind
@@ -54,7 +53,6 @@ struct TreeProfilerEvent
         bool success = true;
 };
 
-// strace-like profiler of channel notifications and service operations; the
 // observed objects must outlive it, or be detached first with reset()
 class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>,
                     public sihd::util::Observable<TreeProfilerEvent>
@@ -121,8 +119,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         TreeProfiler(const TreeProfiler &) = delete;
         TreeProfiler & operator=(const TreeProfiler &) = delete;
 
-        // decorates every channel and service found recursively from root; children created
-        // during lifecycle operations are picked up as services change state
+        // children created during lifecycle operations are picked up as services change state
         bool observe(sihd::util::Node *root, size_t max_recursion = 0);
         bool observe(Channel *channel);
         bool observe(sihd::util::AService *service);
@@ -139,8 +136,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         // keeps at most max_events most recent events in the polled history, 0 keeps everything
         void set_max_events(size_t max_events);
 
-        // events are batched on an internal thread; past queue_max (0 = unbounded) they drop and
-        // enter/exit pairs break; past warning_threshold (0 disables) one warning then one error per source
+        // past queue_max (0 = unbounded) events drop and enter/exit pairs break; warnings past warning_threshold
         void set_queue_max(size_t queue_max);
         void set_queue_warning(size_t warning_threshold);
 
@@ -151,8 +147,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         bool add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_front = false);
         void remove_observer(sihd::util::IHandler<Event *> *obs);
 
-        // capture window: start conditions latch and open it when all fire (also once at attach), stop
-        // conditions likewise close it; the opening/closing notification is captured; paths resolve to the roots
+        // start conditions latch and open the window when all fire (also once at attach), stop ones close it
         bool start_when(Channel *channel, ChannelMatch match);
         bool start_when(Channel *channel, ChannelCondition cond);
         bool start_when(sihd::util::AService *service, ServiceCondition cond);
@@ -173,17 +168,14 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         void stop_capture();
         bool capturing() const;
 
-        // duration of the capture session in progress, frozen at the duration of
-        // the last one when the window is closed
+        // frozen at the last session duration once the window is closed
         sihd::util::Duration session_duration() const;
 
-        // a closed window rearms the start conditions when set, opening a new
-        // capture when they are satisfied again
+        // a closed window rearms the start conditions when set
         void set_rearm(bool rearm);
 
         std::string report_str() const;
-        // empty when called from inside a service op; concurrent calls wait for
-        // the running report
+        // empty when called from inside a service op; concurrent calls wait for the running report
         std::string report_str(const ReportOpts & opts) const;
         void log_report() const;
         void log_report(const ReportOpts & opts) const;
@@ -205,8 +197,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
                 size_t pending = 0;
         };
 
-        // the profiler lock doubles as the ops gate: a report holds the walk flag to stop the service
-        // notification chain in op_start; nested ops join the awaited cascade; profiler lock taken last
+        // the profiler lock doubles as the ops gate: a report holds the walk flag to block op_start; taken last
         mutable sihd::util::WaitableRecursive _waitable;
         mutable bool _walk_in_progress = false;
         mutable size_t _ops_in_flight = 0;
@@ -227,7 +218,6 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
 
         using ConditionList = std::list<std::shared_ptr<CaptureCondition>>;
 
-        // how a notification met the capture window
         struct WindowCheck
         {
                 bool was_open = false;
@@ -328,8 +318,7 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         std::atomic<bool> _stop_dispatch {false};
         std::atomic<bool> _dispatcher_running {false};
         std::atomic<size_t> _dropped_events_total {0};
-        // sources already logged at the current queue pressure, guarded by the
-        // dispatch queue waitable
+        // guarded by the dispatch queue waitable
         std::set<std::string> _warned_sources;
         std::set<std::string> _errored_sources;
         mutable DispatchQueue _dispatch_queue;

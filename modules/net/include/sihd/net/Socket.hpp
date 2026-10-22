@@ -18,7 +18,6 @@ class Socket
         static constexpr int blocking_timeout = -1;
 
         Socket();
-        // open socket
         Socket(int domain, int socket_type, int protocol);
         Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol);
         // from existing socket - get_infos perform up to 3 getsockopt
@@ -28,16 +27,13 @@ class Socket
         Socket(Socket && other);
         virtual ~Socket();
 
-        // don't like hidden behavior so i prefer deleting copy operators
         Socket(const Socket & other) = delete;
         Socket & operator=(const Socket & other) = delete;
 
         Socket & operator=(Socket && other);
 
-        operator int() const { return _socket; }
-        operator bool() const { return this->is_open(); }
-
-        // Class utilities for socket manipulation //
+        operator int() const;
+        operator bool() const;
 
         // returns true if getpeername worked and the provided addr_len is still the same
         static sihd::util::Result<void> get_socket_peername(int socket, sockaddr *addr, socklen_t *addr_len);
@@ -73,8 +69,6 @@ class Socket
         // an Error from the platform last error code: the message carries the system description
         static sihd::util::Error make_error(std::string_view message);
 
-        // Operations on internal socket //
-
         sihd::util::Result<void> get_infos();
 
         sihd::util::Result<void> set_tcp_nodelay(bool active) const;
@@ -106,7 +100,7 @@ class Socket
         sihd::util::Result<void> open(int domain, int socket_type, int protocol);
         virtual sihd::util::Result<void> close();
         virtual sihd::util::Result<void> shutdown() const;
-        bool is_open() const { return _socket >= 0; }
+        bool is_open() const;
 
         // MSG_NOSIGNAL by default where it exists: a dead peer gives EPIPE, not SIGPIPE
         virtual sihd::util::Result<size_t> send(sihd::util::ArrCharView view);
@@ -121,14 +115,9 @@ class Socket
         sihd::util::Result<int> accept(int timeout_ms = blocking_timeout);
         sihd::util::Result<int> accept(IpAddr & ipaddr, int timeout_ms = blocking_timeout);
 
-        // Utilities for internal socket //
-
         sihd::util::Result<IpAddr> peeraddr(bool ipv6 = false) const;
         sihd::util::Result<int> local_port() const;
 
-        // Operations on IP adresses //
-
-        // sockaddr
         sihd::util::Result<void> bind(const sockaddr *addr, socklen_t addr_len);
         virtual sihd::util::Result<void>
             connect(const sockaddr *addr, socklen_t addr_len, int timeout_ms = blocking_timeout);
@@ -148,8 +137,6 @@ class Socket
         sihd::util::Result<size_t> receive_from(IpAddr & addr, void *data, size_t size);
         sihd::util::Result<size_t> receive_from(IpAddr & addr, sihd::util::IArray & arr);
 
-        // Operations on unix sockets //
-
         static sihd::util::Result<std::string> unix_socket_peername(int socket);
         sihd::util::Result<void> bind_unix(std::string_view path);
         sihd::util::Result<void> connect_unix(std::string_view path);
@@ -158,17 +145,13 @@ class Socket
         sihd::util::Result<size_t> receive_from_unix(std::string & path, void *data, size_t size);
         sihd::util::Result<size_t> receive_from_unix(std::string & path, sihd::util::IArray & arr);
 
-        // Configuration //
+        void set_send_flags(int flags);
+        void set_receive_flags(int flags);
 
-        void set_send_flags(int flags) { _send_flags = flags; }
-        void set_receive_flags(int flags) { _rcv_flags = flags; }
-
-        // Getters //
-
-        int domain() const { return _domain; }
-        int type() const { return _type; }
-        int protocol() const { return _protocol; }
-        int socket() const { return _socket; }
+        int domain() const;
+        int type() const;
+        int protocol() const;
+        int socket() const;
 
         bool is_unix() const;
         bool is_ip() const;
@@ -179,8 +162,8 @@ class Socket
 
         sihd::util::Result<void> reconnect(int timeout_ms = -1);
 
-        const IpAddr & connect_addr() const { return _connect_addr; }
-        std::string connect_unix_path() const { return _connect_unix_path; }
+        const IpAddr & connect_addr() const;
+        std::string connect_unix_path() const;
 
     protected:
         void _clear_socket_info();

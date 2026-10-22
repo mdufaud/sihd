@@ -7,8 +7,7 @@
 namespace sihd::sys
 {
 
-// Redirects a C stream to a temporary file until destroyed: the capture is
-// process-wide and nested captures restore in LIFO order.
+// Redirects a C stream to a temporary file until destroyed: process-wide, nested captures restore in LIFO order
 class StreamCapture
 {
     public:
@@ -18,7 +17,6 @@ class StreamCapture
         StreamCapture(const StreamCapture &) = delete;
         StreamCapture & operator=(const StreamCapture &) = delete;
 
-        // flushes the stream and returns everything captured so far
         std::string str();
 
     private:

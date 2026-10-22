@@ -68,7 +68,7 @@ class Collector: public Observable<Collector<T>>,
         bool on_stop() override
         {
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 _running = false;
                 _waitable.notify();
             }

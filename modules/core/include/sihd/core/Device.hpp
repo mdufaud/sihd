@@ -25,8 +25,8 @@ class Device: public AChannelContainer,
         virtual const char *device_state_str() const;
 
     protected:
-        virtual void handle([[maybe_unused]] Channel *c) override {}
-        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+        virtual void handle(Channel *channel) override;
+        virtual void handle(sihd::util::ServiceController *ctrl) override;
 
         bool do_setup() override;
         bool do_init() override;
@@ -34,13 +34,13 @@ class Device: public AChannelContainer,
         bool do_stop() override;
         bool do_reset() override;
 
-        virtual bool on_setup() { return true; };
-        virtual bool on_init() { return true; };
-        virtual bool on_start() { return true; };
-        virtual bool on_stop() { return true; };
-        virtual bool on_reset() { return true; };
+        virtual bool on_setup();
+        virtual bool on_init();
+        virtual bool on_start();
+        virtual bool on_stop();
+        virtual bool on_reset();
 
-        virtual sihd::util::AService::IServiceController *service_ctrl() override { return &_service_controller; }
+        virtual sihd::util::AService::IServiceController *service_ctrl() override;
         sihd::util::ServiceController _service_controller;
 
     private:

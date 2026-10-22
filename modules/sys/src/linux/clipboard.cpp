@@ -1,8 +1,7 @@
 #include <sihd/sys/clipboard.hpp>
 #include <sihd/util/Logger.hpp>
 
-// The x11 and wayland backends live under src/linux/{x11,wayland}/ as compile-time
-// opts (inline no-ops when off); the session-matching backend dispatches first.
+// x11 and wayland backends (src/linux/{x11,wayland}/) are compile-time opts; the session-matching one dispatches first
 
 #include "internal/deadline.hpp"
 #include "internal/desktop_env.hpp"

@@ -95,6 +95,7 @@ form = sihd.http.Multipart()
 form.add_field("field", "multipart-value")
 assert(not form.empty())
 assert(form.value("field") == "multipart-value")
+assert(form.value("missing") is None)
 
 uploaded = nav.post_multipart("localhost:3012/api/upload", form)
 assert(uploaded is not None)

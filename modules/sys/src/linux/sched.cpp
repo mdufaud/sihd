@@ -22,37 +22,37 @@ std::unexpected<Error> unsupported()
 
 } // namespace
 
-sihd::util::Result<int> nice(pid_t)
+Result<int> nice(pid_t)
 {
     return unsupported();
 }
 
-sihd::util::Result<void> set_nice(pid_t, int)
+Result<void> set_nice(pid_t, int)
 {
     return unsupported();
 }
 
-sihd::util::Result<Policy> scheduler(pid_t)
+Result<Policy> scheduler(pid_t)
 {
     return unsupported();
 }
 
-sihd::util::Result<Priority> scheduler_priority(pid_t)
+Result<Priority> scheduler_priority(pid_t)
 {
     return unsupported();
 }
 
-sihd::util::Result<void> set_scheduler(pid_t, Policy, Priority)
+Result<void> set_scheduler(pid_t, Policy, Priority)
 {
     return unsupported();
 }
 
-sihd::util::Result<std::vector<bool>> affinity(pid_t)
+Result<std::vector<bool>> affinity(pid_t)
 {
     return unsupported();
 }
 
-sihd::util::Result<void> set_affinity(pid_t, const std::vector<bool> &)
+Result<void> set_affinity(pid_t, const std::vector<bool> &)
 {
     return unsupported();
 }
@@ -104,7 +104,7 @@ int policy_from_scheduler(Policy policy)
 
 } // namespace
 
-sihd::util::Result<int> nice(pid_t pid)
+Result<int> nice(pid_t pid)
 {
     errno = 0;
     const int value = getpriority(PRIO_PROCESS, pid);
@@ -114,14 +114,14 @@ sihd::util::Result<int> nice(pid_t pid)
     return value;
 }
 
-sihd::util::Result<void> set_nice(pid_t pid, int nice_value)
+Result<void> set_nice(pid_t pid, int nice_value)
 {
     if (setpriority(PRIO_PROCESS, pid, nice_value) == -1)
         return std::unexpected(Error::from_errno("setpriority({}, {})", pid, nice_value));
     return {};
 }
 
-sihd::util::Result<Policy> scheduler(pid_t pid)
+Result<Policy> scheduler(pid_t pid)
 {
     const int policy = sched_getscheduler(pid);
     if (policy == -1)
@@ -129,7 +129,7 @@ sihd::util::Result<Policy> scheduler(pid_t pid)
     return scheduler_from_policy(policy);
 }
 
-sihd::util::Result<Priority> scheduler_priority(pid_t pid)
+Result<Priority> scheduler_priority(pid_t pid)
 {
     sched_param param = {};
     if (sched_getparam(pid, &param) == -1)
@@ -137,7 +137,7 @@ sihd::util::Result<Priority> scheduler_priority(pid_t pid)
     return Priority {param.sched_priority};
 }
 
-sihd::util::Result<void> set_scheduler(pid_t pid, Policy policy, Priority priority)
+Result<void> set_scheduler(pid_t pid, Policy policy, Priority priority)
 {
     // SCHED_DEADLINE is only settable through sched_setattr with the runtime/deadline/period triple
     if (policy == Policy::deadline)
@@ -149,7 +149,7 @@ sihd::util::Result<void> set_scheduler(pid_t pid, Policy policy, Priority priori
     return {};
 }
 
-sihd::util::Result<std::vector<bool>> affinity(pid_t pid)
+Result<std::vector<bool>> affinity(pid_t pid)
 {
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -167,7 +167,7 @@ sihd::util::Result<std::vector<bool>> affinity(pid_t pid)
     return cpu_mask;
 }
 
-sihd::util::Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
+Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
 {
     if (cpu_mask.empty())
         return std::unexpected(Error(invalid_argument, "empty cpu mask"));

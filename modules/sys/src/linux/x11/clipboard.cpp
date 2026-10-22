@@ -6,8 +6,7 @@
 #include <string>
 #include <vector>
 
-// sihd headers first: Xlib poisons common identifiers (None, Status, True,
-// False, ...) with its macros.
+// sihd headers first: Xlib poisons common identifiers (None, Status, True, False) with its macros
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/Poll.hpp>
 #include <sihd/util/Defer.hpp>
@@ -20,20 +19,18 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
-// X11 clipboard backend: selection ownership, serving TARGETS and owned
-// targets. One-shot set. INCR transfers unsupported (selections ~16 MB max).
+// INCR transfers are unsupported: selections are limited to ~16 MB
 
 namespace sihd::sys::clipboard::x11
 {
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::clipboard");
+SIHD_NEW_LOGGER("sihd::sys::clipboard::x11");
 
 namespace
 {
 
-// One data payload served for one selection target.
 struct TargetData
 {
         Atom target;
@@ -41,8 +38,6 @@ struct TargetData
         unsigned long size = 0;
 };
 
-// Display connection, requestor/owner window and poller used by one clipboard
-// operation.
 struct ClipboardSession;
 
 // The server's current time: selection requests want a real timestamp, not CurrentTime (ICCCM);
@@ -92,8 +87,6 @@ struct ClipboardSession
         }
 };
 
-// Polls the X connection until an event is queued, the deadline expires or the
-// connection drops.
 bool wait_for_x_event(ClipboardSession & session, Timestamp deadline)
 {
     while (XPending(session.conn.display) == 0)
@@ -126,7 +119,6 @@ Time server_timestamp(ClipboardSession & session)
     }
 }
 
-// Reads the property the owner wrote for us, chunk by chunk, into `out`.
 bool read_selection_property(ClipboardSession & session, ArrByte & out)
 {
     Display *display = session.conn.display;
@@ -137,7 +129,6 @@ bool read_selection_property(ClipboardSession & session, ArrByte & out)
     unsigned long bytes_after = 0;
     unsigned char *data = nullptr;
 
-    // 4-byte units per round; INCR is unsupported.
     const long chunk_units = 0xFFFFFF;
 
     // XGetWindowProperty offsets and lengths are 4-byte units, not elements.
@@ -147,7 +138,7 @@ bool read_selection_property(ClipboardSession & session, ArrByte & out)
                                session.window,
                                session.property,
                                offset,
-                               0xFFFFFF, // plenty for one round; INCR is unsupported anyway
+                               0xFFFFFF,
                                False,
                                AnyPropertyType,
                                &type,
@@ -180,8 +171,6 @@ bool read_selection_property(ClipboardSession & session, ArrByte & out)
     }
 }
 
-// Requests `target` from `selection` and waits for the SelectionNotify before
-// reading the converted data into `out`.
 bool convert_selection(ClipboardSession & session, Atom target, ArrByte & out, Timestamp deadline)
 {
     Display *display = session.conn.display;
@@ -201,14 +190,12 @@ bool convert_selection(ClipboardSession & session, Atom target, ArrByte & out, T
             continue;
 
         if (event.xselection.property == None)
-            return false; // the owner refused the conversion
+            return false;
 
         return read_selection_property(session, out);
     }
 }
 
-// The X selection target serving a mime type: text mimes map to the standard
-// text targets, any other mime type is the target name itself (image/png, ...).
 Atom target_atom(Display *display, std::string_view mime_str)
 {
     if (mime_str == mime::utf8_text)
@@ -218,8 +205,6 @@ Atom target_atom(Display *display, std::string_view mime_str)
     return XInternAtom(display, std::string(mime_str).c_str(), False);
 }
 
-// The canonical mime type of an X selection target: the text targets map to
-// mime types, any other target is its own mime type.
 std::optional<std::string> target_mime(Display *display, Atom target)
 {
     if (target == XA_STRING)
@@ -239,7 +224,6 @@ std::optional<std::string> target_mime(Display *display, Atom target)
     return owned;
 }
 
-// Selection bookkeeping targets: part of the selection protocol, not content.
 bool is_protocol_target(std::string_view target)
 {
     for (std::string_view protocol_target : {"TARGETS", "MULTIPLE", "TIMESTAMP", "SAVE_TARGETS"})
@@ -250,8 +234,6 @@ bool is_protocol_target(std::string_view target)
     return false;
 }
 
-// Reads the TARGETS property: the mime types the current selection owner
-// supports, in canonical form.
 std::optional<std::vector<std::string>> read_targets(ClipboardSession & session, Timestamp deadline)
 {
     Display *display = session.conn.display;
@@ -274,8 +256,6 @@ std::optional<std::vector<std::string>> read_targets(ClipboardSession & session,
     return targets;
 }
 
-// Owns the selection and serves requests until the first data target is fulfilled, within the
-// dispatcher's deadline; false when another client takes it or nothing requests in time
 bool serve_selection_once(ClipboardSession & session,
                           const std::vector<Atom> & offered_targets,
                           const std::vector<TargetData> & data_targets,
@@ -378,7 +358,6 @@ bool serve_selection_once(ClipboardSession & session,
                 break;
             }
             case SelectionClear:
-                // Another client took the selection.
                 return false;
             default:
                 break;
@@ -415,8 +394,6 @@ bool set_raw(const std::vector<RawContentView> & contents, Timestamp deadline)
     return serve_selection_once(session, offered_targets, data_targets, deadline);
 }
 
-// Fetches the wanted mime types - every offered one when the wanted list is
-// empty - in `wanted_mimes` order (offered order when empty), in one session.
 std::vector<RawContent> get_wanted(const std::vector<std::string_view> & wanted_mimes)
 {
     ClipboardSession session;
@@ -432,7 +409,6 @@ std::vector<RawContent> get_wanted(const std::vector<std::string_view> & wanted_
         return {};
     }
 
-    // One budget for the whole read: targets listing and every mime fetch.
     const Timestamp deadline = internal::deadline_from_now(get_timeout);
 
     auto targets = read_targets(session, deadline);

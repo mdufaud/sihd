@@ -16,7 +16,7 @@ SIHD_LOGGER;
 namespace
 {
 
-sihd::util::Result<void> convert_trigger_value(const std::string & str, Value & value)
+Result<void> convert_trigger_value(const std::string & str, Value & value)
 {
     value = Value::from_any_string(str);
     if (value.empty())
@@ -68,7 +68,7 @@ ChannelMatch::Comparison ChannelMatch::comparison_from_str(std::string_view str)
     return None;
 }
 
-sihd::util::Result<void> ChannelMatch::parse(std::string_view conf_str)
+Result<void> ChannelMatch::parse(std::string_view conf_str)
 {
     StrConfiguration conf(conf_str);
     auto [key_cmp, key_idx, key_value, key_invert] = conf.find_all("cmp", "idx", "value", "invert");
@@ -88,12 +88,14 @@ sihd::util::Result<void> ChannelMatch::parse(std::string_view conf_str)
         SIHD_UNEXPECTED_RETURN(idx);
         parsed_idx = *idx;
     }
+
     if (key_value.has_value())
     {
         parsed_value = Value::from_any_string(*key_value);
         if (parsed_value.empty())
             return std::unexpected(Error(invalid_argument, "cannot convert value: {}", *key_value));
     }
+
     if (key_invert.has_value())
     {
         const auto invert = str::convert_from_string<bool>(*key_invert);
@@ -107,7 +109,7 @@ sihd::util::Result<void> ChannelMatch::parse(std::string_view conf_str)
     return {};
 }
 
-sihd::util::Result<void> ChannelMatch::parse_trigger(std::string_view conf)
+Result<void> ChannelMatch::parse_trigger(std::string_view conf)
 {
     Splitter splitter(":");
     splitter.set_empty_delimitations(true);
@@ -117,13 +119,11 @@ sihd::util::Result<void> ChannelMatch::parse_trigger(std::string_view conf)
         return std::unexpected(Error(invalid_argument, "trigger conf error: '{}'", conf));
     if (split.size() == 1)
     {
-        // trigger=value
         if (split[0].empty())
             return std::unexpected(Error(invalid_argument, "trigger value empty: '{}'", conf));
         this->idx = 0;
         return convert_trigger_value(split[0], this->value);
     }
-    // trigger=index:value
     if (split[0].empty() && split[1].empty())
         return std::unexpected(Error(invalid_argument, "trigger idx and value empty: '{}'", conf));
     if (split[0].empty() == false)
@@ -169,6 +169,7 @@ bool ChannelMatch::match(const Value & in_value) const
         case InferiorEqual:
             matched = in_value <= this->value;
             break;
+
         case ByteAnd:
             matched = (in_value.data.n & this->value.data.n) != 0;
             break;
@@ -210,6 +211,46 @@ bool ChannelMatch::verify(const Channel *channel) const
         return false;
     }
     return true;
+}
+
+ChannelMatch ChannelMatch::equal(Value val)
+{
+    return {Equal, val};
+}
+
+ChannelMatch ChannelMatch::superior(Value val)
+{
+    return {Superior, val};
+}
+
+ChannelMatch ChannelMatch::superior_equal(Value val)
+{
+    return {SuperiorEqual, val};
+}
+
+ChannelMatch ChannelMatch::inferior(Value val)
+{
+    return {Inferior, val};
+}
+
+ChannelMatch ChannelMatch::inferior_equal(Value val)
+{
+    return {InferiorEqual, val};
+}
+
+ChannelMatch ChannelMatch::byte_and(Value val)
+{
+    return {ByteAnd, val};
+}
+
+ChannelMatch ChannelMatch::byte_or(Value val)
+{
+    return {ByteOr, val};
+}
+
+ChannelMatch ChannelMatch::byte_xor(Value val)
+{
+    return {ByteXor, val};
 }
 
 } // namespace sihd::core

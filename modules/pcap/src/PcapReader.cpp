@@ -7,8 +7,8 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/time.hpp>
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum sihd::util::ErrorCode;
 
 namespace sihd::pcap
 {
@@ -26,9 +26,7 @@ SIHD_REGISTER_FACTORY(PcapReader)
 
 SIHD_LOGGER;
 
-PcapReader::PcapReader(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
-    _impl_ptr(std::make_unique<Impl>())
+PcapReader::PcapReader(const std::string & name, Node *parent): Named(name, parent), _impl_ptr(std::make_unique<Impl>())
 {
     utils::init();
 }
@@ -38,7 +36,7 @@ PcapReader::~PcapReader()
     this->close();
 }
 
-sihd::util::Result<void> PcapReader::open(const std::string & path)
+Result<void> PcapReader::open(const std::string & path)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -49,17 +47,17 @@ sihd::util::Result<void> PcapReader::open(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> PcapReader::open_micro_precision(const std::string & path)
+Result<void> PcapReader::open_micro_precision(const std::string & path)
 {
     return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-sihd::util::Result<void> PcapReader::open_nano_precision(const std::string & path)
+Result<void> PcapReader::open_nano_precision(const std::string & path)
 {
     return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_NANO);
 }
 
-sihd::util::Result<void> PcapReader::_open_precision(const char *path, u_int precision)
+Result<void> PcapReader::_open_precision(const char *path, u_int precision)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -70,7 +68,7 @@ sihd::util::Result<void> PcapReader::_open_precision(const char *path, u_int pre
     return {};
 }
 
-sihd::util::Result<void> PcapReader::open(FILE *file)
+Result<void> PcapReader::open(FILE *file)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -81,17 +79,17 @@ sihd::util::Result<void> PcapReader::open(FILE *file)
     return {};
 }
 
-sihd::util::Result<void> PcapReader::open_micro_precision(FILE *file)
+Result<void> PcapReader::open_micro_precision(FILE *file)
 {
     return this->_open_precision(file, PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-sihd::util::Result<void> PcapReader::open_nano_precision(FILE *file)
+Result<void> PcapReader::open_nano_precision(FILE *file)
 {
     return this->_open_precision(file, PCAP_TSTAMP_PRECISION_NANO);
 }
 
-sihd::util::Result<void> PcapReader::_open_precision(FILE *file, u_int precision)
+Result<void> PcapReader::_open_precision(FILE *file, u_int precision)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -126,7 +124,7 @@ FILE *PcapReader::file()
     return pcap_file(_impl_ptr->pcap_ptr);
 }
 
-sihd::util::Result<bool> PcapReader::read_next()
+Result<bool> PcapReader::read_next()
 {
     if (this->is_open() == false)
         return std::unexpected(Error(not_initialized, "not open"));
@@ -139,7 +137,7 @@ sihd::util::Result<bool> PcapReader::read_next()
     return ret > 0;
 }
 
-bool PcapReader::get_read_data(sihd::util::ArrCharView & view) const
+bool PcapReader::get_read_data(ArrCharView & view) const
 {
     if (_impl_ptr->pkt_data_ptr == nullptr || _impl_ptr->pkt_hdr_ptr == nullptr)
         return false;
@@ -147,14 +145,14 @@ bool PcapReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-sihd::util::Result<sihd::util::Timestamp> PcapReader::get_read_timestamp() const
+Result<Timestamp> PcapReader::get_read_timestamp() const
 {
     if (_impl_ptr->pkt_hdr_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "no packet read"));
     if (_impl_ptr->precision == PCAP_TSTAMP_PRECISION_MICRO)
-        return sihd::util::Timestamp(sihd::util::time::tv(_impl_ptr->pkt_hdr_ptr->ts));
+        return Timestamp(time::tv(_impl_ptr->pkt_hdr_ptr->ts));
     if (_impl_ptr->precision == PCAP_TSTAMP_PRECISION_NANO)
-        return sihd::util::Timestamp(sihd::util::time::nano_tv(_impl_ptr->pkt_hdr_ptr->ts));
+        return Timestamp(time::nano_tv(_impl_ptr->pkt_hdr_ptr->ts));
     return std::unexpected(Error(not_supported, "unknown timestamp precision"));
 }
 

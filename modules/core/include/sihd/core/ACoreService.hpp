@@ -22,7 +22,7 @@ class ACoreService: public sihd::util::AService,
         virtual ~ACoreService() = default;
 
     protected:
-        virtual void handle([[maybe_unused]] sihd::util::ServiceController *ctrl) override {}
+        virtual void handle(sihd::util::ServiceController *ctrl) override;
 };
 
 } // namespace sihd::core

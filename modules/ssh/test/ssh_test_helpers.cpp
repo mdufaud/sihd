@@ -6,7 +6,7 @@ namespace test
 SIHD_LOGGER;
 
 bool connect_to_test_server(const SshServerHelper & server,
-                            SshSession & session,
+                            sihd::ssh::SshSession & session,
                             const char *user,
                             const char *password)
 {

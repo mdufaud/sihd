@@ -5,8 +5,7 @@
 #include <sihd/sys/Process.hpp>
 #include <sihd/util/Logger.hpp>
 
-// everything touching child process spawning, pipes and the platform watchers lives in
-// src/linux|windows/Process.cpp
+// child spawning, pipes and platform watchers live in src/linux|windows/Process.cpp
 
 namespace sihd::sys
 {
@@ -77,7 +76,7 @@ bool Process::set_nice(int nice_value)
 
 bool Process::set_scheduler(sched::Policy policy, sched::Priority priority)
 {
-    _scheduler = {policy, priority};
+    _scheduler = Scheduler {policy, priority};
     return true;
 }
 
@@ -98,7 +97,7 @@ void Process::_apply_child_policy()
     }
     if (_scheduler)
     {
-        auto applied = sched::set_scheduler(static_cast<pid_t>(this->pid()), _scheduler->first, _scheduler->second);
+        auto applied = sched::set_scheduler(static_cast<pid_t>(this->pid()), _scheduler->policy, _scheduler->priority);
         SIHD_UNEXPECTED_LOG(applied);
     }
     if (_affinity.empty() == false)
@@ -107,8 +106,6 @@ void Process::_apply_child_policy()
         SIHD_UNEXPECTED_LOG(applied);
     }
 }
-
-// Argv
 
 Process & Process::set_function(std::nullptr_t)
 {

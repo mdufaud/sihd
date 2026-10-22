@@ -11,16 +11,14 @@
 namespace sihd::tui
 {
 
-// A ftxui Input kept for its event handling, drawn here: ftxui draws no cursor for empty content
-// (the placeholder's focus node overrides it), so the prompt gives the cursor cell a place
+// ftxui draws no cursor for empty content: the prompt gives the cursor cell a place
 class InputLine: public ftxui::ComponentBase
 {
     public:
         InputLine(std::string prompt, std::string placeholder);
         ~InputLine() = default;
 
-        [[nodiscard]] const std::string & content() const { return _content; }
-        // sets the content and moves the caret to its end
+        [[nodiscard]] const std::string & content() const;
         void set_content(std::string content);
         void clear();
 
@@ -29,7 +27,7 @@ class InputLine: public ftxui::ComponentBase
 
     private:
         ftxui::Element OnRender() override;
-        ftxui::Component ActiveChild() override { return _input; }
+        ftxui::Component ActiveChild() override;
 
         std::string _prompt;
         std::string _placeholder;

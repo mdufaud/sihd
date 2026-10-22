@@ -8,6 +8,7 @@
 #include <robuffer.h>
 
 #include <atomic>
+#include <optional>
 #include <vector>
 #include <windows.devices.bluetooth.advertisement.h>
 #include <windows.storage.streams.h>
@@ -238,13 +239,13 @@ void read_extended_args(IBluetoothLEAdvertisementReceivedEventArgs *args, ScanRe
         result.connectable = connectable != 0;
 }
 
-ScanResult read_received(IBluetoothLEAdvertisementReceivedEventArgs *args)
+std::optional<ScanResult> read_received(IBluetoothLEAdvertisementReceivedEventArgs *args)
 {
     ScanResult result;
     UINT64 address = 0;
     INT16 rssi = 0;
-    args->get_BluetoothAddress(&address);
-    args->get_RawSignalStrengthInDBm(&rssi);
+    if (FAILED(args->get_BluetoothAddress(&address)) || FAILED(args->get_RawSignalStrengthInDBm(&rssi)))
+        return std::nullopt;
     result.address = format_address(address);
     result.rssi = rssi;
 
@@ -258,10 +259,12 @@ ScanResult read_received(IBluetoothLEAdvertisementReceivedEventArgs *args)
 HRESULT STDMETHODCALLTYPE ReceivedHandler::Invoke(IBluetoothLEAdvertisementWatcher *,
                                                   IBluetoothLEAdvertisementReceivedEventArgs *args)
 {
-    ScanResult result = read_received(args);
+    std::optional<ScanResult> result = read_received(args);
+    if (!result)
+        return S_OK;
     {
         auto lock = _waitable.guard();
-        _pending.emplace_back(std::move(result));
+        _pending.emplace_back(std::move(*result));
     }
     _waitable.notify_all();
     return S_OK;

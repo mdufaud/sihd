@@ -35,7 +35,6 @@ class Channel: public sihd::util::Named,
         void set_resizable(bool activate);
         void set_clock(sihd::util::IClock *clock);
 
-        // Named
         virtual std::string description() const override;
 
         uint8_t *data() const;
@@ -62,7 +61,7 @@ class Channel: public sihd::util::Named,
             return sihd::util::type::is_same<T>(_array_ptr->data_type());
         }
 
-        // get last write timestamp (thread safe)
+        // thread safe
         sihd::util::Timestamp timestamp() const;
 
         void do_timestamp();
@@ -106,6 +105,7 @@ class Channel: public sihd::util::Named,
         }
 
     protected:
+        // app-wide default clock for every channel
         static sihd::util::IClock *_default_channel_clock_ptr;
 
     private:

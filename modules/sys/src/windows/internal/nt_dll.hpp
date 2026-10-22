@@ -6,8 +6,7 @@
 namespace sihd::sys::internal
 {
 
-// optional APIs: absent from wine or old windows exports.
-// GetModuleHandle only sees loaded modules - powrprof is not loaded by default
+// optional APIs absent from wine/old windows; GetModuleHandle only sees loaded modules (powrprof is not by default)
 inline void *nt_dll_symbol(const char *dll, const char *symbol)
 {
     HMODULE mod = GetModuleHandleA(dll);

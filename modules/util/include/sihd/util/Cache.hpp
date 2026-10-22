@@ -175,13 +175,10 @@ class Cache
     private:
         struct CacheEntry
         {
-                // Stats
                 size_t hit = 0;
                 size_t miss = 0;
-                // Time management
                 Timestamp last_refresh = Timestamp(-1);
                 Timestamp max_age = Timestamp(-1);
-                // Value management
                 std::function<Value()> getter;
                 Value cached_value;
         };

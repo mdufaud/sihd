@@ -10,8 +10,7 @@
 namespace sihd::sys
 {
 
-// syslog on linux is a process-global connection: opened by the first
-// instance, closed by the last; windows holds a per-instance event source
+// syslog on linux is a process-global connection: opened by the first instance, closed by the last
 class LoggerSystem: public sihd::util::ALogger
 {
     public:

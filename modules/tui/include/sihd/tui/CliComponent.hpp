@@ -10,7 +10,6 @@
 namespace sihd::tui
 {
 
-// command name -> list of possible arguments
 using CompletionMap = std::map<std::string, std::vector<std::string>>;
 
 struct CliOptions
@@ -36,7 +35,7 @@ class Cli
     public:
         virtual ~Cli() = default;
         virtual void add_output(std::string_view line, OutputStyle style) = 0;
-        void add_output(std::string_view line) { this->add_output(line, OutputStyle::normal); }
+        void add_output(std::string_view line);
         virtual void clear_output() = 0;
 };
 

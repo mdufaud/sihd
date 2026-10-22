@@ -1,8 +1,6 @@
 #ifndef __SIHD_SYS_SHAREDMEMORY_HPP__
 #define __SIHD_SYS_SHAREDMEMORY_HPP__
 
-#include <sys/stat.h> // mode_t
-
 #include <string>
 #include <type_traits>
 
@@ -10,10 +8,6 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/traits.hpp>
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# define mode_t unsigned int
-#endif
 
 namespace sihd::sys
 {
@@ -61,9 +55,5 @@ class SharedMemory
 };
 
 } // namespace sihd::sys
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# undef mode_t
-#endif
 
 #endif

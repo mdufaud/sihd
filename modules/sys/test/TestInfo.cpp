@@ -16,9 +16,9 @@ using namespace sihd::sys;
 class TestInfo: public ::testing::Test
 {
     protected:
-        TestInfo() { sihd::util::LoggerManager::stream(); }
+        TestInfo() { LoggerManager::stream(); }
 
-        virtual ~TestInfo() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestInfo() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

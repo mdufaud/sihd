@@ -11,8 +11,8 @@ using namespace sihd::util;
 class TestProfiling: public ::testing::Test
 {
     protected:
-        TestProfiling() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestProfiling() { sihd::util::LoggerManager::clear_loggers(); }
+        TestProfiling() { LoggerManager::stream(); }
+        virtual ~TestProfiling() { LoggerManager::clear_loggers(); }
         virtual void SetUp() {}
         virtual void TearDown() {}
 };
@@ -20,36 +20,36 @@ class TestProfiling: public ::testing::Test
 TEST_F(TestProfiling, test_timeit)
 {
     {
-        Timeit t("test_function");
+        Timeit timeit("test_function");
     }
-    Timeit t;
-    EXPECT_GE(t.elapsed(), Timestamp(0));
+    Timeit timeit;
+    EXPECT_GE(timeit.elapsed(), Timestamp(0));
 }
 
 TEST_F(TestProfiling, test_perf_guard)
 {
-    Perf p("test_perf");
+    Perf perf("test_perf");
 
     for (int i = 0; i < 10; ++i)
     {
-        Perf::Guard guard(p);
+        Perf::Guard guard(perf);
         volatile int x = 0;
         for (int j = 0; j < 100; ++j)
             x = x + j;
         (void)x;
     }
 
-    EXPECT_EQ(p.stat().samples, 10u);
-    EXPECT_GE(p.stat().min, 0);
-    EXPECT_GE(p.stat().max, p.stat().min);
+    EXPECT_EQ(perf.stat().samples, 10u);
+    EXPECT_GE(perf.stat().min, 0);
+    EXPECT_GE(perf.stat().max, perf.stat().min);
 
-    p.log();
+    perf.log();
 }
 
 TEST_F(TestProfiling, test_perf_end_before_begin)
 {
-    Perf p("fail");
-    EXPECT_THROW(p.end(), std::runtime_error);
+    Perf perf("fail");
+    EXPECT_THROW(perf.end(), std::runtime_error);
 }
 
 TEST_F(TestProfiling, test_detailed_stat_percentiles)

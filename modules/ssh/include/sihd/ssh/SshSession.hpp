@@ -34,13 +34,11 @@ class SshSession
         // When disabled, libssh ignores ~/.ssh/config and system ssh_config
         // (ProxyCommand/ProxyJump, etc). libssh default is enabled.
         sihd::util::Result<void> set_process_config(bool enable);
-        // Override the .ssh directory libssh reads (config, known_hosts, keys)
         sihd::util::Result<void> set_ssh_dir(const std::string & path);
         // Bound connect/handshake/blocking ops (seconds). Applied by default in
         // new_session(); pass <= 0 to disable (block indefinitely).
         sihd::util::Result<void> set_timeout(int seconds);
 
-        // Default connect/handshake timeout (seconds) set by new_session().
         static constexpr int default_timeout_sec = 10;
 
         sihd::util::Result<void> connect();
@@ -64,7 +62,7 @@ class SshSession
 
         struct AuthMethods
         {
-                AuthMethods(int m): methods(m) {}
+                AuthMethods(int m);
 
                 bool unknown() const;
                 bool none() const;
@@ -82,7 +80,7 @@ class SshSession
 
         struct AuthState
         {
-                AuthState(int st): status(st) {}
+                AuthState(int st);
 
                 bool error() const;
                 bool denied() const;
@@ -121,7 +119,6 @@ class SshSession
 
         std::string get_banner();
 
-        // Returns internal session pointer (void*)
         void *session() const;
 
         void set_userdata(void *userdata);

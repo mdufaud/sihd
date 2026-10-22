@@ -1,3 +1,4 @@
+#include <array>
 #include <span>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -16,13 +17,13 @@ namespace sihd::sys::signal
 
 SIHD_NEW_LOGGER("sihd::sys::signal");
 
-sihd::util::Result<void> block_thread(int sig)
+Result<void> block_thread(int sig)
 {
-    const int sigs[] = {sig};
+    const std::array<int, 1> sigs = {sig};
     return block_thread(sigs);
 }
 
-sihd::util::Result<void> block_thread(std::span<const int> sigs)
+Result<void> block_thread(std::span<const int> sigs)
 {
     sigset_t set;
     sigemptyset(&set);
@@ -33,13 +34,13 @@ sihd::util::Result<void> block_thread(std::span<const int> sigs)
     return {};
 }
 
-sihd::util::Result<void> unblock_thread(int sig)
+Result<void> unblock_thread(int sig)
 {
-    const int sigs[] = {sig};
+    const std::array<int, 1> sigs = {sig};
     return unblock_thread(sigs);
 }
 
-sihd::util::Result<void> unblock_thread(std::span<const int> sigs)
+Result<void> unblock_thread(std::span<const int> sigs)
 {
     sigset_t set;
     sigemptyset(&set);
@@ -56,9 +57,7 @@ sihd::util::Result<void> unblock_thread(std::span<const int> sigs)
     return {};
 }
 
-// utilities
-
-sihd::util::Result<void> kill(pid_t pid, int sig)
+Result<void> kill(pid_t pid, int sig)
 {
     if (::kill(pid, sig) != 0)
         return std::unexpected(Error::from_errno("could not kill {} with signal {}", pid, sig));

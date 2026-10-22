@@ -16,21 +16,24 @@
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-// prevents: previous declaration as 'typedef long int suseconds_t' - windows libwebsockets
-// typedefs it, contrary to libpcap, with no way to not typedef based on this define
+// libwebsockets typedefs suseconds_t on windows, contrary to libpcap: this define prevents a redeclaration
 # define LWS_HAVE_SUSECONDS_T
 #endif
+
+using namespace sihd::util;
 
 namespace test::module
 {
 
-using namespace sihd::util;
 using namespace sihd::sys;
 using namespace sihd::pcap;
 
 SIHD_NEW_LOGGER("demo");
 
-static std::string interfaces_test()
+namespace
+{
+
+std::string interfaces_test()
 {
     SIHD_LOG(info, "Net interfaces");
     std::string interface_to_sniff;
@@ -47,7 +50,7 @@ static std::string interfaces_test()
     return interface_to_sniff;
 }
 
-static void sniffer_test(const std::string & interface_to_sniff)
+void sniffer_test(const std::string & interface_to_sniff)
 {
     SIHD_LOG(info, "Sniffing on eth0");
     Sniffer pcap("pcap-sniffer");
@@ -60,23 +63,24 @@ static void sniffer_test(const std::string & interface_to_sniff)
     if (pcap.open(interface_to_sniff).has_value() == false)
         return;
     pcap.add_observer(&obs);
-    // pcap.set_monitor(true);
-    // pcap.set_immediate(true);
+
     pcap.set_promiscuous(false);
     pcap.set_snaplen(2048);
     pcap.set_timeout(512);
+
     SIHD_LOG(info, "Activating packet capture");
     SIHD_UNEXPECTED_LOG(pcap.activate());
     if (pcap.is_active())
     {
         pcap.set_filter("portrange 0-2000");
-        // sniff once
         pcap.sniff();
         pcap.close();
     }
     SIHD_LOG(info, "Ending packet capture");
     fmt::print("\n");
 }
+
+} // namespace
 
 } // namespace test::module
 
@@ -90,8 +94,8 @@ int main(int argc, char **argv)
     app.root().on_run([] {
         std::string interface_to_sniff = test::module::interfaces_test();
         test::module::sniffer_test(interface_to_sniff);
-        if (sihd::util::build::is_windows)
-            sihd::util::time::sleep(5);
+        if (build::is_windows)
+            time::sleep(5);
     });
 
     return app.run(argc, argv);

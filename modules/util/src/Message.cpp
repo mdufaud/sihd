@@ -146,6 +146,7 @@ IMessageField *Message::clone() const
     for (const auto & name : this->children_keys())
     {
         IMessageField *cloned_field = _fields.at(name)->clone();
+
         if (cloned_field != nullptr)
         {
             if (cloned->add_field(name, cloned_field) == false)
@@ -165,6 +166,7 @@ IMessageField *Message::clone() const
     }
     if (!error && this->is_finished())
         error = cloned->finish() == false;
+
     if (error)
     {
         delete cloned;

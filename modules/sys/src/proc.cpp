@@ -21,7 +21,7 @@ using namespace sihd::util;
 namespace
 {
 
-void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & options)
+void configure_process(Process & proc, const Options & options)
 {
     if (options.close_stdin && !options.to_stdin.empty())
         throw std::logic_error("Cannot close and send input through stdin");
@@ -32,87 +32,82 @@ void configure_process(std::shared_ptr<Process> & proc_ptr, const Options & opti
 
     if (!options.to_stdin.empty())
     {
-        proc_ptr->stdin_from(options.to_stdin);
-        proc_ptr->stdin_close_after_exec(true);
+        proc.stdin_from(options.to_stdin);
+        proc.stdin_close_after_exec(true);
     }
     if (options.stdout_callback)
-        proc_ptr->stdout_to(options.stdout_callback);
+        proc.stdout_to(options.stdout_callback);
     if (options.stderr_callback)
-        proc_ptr->stderr_to(options.stderr_callback);
+        proc.stderr_to(options.stderr_callback);
 
     if (options.close_stdin)
-        proc_ptr->stdin_close();
+        proc.stdin_close();
     if (options.close_stdout)
-        proc_ptr->stdout_close();
+        proc.stdout_close();
     if (options.close_stderr)
-        proc_ptr->stderr_close();
+        proc.stderr_close();
 
     if (options.purge_env)
-        proc_ptr->env_clear();
+        proc.env_clear();
     if (!options.env.empty())
-        proc_ptr->env_load(options.env);
+        proc.env_load(options.env);
 
     if (options.nice.has_value())
-        proc_ptr->set_nice(*options.nice);
+        proc.set_nice(*options.nice);
     if (options.scheduler_policy.has_value())
-        proc_ptr->set_scheduler(*options.scheduler_policy, options.scheduler_priority);
+        proc.set_scheduler(*options.scheduler_policy, options.scheduler_priority);
     if (options.affinity.empty() == false)
-        proc_ptr->set_affinity(options.affinity);
+        proc.set_affinity(options.affinity);
 }
 
-int do_execute(std::shared_ptr<Process> proc_ptr, Duration max_timeout)
+int do_execute(Process & proc, Duration max_timeout)
 {
     constexpr int poll_timeout_ms = 10;
     SteadyClock clock;
 
-    // if process failed to execute return the POSIX-like failure code
-    auto executed = proc_ptr->execute();
+    auto executed = proc.execute();
     if (SIHD_UNEXPECTED_LOG(executed))
         return Process::failure_return_code;
 
-    const bool has_to_poll = proc_ptr->can_read_pipes();
+    const bool has_to_poll = proc.can_read_pipes();
     bool timed_out = false;
     Timestamp begin = clock.now();
     while (!timed_out)
     {
-        // ensure reading the stdout/stderr
         if (has_to_poll)
         {
-            proc_ptr->read_pipes(poll_timeout_ms);
+            proc.read_pipes(poll_timeout_ms);
         }
-        // check the process status - break the loop if exited
 #if defined(WNOHANG)
-        (void)proc_ptr->wait_any(WNOHANG);
+        (void)proc.wait_any(WNOHANG);
 #else
-        (void)proc_ptr->wait(poll_timeout_ms);
+        (void)proc.wait(poll_timeout_ms);
 #endif
-        if (proc_ptr->has_terminated())
+        if (proc.has_terminated())
         {
             break;
         }
-        // if there is no polling then there is no sleep - be easy in the processor
         if (has_to_poll == false)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(poll_timeout_ms));
         }
-        // check if the timeout is reached
         if (max_timeout > 0)
             timed_out = (clock.now() - begin) >= max_timeout;
     }
-    proc_ptr->terminate();
-    return static_cast<int>(proc_ptr->return_code());
+    proc.terminate();
+    return static_cast<int>(proc.return_code());
 }
 
 template <typename T>
 std::future<int> execute_impl(const T & args, const Options & options)
 {
-    std::shared_ptr<Process> proc_ptr = std::make_shared<Process>(args);
+    auto proc = std::make_unique<Process>(args);
 
-    configure_process(proc_ptr, options);
+    configure_process(*proc, options);
 
-    std::future<int> exit_code = std::async(std::launch::async, [proc_ptr, timeout = options.timeout] {
+    std::future<int> exit_code = std::async(std::launch::async, [proc = std::move(proc), timeout = options.timeout] {
         SIHD_UNEXPECTED_LOG(thread::set_name("proc::execute"));
-        return do_execute(proc_ptr, timeout);
+        return do_execute(*proc, timeout);
     });
 
     return exit_code;

@@ -1,7 +1,7 @@
 #ifndef __SIHD_UTIL_ARRAYUTILS_HPP__
 #define __SIHD_UTIL_ARRAYUTILS_HPP__
 
-#include <stdexcept> // out of range
+#include <stdexcept>
 #include <vector>
 
 #include <sihd/util/IArray.hpp>

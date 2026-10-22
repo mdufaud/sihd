@@ -66,7 +66,6 @@ FileCache::OptionalCachedValue FileCache::get(const std::string & file_path)
         SIHD_LOG(error, "Failed to access cached file: {}", file_path);
         return std::nullopt;
     }
-    // do not catch out of range
 }
 
 void FileCache::handle(FileWatcher *file_watcher)
@@ -93,7 +92,6 @@ void FileCache::handle(FileWatcher *file_watcher)
             case FileWatcherEventType::closed:
 #endif
             {
-                // do nothing, we don't care about these events
                 break;
             }
             case FileWatcherEventType::terminated:

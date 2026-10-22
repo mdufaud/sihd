@@ -8,14 +8,15 @@ namespace test
 
 SIHD_NEW_LOGGER("test");
 
+using namespace sihd::util;
 using namespace sihd::http;
 
 class TestScheme: public ::testing::Test
 {
     protected:
-        TestScheme() { sihd::util::LoggerManager::stream(); }
+        TestScheme() { LoggerManager::stream(); }
 
-        virtual ~TestScheme() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestScheme() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

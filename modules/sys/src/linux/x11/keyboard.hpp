@@ -1,8 +1,7 @@
 #ifndef __SIHD_SYS_X11_KEYBOARD_HPP__
 #define __SIHD_SYS_X11_KEYBOARD_HPP__
 
-// X11 keyboard backend of the dispatcher in src/linux/keyboard.cpp: XTest fake
-// key events; characters outside the keymap go through a temporary keycode remap
+// X11 keyboard backend (XTest fake key events); chars outside the keymap use a temporary keycode remap
 
 #include <string_view>
 
@@ -22,8 +21,6 @@ sihd::util::Result<void> key_down(Key key);
 sihd::util::Result<void> key_up(Key key);
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<void> type_text([[maybe_unused]] std::string_view utf8_text)
 {

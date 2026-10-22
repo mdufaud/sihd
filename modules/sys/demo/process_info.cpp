@@ -32,7 +32,7 @@ void do_dump_env(bool do_dump, const std::vector<std::string> & env)
 
 int main(int argc, char **argv)
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
     {
         console::set_output_utf8();
     }
@@ -57,6 +57,7 @@ int main(int argc, char **argv)
                 SIHD_LOG(info, "pid: {}", process.pid());
                 SIHD_LOG(info, "name: {}", process.name());
                 SIHD_LOG(info, "cwd: {}", process.cwd());
+
                 if (process.creation_time() != 0)
                 {
                     SIHD_LOG(info, "creation_time: {}", process.creation_time().local_str());

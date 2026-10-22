@@ -42,7 +42,6 @@ class Node: public Named
 
         virtual ~Node();
 
-        // Children
         sihd::util::Result<void> add_child(Named *child, bool take_ownership = true);
         virtual sihd::util::Result<void> add_child(const std::string & name, Named *child, bool take_ownership = true);
 
@@ -68,7 +67,6 @@ class Node: public Named
 
         virtual void remove_children();
 
-        // Ownership
         bool has_ownership(const Named *child) const;
         bool has_ownership(const std::string & name) const;
         bool set_child_ownership(const std::string & name, bool ownership);
@@ -118,14 +116,12 @@ class Node: public Named
             }
         }
 
-        // Links
         bool is_link(const std::string & link) const;
         bool add_link(const std::string & link, const std::string & path);
         bool remove_link(const std::string & link);
         Named *resolve_link(const std::string & path, size_t recursion = 0);
         sihd::util::Result<void> resolve_links(size_t recursion = 0);
 
-        // Tree description
         std::string tree_str() const { return this->tree_str({}); };
         std::string tree_str(TreeOpts opts) const;
         std::string tree_desc_str() const;
@@ -134,7 +130,6 @@ class Node: public Named
         const std::vector<std::string> & children_keys() const;
 
     protected:
-        // Static
         static std::pair<std::string, std::string> parent_path(const std::string & path);
 
         virtual bool on_check_link(const std::string & name, Named *child);

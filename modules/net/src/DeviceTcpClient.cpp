@@ -6,6 +6,8 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -13,7 +15,7 @@ SIHD_REGISTER_FACTORY(DeviceTcpClient)
 
 SIHD_LOGGER;
 
-DeviceTcpClient::DeviceTcpClient(const std::string & name, sihd::util::Node *parent):
+DeviceTcpClient::DeviceTcpClient(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _tcp_client("tcp-client"),
     _start_sync(2),
@@ -29,7 +31,7 @@ DeviceTcpClient::DeviceTcpClient(const std::string & name, sihd::util::Node *par
 {
     // windows shutdown does not wake a blocking recv (linux does): bound the
     // rx drain or the stop join parks forever on a quiet socket
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
     {
         if (_tcp_client.set_recv_timeout(100) == false)
             SIHD_LOG(error, "DeviceTcpClient: could not set the windows recv drain timeout");
@@ -98,9 +100,9 @@ bool DeviceTcpClient::set_reconnect_interval(int milliseconds)
 
 bool DeviceTcpClient::on_init()
 {
-    this->add_unlinked_channel_resizable("rx", sihd::util::Type::TYPE_BYTE, 1, _buffer_capacity);
-    this->add_unlinked_channel_resizable("tx", sihd::util::Type::TYPE_BYTE, 1, _buffer_capacity);
-    this->add_unlinked_channel("connected", sihd::util::Type::TYPE_BOOL, 1);
+    this->add_unlinked_channel_resizable("rx", Type::TYPE_BYTE, 1, _buffer_capacity);
+    this->add_unlinked_channel_resizable("tx", Type::TYPE_BYTE, 1, _buffer_capacity);
+    this->add_unlinked_channel("connected", Type::TYPE_BOOL, 1);
     return true;
 }
 
@@ -156,7 +158,7 @@ bool DeviceTcpClient::on_reset()
     return true;
 }
 
-sihd::util::Result<void> DeviceTcpClient::_connect()
+Result<void> DeviceTcpClient::_connect()
 {
     if (!_unix_path.empty())
         return _tcp_client.open_unix_and_connect(_unix_path);
@@ -233,7 +235,7 @@ void DeviceTcpClient::handle(sihd::core::Channel *c)
     if (c != _channel_tx)
         return;
     if (_tcp_client.connected())
-        SIHD_UNEXPECTED_LOG(_tcp_client.send_all(sihd::util::ArrCharView(*c->array())));
+        SIHD_UNEXPECTED_LOG(_tcp_client.send_all(ArrCharView(*c->array())));
     else
         SIHD_LOG(warning, "DeviceTcpClient: dropping tx data, client is not connected");
 }
@@ -246,7 +248,7 @@ void DeviceTcpClient::handle(INetReceiver *receiver)
         return;
     }
 
-    sihd::util::ArrByte buf(_buffer_capacity);
+    ArrByte buf(_buffer_capacity);
     // notifications must drain: the peer FIN notification is the last one
     while (true)
     {

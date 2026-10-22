@@ -1,8 +1,6 @@
 #ifndef __SIHD_SYS_SEMAPHORE_HPP__
 #define __SIHD_SYS_SEMAPHORE_HPP__
 
-#include <sys/stat.h> // mode_t
-
 #include <string>
 
 #include <sihd/sys/platform.hpp>
@@ -10,10 +8,6 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/build.hpp>
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# define mode_t unsigned int
-#endif
 
 namespace sihd::sys
 {
@@ -72,9 +66,5 @@ class Semaphore
 };
 
 } // namespace sihd::sys
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# undef mode_t
-#endif
 
 #endif

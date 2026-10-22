@@ -33,7 +33,7 @@ class TcpClient: public INetReceiver,
 
         sihd::util::Result<void> open_socket(bool ipv6 = false);
         sihd::util::Result<void> open_socket_unix();
-        bool socket_opened() { return _socket.is_open(); }
+        bool socket_opened();
 
         sihd::util::Result<void> connect(const IpAddr & addr, int timeout_ms = Socket::blocking_timeout);
         sihd::util::Result<void> connect(std::string_view path);
@@ -47,19 +47,15 @@ class TcpClient: public INetReceiver,
         bool set_poll_timeout(int milliseconds);
         // bounds each blocking receive (0 = unbounded): a poll-driven drain must never park on a quiet socket
         bool set_recv_timeout(int milliseconds);
-        // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
-        // poll once with configured timeout
         bool poll();
 
         sihd::util::Result<size_t> receive(void *buf, size_t len);
 
-        // INetReceiver
         sihd::util::Result<void> close() override;
         sihd::util::Result<size_t> receive(IpAddr & addr, sihd::util::IArray & arr) override;
         sihd::util::Result<size_t> receive(sihd::util::IArray & arr) override;
 
-        // INetSender
         sihd::util::Result<size_t> send(sihd::util::ArrCharView view) override;
         sihd::util::Result<void> send_all(sihd::util::ArrCharView view) override;
 
@@ -67,9 +63,9 @@ class TcpClient: public INetReceiver,
         void set_tls_server_name(std::string name);
 
         // to set blocking/broadcast
-        const TlsSocket & socket() const { return _socket; }
-        bool connected() const { return _connected; }
-        const IpAddr & client_addr() const { return _client_addr; }
+        const TlsSocket & socket() const;
+        bool connected() const;
+        const IpAddr & client_addr() const;
 
     protected:
         void handle(sihd::sys::Poll *poll) override;

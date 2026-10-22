@@ -69,8 +69,7 @@ constexpr std::array<Cap, count> cap_list = [] {
     return caps;
 }();
 
-// every enumerator, in declaration order, each with a name - a forgotten entry leaves a
-// value-initialised {chown, ""} slot
+// every enumerator, in declaration order, with a name - a forgotten entry leaves a value-initialised {chown, ""} slot
 static_assert([] {
     for (size_t i = 0; i < count; ++i)
     {

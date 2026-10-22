@@ -62,7 +62,7 @@ std::string Named::full_name() const
 
 std::string Named::class_name() const
 {
-    return sihd::util::str::demangle(typeid(*this).name());
+    return str::demangle(typeid(*this).name());
 }
 
 const Node *Named::_root() const
@@ -126,6 +126,7 @@ const Named *Named::_find(const std::string & path) const
         else
             current = this;
     }
+
     return Named::_find_from(current, path);
 }
 

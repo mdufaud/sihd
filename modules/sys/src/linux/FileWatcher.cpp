@@ -31,7 +31,7 @@ using namespace sihd::util;
 
 SIHD_LOGGER;
 
-struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
+struct FileWatcher::Impl: public IHandler<sihd::sys::Poll *>
 {
         struct Watcher
         {
@@ -90,7 +90,7 @@ struct FileWatcher::Impl: public sihd::util::IHandler<sihd::sys::Poll *>
         void handle(Poll *poll);
 
         void init();
-        sihd::util::Result<void> add_watch(const std::string & path);
+        Result<void> add_watch(const std::string & path);
         bool rm_watch(const std::string & path);
         bool is_watching(const std::string & path);
         void terminate();
@@ -131,7 +131,7 @@ void FileWatcher::Impl::init()
 #endif
 }
 
-sihd::util::Result<void> FileWatcher::Impl::add_watch(const std::string & path)
+Result<void> FileWatcher::Impl::add_watch(const std::string & path)
 {
 #if defined(INOTIFY_ENABLED)
     if (this->is_watching(path))
@@ -183,7 +183,6 @@ void FileWatcher::Impl::handle(Poll *poll)
     {
         if (event.readable)
         {
-            // inotify specifies that you can read the number of bytes available in the buffer
             int avail;
             if (ioctl(_inotify_fd, FIONREAD, &avail) < 0)
             {
@@ -195,7 +194,6 @@ void FileWatcher::Impl::handle(Poll *poll)
                 _buffer.resize(avail);
             }
 
-            // pray that we don't have a truncated event if avail > EVENT_BUFFER_LEN
             ssize_t length = read(_inotify_fd, _buffer.data(), avail);
             if (length < 0)
             {
@@ -274,11 +272,9 @@ void FileWatcher::Impl::handle(Poll *poll)
                     fw_event.old_filename = std::move(watcher.old_filename);
                     watcher.old_filename.clear();
                 }
-
                 else if (event->mask & IN_DELETE_SELF || event->mask & IN_MOVE_SELF || event->mask & IN_UNMOUNT
                          || event->mask & IN_IGNORED)
                 {
-                    // not supported or termination events
                     fw_event.type = FileWatcherEventType::terminated;
                     this->rm_watch(watcher.path);
                 }
@@ -340,7 +336,7 @@ bool FileWatcher::run()
     return success;
 }
 
-sihd::util::Result<void> FileWatcher::watch(const std::string & path)
+Result<void> FileWatcher::watch(const std::string & path)
 {
     return _impl->add_watch(path);
 }

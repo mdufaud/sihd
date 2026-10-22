@@ -7,8 +7,8 @@
 #include <sihd/util/container.hpp>
 #include <sihd/util/str.hpp>
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum ErrorCode;
 
 namespace sihd::csv
 {
@@ -34,7 +34,7 @@ CsvWriter::CsvWriter(const std::string & path, bool append): CsvWriter()
 
 CsvWriter::~CsvWriter() = default;
 
-sihd::util::Result<void> CsvWriter::set_delimiter(int c)
+Result<void> CsvWriter::set_delimiter(int c)
 {
     if (std::isprint(c))
     {
@@ -44,7 +44,7 @@ sihd::util::Result<void> CsvWriter::set_delimiter(int c)
     return std::unexpected(Error(invalid_argument, "delimiter is not a printable character"));
 }
 
-sihd::util::Result<void> CsvWriter::set_commentary(int c)
+Result<void> CsvWriter::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -54,7 +54,7 @@ sihd::util::Result<void> CsvWriter::set_commentary(int c)
     return std::unexpected(Error(invalid_argument, "commentary is not a printable character"));
 }
 
-sihd::util::Result<void> CsvWriter::open(const std::string & path, bool append)
+Result<void> CsvWriter::open(const std::string & path, bool append)
 {
     _col = 0;
     _row = 0;
@@ -79,7 +79,37 @@ bool CsvWriter::close()
     return !SIHD_UNEXPECTED_LOG(_file.close());
 }
 
-sihd::util::Result<void> CsvWriter::new_row()
+int CsvWriter::delimiter() const
+{
+    return _delimiter;
+}
+
+int CsvWriter::comment() const
+{
+    return _comment;
+}
+
+size_t CsvWriter::current_row() const
+{
+    return _row;
+}
+
+size_t CsvWriter::current_col() const
+{
+    return _col;
+}
+
+size_t CsvWriter::max_col() const
+{
+    return _max_col;
+}
+
+const sihd::sys::File & CsvWriter::file() const
+{
+    return _file;
+}
+
+Result<void> CsvWriter::new_row()
 {
     auto fed = _file.write_char(_line_feed);
     SIHD_UNEXPECTED_RETURN_CTX(fed, "writing new row");
@@ -109,14 +139,12 @@ ssize_t CsvWriter::write_commentary(std::string_view comment)
     }
     if (SIHD_UNEXPECTED_LOG(this->new_row()))
         return -1;
-    // 1 for comment char + comment size + 1 for newline
     return 1 + (ssize_t)*wrote + 1;
 }
 
-ssize_t CsvWriter::write(sihd::util::ArrCharView view)
+ssize_t CsvWriter::write(ArrCharView view)
 {
     ssize_t ret = 0;
-    //,
     if (_col > 0)
     {
         auto fed = _file.write_char(_delimiter);
@@ -133,13 +161,15 @@ ssize_t CsvWriter::write(sihd::util::ArrCharView view)
         SIHD_LOG(error, "CsvWriter: write failed '{}' < '{}'", wrote.value_or(0), view.size());
         return -1;
     }
+
     ret += (ssize_t)*wrote;
     _col += 1;
     _max_col = std::max(_max_col, _col);
+
     return ret;
 }
 
-ssize_t CsvWriter::write_row(sihd::util::ArrCharView view)
+ssize_t CsvWriter::write_row(ArrCharView view)
 {
     const ssize_t wrote = this->write(view);
     if (wrote < 0)

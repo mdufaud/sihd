@@ -24,9 +24,9 @@ using namespace sihd::sys;
 class TestSharedMemory: public ::testing::Test
 {
     protected:
-        TestSharedMemory() { sihd::util::LoggerManager::stream(); }
+        TestSharedMemory() { LoggerManager::stream(); }
 
-        virtual ~TestSharedMemory() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSharedMemory() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -43,7 +43,6 @@ TEST_F(TestSharedMemory, test_sharedmemory)
 {
     SharedMemory first;
     ASSERT_TRUE(first.create("/id", sizeof(shmbuf)));
-    // testing move
     SharedMemory mem(std::move(first));
     ASSERT_NE(mem.data(), nullptr);
     EXPECT_TRUE(mem.creator());
@@ -52,7 +51,6 @@ TEST_F(TestSharedMemory, test_sharedmemory)
     shmp->data[0] = 42;
     shmp->data[1] = 24;
 
-    // another process attaches, reads our writes and writes back its own
     Process proc({helper_path(), "shm", "/id"});
     (void)proc.execute();
     (void)proc.wait_any();

@@ -4,6 +4,7 @@
 # include <dlfcn.h>
 #endif
 
+#include <array>
 #include <iterator>
 
 #include <sihd/sys/platform.hpp>
@@ -50,14 +51,14 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
+Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
 {
 #if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
     this->close();
-    constexpr std::string_view patterns[] = {"lib{}.so", "{}.so", "{}"};
-    for (size_t i = 0; i < std::size(patterns); ++i)
+    constexpr auto patterns = std::to_array<std::string_view>({"lib{}.so", "{}.so", "{}"});
+    for (const std::string_view pattern : patterns)
     {
-        if (try_load_lib(fmt::format(fmt::runtime(patterns[i]), lib_name), &_handle, _name))
+        if (try_load_lib(fmt::format(fmt::runtime(pattern), lib_name), &_handle, _name))
             return {};
     }
     return lib_error(get_error());
@@ -66,7 +67,7 @@ sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_n
 #endif
 }
 
-sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
+Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(SIHD_STATIC) && !defined(__SIHD_EMSCRIPTEN__)
     if (this->is_open() == false)

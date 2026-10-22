@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <csignal>
 #include <cstdlib>
 #include <string>
@@ -7,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/App.hpp>
+#include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
@@ -27,7 +29,17 @@ namespace fs = sihd::sys::fs;
 namespace signal = sihd::sys::signal;
 namespace os = sihd::sys::os;
 
-static int run_app(sihd::sys::App & app, const std::vector<std::string> & args)
+namespace
+{
+
+struct ConfigApp: sihd::sys::App
+{
+        using App::App;
+        using App::apply_sihd_conf;
+        using App::on_conf_reloaded;
+};
+
+int run_app(sihd::sys::App & app, const std::vector<std::string> & args)
 {
     std::vector<char *> argv;
     argv.push_back(const_cast<char *>("prog"));
@@ -36,10 +48,7 @@ static int run_app(sihd::sys::App & app, const std::vector<std::string> & args)
     return app.run((int)argv.size(), argv.data());
 }
 
-static std::string tmp_path(std::string_view suffix)
-{
-    return fmt::format("/tmp/sihd_app_test_{}_{}", os::pid(), suffix);
-}
+} // namespace
 
 class TestService: public AService
 {
@@ -72,16 +81,26 @@ class TestService: public AService
 class TestApp: public ::testing::Test
 {
     protected:
-        TestApp() { sihd::util::LoggerManager::stream(); }
+        TestApp() { LoggerManager::stream(); }
 
-        virtual ~TestApp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestApp() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() { signal::reset_all_received(); }
 
         virtual void TearDown() {}
+
+        // forward slashes: the path is embedded in JSON confs, where a Windows backslash is an escape
+        std::string tmp_path(std::string_view suffix) const
+        {
+            std::string path = fs::combine(_tmp_dir.path(), suffix);
+            std::ranges::replace(path, '\\', '/');
+            return path;
+        }
+
+    private:
+        sihd::sys::TmpDir _tmp_dir;
 };
 
-// keeps the App logging setup, exposing what install_logging installed
 class LogCheckApp: public sihd::sys::App
 {
     public:
@@ -125,11 +144,7 @@ TEST_F(TestApp, test_conf_file_missing)
 
 TEST_F(TestApp, test_signal_out_of_range)
 {
-    struct ConfigApp: sihd::sys::App
-    {
-            using App::App;
-            using App::apply_sihd_conf;
-    } app({.name = "invalid-signal", .setup_logging = false});
+    ConfigApp app({.name = "invalid-signal", .setup_logging = false});
     auto conf = sihd::json::Json::parse(R"({"signals":{"ignore":[0]}})");
     ASSERT_TRUE(conf);
     EXPECT_FALSE(app.apply_sihd_conf(*conf));
@@ -137,7 +152,7 @@ TEST_F(TestApp, test_signal_out_of_range)
 
 TEST_F(TestApp, test_log_sinks_file_conf)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
     const std::string log_path = tmp_path("sinks.log");
     const std::string conf_path = tmp_path("sinks.json");
@@ -170,10 +185,9 @@ TEST_F(TestApp, test_log_sinks_file_conf)
 #if defined(SIGHUP) && defined(SIGUSR1) && defined(SIGPIPE)
 TEST_F(TestApp, test_golden_conf)
 {
-    if constexpr (sihd::util::build::is_statically_linked)
+    if constexpr (build::is_statically_linked)
         GTEST_SKIP() << "the daemon user/group conf resolves through NSS, unavailable in static binaries";
 
-    // the golden sample documents every conf key and must keep applying as a whole;
     // its log path is rewritten so concurrent test runs never share the file
     std::string conf = fs::read_all("test/resources/golden_app_conf.json").value_or("");
     ASSERT_FALSE(conf.empty());
@@ -188,9 +202,9 @@ TEST_F(TestApp, test_golden_conf)
             std::string host = "localhost";
             int port = 80;
     } opts;
+
     int reloads = 0;
     int signaled = 0;
-    // the file logger flushes on destruction
     {
         sihd::sys::App app({.name = "golden", .setup_logging = true});
         app.on_reload([&](void) { reloads++; });
@@ -199,6 +213,7 @@ TEST_F(TestApp, test_golden_conf)
                 signaled++;
         });
         Command & serve = app.root().add_command("serve", "serve");
+
         serve.bind("host", opts.host, "");
         serve.bind("port", opts.port, "");
         serve.on_run([&] {
@@ -250,7 +265,7 @@ TEST_F(TestApp, test_signal_unknown_conf)
 TEST_F(TestApp, test_signal_stop)
 {
     // windows kill terminates the process without running handlers
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         GTEST_SKIP() << "not supported on windows";
 
     sihd::sys::App app({.name = "stop", .setup_logging = false});
@@ -339,12 +354,7 @@ TEST_F(TestApp, test_signal_added_on_reload)
 #if defined(SIGUSR1)
 TEST_F(TestApp, test_signal_removed_on_reload)
 {
-    struct ConfigApp: sihd::sys::App
-    {
-            using App::App;
-            using App::apply_sihd_conf;
-            using App::on_conf_reloaded;
-    } app({.name = "signal-reload", .setup_logging = false});
+    ConfigApp app({.name = "signal-reload", .setup_logging = false});
     auto conf = sihd::json::Json::parse(fmt::format(R"({{"signals":{{"ignore":[{}]}}}})", SIGUSR1));
     ASSERT_TRUE(conf);
     ASSERT_TRUE(app.apply_sihd_conf(*conf));
@@ -362,7 +372,6 @@ TEST_F(TestApp, test_signal_removed_on_reload)
 TEST_F(TestApp, test_signal_ignore)
 {
     std::string path = tmp_path("ignore.json");
-    // the conf accepts raw signal numbers too
     ASSERT_TRUE(fs::write(path, fmt::format(R"({{"sihd": {{"signals": {{"ignore": [{}]}}}}}})", SIGUSR1)).has_value());
 
     sihd::sys::App app({.name = "ignore", .setup_logging = false});
@@ -428,9 +437,8 @@ TEST_F(TestApp, test_daemon_keys)
     sihd::sys::App app({.name = "daemon", .setup_logging = false});
     app.root().add_command("run", "run").on_run([] {});
 
-    // the daemon keys configure the Daemon without forking in tests
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
-    if constexpr (sihd::util::build::is_windows == false)
+    if constexpr (build::is_windows == false)
     {
         EXPECT_TRUE(app.daemon().supported);
     }
@@ -455,7 +463,7 @@ TEST_F(TestApp, test_service_loop)
 
 TEST_F(TestApp, test_log_file)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("app.log");
     std::string path = tmp_path("logconf.json");
@@ -467,7 +475,6 @@ TEST_F(TestApp, test_log_file)
                 log_path))
             .has_value());
 
-    // the file logger flushes on destruction
     {
         sihd::sys::App app({.name = "logfile", .setup_logging = true});
         app.root().add_command("emit", "emit").on_run([] { SIHD_LOG(info, "FILEMSG"); });
@@ -483,7 +490,7 @@ TEST_F(TestApp, test_log_file)
 
 TEST_F(TestApp, test_log_file_level)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("filevel.log");
     std::string path = tmp_path("filevel.json");
@@ -493,7 +500,6 @@ TEST_F(TestApp, test_log_file_level)
             R"({{"sihd": {{"logging": {{"level": "info", "sinks": [{{"logger": "LoggerFile", "name": "app_log", "path": "{}"}}]}}}}}})",
             log_path)));
 
-    // the file logger flushes on destruction
     {
         sihd::sys::App app({.name = "filevel", .setup_logging = true});
         app.root().add_command("emit", "emit").on_run([] {
@@ -505,7 +511,6 @@ TEST_F(TestApp, test_log_file_level)
     }
     auto content = fs::read_all(log_path);
     ASSERT_TRUE(content.has_value());
-    // the level filter applies to the file logger
     EXPECT_NE(content->find("INFOMSG"), std::string::npos);
     EXPECT_EQ(content->find("DEBUGMSG"), std::string::npos);
     (void)fs::remove_file(path);
@@ -514,7 +519,7 @@ TEST_F(TestApp, test_log_file_level)
 
 TEST_F(TestApp, test_log_file_reload)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path1 = tmp_path("reload1.log");
     std::string log_path2 = tmp_path("reload2.log");
@@ -527,7 +532,6 @@ TEST_F(TestApp, test_log_file_reload)
                 log_path1))
             .has_value());
 
-    // the file loggers flush on destruction
     {
         sihd::sys::App app({.name = "logreload", .setup_logging = true});
         std::string msg = "FIRSTMSG";
@@ -546,6 +550,7 @@ TEST_F(TestApp, test_log_file_reload)
         EXPECT_EQ(app.evaluate(std::vector<std::string> {"emit"}), 0);
     }
     auto first = fs::read_all(log_path1);
+
     ASSERT_TRUE(first.has_value());
     EXPECT_NE(first->find("FIRSTMSG"), std::string::npos);
     EXPECT_EQ(first->find("SECONDMSG"), std::string::npos);
@@ -559,7 +564,7 @@ TEST_F(TestApp, test_log_file_reload)
 
 TEST_F(TestApp, test_log_console_opt_out)
 {
-    if constexpr (sihd::util::build::is_statically_linked && !SIHD_FACTORY_TABLE)
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
     std::string log_path = tmp_path("noconsole.log");
     std::string path = tmp_path("noconsole.json");
@@ -569,13 +574,11 @@ TEST_F(TestApp, test_log_console_opt_out)
             R"({{"sihd": {{"logging": {{"sinks": [{{"logger": "LoggerFile", "name": "app_log", "path": "{}"}}]}}}}}})",
             log_path)));
 
-    // the file logger flushes on destruction
     {
         LogCheckApp app({.name = "noconsole"});
         app.root().add_command("emit", "emit").on_run([] { SIHD_LOG(info, "NOCONSOLEMSG"); });
 
         ASSERT_EQ(run_app(app, {"--conf", path, "emit"}), 0);
-        // the sinks conf replaces the default logger, the file logger stayed
         EXPECT_EQ(app.logger(), nullptr);
     }
     auto content = fs::read_all(log_path);

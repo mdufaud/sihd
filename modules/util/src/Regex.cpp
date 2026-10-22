@@ -176,6 +176,7 @@ Result<std::vector<std::string>> Regex::find_all(std::string_view subject) const
         offset = ovector[1];
         options = ovector[0] == ovector[1] ? (PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED) : 0;
     }
+
     return found;
 }
 

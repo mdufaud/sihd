@@ -1,8 +1,7 @@
-#ifndef __SIHD_NET_UTILS_WINDOWS_HPP__
-#define __SIHD_NET_UTILS_WINDOWS_HPP__
+#ifndef __SIHD_NET_WINDOWS_UTILS_HPP__
+#define __SIHD_NET_WINDOWS_UTILS_HPP__
 
 // Icmp/ip structures for Windows, where the BSD netinet headers are missing.
-// Included by sihd/net/utils.hpp on windows targets only.
 
 #if defined(__SIHD_WINDOWS__)
 

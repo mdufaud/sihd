@@ -30,7 +30,6 @@ std::string address_type_str(AddressType type)
     }
 }
 
-// 16 bits uuids are shown in their short form: 0000xxxx-0000-1000-8000-00805f9b34fb
 std::string short_uuid(const std::string & uuid)
 {
     constexpr std::string_view base_suffix = "-0000-1000-8000-00805f9b34fb";

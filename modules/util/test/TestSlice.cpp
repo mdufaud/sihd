@@ -12,9 +12,9 @@ using namespace sihd::util;
 class TestSlice: public ::testing::Test
 {
     protected:
-        TestSlice() { sihd::util::LoggerManager::stream(); }
+        TestSlice() { LoggerManager::stream(); }
 
-        virtual ~TestSlice() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSlice() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -24,8 +24,8 @@ class TestSlice: public ::testing::Test
 TEST_F(TestSlice, test_resolve_defaults)
 {
     constexpr size_t container_size = 10;
-    Slice s;
-    auto range = s.resolve(container_size);
+    Slice slice;
+    auto range = slice.resolve(container_size);
     EXPECT_EQ(range.from, 0u);
     EXPECT_EQ(range.to, 10u);
     EXPECT_EQ(range.size(), 10u);
@@ -122,8 +122,8 @@ TEST_F(TestSlice, test_resolve_negative_overflow)
 
 TEST_F(TestSlice, test_from_size_basic)
 {
-    auto s = Slice::from_size(2, 4);
-    auto range = s.resolve(10);
+    auto slice = Slice::from_size(2, 4);
+    auto range = slice.resolve(10);
     EXPECT_EQ(range.from, 2u);
     EXPECT_EQ(range.to, 6u);
     EXPECT_EQ(range.size(), 4u);
@@ -131,8 +131,8 @@ TEST_F(TestSlice, test_from_size_basic)
 
 TEST_F(TestSlice, test_from_size_zero_offset)
 {
-    auto s = Slice::from_size(0, 3);
-    auto range = s.resolve(10);
+    auto slice = Slice::from_size(0, 3);
+    auto range = slice.resolve(10);
     EXPECT_EQ(range.from, 0u);
     EXPECT_EQ(range.to, 3u);
     EXPECT_EQ(range.size(), 3u);
@@ -146,8 +146,8 @@ TEST_F(TestSlice, test_from_size_zero_length)
 
 TEST_F(TestSlice, test_from_size_single)
 {
-    auto s = Slice::from_size(5, 1);
-    auto range = s.resolve(10);
+    auto slice = Slice::from_size(5, 1);
+    auto range = slice.resolve(10);
     EXPECT_EQ(range.from, 5u);
     EXPECT_EQ(range.to, 6u);
     EXPECT_EQ(range.size(), 1u);
@@ -155,8 +155,8 @@ TEST_F(TestSlice, test_from_size_single)
 
 TEST_F(TestSlice, test_from_size_clamp)
 {
-    auto s = Slice::from_size(8, 10);
-    auto range = s.resolve(10);
+    auto slice = Slice::from_size(8, 10);
+    auto range = slice.resolve(10);
     EXPECT_EQ(range.from, 8u);
     EXPECT_EQ(range.to, 10u);
     EXPECT_EQ(range.size(), 2u);
@@ -164,8 +164,8 @@ TEST_F(TestSlice, test_from_size_clamp)
 
 TEST_F(TestSlice, test_from_size_out_of_range)
 {
-    auto s = Slice::from_size(20, 5);
-    auto range = s.resolve(10);
+    auto slice = Slice::from_size(20, 5);
+    auto range = slice.resolve(10);
     EXPECT_TRUE(range.empty());
 }
 

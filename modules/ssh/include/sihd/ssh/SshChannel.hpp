@@ -65,7 +65,6 @@ class SshChannel
         sihd::util::Result<void> send_eof();
         bool is_eof();
 
-        // Server-side methods
         sihd::util::Result<void> request_send_exit_status(int exit_status);
         sihd::util::Result<void> request_send_exit_signal(const std::string & signum,
                                                           bool core_dumped,

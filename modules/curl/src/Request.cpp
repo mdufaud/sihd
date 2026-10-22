@@ -56,7 +56,7 @@ namespace sihd::curl
 namespace
 {
 
-struct GlobalCleanup: public sihd::util::IRunnable
+struct GlobalCleanup: public IRunnable
 {
         bool run() override
         {
@@ -65,21 +65,21 @@ struct GlobalCleanup: public sihd::util::IRunnable
         }
 };
 
-std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, std::string message)
+std::unexpected<Error> err(ErrorCode code, std::string message)
 {
     return std::unexpected(Error(code, std::move(message)));
 }
 
 template <typename... Args>
     requires(sizeof...(Args) != 0)
-std::unexpected<sihd::util::Error> err(sihd::util::ErrorCode code, fmt::format_string<Args...> format, Args &&...args)
+std::unexpected<Error> err(ErrorCode code, fmt::format_string<Args...> format, Args &&...args)
 {
     return err(code, fmt::format(format, std::forward<Args>(args)...));
 }
 
 // curl_global_init() is not thread-safe and must run before any other curl call, from a single
 // thread: funnel every request creation here. A failed init is not sticky, the next one retries
-sihd::util::Result<void> global_init()
+Result<void> global_init()
 {
     static std::mutex mutex;
     static bool initialized = false;
@@ -91,16 +91,14 @@ sihd::util::Result<void> global_init()
         return err(not_initialized, "curl_global_init failed: {}", curl_easy_strerror(code));
     // cleanup joins sihd's exit chain so it is ordered with the other
     // exit handlers instead of racing them in the C atexit chain
-    if (sihd::util::atexit::install())
-        sihd::util::atexit::add_handler(new GlobalCleanup());
+    if (util::atexit::install())
+        util::atexit::add_handler(new GlobalCleanup());
     else
         std::atexit(curl_global_cleanup);
     initialized = true;
     return {};
 }
 
-// the implementation type is deduced: setters record every curl failure into
-// it so last_error() covers option setting, not only perform()
 template <typename Impl, typename T>
 Result<void> set_opt(Impl & impl, CURLoption option, const T & value)
 {
@@ -131,7 +129,6 @@ struct Callbacks
         Request::ProgressFn progress;
 };
 
-// the write and header callbacks share the same trampoline shape
 template <Request::WriteFn Callbacks::*member>
 size_t data_trampoline(char *ptr, size_t size, size_t nmemb, void *userdata)
 {
@@ -139,7 +136,7 @@ size_t data_trampoline(char *ptr, size_t size, size_t nmemb, void *userdata)
     const Request::WriteFn & fn = callbacks->*member;
     if (!fn)
         return size * nmemb;
-    sihd::util::ArrByteView view((const int8_t *)ptr, size * nmemb);
+    ArrByteView view((const int8_t *)ptr, size * nmemb);
     return fn(view) ? size * nmemb : 0;
 }
 
@@ -161,7 +158,6 @@ int progress_trampoline(void *userdata, curl_off_t dltotal, curl_off_t dlnow, cu
     return callbacks->progress(prog) ? CURL_PROGRESSFUNC_CONTINUE : 1;
 }
 
-// curl_mime setters only report through their return code
 Result<void> mime_check(CURLcode code, std::string_view what)
 {
     if (code == CURLE_OK)
@@ -422,7 +418,7 @@ Result<void> Request::set_mime(const Mime & mime)
     curl_mime *handle = curl_mime_init(_impl->curl);
     if (handle == nullptr)
         return err(out_of_memory, "could not init mime");
-    sihd::util::Defer free_mime([&handle] { curl_mime_free(handle); });
+    Defer free_mime([&handle] { curl_mime_free(handle); });
     for (const MimePart & part : mime.parts())
     {
         auto added = add_mime_part(handle, part);
@@ -563,7 +559,6 @@ Result<void> Request::set_read_callback(ReadFn callback)
 Result<void> Request::set_progress_callback(ProgressFn callback)
 {
     _impl->callbacks.progress = std::move(callback);
-    // empty callback restores the default: no progress reporting
     if (!_impl->callbacks.progress)
         return set_opt(*_impl, CURLOPT_NOPROGRESS, 1L);
     auto progress_set = set_opt(*_impl, CURLOPT_NOPROGRESS, 0L);
@@ -612,7 +607,7 @@ std::vector<std::string> Request::cookie_list() const
     return slist_lines(list.get());
 }
 
-sihd::util::Result<void> Request::perform()
+Result<void> Request::perform()
 {
     if (_impl->curl == nullptr)
         return err(not_initialized, _impl->init_error.empty() ? "no curl handle" : _impl->init_error);

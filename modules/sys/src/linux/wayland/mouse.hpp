@@ -1,8 +1,7 @@
 #ifndef __SIHD_SYS_WAYLAND_MOUSE_HPP__
 #define __SIHD_SYS_WAYLAND_MOUSE_HPP__
 
-// Wayland mouse backend of the dispatcher in src/linux/mouse.cpp:
-// zwlr_virtual_pointer_v1, wlroots-style compositors only
+// Wayland mouse backend: zwlr_virtual_pointer_v1, wlroots-style compositors only
 
 #include <sihd/sys/mouse.hpp>
 
@@ -22,8 +21,6 @@ sihd::util::Result<void> mouse_click(MouseButton button);
 sihd::util::Result<void> mouse_scroll(int x, int y);
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<void> mouse_move([[maybe_unused]] int x, [[maybe_unused]] int y)
 {

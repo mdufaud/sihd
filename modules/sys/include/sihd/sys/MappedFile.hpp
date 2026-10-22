@@ -1,8 +1,6 @@
 #ifndef __SIHD_SYS_MAPPEDFILE_HPP__
 #define __SIHD_SYS_MAPPEDFILE_HPP__
 
-#include <sys/stat.h> // mode_t
-
 #include <string>
 #include <type_traits>
 
@@ -11,14 +9,9 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/traits.hpp>
 
-#if defined(__SIHD_EMSCRIPTEN__)
-# define mode_t unsigned int
-#endif
-
 namespace sihd::sys
 {
 
-// maps a whole file into memory
 class MappedFile
 {
     public:
@@ -35,7 +28,6 @@ class MappedFile
         // truncates/creates 'path' to 'size' bytes and maps it read-write; size must not be 0
         sihd::util::Result<void> create(const std::string & path, size_t size, mode_t mode = 0600);
 
-        // mapping an empty file fails
         sihd::util::Result<void> open_read_only(const std::string & path);
         sihd::util::Result<void> open_read_write(const std::string & path);
 
@@ -64,9 +56,5 @@ class MappedFile
 };
 
 } // namespace sihd::sys
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# undef mode_t
-#endif
 
 #endif

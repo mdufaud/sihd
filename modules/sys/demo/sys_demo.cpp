@@ -158,7 +158,7 @@ void clipboard()
         SIHD_LOG(info, "Clipboard offers '{}' ({} bytes)", raw.mime, raw.data.size());
     }
 
-    for (const auto & raw : clipboard::get_raw({sihd::util::mime::bmp_image}))
+    for (const auto & raw : clipboard::get_raw({mime::bmp_image}))
     {
         auto bitmap = clipboard::to_image(raw);
         if (!bitmap.has_value())
@@ -173,12 +173,11 @@ void clipboard()
         if (bitmap->save_bmp(path))
             SIHD_LOG(notice, "Saved clipboard image to: {}", path);
 
-        // for the fun of it all
         clipboard::set(*bitmap);
         break;
     }
 
-    for (const auto & raw : clipboard::get_raw({sihd::util::mime::utf8_text}))
+    for (const auto & raw : clipboard::get_raw({mime::utf8_text}))
     {
         auto text = clipboard::to_text(raw);
         if (text.has_value())
@@ -207,14 +206,14 @@ void bitmap()
 
     Bitmap bm(width, height);
 
-    Color p;
+    Color pixel;
 
-    p.alpha = 0;
-    p.red = 200;
-    p.blue = 0;
-    p.green = 0;
+    pixel.alpha = 0;
+    pixel.red = 200;
+    pixel.blue = 0;
+    pixel.green = 0;
 
-    bm.fill(p);
+    bm.fill(pixel);
 
     TmpDir tmp;
 
@@ -393,13 +392,13 @@ void process()
         fmt::print("=========================\n");
     };
 
-    if constexpr (sihd::util::build::is_unix)
+    if constexpr (build::is_unix)
     {
         args.push_back("ls");
         args.push_back("-l");
     }
 
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
     {
         console::set_output_utf8();
         args.push_back("cmd.exe");
@@ -462,11 +461,12 @@ int main(int argc, char **argv)
     {
         app.root().add_command("screen", "list the monitors").on_run([] { demo::screen(); });
     }
+
     if constexpr (keyboard::supported)
     {
         app.root().add_command("keyboard", "type into the focused window - 3 seconds to focus").on_run([&app] {
             fmt::print("Focus the window that must receive the input - Ctrl + C to abort\n");
-            app.wait_for_termination(sihd::util::Duration(time::seconds(3)));
+            app.wait_for_termination(Duration(time::seconds(3)));
             demo::keyboard_input();
         });
     }
@@ -478,7 +478,7 @@ int main(int argc, char **argv)
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
     app.root().add_command("wait", "wait 5 seconds or until a stop signal").on_run([&app] {
         fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
-        app.wait_for_termination(sihd::util::Duration(time::seconds(5)));
+        app.wait_for_termination(Duration(time::seconds(5)));
         fmt::print("Exiting...\n");
     });
 #endif
@@ -504,7 +504,7 @@ int main(int argc, char **argv)
         demo::process();
         demo::read_line();
         fmt::print("Press Ctrl + C to exit (or wait 5 seconds)\n");
-        app.wait_for_termination(sihd::util::Duration(time::seconds(5)));
+        app.wait_for_termination(Duration(time::seconds(5)));
         fmt::print("Exiting...\n");
 #endif
     });

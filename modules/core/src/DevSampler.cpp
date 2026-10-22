@@ -8,11 +8,13 @@
 namespace sihd::core
 {
 
+using namespace sihd::util;
+
 SIHD_REGISTER_FACTORY(DevSampler)
 
 SIHD_LOGGER;
 
-DevSampler::DevSampler(const std::string & name, sihd::util::Node *parent):
+DevSampler::DevSampler(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _channel_sample(nullptr)
 {
@@ -33,7 +35,7 @@ bool DevSampler::set_frequency(double freq)
 
 bool DevSampler::set_sample(std::string_view conf)
 {
-    sihd::util::Splitter splitter("=");
+    Splitter splitter("=");
     std::vector<std::string> splitted = splitter.split(conf);
 
     if (splitted.size() != 2)
@@ -44,8 +46,6 @@ bool DevSampler::set_sample(std::string_view conf)
             conf);
         return false;
     }
-    // splitted[0] = channel_path_out
-    // splitted[1] = channel_path_in
     _conf_map[splitted[0]] = splitted[1];
     return true;
 }
@@ -57,7 +57,7 @@ bool DevSampler::is_running() const
 
 void DevSampler::handle(sihd::core::Channel *channel)
 {
-    std::lock_guard l(_set_mutex);
+    std::lock_guard lock(_set_mutex);
     if (_channels_map.contains(channel))
     {
         _channels_sample_set.emplace(channel);
@@ -71,7 +71,7 @@ bool DevSampler::on_setup()
 
 bool DevSampler::on_init()
 {
-    Channel *sample = this->add_unlinked_channel(CHANNEL_SAMPLE, sihd::util::TYPE_BOOL, 1);
+    Channel *sample = this->add_unlinked_channel(CHANNEL_SAMPLE, TYPE_BOOL, 1);
     if (sample != nullptr)
         sample->set_write_on_change(false);
     return true;
@@ -88,6 +88,7 @@ bool DevSampler::on_start()
     if (!sample)
         return !SIHD_UNEXPECTED_LOG(sample);
     _channel_sample = *sample;
+
     for (const auto & [channel_out_path, channel_in_path] : _conf_map)
     {
         auto channel_in_res = this->find_channel(channel_in_path);
@@ -96,6 +97,7 @@ bool DevSampler::on_start()
         {
             channel_in = *channel_in_res;
             channel_out = *channel_out_res;
+
             if (this->observe_channel(channel_in) == false)
             {
                 SIHD_LOG(error, "DevSampler: could not observe channel '{}'", channel_in_path);
@@ -110,6 +112,7 @@ bool DevSampler::on_start()
             ret = false;
         }
     }
+
     if (ret && _step_worker.start_sync_worker(this->name()) == false)
     {
         SIHD_LOG(error, "DevSampler: could not start worker");
@@ -127,7 +130,7 @@ bool DevSampler::run()
     */
     std::set<Channel *> channels_set;
     {
-        std::lock_guard l(_set_mutex);
+        std::lock_guard lock(_set_mutex);
         channels_set = _channels_sample_set;
         _channels_sample_set.clear();
     }
@@ -151,7 +154,7 @@ bool DevSampler::on_stop()
         SIHD_LOG(error, "DevSampler: could not stop worker");
     _channels_map.clear();
     {
-        std::lock_guard l(_set_mutex);
+        std::lock_guard lock(_set_mutex);
         _channels_sample_set.clear();
     }
     return true;

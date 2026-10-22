@@ -55,7 +55,7 @@ int main(int argc, char **argv)
 
         std::string stdout_str;
         std::string stderr_str;
-        sihd::util::Handler<std::string_view, bool> test_output_handler(
+        Handler<std::string_view, bool> test_output_handler(
             [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
                 if (is_stderr)
                     stderr_str += buf;

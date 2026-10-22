@@ -16,7 +16,7 @@ namespace sihd::sys::signal
 
 inline constexpr int max_signal = 64;
 
-typedef void (*sig_handler)(int);
+using sig_handler = void (*)(int);
 
 struct SigStatus
 {
@@ -41,10 +41,8 @@ struct SigExitConfig
 };
 void set_exit_config(const SigExitConfig & config);
 
-// set signal handling to handled, previous handler written when asked
 sihd::util::Result<void> handle(int sig, sig_handler *previous_handler = nullptr);
 
-// set signal handling to default
 sihd::util::Result<void> unhandle(int sig);
 
 sihd::util::Result<void> ignore(int sig);
@@ -64,12 +62,10 @@ bool should_stop();
 void reset_received(int sig);
 void reset_all_received();
 
-#if !defined(__SIHD_WINDOWS__)
 sihd::util::Result<void> block_thread(int sig);
 sihd::util::Result<void> block_thread(std::span<const int> sigs);
 sihd::util::Result<void> unblock_thread(int sig);
 sihd::util::Result<void> unblock_thread(std::span<const int> sigs);
-#endif
 
 sihd::util::Result<void> kill(pid_t pid, int sig);
 

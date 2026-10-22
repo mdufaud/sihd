@@ -37,19 +37,18 @@ class SshSubsystemFunction: public ISshSubsystemHandler
         // Must be set before on_start()
         void set_callback(Callback callback);
 
-        const std::string & command() const { return _command; }
+        const std::string & command() const;
 
-        // ISshSubsystemHandler
         bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) override;
         int on_data(const void *data, size_t len) override;
         void on_resize(const WinSize & winsize) override;
         void on_eof() override;
         int on_close() override;
 
-        int stdout_fd() const override { return -1; }
-        int stderr_fd() const override { return -1; }
-        SshChannel *channel() const override { return _channel; }
-        bool is_running() const override { return false; }
+        int stdout_fd() const override;
+        int stderr_fd() const override;
+        SshChannel *channel() const override;
+        bool is_running() const override;
 
     private:
         SshChannel *_channel;

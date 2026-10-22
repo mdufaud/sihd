@@ -22,15 +22,11 @@ class ImguiBackendAndroid: public sihd::imgui::IImguiBackend
         ImguiBackendAndroid();
         virtual ~ImguiBackendAndroid();
 
-        // Setup: call this once with the android_app from android_main.
-        // Sets up ALooper callbacks and stores app pointer.
         void set_app(struct android_app *app);
 
-        // Blocks until the native window is available, then initializes EGL.
+        // blocks until the native window is available
         bool init_egl();
 
-        // Initializes the ImGui Android backend + OpenGL ES 3 renderer.
-        // Also applies DPI scaling from the device configuration.
         bool init_backend();
 
         void new_frame();
@@ -41,7 +37,7 @@ class ImguiBackendAndroid: public sihd::imgui::IImguiBackend
         void shutdown();
         void terminate();
 
-        ANativeWindow *window() { return _window_ptr; }
+        ANativeWindow *window();
 
     protected:
 
@@ -56,6 +52,7 @@ class ImguiBackendAndroid: public sihd::imgui::IImguiBackend
 
         bool _is_init;
         bool _egl_ready;
+        bool _want_text_input_last;
         struct android_app *_app;
         ANativeWindow *_window_ptr;
         EGLDisplay _egl_display;

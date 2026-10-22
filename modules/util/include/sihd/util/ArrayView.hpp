@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_ARRAYVIEW_HPP__
 #define __SIHD_UTIL_ARRAYVIEW_HPP__
 
-#include <string.h> // strlen
+#include <string.h>
 
-#include <stdexcept> // out of range
+#include <stdexcept>
 
 #include <sihd/util/ArrayIterator.hpp>
 #include <sihd/util/IArrayView.hpp>
@@ -49,14 +49,12 @@ class ArrayView: public IArrayView
         {
         }
 
-        // char specialization
         ArrayView(std::string_view str)
             requires std::same_as<T, char>
             : ArrayView(str.data(), str.size())
         {
         }
 
-        // char specialization
         ArrayView(const char *str)
             requires std::same_as<T, char>
             : ArrayView(str, strlen(str))
@@ -171,7 +169,6 @@ class ArrayView: public IArrayView
 
         bool is_equal(ArrayView<T> arr) const { return this->is_equal(arr.data(), arr.size()); }
 
-        // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size) const
         {
             return _size == size && this->is_bytes_equal(arr, size * this->data_size());
@@ -215,15 +212,15 @@ class ArrayView: public IArrayView
             }
             else if constexpr (std::is_fundamental_v<T>)
             {
-                std::string s;
-                s.reserve(_size);
+                std::string text;
+                text.reserve(_size);
                 size_t i = 0;
                 while (i < _size)
                 {
-                    s += std::to_string(_buf_ptr[i]);
+                    text += std::to_string(_buf_ptr[i]);
                     ++i;
                 }
-                return s;
+                return text;
             }
             else
                 return str::hexdump(_buf_ptr, this->byte_size(), 0);
@@ -233,21 +230,21 @@ class ArrayView: public IArrayView
         {
             if constexpr (std::is_fundamental_v<T>)
             {
-                std::string s;
+                std::string text;
                 // trying to reserve at least 1 char by element + delimiters (if there are)
-                s.reserve(_size + (delimiter != '\0' ? std::max(0, int(_size - 2)) : 0));
+                text.reserve(_size + (delimiter != '\0' ? std::max(0, int(_size - 2)) : 0));
                 size_t i = 0;
                 while (i < _size)
                 {
                     if (i > 0)
-                        s += delimiter;
+                        text += delimiter;
                     if constexpr (std::same_as<T, char>)
-                        s += _buf_ptr[i];
+                        text += _buf_ptr[i];
                     else
-                        s += std::to_string(_buf_ptr[i]);
+                        text += std::to_string(_buf_ptr[i]);
                     ++i;
                 }
-                return s;
+                return text;
             }
             else
                 return str::hexdump(_buf_ptr, this->byte_size(), delimiter);
@@ -306,10 +303,8 @@ class ArrayView: public IArrayView
         /* access */
         /*********************************************************************/
 
-        // data first value
         inline T front() const { return this->at(0); }
 
-        // access last value
         inline T back() const { return this->at(_size - 1); }
 
         // access value at idx - throws out_of_range
@@ -320,7 +315,6 @@ class ArrayView: public IArrayView
             return _buf_ptr[idx];
         }
 
-        // access value arr[idx]
         inline T operator[](size_t idx) const { return _buf_ptr[idx]; }
 
         const T *data() const { return _buf_ptr; }
@@ -329,7 +323,7 @@ class ArrayView: public IArrayView
         /* iterator */
         /*********************************************************************/
 
-        typedef ArrayIterator<const T> iterator;
+        using iterator = ArrayIterator<const T>;
 
         iterator begin() const { return iterator(this->data(), this->data(), this->data() + this->size()); }
         iterator end() const
@@ -341,7 +335,7 @@ class ArrayView: public IArrayView
         /* reverse iterator */
         /*********************************************************************/
 
-        typedef ReverseArrayIterator<const T> reverse_iterator;
+        using reverse_iterator = ReverseArrayIterator<const T>;
 
         reverse_iterator rbegin() const
         {
@@ -365,7 +359,6 @@ class ArrayView: public IArrayView
 
 using iterator_type = ArrayView<int>::iterator;
 static_assert(std::input_iterator<iterator_type>, "failed input iterator");
-// static_assert(std::output_iterator<iterator_type, int>, "failed output iterator");
 static_assert(std::forward_iterator<iterator_type>, "failed forward iterator");
 static_assert(std::input_iterator<iterator_type>, "failed input iterator");
 static_assert(std::bidirectional_iterator<iterator_type>, "failed bidirectional iterator");
@@ -374,19 +367,18 @@ static_assert(std::weakly_incrementable<iterator_type>, "Failed the weakly incre
 static_assert(std::movable<iterator_type>, "Failed the moveable test");
 static_assert(std::default_initializable<iterator_type>, "Failed the default initializable test");
 
-// typedef for types
-typedef ArrayView<bool> ArrBoolView;
-typedef ArrayView<char> ArrCharView;
-typedef ArrayView<int8_t> ArrByteView;
-typedef ArrayView<uint8_t> ArrUByteView;
-typedef ArrayView<int16_t> ArrShortView;
-typedef ArrayView<uint16_t> ArrUShortView;
-typedef ArrayView<int32_t> ArrIntView;
-typedef ArrayView<uint32_t> ArrUIntView;
-typedef ArrayView<int64_t> ArrLongView;
-typedef ArrayView<uint64_t> ArrULongView;
-typedef ArrayView<float> ArrFloatView;
-typedef ArrayView<double> ArrDoubleView;
+using ArrBoolView = ArrayView<bool>;
+using ArrCharView = ArrayView<char>;
+using ArrByteView = ArrayView<int8_t>;
+using ArrUByteView = ArrayView<uint8_t>;
+using ArrShortView = ArrayView<int16_t>;
+using ArrUShortView = ArrayView<uint16_t>;
+using ArrIntView = ArrayView<int32_t>;
+using ArrUIntView = ArrayView<uint32_t>;
+using ArrLongView = ArrayView<int64_t>;
+using ArrULongView = ArrayView<uint64_t>;
+using ArrFloatView = ArrayView<float>;
+using ArrDoubleView = ArrayView<double>;
 
 } // namespace sihd::util
 

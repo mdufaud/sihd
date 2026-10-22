@@ -45,6 +45,7 @@ TEST_F(TestCrashHandler, test_previous_alt_stack_restored)
     stack_t previous {};
     previous.ss_sp = buffer.data();
     previous.ss_size = buffer.size();
+
     ASSERT_EQ(sigaltstack(&previous, nullptr), 0);
     Defer restore([&] { sigaltstack(&original, nullptr); });
     CrashHandler handler;
@@ -70,7 +71,6 @@ TEST_F(TestCrashHandler, test_crash_handler_raii)
     EXPECT_TRUE(handler.is_installed());
     handler.uninstall();
     EXPECT_FALSE(handler.is_installed());
-    // uninstalling twice is a no-op
     handler.uninstall();
 }
 
@@ -109,7 +109,6 @@ TEST_F(TestCrashHandler, test_crash_handler_dump)
     {
         // rethrow disabled: the handler exits with 128 + SIGSEGV
         EXPECT_EQ(exit_code, 128 + 11);
-        // the dump file carries the text report
         const auto report = fs::read_all(dump_path);
         ASSERT_TRUE(report.has_value());
         EXPECT_NE(report->find("fatal signal 11"), std::string::npos);

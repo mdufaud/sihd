@@ -10,34 +10,29 @@ using Op = sihd::util::AService;
 const SM & default_statemachine()
 {
     static const SM sm = [] {
-        SM m(St::None);
-        m.set_transitions_map({
-            // none -> setup -> configured
+        SM machine(St::None);
+        machine.set_transitions_map({
             {SM::pack_key(St::None, Op::Setup), St::Configuring},
             {SM::pack_key(St::Configuring, Op::Failure), St::Failure},
             {SM::pack_key(St::Configuring, Op::Success), St::Configured},
-            // configured -> init -> stopped
             {SM::pack_key(St::Configured, Op::Init), St::Initializing},
             {SM::pack_key(St::Initializing, Op::Failure), St::Failure},
             {SM::pack_key(St::Initializing, Op::Success), St::Stopped},
-            // stopped -> start -> running
             {SM::pack_key(St::Stopped, Op::Start), St::Starting},
             {SM::pack_key(St::Starting, Op::Failure), St::StartFailure},
             {SM::pack_key(St::Starting, Op::Success), St::Running},
-            // running -> stop -> stopped
             {SM::pack_key(St::Running, Op::Stop), St::Stopping},
             {SM::pack_key(St::Stopping, Op::Failure), St::StopFailure},
             {SM::pack_key(St::Stopping, Op::Success), St::Stopped},
             // a failed start or stop is retried by the same operation
             {SM::pack_key(St::StartFailure, Op::Start), St::Starting},
             {SM::pack_key(St::StopFailure, Op::Stop), St::Stopping},
-            // configured/stopped -> reset -> none
             {SM::pack_key(St::Configured, Op::Reset), St::Resetting},
             {SM::pack_key(St::Stopped, Op::Reset), St::Resetting},
             {SM::pack_key(St::Resetting, Op::Failure), St::Failure},
             {SM::pack_key(St::Resetting, Op::Success), St::None},
         });
-        m.set_states_names_map({
+        machine.set_states_names_map({
             {St::None, "none"},
             {St::Configuring, "configuring"},
             {St::Configured, "configured"},
@@ -48,7 +43,7 @@ const SM & default_statemachine()
             {St::Stopped, "stopped"},
             {St::Resetting, "resetting"},
         });
-        m.set_events_names_map({
+        machine.set_events_names_map({
             {Op::Setup, "setup"},
             {Op::Init, "init"},
             {Op::Start, "start"},
@@ -57,7 +52,7 @@ const SM & default_statemachine()
             {Op::Success, "success"},
             {Op::Failure, "error"},
         });
-        return m;
+        return machine;
     }();
     return sm;
 }
@@ -88,7 +83,7 @@ AService::Transition ServiceController::op_start(AService::Operation op)
 {
     bool ret;
     {
-        std::lock_guard l(_state_mutex);
+        std::lock_guard lock(_state_mutex);
         const State state = statemachine.state();
         if (op == AService::Stop && (state == Stopping || state == Stopped))
             return AService::Transition::done;
@@ -104,7 +99,7 @@ bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool sta
 {
     bool ret;
     {
-        std::lock_guard l(_state_mutex);
+        std::lock_guard lock(_state_mutex);
         ret = statemachine.transition(status ? AService::Success : AService::Failure);
     }
     this->notify_observers(this);
@@ -113,13 +108,13 @@ bool ServiceController::op_end([[maybe_unused]] AService::Operation op, bool sta
 
 ServiceController::State ServiceController::state() const
 {
-    std::lock_guard l(_state_mutex);
+    std::lock_guard lock(_state_mutex);
     return statemachine.state();
 }
 
 AService::Operation ServiceController::last_event() const
 {
-    std::lock_guard l(_state_mutex);
+    std::lock_guard lock(_state_mutex);
     return statemachine.last_event();
 }
 

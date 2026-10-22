@@ -81,7 +81,6 @@ TEST_F(TestSynchronizer, test_synchronizer_multi_round)
     EXPECT_EQ(run_round(), nthreads);
     EXPECT_EQ(sync.current_sync(), 0);
 
-    // second round after re-init
     sync.reset();
     EXPECT_TRUE(sync.init_sync(nthreads));
     EXPECT_EQ(run_round(), nthreads);

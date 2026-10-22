@@ -18,9 +18,9 @@ using namespace sihd::util;
 class TestFileCache: public ::testing::Test
 {
     protected:
-        TestFileCache() { sihd::util::LoggerManager::stream(); }
+        TestFileCache() { LoggerManager::stream(); }
 
-        virtual ~TestFileCache() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestFileCache() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {

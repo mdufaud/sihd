@@ -44,8 +44,6 @@ TEST_F(TestTools, test_tools_boolean)
     int i = 1;
     EXPECT_TRUE(tools::only_one_true(i == 1, i != 1, i < 0));
 
-    // Testing false
-
     EXPECT_TRUE(tools::only_one_false(false));
     EXPECT_TRUE(tools::maximum_one_false(true));
     EXPECT_TRUE(tools::maximum_one_false(false));

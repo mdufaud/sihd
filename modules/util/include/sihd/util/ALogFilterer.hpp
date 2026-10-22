@@ -26,7 +26,7 @@ class ALogFilterer
         {
             bool found = false;
             {
-                std::lock_guard<std::mutex> l(_filters_mutex);
+                std::lock_guard<std::mutex> lock(_filters_mutex);
                 T *filtercast;
                 auto it = _filters_lst.begin();
                 while (it != _filters_lst.end())

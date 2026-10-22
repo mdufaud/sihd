@@ -11,8 +11,6 @@
 namespace test
 {
 
-SIHD_LOGGER;
-
 class LuaFixture: public ::testing::Test
 {
     protected:
@@ -30,7 +28,6 @@ class LuaFixture: public ::testing::Test
 
         void do_script(const std::string & path)
         {
-            SIHD_LOG(info, "Starting LUA test: {}", path);
             auto res = _vm.do_file(path);
             ASSERT_TRUE(res) << res.error().message;
         }

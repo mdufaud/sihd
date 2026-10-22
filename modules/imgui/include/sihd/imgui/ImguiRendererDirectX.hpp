@@ -16,7 +16,6 @@ class ImguiRendererDirectX: public sihd::imgui::IImguiRenderer
         ImguiRendererDirectX();
         virtual ~ImguiRendererDirectX();
 
-        // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
         bool init(HWND window);
 
         void new_frame();

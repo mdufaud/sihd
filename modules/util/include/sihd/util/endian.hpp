@@ -30,7 +30,6 @@ bool switch_buffer_endianness(void *buf, ByteSize size, size_t buf_size);
 template <typename T>
 concept SwappableEndian = std::integral<T> || std::same_as<T, float> || std::same_as<T, double>;
 
-// byte swap
 template <typename T>
     requires SwappableEndian<T>
 constexpr T swap(T value)

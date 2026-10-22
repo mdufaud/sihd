@@ -1,17 +1,17 @@
-#include <dirent.h> // DIR...
-#include <fcntl.h>  // open, AT_FDCWD
+#include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
-#include <unistd.h> // access
+#include <unistd.h>
 
 #if defined(__linux__)
-# include <sys/sendfile.h> // sendfile
+# include <sys/sendfile.h>
 #endif
 
 #include <algorithm>
 #include <cerrno>
 #include <cstdio>
-#include <cstring> // strcmp
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 
@@ -27,10 +27,10 @@
 #include <sihd/util/str.hpp>
 
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-# include <sys/statfs.h>    // statfs
-# include <sys/sysmacros.h> // major / minor
+# include <sys/statfs.h>
+# include <sys/sysmacros.h>
 
-# include <linux/magic.h> // *_SUPER_MAGIC
+# include <linux/magic.h>
 #endif
 
 // statx is declared by glibc >= 2.28 and musl >= 1.1.24; bionic/emscripten lack it
@@ -68,7 +68,7 @@
 #endif
 
 #if defined(__SIHD_LINUX__)
-# include <mntent.h> // setmntent
+# include <mntent.h>
 #endif
 
 using enum sihd::util::ErrorCode;
@@ -107,71 +107,72 @@ Timestamp statx_timestamp_to_ts(const struct statx_timestamp & ts)
 
 #endif
 
-sihd::util::Result<void> write_full(int fd, const char *data, size_t size)
+Result<void> write_full(int fd, const char *data, size_t size)
 {
     while (size > 0)
     {
-        ssize_t n = ::write(fd, data, size);
-        if (n < 0)
+        ssize_t bytes = ::write(fd, data, size);
+        if (bytes < 0)
         {
             if (errno == EINTR)
                 continue;
             return std::unexpected(Error::from_errno("copy_file: write"));
         }
-        data += n;
-        size -= (size_t)n;
+        data += bytes;
+        size -= (size_t)bytes;
     }
     return {};
 }
 
 template <typename CopyChunk>
-sihd::util::Result<CopyResult>
+Result<CopyResult>
     kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     size_t transferred = 0;
     while (transferred < total)
     {
-        ssize_t n = copy_chunk(std::min(total - transferred, range_chunk_max));
-        if (n < 0)
+        ssize_t bytes = copy_chunk(std::min(total - transferred, range_chunk_max));
+        if (bytes < 0)
         {
             if (errno == EINTR)
                 continue;
+
             // these leave the fd offsets usable for the next strategy
             if (errno == EINVAL || errno == ENOSYS || errno == EXDEV || errno == EOPNOTSUPP)
                 return CopyResult::unsupported;
             return std::unexpected(Error::from_errno("copy_file: kernel copy"));
         }
-        if (n == 0)
+        if (bytes == 0)
         {
             // the source shrank under fstat; do not report a short copy as done
             return std::unexpected(Error(io_error, "copy_file: source shortened during copy"));
         }
-        transferred += (size_t)n;
+        transferred += (size_t)bytes;
         if (progress && !progress(transferred, total))
             return CopyResult::cancelled;
     }
     return CopyResult::done;
 }
 
-sihd::util::Result<CopyResult>
+Result<CopyResult>
     read_write_copy_loop(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     std::vector<char> buf(256 * 1024);
     size_t transferred = 0;
     for (;;)
     {
-        ssize_t n = ::read(in_fd, buf.data(), buf.size());
-        if (n < 0)
+        ssize_t bytes = ::read(in_fd, buf.data(), buf.size());
+        if (bytes < 0)
         {
             if (errno == EINTR)
                 continue;
             return std::unexpected(Error::from_errno("copy_file: read"));
         }
-        if (n == 0)
+        if (bytes == 0)
             return CopyResult::done;
-        auto written = write_full(out_fd, buf.data(), (size_t)n);
+        auto written = write_full(out_fd, buf.data(), (size_t)bytes);
         SIHD_UNEXPECTED_RETURN(written);
-        transferred += (size_t)n;
+        transferred += (size_t)bytes;
         if (progress && !progress(transferred, total))
             return CopyResult::cancelled;
     }
@@ -179,17 +180,17 @@ sihd::util::Result<CopyResult>
 
 #if defined(__linux__)
 
-sihd::util::Result<CopyResult>
+Result<CopyResult>
     kernel_copy(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
 {
     // bionic declares copy_file_range only from API 30
 # if !defined(__ANDROID__) || __ANDROID_API__ >= 30
-    auto r = kernel_copy_loop(
+    auto result = kernel_copy_loop(
         [&](size_t chunk) { return ::copy_file_range(in_fd, nullptr, out_fd, nullptr, chunk, 0); },
         total,
         progress);
-    if (!r || *r != CopyResult::unsupported)
-        return r;
+    if (!result || *result != CopyResult::unsupported)
+        return result;
 # endif
     // copy_file_range wants a regular file on the same mount; sendfile covers more
     return kernel_copy_loop([&](size_t chunk) { return ::sendfile(out_fd, in_fd, nullptr, chunk); }, total, progress);
@@ -233,16 +234,15 @@ void get_recursive_children(const std::string & path,
 StorageMedium read_rotational(const std::string & sysfs_dir)
 {
     std::ifstream file(sysfs_dir + "/queue/rotational");
-    char c;
-    if (file.is_open() && file.get(c))
-        return c == '1' ? StorageMedium::hdd : StorageMedium::ssd;
+    char chr;
+    if (file.is_open() && file.get(chr))
+        return chr == '1' ? StorageMedium::hdd : StorageMedium::ssd;
     return StorageMedium::unknown;
 }
 
 StorageMedium storage_medium_from_devnum(dev_t st_dev)
 {
-    // /sys/dev/block/<major>:<minor> symlinks to the device's sysfs dir: a whole disk exposes
-    // queue/rotational directly, a partition through its parent disk (best-effort for dm/LVM)
+    // /sys/dev/block/<maj>:<min>: a partition reads queue/rotational through its parent disk (dm/LVM best-effort)
     const std::string base = fmt::format("/sys/dev/block/{}:{}", major(st_dev), minor(st_dev));
     StorageMedium ret = read_rotational(base);
     if (ret == StorageMedium::unknown)
@@ -252,7 +252,6 @@ StorageMedium storage_medium_from_devnum(dev_t st_dev)
 
 #endif
 
-// default location, relative to the home directory
 std::string home_subpath(std::string_view sub)
 {
     const std::string home = home_path();
@@ -278,6 +277,7 @@ std::string user_dirs_path(std::string_view key)
     if (!content.has_value())
         return "";
     const std::string home = home_path();
+
     for (const std::string & line : str::split(content.value(), '\n'))
     {
         const auto [line_key, line_value] = str::split_pair(line, "=");
@@ -326,8 +326,6 @@ std::string download_path()
     return dir.empty() ? home_subpath("Downloads") : dir;
 }
 
-// stat
-
 bool exists(const std::string & path)
 {
     return access(path.c_str(), F_OK) == 0;
@@ -348,7 +346,7 @@ bool is_executable(const std::string & path)
     return access(path.c_str(), X_OK) == 0;
 }
 
-sihd::util::Result<FileTimes> times(const std::string & path)
+Result<FileTimes> times(const std::string & path)
 {
 #if defined(SIHD_FS_HAS_STATX)
     struct statx stx;
@@ -378,15 +376,13 @@ Timestamp last_write(const std::string & path)
     return times(path).value_or(FileTimes()).write;
 }
 
-sihd::util::Result<size_t> file_size(const std::string & path)
+Result<size_t> file_size(const std::string & path)
 {
     struct stat s;
     if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     return s.st_size;
 }
-
-// directories
 
 std::string tmp_path()
 {
@@ -399,7 +395,7 @@ std::string tmp_path()
     return "/tmp";
 }
 
-sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
+Result<std::string> make_tmp_directory(const std::string & prefix)
 {
     if (prefix.size() + 6 > PATH_MAX)
         return std::unexpected(Error(invalid_argument, "path too long: {}", prefix));
@@ -415,7 +411,7 @@ sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
     return path;
 }
 
-sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode)
+Result<void> make_directory(const std::string & path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -457,9 +453,7 @@ std::vector<std::string> children(const std::string & path)
     return ret;
 }
 
-// files
-
-sihd::util::Result<void> truncate(const std::string & path, int64_t size)
+Result<void> truncate(const std::string & path, int64_t size)
 {
     if (::truncate(path.c_str(), static_cast<off_t>(size)) != 0)
     {
@@ -468,7 +462,7 @@ sihd::util::Result<void> truncate(const std::string & path, int64_t size)
     return {};
 }
 
-sihd::util::Result<void>
+Result<void>
     copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
 {
     int in_fd = ::open(from.c_str(), O_RDONLY);
@@ -501,22 +495,22 @@ sihd::util::Result<void>
         return ret;
     }
 
-    sihd::util::Result<CopyResult> r = CopyResult::done;
+    Result<CopyResult> result = CopyResult::done;
 #if defined(__linux__)
     if (total > 0)
     {
-        r = kernel_copy(in_fd, out_fd, total, progress);
-        if (r && *r == CopyResult::unsupported)
-            r = read_write_copy_loop(in_fd, out_fd, total, progress);
+        result = kernel_copy(in_fd, out_fd, total, progress);
+        if (result && *result == CopyResult::unsupported)
+            result = read_write_copy_loop(in_fd, out_fd, total, progress);
     }
     else
 #endif
     {
         // unknown size (empty file, procfs, pipes): read/write is the only strategy reaching EOF
-        r = read_write_copy_loop(in_fd, out_fd, total, progress);
+        result = read_write_copy_loop(in_fd, out_fd, total, progress);
     }
 
-    if (r && *r == CopyResult::cancelled)
+    if (result && *result == CopyResult::cancelled)
     {
         ::close(in_fd);
         ::close(out_fd);
@@ -524,15 +518,15 @@ sihd::util::Result<void>
         return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
     }
 
-    if (!r)
+    if (!result)
     {
         ::close(in_fd);
         ::close(out_fd);
         ::unlink(to.c_str());
-        SIHD_UNEXPECTED_RETURN_CTX(r, "could not copy '{}' to '{}'", from, to);
+        SIHD_UNEXPECTED_RETURN_CTX(result, "could not copy '{}' to '{}'", from, to);
     }
     ::close(in_fd);
-    sihd::util::Result<void> res {};
+    Result<void> res {};
     // CopyFile2 preserves the source metadata; mirror it for symmetry
     if (::fchmod(out_fd, s.st_mode & 07777) != 0)
     {
@@ -574,7 +568,7 @@ Result<void> rename(const std::string & from, const std::string & to)
     return {};
 }
 
-sihd::util::Result<void> chdir(const std::string & path)
+Result<void> chdir(const std::string & path)
 {
     if (::chdir(path.c_str()) != 0)
     {
@@ -627,8 +621,7 @@ MountType mount_type([[maybe_unused]] const std::string & path)
         case EFIVARFS_MAGIC:
             return MountType::unknown;
         default:
-            // FUSE-based remotes (sshfs) report FUSE_SUPER_MAGIC and fall here as
-            // local: telling them apart needs parsing the mount source.
+            // FUSE remotes (sshfs) land here as local: telling them apart needs parsing the mount source
             return MountType::local;
     }
 #else
@@ -653,7 +646,7 @@ StorageMedium storage_medium([[maybe_unused]] const std::string & path)
 #endif
 }
 
-sihd::util::Result<uint64_t> free_space(const std::string & path)
+Result<uint64_t> free_space(const std::string & path)
 {
     struct statvfs vfs;
     if (::statvfs(path.c_str(), &vfs) != 0)
@@ -661,7 +654,7 @@ sihd::util::Result<uint64_t> free_space(const std::string & path)
     return (uint64_t)vfs.f_bavail * vfs.f_frsize;
 }
 
-sihd::util::Result<uint64_t> total_space(const std::string & path)
+Result<uint64_t> total_space(const std::string & path)
 {
     struct statvfs vfs;
     if (::statvfs(path.c_str(), &vfs) != 0)

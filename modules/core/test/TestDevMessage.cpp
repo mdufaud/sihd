@@ -1,3 +1,6 @@
+#include <array>
+#include <cstring>
+
 #include <gtest/gtest.h>
 
 #include <sihd/core/Core.hpp>
@@ -16,12 +19,25 @@ SIHD_LOGGER;
 using namespace sihd::core;
 using namespace sihd::util;
 using namespace sihd::sys;
+
+namespace
+{
+
+struct s_msg
+{
+        bool active;
+        int size;
+        std::array<char, 20> str;
+} __attribute__((packed));
+
+} // namespace
+
 class TestDevMessage: public ::testing::Test
 {
     protected:
-        TestDevMessage() { sihd::util::LoggerManager::stream(); }
+        TestDevMessage() { LoggerManager::stream(); }
 
-        virtual ~TestDevMessage() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestDevMessage() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -40,15 +56,7 @@ TEST_F(TestDevMessage, test_devmessage)
 
     msg->finish();
 
-    struct s_msg
-    {
-            bool active;
-            int size;
-            char str[20];
-    } __attribute__((packed));
-
     (void)dev->set_conf_str("message", "..msg");
-    // immediate compute mode
     dev->set_trigger_mode(false);
 
     ASSERT_TRUE(core.init());
@@ -91,7 +99,7 @@ TEST_F(TestDevMessage, test_devmessage)
     memset(&msgtest, 0, sizeof(msgtest));
     msgtest.active = true;
     msgtest.size = 20;
-    strcpy(msgtest.str, "hello world");
+    strcpy(msgtest.str.data(), "hello world");
 
     EXPECT_TRUE(ch_buffer_in->write({&msgtest, sizeof(msgtest)}));
     EXPECT_EQ(ch_active_out->read<bool>(0), true);
@@ -109,27 +117,23 @@ TEST_F(TestDevMessage, test_devmessage)
     dev->set_trigger_mode(true);
 
     EXPECT_TRUE(ch_size_in->write(0, 30));
-    // still old value
     EXPECT_EQ(ch_buffer_out->read<int>(1), 20);
     ch_trigger->notify();
-    // new value after trigger
     EXPECT_EQ(ch_buffer_out->read<int>(1), 30);
 
     memset(&msgtest, 0, sizeof(msgtest));
     msgtest.active = false;
     msgtest.size = 40;
-    strcpy(msgtest.str, "toto");
+    strcpy(msgtest.str.data(), "toto");
 
     EXPECT_TRUE(ch_buffer_in->write({&msgtest, sizeof(msgtest)}));
 
-    // still old values
     EXPECT_EQ(ch_active_out->read<bool>(0), true);
     EXPECT_EQ(ch_size_out->read<int>(0), 30);
     EXPECT_STREQ((char *)ch_str_out->data(), "hello world");
 
     ch_trigger->notify();
 
-    // new values after trigger
     EXPECT_EQ(ch_active_out->read<bool>(0), false);
     EXPECT_EQ(ch_size_out->read<int>(0), 40);
     EXPECT_STREQ((char *)ch_str_out->data(), "toto");

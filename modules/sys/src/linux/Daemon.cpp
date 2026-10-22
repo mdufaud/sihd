@@ -1,6 +1,6 @@
-#include <fcntl.h>    // open, O_RDWR
-#include <sys/stat.h> // umask
-#include <unistd.h>   // fork, setsid, chdir, chown, dup2
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/os.hpp>
@@ -50,10 +50,8 @@ bool Daemon::set_group(const user::GroupId & group_id)
 
 bool Daemon::run()
 {
-    // lock file
     if (_lock_pid_file() == false)
         return false;
-    // first fork (run in background)
     pid_t pid = fork();
     if (pid < 0)
     {
@@ -62,7 +60,7 @@ bool Daemon::run()
     }
     else if (pid > 0)
         _exit(EXIT_SUCCESS);
-    // install signal handlers
+
     if (this->_handle_signals() == false)
         SIHD_LOG(error, "Daemon: could not install signal handlers");
     // process not killed once shell is exited
@@ -78,26 +76,23 @@ bool Daemon::run()
         SIHD_LOG(error, "Daemon: second fork failed: {}", os::last_error_str());
         _exit(2);
     }
+
     if (pid > 0)
         _exit(EXIT_SUCCESS);
-    // write pid file
     if (_write_pid_file() == false)
     {
         SIHD_LOG(error, "Daemon: could not write pid file '{}'", _pid_file_path);
         _exit(4);
     }
-    // change file creation mask
     umask(0);
-    // change directory
     if (chdir(_working_dir_path.c_str()) < 0)
     {
         SIHD_LOG(error, "Daemon: chdir failed: {}", os::last_error_str());
         _exit(3);
     }
-    // drop to the requested account
+
     if (_user.valid())
     {
-        // set right ownership to pid file
         if (chown(_pid_file_path.c_str(), _user.native(), _group.native()) != 0)
         {
             SIHD_LOG(warning, "Daemon: can't set pid file ownership to uid: {}", _user.to_string());
@@ -110,10 +105,10 @@ bool Daemon::run()
             _exit(4);
         }
     }
-    // redirect standard file descriptors to /dev/null
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
+
     if (open("/dev/null", O_RDWR) == STDIN_FILENO)
     {
         if (dup2(STDIN_FILENO, STDOUT_FILENO) != STDOUT_FILENO)

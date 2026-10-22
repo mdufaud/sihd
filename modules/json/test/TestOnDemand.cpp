@@ -94,7 +94,7 @@ TEST_F(TestOnDemand, test_for_each_unparsable_element_aborts)
         ++count;
         return true;
     });
-    // fail-fast: elements before the bad one are delivered, the walk aborts on the first unparsable
+    // elements before the bad one are delivered, then the walk aborts
     ASSERT_FALSE(walked.has_value());
     EXPECT_EQ(count, 1u);
 }

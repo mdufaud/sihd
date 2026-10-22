@@ -53,7 +53,6 @@ class ProcessInfo
         static constexpr bool supported = !sihd::util::build::is_emscripten;
 
         ProcessInfo(int pid);
-        // exact name match
         ProcessInfo(std::string_view name);
         ProcessInfo(const ProcessInfo & process_info);
         ~ProcessInfo();

@@ -6,15 +6,13 @@
 namespace sihd::core
 {
 
-// Only purpose is to be a container and cascade service states to children
-
 class Core: public sihd::core::Device
 {
     public:
         Core(const std::string & name = "core", sihd::util::Node *parent = nullptr);
         virtual ~Core();
 
-        bool is_running() const override { return _running; }
+        bool is_running() const override;
 
         bool on_init() override;
         bool on_start() override;

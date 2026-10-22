@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -23,9 +24,6 @@
 #include "connection.hpp"
 #include "protocols/zwp-virtual-keyboard-unstable-v1-client-protocol.h"
 
-// Native zwp_virtual_keyboard_v1 injection: one generated keymap per call, its
-// keycode space fully custom so any text types without touching the layout
-
 // linux/memfd.h is a kernel uapi header some libcs do not ship.
 #ifndef MFD_CLOEXEC
 # define MFD_CLOEXEC 0x0001U
@@ -40,7 +38,7 @@ namespace sihd::sys::keyboard::wayland
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::keyboard");
+SIHD_NEW_LOGGER("sihd::sys::keyboard::wayland");
 
 namespace
 {
@@ -48,27 +46,24 @@ namespace
 constexpr Duration key_timeout = Duration(time::sec(2));
 
 // xkb modifier masks of the complete compat set, indexed by the Modifiers bit.
-constexpr uint32_t modifier_masks[] = {1 << 0, 1 << 2, 1 << 3, 1 << 6};
+constexpr auto modifier_masks = std::to_array<uint32_t>({1 << 0, 1 << 2, 1 << 3, 1 << 6});
 
-// The xkbcommon keysym names of Key, skipping Key::none.
-constexpr std::string_view key_names[] = {
+constexpr auto key_names = std::to_array<std::string_view>({
     "a",         "b",      "c",      "d",    "e",   "f",     "g",    "h",   "i",    "j",     "k",      "l",   "m",
     "n",         "o",      "p",      "q",    "r",   "s",     "t",    "u",   "v",    "w",     "x",      "y",   "z",
     "0",         "1",      "2",      "3",    "4",   "5",     "6",    "7",   "8",    "9",     "F1",     "F2",  "F3",
     "F4",        "F5",     "F6",     "F7",   "F8",  "F9",    "F10",  "F11", "F12",  "space", "Return", "Tab", "Escape",
     "BackSpace", "Delete", "Insert", "Home", "End", "Prior", "Next", "Up",  "Down", "Left",  "Right",
-};
+});
 
-static_assert(sizeof(key_names) / sizeof(key_names[0]) == std::to_underlying(Key::right),
-              "the keysym name table must cover every Key");
+static_assert(key_names.size() == std::to_underlying(Key::right), "the keysym name table must cover every Key");
 
 std::string_view key_name(Key key)
 {
     return key_names[std::to_underlying(key) - 1];
 }
 
-// The keysym name of one text codepoint: literals for ascii, xkbcommon's hex
-// form for the unicode keysym 0x1000000 + codepoint; empty when untypeable.
+// ascii literals; else xkbcommon's unicode keysym 0x1000000 + codepoint; empty when untypeable
 std::string codepoint_name(char32_t cp)
 {
     if (cp == U'\n')
@@ -84,8 +79,6 @@ std::string codepoint_name(char32_t cp)
     return buf;
 }
 
-// The generated keymap: one entry per distinct key, keycodes allocated in
-// insertion order starting at 9.
 class Keymap
 {
     public:
@@ -107,6 +100,7 @@ class Keymap
             out += "xkb_keycodes \"(unnamed)\" {\n";
             out += "minimum = 8;\n";
             out += "maximum = " + std::to_string(first_keycode + _entries.size()) + ";\n";
+
             for (size_t i = 0; i < _entries.size(); ++i)
             {
                 out += "<K" + std::to_string(i + 1) + "> = " + std::to_string(first_keycode + i) + ";\n";
@@ -131,7 +125,6 @@ class Keymap
         std::vector<std::string> _entries;
 };
 
-// The connection binding the seat and the virtual keyboard manager.
 class Connection: public sihd::sys::internal::wayland::Connection
 {
     public:
@@ -153,7 +146,6 @@ class Connection: public sihd::sys::internal::wayland::Connection
         bool ready() const override { return seat != nullptr && manager != nullptr; }
 };
 
-// The virtual keyboard of one injection, released with the connection.
 class KeyboardSession
 {
     public:
@@ -174,8 +166,7 @@ class KeyboardSession
             Defer close_fd([&fd] { close(fd); });
 
             zwp_virtual_keyboard_v1_keymap(_keyboard, WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1, fd, keymap_text.size() + 1);
-            // The compositor takes the keymap fd on the roundtrip: only then may
-            // our copy close.
+            // the compositor takes the keymap fd on the roundtrip: only then may our copy close
             if (!roundtrip_bounded(_conn, _deadline))
                 return std::unexpected(Error(timeout, "the keymap was not absorbed in time"));
             return {};
@@ -213,13 +204,13 @@ class KeyboardSession
             size_t written = 0;
             while (written < text.size())
             {
-                const ssize_t n = ::write(fd, text.data() + written, text.size() - written);
-                if (n <= 0 && errno != EINTR)
+                const ssize_t bytes = ::write(fd, text.data() + written, text.size() - written);
+                if (bytes <= 0 && errno != EINTR)
                 {
                     close(fd);
                     return -1;
                 }
-                written += static_cast<size_t>(n);
+                written += static_cast<size_t>(bytes);
             }
             return fd;
         }
@@ -240,8 +231,6 @@ uint32_t modifiers_mask(Modifiers mods)
     return mask;
 }
 
-// One keyboard gesture: the bounded session over `keymap`, the body, the
-// delivery.
 template <typename Body>
 Result<void> keyboard_gesture(const Keymap & keymap, const Body & body)
 {

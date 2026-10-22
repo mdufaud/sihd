@@ -10,26 +10,7 @@
 namespace sihd::py
 {
 
-// the sihd.Error python exception (RuntimeError base): args = (message,), code attribute = ErrorCode
-inline pybind11::object & error_type()
-{
-    static pybind11::object type = pybind11::reinterpret_steal<pybind11::object>(
-        PyErr_NewException("sihd.Error", PyExc_RuntimeError, nullptr));
-    return type;
-}
-
-[[noreturn]] inline void raise_error(const sihd::util::Error & error)
-{
-    // callers may release the GIL for the I/O (call_guard): raising touches the interpreter
-    pybind11::gil_scoped_acquire acquire;
-    // fetch the type from the module, not from a C++ static: inline statics are not
-    // deduplicated across the shared libraries that instantiate this header
-    pybind11::object type = pybind11::module_::import("sihd").attr("Error");
-    pybind11::object instance = type(error.message);
-    instance.attr("code") = static_cast<int>(error.code);
-    PyErr_SetObject(type.ptr(), instance.ptr());
-    throw pybind11::error_already_set();
-}
+[[noreturn]] void raise_error(const sihd::util::Error & error);
 
 } // namespace sihd::py
 

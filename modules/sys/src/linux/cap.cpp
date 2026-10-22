@@ -3,13 +3,11 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
-// libcap is linux only: cap::supported is false elsewhere (android/emscripten/apple/bsd) and
-// every operation is a no-op.
+// libcap is linux only: cap::supported is false elsewhere and every operation is a no-op
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # define SIHD_CAPABILITIES_LIBCAP
 # include <sys/capability.h>
-// cross toolchains ship pre-5.8 kernel headers without the newest caps - the numbers are
-// frozen kernel ABI, define the missing ones
+// cross toolchains ship pre-5.8 kernel headers: define the missing caps (numbers are frozen kernel ABI)
 # if !defined(CAP_PERFMON)
 #  define CAP_PERFMON 38
 # endif
@@ -20,6 +18,8 @@
 #  define CAP_CHECKPOINT_RESTORE 40
 # endif
 #endif
+
+using namespace sihd::util;
 
 namespace sihd::sys
 {
@@ -122,7 +122,6 @@ std::optional<cap_value_t> to_cap_value(Cap cap)
     return std::nullopt;
 }
 
-// reads one flag out of a freshly loaded snapshot of the calling thread
 bool live_flag_set(Cap cap, cap_flag_t flag)
 {
     const auto value = to_cap_value(cap);
@@ -220,12 +219,12 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>())
 
 CapabilitySet::~CapabilitySet() = default;
 
-sihd::util::Result<void> CapabilitySet::refresh()
+Result<void> CapabilitySet::refresh()
 {
     _impl->clear();
     _impl->caps = cap_get_proc();
     if (_impl->caps == nullptr)
-        return std::unexpected(sihd::util::Error::from_errno("could not read the process capability set"));
+        return std::unexpected(Error::from_errno("could not read the process capability set"));
     return {};
 }
 
@@ -268,13 +267,12 @@ void CapabilitySet::drop_all()
         _impl->set_flag(cap, CAP_EFFECTIVE, false);
 }
 
-sihd::util::Result<void> CapabilitySet::apply()
+Result<void> CapabilitySet::apply()
 {
     if (_impl->caps == nullptr)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "capability set is not refreshed"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "capability set is not refreshed"));
     if (cap_set_proc(_impl->caps) != 0)
-        return std::unexpected(sihd::util::Error::from_errno("could not apply the process capability set"));
+        return std::unexpected(Error::from_errno("could not apply the process capability set"));
     return {};
 }
 
@@ -322,10 +320,9 @@ CapabilitySet::CapabilitySet(): _impl(std::make_unique<Impl>()) {}
 
 CapabilitySet::~CapabilitySet() = default;
 
-sihd::util::Result<void> CapabilitySet::refresh()
+Result<void> CapabilitySet::refresh()
 {
-    return std::unexpected(
-        sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "capabilities are not supported on this platform"));
 }
 
 bool CapabilitySet::is_enabled([[maybe_unused]] Cap cap) const
@@ -355,10 +352,9 @@ bool CapabilitySet::drop([[maybe_unused]] Cap cap)
 
 void CapabilitySet::drop_all() {}
 
-sihd::util::Result<void> CapabilitySet::apply()
+Result<void> CapabilitySet::apply()
 {
-    return std::unexpected(
-        sihd::util::Error(sihd::util::ErrorCode::not_supported, "capabilities are not supported on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "capabilities are not supported on this platform"));
 }
 
 #endif

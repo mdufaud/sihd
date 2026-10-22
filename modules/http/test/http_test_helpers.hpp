@@ -232,7 +232,6 @@ class SimpleHttpServer: public sihd::http::HttpServer,
     public:
         SimpleHttpServer(): HttpServer("http-server-test")
         {
-            // HttpServer protected call
             this->add_websocket("proto-two", this);
             _webservice = this->add_child<sihd::http::WebService>("web");
             this->setup_webservice_entry_points();
@@ -286,12 +285,10 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 sihd::http::HttpRequest::Put);
         }
 
-        // IWebsocketHandler
-
         void on_open([[maybe_unused]] std::string_view protocol) override
         {
             {
-                auto l = _ws_waitable.guard();
+                auto lock = _ws_waitable.guard();
                 ++_nopen;
             }
             _ws_waitable.notify_all();
@@ -300,7 +297,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         bool on_read([[maybe_unused]] const sihd::util::ArrChar & arr) override
         {
             {
-                auto l = _ws_waitable.guard();
+                auto lock = _ws_waitable.guard();
                 _client_wrote = true;
                 ++_nread;
             }
@@ -310,7 +307,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
 
         bool on_write(sihd::util::ArrChar & arr, sihd::http::WriteProtocol & protocol) override
         {
-            auto l = _ws_waitable.guard();
+            auto lock = _ws_waitable.guard();
             if (_client_wrote)
             {
                 ++_nwrite;
@@ -325,7 +322,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         void on_close() override
         {
             {
-                auto l = _ws_waitable.guard();
+                auto lock = _ws_waitable.guard();
                 ++_nclosed;
             }
             _ws_waitable.notify_all();
@@ -343,14 +340,12 @@ class SimpleHttpServer: public sihd::http::HttpServer,
             return _ws_waitable.wait_for(timeout, [this] { return _nclosed > 0; });
         }
 
-        // websocket
         sihd::util::Waitable _ws_waitable;
         int _nopen = 0;
         int _nread = 0;
         int _nwrite = 0;
         int _nclosed = 0;
         bool _client_wrote = false;
-        // webservice
         int _npost = 0;
         int _nput = 0;
         int _ndelete = 0;
@@ -449,10 +444,10 @@ class SimpleConnectProxy
             std::vector<char> tmp(65536);
             while (_running && src.is_open() && dst.is_open())
             {
-                auto n = src.receive(tmp.data(), tmp.size());
-                if (!n || n.value() == 0)
+                auto received = src.receive(tmp.data(), tmp.size());
+                if (!received || received.value() == 0)
                     break;
-                if (!dst.send_all(sihd::util::ArrCharView(tmp.data(), n.value())))
+                if (!dst.send_all(sihd::util::ArrCharView(tmp.data(), received.value())))
                     break;
             }
             (void)src.shutdown();
@@ -466,10 +461,10 @@ class SimpleConnectProxy
             std::vector<char> tmp(4096);
             while (buf.find("\r\n\r\n") == std::string::npos)
             {
-                auto n = client.receive(tmp.data(), tmp.size());
-                if (!n || n.value() == 0)
+                auto received = client.receive(tmp.data(), tmp.size());
+                if (!received || received.value() == 0)
                     return;
-                buf.append(tmp.data(), n.value());
+                buf.append(tmp.data(), received.value());
             }
 
             auto head_end = buf.find("\r\n\r\n");
@@ -692,7 +687,6 @@ class HeadCaptureServer
         sihd::util::Worker _worker;
 };
 
-// Minimal WebSocket client for automated testing
 class SimpleWsClient
 {
     public:
@@ -700,7 +694,6 @@ class SimpleWsClient
 
         bool connect(int port) { return _client.open_and_connect("127.0.0.1", port).has_value(); }
 
-        // Perform the HTTP -> WebSocket upgrade handshake.
         bool handshake(const char *protocol) { return this->upgrade("/", protocol) == switching_protocols; }
 
         std::string upgrade(std::string_view path,
@@ -740,7 +733,6 @@ class SimpleWsClient
 
         static constexpr std::string_view switching_protocols = "HTTP/1.1 101 Switching Protocols";
 
-        // Send a masked WebSocket text frame (len <= 125).
         bool send_text(std::string_view text)
         {
             std::vector<uint8_t> frame;
@@ -753,7 +745,6 @@ class SimpleWsClient
             return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size())).has_value();
         }
 
-        // Receive one unmasked text frame from the server.
         std::optional<std::string> recv_text()
         {
             std::array<uint8_t, 2> header;
@@ -779,7 +770,6 @@ class SimpleWsClient
             return payload;
         }
 
-        // Send a masked WebSocket close frame with no payload.
         void send_close()
         {
             constexpr std::array<uint8_t, 6> close_frame {0x88, 0x80, 0x00, 0x00, 0x00, 0x00};

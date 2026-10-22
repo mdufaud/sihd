@@ -1,11 +1,11 @@
 #include <algorithm>
+#include <array>
 #include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-// sihd headers first: Xlib poisons common identifiers (None, Status, True,
-// False, ...) with its macros.
+// sihd headers first: Xlib poisons common identifiers (None, Status, True, False) with macros
 #include <sihd/sys/keyboard.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -16,9 +16,7 @@
 #include <X11/extensions/XTest.h>
 #include <X11/keysym.h>
 
-// XTest fake key events over the live keymap: letters and keys map to their
-// keycode (shift column handled), characters the keymap cannot produce are
-// typed through keycodes temporarily remapped to their unicode keysym
+// characters the keymap cannot produce are typed through keycodes temporarily remapped to their unicode keysym
 
 using enum sihd::util::ErrorCode;
 
@@ -27,13 +25,12 @@ namespace sihd::sys::keyboard::x11
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::keyboard");
+SIHD_NEW_LOGGER("sihd::sys::keyboard::x11");
 
 namespace
 {
 
-// Keysyms indexed by Key, skipping Key::none.
-constexpr KeySym key_keysyms[] = {
+constexpr auto key_keysyms = std::to_array<KeySym>({
     XK_a,      XK_b,    XK_c,   XK_d,       XK_e,         XK_f,   XK_g,      XK_h,         XK_i,
     XK_j,      XK_k,    XK_l,   XK_m,       XK_n,         XK_o,   XK_p,      XK_q,         XK_r,
     XK_s,      XK_t,    XK_u,   XK_v,       XK_w,         XK_x,   XK_y,      XK_z,         XK_0,
@@ -41,12 +38,11 @@ constexpr KeySym key_keysyms[] = {
     XK_F1,     XK_F2,   XK_F3,  XK_F4,      XK_F5,        XK_F6,  XK_F7,     XK_F8,        XK_F9,
     XK_F10,    XK_F11,  XK_F12, XK_space,   XK_Return,    XK_Tab, XK_Escape, XK_BackSpace, XK_Delete,
     XK_Insert, XK_Home, XK_End, XK_Page_Up, XK_Page_Down, XK_Up,  XK_Down,   XK_Left,      XK_Right,
-};
+});
 
-constexpr KeySym modifier_keysyms[] = {XK_Shift_L, XK_Control_L, XK_Alt_L, XK_Super_L};
+constexpr auto modifier_keysyms = std::to_array<KeySym>({XK_Shift_L, XK_Control_L, XK_Alt_L, XK_Super_L});
 
-static_assert(sizeof(key_keysyms) / sizeof(key_keysyms[0]) == std::to_underlying(Key::right),
-              "the keysym table must cover every Key");
+static_assert(key_keysyms.size() == std::to_underlying(Key::right), "the keysym table must cover every Key");
 
 KeySym keysym_of(Key key)
 {
@@ -100,7 +96,6 @@ class Keymap
             return std::nullopt;
         }
 
-        // Remaps an unused keycode to `keysym` until the keymap dies.
         std::optional<KeyCode> remap(KeySym keysym)
         {
             if (_syms == nullptr)

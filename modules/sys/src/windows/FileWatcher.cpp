@@ -78,7 +78,7 @@ struct FileWatcher::Impl
         std::list<Watcher> _watchers;
 
         void init();
-        sihd::util::Result<void> add_watch(const std::string & path);
+        Result<void> add_watch(const std::string & path);
         bool rm_watch(const std::string & path);
         bool is_watching(const std::string & path);
         void terminate();
@@ -122,13 +122,12 @@ bool FileWatcher::Impl::rm_watch(const std::string & path)
 
 void FileWatcher::Impl::init() {}
 
-sihd::util::Result<void> FileWatcher::Impl::add_watch(const std::string & path)
+Result<void> FileWatcher::Impl::add_watch(const std::string & path)
 {
     if (this->is_watching(path))
         return {};
 
-    // ReadDirectoryChangesW only watches directories: when given a file, watch its
-    // parent directory and filter incoming events on the file name.
+    // ReadDirectoryChangesW only watches directories: for a file, watch its parent and filter on the file name
     std::string filename_filter;
     std::string dir_to_watch(path);
     const DWORD attributes = GetFileAttributesW(str::to_wstr(path).c_str());
@@ -150,8 +149,7 @@ sihd::util::Result<void> FileWatcher::Impl::add_watch(const std::string & path)
     if (handle == INVALID_HANDLE_VALUE)
         return std::unexpected(Error(io_error, "could not watch '{}': {}", path, os::last_error_str()));
 
-    // ReadDirectoryChangesW is asynchronous: the OVERLAPPED address must stay stable until completion.
-    // Watcher is stored first (std::list nodes never move) so the OS never writes into freed memory
+    // OVERLAPPED address must stay stable until completion: watcher is stored first (std::list nodes never move)
     Watcher & watcher = _watchers.emplace_back();
     watcher.path = std::string(path);
     watcher.filename_filter = std::move(filename_filter);
@@ -226,7 +224,6 @@ bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
                     break;
             }
 
-            // when watching a single file, drop events for the other entries of the parent directory
             if (!watcher.filename_filter.empty() && !str::iequals(fw_event.filename, watcher.filename_filter)
                 && !str::iequals(fw_event.old_filename, watcher.filename_filter))
                 add_event = false;
@@ -296,7 +293,7 @@ bool FileWatcher::run()
     return success;
 }
 
-sihd::util::Result<void> FileWatcher::watch(const std::string & path)
+Result<void> FileWatcher::watch(const std::string & path)
 {
     return _impl->add_watch(path);
 }

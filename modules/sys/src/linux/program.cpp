@@ -60,7 +60,7 @@ std::string path()
     return ".";
 }
 
-sihd::util::Result<void *> find_symbol([[maybe_unused]] const std::string & symbol_name)
+Result<void *> find_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(__SIHD_EMSCRIPTEN__)
     void *ret = dlsym(RTLD_DEFAULT, symbol_name.c_str());

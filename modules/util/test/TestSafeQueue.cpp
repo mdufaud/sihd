@@ -187,6 +187,7 @@ TEST_F(TestSafeQueue, test_safequeue_clear_releases_space)
     ready.wait();
     queue.clear();
     EXPECT_EQ(result.wait_for(std::chrono::seconds(1)), std::future_status::ready);
+
     queue.terminate();
     producer.join();
     EXPECT_TRUE(result.get());

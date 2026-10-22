@@ -1,22 +1,22 @@
 // Copyright 2021 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSED file.
-#include <cmath>   // for sin, cos
-#include <memory>  // for allocator, shared_ptr, __shared_ptr_access
-#include <string>  // for string, basic_string
-#include <utility> // for move
-#include <vector>  // for vector, __alloc_traits<>::value_type
+#include <cmath>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include <ftxui/dom/elements.hpp>  // for canvas, Element, separator, hbox, operator|, border
-#include <ftxui/screen/screen.hpp> // for Pixel
+#include <ftxui/dom/elements.hpp>
+#include <ftxui/screen/screen.hpp>
 
-#include "ftxui/component/component.hpp"          // for Renderer, CatchEvent, Horizontal, Menu, Tab
-#include "ftxui/component/component_base.hpp"     // for ComponentBase
-#include "ftxui/component/event.hpp"              // for Event
-#include "ftxui/component/mouse.hpp"              // for Mouse
-#include "ftxui/component/screen_interactive.hpp" // for ScreenInteractive
-#include "ftxui/dom/canvas.hpp"                   // for Canvas
-#include "ftxui/screen/color.hpp"                 // for Color, Color::Red, Color::Blue, Color::Green, ftxui
+#include "ftxui/component/component.hpp"
+#include "ftxui/component/component_base.hpp"
+#include "ftxui/component/event.hpp"
+#include "ftxui/component/mouse.hpp"
+#include "ftxui/component/screen_interactive.hpp"
+#include "ftxui/dom/canvas.hpp"
+#include "ftxui/screen/color.hpp"
 
 int main()
 {
@@ -25,106 +25,95 @@ int main()
     int mouse_x = 0;
     int mouse_y = 0;
 
-    // A triangle following the mouse, using braille characters.
     auto renderer_line_braille = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "Several lines (braille)");
-        c.DrawPointLine(mouse_x, mouse_y, 80, 10, Color::Red);
-        c.DrawPointLine(80, 10, 80, 40, Color::Blue);
-        c.DrawPointLine(80, 40, mouse_x, mouse_y, Color::Green);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "Several lines (braille)");
+        drawing.DrawPointLine(mouse_x, mouse_y, 80, 10, Color::Red);
+        drawing.DrawPointLine(80, 10, 80, 40, Color::Blue);
+        drawing.DrawPointLine(80, 40, mouse_x, mouse_y, Color::Green);
+        return canvas(std::move(drawing));
     });
 
-    // A triangle following the mouse, using block characters.
     auto renderer_line_block = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "Several lines (block)");
-        c.DrawBlockLine(mouse_x, mouse_y, 80, 10, Color::Red);
-        c.DrawBlockLine(80, 10, 80, 40, Color::Blue);
-        c.DrawBlockLine(80, 40, mouse_x, mouse_y, Color::Green);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "Several lines (block)");
+        drawing.DrawBlockLine(mouse_x, mouse_y, 80, 10, Color::Red);
+        drawing.DrawBlockLine(80, 10, 80, 40, Color::Blue);
+        drawing.DrawBlockLine(80, 40, mouse_x, mouse_y, Color::Green);
+        return canvas(std::move(drawing));
     });
 
-    // A circle following the mouse, using braille characters.
     auto renderer_circle_braille = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A circle (braille)");
-        c.DrawPointCircle(mouse_x, mouse_y, 30);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A circle (braille)");
+        drawing.DrawPointCircle(mouse_x, mouse_y, 30);
+        return canvas(std::move(drawing));
     });
 
-    // A circle following the mouse, using block characters.
     auto renderer_circle_block = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A circle (block)");
-        c.DrawBlockCircle(mouse_x, mouse_y, 30);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A circle (block)");
+        drawing.DrawBlockCircle(mouse_x, mouse_y, 30);
+        return canvas(std::move(drawing));
     });
 
-    // A filled circle following the mouse, using braille characters.
     auto renderer_circle_filled_braille = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A circle filled (braille)");
-        c.DrawPointCircleFilled(mouse_x, mouse_y, 30);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A circle filled (braille)");
+        drawing.DrawPointCircleFilled(mouse_x, mouse_y, 30);
+        return canvas(std::move(drawing));
     });
 
-    // A filled circle following the mouse, using block characters.
     auto renderer_circle_filled_block = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A circle filled (block)");
-        c.DrawBlockCircleFilled(mouse_x, mouse_y, 30);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A circle filled (block)");
+        drawing.DrawBlockCircleFilled(mouse_x, mouse_y, 30);
+        return canvas(std::move(drawing));
     });
 
-    // An ellipse following the mouse, using braille characters.
     auto renderer_ellipse_braille = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "An ellipse (braille)");
-        c.DrawPointEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "An ellipse (braille)");
+        drawing.DrawPointEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
+        return canvas(std::move(drawing));
     });
 
-    // An ellipse following the mouse, using block characters.
     auto renderer_ellipse_block = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "An ellipse (block)");
-        c.DrawBlockEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "An ellipse (block)");
+        drawing.DrawBlockEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
+        return canvas(std::move(drawing));
     });
 
-    // An ellipse following the mouse filled, using braille characters.
     auto renderer_ellipse_filled_braille = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A filled ellipse (braille)");
-        c.DrawPointEllipseFilled(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A filled ellipse (braille)");
+        drawing.DrawPointEllipseFilled(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
+        return canvas(std::move(drawing));
     });
 
-    // An ellipse following the mouse filled, using block characters.
     auto renderer_ellipse_filled_block = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A filled ellipse (block)");
-        c.DrawBlockEllipseFilled(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
-        c.DrawBlockEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
-        return canvas(std::move(c));
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A filled ellipse (block)");
+        drawing.DrawBlockEllipseFilled(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
+        drawing.DrawBlockEllipse(mouse_x / 2, mouse_y / 2, mouse_x / 2, mouse_y / 2);
+        return canvas(std::move(drawing));
     });
 
-    // A text following the mouse
     auto renderer_text = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A piece of text");
-        c.DrawText(mouse_x, mouse_y, "This is a piece of text with effects", [](Pixel & p) {
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A piece of text");
+        drawing.DrawText(mouse_x, mouse_y, "This is a piece of text with effects", [](Pixel & p) {
             p.foreground_color = Color::Red;
             p.underlined = true;
             p.bold = true;
         });
-        return canvas(std::move(c));
+        return canvas(std::move(drawing));
     });
 
     auto renderer_plot_1 = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A graph");
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A graph");
 
         std::vector<int> ys(100);
         for (int x = 0; x < 100; x++)
@@ -134,33 +123,30 @@ int main()
             ys[x] = int(dy + 20 * cos(dx * 0.14) + 10 * sin(dx * 0.42));
         }
         for (int x = 1; x < 99; x++)
-            c.DrawPointLine(x, ys[x], x + 1, ys[x + 1]);
+            drawing.DrawPointLine(x, ys[x], x + 1, ys[x + 1]);
 
-        return canvas(std::move(c));
+        return canvas(std::move(drawing));
     });
 
     auto renderer_plot_2 = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A symmetrical graph filled");
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A symmetrical graph filled");
         std::vector<int> ys(100);
         for (int x = 0; x < 100; x++)
         {
-            ys[x] = int(30 +                                 //
-                        10 * cos(x * 0.2 - mouse_x * 0.05) + //
-                        5 * sin(x * 0.4) +                   //
-                        5 * sin(x * 0.3 - mouse_y * 0.05));  //
+            ys[x] = int(30 + 10 * cos(x * 0.2 - mouse_x * 0.05) + 5 * sin(x * 0.4) + 5 * sin(x * 0.3 - mouse_y * 0.05));
         }
         for (int x = 0; x < 100; x++)
         {
-            c.DrawPointLine(x, 50 + ys[x], x, 50 - ys[x], Color::Red);
+            drawing.DrawPointLine(x, 50 + ys[x], x, 50 - ys[x], Color::Red);
         }
 
-        return canvas(std::move(c));
+        return canvas(std::move(drawing));
     });
 
     auto renderer_plot_3 = Renderer([&] {
-        auto c = Canvas(100, 100);
-        c.DrawText(0, 0, "A 2D gaussian plot");
+        auto drawing = Canvas(100, 100);
+        drawing.DrawText(0, 0, "A 2D gaussian plot");
         int size = 15;
 
         // mouse_x = 5mx + 3*my
@@ -183,22 +169,22 @@ int main()
             {
                 if (x != 0)
                 {
-                    c.DrawPointLine(5 * (x - 1) + 3 * (y - 0),
-                                    90 - 5 * (y - 0) - 5 * ys[y][x - 1],
-                                    5 * (x - 0) + 3 * (y - 0),
-                                    90 - 5 * (y - 0) - 5 * ys[y][x]);
+                    drawing.DrawPointLine(5 * (x - 1) + 3 * (y - 0),
+                                          90 - 5 * (y - 0) - 5 * ys[y][x - 1],
+                                          5 * (x - 0) + 3 * (y - 0),
+                                          90 - 5 * (y - 0) - 5 * ys[y][x]);
                 }
                 if (y != 0)
                 {
-                    c.DrawPointLine(5 * (x - 0) + 3 * (y - 1),
-                                    90 - 5 * (y - 1) - 5 * ys[y - 1][x],
-                                    5 * (x - 0) + 3 * (y - 0),
-                                    90 - 5 * (y - 0) - 5 * ys[y][x]);
+                    drawing.DrawPointLine(5 * (x - 0) + 3 * (y - 1),
+                                          90 - 5 * (y - 1) - 5 * ys[y - 1][x],
+                                          5 * (x - 0) + 3 * (y - 0),
+                                          90 - 5 * (y - 0) - 5 * ys[y][x]);
                 }
             }
         }
 
-        return canvas(std::move(c));
+        return canvas(std::move(drawing));
     });
 
     int selected_tab = 12;
@@ -223,7 +209,6 @@ int main()
         },
         &selected_tab);
 
-    // This capture the last mouse position.
     auto tab_with_mouse = CatchEvent(tab, [&](Event e) {
         if (e.is_mouse())
         {
@@ -256,7 +241,6 @@ int main()
         tab_toggle,
     });
 
-    // Add some separator to decorate the whole component:
     auto component_renderer = Renderer(component, [&] {
         return hbox({
                    tab_with_mouse->Render(),

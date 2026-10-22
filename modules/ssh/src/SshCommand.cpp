@@ -21,20 +21,25 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
+namespace
+{
+
+struct CommandStatus
+{
+        int exit_status;
+        bool core_dumped;
+        std::string signal_str;
+        std::optional<Error> exit_error;
+};
+
+} // namespace
+
 struct SshCommand::Impl
 {
-        struct CommandStatus
-        {
-                int exit_status;
-                bool core_dumped;
-                std::string signal_str;
-                std::optional<Error> exit_error;
-        };
-
         ssh_session_struct *ssh_session_ptr;
         std::unique_ptr<struct ssh_channel_callbacks_struct> ssh_callbacks_ptr;
         SshChannel channel;
-        sihd::util::Waitable waitable;
+        Waitable waitable;
         CommandStatus command_status;
         SshCommand *parent;
         bool stop;
@@ -69,7 +74,7 @@ struct SshCommand::Impl
         void callback_exit_status(int exit_status)
         {
             {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 command_status.exit_status = exit_status;
             }
             waitable.notify_all();
@@ -78,7 +83,7 @@ struct SshCommand::Impl
         void callback_exit_signal(const char *signal, int core, const char *errmsg)
         {
             {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 command_status.signal_str = signal;
                 command_status.core_dumped = core != 0;
                 command_status.exit_error = Error(unknown,
@@ -139,7 +144,7 @@ SshCommand::SshCommand(void *session):
 SshCommand::~SshCommand()
 {
     {
-        auto l = _impl->waitable.guard();
+        auto lock = _impl->waitable.guard();
         _impl->stop = true;
     }
     _impl->waitable.notify_all();
@@ -150,14 +155,14 @@ SshChannel & SshCommand::channel()
     return _impl->channel;
 }
 
-sihd::util::Result<void> SshCommand::execute(const std::string & cmd)
+Result<void> SshCommand::execute(const std::string & cmd)
 {
     if (auto res = this->execute_async(cmd); !res)
         return res;
     return this->wait();
 }
 
-sihd::util::Result<void> SshCommand::execute_async(const std::string & cmd)
+Result<void> SshCommand::execute_async(const std::string & cmd)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl->ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -170,12 +175,14 @@ sihd::util::Result<void> SshCommand::execute_async(const std::string & cmd)
         _impl->channel.clear_channel();
         return res;
     }
+
     memset(_impl->ssh_callbacks_ptr.get(), 0, sizeof(struct ssh_channel_callbacks_struct));
     _impl->ssh_callbacks_ptr->userdata = (void *)_impl.get();
     _impl->ssh_callbacks_ptr->channel_data_function = Impl::ssh_command_channel_data_callback;
     _impl->ssh_callbacks_ptr->channel_exit_signal_function = Impl::ssh_command_exit_signal_callback;
     _impl->ssh_callbacks_ptr->channel_exit_status_function = Impl::ssh_command_exit_status_callback;
     ssh_callbacks_init(_impl->ssh_callbacks_ptr.get());
+
     if (ssh_set_channel_callbacks(static_cast<ssh_channel>(_impl->channel.channel()), _impl->ssh_callbacks_ptr.get())
         != SSH_OK)
     {
@@ -185,6 +192,7 @@ sihd::util::Result<void> SshCommand::execute_async(const std::string & cmd)
                                      ssh_error_str(_impl->ssh_session_ptr)));
     }
     _impl->reset_command_status();
+
     if (auto res = _impl->channel.request_exec(cmd); !res)
     {
         _impl->channel.clear_channel();
@@ -194,31 +202,29 @@ sihd::util::Result<void> SshCommand::execute_async(const std::string & cmd)
     return {};
 }
 
-sihd::util::Result<void> SshCommand::wait(sihd::util::Duration timeout_nano,
-                                          sihd::util::time::UnixTime milliseconds_poll_time)
+Result<void> SshCommand::wait(Duration timeout_nano, time::UnixTime milliseconds_poll_time)
 {
     if (_impl->channel.is_open() == false)
         return {};
-    int r = 0;
+    int exit_status = 0;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(timeout_nano);
-    while (_impl->stop == false && (r = _impl->channel.exit_status()) == -1)
+    while (_impl->stop == false && (exit_status = _impl->channel.exit_status()) == -1)
     {
         if (timeout_nano > 0 && std::chrono::steady_clock::now() >= deadline)
             break;
-        _impl->waitable.wait_for(sihd::util::Duration(sihd::util::time::milliseconds(milliseconds_poll_time)),
-                                 [this] { return _impl->stop; });
+        _impl->waitable.wait_for(Duration(time::milliseconds(milliseconds_poll_time)), [this] { return _impl->stop; });
     }
-    if (r == -1 && !_impl->command_status.exit_error)
+    if (exit_status == -1 && !_impl->command_status.exit_error)
         return std::unexpected(
             Error(_impl->stop ? interrupted : timeout, "could not wait for command: no exit status"));
     _impl->channel.clear_channel();
     // a valid exit status wins over a signal packet from a non compliant server
-    if (r == -1)
+    if (exit_status == -1)
         return std::unexpected(std::move(*_impl->command_status.exit_error));
     return {};
 }
 
-sihd::util::Result<void> SshCommand::input(sihd::util::ArrCharView view)
+Result<void> SshCommand::input(ArrCharView view)
 {
     if (_impl->channel.is_open() == false)
         return std::unexpected(Error(closed, "could not write command input: channel is not open"));

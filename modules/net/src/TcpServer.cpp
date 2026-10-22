@@ -16,7 +16,7 @@ SIHD_REGISTER_FACTORY(TcpServer)
 
 SIHD_LOGGER;
 
-TcpServer::TcpServer(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+TcpServer::TcpServer(const std::string & name, Node *parent): Named(name, parent)
 {
     _server_handler_ptr = nullptr;
     _poll.set_service_wait_stop(true);
@@ -59,17 +59,17 @@ bool TcpServer::set_poll_timeout(int milliseconds)
     return _poll.set_timeout(milliseconds);
 }
 
-sihd::util::Result<void> TcpServer::open_socket_unix()
+Result<void> TcpServer::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
-sihd::util::Result<void> TcpServer::open_socket(bool ipv6)
+Result<void> TcpServer::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (res)
     {
@@ -82,12 +82,22 @@ sihd::util::Result<void> TcpServer::open_socket(bool ipv6)
     return res;
 }
 
-sihd::util::Result<void> TcpServer::bind(const IpAddr & addr)
+bool TcpServer::socket_opened()
+{
+    return _socket.is_open();
+}
+
+Result<void> TcpServer::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-sihd::util::Result<void> TcpServer::open_and_bind(const IpAddr & ip)
+Result<void> TcpServer::bind_unix(std::string_view path)
+{
+    return _socket.bind_unix(path);
+}
+
+Result<void> TcpServer::open_and_bind(const IpAddr & ip)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -95,7 +105,7 @@ sihd::util::Result<void> TcpServer::open_and_bind(const IpAddr & ip)
     return this->bind(ip);
 }
 
-sihd::util::Result<void> TcpServer::open_and_bind(std::string_view ip, int port)
+Result<void> TcpServer::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -104,7 +114,7 @@ sihd::util::Result<void> TcpServer::open_and_bind(std::string_view ip, int port)
     return this->bind(addr);
 }
 
-sihd::util::Result<void> TcpServer::open_unix_and_bind(std::string_view path)
+Result<void> TcpServer::open_unix_and_bind(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -112,7 +122,7 @@ sihd::util::Result<void> TcpServer::open_unix_and_bind(std::string_view path)
     return this->bind_unix(path);
 }
 
-sihd::util::Result<void> TcpServer::close()
+Result<void> TcpServer::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
@@ -123,13 +133,23 @@ void TcpServer::set_server_handler(INetServerHandler *handler)
     _server_handler_ptr = handler;
 }
 
+const Socket & TcpServer::socket() const
+{
+    return _socket;
+}
+
+size_t TcpServer::queue_size() const
+{
+    return _queue_size;
+}
+
 void TcpServer::_setup_poll()
 {
     _poll.clear_fds();
     _poll.set_read_fd(_socket.socket());
 }
 
-sihd::util::Result<int> TcpServer::accept_client(IpAddr *client_ip, int timeout_ms)
+Result<int> TcpServer::accept_client(IpAddr *client_ip, int timeout_ms)
 {
     if (client_ip != nullptr)
         return _socket.accept(*client_ip, timeout_ms);
@@ -158,24 +178,19 @@ bool TcpServer::remove_client_write(int socket)
 
 bool TcpServer::on_start()
 {
-    bool ret = _poll.is_running();
-    if (ret == false)
+    if (_poll.is_running())
+        return true;
+
+    this->_setup_poll();
+    if (_server_handler_ptr == nullptr)
     {
-        this->_setup_poll();
-        if ((ret = _server_handler_ptr != nullptr))
-        {
-            if ((ret = !SIHD_UNEXPECTED_LOG(_socket.listen(this->queue_size()))))
-            {
-                this->service_set_ready();
-                ret = _poll.start();
-            }
-        }
-        else
-        {
-            SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
-        }
+        SIHD_LOG(error, "TcpServer: cannot serve without a server handler");
+        return false;
     }
-    return ret;
+    if (SIHD_UNEXPECTED_LOG(_socket.listen(this->queue_size())))
+        return false;
+    this->service_set_ready();
+    return _poll.start();
 }
 
 bool TcpServer::on_stop()
@@ -191,6 +206,7 @@ void TcpServer::handle(sihd::sys::Poll *poll)
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());
     else
         _server_handler_ptr->handle_activity(this, poll->polling_time());
+
     auto events = poll->events();
     for (const auto & event : events)
     {
@@ -211,6 +227,7 @@ void TcpServer::handle(sihd::sys::Poll *poll)
             // wine's WSAPoll reports a FIN as POLLHUP without POLLIN: the read must still run
             if (event.readable || event.closed || event.error)
                 _server_handler_ptr->handle_client_read(this, event.fd);
+
             // writable is served even when readable: a POLLIN flood would starve a pending write
             if (event.writable)
                 _server_handler_ptr->handle_client_write(this, event.fd);

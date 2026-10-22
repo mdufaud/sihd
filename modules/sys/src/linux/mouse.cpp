@@ -1,12 +1,10 @@
+#include "wayland/mouse.hpp"
+
 #include <sihd/sys/mouse.hpp>
 #include <sihd/util/Logger.hpp>
 
-// The x11 and wayland backends live under src/linux/{x11,wayland}/ as compile-time
-// opts (inline no-ops when off); the session-matching backend dispatches first.
-
 #include "internal/desktop_env.hpp"
 #include "internal/dispatch.hpp"
-#include "wayland/mouse.hpp"
 #include "x11/mouse.hpp"
 
 using sihd::sys::internal::try_first;

@@ -38,8 +38,6 @@ std::vector<PcapAddress> make_addresses(const struct pcap_addr *pcap_addr_ptr)
 
 } // namespace
 
-// PcapInterfaces
-
 struct PcapInterfaces::Impl
 {
         int code {0};
@@ -113,8 +111,6 @@ std::string PcapInterfaces::status()
     return utils::status_str(_impl_ptr->code);
 }
 
-// PcapIFace
-
 PcapIFace::PcapIFace(std::string name, std::string description, uint32_t flags, std::vector<PcapAddress> addresses):
     _name(std::move(name)),
     _description(std::move(description)),
@@ -138,6 +134,7 @@ std::string PcapIFace::dump() const
         ret += " - ";
         ret += _description;
     }
+
     ret += " (";
     if (this->loopback())
         ret += "loopback, ";
@@ -156,6 +153,7 @@ std::string PcapIFace::dump() const
     }
     else
         ret += "no_connect, ";
+
     ret += std::to_string(_addresses.size()) + " addresses)";
     return ret;
 }

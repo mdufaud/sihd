@@ -7,7 +7,7 @@
 #include <sihd/util/Result.hpp>
 
 #if defined(__SIHD_WINDOWS__)
-typedef void (*sighandler_t)(int);
+using sighandler_t = void (*)(int);
 #endif
 
 using namespace sihd::util;
@@ -28,7 +28,7 @@ SigHandler::~SigHandler()
     (void)this->unhandle();
 }
 
-sihd::util::Result<void> SigHandler::handle(int sig)
+Result<void> SigHandler::handle(int sig)
 {
     auto unhandled = this->unhandle();
     if (!unhandled)
@@ -45,7 +45,7 @@ sihd::util::Result<void> SigHandler::handle(int sig)
     return handled;
 }
 
-sihd::util::Result<void> SigHandler::unhandle()
+Result<void> SigHandler::unhandle()
 {
     if (this->is_handling() == false)
     {

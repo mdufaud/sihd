@@ -1,8 +1,6 @@
 #ifndef __SIHD_NET_TLSCONNECTION_HPP__
 #define __SIHD_NET_TLSCONNECTION_HPP__
 
-#include <sys/types.h>
-
 #include <cstddef>
 #include <memory>
 #include <string_view>
@@ -36,7 +34,7 @@ class TlsConnection
         TlsConnection(const TlsConnection &) = delete;
         TlsConnection & operator=(const TlsConnection &) = delete;
 
-        operator bool() const { return _handle != nullptr; }
+        operator bool() const;
 
         sihd::util::Result<void> init(sihd::crypto::TlsContext & ctx, Socket & socket);
         // between init and connect
@@ -59,7 +57,7 @@ class TlsConnection
         sihd::util::Result<void> shutdown() const;
         void clear();
 
-        void *native() const { return _handle.get(); }
+        void *native() const;
 
     private:
         struct SslFree

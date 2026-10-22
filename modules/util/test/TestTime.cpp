@@ -13,9 +13,9 @@ using namespace sihd::util;
 class TestTime: public ::testing::Test
 {
     protected:
-        TestTime() { sihd::util::LoggerManager::stream(); }
+        TestTime() { LoggerManager::stream(); }
 
-        virtual ~TestTime() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestTime() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -113,6 +113,7 @@ TEST_F(TestTime, test_time_integer_precision)
     EXPECT_EQ(time::ts(ts), nano);
     EXPECT_EQ(time::nano_tv(time::to_nano_tv(nano)), nano);
     const auto negative = time::to_ts(-500000000);
+
     EXPECT_EQ(negative.tv_sec, -1);
     EXPECT_EQ(negative.tv_nsec, 500000000);
     EXPECT_EQ(time::ts(negative), -500000000);

@@ -35,7 +35,7 @@ LogFormatter::LogFormatter()
     (void)this->set_pattern(default_pattern);
 }
 
-sihd::util::Result<void> LogFormatter::set_pattern(std::string_view pattern)
+Result<void> LogFormatter::set_pattern(std::string_view pattern)
 {
     TokenPattern compiled;
     if (auto res = compiled.compile(pattern); res.has_value() == false)
@@ -58,6 +58,7 @@ sihd::util::Result<void> LogFormatter::set_pattern(std::string_view pattern)
             const bool time_field = *kind == Token::Kind::time_local || *kind == Token::Kind::time_utc;
             const bool spec_ok = token.raw_spec.empty()
                                  || (time_field ? token.raw_spec.find('%') != std::string_view::npos : token.classical);
+
             if (spec_ok == false)
                 return std::unexpected(Error(ErrorCode::invalid_argument,
                                              "invalid spec '{}' for '{}' at {}",
@@ -97,6 +98,7 @@ std::string LogFormatter::format(const LogInfo & info, std::string_view msg) con
             case Token::Kind::level:
                 TokenPattern::append(out, info.strlevel, token.options);
                 break;
+
             case Token::Kind::thread_name:
                 TokenPattern::append(out, info.thread_name, token.options);
                 break;
@@ -109,6 +111,7 @@ std::string LogFormatter::format(const LogInfo & info, std::string_view msg) con
                 char buf[40];
                 char *end = std::to_chars(buf, buf + sizeof(buf), info.timespec.tv_sec).ptr;
                 *end++ = '.';
+
                 char nsec_digits[16];
                 const char *
                     nsec_end = std::to_chars(nsec_digits, nsec_digits + sizeof(nsec_digits), info.timespec.tv_nsec).ptr;

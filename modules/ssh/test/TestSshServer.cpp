@@ -29,9 +29,9 @@ using namespace sihd::sys;
 class TestSshServer: public ::testing::Test
 {
     protected:
-        TestSshServer() { sihd::util::LoggerManager::stream(); }
+        TestSshServer() { LoggerManager::stream(); }
 
-        virtual ~TestSshServer() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSshServer() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -59,7 +59,6 @@ TEST_F(TestSshServer, test_password_auth_failure)
     int port = server.get_port();
     ASSERT_GT(port, 0);
 
-    // Client connects
     SshSession client;
     ASSERT_TRUE(client.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());
@@ -108,7 +107,6 @@ TEST_F(TestSshServer, test_server_issue_banner)
     auto auth = client.auth_password("testpass");
     EXPECT_TRUE(auth.success());
 
-    // The pre-auth issue banner is captured during authentication
     EXPECT_EQ(client.get_banner(), "Welcome to SIHD SSH\n");
 
     client.disconnect();
@@ -119,7 +117,6 @@ TEST_F(TestSshServer, test_server_issue_banner)
 
 TEST_F(TestSshServer, test_pubkey_auth_success)
 {
-    // Read public key to add to allowed keys
     SshKey client_pubkey;
     ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
     std::string pubkey_base64 = client_pubkey.base64();
@@ -144,7 +141,6 @@ TEST_F(TestSshServer, test_pubkey_auth_success)
     int port = server.get_port();
     ASSERT_GT(port, 0);
 
-    // Client connects with pubkey auth
     SshSession client;
     ASSERT_TRUE(client.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());
@@ -184,14 +180,12 @@ TEST_F(TestSshServer, test_multiple_sessions)
     int port = server.get_port();
     ASSERT_GT(port, 0);
 
-    // First client
     SshSession client1;
     ASSERT_TRUE(client1.fast_connect({.user = "user1", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());
     auto auth1 = client1.auth_password("pass1");
     ASSERT_TRUE(auth1.success());
 
-    // Second client
     SshSession client2;
     ASSERT_TRUE(client2.fast_connect({.user = "user2", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());
@@ -222,7 +216,6 @@ TEST_F(TestSshServer, test_custom_auth_callback)
     SshServer server("test-ssh-server");
     BasicSshServerHandler handler;
 
-    // Use custom callback instead of user list
     handler.set_auth_password_callback([](SshSession *, std::string_view user, std::string_view password) -> bool {
         SIHD_LOG(info, "Custom auth callback: user={}, pass={}", user, password);
         return user == "dynamic" && password == "secret";
@@ -241,7 +234,6 @@ TEST_F(TestSshServer, test_custom_auth_callback)
     int port = server.get_port();
     ASSERT_GT(port, 0);
 
-    // Client connects with dynamic credentials
     SshSession client;
     ASSERT_TRUE(client.fast_connect({.user = "dynamic", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());

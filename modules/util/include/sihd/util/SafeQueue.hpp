@@ -38,7 +38,7 @@ class SafeQueue
         {
             bool wake_consumers;
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 if (_terminated)
                     return false;
                 if (max_size != 0 && _queue.size() >= max_size)
@@ -57,7 +57,7 @@ class SafeQueue
         {
             std::optional<T> ret;
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 if (_queue.empty())
                     return std::nullopt;
                 ret.emplace(std::move(_queue.front()));
@@ -69,12 +69,12 @@ class SafeQueue
 
         sihd::util::Result<T> pop()
         {
-            auto l = _waitable.wait_guard([this] { return _terminated || _queue.empty() == false; });
+            auto lock = _waitable.wait_guard([this] { return _terminated || _queue.empty() == false; });
             if (_queue.empty())
                 return std::unexpected(Error(ErrorCode::closed, "queue is closed and drained"));
             T ret = std::move(_queue.front());
             _queue.pop();
-            l.unlock();
+            lock.unlock();
             _waitable.notify_all();
             return ret;
         }
@@ -89,14 +89,14 @@ class SafeQueue
 
         bool wait_for_space(size_t max_size) const
         {
-            auto l = _waitable.wait_guard([this, max_size] { return _terminated || _queue.size() < max_size; });
+            auto lock = _waitable.wait_guard([this, max_size] { return _terminated || _queue.size() < max_size; });
             return _queue.size() < max_size;
         }
 
         void terminate()
         {
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 _terminated = true;
             }
             _waitable.notify_all();
@@ -104,13 +104,13 @@ class SafeQueue
 
         T front() const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             return _queue.front();
         }
 
         T back() const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             return _queue.back();
         }
 
@@ -118,7 +118,7 @@ class SafeQueue
         template <typename Visit>
         bool peek_front(Visit visit) const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             if (_queue.empty())
                 return false;
             visit(_queue.front());
@@ -128,7 +128,7 @@ class SafeQueue
         template <typename Visit>
         bool peek_back(Visit visit) const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             if (_queue.empty())
                 return false;
             visit(_queue.back());
@@ -137,7 +137,7 @@ class SafeQueue
 
         size_t size() const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             return _queue.size();
         }
 
@@ -146,7 +146,7 @@ class SafeQueue
         void clear()
         {
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 _queue = {};
             }
             _waitable.notify_all();

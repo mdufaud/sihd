@@ -30,14 +30,12 @@ namespace sihd::lua
 {
 
 using namespace sihd::http;
-using sihd::util::Node;
-using sihd::util::SmartNodePtr;
+using namespace sihd::util;
 SIHD_LOGGER;
 
 namespace
 {
 
-// status + content + headers, shared by every response conversion
 luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::string content, const HttpHeader & header)
 {
     luabridge::LuaRef table = luabridge::newTable(state);
@@ -49,7 +47,7 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
     {
         // stored names carry their ':' separator, callers expect the plain name
         std::string_view key = name;
-        if (sihd::util::str::ends_with(key, ":"))
+        if (str::ends_with(key, ":"))
             key.remove_suffix(1);
         headers[std::string(key)] = value;
     }
@@ -60,7 +58,7 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
 
 // Marshals a NavigatorResponse to a Lua table so scripts never touch the move-only C++ type;
 // returns nil on failure, the error logged once here at the lua nil boundary
-luabridge::LuaRef response_to_lua(lua_State *state, sihd::util::Result<NavigatorResponse> && resp)
+luabridge::LuaRef response_to_lua(lua_State *state, Result<NavigatorResponse> && resp)
 {
     if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());
@@ -85,7 +83,7 @@ luabridge::LuaRef response_to_lua(lua_State *state, sihd::util::Result<Navigator
     return table;
 }
 
-luabridge::LuaRef http_response_to_lua(lua_State *state, sihd::util::Result<HttpResponse> && resp)
+luabridge::LuaRef http_response_to_lua(lua_State *state, Result<HttpResponse> && resp)
 {
     if (SIHD_UNEXPECTED_LOG(resp))
         return luabridge::LuaRef(state, luabridge::LuaNil());
@@ -158,7 +156,6 @@ void LuaHttpApi::load_base(Vm & vm)
         .beginNamespace("http")
         .beginClass<Navigator>("Navigator")
         .addConstructor<void (*)()>()
-        // HTTP methods (return a response table or nil)
         .addFunction(
             "get",
             +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
@@ -204,7 +201,6 @@ void LuaHttpApi::load_base(Vm & vm)
             +[](Navigator *self, const std::string & url, const std::string & path, lua_State *state)
                 -> luabridge::LuaRef { return response_to_lua(state, self->put_file(url, path)); })
         .addFunction("new_connection_count", &Navigator::new_connection_count)
-        // configuration
         .addFunction("set_verbose", &Navigator::set_verbose)
         .addFunction("set_follow_redirects", &Navigator::set_follow_redirects)
         .addFunction("set_max_redirects", &Navigator::set_max_redirects)
@@ -230,7 +226,6 @@ void LuaHttpApi::load_base(Vm & vm)
                 self->set_max_response_size(static_cast<size_t>(bytes));
             })
         .addFunction("set_ssrf_guard", &Navigator::set_ssrf_guard)
-        // authentication
         .addFunction(
             "set_basic_auth",
             +[](Navigator *self, const std::string & user, const std::string & password) {
@@ -245,7 +240,6 @@ void LuaHttpApi::load_base(Vm & vm)
             "set_token_auth",
             +[](Navigator *self, const std::string & token) { self->set_token_auth(token); })
         .addFunction("clear_auth", &Navigator::clear_auth)
-        // persistent headers
         .addFunction(
             "set_header",
             +[](Navigator *self, const std::string & name, const std::string & value) {
@@ -255,7 +249,6 @@ void LuaHttpApi::load_base(Vm & vm)
             "remove_header",
             +[](Navigator *self, const std::string & name) { self->remove_header(name); })
         .addFunction("clear_headers", &Navigator::clear_headers)
-        // cookies
         .addFunction(
             "cookies",
             +[](Navigator *self, lua_State *state) -> luabridge::LuaRef {
@@ -278,7 +271,6 @@ void LuaHttpApi::load_base(Vm & vm)
         .addFunction(
             "load_cookies",
             +[](Navigator *self, const std::string & path) { return self->load_cookies(path).has_value(); })
-        // proxy
         .addFunction(
             "set_proxy",
             +[](Navigator *self, const std::string & url, luabridge::LuaRef type) {
@@ -291,7 +283,6 @@ void LuaHttpApi::load_base(Vm & vm)
             })
         .addFunction("clear_proxy", &Navigator::clear_proxy)
         .endClass()
-        // stateless helpers, one connection per call, options in RequestOptions
         .addFunction(
             "get",
             +[](const std::string & url, lua_State *state) -> luabridge::LuaRef {
@@ -388,7 +379,6 @@ void LuaHttpApi::load_base(Vm & vm)
             "set_multipart",
             +[](RequestOptions *self, const Multipart & multipart) { self->multipart = multipart; })
         .endClass()
-        // --- server side ---
         .beginClass<HttpRequest>("HttpRequest")
         .addFunction(
             "type_str",
@@ -410,25 +400,25 @@ void LuaHttpApi::load_base(Vm & vm)
         .addFunction(
             "path_param",
             +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                auto v = self->path_param(name);
-                if (v.has_value())
-                    return luabridge::LuaRef(state, std::string(*v));
+                auto value = self->path_param(name);
+                if (value.has_value())
+                    return luabridge::LuaRef(state, std::string(*value));
                 return luabridge::LuaRef(state, luabridge::LuaNil());
             })
         .addFunction(
             "query_param",
             +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                auto v = self->query_param(name);
-                if (v.has_value())
-                    return luabridge::LuaRef(state, std::string(*v));
+                auto value = self->query_param(name);
+                if (value.has_value())
+                    return luabridge::LuaRef(state, std::string(*value));
                 return luabridge::LuaRef(state, luabridge::LuaNil());
             })
         .addFunction(
             "cookie",
             +[](HttpRequest *self, const std::string & name, lua_State *state) -> luabridge::LuaRef {
-                auto v = self->cookie(name);
-                if (v.has_value())
-                    return luabridge::LuaRef(state, std::string(*v));
+                auto value = self->cookie(name);
+                if (value.has_value())
+                    return luabridge::LuaRef(state, std::string(*value));
                 return luabridge::LuaRef(state, luabridge::LuaNil());
             })
         .addFunction("has_multipart", &HttpRequest::has_multipart)

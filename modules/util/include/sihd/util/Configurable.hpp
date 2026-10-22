@@ -79,7 +79,6 @@ class Configurable
 
         sihd::util::Result<void> set_conf_str(const std::string & name, const char *param);
 
-        // Json-based configuration
         sihd::util::Result<void> set_conf(const sihd::json::Json & json);
         sihd::util::Result<void> set_conf(const std::string & key, const sihd::json::Json & val);
 

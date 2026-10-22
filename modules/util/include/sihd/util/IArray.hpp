@@ -17,8 +17,6 @@ class IArray
     public:
         virtual ~IArray() = default;
 
-        // informations
-
         virtual uint8_t *buf() = 0;
         virtual const uint8_t *buf() const = 0;
         virtual size_t byte_index(size_t index) const = 0;
@@ -33,53 +31,34 @@ class IArray
 
         virtual IArray *clone_array() const = 0;
 
-        // data type checking
-
         virtual bool is_same_type(const IArray & arr) const = 0;
         virtual bool is_same_type(const IArrayView & arr) const = 0;
         virtual Type data_type() const = 0;
         virtual const char *data_type_str() const = 0;
 
-        // comparison
-
         virtual bool is_bytes_equal(const IArray & arr, Slice byte_slice = {}) const = 0;
         virtual bool is_bytes_equal(const IArrayView & arr, Slice byte_slice = {}) const = 0;
         virtual bool is_bytes_equal(const void *buf, size_t buf_byte_size, Slice byte_slice = {}) const = 0;
-
-        // create new internal buffer
 
         virtual bool from_bytes(const IArray & arr) = 0;
         virtual bool from_bytes(const IArrayView & arr) = 0;
         virtual bool from_bytes(const void *buf, size_t buf_byte_size) = 0;
         virtual bool from_str(std::string_view data, std::string_view delimiters) = 0;
 
-        // copy data to internal buffer
-
         virtual bool copy_from_bytes(const IArray & arr, Slice byte_slice = {}) = 0;
         virtual bool copy_from_bytes(const IArrayView & arr, Slice byte_slice = {}) = 0;
         virtual bool copy_from_bytes(const void *buf, size_t buf_byte_size, Slice byte_slice = {}) = 0;
 
-        // copy to data from internal buffer
-
         virtual bool copy_to_bytes(void *buf, Slice byte_slice = {}) const = 0;
 
-        // assign buffer to internal buffer
-
         virtual bool assign_bytes(void *buf, size_t buf_byte_size) = 0;
-
-        // modify capacity
 
         virtual bool byte_resize(size_t byte_size) = 0;
         virtual bool byte_reserve(size_t byte_capacity) = 0;
 
-        // no byte size
         virtual bool resize(size_t size) = 0;
-        // no byte size
         virtual bool reserve(size_t capacity) = 0;
-        // resize to 0
         virtual void clear() = 0;
-
-        // views
 
         virtual std::string hexdump(char delimiter = ' ') const = 0;
         virtual std::string str() const = 0;
@@ -89,9 +68,9 @@ class IArray
         virtual std::string_view cpp_str_view() const = 0;
 };
 
-typedef std::unique_ptr<IArray> IArrayUnique;
-typedef std::shared_ptr<IArray> IArrayShared;
-typedef std::weak_ptr<IArray> IArrayWeak;
+using IArrayUnique = std::unique_ptr<IArray>;
+using IArrayShared = std::shared_ptr<IArray>;
+using IArrayWeak = std::weak_ptr<IArray>;
 
 } // namespace sihd::util
 

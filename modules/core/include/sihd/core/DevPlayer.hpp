@@ -59,20 +59,15 @@ class DevPlayer: public sihd::core::Device,
         Channel *_channel_end_ptr;
         sihd::util::Scheduler *_scheduler_ptr;
 
-        // channels to write records to
         std::map<std::string, Channel *> _map_channels;
-        // channels to write configuration
         std::map<std::string, std::string> _map_channels_alias;
 
         std::optional<sihd::util::Timestamp> _first_timestamp;
 
         // queue to pass data between scheduler thread and worker thread
         sihd::util::SafeQueue<PlayableRecord> _safe_queue;
-        // notifies scheduler task has played
         sihd::util::Waitable _waitable;
-        // provider reading thread
         sihd::util::Worker _worker;
-        // collects records from provider
         sihd::util::Collector<PlayableRecord> _collector;
 
         sihd::util::Runnable _runnable;

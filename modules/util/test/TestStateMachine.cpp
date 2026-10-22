@@ -28,9 +28,9 @@ enum State
 class TestStateMachine: public ::testing::Test
 {
     protected:
-        TestStateMachine() { sihd::util::LoggerManager::stream(); }
+        TestStateMachine() { LoggerManager::stream(); }
 
-        virtual ~TestStateMachine() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestStateMachine() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -52,12 +52,10 @@ class TestStateMachine: public ::testing::Test
 
         void add_transitions(StateMachine<State, Event> & machine)
         {
-            // first -> evt1 -> done_evt1
             machine.add_transition(State::FIRST, Event::EVT1, State::BEFORE_EVT1);
             machine.add_transition(State::BEFORE_EVT1, Event::EVT_ERROR, State::Error);
             machine.add_transition(State::BEFORE_EVT1, Event::EVT_SUCCESS, State::DONE_EVT1);
 
-            // done_evt1 -> evt2 -> done_evt2
             machine.add_transition(State::DONE_EVT1, Event::EVT2, State::DONE_EVT2);
         }
 };
@@ -73,33 +71,27 @@ TEST_F(TestStateMachine, test_statemachine_transitions)
 
     EXPECT_EQ(first_machine.state(), FIRST);
 
-    // FIRST -> EVT1 -> BEFORE_EVT1
     EXPECT_TRUE(first_machine.transition(EVT1));
     EXPECT_EQ(first_machine.last_event(), EVT1);
     EXPECT_EQ(first_machine.state(), BEFORE_EVT1);
 
-    // EVT1 -> EVT1 => no transition - no change
     EXPECT_FALSE(first_machine.transition(EVT1));
     EXPECT_EQ(first_machine.last_event(), EVT1);
     EXPECT_EQ(first_machine.state(), BEFORE_EVT1);
 
-    // EVT1 -> EVT_ERROR -> error state
     EXPECT_TRUE(first_machine.transition(EVT_ERROR));
     EXPECT_EQ(first_machine.last_event(), EVT_ERROR);
     EXPECT_EQ(first_machine.state(), State::Error);
 
-    // let's get back to before it failed
     StateMachine<State, Event> evt1_machine(BEFORE_EVT1);
     this->add_transitions(evt1_machine);
 
     EXPECT_EQ(evt1_machine.state(), BEFORE_EVT1);
 
-    // let's say we did it
     EXPECT_TRUE(evt1_machine.transition(EVT_SUCCESS));
     EXPECT_EQ(evt1_machine.last_event(), EVT_SUCCESS);
     EXPECT_EQ(evt1_machine.state(), State::DONE_EVT1);
 
-    // testing last transition -> DONE_EVT1 -> EVT2 -> DONE_EVT2
     EXPECT_TRUE(evt1_machine.transition(EVT2));
     EXPECT_EQ(evt1_machine.last_event(), EVT2);
     EXPECT_EQ(evt1_machine.state(), State::DONE_EVT2);

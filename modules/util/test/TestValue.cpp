@@ -22,9 +22,9 @@ static_assert(type::from<long double>() == TYPE_OBJECT);
 class TestValue: public ::testing::Test
 {
     protected:
-        TestValue() { sihd::util::LoggerManager::stream(); }
+        TestValue() { LoggerManager::stream(); }
 
-        virtual ~TestValue() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestValue() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -90,7 +90,6 @@ TEST_F(TestValue, test_value_float)
     EXPECT_TRUE(val < 4);
     EXPECT_TRUE(val > 3);
 
-    // double
     val = 6.28;
 
     EXPECT_TRUE(val > 6.27);
@@ -136,6 +135,7 @@ TEST_F(TestValue, test_value)
     EXPECT_TRUE(val <= test16);
     EXPECT_FALSE(val > test16);
     EXPECT_FALSE(val >= test16);
+
     val = test16;
     EXPECT_TRUE(val == test16);
     val = test32;

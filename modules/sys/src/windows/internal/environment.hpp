@@ -8,8 +8,7 @@
 namespace sihd::sys::internal
 {
 
-// win32 environment block: double-null-terminated, null-separated "KEY=VALUE",
-// sorted case-insensitively by name
+// win32 environment block: double-null-terminated, null-separated "KEY=VALUE", sorted case-insensitively
 std::string to_windows_block(const Environment & env);
 
 } // namespace sihd::sys::internal

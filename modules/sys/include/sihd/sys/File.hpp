@@ -1,7 +1,7 @@
 #ifndef __SIHD_SYS_FILE_HPP__
 #define __SIHD_SYS_FILE_HPP__
 
-#include <cstdio> // FILE
+#include <cstdio>
 #include <string>
 #include <string_view>
 
@@ -22,7 +22,6 @@ class File
         File(File && other);
         ~File();
 
-        // don't like hidden behavior - deleting copy operators
         File(const File & other) = delete;
         File & operator=(const File & other) = delete;
 
@@ -34,12 +33,10 @@ class File
 
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
         sihd::util::Result<void> open(const std::string & path, const std::string & mode);
-        // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
         sihd::util::Result<void> open_fd(int fd, const std::string & mode);
         sihd::util::Result<void> set_stream(FILE *stream, bool ownership);
         sihd::util::Result<void>
             open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix = "");
-        // open with setted buffer_size
         sihd::util::Result<void> open_mem(const std::string & mode, std::string_view put_in_buffer = "");
         sihd::util::Result<void> open_tmpfile();
         bool is_open() const;
@@ -47,24 +44,17 @@ class File
 
         // if size == 0 -> buffer is null
         sihd::util::Result<void> set_buffer_size(size_t size);
-        // no buffering, immediately write change to disk
         void set_no_buffering();
-        // full buffering (until flush)
         void set_buffering_line();
-        // line buffering (flush when newline)
         void set_buffering_full();
-        // apply buff mode to current stream
         sihd::util::Result<void> buff_stream();
 
-        // write changes to disk
         sihd::util::Result<void> flush();
         sihd::util::Result<void> flush_unlocked();
 
-        // internal file descriptor
         int fd() const;
         int fd_unlocked() const;
 
-        // error checking
         bool eof() const;
         bool eof_unlocked() const;
         int error() const;
@@ -83,7 +73,6 @@ class File
         sihd::util::Result<size_t> read(void *buf, size_t size);
         // read to string, because of short string optimization we can't use capacity()
         sihd::util::Result<size_t> read(std::string & str, size_t size);
-        // read into Array using it's capacity()
         sihd::util::Result<size_t> read(sihd::util::IArray & array);
 
         // 0 means end of file

@@ -36,7 +36,7 @@ The header `sihd/lua/config.hpp` is generated in the build directory and defines
 ### Reachable from scripts (`sihd.<module>`)
 
 - `util` (`LuaUtilApi`): `Node`, `Named`, `AService`, `ServiceController`, `IArray` and typed arrays (`ArrBool` to `ArrDouble`), `Splitter`, `Timestamp`, `Duration`, `Random`, `IClock`, `SystemClock`, `SteadyClock`, `Waitable`, `Scheduler` (`add_task`, `start`, `stop`), `Worker`, `StepWorker`; namespaces `time`, `thread`, `str`, `num`, `endian`, `log` (`info`, `error`, ... `console`, `stream`, `clear`).
-- `sys` (`LuaSysApi`): `Uuid`, `ProcessInfo`, `Color`, `Bitmap`, `FileMutex`, `Process`, `ProcFuture`, `File`, `LineReader`; namespaces `sihd.sys.fs`, `sihd.sys.os`, `sihd.sys.user`, `sihd.sys.signal`, `sihd.sys.screenshot`.
+- `sys` (`LuaSysApi`): `Uuid`, `ProcessInfo`, `Color`, `Bitmap`, `FileMutex`, `Process`, `ProcFuture`, `File`, `LineReader`; namespaces `sihd.sys.fs`, `sihd.sys.os`, `sihd.sys.user` (`name` returns `nil` on failure), `sihd.sys.signal`, `sihd.sys.screenshot`.
 - `core` (`LuaCoreApi`): `Device`, `Core`, `Channel` (`read`, `write`, `write_array`, `set_observer`), `ACoreObject`, `ChannelWaiter`, `DevFilter`, `DevPulsation`, `DevSampler`, `DevPlayer`, `DevRecorder`, `DevMessage`.
 - `net` (`LuaNetApi`): `IpAddr`, `sihd.net.ip_addr(host[, port])`, `DeviceTcpClient`, `DeviceTcpServer`, `DeviceUdpSender`, `DeviceUdpReceiver`.
 - `http` (`LuaHttpApi`): `Navigator` (`get`, `post`, `put`, `del`, `download`, ...), `RequestOptions`, `Multipart`, `HttpRequest`, `HttpResponse`, `WebService`, `HttpServer`.

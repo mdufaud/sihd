@@ -66,7 +66,7 @@ bool Worker::start_sync_worker(std::string_view name)
 {
     if (_started)
         return true;
-    ScopedModifier m(_sync_start, false);
+    ScopedModifier modifier(_sync_start, false);
     _sync_start = true;
     bool ret = this->start_worker(name);
     if (ret)
@@ -76,7 +76,7 @@ bool Worker::start_sync_worker(std::string_view name)
 
 bool Worker::pre_run()
 {
-    ScopedModifier m(_running, true);
+    ScopedModifier modifier(_running, true);
     SIHD_UNEXPECTED_LOG(thread::set_name(_worker_thread_name));
     if (_sync_start)
         _start_sync.sync();

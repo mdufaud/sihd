@@ -1,6 +1,7 @@
-// sihd headers first: Xlib poisons common identifiers (None, Status, True,
-// False, ...) with its macros.
+// sihd headers first: Xlib poisons common identifiers (None, Status, True, False) with macros
 #include "mouse.hpp"
+
+#include <array>
 
 #include <sihd/sys/mouse.hpp>
 #include <sihd/util/Logger.hpp>
@@ -9,8 +10,6 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/XTest.h>
 
-// XTest fake motion and button events over the whole virtual desktop
-
 using enum sihd::util::ErrorCode;
 
 namespace sihd::sys::mouse::x11
@@ -18,13 +17,13 @@ namespace sihd::sys::mouse::x11
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::mouse");
+SIHD_NEW_LOGGER("sihd::sys::mouse::x11");
 
 namespace
 {
 
 // Pointer buttons indexed by MouseButton: left, middle, right, back, forward.
-constexpr unsigned int button_codes[] = {1, 2, 3, 8, 9};
+constexpr auto button_codes = std::to_array<unsigned int>({1, 2, 3, 8, 9});
 
 // Wheel buttons: up, down, left, right.
 constexpr unsigned int scroll_up = 4;

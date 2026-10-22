@@ -13,6 +13,7 @@
 #endif
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/fmt.hpp>
 #include <sihd/util/str.hpp>
 
@@ -48,8 +49,7 @@ struct SshKeyFree
 
 using SshKeyPtr = std::unique_ptr<ssh_key_struct, SshKeyFree>;
 
-sihd::util::Result<void>
-    set_ssh_option(ssh_session_struct *session, std::string_view name, ssh_options_e option, const void *value)
+Result<void> set_ssh_option(ssh_session_struct *session, std::string_view name, ssh_options_e option, const void *value)
 {
     if (ssh_options_set(session, option, value) == SSH_OK)
         return {};
@@ -94,7 +94,7 @@ void *SshSession::userdata() const
     return _impl_ptr->userdata;
 }
 
-sihd::util::Result<void> SshSession::fast_connect(const SshSession::ConnectOptions & options)
+Result<void> SshSession::fast_connect(const SshSession::ConnectOptions & options)
 {
     this->delete_session();
     if (auto res = this->new_session(); !res)
@@ -119,12 +119,12 @@ sihd::util::Result<void> SshSession::fast_connect(const SshSession::ConnectOptio
     return this->check_hostkey();
 }
 
-sihd::util::Result<void> SshSession::connect()
+Result<void> SshSession::connect()
 {
-    int r = 0;
-    while ((r = ssh_connect(_impl_ptr->ssh_session_ptr)) == SSH_AGAIN)
+    int status = 0;
+    while ((status = ssh_connect(_impl_ptr->ssh_session_ptr)) == SSH_AGAIN)
         ;
-    if (r == SSH_OK)
+    if (status == SSH_OK)
         return {};
     return std::unexpected(
         Error(_impl_ptr->ssh_session_ptr, "could not connect: {}", ssh_error_str(_impl_ptr->ssh_session_ptr)));
@@ -135,7 +135,7 @@ bool SshSession::connected()
     return _impl_ptr->ssh_session_ptr != nullptr && ssh_is_connected(_impl_ptr->ssh_session_ptr);
 }
 
-sihd::util::Result<void> SshSession::check_hostkey()
+Result<void> SshSession::check_hostkey()
 {
     size_t hash_len = 0;
     SshKeyPtr pubkey;
@@ -251,12 +251,8 @@ SshSession::AuthState SshSession::auth_key_file(const std::string & private_key_
 {
     SshKey key;
 
-    auto imported = key.import_privkey_file(private_key_path, passphrase);
-    if (!imported)
-    {
-        SIHD_UNEXPECTED_LOG(imported);
+    if (SIHD_UNEXPECTED_LOG(key.import_privkey_file(private_key_path, passphrase)))
         return AuthState(SSH_AUTH_ERROR);
-    }
     return this->auth_key(key);
 }
 
@@ -264,11 +260,9 @@ SshSession::AuthState SshSession::auth_key_try_file(const std::string & public_k
 {
     SshKey key;
 
-    auto imported = key.import_pubkey_file(public_key_path);
-    if (imported)
-        return this->auth_key_try(key);
-    SIHD_UNEXPECTED_LOG(imported);
-    return AuthState(SSH_AUTH_ERROR);
+    if (SIHD_UNEXPECTED_LOG(key.import_pubkey_file(public_key_path)))
+        return AuthState(SSH_AUTH_ERROR);
+    return this->auth_key_try(key);
 }
 
 SshSession::AuthState SshSession::auth_key(const SshKey & private_key)
@@ -285,8 +279,8 @@ SshSession::AuthState SshSession::auth_key_try(const SshKey & public_key)
 
 SshSession::AuthState SshSession::auth_interactive_keyboard()
 {
-    int r = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
-    while (r == SSH_AUTH_INFO)
+    int status = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
+    while (status == SSH_AUTH_INFO)
     {
         const char *name = ssh_userauth_kbdint_getname(_impl_ptr->ssh_session_ptr);
         const char *instruction = ssh_userauth_kbdint_getinstruction(_impl_ptr->ssh_session_ptr);
@@ -294,15 +288,17 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             fmt::print("{}\n", name);
         if (instruction != nullptr && instruction[0])
             fmt::print("{}\n", instruction);
-        int n = ssh_userauth_kbdint_getnprompts(_impl_ptr->ssh_session_ptr);
+        int nprompts = ssh_userauth_kbdint_getnprompts(_impl_ptr->ssh_session_ptr);
         int i = 0;
-        while (i < n)
+        while (i < nprompts)
         {
             char echo;
             const char *prompt = ssh_userauth_kbdint_getprompt(_impl_ptr->ssh_session_ptr, i, &echo);
+
             if (echo)
             {
                 fmt::print("{}", prompt);
+
                 auto answer = sihd::sys::LineReader::fast_read_stdin();
                 if (SIHD_UNEXPECTED_LOG(answer))
                     return AuthState(SSH_AUTH_ERROR);
@@ -321,13 +317,13 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
 #else
                 fmt::print("{}", prompt);
                 std::string answer;
-                int c;
-                while ((c = _getch()) != '\r' && c != '\n')
+                int key;
+                while ((key = _getch()) != '\r' && key != '\n')
                 {
-                    if (c == '\b' && !answer.empty())
+                    if (key == '\b' && !answer.empty())
                         answer.pop_back();
                     else
-                        answer += static_cast<char>(c);
+                        answer += static_cast<char>(key);
                 }
                 fmt::print("\n");
                 if (ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, answer.c_str()) < 0)
@@ -336,42 +332,42 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             }
             ++i;
         }
-        r = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
+        status = ssh_userauth_kbdint(_impl_ptr->ssh_session_ptr, NULL, NULL);
     }
-    return AuthState(r);
+    return AuthState(status);
 }
 
-sihd::util::Result<void> SshSession::set_user(const std::string & user)
+Result<void> SshSession::set_user(const std::string & user)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.c_str());
 }
 
-sihd::util::Result<void> SshSession::set_host(const std::string & host)
+Result<void> SshSession::set_host(const std::string & host)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.c_str());
 }
 
-sihd::util::Result<void> SshSession::set_port(int port)
+Result<void> SshSession::set_port(int port)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "port", SSH_OPTIONS_PORT, &port);
 }
 
-sihd::util::Result<void> SshSession::set_verbosity(int verbosity)
+Result<void> SshSession::set_verbosity(int verbosity)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "verbosity", SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
 }
 
-sihd::util::Result<void> SshSession::set_process_config(bool enable)
+Result<void> SshSession::set_process_config(bool enable)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "process_config", SSH_OPTIONS_PROCESS_CONFIG, &enable);
 }
 
-sihd::util::Result<void> SshSession::set_ssh_dir(const std::string & path)
+Result<void> SshSession::set_ssh_dir(const std::string & path)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.c_str());
 }
 
-sihd::util::Result<void> SshSession::set_timeout(int seconds)
+Result<void> SshSession::set_timeout(int seconds)
 {
     long value = seconds > 0 ? seconds : 0;
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "timeout", SSH_OPTIONS_TIMEOUT, &value);
@@ -382,22 +378,22 @@ void SshSession::set_blocking(bool active)
     ssh_set_blocking(_impl_ptr->ssh_session_ptr, (int)active);
 }
 
-sihd::util::Result<void> SshSession::update_known_hosts()
+Result<void> SshSession::update_known_hosts()
 {
-    const int r =
+    const int status =
 #if LIBSSH_VERSION_MINOR > 7
         ssh_session_update_known_hosts(_impl_ptr->ssh_session_ptr);
 #else
         ssh_write_knownhost(_impl_ptr->ssh_session_ptr);
 #endif
-    if (r == SSH_OK)
+    if (status == SSH_OK)
         return {};
     return std::unexpected(Error(_impl_ptr->ssh_session_ptr,
                                  "could not update known hosts: {}",
                                  ssh_error_str(_impl_ptr->ssh_session_ptr)));
 }
 
-sihd::util::Result<void> SshSession::known_hosts(std::string & hosts)
+Result<void> SshSession::known_hosts(std::string & hosts)
 {
 #if LIBSSH_VERSION_MINOR > 7
     char *hosts_ptr = nullptr;
@@ -427,7 +423,7 @@ void SshSession::silent_disconnect()
     ssh_silent_disconnect(_impl_ptr->ssh_session_ptr);
 }
 
-sihd::util::Result<void> SshSession::new_session()
+Result<void> SshSession::new_session()
 {
     this->delete_session();
     _impl_ptr->ssh_session_ptr = ssh_new();
@@ -474,7 +470,7 @@ Sftp SshSession::make_sftp()
     return Sftp(_impl_ptr->ssh_session_ptr);
 }
 
-sihd::util::Result<void> SshSession::make_channel(SshChannel & channel)
+Result<void> SshSession::make_channel(SshChannel & channel)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
@@ -485,7 +481,7 @@ sihd::util::Result<void> SshSession::make_channel(SshChannel & channel)
     return {};
 }
 
-sihd::util::Result<void> SshSession::make_channel_session(SshChannel & channel)
+Result<void> SshSession::make_channel_session(SshChannel & channel)
 {
     if (auto res = this->make_channel(channel); !res)
         return res;
@@ -498,15 +494,15 @@ std::string SshSession::AuthMethods::str() const
         return "unknown";
     std::string ret;
     if (this->methods & SSH_AUTH_METHOD_NONE)
-        sihd::util::str::append_sep(ret, "none");
+        str::append_sep(ret, "none");
     if (this->methods & SSH_AUTH_METHOD_PASSWORD)
-        sihd::util::str::append_sep(ret, "password");
+        str::append_sep(ret, "password");
     if (this->methods & SSH_AUTH_METHOD_HOSTBASED)
-        sihd::util::str::append_sep(ret, "hostbased");
+        str::append_sep(ret, "hostbased");
     if (this->methods & SSH_AUTH_METHOD_INTERACTIVE)
-        sihd::util::str::append_sep(ret, "keyboard-interactive");
+        str::append_sep(ret, "keyboard-interactive");
     if (this->methods & SSH_AUTH_METHOD_GSSAPI_MIC)
-        sihd::util::str::append_sep(ret, "gssapi");
+        str::append_sep(ret, "gssapi");
     return ret;
 }
 
@@ -588,5 +584,9 @@ bool SshSession::AuthState::again() const
 {
     return status == SSH_AUTH_AGAIN;
 }
+
+SshSession::AuthMethods::AuthMethods(int m): methods(m) {}
+
+SshSession::AuthState::AuthState(int st): status(st) {}
 
 } // namespace sihd::ssh

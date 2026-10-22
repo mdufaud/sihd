@@ -1,3 +1,4 @@
+#include <array>
 #include <wait_for.hpp>
 
 #include <gtest/gtest.h>
@@ -18,13 +19,14 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::core;
 using namespace sihd::net;
+using namespace sihd::util;
 
 class TestDevices: public ::testing::Test
 {
     protected:
-        TestDevices() { sihd::util::LoggerManager::stream(); }
+        TestDevices() { LoggerManager::stream(); }
 
-        virtual ~TestDevices() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestDevices() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -106,7 +108,7 @@ TEST_F(TestDevices, test_tcp_client_device)
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    sihd::util::ArrChar recv_buf(64);
+    ArrChar recv_buf(64);
     ssize_t received = accepted.receive(recv_buf).value_or(0);
     EXPECT_EQ(received, (ssize_t)strlen(hello));
     EXPECT_EQ(memcmp(recv_buf.buf(), hello, strlen(hello)), 0);
@@ -168,7 +170,7 @@ TEST_F(TestDevices, test_tcp_server_device)
 
     EXPECT_EQ(client_count->read<int32_t>(0), 1);
 
-    sihd::util::ArrChar recv_buf(64);
+    ArrChar recv_buf(64);
     const char broadcast[] = "broadcast msg";
     tx->write({broadcast, strlen(broadcast)});
 
@@ -241,15 +243,15 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     ASSERT_NE(tx, nullptr);
     const char tx_msg[] = "tx after reconnect";
     tx->write({tx_msg, strlen(tx_msg)});
-    char tx_buf[64] = {0};
+    std::array<char, 64> tx_buf {};
     ssize_t tx_received = 0;
     ASSERT_TRUE(accepted2.set_blocking(false).has_value());
     wait_for([&] {
-        tx_received = accepted2.receive(tx_buf, sizeof(tx_buf)).value_or(0);
+        tx_received = accepted2.receive(tx_buf.data(), tx_buf.size()).value_or(0);
         return tx_received > 0;
     });
     EXPECT_EQ(tx_received, (ssize_t)strlen(tx_msg));
-    EXPECT_EQ(memcmp(tx_buf, tx_msg, strlen(tx_msg)), 0);
+    EXPECT_EQ(memcmp(tx_buf.data(), tx_msg, strlen(tx_msg)), 0);
 
     ASSERT_TRUE(core.stop());
     EXPECT_FALSE(client->is_running());

@@ -46,7 +46,6 @@ struct recursive_map_type_helper
         using return_type = typename recursive_map_type<T, 0, sizeof...(Keys) + 1>::type;
 
     public:
-        // handle const type
         using type = std::conditional_t<std::is_const_v<T>, const return_type, return_type>;
 };
 

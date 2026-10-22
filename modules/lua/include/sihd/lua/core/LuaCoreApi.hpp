@@ -58,9 +58,6 @@ class LuaCoreApi
     private:
         LuaCoreApi() = default;
         virtual ~LuaCoreApi() = default;
-
-        static std::mutex _handler_map_mutex;
-        static std::map<lua_State *, std::unique_ptr<LuaChannelHandler>> _handler_map;
 };
 
 } // namespace sihd::lua

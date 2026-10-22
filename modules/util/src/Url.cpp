@@ -13,7 +13,7 @@ bool is_unreserved(unsigned char c)
            || c == '.' || c == '~';
 }
 
-constexpr char hex_chars[] = "0123456789ABCDEF";
+constexpr std::string_view hex_chars = "0123456789ABCDEF";
 
 } // namespace
 
@@ -29,9 +29,9 @@ Url::Url(std::string_view url)
         bool valid = (potential[0] >= 'A' && potential[0] <= 'Z') || (potential[0] >= 'a' && potential[0] <= 'z');
         for (size_t i = 1; valid && i < potential.size(); ++i)
         {
-            char c = potential[i];
-            valid = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '+' || c == '-'
-                    || c == '.';
+            char ch = potential[i];
+            valid = (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '+'
+                    || ch == '-' || ch == '.';
         }
         if (valid)
         {
@@ -50,7 +50,6 @@ Url::Url(std::string_view url)
         std::string_view authority = remainder.substr(0, auth_end);
         remainder = (auth_end != std::string_view::npos) ? remainder.substr(auth_end) : std::string_view {};
 
-        // userinfo: up to last '@'
         auto at = authority.rfind('@');
         if (at != std::string_view::npos)
         {
@@ -58,7 +57,6 @@ Url::Url(std::string_view url)
             authority = authority.substr(at + 1);
         }
 
-        // host + port: handle IPv6 [addr]:port
         if (!authority.empty() && authority[0] == '[')
         {
             auto bracket = authority.find(']');
@@ -68,7 +66,7 @@ Url::Url(std::string_view url)
                 authority = authority.substr(bracket + 1);
                 if (!authority.empty() && authority[0] == ':')
                 {
-                    if (const auto port_val = sihd::util::str::convert_from_string<long>(authority.substr(1)))
+                    if (const auto port_val = str::convert_from_string<long>(authority.substr(1)))
                         port = static_cast<int>(*port_val);
                 }
             }
@@ -76,9 +74,10 @@ Url::Url(std::string_view url)
         else
         {
             auto port_colon = authority.rfind(':');
+
             if (port_colon != std::string_view::npos)
             {
-                if (const auto port_val = sihd::util::str::convert_from_string<long>(authority.substr(port_colon + 1)))
+                if (const auto port_val = str::convert_from_string<long>(authority.substr(port_colon + 1)))
                 {
                     host = std::string(authority.substr(0, port_colon));
                     port = static_cast<int>(*port_val);
@@ -91,7 +90,6 @@ Url::Url(std::string_view url)
         }
     }
 
-    // 3. path, query, fragment
     if (!remainder.empty())
     {
         auto frag_pos = remainder.find('#');
@@ -106,9 +104,9 @@ Url::Url(std::string_view url)
         {
             std::string_view query_str = remainder.substr(query_pos + 1);
             path = std::string(remainder.substr(0, query_pos));
-            for (const auto & param : sihd::util::str::split(query_str, "&"))
+            for (const auto & param : str::split(query_str, "&"))
             {
-                auto [key, value] = sihd::util::str::split_pair(param, "=");
+                auto [key, value] = str::split_pair(param, "=");
                 if (!key.empty())
                     query_params[Url::str_decode(key)] = Url::str_decode(value);
             }
@@ -117,7 +115,6 @@ Url::Url(std::string_view url)
             path = std::string(remainder);
     }
 
-    // default path for authority-based URLs
     if (has_authority && path.empty())
         path = "/";
 }
@@ -183,6 +180,7 @@ std::string Url::encode() const
             result += userinfo;
             result += '@';
         }
+
         if (host.find(':') != std::string::npos)
         {
             result += '[';
@@ -206,12 +204,14 @@ std::string Url::encode() const
         {
             if (!first)
                 result += '&';
+
             result += Url::str_encode(key);
             result += '=';
             result += Url::str_encode(value);
             first = false;
         }
     }
+
     if (!fragment.empty())
     {
         result += '#';

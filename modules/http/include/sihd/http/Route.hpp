@@ -30,12 +30,12 @@ class Route
 
         RouteMatch match(std::string_view path) const;
 
-        bool is_parameterized() const { return _has_params; }
-        bool has_catch_all() const { return _has_catch_all; }
-        const std::string & pattern() const { return _pattern; }
+        bool is_parameterized() const;
+        bool has_catch_all() const;
+        const std::string & pattern() const;
         // number of literal (non-param) segments — higher = more specific
-        size_t specificity() const { return _specificity; }
-        const Handler & handler() const { return _handler; }
+        size_t specificity() const;
+        const Handler & handler() const;
 
     private:
         struct Segment

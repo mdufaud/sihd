@@ -19,9 +19,9 @@ using namespace sihd::ssh;
 class TestSshCommand: public ::testing::Test
 {
     protected:
-        TestSshCommand() { sihd::util::LoggerManager::stream(); }
+        TestSshCommand() { LoggerManager::stream(); }
 
-        virtual ~TestSshCommand() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSshCommand() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -39,7 +39,7 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
 
     std::string stdout_str;
     std::string stderr_str;
-    sihd::util::Handler<std::string_view, bool> test_output_handler(
+    Handler<std::string_view, bool> test_output_handler(
         [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
             if (is_stderr)
                 stderr_str += buf;
@@ -49,7 +49,7 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
     EXPECT_TRUE(cmd.execute("echo 'hello world'").has_value());
-    EXPECT_TRUE(cmd.wait(sihd::util::Duration(time::seconds(5))).has_value());
+    EXPECT_TRUE(cmd.wait(Duration(time::seconds(5))).has_value());
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello world\n");
     EXPECT_EQ(cmd.exit_status(), 0);
@@ -66,7 +66,7 @@ TEST_F(TestSshCommand, test_sshcommand_async)
 
     std::string stdout_str;
     std::string stderr_str;
-    sihd::util::Handler<std::string_view, bool> test_output_handler(
+    Handler<std::string_view, bool> test_output_handler(
         [&stdout_str, &stderr_str](std::string_view buf, bool is_stderr) {
             if (is_stderr)
                 stderr_str += buf;
@@ -76,9 +76,8 @@ TEST_F(TestSshCommand, test_sshcommand_async)
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
 
-    // Test async execution - command runs via proc::execute on server
     EXPECT_TRUE(cmd.execute_async("echo hello; echo world").has_value());
-    EXPECT_TRUE(cmd.wait(sihd::util::Duration(time::seconds(2))).has_value());
+    EXPECT_TRUE(cmd.wait(Duration(time::seconds(2))).has_value());
 
     EXPECT_EQ(stderr_str, "");
     EXPECT_EQ(stdout_str, "hello\nworld\n");

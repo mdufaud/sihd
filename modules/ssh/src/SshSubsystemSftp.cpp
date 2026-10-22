@@ -14,6 +14,7 @@
 # include <unistd.h>
 #endif
 
+#include <array>
 #include <cstring>
 
 // Define WITH_SERVER before including sftp.h to get sftp_server_* functions
@@ -44,6 +45,7 @@
 #endif
 
 using enum sihd::util::ErrorCode;
+using namespace sihd::util;
 
 namespace sihd::ssh
 {
@@ -51,6 +53,23 @@ namespace sihd::ssh
 using namespace sihd::sys;
 
 SIHD_LOGGER;
+
+namespace
+{
+
+constexpr std::array<std::pair<mode_t, char>, 9> permission_bits {{
+    {S_IRUSR, 'r'},
+    {S_IWUSR, 'w'},
+    {S_IXUSR, 'x'},
+    {S_IRGRP, 'r'},
+    {S_IWGRP, 'w'},
+    {S_IXGRP, 'x'},
+    {S_IROTH, 'r'},
+    {S_IWOTH, 'w'},
+    {S_IXOTH, 'x'},
+}};
+
+} // namespace
 
 struct SshSubsystemSftp::Impl
 {
@@ -71,16 +90,19 @@ struct SshSubsystemSftp::Impl
         void handle_opendir(sftp_client_message_struct *msg);
         void handle_readdir(sftp_client_message_struct *msg);
         void handle_close(sftp_client_message_struct *msg);
+
         void handle_mkdir(sftp_client_message_struct *msg);
         void handle_rmdir(sftp_client_message_struct *msg);
         void handle_open(sftp_client_message_struct *msg);
         void handle_read(sftp_client_message_struct *msg);
         void handle_write(sftp_client_message_struct *msg);
+
         void handle_remove(sftp_client_message_struct *msg);
         void handle_rename(sftp_client_message_struct *msg);
         void handle_setstat(sftp_client_message_struct *msg);
         void handle_readlink(sftp_client_message_struct *msg);
         void handle_symlink(sftp_client_message_struct *msg);
+
         std::string resolve_path(const std::string & path);
         std::string generate_handle();
         void reply_status(sftp_client_message_struct *msg, uint32_t status, const std::string & message = "");
@@ -100,7 +122,6 @@ SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(con
     attrs.atime = st.st_atime;
     attrs.mtime = st.st_mtime;
 
-    // Determine type
     if (S_ISDIR(st.st_mode))
         attrs.type = SSH_FILEXFER_TYPE_DIRECTORY;
     else if (S_ISLNK(st.st_mode))
@@ -110,23 +131,13 @@ SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(con
     else
         attrs.type = SSH_FILEXFER_TYPE_SPECIAL;
 
-    // Build longname (ls -l format)
-    char mode_str[11];
-    mode_str[0] = S_ISDIR(st.st_mode) ? 'd' : (S_ISLNK(st.st_mode) ? 'l' : '-');
-    mode_str[1] = (st.st_mode & S_IRUSR) ? 'r' : '-';
-    mode_str[2] = (st.st_mode & S_IWUSR) ? 'w' : '-';
-    mode_str[3] = (st.st_mode & S_IXUSR) ? 'x' : '-';
-    mode_str[4] = (st.st_mode & S_IRGRP) ? 'r' : '-';
-    mode_str[5] = (st.st_mode & S_IWGRP) ? 'w' : '-';
-    mode_str[6] = (st.st_mode & S_IXGRP) ? 'x' : '-';
-    mode_str[7] = (st.st_mode & S_IROTH) ? 'r' : '-';
-    mode_str[8] = (st.st_mode & S_IWOTH) ? 'w' : '-';
-    mode_str[9] = (st.st_mode & S_IXOTH) ? 'x' : '-';
-    mode_str[10] = '\0';
+    std::string mode_str(1, S_ISDIR(st.st_mode) ? 'd' : (S_ISLNK(st.st_mode) ? 'l' : '-'));
+    for (const auto & [bit, letter] : permission_bits)
+        mode_str += (st.st_mode & bit) ? letter : '-';
 
-    char time_str[64];
-    struct tm tm_info = sihd::util::time::to_tm(st.st_mtime * static_cast<int64_t>(1e9), true);
-    strftime(time_str, sizeof(time_str), "%b %d %H:%M", &tm_info);
+    std::array<char, 64> time_str;
+    struct tm tm_info = time::to_tm(st.st_mtime * static_cast<int64_t>(1e9), true);
+    strftime(time_str.data(), time_str.size(), "%b %d %H:%M", &tm_info);
 
     attrs.longname = fmt::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",
                                  mode_str,
@@ -134,7 +145,7 @@ SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(con
                                  st.st_uid,
                                  st.st_gid,
                                  static_cast<long>(st.st_size),
-                                 time_str,
+                                 time_str.data(),
                                  name);
 
     return attrs;
@@ -201,9 +212,9 @@ sftp_attributes create_sftp_attributes(const SshSubsystemSftp::SftpAttributes & 
 
     sa->name = strdup(attrs.name.c_str());
     sa->longname = strdup(attrs.longname.c_str());
-    sa->permissions = attrs.permissions;
-    sa->uid = attrs.uid;
-    sa->gid = attrs.gid;
+    sa->permissions = static_cast<uint32_t>(attrs.permissions);
+    sa->uid = static_cast<uint32_t>(attrs.uid);
+    sa->gid = static_cast<uint32_t>(attrs.gid);
     sa->size = attrs.size;
     sa->atime = attrs.atime;
     sa->mtime = attrs.mtime;
@@ -214,7 +225,7 @@ sftp_attributes create_sftp_attributes(const SshSubsystemSftp::SftpAttributes & 
     return sa;
 }
 
-uint32_t sftp_status_from_error(const sihd::util::Error & err)
+uint32_t sftp_status_from_error(const Error & err)
 {
     switch (err.code)
     {
@@ -271,7 +282,6 @@ bool SshSubsystemSftp::forward_output()
 void SshSubsystemSftp::set_root_path(std::string_view path)
 {
     _impl_ptr->root_path = path;
-    // Ensure trailing slash for proper path joining
     if (!_impl_ptr->root_path.empty() && _impl_ptr->root_path.back() != '/')
         _impl_ptr->root_path += '/';
 }
@@ -285,7 +295,6 @@ bool SshSubsystemSftp::on_start(SshChannel *channel, bool has_pty, [[maybe_unuse
         SIHD_LOG(warning, "SshSubsystemSftp: SFTP does not use PTY");
     }
 
-    // Get the SSH channel from our wrapper
     ssh_channel ssh_chan = static_cast<ssh_channel>(channel->channel());
     if (!ssh_chan)
     {
@@ -300,7 +309,6 @@ bool SshSubsystemSftp::on_start(SshChannel *channel, bool has_pty, [[maybe_unuse
         return false;
     }
 
-    // Create SFTP session for server mode
     _impl_ptr->sftp = sftp_server_new(ssh_sess, ssh_chan);
     if (!_impl_ptr->sftp)
     {
@@ -331,13 +339,11 @@ bool SshSubsystemSftp::Impl::do_init()
     int available = ssh_channel_poll(ssh_chan, 0);
     if (available <= 0)
     {
-        // No data available yet
         return false;
     }
 
     SIHD_LOG(debug, "SshSubsystemSftp: {} bytes available, initializing SFTP", available);
 
-    // Initialize SFTP session (this exchanges version info with client)
     int rc = sftp_server_init(sftp);
     if (rc != SSH_OK)
     {
@@ -355,12 +361,10 @@ int SshSubsystemSftp::on_data([[maybe_unused]] const void *data, [[maybe_unused]
     if (!_impl_ptr->running || !_impl_ptr->sftp)
         return -1;
 
-    // Deferred initialization - wait for SSH_FXP_INIT to be available
     if (!_impl_ptr->initialized)
     {
         if (!_impl_ptr->do_init())
         {
-            // Not ready yet or error
             return 0;
         }
     }
@@ -435,10 +439,7 @@ int SshSubsystemSftp::on_data([[maybe_unused]] const void *data, [[maybe_unused]
     return static_cast<int>(len);
 }
 
-void SshSubsystemSftp::on_resize([[maybe_unused]] const WinSize & winsize)
-{
-    // SFTP does not use PTY
-}
+void SshSubsystemSftp::on_resize([[maybe_unused]] const WinSize & winsize) {}
 
 void SshSubsystemSftp::on_eof()
 {
@@ -455,7 +456,6 @@ int SshSubsystemSftp::on_close()
 
     SIHD_LOG(debug, "SshSubsystemSftp: closing");
 
-    // Close any open file handles
     _impl_ptr->handle_to_file.clear();
     _impl_ptr->handle_to_path.clear();
     _impl_ptr->dir_positions.clear();
@@ -468,7 +468,6 @@ int SshSubsystemSftp::on_close()
         SIHD_UNEXPECTED_LOG(_impl_ptr->channel->close());
     }
 
-    // Free SFTP session
     if (_impl_ptr->sftp)
     {
         sftp_free(_impl_ptr->sftp);
@@ -484,7 +483,6 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: REALPATH '{}'", path);
 
-    // Resolve the path
     std::string resolved;
     if (path.empty() || path == ".")
     {
@@ -496,7 +494,6 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
         std::string real_result = sihd::sys::fs::realpath(full);
         if (!real_result.empty())
         {
-            // Return path relative to root if root is set
             if (!root_path.empty() && real_result.find(root_path) == 0)
             {
                 resolved = real_result.substr(root_path.length());
@@ -510,7 +507,6 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
         }
         else
         {
-            // Path doesn't exist yet, return cleaned path
             resolved = path.empty() ? "/" : path;
         }
     }
@@ -521,7 +517,6 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
         return;
     }
 
-    // Create attributes for the resolved path
     sftp_attributes attrs = create_sftp_attributes({resolved, resolved, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_REGULAR});
     if (attrs)
     {
@@ -552,7 +547,7 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
 
     if (rc < 0)
     {
-        auto err = sihd::util::Error::from_errno("could not stat '{}'", resolved);
+        auto err = Error::from_errno("could not stat '{}'", resolved);
         reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
@@ -581,13 +576,12 @@ void SshSubsystemSftp::Impl::handle_opendir(sftp_client_message_struct *msg)
     DIR *dir = opendir(resolved.c_str());
     if (!dir)
     {
-        auto err = sihd::util::Error::from_errno("could not open directory '{}'", resolved);
+        auto err = Error::from_errno("could not open directory '{}'", resolved);
         reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
     closedir(dir);
 
-    // Generate handle and store mapping
     std::string handle = generate_handle();
     handle_to_path[handle] = path;
     dir_positions[handle] = 0;
@@ -606,7 +600,6 @@ void SshSubsystemSftp::Impl::handle_opendir(sftp_client_message_struct *msg)
 
 void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
 {
-    // Access handle directly from message structure
     ssh_string handle_str = msg->handle;
     if (!handle_str)
     {
@@ -625,16 +618,13 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     std::string path = it->second;
     SIHD_LOG(debug, "SshSubsystemSftp: READDIR '{}'", path);
 
-    // Check if we've already read this directory
     auto pos_it = dir_positions.find(handle);
     if (pos_it != dir_positions.end() && pos_it->second > 0)
     {
-        // Already returned entries, send EOF
         reply_status(msg, SSH_FX_EOF);
         return;
     }
 
-    // Read directory entries
     std::string resolved = resolve_path(path);
     DIR *dir = opendir(resolved.c_str());
     if (!dir)
@@ -666,7 +656,6 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
         return;
     }
 
-    // Add names to reply
     for (const auto & entry : entries)
     {
         sftp_attributes attrs = create_sftp_attributes(entry);
@@ -679,7 +668,6 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
 
     sftp_reply_names(msg);
 
-    // Mark as read
     dir_positions[handle] = 1;
 }
 
@@ -695,14 +683,12 @@ void SshSubsystemSftp::Impl::handle_close(sftp_client_message_struct *msg)
     std::string handle = ssh_string_get_char(handle_str);
     SIHD_LOG(debug, "SshSubsystemSftp: CLOSE handle={}", handle);
 
-    // Check if it's a file handle
     auto fd_it = handle_to_file.find(handle);
     if (fd_it != handle_to_file.end())
     {
         handle_to_file.erase(fd_it);
     }
 
-    // Clean up handle mappings
     handle_to_path.erase(handle);
     dir_positions.erase(handle);
 
@@ -757,7 +743,6 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: OPEN '{}' flags={:#x} mode={:o}", path, flags, mode);
 
-    // Convert SFTP flags to fopen mode string
     std::string open_mode;
     bool has_read = (flags & SSH_FXF_READ) != 0;
     bool has_write = (flags & SSH_FXF_WRITE) != 0;
@@ -803,7 +788,6 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
     if (has_creat && (attrs && (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)))
         SIHD_UNEXPECTED_LOG(sihd::sys::fs::permission_set(resolved, mode));
 
-    // Generate handle and store mapping
     std::string handle = generate_handle();
     handle_to_path[handle] = path;
     handle_to_file.emplace(handle, std::move(file));
@@ -977,7 +961,6 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
 
     std::string resolved = resolve_path(path);
 
-    // Apply requested attributes
     if (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
     {
         if (auto res = sihd::sys::fs::permission_set(resolved, attrs->permissions); !res)
@@ -1022,16 +1005,15 @@ void SshSubsystemSftp::Impl::handle_readlink(sftp_client_message_struct *msg)
     reply_status(msg, SSH_FX_OP_UNSUPPORTED, "Symlinks not supported on Windows");
 #else
     std::string resolved = resolve_path(path);
-    char buf[PATH_MAX];
-    ssize_t len = ::readlink(resolved.c_str(), buf, sizeof(buf) - 1);
+    std::array<char, PATH_MAX> buf;
+    ssize_t len = ::readlink(resolved.c_str(), buf.data(), buf.size() - 1);
     if (len <= 0)
     {
         reply_status(msg, SSH_FX_NO_SUCH_FILE);
         return;
     }
 
-    buf[len] = '\0';
-    std::string target(buf);
+    std::string target(buf.data(), static_cast<size_t>(len));
 
     sftp_attributes attrs = create_sftp_attributes({target, target, 0, 0, 0, 0, 0, 0, SSH_FILEXFER_TYPE_SYMLINK});
     if (attrs)
@@ -1086,6 +1068,21 @@ void SshSubsystemSftp::Impl::reply_status(sftp_client_message_struct *msg, uint3
 {
     const char *msg_str = message.empty() ? nullptr : message.c_str();
     sftp_reply_status(msg, status, msg_str);
+}
+
+int SshSubsystemSftp::stdout_fd() const
+{
+    return -1;
+}
+
+int SshSubsystemSftp::stderr_fd() const
+{
+    return -1;
+}
+
+bool SshSubsystemSftp::manages_channel_io() const
+{
+    return true;
 }
 
 } // namespace sihd::ssh

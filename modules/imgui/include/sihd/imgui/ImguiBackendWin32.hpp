@@ -33,7 +33,7 @@ class ImguiBackendWin32: public sihd::imgui::IImguiBackend
 
         LRESULT handle_win32_msg_handler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-        HWND window() { return _window; }
+        HWND window();
 
     protected:
 

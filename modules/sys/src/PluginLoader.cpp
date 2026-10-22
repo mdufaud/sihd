@@ -25,14 +25,14 @@ namespace
 std::mutex g_libs_mutex;
 std::unordered_map<std::string, DynLib> g_loaded_libs;
 
-sihd::util::Result<sihd::util::Named *> create_from_factory(const std::string & factory_name,
-                                                            const std::string & origin,
-                                                            void *symbol,
-                                                            const std::string & name,
-                                                            sihd::util::Node *parent)
+Result<Named *> create_from_factory(const std::string & factory_name,
+                                    const std::string & origin,
+                                    void *symbol,
+                                    const std::string & name,
+                                    Node *parent)
 {
-    auto constructor_sym = (sihd::util::Named * (*)(const std::string &, sihd::util::Node *)) symbol;
-    sihd::util::Named *created = constructor_sym(name, parent);
+    auto constructor_sym = (Named * (*)(const std::string &, Node *)) symbol;
+    Named *created = constructor_sym(name, parent);
     if (created == nullptr)
     {
         return std::unexpected(Error(not_found, "factory '{}' of '{}' created no object", factory_name, origin));
@@ -42,10 +42,10 @@ sihd::util::Result<sihd::util::Named *> create_from_factory(const std::string & 
 
 } // namespace
 
-sihd::util::Result<sihd::util::Named *> PluginLoader::create_from_library(const std::string & libname,
-                                                                          const std::string & classname,
-                                                                          const std::string & name,
-                                                                          sihd::util::Node *parent)
+Result<Named *> PluginLoader::create_from_library(const std::string & libname,
+                                                  const std::string & classname,
+                                                  const std::string & name,
+                                                  Node *parent)
 {
     std::string factory_name = SIHD_FACTORY_PREFIX + classname;
     std::lock_guard<std::mutex> lock(g_libs_mutex);
@@ -66,15 +66,14 @@ sihd::util::Result<sihd::util::Named *> PluginLoader::create_from_library(const 
     return create_from_factory(factory_name, libname, symbol.value(), name, parent);
 }
 
-sihd::util::Result<sihd::util::Named *>
-    PluginLoader::create_from_linked(const std::string & classname, const std::string & name, sihd::util::Node *parent)
+Result<Named *> PluginLoader::create_from_linked(const std::string & classname, const std::string & name, Node *parent)
 {
     const std::string factory_name = SIHD_FACTORY_PREFIX + classname;
     auto symbol = program::find_symbol(factory_name);
     if (symbol)
         return create_from_factory(factory_name, "the linked symbols", symbol.value(), name, parent);
     // the dynamic loader has no scope in a static binary: the linker section keeps the factories
-    sihd::util::Named *created = sihd::util::create_from_factory_table(classname, name, parent);
+    Named *created = create_from_factory_table(classname, name, parent);
     if (created == nullptr)
         return std::unexpected(Error(not_found, "factory '{}' not found in the linked factory table", factory_name));
     return created;
@@ -83,7 +82,7 @@ sihd::util::Result<sihd::util::Named *>
 bool PluginLoader::unload(const std::string & libname)
 {
     std::lock_guard<std::mutex> lock(g_libs_mutex);
-    if (g_loaded_libs.count(libname) > 0)
+    if (g_loaded_libs.contains(libname))
         SIHD_LOG(warning, "PluginLoader: unloading '{}' — objects created from this library become dangling", libname);
     return g_loaded_libs.erase(libname) > 0;
 }

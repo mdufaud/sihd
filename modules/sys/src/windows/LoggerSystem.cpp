@@ -29,7 +29,7 @@ LoggerSystem::~LoggerSystem()
     }
 }
 
-sihd::util::Result<void> LoggerSystem::_open_source()
+Result<void> LoggerSystem::_open_source()
 {
     _impl = new Impl();
     _impl->handle = RegisterEventSource(NULL, _progname.c_str());
@@ -68,18 +68,9 @@ void LoggerSystem::log(const LogInfo & info, std::string_view msg)
     }
     WORD category = static_cast<WORD>(info.level);
     const std::string report_str = info.format(msg);
-    // a failing ReportEvent (a full event log) must log nothing back: the manager
-    // would re-enter this sink and recurse
+    // a failing ReportEvent (a full event log) must log nothing back: the manager would re-enter this sink
     LPCSTR strings[] = {report_str.c_str()};
-    (void)ReportEvent(_impl->handle, // Event log handle
-                      type,          // Event type
-                      category,      // Event category
-                      0x1000,        // Event identifier
-                      NULL,          // No security identifier
-                      1,             // Number of strings
-                      0,             // No binary data
-                      strings,       // Array of strings
-                      NULL);         // No binary data
+    (void)ReportEvent(_impl->handle, type, category, 0x1000, NULL, 1, 0, strings, NULL);
 }
 
 } // namespace sihd::sys

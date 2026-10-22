@@ -1,4 +1,4 @@
-#include <cxxabi.h> // demangle
+#include <cxxabi.h>
 #include <errno.h>
 #include <string.h>
 
@@ -6,10 +6,10 @@
 #include <array>
 #include <cctype>
 #include <charconv>
-#include <climits> // LONG_MIN LONG_MAX ULONG_MAX...
-#include <cmath>   // HUGE_VAL
+#include <climits>
+#include <cmath>
 #include <cstdarg>
-#include <iomanip> // std::put_time
+#include <iomanip>
 #include <iterator>
 #include <locale>
 #include <random>
@@ -36,10 +36,9 @@
 # include <stringapiset.h>
 #endif
 
-using enum sihd::util::ErrorCode;
-
 namespace sihd::util::str
 {
+using enum ErrorCode;
 
 namespace
 {
@@ -161,36 +160,37 @@ std::string timeoffset_to_string(Timestamp timestamp, bool total_parenthesis, bo
     const auto nano = timestamp.get();
     const uint64_t magnitude = nano < 0 ? uint64_t(0) - static_cast<uint64_t>(nano) : static_cast<uint64_t>(nano);
     const struct tm tm = time::to_tm(time::seconds(magnitude / 1000000000), localtime);
-    std::string s;
-    s.reserve(64);
+    std::string text;
+    text.reserve(64);
     bool next_step;
 
-    s += (timestamp >= 0 ? "+" : "-");
+    text += (timestamp >= 0 ? "+" : "-");
     if ((next_step = tm.tm_year > 70))
-        fmt::format_to(std::back_inserter(s), "{}y:", tm.tm_year - 70);
+        fmt::format_to(std::back_inserter(text), "{}y:", tm.tm_year - 70);
     if ((next_step = next_step || tm.tm_mon > 0))
-        fmt::format_to(std::back_inserter(s), "{}m:", tm.tm_mon);
+        fmt::format_to(std::back_inserter(text), "{}m:", tm.tm_mon);
     if ((next_step = next_step || (tm.tm_mday - 1) > 0))
-        fmt::format_to(std::back_inserter(s), "{}d ", tm.tm_mday - 1);
+        fmt::format_to(std::back_inserter(text), "{}d ", tm.tm_mday - 1);
     if ((next_step = next_step || tm.tm_hour > 0))
-        fmt::format_to(std::back_inserter(s), "{}h:", tm.tm_hour);
+        fmt::format_to(std::back_inserter(text), "{}h:", tm.tm_hour);
     if ((next_step = next_step || tm.tm_min > 0))
-        fmt::format_to(std::back_inserter(s), "{}m:", tm.tm_min);
+        fmt::format_to(std::back_inserter(text), "{}m:", tm.tm_min);
     if ((next_step = next_step || tm.tm_sec > 0))
-        fmt::format_to(std::back_inserter(s), "{}s:", tm.tm_sec);
+        fmt::format_to(std::back_inserter(text), "{}s:", tm.tm_sec);
     const auto ms = magnitude / 1000000 % 1000;
     if ((next_step = next_step || ms > 0))
-        fmt::format_to(std::back_inserter(s), "{}ms:", ms);
+        fmt::format_to(std::back_inserter(text), "{}ms:", ms);
     const auto us = magnitude / 1000 % 1000;
-    fmt::format_to(std::back_inserter(s), "{}us", us);
+    fmt::format_to(std::back_inserter(text), "{}us", us);
     if (nano_resolution)
     {
         const auto ns = magnitude % 1000;
-        fmt::format_to(std::back_inserter(s), ":{}ns", ns);
+        fmt::format_to(std::back_inserter(text), ":{}ns", ns);
     }
+
     if (total_parenthesis)
-        fmt::format_to(std::back_inserter(s), " ({})", timestamp.nanoseconds());
-    return s;
+        fmt::format_to(std::back_inserter(text), " ({})", timestamp.nanoseconds());
+    return text;
 }
 
 template <typename T>
@@ -326,10 +326,9 @@ char glob_lower(char c)
     return static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
 }
 
-// POSIX bracket classes: [:alpha:], [:digit:]...
 bool glob_posix_class_match(std::string_view name, char c)
 {
-    static const std::pair<std::string_view, int (*)(int)> classes[] = {
+    static const std::array<std::pair<std::string_view, int (*)(int)>, 12> classes = {{
         {"alnum", std::isalnum},
         {"alpha", std::isalpha},
         {"blank", std::isblank},
@@ -342,7 +341,7 @@ bool glob_posix_class_match(std::string_view name, char c)
         {"space", std::isspace},
         {"upper", std::isupper},
         {"xdigit", std::isxdigit},
-    };
+    }};
     for (const auto & [class_name, is_type] : classes)
     {
         if (class_name == name)
@@ -363,6 +362,7 @@ bool glob_match_class(std::string_view pattern, size_t & i, char c)
         negate = true;
         ++j;
     }
+
     // fnmatch: ']' first in class is a literal member
     const size_t body = j;
     bool member = false;
@@ -377,6 +377,7 @@ bool glob_match_class(std::string_view pattern, size_t & i, char c)
             }
             return false;
         }
+
         if (pattern[j] == '[' && j + 1 < pattern.size() && pattern[j + 1] == ':')
         {
             const size_t stop = pattern.find(":]", j + 2);
@@ -393,6 +394,7 @@ bool glob_match_class(std::string_view pattern, size_t & i, char c)
             first = pattern[++j];
         char last = first;
         size_t element_end = j;
+
         // fnmatch: '-' is literal at class edges
         if (j + 2 < pattern.size() && pattern[j + 1] == '-' && pattern[j + 2] != ']')
         {
@@ -434,6 +436,7 @@ bool glob_match_element(std::string_view pattern, size_t & p, char c)
         literal = pattern[next++];
         escaped = true;
     }
+
     if (!escaped)
     {
         if (literal == '?')
@@ -459,12 +462,13 @@ bool glob_match_impl(std::string_view str, std::string_view pattern, bool ignore
     size_t star_si = 0;
     while (si < str.size())
     {
-        const char c = ignore_case ? glob_lower(str[si]) : str[si];
-        if (pi < pattern.size() && pattern[pi] != '*' && glob_match_element(pattern, pi, c))
+        const char ch = ignore_case ? glob_lower(str[si]) : str[si];
+        if (pi < pattern.size() && pattern[pi] != '*' && glob_match_element(pattern, pi, ch))
         {
             ++si;
             continue;
         }
+
         if (pi < pattern.size() && pattern[pi] == '*')
         {
             star_pi = pi++;
@@ -529,6 +533,7 @@ uint16_t resolve_base_prefix(std::string_view & str, uint16_t base)
             default:
                 break;
         }
+
         if (prefix_base != 0 && (base == 0 || base == prefix_base))
         {
             str.remove_prefix(2);
@@ -657,6 +662,7 @@ std::u32string to_u32str(std::string_view utf8_view)
     }
     return utf32_str;
 }
+
 // clang-format on
 #endif
 
@@ -1099,6 +1105,7 @@ std::vector<std::string> hexdump_fmt(const void *mem, size_t size, size_t cols)
             else
                 line += '.';
         }
+
         ret.emplace_back(std::move(line));
         line.clear();
     }
@@ -1116,7 +1123,7 @@ std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols)
 
 std::string to_base64(const void *mem, size_t size)
 {
-    static constexpr char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static constexpr std::string_view alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     std::string ret;
     ret.reserve(((size + 2) / 3) * 4);
     const unsigned char *bytes = (const unsigned char *)mem;
@@ -1124,27 +1131,27 @@ std::string to_base64(const void *mem, size_t size)
     size_t i = 0;
     while (i + 2 < size)
     {
-        const uint32_t n = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8) | uint32_t(bytes[i + 2]);
-        ret += alphabet[(n >> 18) & 63];
-        ret += alphabet[(n >> 12) & 63];
-        ret += alphabet[(n >> 6) & 63];
-        ret += alphabet[n & 63];
+        const uint32_t group = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8) | uint32_t(bytes[i + 2]);
+        ret += alphabet[(group >> 18) & 63];
+        ret += alphabet[(group >> 12) & 63];
+        ret += alphabet[(group >> 6) & 63];
+        ret += alphabet[group & 63];
         i += 3;
     }
     const size_t rem = size - i;
     if (rem == 1)
     {
-        const uint32_t n = uint32_t(bytes[i]) << 16;
-        ret += alphabet[(n >> 18) & 63];
-        ret += alphabet[(n >> 12) & 63];
+        const uint32_t group = uint32_t(bytes[i]) << 16;
+        ret += alphabet[(group >> 18) & 63];
+        ret += alphabet[(group >> 12) & 63];
         ret += "==";
     }
     else if (rem == 2)
     {
-        const uint32_t n = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8);
-        ret += alphabet[(n >> 18) & 63];
-        ret += alphabet[(n >> 12) & 63];
-        ret += alphabet[(n >> 6) & 63];
+        const uint32_t group = (uint32_t(bytes[i]) << 16) | (uint32_t(bytes[i + 1]) << 8);
+        ret += alphabet[(group >> 18) & 63];
+        ret += alphabet[(group >> 12) & 63];
+        ret += alphabet[(group >> 6) & 63];
         ret += '=';
     }
     return ret;
@@ -1163,7 +1170,7 @@ std::string to_base64(std::string_view str)
     return to_base64(str.data(), str.size());
 }
 
-sihd::util::Result<std::vector<uint8_t>> from_base64(std::string_view b64)
+Result<std::vector<uint8_t>> from_base64(std::string_view b64)
 {
     std::vector<uint8_t> ret;
     ret.reserve(b64.size() / 4 * 3);
@@ -1176,6 +1183,7 @@ sihd::util::Result<std::vector<uint8_t>> from_base64(std::string_view b64)
     for (const char c : b64)
     {
         const size_t i = index++;
+
         // ascii whitespace only: std::isspace is locale dependent and may accept bytes like 0xa0
         if (c == ' ' || (c >= '\t' && c <= '\r'))
             continue;
@@ -1193,6 +1201,7 @@ sihd::util::Result<std::vector<uint8_t>> from_base64(std::string_view b64)
         acc = ((acc << 6) | uint32_t(digit)) & 0x3fff;
         bits += 6;
         ++data_count;
+
         if (bits >= 8)
         {
             bits -= 8;
@@ -1289,11 +1298,12 @@ bool is_number(std::string_view s, uint16_t base)
     return true;
 }
 
-sihd::util::Result<long long> to_signed(std::string_view str, uint16_t base)
+Result<long long> to_signed(std::string_view str, uint16_t base)
 {
     const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
         return std::unexpected(Error(invalid_argument, "base must be 0 or in [2, 36]"));
+
     // std::from_chars handles neither a leading '+' nor a base prefix, strtol did
     bool negate = false;
     if (!str.empty() && (str.front() == '-' || str.front() == '+'))
@@ -1314,7 +1324,7 @@ sihd::util::Result<long long> to_signed(std::string_view str, uint16_t base)
     return negate ? -value : value;
 }
 
-sihd::util::Result<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
+Result<unsigned long long> to_unsigned(std::string_view str, uint16_t base)
 {
     const std::string_view input = str;
     if (base != 0 && (base < 2 || base > 36))
@@ -1333,7 +1343,7 @@ sihd::util::Result<unsigned long long> to_unsigned(std::string_view str, uint16_
     return negate ? static_cast<unsigned long long>(0) - *parsed : *parsed;
 }
 
-sihd::util::Result<bool> to_bool(std::string_view str)
+Result<bool> to_bool(std::string_view str)
 {
     if (str == "1" || str == "true")
         return true;
@@ -1342,7 +1352,7 @@ sihd::util::Result<bool> to_bool(std::string_view str)
     return std::unexpected(Error(invalid_argument, "cannot parse '{}' as bool", str));
 }
 
-sihd::util::Result<char> to_char(std::string_view str)
+Result<char> to_char(std::string_view str)
 {
     if (str.size() == 1)
     {
@@ -1361,7 +1371,7 @@ sihd::util::Result<char> to_char(std::string_view str)
 
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
 
-sihd::util::Result<float> to_float(std::string_view str, std::chars_format fmt)
+Result<float> to_float(std::string_view str, std::chars_format fmt)
 {
     const auto parsed = from_chars_to<float>(str, fmt);
     if (!parsed)
@@ -1369,7 +1379,7 @@ sihd::util::Result<float> to_float(std::string_view str, std::chars_format fmt)
     return *parsed;
 }
 
-sihd::util::Result<double> to_double(std::string_view str, std::chars_format fmt)
+Result<double> to_double(std::string_view str, std::chars_format fmt)
 {
     const auto parsed = from_chars_to<double>(str, fmt);
     if (!parsed)
@@ -1379,7 +1389,7 @@ sihd::util::Result<double> to_double(std::string_view str, std::chars_format fmt
 
 #else
 
-sihd::util::Result<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+Result<float> to_float(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
     const auto parsed = strtod_fallback(str);
     if (!parsed)
@@ -1387,7 +1397,7 @@ sihd::util::Result<float> to_float(std::string_view str, [[maybe_unused]] std::c
     return static_cast<float>(*parsed);
 }
 
-sihd::util::Result<double> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
+Result<double> to_double(std::string_view str, [[maybe_unused]] std::chars_format fmt)
 {
     const auto parsed = strtod_fallback(str);
     if (!parsed)
@@ -1510,6 +1520,7 @@ std::string remove_enclosing(std::string_view str, const char *authorized_start_
             else
             {
                 buf[j] = str[i];
+
                 ++j;
             }
         }
@@ -1538,10 +1549,10 @@ int find_str_not_enclosed(std::string_view origin,
         int closed_at = stopping_enclose_index(origin, (int)i, authorized_start_enclose, escape);
         if (closed_at > 0)
         {
-            // matched closure - skip it
             i = (size_t)closed_at;
             continue;
         }
+
         if (closed_at == -2)
         {
             // never ends - not possible to find a string not escaped here
@@ -1684,6 +1695,7 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
         {
             ret += '\n';
             ret.append(s.data() + begin, word_size);
+
             line_width = word_size;
         }
         else
@@ -1725,6 +1737,7 @@ std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen)
                 append_word(word_begin, i + 1);
         }
     }
+
     return ret;
 }
 

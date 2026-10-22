@@ -48,28 +48,7 @@ struct HttpServer::Impl
 {
         struct HttpSession
         {
-                void new_request()
-                {
-                    request.reset();
-                    // a keep-alive connection must not pin the largest body it served
-                    if (content.capacity() > max_retained_body_capacity)
-                        content = sihd::util::ArrChar {};
-                    else
-                        content.clear();
-                    body_stream.reset();
-                    stream_provider = nullptr;
-                    cached_auth_header.reset();
-                    content_length = 0;
-                    content_size = 0;
-                    request_type = HttpRequest::None;
-                    rc = 0;
-                    stream_sent = 0;
-                    stream_length = 0;
-                    waiting_body = false;
-                    response_pending = false;
-                    reject_body = false;
-                    close_after_stream = false;
-                }
+                void new_request();
 
                 struct lws *wsi = nullptr;
                 void *in = nullptr;
@@ -108,14 +87,10 @@ struct HttpServer::Impl
 
         struct LwsPollingScheduler: public sihd::util::IRunnable
         {
-                LwsPollingScheduler(HttpServer *srv): server(srv) {}
+                LwsPollingScheduler(HttpServer *srv);
                 ~LwsPollingScheduler() = default;
 
-                bool run()
-                {
-                    server->_impl->check_all_protocols();
-                    return true;
-                }
+                bool run();
 
                 HttpServer *server;
         };
@@ -123,11 +98,9 @@ struct HttpServer::Impl
         Impl(HttpServer *server);
         ~Impl();
 
-        // session management
         void session_init(HttpSession *session);
         void session_cleanup(HttpSession *session);
 
-        // static lws callbacks
         static int _global_http_lws_callback(struct lws *wsi,
                                              enum lws_callback_reasons reason,
                                              void *user,
@@ -139,7 +112,6 @@ struct HttpServer::Impl
                                                   void *in,
                                                   size_t len);
 
-        // http callbacks & helpers
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
         HttpRequest::RequestType get_request_type(struct lws *wsi);
         bool is_cors_preflight(struct lws *wsi);
@@ -182,7 +154,6 @@ struct HttpServer::Impl
         AuthResult parse_authorization(std::string_view auth_header_value, IHttpAuthenticator *authenticator);
         IHttpAuthenticator *get_authenticator_for(WebService *webservice);
 
-        // header/response helpers
         std::optional<std::string> get_header(struct lws *wsi, enum lws_token_indexes idx);
         // name must carry its trailing ':' as lws matches it verbatim
         std::optional<std::string> get_custom_header(struct lws *wsi, std::string_view name);
@@ -199,7 +170,6 @@ struct HttpServer::Impl
         bool send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
         bool send_http_headers(struct lws *wsi, HttpResponse & response);
 
-        // websocket callbacks
         int _lws_websocket_callback(struct lws *wsi,
                                     enum lws_callback_reasons reason,
                                     void *user,
@@ -211,11 +181,9 @@ struct HttpServer::Impl
         bool is_websocket_origin_allowed(struct lws *wsi);
         bool pass_http_filter(struct lws *wsi, std::string_view uri);
 
-        // protocol management
         bool add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size);
         bool check_all_protocols();
 
-        // members
         HttpServer *server;
 
         std::atomic<bool> stop;

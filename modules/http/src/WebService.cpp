@@ -2,6 +2,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -9,7 +11,7 @@ SIHD_REGISTER_FACTORY(WebService)
 
 SIHD_LOGGER;
 
-WebService::WebService(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent) {}
+WebService::WebService(const std::string & name, Node *parent): Named(name, parent) {}
 
 WebService::~WebService() = default;
 
@@ -44,6 +46,16 @@ bool WebService::call(std::string_view path, HttpRequest & request, HttpResponse
 std::vector<HttpRequest::RequestType> WebService::allowed_methods(std::string_view path) const
 {
     return _route_table.allowed_methods(path);
+}
+
+void WebService::set_authenticator(IHttpAuthenticator *authenticator)
+{
+    _authenticator = authenticator;
+}
+
+IHttpAuthenticator *WebService::authenticator() const
+{
+    return _authenticator;
 }
 
 } // namespace sihd::http

@@ -16,9 +16,9 @@ using namespace sihd::sys;
 class TestPathManager: public ::testing::Test
 {
     protected:
-        TestPathManager() { sihd::util::LoggerManager::stream(); }
+        TestPathManager() { LoggerManager::stream(); }
 
-        virtual ~TestPathManager() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPathManager() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -59,8 +59,6 @@ TEST_F(TestPathManager, test_pathmanager_get)
 
     PathManager path_manager;
 
-    // Test push/remove/find/clear
-
     EXPECT_TRUE(path_manager.find("parent").empty());
     EXPECT_TRUE(path_manager.find("random-dir").empty());
     path_manager.push_back(test_path.string());
@@ -79,8 +77,6 @@ TEST_F(TestPathManager, test_pathmanager_get)
     path_manager.clear();
     EXPECT_TRUE(path_manager.find("child").empty());
 
-    // Test file
-
     path_manager.push_back(test_path_deep.string());
 
     EXPECT_EQ(path_manager.find("file.txt"), test_file_path.string());
@@ -90,8 +86,6 @@ TEST_F(TestPathManager, test_pathmanager_get)
                                  std::filesystem::perm_options::replace);
 
     path_manager.clear();
-
-    // Test find order and findall with twin
 
     path_manager.push_back(test_path.string());
     path_manager.push_back(test_path_parent.string());

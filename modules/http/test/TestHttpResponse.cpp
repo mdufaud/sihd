@@ -1,3 +1,5 @@
+#include <array>
+
 #include <gtest/gtest.h>
 
 #include <sihd/http/HttpResponse.hpp>
@@ -10,24 +12,23 @@ namespace test
 
 SIHD_NEW_LOGGER("test");
 
+using namespace sihd::util;
 using namespace sihd::http;
 
 class TestHttpResponse: public ::testing::Test
 {
     protected:
-        TestHttpResponse() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestHttpResponse() { sihd::util::LoggerManager::clear_loggers(); }
+        TestHttpResponse() { LoggerManager::stream(); }
+        virtual ~TestHttpResponse() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestHttpResponse, test_content_types)
 {
-    // plain: sets text/plain mime and the body
     HttpResponse plain;
     EXPECT_TRUE(plain.set_plain_content("hello"));
     EXPECT_EQ(plain.content().cpp_str(), "hello");
     EXPECT_EQ(plain.http_header().content_type(), "text/plain; charset=utf-8");
 
-    // json: serializes and sets application/json
     HttpResponse json;
     EXPECT_TRUE(json.set_json_content({{"k", "v"}, {"n", 1}}));
     auto parsed = sihd::json::Json::parse(json.content().cpp_str());
@@ -35,17 +36,15 @@ TEST_F(TestHttpResponse, test_content_types)
     EXPECT_EQ((*parsed)["k"].get<std::string>(), "v");
     EXPECT_EQ(json.http_header().content_type(), "application/json; charset=utf-8");
 
-    // byte: sets octet-stream and preserves raw bytes
     HttpResponse bytes;
-    const uint8_t raw[] = {0x00, 0xFF, 0x42};
-    EXPECT_TRUE(bytes.set_byte_content(sihd::util::ArrByteView(raw, 3)));
+    const std::array<uint8_t, 3> raw = {0x00, 0xFF, 0x42};
+    EXPECT_TRUE(bytes.set_byte_content(ArrByteView(raw.data(), raw.size())));
     EXPECT_EQ(bytes.content().size(), 3u);
     EXPECT_EQ(bytes.http_header().content_type(), "application/octet-stream; charset=utf-8");
 }
 
 TEST_F(TestHttpResponse, test_content_type_set_once)
 {
-    // mime type auto-detection should not overwrite an already-set type
     HttpResponse resp;
     EXPECT_TRUE(resp.set_plain_content("first"));
     const std::optional<std::string_view> ct = resp.http_header().content_type();
@@ -53,11 +52,9 @@ TEST_F(TestHttpResponse, test_content_type_set_once)
     EXPECT_TRUE(resp.set_plain_content("second"));
     EXPECT_EQ(resp.http_header().content_type(), ct);
 
-    // explicit type on a fresh response is preserved
     HttpResponse resp2;
     resp2.set_content_type("application/xml");
     EXPECT_EQ(resp2.http_header().content_type(), "application/xml; charset=utf-8");
-    // auto-detection does not override the explicitly set type
     resp2.set_plain_content("data");
     EXPECT_EQ(resp2.http_header().content_type(), "application/xml; charset=utf-8");
 }
@@ -91,17 +88,16 @@ TEST_F(TestHttpResponse, test_streaming)
     EXPECT_FALSE(resp.is_streaming());
 
     int calls = 0;
-    resp.set_stream_provider([&](sihd::util::ArrByte & chunk) -> bool {
-        std::string s = "chunk" + std::to_string(calls++);
-        chunk.resize(s.size());
-        chunk.copy_from_bytes(s.data(), s.size());
+    resp.set_stream_provider([&](ArrByte & chunk) -> bool {
+        std::string text = "chunk" + std::to_string(calls++);
+        chunk.resize(text.size());
+        chunk.copy_from_bytes(text.data(), text.size());
         return calls < 3;
     });
     EXPECT_TRUE(resp.is_streaming());
 
-    // consume all chunks and verify content + termination
     std::string body;
-    sihd::util::ArrByte buf;
+    ArrByte buf;
     bool more = true;
     while (more)
     {
@@ -172,10 +168,10 @@ TEST_F(TestHttpResponse, test_to_string)
     resp.set_plain_content("not found");
     resp.set_cookie("id", "42");
 
-    std::string s = resp.to_string();
-    EXPECT_NE(s.find("HTTP/1.1 404 Not Found\r\n"), std::string::npos);
-    EXPECT_NE(s.find("Set-Cookie: id=42\r\n"), std::string::npos);
-    EXPECT_NE(s.find("\r\n\r\nnot found"), std::string::npos);
+    std::string text = resp.to_string();
+    EXPECT_NE(text.find("HTTP/1.1 404 Not Found\r\n"), std::string::npos);
+    EXPECT_NE(text.find("Set-Cookie: id=42\r\n"), std::string::npos);
+    EXPECT_NE(text.find("\r\n\r\nnot found"), std::string::npos);
 }
 
 TEST_F(TestHttpResponse, test_roundtrip)

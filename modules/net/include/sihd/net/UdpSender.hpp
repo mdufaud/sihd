@@ -21,7 +21,7 @@ class UdpSender: public INetSender,
         sihd::util::Result<void> open_socket(bool ipv6 = false);
         sihd::util::Result<void> open_socket_unix();
 
-        bool socket_opened() { return _socket.is_open(); }
+        bool socket_opened();
 
         sihd::util::Result<void> connect(const IpAddr & addr);
         sihd::util::Result<void> connect_unix(std::string_view path);
@@ -38,7 +38,7 @@ class UdpSender: public INetSender,
         sihd::util::Result<size_t> send_to(const IpAddr & addr, sihd::util::ArrCharView view);
         sihd::util::Result<void> send_to_all(const IpAddr & addr, sihd::util::ArrCharView view);
 
-        const Socket & socket() const { return _socket; }
+        const Socket & socket() const;
 
     protected:
 

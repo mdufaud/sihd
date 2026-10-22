@@ -28,6 +28,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::ssh
 {
 
@@ -36,7 +38,6 @@ SIHD_LOGGER;
 namespace
 {
 
-// Per-channel data
 struct ChannelData
 {
         SshChannel *wrapper;
@@ -45,7 +46,6 @@ struct ChannelData
         struct ssh_channel_callbacks_struct callbacks;
 };
 
-// Session userdata for callbacks
 struct SessionData
 {
         SshServer *server;
@@ -78,7 +78,6 @@ struct SessionData
         }
 };
 
-// Forward declarations for channel callbacks
 int callback_channel_pty_request(ssh_session, ssh_channel, const char *, int, int, int, int, void *);
 int callback_channel_pty_resize(ssh_session, ssh_channel, int, int, int, int, void *);
 int callback_channel_shell_request(ssh_session, ssh_channel, void *);
@@ -86,7 +85,6 @@ int callback_channel_exec_request(ssh_session, ssh_channel, const char *, void *
 int callback_channel_subsystem_request(ssh_session, ssh_channel, const char *, void *);
 int callback_channel_data(ssh_session, ssh_channel, void *, uint32_t, int, void *);
 
-// Global callbacks for libssh
 int callback_auth_password(ssh_session session, const char *user, const char *password, void *userdata)
 {
     (void)session;
@@ -159,14 +157,12 @@ ssh_channel callback_channel_open(ssh_session session, void *userdata)
     if (raw_channel == nullptr)
         return nullptr;
 
-    // Create channel data
     auto ch_data = std::make_unique<ChannelData>();
     ch_data->wrapper = new SshChannel(raw_channel);
     ch_data->wrapper->set_userdata(data);
     ch_data->has_pty = false;
     ch_data->winsize = {};
 
-    // Setup channel callbacks (stored in ChannelData to persist)
     ssh_callbacks_init(&ch_data->callbacks);
     ch_data->callbacks.userdata = data;
     ch_data->callbacks.channel_pty_request_function = callback_channel_pty_request;
@@ -391,7 +387,6 @@ struct SshServer::Impl
 
         void cleanup()
         {
-            // Clean up sessions - remove from event first
             for (auto & [ssh_session_ptr, data] : session_data)
             {
                 if (event)
@@ -417,6 +412,7 @@ struct SshServer::Impl
                     data->channels.clear();
                 }
             }
+
             session_data.clear();
             sessions.clear();
 
@@ -448,11 +444,9 @@ struct SshServer::Impl
             int process_config = 0;
             ssh_bind_options_set(bind, SSH_BIND_OPTIONS_PROCESS_CONFIG, &process_config);
 
-            // Set options
             ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDADDR, bind_addr.c_str());
             ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDPORT, &port);
 
-            // Use SSH_BIND_OPTIONS_HOSTKEY for all key types (modern API)
             if (!rsa_key.empty())
                 ssh_bind_options_set(bind, SSH_BIND_OPTIONS_HOSTKEY, rsa_key.c_str());
             if (!ecdsa_key.empty())
@@ -469,7 +463,6 @@ struct SshServer::Impl
                 return false;
             }
 
-            // Get actual port if port was 0 (dynamic allocation)
             if (port == 0)
             {
                 socket_t fd = ssh_bind_get_fd(bind);
@@ -493,7 +486,6 @@ struct SshServer::Impl
                 actual_port = port;
             }
 
-            // Set bind to non-blocking so accept doesn't block
             ssh_bind_set_blocking(bind, 0);
 
             SIHD_LOG(info, "SshServer: listening on {}:{}", bind_addr, actual_port);
@@ -509,7 +501,6 @@ struct SshServer::Impl
                 return false;
             }
 
-            // Accept with non-blocking bind
             int rc = ssh_bind_accept(bind, session);
             if (rc == SSH_AGAIN)
             {
@@ -527,14 +518,12 @@ struct SshServer::Impl
 
             SIHD_LOG(info, "SshServer: accepted new connection");
 
-            // Create session wrapper (session is still in blocking mode)
             auto session_wrapper = std::make_unique<SshSession>(session);
 
             // Bound the blocking key exchange so a connect-and-stall client cannot hang the single-threaded
             // loop (pre-auth DoS): libssh applies this timeout to the blocking handshake read below
             SIHD_UNEXPECTED_LOG(session_wrapper->set_timeout(kex_timeout_sec));
 
-            // Setup session data for callbacks
             auto data_holder = std::make_unique<SessionData>(SessionData {.server = server,
                                                                           .session = session_wrapper.get(),
                                                                           .channels = {},
@@ -546,14 +535,12 @@ struct SshServer::Impl
             session_wrapper->set_userdata(data);
             session_data[session] = std::move(data_holder);
 
-            // Setup server callbacks (stored in SessionData to persist)
             ssh_callbacks_init(&data->server_callbacks);
             data->server_callbacks.userdata = data;
             data->server_callbacks.auth_password_function = callback_auth_password;
             data->server_callbacks.auth_pubkey_function = callback_auth_pubkey;
             data->server_callbacks.channel_open_request_session_function = callback_channel_open;
 
-            // Set auth methods
             if (!authorized_keys.empty())
                 ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD | SSH_AUTH_METHOD_PUBLICKEY);
             else
@@ -561,9 +548,6 @@ struct SshServer::Impl
 
             ssh_set_server_callbacks(session, &data->server_callbacks);
 
-            // Channel callbacks are now set per-channel in callback_channel_open
-
-            // Perform key exchange (session is in blocking mode)
             if (ssh_handle_key_exchange(session) != SSH_OK)
             {
                 SIHD_LOG(error, "SshServer: key exchange failed: {}", ssh_get_error(session));
@@ -584,15 +568,12 @@ struct SshServer::Impl
                 }
             }
 
-            // NOW set session to non-blocking for event loop
             session_wrapper->set_blocking(false);
 
-            // Add to event loop to handle subsequent messages
             ssh_event_add_session(event, session);
 
             SIHD_LOG(debug, "SshServer: session added to event loop");
 
-            // Notify handler
             if (server->server_handler())
             {
                 server->server_handler()->on_session_opened(server, session_wrapper.get());
@@ -625,7 +606,6 @@ struct SshServer::Impl
 
             ssh_event_remove_session(event, session);
 
-            // Remove from sessions vector
             sessions.erase(
                 std::remove_if(sessions.begin(),
                                sessions.end(),
@@ -641,14 +621,12 @@ struct SshServer::Impl
             {
                 ssh_session session = static_cast<ssh_session>(session_wrapper->session());
 
-                // Check if session is closed (not just disconnected)
                 int status = ssh_get_status(session);
                 if ((status & (SSH_CLOSED | SSH_CLOSED_ERROR)) != 0)
                 {
                     SIHD_LOG(debug, "SshServer: session closed, status={}", status);
                     to_remove.push_back(session);
 
-                    // Notify handler
                     if (server->server_handler())
                     {
                         server->server_handler()->on_session_closed(server, session_wrapper.get());
@@ -697,7 +675,6 @@ struct SshServer::Impl
 
                 poll.poll(wait_timeout_ms);
 
-                // Accept any pending connection (bind fd readable).
                 bool bind_readable = false;
                 for (const auto & ev : poll.events())
                 {
@@ -710,11 +687,9 @@ struct SshServer::Impl
                 if (bind_readable)
                     this->accept_session(server);
 
-                // Non-blocking dispatch of all ready session traffic.
                 if (ssh_event_dopoll(event, 0) == SSH_ERROR)
                     SIHD_LOG(error, "SshServer: session dispatch failed");
 
-                // Allow handler to poll child FDs
                 if (server->server_handler())
                 {
                     server->server_handler()->on_poll(server);
@@ -729,9 +704,9 @@ struct SshServer::Impl
 
 SIHD_REGISTER_FACTORY(SshServer)
 
-SshServer::SshServer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
-    sihd::util::Configurable(),
+SshServer::SshServer(const std::string & name, Node *parent):
+    Named(name, parent),
+    Configurable(),
     _server_handler_ptr(nullptr),
     _stop(false)
 {
@@ -746,71 +721,64 @@ SshServer::~SshServer()
     SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-sihd::util::Result<void> SshServer::set_port(int port)
+Result<void> SshServer::set_port(int port)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change port while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change port while running"));
     _impl_ptr->port = port;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_bind_address(std::string_view addr)
+Result<void> SshServer::set_bind_address(std::string_view addr)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change bind address while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change bind address while running"));
     _impl_ptr->bind_addr = addr;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_rsa_key(std::string_view key_path)
+Result<void> SshServer::set_rsa_key(std::string_view key_path)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change keys while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change keys while running"));
     _impl_ptr->rsa_key = key_path;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_ecdsa_key(std::string_view key_path)
+Result<void> SshServer::set_ecdsa_key(std::string_view key_path)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change keys while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change keys while running"));
     _impl_ptr->ecdsa_key = key_path;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_authorized_keys_file(std::string_view path)
+Result<void> SshServer::set_authorized_keys_file(std::string_view path)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change authorized_keys while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change authorized_keys while running"));
     _impl_ptr->authorized_keys = path;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_banner(std::string_view banner)
+Result<void> SshServer::set_banner(std::string_view banner)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change banner while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change banner while running"));
     _impl_ptr->banner = banner;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_verbosity(int level)
+Result<void> SshServer::set_verbosity(int level)
 {
     _impl_ptr->verbosity = level;
     return {};
 }
 
-sihd::util::Result<void> SshServer::set_kex_timeout(int seconds)
+Result<void> SshServer::set_kex_timeout(int seconds)
 {
     if (this->is_running())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot change kex timeout while running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot change kex timeout while running"));
     _impl_ptr->kex_timeout_sec = seconds;
     return {};
 }
@@ -822,8 +790,6 @@ void SshServer::set_server_handler(ISshServerHandler *handler)
 
 int SshServer::get_port() const
 {
-    // Return actual_port if it was determined (after listening)
-    // Otherwise return configured port
     return _impl_ptr->actual_port != 0 ? _impl_ptr->actual_port : _impl_ptr->port;
 }
 
@@ -831,7 +797,7 @@ bool SshServer::on_start()
 {
     _stop = false;
 
-    sihd::util::Defer defer_finalize([this] { _impl_ptr->cleanup(); });
+    Defer defer_finalize([this] { _impl_ptr->cleanup(); });
 
     return _impl_ptr->setup_bind(this) && _impl_ptr->run_event_loop(this);
 }
@@ -840,6 +806,16 @@ bool SshServer::on_stop()
 {
     _stop = true;
     return true;
+}
+
+ISshServerHandler *SshServer::server_handler() const
+{
+    return _server_handler_ptr;
+}
+
+bool SshServer::should_stop() const
+{
+    return _stop.load();
 }
 
 } // namespace sihd::ssh

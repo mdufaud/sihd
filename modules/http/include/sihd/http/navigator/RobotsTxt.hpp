@@ -23,13 +23,10 @@ class RobotsTxt
         // returns false if fetch failed or returned non-200
         bool fetch(std::string_view base_url, Navigator & nav);
 
-        // parse raw robots.txt content
         void parse(std::string_view content);
 
-        // reset all parsed data
         void clear();
 
-        // check if user_agent is allowed to access path
         bool is_allowed(std::string_view user_agent, std::string_view path) const;
 
         // returns the Crawl-delay for the given user agent (in seconds)

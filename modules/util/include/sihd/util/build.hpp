@@ -1,9 +1,7 @@
 #ifndef __SIHD_UTIL_BUILD_HPP__
 #define __SIHD_UTIL_BUILD_HPP__
 
-#include <sys/types.h> // pid_t, ssize_t
-
-// === Architecture ===
+#include <sys/types.h>
 
 #if defined(__LP64__) || defined(_WIN64)
 # define __SIHD_64BITS__
@@ -14,8 +12,6 @@
 #if defined(__EMSCRIPTEN__)
 # define __SIHD_EMSCRIPTEN__
 #endif
-
-// === Platform macros ===
 
 #if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__) || defined(__MINGW32__))
 
@@ -85,8 +81,6 @@
 # define __SIHD_BSD__
 
 #endif
-
-// === Build and platform constexpr ===
 
 namespace sihd::util::build
 {

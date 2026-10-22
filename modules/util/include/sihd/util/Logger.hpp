@@ -43,10 +43,8 @@
 # define SIHD_CERR(message, ...) fmt::print(stderr, message, ##__VA_ARGS__)
 
 # define SIHD_LOG_LVL(level, message, ...) __sihd_logger__.log(level, message, ##__VA_ARGS__)
-// Log with printf like format
 # define SIHD_LOG_LVL_FORMAT(level, message, ...) __sihd_logger__.log(level, fmt::sprintf(message, ##__VA_ARGS__))
 # define SIHD_LOG(level, message, ...) SIHD_LOG_LVL(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
-// Log with printf like format
 # define SIHD_LOG_FORMAT(level, message, ...) SIHD_LOG_LVL_FORMAT(sihd::util::LogLevel::level, message, ##__VA_ARGS__)
 
 // logs the error of a sihd::util::Result<...> with the call site, returns true when it was an error
@@ -58,9 +56,7 @@
 #  define SIHD_UNEXPECTED_LOG(expected_value) ::sihd::util::log_unexpected(__sihd_logger__, expected_value)
 # endif
 
-// Declare a new logger into the namespace (use in CPP files)
 # define SIHD_NEW_LOGGER(name) inline sihd::util::Logger __sihd_logger__(name);
-// Declare the logger created by SIHD_NEW_LOGGER
 # define SIHD_LOGGER extern sihd::util::Logger __sihd_logger__;
 
 # if SIHD_TRACE_OFF
@@ -69,14 +65,10 @@
 #  define SIHD_TRACEV(message)
 #  define SIHD_TRACE_FORMAT(message, ...)
 # else
-// Log into debug the file location
 #  define SIHD_TRACE(message, ...) SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__)
-// Trace with added function call
 #  define SIHD_TRACEL(message, ...)                                                                                    \
       SIHD_LOG(debug, "TRACE[" __SIHD_LOC__ "] {}: " message, __SIHD_FUNCTION__, ##__VA_ARGS__)
-// Trace variable value
 #  define SIHD_TRACEV(message) SIHD_TRACE(#message " = {}", message)
-// Trace with printf like format
 #  define SIHD_TRACE_FORMAT(message, ...) SIHD_LOG_FORMAT(debug, "TRACE[" __SIHD_LOC__ "] " message, ##__VA_ARGS__)
 # endif
 

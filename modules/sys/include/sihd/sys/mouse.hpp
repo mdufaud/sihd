@@ -24,19 +24,15 @@ enum class MouseButton : uint8_t
     forward,
 };
 
-// Moves the cursor to the virtual desktop position.
 sihd::util::Result<void> mouse_move(int x, int y);
 
-// Moves the cursor relatively to its current position.
 sihd::util::Result<void> mouse_move_by(int dx, int dy);
 
-// Presses or releases `button` without releasing it automatically.
 sihd::util::Result<void> mouse_button(MouseButton button, bool down);
 
 sihd::util::Result<void> mouse_click(MouseButton button = MouseButton::left);
 
-// Scrolls `x` detents horizontally and `y` detents vertically, positive
-// scrolling right and up.
+// scrolls x detents horizontally and y vertically; positive is right and up
 sihd::util::Result<void> mouse_scroll(int x, int y);
 
 } // namespace sihd::sys::mouse

@@ -20,9 +20,9 @@ using namespace sihd::sys;
 class TestSftp: public ::testing::Test
 {
     protected:
-        TestSftp() { sihd::util::LoggerManager::stream(); }
+        TestSftp() { LoggerManager::stream(); }
 
-        virtual ~TestSftp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSftp() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -37,7 +37,6 @@ TEST_F(TestSftp, test_sftp)
     SIHD_UNEXPECTED_LOG(sihd::sys::fs::remove_directories(test_dir));
     SIHD_UNEXPECTED_LOG(sihd::sys::fs::make_directories(test_dir));
 
-    // Start test server with SFTP enabled, using tmp_dir as root
     auto test_server = make_test_server_with_sftp("test-sftp", "/");
     ASSERT_NE(test_server, nullptr);
 
@@ -70,9 +69,11 @@ TEST_F(TestSftp, test_sftp)
     std::vector<SftpAttribute> attrs;
     EXPECT_TRUE(sftp.list_dir(test_dir, attrs).has_value());
     EXPECT_EQ(attrs.size(), 3u);
+
     int nlink = 0;
     int nregular = 0;
     int ndir = 0;
+
     for (const SftpAttribute & attr : attrs)
     {
         if (attr.is_file())
@@ -97,7 +98,6 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     // Secret sits OUTSIDE the jail (in its parent)
     std::string secret = fs::combine(base.path(), "secret.txt");
     ASSERT_TRUE(fs::write(secret, "TOPSECRET"));
-    // Legit file inside the jail
     ASSERT_TRUE(fs::write(fs::combine(jail, "ok.txt"), "hello"));
 
     auto test_server = make_test_server_with_sftp("test-sftp-jail", jail);
@@ -120,12 +120,10 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
         EXPECT_EQ(fs::file_size(leaked).value(), 0u);
     }
 
-    // Legit read inside the jail still works
     std::string got = fs::combine(out.path(), "got.txt");
     EXPECT_TRUE(sftp.get_file("ok.txt", got).has_value());
     EXPECT_TRUE(fs::is_file(got));
 
-    // Traversal write must not escape the jail
     EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt").has_value());
     EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
 }

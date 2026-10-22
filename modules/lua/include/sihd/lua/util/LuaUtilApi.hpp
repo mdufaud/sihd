@@ -31,23 +31,9 @@
 namespace sihd::lua
 {
 
-// A raw Lua number is taken as a nanosecond count (the sihd.util.time.* helpers
-// return nanoseconds); anything else is cast from a Duration userdata.
-inline sihd::util::Duration to_duration(const luabridge::LuaRef & ref)
-{
-    if (ref.isNumber())
-        return sihd::util::Duration(ref.cast<int64_t>().value());
-    return ref.cast<sihd::util::Duration>().value();
-}
-
-// A raw Lua number is taken as a nanosecond count (the sihd.util.time.* helpers
-// return nanoseconds); anything else is cast from a Timestamp userdata.
-inline sihd::util::Timestamp to_timestamp(const luabridge::LuaRef & ref)
-{
-    if (ref.isNumber())
-        return sihd::util::Timestamp(ref.cast<int64_t>().value());
-    return ref.cast<sihd::util::Timestamp>().value();
-}
+// A raw Lua number is a nanosecond count, anything else is cast from the userdata
+sihd::util::Duration to_duration(const luabridge::LuaRef & ref);
+sihd::util::Timestamp to_timestamp(const luabridge::LuaRef & ref);
 
 template <typename T>
 struct EnumWrapper
@@ -68,7 +54,6 @@ struct EnumWrapper
 namespace luabridge
 {
 
-// LuaBridge smart pointer management for Named/Node pattern
 template <class C>
 struct ContainerTraits<sihd::util::SmartNodePtr<C>>
 {
@@ -79,9 +64,8 @@ struct ContainerTraits<sihd::util::SmartNodePtr<C>>
         static C *get(sihd::util::SmartNodePtr<C> & obj) { return obj.get(); }
 };
 
-}; // namespace luabridge
+} // namespace luabridge
 
-// enable enums in Lua
 template <>
 struct luabridge::Stack<sihd::util::Type>: luabridge::Enum<sihd::util::Type,
                                                            sihd::util::Type::TYPE_NONE,
@@ -139,7 +123,6 @@ namespace sihd::lua
 class LuaUtilApi
 {
     public:
-        // loads api into lua_state
         static void load_all(Vm & vm);
 
         static void load_base(Vm & vm);
@@ -211,7 +194,7 @@ class LuaUtilApi
 
             private:
                 luabridge::LuaRef _exec_fun();
-                lua_State *_guard_state() { return _exec_state != nullptr ? _exec_state : _fun.state(); }
+                lua_State *_guard_state();
 
                 luabridge::LuaRef _fun;
                 lua_State *_exec_state = nullptr;
@@ -222,13 +205,13 @@ class LuaUtilApi
             public:
                 LuaCoroutine() = default;
 
-                void set_state(lua_State *parent) { _parent = parent; }
-                lua_State *parent() const { return _parent; }
+                void set_state(lua_State *parent);
+                lua_State *parent() const;
 
                 // false if no parent or on failure
                 bool create();
-                lua_State *state() const { return _vm.lua_state(); }
-                void destroy() { _vm.close_state(); }
+                lua_State *state() const;
+                void destroy();
 
             private:
                 lua_State *_parent = nullptr;
@@ -263,11 +246,7 @@ class LuaUtilApi
                 LuaHandler(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref) {}
                 ~LuaHandler() = default;
 
-                void handle(T... args)
-                {
-                    // ISO C++03 14.2/4
-                    this->template call_lua_method<void, T...>(args...);
-                }
+                void handle(T... args) { this->template call_lua_method<void, T...>(args...); }
         };
 
         class LuaScheduler: public sihd::util::Scheduler
@@ -322,128 +301,6 @@ class LuaUtilApi
         LuaUtilApi() = delete;
         ~LuaUtilApi() = delete;
 
-        // Array utils
-
-        template <typename T>
-        static sihd::util::Array<T> _array_lua_new(luabridge::LuaRef ref, lua_State *state)
-        {
-            sihd::util::Array<T> array;
-            if constexpr (std::is_same_v<T, char>)
-            {
-                if (ref.isString())
-                {
-                    array.from(std::string(ref));
-                    return array;
-                }
-            }
-            if (ref.isTable())
-            {
-                array.reserve(ref.length());
-                for (const auto & pair : luabridge::pairs(ref))
-                    array.push_back(T(pair.second));
-            }
-            else
-                luaL_error(state, "Array new argument must be a table");
-            return array;
-        }
-
-        template <typename T>
-        static bool _array_lua_push_back(sihd::util::Array<T> *self, luabridge::LuaRef ref)
-        {
-            bool ret = true;
-            if constexpr (std::is_same_v<T, char>)
-            {
-                if (ref.isString())
-                {
-                    self->push_back(std::string(ref));
-                    return true;
-                }
-            }
-            if (ref.isTable())
-            {
-                self->reserve(self->size() + ref.length());
-                for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_back(T(pair.second));
-            }
-            else
-                ret = self->push_back(T(ref));
-            return ret;
-        }
-
-        template <typename T>
-        static bool _array_lua_push_front(sihd::util::Array<T> *self, luabridge::LuaRef ref)
-        {
-            bool ret = true;
-            if constexpr (std::is_same_v<T, char>)
-            {
-                if (ref.isString())
-                {
-                    self->push_front(std::string(ref));
-                    return true;
-                }
-            }
-            if (ref.isTable())
-            {
-                self->reserve(self->size() + ref.length());
-                for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_front(T(pair.second));
-            }
-            else
-                ret = self->push_front(T(ref));
-            return ret;
-        }
-
-        template <typename T>
-        static bool _array_lua_copy_table(sihd::util::Array<T> *self, luabridge::LuaRef ref, luabridge::LuaRef from_ref)
-        {
-            size_t from_idx = 0;
-            if (from_ref.isNil() == false)
-                from_idx = static_cast<size_t>(from_ref);
-            if constexpr (std::is_same_v<T, char>)
-            {
-                if (ref.isString())
-                {
-                    self->copy_from(std::string(ref), from_idx);
-                    return true;
-                }
-            }
-            if (ref.isTable() == false)
-                return false;
-            if ((size_t)ref.length() > (from_idx + self->size()))
-                return false;
-            for (const auto & pair : luabridge::pairs(ref))
-            {
-                self->set(from_idx, T(pair.second));
-                ++from_idx;
-            }
-            return true;
-        }
-
-        template <typename T>
-        static bool _array_lua_from(sihd::util::Array<T> *self, luabridge::LuaRef ref)
-        {
-            bool ret = true;
-            if constexpr (std::is_same_v<T, char>)
-            {
-                if (ref.isString())
-                {
-                    self->from(std::string(ref));
-                    return true;
-                }
-            }
-            self->delete_buffer();
-            if (ref.isTable())
-            {
-                self->reserve(self->size() + ref.length());
-                for (const auto & pair : luabridge::pairs(ref))
-                    ret = ret && self->push_back(T(pair.second));
-            }
-            else
-                ret = self->push_back(T(ref));
-            return ret;
-        }
-
-        // Configurable's recursive setting
         static bool
             _configurable_recursive_set(sihd::util::Configurable *obj, const std::string & key, luabridge::LuaRef ref);
 };

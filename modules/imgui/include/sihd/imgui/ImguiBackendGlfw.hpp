@@ -39,7 +39,7 @@ class ImguiBackendGlfw: public sihd::imgui::IImguiBackend
         void shutdown();
         void terminate();
 
-        GLFWwindow *window() { return _glfw_window_ptr; };
+        GLFWwindow *window();
 
     protected:
 

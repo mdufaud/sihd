@@ -23,7 +23,7 @@ class TlsContext
         TlsContext(TlsContext && other) noexcept = default;
         TlsContext & operator=(TlsContext && other) noexcept = default;
 
-        operator bool() const { return _handle != nullptr; }
+        operator bool() const;
 
         // TLS 1.2 minimum, renegotiation disabled, a client verifies the server certificate against the default CAs
         sihd::util::Result<void> init(bool server_mode);
@@ -40,11 +40,10 @@ class TlsContext
 
         void clear();
 
-        void *native() const { return _handle.get(); }
+        void *native() const;
 
     private:
-        // type-erased SSL_CTX: the deleter freeing it is bound at acquisition,
-        // keeping openssl types out of this header
+        // type-erased SSL_CTX, deleter bound at acquisition: keeps openssl types out of this header
         std::shared_ptr<void> _handle;
         bool _server_mode = false;
 };

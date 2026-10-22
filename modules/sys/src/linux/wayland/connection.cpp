@@ -32,7 +32,6 @@ bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<b
         if (ret <= 0)
         {
             wl_display_cancel_read(display);
-            // A polling error, or the deadline reached, gives up.
             if (poll.polling_error() || steady_now() >= deadline)
                 return false;
             // Signal interrupt while time is left: keep waiting.
@@ -48,19 +47,15 @@ bool dispatch_until(Connection & conn, Timestamp deadline, const std::function<b
 
 bool roundtrip_bounded(Connection & conn, Timestamp deadline)
 {
-    struct SyncDone
-    {
-            bool done = false;
-    };
-    SyncDone done;
+    bool done = false;
     const wl_callback_listener listener = {
-        .done = [](void *data, wl_callback *, uint32_t) { static_cast<SyncDone *>(data)->done = true; },
+        .done = [](void *data, wl_callback *, uint32_t) { *static_cast<bool *>(data) = true; },
     };
     wl_callback *callback = wl_display_sync(conn.display());
     if (callback == nullptr)
         return false;
     wl_callback_add_listener(callback, &listener, &done);
-    const bool ok = dispatch_until(conn, deadline, [&] { return done.done; });
+    const bool ok = dispatch_until(conn, deadline, [&] { return done; });
     wl_callback_destroy(callback);
     return ok;
 }
@@ -79,8 +74,7 @@ bool Connection::bind_globals(Timestamp deadline)
 {
     if (_registry == nullptr)
         return false;
-    // First roundtrip binds the globals, the second lets them emit initial
-    // events (seat capabilities, output names)
+    // First roundtrip binds the globals, the second lets them emit initial events (seat caps, output names)
     if (!roundtrip_bounded(*this, deadline) || !roundtrip_bounded(*this, deadline))
         return false;
     _ok = ready();

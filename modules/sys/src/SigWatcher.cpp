@@ -36,7 +36,7 @@ SIHD_LOGGER;
 SigWatcher::SigWatcher(const std::string & name, Node *parent):
     Named(name, parent),
     _running(false),
-    _polling_interval_ns(Duration(time::sec(1))) // Default 1 second for polling mode
+    _polling_interval_ns(Duration(time::sec(1)))
 {
 #if defined(SIHD_HAS_SIGSET)
     sigemptyset(&_sigset);
@@ -79,7 +79,7 @@ bool SigWatcher::is_running() const
 
 bool SigWatcher::add_signal(int sig)
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     auto & sig_controller = _sig_controllers.emplace_back();
 
     bool success = !SIHD_UNEXPECTED_LOG(sig_controller.sig_handler.handle(sig));
@@ -115,7 +115,7 @@ bool SigWatcher::add_signals(std::span<const int> signals)
 
 bool SigWatcher::rm_signal(int sig)
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
 #if defined(SIHD_HAS_SIGSET)
     sigdelset(&_sigset, sig);
 #endif
@@ -131,7 +131,7 @@ bool SigWatcher::rm_signals(std::span<const int> signals)
 
 bool SigWatcher::call_previous_handler(int sig)
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     const auto it = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
         return sig_controller.sig_handler.sig() == sig;
     });
@@ -171,13 +171,11 @@ bool SigWatcher::start()
         return true;
     });
 #elif defined(SIHD_HAS_SIGWAIT)
-    // Dedicated sigwait thread for POSIX targets without signalfd (macOS/BSD/Android)
     _worker.set_method([this]() {
         this->_run_sigwait_loop();
         return true;
     });
 #else
-    // Fallback to polling mode for Windows and Emscripten
     _worker.set_method([this]() {
         this->_run_polling_loop();
         return true;
@@ -245,16 +243,16 @@ void SigWatcher::_run_signalfd_loop()
         }
 
         if (ret == 0 || _poll.polling_timeout())
-            continue; // Timeout, check _running flag
+            continue;
 
         for (const auto & event : _poll.events())
         {
             if (event.fd == _signalfd && event.readable)
             {
                 struct signalfd_siginfo siginfo;
-                ssize_t s = read(_signalfd, &siginfo, sizeof(siginfo));
+                ssize_t bytes = read(_signalfd, &siginfo, sizeof(siginfo));
 
-                if (s != sizeof(siginfo))
+                if (bytes != sizeof(siginfo))
                 {
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                         continue;
@@ -263,7 +261,7 @@ void SigWatcher::_run_signalfd_loop()
                 }
 
                 {
-                    std::lock_guard l(_mutex);
+                    std::lock_guard lock(_mutex);
                     const int sig = static_cast<int>(siginfo.ssi_signo);
 
                     auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
@@ -272,8 +270,7 @@ void SigWatcher::_run_signalfd_loop()
 
                     if (it_sigcontroller != _sig_controllers.end())
                     {
-                        // With signalfd, signals are blocked and delivered via fd
-                        // The signal handler is never called, so we directly add to signals_to_handle
+                        // signalfd blocks the signals, the handler never fires: add straight to signals_to_handle
                         it_sigcontroller->last_received++;
                         _signals_to_handle.emplace_back(sig);
                     }
@@ -306,13 +303,13 @@ void SigWatcher::_run_sigwait_loop()
         if (sig < 0)
         {
             if (errno == EAGAIN || errno == EINTR)
-                continue; // timeout or interrupted, re-check _running flag
+                continue;
             SIHD_LOG(error, "SigWatcher: sigtimedwait failed: {}", os::last_error_str());
             break;
         }
 
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
 
             auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
                 return sig_controller.sig_handler.sig() == sig;
@@ -339,7 +336,7 @@ void SigWatcher::_run_polling_loop()
     while (_running.load(std::memory_order_relaxed))
     {
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             for (int sig : _signals)
             {
                 auto it_sigcontroller = container::find_if(_sig_controllers, [sig](const auto & sig_controller) {
@@ -361,7 +358,6 @@ void SigWatcher::_run_polling_loop()
 
         this->_notify_signals();
 
-        // Sleep for polling interval
         std::this_thread::sleep_for(std::chrono::nanoseconds(_polling_interval_ns.load(std::memory_order_relaxed)));
     }
 }

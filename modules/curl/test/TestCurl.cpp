@@ -23,7 +23,6 @@ using namespace sihd::util;
 namespace
 {
 
-// run-scoped directory: parallel test runs never share files
 class TempDir
 {
     public:
@@ -142,7 +141,6 @@ TEST(TestCurl, test_request_move)
     EXPECT_TRUE(moved.perform().has_value());
     EXPECT_EQ(received, content);
 
-    // the moved-from request fails every operation without crashing
     auto defunct_set = request.set_url(url);
     ASSERT_FALSE(defunct_set.has_value());
     EXPECT_EQ(defunct_set.error().code, not_initialized);
@@ -197,7 +195,7 @@ TEST(TestCurl, test_request_cookies)
 
     std::vector<std::string> lines = request.cookie_list();
     ASSERT_EQ(lines.size(), 1u);
-    auto parts = sihd::util::str::split(lines[0], "\t");
+    auto parts = str::split(lines[0], "\t");
     ASSERT_GE(parts.size(), 7u);
     EXPECT_EQ(parts[5], "sihd");
     EXPECT_EQ(parts[6], "value");
@@ -216,6 +214,7 @@ TEST(TestCurl, test_request_options)
     EXPECT_TRUE(request.set_ssl_verify(true, true));
     EXPECT_TRUE(request.set_userpass("user", "pass"));
     EXPECT_TRUE(request.set_auth(Auth::Basic));
+
     EXPECT_TRUE(request.set_proxy("http://localhost:8080", Proxy::Http));
     EXPECT_TRUE(request.set_proxy_auth("user", "pass"));
     EXPECT_TRUE(request.set_body("body"));
@@ -299,7 +298,6 @@ TEST(TestCurl, test_mime)
     ASSERT_TRUE(request.set_write_callback([](ArrByteView) { return true; }).has_value());
     EXPECT_TRUE(request.perform().has_value());
 
-    // a default-constructed part has no target: its setters do not crash
     Mime::Part empty;
     empty.name("x").data("y").content_type("text/plain");
 }

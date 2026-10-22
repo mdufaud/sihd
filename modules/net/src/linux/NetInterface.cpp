@@ -1,5 +1,5 @@
-#include <ifaddrs.h>   // getifaddrs
-#include <sys/types.h> // getifaddrs
+#include <ifaddrs.h>
+#include <sys/types.h>
 
 #include <cstring>
 
@@ -12,20 +12,18 @@
 
 #include <linux/if_link.h>
 #include <linux/if_packet.h>
-#include <net/if.h> // macros
+#include <net/if.h>
 
 using namespace sihd::util;
 
 namespace sihd::net
 {
 
-// Interface is running.
 bool NetInterface::up() const
 {
     return _flags & IFF_UP;
 }
 
-// Valid broadcast address set.
 bool NetInterface::broadcast() const
 {
     return _flags & IFF_BROADCAST;
@@ -36,61 +34,52 @@ bool NetInterface::loopback() const
     return _flags & IFF_LOOPBACK;
 }
 
-// Interface is a point-to-point link.
 bool NetInterface::point2point() const
 {
     return _flags & IFF_POINTOPOINT;
 }
 
-// Resources allocated.
 bool NetInterface::running() const
 {
     return _flags & IFF_RUNNING;
 }
 
-// No arp protocol, L2 destination address not set.
 bool NetInterface::noarp() const
 {
     return _flags & IFF_NOARP;
 }
 
-// Interface is in promiscuous mode.
 bool NetInterface::promisc() const
 {
     return _flags & IFF_PROMISC;
 }
 
-// Avoid use of trailers
 bool NetInterface::notrailers() const
 {
     return _flags & IFF_NOTRAILERS;
 }
 
-// Master of a load balancing bundle.
 bool NetInterface::master() const
 {
     return _flags & IFF_MASTER;
 }
 
-// Slave of a load balancing bundle.
 bool NetInterface::slave() const
 {
     return _flags & IFF_SLAVE;
 }
 
-// Receive all multicast packets.
 bool NetInterface::all_multicast() const
 {
     return _flags & IFF_ALLMULTI;
 }
 
-// Supports multicast
 bool NetInterface::supports_multicast() const
 {
     return _flags & IFF_MULTICAST;
 }
 
-sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
+Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 
@@ -100,7 +89,7 @@ sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_in
         return std::unexpected(Error::from_errno("could not list interfaces"));
 
     first = iface;
-    Defer d([&first] { freeifaddrs(first); });
+    Defer cleanup([&first] { freeifaddrs(first); });
 
     while (iface != nullptr)
     {

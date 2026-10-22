@@ -47,9 +47,8 @@ extlibs_features = {
     "imgui": ["glfw-binding", "opengl3-binding", "sdl3-binding"],
 }
 
-extlibs_features_linux = {
-    "libusb": ["udev"],  # udev is linux-only
-}
+# libusb stays without its udev feature: usb names devices through its own hwdb.bin parser
+extlibs_features_linux = {}
 
 extlibs_features_windows = {
     "imgui": ["glfw-binding", "opengl3-binding", "sdl3-binding", "win32-binding", "dx11-binding"],

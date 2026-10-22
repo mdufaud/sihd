@@ -233,7 +233,7 @@ void LuaSysApi::load_base(Vm & vm)
         .addFunction(
             "read_bmp_data",
             +[](sihd::sys::Bitmap *self, const std::string & data) -> bool {
-                return self->read_bmp_data(sihd::util::ArrByteView(data));
+                return self->read_bmp_data(ArrByteView(data));
             })
         .addFunction("empty", &sihd::sys::Bitmap::empty)
         .addFunction(
@@ -259,7 +259,6 @@ void LuaSysApi::load_base(Vm & vm)
                 return sihd::sys::screenshot::take_window_name(bm, name);
             })
         .endNamespace()
-        // FileMutex: advisory inter-process file lock (no Lua stdlib equivalent)
         .beginClass<sihd::sys::FileMutex>("FileMutex")
         .addConstructor<void (*)(), void (*)(const std::string &, bool)>()
         .addFunction("lock", &sihd::sys::FileMutex::lock)
@@ -304,7 +303,6 @@ void LuaSysApi::load_process(Vm & vm)
                     luaL_error(state, "add_argv argument must be either a string or a string table");
             })
         .addFunction("clear_argv", &LuaProcess::clear_argv)
-        // stdin
         .addFunction(
             "stdin_from",
             +[](LuaProcess *self, const std::string & from) { self->stdin_from(from); })
@@ -315,7 +313,6 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction(
             "stdin_close",
             +[](LuaProcess *self) { self->stdin_close(); })
-        // stdout - thread-safe with flush
         .addFunction(
             "stdout_to",
             +[](LuaProcess *self, luabridge::LuaRef ref, lua_State *state) {
@@ -334,7 +331,6 @@ void LuaSysApi::load_process(Vm & vm)
             "stdout_close",
             +[](LuaProcess *self) { self->stdout_close(); })
         .addFunction("flush_stdout", &LuaProcess::flush_stdout)
-        // stderr - thread-safe with flush
         .addFunction(
             "stderr_to",
             +[](LuaProcess *self, luabridge::LuaRef ref, lua_State *state) {
@@ -353,9 +349,7 @@ void LuaSysApi::load_process(Vm & vm)
             "stderr_close",
             +[](LuaProcess *self) { self->stderr_close(); })
         .addFunction("flush_stderr", &LuaProcess::flush_stderr)
-        // flush all callbacks
         .addFunction("flush", &LuaProcess::flush_all)
-        // start - restart
         .addFunction(
             "execute",
             +[](LuaProcess *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->execute()); })
@@ -365,11 +359,9 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction(
             "reset_proc",
             +[](LuaProcess *self) { self->reset_proc(); })
-        // service
         .addFunction("start", &LuaProcess::start)
         .addFunction("stop", &LuaProcess::stop)
         .addFunction("is_running", &LuaProcess::is_running)
-        // wait
         .addFunction(
             "wait",
             +[](LuaProcess *self, int options, lua_State *state) {
@@ -417,14 +409,11 @@ void LuaSysApi::load_process(Vm & vm)
                 return waited.value();
             })
 #endif
-        // manual pipe process
         .addFunction("read_pipes", &LuaProcess::read_pipes)
-        // end execution
         .addFunction("terminate", &LuaProcess::terminate)
         .addFunction(
             "kill",
             +[](LuaProcess *self, int sig) -> bool { return !SIHD_UNEXPECTED_LOG(self->kill(sig)); })
-    // post execution
 #if !defined(__SIHD_WINDOWS__)
         .addFunction("has_exited", &LuaProcess::has_exited)
         .addFunction("has_core_dumped", &LuaProcess::has_core_dumped)
@@ -435,7 +424,6 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("signal_stop_number", &LuaProcess::signal_stop_number)
 #endif
         .addFunction("return_code", &LuaProcess::return_code)
-        // utils
         .addFunction("pid", &LuaProcess::pid)
         .addFunction("argv", &LuaProcess::argv)
         .endClass()
@@ -562,7 +550,6 @@ void LuaSysApi::load_files(Vm & vm)
          */
         .beginClass<File>("File")
         .addConstructor<void (*)()>()
-        // config
         .addFunction(
             "set_buffer_size",
             +[](File *self, size_t size) -> bool { return !SIHD_UNEXPECTED_LOG(self->set_buffer_size(size)); })
@@ -572,7 +559,6 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction(
             "buff_stream",
             +[](File *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->buff_stream()); })
-        // open
         .addFunction(
             "open",
             +[](File *self, const std::string & path, const std::string & mode) -> bool {
@@ -582,7 +568,6 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction(
             "close",
             +[](File *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->close()); })
-        // read
         .addFunction(
             "read",
             +[](File *self, IArray *array_ptr) -> long {
@@ -600,7 +585,7 @@ void LuaSysApi::load_files(Vm & vm)
                                                 : self->read_line(&line, &size);
                 if (ret.has_value())
                 {
-                    sihd::util::ArrChar array;
+                    ArrChar array;
                     array.from(line);
                     free(line);
                     return luabridge::LuaRef(state, array);
@@ -609,7 +594,6 @@ void LuaSysApi::load_files(Vm & vm)
                 SIHD_UNEXPECTED_LOG(ret);
                 return luabridge::LuaRef(state);
             })
-        // write
         .addFunction(
             "write_array",
             +[](File *self, const IArray *array_ptr) -> long {
@@ -629,11 +613,9 @@ void LuaSysApi::load_files(Vm & vm)
                     return -1;
                 return (long)wrote.value();
             })
-        // test cases
         .addFunction("eof", &File::eof)
         .addFunction("error", &File::error)
         .addFunction("clear_errors", &File::clear_errors)
-        // utils
         .addFunction(
             "flush",
             +[](File *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->flush()); })
@@ -647,7 +629,6 @@ void LuaSysApi::load_files(Vm & vm)
                     return -1;
                 return (long)*size;
             })
-        // lock
         .addFunction("lock", &File::lock)
         .addFunction("trylock", &File::trylock)
         .addFunction("unlock", &File::unlock)
@@ -657,7 +638,6 @@ void LuaSysApi::load_files(Vm & vm)
          */
         .beginClass<LineReader>("LineReader")
         .addConstructor<void (*)()>()
-        // IReader
         .addFunction(
             "read_next",
             +[](LineReader *self) -> bool {
@@ -667,7 +647,6 @@ void LuaSysApi::load_files(Vm & vm)
                 return next.value();
             })
         .addFunction("get_read_data", &LuaUtilApi::ireader_get_read_data<LineReader>)
-        // other
         .addFunction(
             "open",
             +[](LineReader *self, const std::string & path) -> bool { return !SIHD_UNEXPECTED_LOG(self->open(path)); })
@@ -699,7 +678,7 @@ void LuaSysApi::load_tools(Vm & vm)
         .beginNamespace("signal")
         .addFunction("kill", &signal::kill)
         .addFunction("name", &signal::name)
-        .endNamespace() // signal
+        .endNamespace()
         .beginNamespace("os")
         .addProperty(
             "stdin",
@@ -719,20 +698,18 @@ void LuaSysApi::load_tools(Vm & vm)
         .addFunction("is_run_by_valgrind", &sihd::sys::os::is_run_by_valgrind)
         .addProperty(
             "is_run_with_asan",
-            +[] { return sihd::util::build::is_run_with_asan; })
+            +[] { return build::is_run_with_asan; })
         .addFunction(
             "peak_rss",
             +[] { return sihd::sys::os::peak_rss().value_or(-1); })
         .addFunction("current_rss", &sihd::sys::os::current_rss)
-        .endNamespace() // os
+        .endNamespace()
         .beginNamespace("user")
         .addFunction("is_root", &sihd::sys::user::is_root)
-        .addFunction(
-            "name",
-            +[]() -> std::string { return sihd::sys::user::name().value_or(""); })
-        .endNamespace()  // user
-        .endNamespace()  // sys
-        .endNamespace(); // sihd
+        .addFunction("name", &sihd::sys::user::name)
+        .endNamespace()
+        .endNamespace()
+        .endNamespace();
 }
 
 void LuaSysApi::load_all(Vm & vm)
@@ -742,10 +719,6 @@ void LuaSysApi::load_all(Vm & vm)
     LuaSysApi::load_files(vm);
     LuaSysApi::load_process(vm);
 }
-
-/* ************************************************************************* */
-/* LuaProcessCallback */
-/* ************************************************************************* */
 
 LuaSysApi::LuaProcessCallback::LuaProcessCallback(luabridge::LuaRef callback): _callback(callback) {}
 

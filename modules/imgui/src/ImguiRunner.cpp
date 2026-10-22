@@ -7,6 +7,8 @@
 # include <emscripten.h>
 #endif
 
+using namespace sihd::util;
+
 namespace sihd::imgui
 {
 
@@ -14,8 +16,8 @@ SIHD_REGISTER_FACTORY(ImguiRunner)
 
 SIHD_NEW_LOGGER("sihd::imgui");
 
-ImguiRunner::ImguiRunner(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
+ImguiRunner::ImguiRunner(const std::string & name, Node *parent):
+    Named(name, parent),
     _running(false),
     _gui_running(false),
     _imgui_renderer_ptr(nullptr),
@@ -45,7 +47,7 @@ bool ImguiRunner::run()
         return false;
     }
     {
-        std::lock_guard l(_mutex);
+        std::lock_guard guard(_mutex);
         if (_running)
             return true;
         _running = true;
@@ -68,7 +70,7 @@ bool ImguiRunner::run()
 bool ImguiRunner::stop()
 {
     {
-        std::lock_guard l(_mutex);
+        std::lock_guard guard(_mutex);
         if (_running == false)
             return true;
         _running = false;
@@ -93,13 +95,8 @@ bool ImguiRunner::init_imgui()
         return false;
     ImGuiIO & io = ImGui::GetIO();
     (void)io;
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    // ImGui::StyleColorsClassic();
-    // ImGui::StyleColorsLight();
     return true;
 }
 

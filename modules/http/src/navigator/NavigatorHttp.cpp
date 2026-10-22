@@ -145,6 +145,14 @@ std::string extract_meta_refresh_url(std::string_view body)
     return url;
 }
 
+std::string registrable_domain(std::string_view host)
+{
+    auto parts = str::split(host, ".");
+    if (parts.size() <= 2)
+        return std::string(host);
+    return std::string(parts[parts.size() - 2]) + "." + std::string(parts[parts.size() - 1]);
+}
+
 } // namespace
 
 Navigator::Impl::Impl(Navigator *nav): owner(nav)
@@ -303,13 +311,7 @@ bool Navigator::Impl::check_redirect_policy(const std::string & original_url, co
     if (sihd::net::ip::is_valid_ip(orig.host) || sihd::net::ip::is_valid_ip(tgt.host))
         return orig.host == tgt.host;
 
-    auto reg_domain = [](std::string_view h) -> std::string {
-        auto parts = str::split(h, ".");
-        if (parts.size() <= 2)
-            return std::string(h);
-        return std::string(parts[parts.size() - 2]) + "." + std::string(parts[parts.size() - 1]);
-    };
-    return reg_domain(orig.host) == reg_domain(tgt.host);
+    return registrable_domain(orig.host) == registrable_domain(tgt.host);
 }
 
 Result<std::vector<std::string>> Navigator::Impl::check_target(const std::string & url) const

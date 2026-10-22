@@ -15,7 +15,10 @@ using namespace sihd::net;
 
 SIHD_NEW_LOGGER("tcp-echo-demo");
 
-static int run_server(sihd::sys::App & app, TcpServer & server)
+namespace
+{
+
+int run_server(sihd::sys::App & app, TcpServer & server)
 {
     BasicServerHandler handler;
     server.set_server_handler(&handler);
@@ -44,34 +47,40 @@ static int run_server(sihd::sys::App & app, TcpServer & server)
     return EXIT_SUCCESS;
 }
 
-static int run_client(TcpClient & client, const std::string & host, int port, const std::string & message)
+int run_client(TcpClient & client, const std::string & host, int port, const std::string & message)
 {
     if (!client.open_and_connect(host, port, 2000))
     {
         SIHD_LOG(error, "cannot connect to {}:{}", host, port);
         return EXIT_FAILURE;
     }
+
     SIHD_LOG(notice, "sending: {}", message);
     if (!client.send_all({message.data(), message.size()}))
     {
         SIHD_LOG(error, "send failed");
         return EXIT_FAILURE;
     }
+
     ArrChar recv(512);
     if (!client.poll(1000))
     {
         SIHD_LOG(error, "no reply");
         return EXIT_FAILURE;
     }
-    ssize_t received = (ssize_t)client.receive(recv).value_or(0);
-    if (received <= 0)
+
+    const auto received = client.receive(recv);
+    if (!received || *received == 0)
     {
         SIHD_LOG(error, "no echo received");
         return EXIT_FAILURE;
     }
-    std::cout << "echo: " << std::string_view(recv.data(), (size_t)received) << std::endl;
+
+    std::cout << "echo: " << std::string_view(recv.data(), *received) << std::endl;
     return EXIT_SUCCESS;
 }
+
+} // namespace
 
 int main(int argc, char **argv)
 {

@@ -41,6 +41,7 @@ struct WindowsUserProcessInfos
         ULONG DebugFlags;
         PVOID ConsoleHandle;
         ULONG ConsoleFlags;
+
         PVOID StdInputHandle;
         PVOID StdOutputHandle;
         PVOID StdErrorHandle;
@@ -48,6 +49,7 @@ struct WindowsUserProcessInfos
         PVOID CurrentDirectoryHandle;
         UNICODE_STRING DllPath;
         UNICODE_STRING ImagePathName;
+
         UNICODE_STRING CommandLine;
         PVOID Environment;
         ULONG StartingPositionLeft;
@@ -55,6 +57,7 @@ struct WindowsUserProcessInfos
         ULONG Width;
         ULONG Height;
         ULONG CharWidth;
+
         ULONG CharHeight;
         ULONG ConsoleTextAttributes;
         ULONG WindowFlags;

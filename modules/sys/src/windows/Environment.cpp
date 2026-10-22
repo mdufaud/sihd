@@ -16,10 +16,14 @@ struct CaseInsensitiveLess
 {
         bool operator()(const std::string & left, const std::string & right) const
         {
-            const auto lower = [](const char & left, const char & right) {
-                return std::tolower(static_cast<unsigned char>(left)) < std::tolower(static_cast<unsigned char>(right));
-            };
-            return std::lexicographical_compare(left.begin(), left.end(), right.begin(), right.end(), lower);
+            return std::lexicographical_compare(left.begin(),
+                                                left.end(),
+                                                right.begin(),
+                                                right.end(),
+                                                [](char lhs, char rhs) {
+                                                    return std::tolower(static_cast<unsigned char>(lhs))
+                                                           < std::tolower(static_cast<unsigned char>(rhs));
+                                                });
         }
 };
 

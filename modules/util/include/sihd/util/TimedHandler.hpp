@@ -38,7 +38,7 @@ class TimedHandler: public IHandler<T *>
             _wrapped->handle(sender);
             const time::UnixTime elapsed = this->_now() - begin;
             {
-                std::lock_guard l(_stat_mutex);
+                std::lock_guard lock(_stat_mutex);
                 _stat.add_sample(elapsed);
             }
             _last = elapsed;
@@ -55,7 +55,7 @@ class TimedHandler: public IHandler<T *>
 
         Stat<time::UnixTime> stat() const
         {
-            std::lock_guard l(_stat_mutex);
+            std::lock_guard lock(_stat_mutex);
             return _stat;
         }
 

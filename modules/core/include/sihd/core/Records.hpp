@@ -17,10 +17,10 @@ struct PlayableRecord
         sihd::util::IArrayShared value = nullptr;
 };
 
-typedef std::pair<sihd::util::Timestamp, sihd::util::IArrayShared> RecordedValue;
-typedef std::list<RecordedValue> ListRecordedValues;
-typedef std::map<std::string, ListRecordedValues> MapListRecordedValues;
-typedef std::multimap<sihd::util::Timestamp, PlayableRecord> SortedRecordedValues;
+using RecordedValue = std::pair<sihd::util::Timestamp, sihd::util::IArrayShared>;
+using ListRecordedValues = std::list<RecordedValue>;
+using MapListRecordedValues = std::map<std::string, ListRecordedValues>;
+using SortedRecordedValues = std::multimap<sihd::util::Timestamp, PlayableRecord>;
 
 } // namespace sihd::core
 

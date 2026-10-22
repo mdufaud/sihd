@@ -1,9 +1,6 @@
 #ifndef __SIHD_SYS_X11_MOUSE_HPP__
 #define __SIHD_SYS_X11_MOUSE_HPP__
 
-// X11 mouse backend of the dispatcher in src/linux/mouse.cpp: XTest fake motion
-// and button events over the virtual desktop
-
 #include <sihd/sys/mouse.hpp>
 
 namespace sihd::sys::mouse::x11
@@ -22,8 +19,6 @@ sihd::util::Result<void> mouse_click(MouseButton button);
 sihd::util::Result<void> mouse_scroll(int x, int y);
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<void> mouse_move([[maybe_unused]] int x, [[maybe_unused]] int y)
 {

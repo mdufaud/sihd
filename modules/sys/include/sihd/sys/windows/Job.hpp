@@ -42,8 +42,8 @@ class Job
         {
                 enum class Kind
                 {
-                    end_of_job_time,
-                    end_of_process_time,
+                    job_time_expired,
+                    process_time_expired,
                     active_process_limit,
                     active_process_zero,
                     new_process,

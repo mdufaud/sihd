@@ -44,7 +44,6 @@ class ImguiBackendSDL: public sihd::imgui::IImguiBackend
         void select_opengl3();
         void select_opengl32();
         void decide_opengl_version();
-        // Set up an OpenGL context for rendering into an OpenGL window.
         void set_sdl_context_at_prerender(bool active);
 
         bool init_window(const std::string & name, size_t width = 1280, size_t height = 800);
@@ -60,11 +59,9 @@ class ImguiBackendSDL: public sihd::imgui::IImguiBackend
         void shutdown();
         void terminate();
 
-        SDL_Window *window() { return _sdl_window_ptr; }
-        SDL_GLContext context() { return _sdl_context_ptr; }
-#if defined(__SIHD_WINDOWS__)
+        SDL_Window *window();
+        SDL_GLContext context();
         void *windows_window();
-#endif
 
     protected:
         virtual bool _sdl_init();

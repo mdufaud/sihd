@@ -5,6 +5,8 @@
 
 using enum sihd::util::ErrorCode;
 
+using namespace sihd::util;
+
 namespace test
 {
 using namespace sihd::sys;
@@ -20,7 +22,7 @@ class TestProgram: public ::testing::Test
 
 TEST_F(TestProgram, test_program_find_symbol)
 {
-    if constexpr (sihd::util::build::is_statically_linked || sihd::util::build::is_emscripten)
+    if constexpr (build::is_statically_linked || build::is_emscripten)
         GTEST_SKIP() << "global symbol search not available in this build";
 
     auto sym = program::find_symbol("printf");

@@ -50,6 +50,7 @@ std::vector<ProcessSample> ProcessMonitor::Impl::collect(const std::string & nam
         return fresh;
     PROCESSENTRY32 pe32;
     pe32.dwSize = sizeof(PROCESSENTRY32);
+
     BOOL has_entry = Process32First(process_snap, &pe32);
     while (has_entry)
     {
@@ -62,6 +63,7 @@ std::vector<ProcessSample> ProcessMonitor::Impl::collect(const std::string & nam
         if (selected)
         {
             ProcessSample sample;
+
             sample.name = pe32.szExeFile;
             sample.metrics.pid = static_cast<int>(pe32.th32ProcessID);
             sample.metrics.parent_pid = static_cast<int>(pe32.th32ParentProcessID);

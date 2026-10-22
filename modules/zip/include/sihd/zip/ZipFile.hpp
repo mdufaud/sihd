@@ -32,18 +32,13 @@ class ZipFile: public sihd::util::IReader
         ZipFile(ZipFile &&) = delete;
         ZipFile & operator=(ZipFile &&) = delete;
 
-        // set internal reading buff size
         sihd::util::Result<void> set_buffer_size(size_t size);
-        // set general password for encrypted content
         sihd::util::Result<void> set_password(const std::string & password);
-        // choose encryption method
         sihd::util::Result<void> set_aes_encryption(int aes);
 
         sihd::util::Result<void> open(const std::string & path, bool read_only = false, bool do_strict_checks = false);
         bool is_open() const;
-        // close and save
         sihd::util::Result<void> close();
-        // close and discard changes
         void discard();
 
         void no_encrypt();
@@ -55,21 +50,15 @@ class ZipFile: public sihd::util::IReader
         sihd::util::Result<void> comment_archive(std::string_view comment);
         sihd::util::Result<void> set_archive_readonly(bool active);
 
-        // encrypt all current entries
         sihd::util::Result<void> encrypt_all(const std::string & password);
 
-        // total original entries before new additions
         ssize_t count_original_entries() const;
-        // total current entries
         ssize_t count_entries() const;
 
-        // load a zip file entry from the archive
         sihd::util::Result<ZipEntry> load_entry(size_t index);
         sihd::util::Result<ZipEntry> load_entry(const std::string & name);
-        // iterate over all original entries (excluding new additions)
         sihd::util::Result<bool> read_next_entry();
 
-        // loaded entry informations
         bool is_entry_loaded() const;
         std::string_view entry_name() const;
         ssize_t entry_index() const;
@@ -79,12 +68,10 @@ class ZipFile: public sihd::util::IReader
 
         // read loaded entry: false means end of entry, an error means the read failed
         sihd::util::Result<bool> read_next();
-        // get data from entry
         bool get_read_data(sihd::util::ArrCharView & view) const;
         // read loaded entry with custom password: 0 means end of entry
         sihd::util::Result<ssize_t> read_entry(const std::string & password = "");
 
-        // change entry
         sihd::util::Result<void> unchange_entry();
         sihd::util::Result<void> remove_entry();
         sihd::util::Result<void> rename_entry(const std::string & new_name);
@@ -94,20 +81,14 @@ class ZipFile: public sihd::util::IReader
         // note: the view data must remain valid until close() or discard() is called
         sihd::util::Result<void> replace_entry(sihd::util::ArrCharView view);
 
-        // add dir in memory
         sihd::util::Result<void> add_dir(const std::string & name);
-        // add file content in memory
         // note: the view data must remain valid until close() or discard() is called
         sihd::util::Result<void> add_file(const std::string & name, sihd::util::ArrCharView view);
 
-        // add either file or directory from filesystem
         sihd::util::Result<void> add_from_fs(const std::string & name, const std::string & path);
-        // recursively add directory and its content from filesystem
         sihd::util::Result<void> add_dir_from_fs(const std::string & name, const std::string & path);
-        // add file from filesystem
         sihd::util::Result<void> add_file_from_fs(const std::string & name, const std::string & path);
 
-        // dump loaded entry to fs either making a directory or writing whole content in file
         sihd::util::Result<void> dump_entry_to_fs(const std::string & path, const std::string & password = "");
 
     protected:
@@ -117,13 +98,10 @@ class ZipFile: public sihd::util::IReader
 
         std::unique_ptr<ZipHandle> _zip_handle;
 
-        // current loaded entry data
         ZipEntry _current_zip_entry;
 
-        // read buffer
         sihd::util::ArrChar _buf;
 
-        // libzip encryption method
         short _encryption_method;
 };
 

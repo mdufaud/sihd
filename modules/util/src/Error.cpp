@@ -237,6 +237,7 @@ ErrorCode errno_to_error_code(int errno_value)
             return ErrorCode::not_found;
         case WSAENAMETOOLONG:
             return ErrorCode::overflow;
+
         case WSANOTINITIALISED:
             return ErrorCode::not_initialized;
     }

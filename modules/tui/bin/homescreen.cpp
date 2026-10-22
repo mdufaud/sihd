@@ -1,53 +1,79 @@
 // Copyright 2020 Arthur Sonzogni. All rights reserved.
 // Use of this source code is governed by the MIT license that can be found in
 // the LICENSE file.
-#include <stddef.h> // for size_t
+#include <stddef.h>
 
-#include <array>      // for array
-#include <atomic>     // for atomic
-#include <chrono>     // for operator""s, chrono_literals
-#include <cmath>      // for sin
-#include <functional> // for ref, reference_wrapper, function
-#include <memory>     // for allocator, shared_ptr, __shared_ptr_access
-#include <string>     // for string, basic_string, char_traits, operator+, to_string
-#include <thread>     // for sleep_for, thread
-#include <utility>    // for move
-#include <vector>     // for vector
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <functional>
+#include <memory>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
 
-#include "color_info_sorted_2d.ipp" // for ColorInfoSorted2D
-#include "ftxui/component/component.hpp" // for Checkbox, Renderer, Horizontal, Vertical, Input, Menu, Radiobox, ResizableSplitLeft, Tab
-#include "ftxui/component/component_base.hpp"     // for ComponentBase, Component
-#include "ftxui/component/component_options.hpp"  // for MenuOption, InputOption
-#include "ftxui/component/event.hpp"              // for Event, Event::Custom
-#include "ftxui/component/screen_interactive.hpp" // for Component, ScreenInteractive
-#include "ftxui/dom/elements.hpp" // for text, color, operator|, bgcolor, filler, Element, vbox, size, hbox, separator, flex, window, graph, EQUAL, paragraph, WIDTH, hcenter, Elements, bold, vscroll_indicator, HEIGHT, flexbox, hflow, border, frame, flex_grow, gauge, paragraphAlignCenter, paragraphAlignJustify, paragraphAlignLeft, paragraphAlignRight, dim, spinner, LESS_THAN, center, yframe, GREATER_THAN
-#include "ftxui/dom/flexbox_config.hpp" // for FlexboxConfig
-#include "ftxui/screen/color.hpp" // for Color, Color::BlueLight, Color::RedLight, Color::Black, Color::Blue, Color::Cyan, Color::CyanLight, Color::GrayDark, Color::GrayLight, Color::Green, Color::GreenLight, Color::Magenta, Color::MagentaLight, Color::Red, Color::White, Color::Yellow, Color::YellowLight, Color::Default, Color::Palette256, ftxui
-#include "ftxui/screen/color_info.hpp" // for ColorInfo
-#include "ftxui/screen/terminal.hpp"   // for Size, Dimensions
+#include "color_info_sorted_2d.ipp"
+#include "ftxui/component/component.hpp"
+#include "ftxui/component/component_base.hpp"
+#include "ftxui/component/component_options.hpp"
+#include "ftxui/component/event.hpp"
+#include "ftxui/component/screen_interactive.hpp"
+#include "ftxui/dom/elements.hpp"
+#include "ftxui/dom/flexbox_config.hpp"
+#include "ftxui/screen/color.hpp"
+#include "ftxui/screen/color_info.hpp"
+#include "ftxui/screen/terminal.hpp"
 
 using namespace ftxui;
+
+namespace
+{
+
+std::vector<int> wave(int shift, int width, int height)
+{
+    std::vector<int> output(width);
+    for (int i = 0; i < width; ++i)
+    {
+        float level = 0.5f;
+        level += 0.1f * sin((i + shift) * 0.1f);
+        level += 0.2f * sin((i + shift + 10) * 0.15f);
+        level += 0.1f * sin((i + shift) * 0.03f);
+        level *= height;
+        output[i] = (int)level;
+    }
+    return output;
+}
+
+Element wave_graph(int shift)
+{
+    return graph([shift](int width, int height) { return wave(shift, width, height); });
+}
+
+Element render_gauge(int shift, int delta)
+{
+    float progress = (shift + delta) % 500 / 500.f;
+    return hbox({
+        text(std::to_string(int(progress * 100)) + "% ") | size(WIDTH, EQUAL, 5),
+        gauge(progress),
+    });
+}
+
+Element make_box(size_t dimx, size_t dimy)
+{
+    std::string title = std::to_string(dimx) + "x" + std::to_string(dimy);
+    return window(text(title) | hcenter | bold, text("content") | hcenter | dim) | size(WIDTH, EQUAL, dimx)
+           | size(HEIGHT, EQUAL, dimy);
+}
+
+} // namespace
 
 int main()
 {
     auto screen = ScreenInteractive::Fullscreen();
 
-    // HTOP
     int shift = 0;
-
-    auto my_graph = [&shift](int width, int height) {
-        std::vector<int> output(width);
-        for (int i = 0; i < width; ++i)
-        {
-            float v = 0.5f;
-            v += 0.1f * sin((i + shift) * 0.1f);
-            v += 0.2f * sin((i + shift + 10) * 0.15f);
-            v += 0.1f * sin((i + shift) * 0.03f);
-            v *= height;
-            output[i] = (int)v;
-        }
-        return output;
-    };
 
     auto htop = Renderer([&] {
         auto frequency = vbox({
@@ -60,7 +86,7 @@ int main()
                     filler(),
                     text("0 "),
                 }),
-                graph(std::ref(my_graph)) | flex,
+                wave_graph(shift) | flex,
             }) | flex,
         });
 
@@ -74,7 +100,7 @@ int main()
                     filler(),
                     text("0 "),
                 }),
-                graph(std::ref(my_graph)) | color(Color::RedLight),
+                wave_graph(shift) | color(Color::RedLight),
             }) | flex,
         });
 
@@ -88,7 +114,7 @@ int main()
                     filler(),
                     text("0 "),
                 }),
-                graph(std::ref(my_graph)) | color(Color::BlueLight),
+                wave_graph(shift) | color(Color::BlueLight),
             }) | flex,
         });
 
@@ -103,8 +129,6 @@ int main()
                })
                | flex;
     });
-
-    // Compiler
 
     const std::vector<std::string> compiler_entries = {
         "gcc",
@@ -210,11 +234,9 @@ int main()
         }),
     });
 
-    auto render_command = [&] {
+    auto compiler_renderer = Renderer(compiler_component, [&] {
         Elements line;
-        // Compiler
         line.push_back(text(compiler_entries[compiler_selected]) | bold);
-        // flags
         for (int i = 0; i < 8; ++i)
         {
             if (options_state[i])
@@ -223,21 +245,16 @@ int main()
                 line.push_back(text(options_label[i]) | dim);
             }
         }
-        // Executable
         if (!executable_content_.empty())
         {
             line.push_back(text(" -o ") | bold);
             line.push_back(text(executable_content_) | color(Color::BlueLight) | bold);
         }
-        // Input
         for (auto & it : input_entries)
         {
             line.push_back(text(" " + it) | color(Color::RedLight));
         }
-        return line;
-    };
 
-    auto compiler_renderer = Renderer(compiler_component, [&] {
         auto compiler_win = window(text("Compiler"), compiler->Render() | vscroll_indicator | frame);
         auto flags_win = window(text("Flags"), flags->Render() | vscroll_indicator | frame);
         auto executable_win = window(text("Executable:"), executable_->Render());
@@ -264,12 +281,11 @@ int main()
                        }),
                        filler(),
                    }) | size(HEIGHT, LESS_THAN, 8),
-                   hflow(render_command()) | flex_grow,
+                   hflow(std::move(line)) | flex_grow,
                })
                | flex_grow;
     });
 
-    // Spiner
     auto spinner_tab_renderer = Renderer([&] {
         Elements entries;
         for (int i = 0; i < 22; ++i)
@@ -279,7 +295,6 @@ int main()
         return hflow(std::move(entries));
     });
 
-    // Colors
     auto color_tab_renderer = Renderer([] {
         auto basic_color_display = vbox({
                                        text("16 color palette:"),
@@ -348,7 +363,6 @@ int main()
                                         | border;
         }
 
-        // True color display.
         auto true_color_display = text("TrueColors: 24bits:");
         {
             int saturation = 255;
@@ -358,8 +372,7 @@ int main()
                 Elements line;
                 for (int hue = 0; hue < 255; hue += 6)
                 {
-                    line.push_back(text("▀")                                   //
-                                   | color(Color::HSV(hue, saturation, value)) //
+                    line.push_back(text("▀") | color(Color::HSV(hue, saturation, value))
                                    | bgcolor(Color::HSV(hue, saturation, value + 8)));
                 }
                 array.push_back(hbox(std::move(line)));
@@ -381,43 +394,27 @@ int main()
             FlexboxConfig().SetGap(1, 1));
     });
 
-    // Gauges
-    auto render_gauge = [&shift](int delta) {
-        float progress = (shift + delta) % 500 / 500.f;
-        return hbox({
-            text(std::to_string(int(progress * 100)) + "% ") | size(WIDTH, EQUAL, 5),
-            gauge(progress),
-        });
-    };
-
-    auto gauge_component = Renderer([render_gauge] {
+    auto gauge_component = Renderer([&shift] {
         return vbox({
-            render_gauge(0) | color(Color::Black),
-            render_gauge(100) | color(Color::GrayDark),
-            render_gauge(50) | color(Color::GrayLight),
-            render_gauge(6894) | color(Color::White),
+            render_gauge(shift, 0) | color(Color::Black),
+            render_gauge(shift, 100) | color(Color::GrayDark),
+            render_gauge(shift, 50) | color(Color::GrayLight),
+            render_gauge(shift, 6894) | color(Color::White),
             separator(),
-            render_gauge(6841) | color(Color::Blue),
-            render_gauge(9813) | color(Color::BlueLight),
-            render_gauge(98765) | color(Color::Cyan),
-            render_gauge(98) | color(Color::CyanLight),
-            render_gauge(9846) | color(Color::Green),
-            render_gauge(1122) | color(Color::GreenLight),
-            render_gauge(84) | color(Color::Magenta),
-            render_gauge(645) | color(Color::MagentaLight),
-            render_gauge(568) | color(Color::Red),
-            render_gauge(2222) | color(Color::RedLight),
-            render_gauge(220) | color(Color::Yellow),
-            render_gauge(348) | color(Color::YellowLight),
+            render_gauge(shift, 6841) | color(Color::Blue),
+            render_gauge(shift, 9813) | color(Color::BlueLight),
+            render_gauge(shift, 98765) | color(Color::Cyan),
+            render_gauge(shift, 98) | color(Color::CyanLight),
+            render_gauge(shift, 9846) | color(Color::Green),
+            render_gauge(shift, 1122) | color(Color::GreenLight),
+            render_gauge(shift, 84) | color(Color::Magenta),
+            render_gauge(shift, 645) | color(Color::MagentaLight),
+            render_gauge(shift, 568) | color(Color::Red),
+            render_gauge(shift, 2222) | color(Color::RedLight),
+            render_gauge(shift, 220) | color(Color::Yellow),
+            render_gauge(shift, 348) | color(Color::YellowLight),
         });
     });
-
-    // Paragraph
-    auto make_box = [](size_t dimx, size_t dimy) {
-        std::string title = std::to_string(dimx) + "x" + std::to_string(dimy);
-        return window(text(title) | hcenter | bold, text("content") | hcenter | dim) | size(WIDTH, EQUAL, dimx)
-               | size(HEIGHT, EQUAL, dimy);
-    };
 
     auto paragraph_renderer_left = Renderer([&] {
         std::string str = "Lorem Ipsum is simply dummy text of the printing and typesetting "
@@ -464,8 +461,6 @@ int main()
     auto paragraph_renderer_group_renderer = Renderer(paragraph_renderer_group,
                                                       [&] { return paragraph_renderer_group->Render(); });
 
-    // Tabs
-
     int tab_index = 0;
     std::vector<std::string> tab_entries = {
         "htop",
@@ -508,8 +503,6 @@ int main()
             std::this_thread::sleep_for(0.05s);
             // |shift| belongs to the main thread: screen.Post(task) runs it on |screen|'s thread, threadsafe
             screen.Post([&] { shift++; });
-            // After updating the state, request a new frame to be drawn. This is done
-            // by simulating a new "custom" event to be handled.
             screen.Post(Event::Custom);
         }
     });

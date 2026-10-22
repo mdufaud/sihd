@@ -11,13 +11,9 @@ class IHttpAuthenticator
     public:
         virtual ~IHttpAuthenticator() = default;
         // return true to allow, false to reject with 401
-        virtual bool on_basic_auth([[maybe_unused]] std::string_view username,
-                                   [[maybe_unused]] std::string_view password)
-        {
-            return false;
-        }
+        virtual bool on_basic_auth(std::string_view username, std::string_view password);
         // return true to allow, false to reject with 401 — override to support Bearer token auth
-        virtual bool on_token_auth([[maybe_unused]] std::string_view token) { return false; }
+        virtual bool on_token_auth(std::string_view token);
 };
 
 } // namespace sihd::http

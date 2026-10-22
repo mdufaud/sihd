@@ -58,11 +58,8 @@
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
-// backup for max_fds
 # define __SIHD_UTIL_OS_DEFAULT_MAX_FDS__ 512
 #endif
-
-// backtrace not available in android / emscripten / apple
 
 #ifndef SIHD_MAX_BACKTRACE_SIZE
 # define SIHD_MAX_BACKTRACE_SIZE 50
@@ -100,9 +97,9 @@ pid_t pid()
     return getpid();
 }
 
-sihd::util::Result<rlim_t> max_fds()
+Result<rlim_t> max_fds()
 {
-    if constexpr (sihd::util::build::is_emscripten)
+    if constexpr (build::is_emscripten)
     {
         return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
     }
@@ -114,14 +111,14 @@ sihd::util::Result<rlim_t> max_fds()
     return r.rlim_cur;
 }
 
-sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
+Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
     if (::ioctl(fd, request, arg_ptr) == -1)
         return std::unexpected(Error::from_errno("could not ioctl"));
     return {};
 }
 
-sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
+Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
@@ -130,7 +127,7 @@ sihd::util::Result<void> setsockopt(int socket, int level, int optname, const vo
     return {};
 }
 
-sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
+Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
@@ -139,7 +136,7 @@ sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *op
     return {};
 }
 
-sihd::util::Result<FdType> fd_type(int fd)
+Result<FdType> fd_type(int fd)
 {
     if (fd < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot fstat a negative fd"));
@@ -177,7 +174,7 @@ bool is_socket(int fd)
     return fd_type(fd) == FdType::socket;
 }
 
-sihd::util::Result<void> set_nonblocking(int fd, bool enable)
+Result<void> set_nonblocking(int fd, bool enable)
 {
     const int flags = ::fcntl(fd, F_GETFL);
     if (flags == -1)
@@ -188,7 +185,7 @@ sihd::util::Result<void> set_nonblocking(int fd, bool enable)
     return {};
 }
 
-sihd::util::Result<size_t> bytes_available(int fd)
+Result<size_t> bytes_available(int fd)
 {
     int available = 0;
     auto res = ioctl(fd, FIONREAD, &available);
@@ -196,7 +193,7 @@ sihd::util::Result<size_t> bytes_available(int fd)
     return static_cast<size_t>(available);
 }
 
-sihd::util::Result<int> dup(int fd)
+Result<int> dup(int fd)
 {
     const int new_fd = ::dup(fd);
     if (new_fd == -1)
@@ -204,7 +201,7 @@ sihd::util::Result<int> dup(int fd)
     return new_fd;
 }
 
-sihd::util::Result<int> dup2(int fd, int to)
+Result<int> dup2(int fd, int to)
 {
     if (::dup2(fd, to) == -1)
         return std::unexpected(Error::from_errno("could not dup2"));
@@ -257,15 +254,15 @@ ssize_t write_endl(int fd, const char *s)
 
 ssize_t write_number(int fd, int number)
 {
-    char c;
+    char chr;
     if (number < 10)
     {
-        c = (char)number + '0';
-        return ::write(fd, &c, 1);
+        chr = (char)number + '0';
+        return ::write(fd, &chr, 1);
     }
     ssize_t ret = write_number(fd, number / 10);
-    c = (char)(number % 10) + '0';
-    return ret + ::write(fd, &c, 1);
+    chr = (char)(number % 10) + '0';
+    return ret + ::write(fd, &chr, 1);
 }
 
 #endif
@@ -283,6 +280,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     bool ret = write(fd, "backtrace (") > 0;
     ret = ret && write_number(fd, size) > 0;
     ret = ret && write_endl(fd, " calls)") > 0;
+
     uint32_t i = 0;
     while (ret && i < size)
     {
@@ -316,7 +314,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     return size;
 }
 
-#else // no backtrace
+#else
 
 # pragma message("Backtrace is not supported for this platform")
 
@@ -327,9 +325,7 @@ ssize_t backtrace(int fd, size_t backtrace_size)
     return 0;
 }
 
-#endif // end of backtrace
-
-// debuggers
+#endif
 
 /*
  * Author:  David Robert Nadeau
@@ -342,9 +338,9 @@ ssize_t backtrace(int fd, size_t backtrace_size)
  * Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes.
  */
-sihd::util::Result<ssize_t> peak_rss()
+Result<ssize_t> peak_rss()
 {
-    if constexpr (sihd::util::build::is_emscripten)
+    if constexpr (build::is_emscripten)
     {
         return std::unexpected(Error(ErrorCode::not_supported, "peak_rss is not supported on this platform"));
     }
@@ -390,7 +386,7 @@ sihd::util::Result<ssize_t> peak_rss()
  */
 ssize_t current_rss()
 {
-    if constexpr (sihd::util::build::is_emscripten)
+    if constexpr (build::is_emscripten)
     {
         return -1L;
     }
@@ -428,7 +424,7 @@ std::string error_str(int error_code)
     return strerror_result(strerror_r(error_code, buf, sizeof(buf)), buf);
 }
 
-sihd::util::Result<void> mem_lock(const void *addr, size_t len)
+Result<void> mem_lock(const void *addr, size_t len)
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     (void)addr;
@@ -441,7 +437,7 @@ sihd::util::Result<void> mem_lock(const void *addr, size_t len)
 #endif
 }
 
-sihd::util::Result<void> mem_unlock(const void *addr, size_t len)
+Result<void> mem_unlock(const void *addr, size_t len)
 {
 #if defined(__SIHD_EMSCRIPTEN__)
     (void)addr;

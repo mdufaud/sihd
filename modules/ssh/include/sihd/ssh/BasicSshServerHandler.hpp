@@ -40,15 +40,12 @@ class BasicSshServerHandler: public ISshServerHandler
                                                                               bool has_pty,
                                                                               const WinSize & winsize)>;
 
-        // Custom auth callbacks (called in addition to allowed user/key lists)
         using AuthPasswordCallback = std::function<
             bool(SshSession *session, std::string_view user, std::string_view password)>;
         using AuthPubkeyCallback = std::function<bool(SshSession *session, std::string_view user, const SshKey & key)>;
 
         BasicSshServerHandler();
         ~BasicSshServerHandler() override;
-
-        // ===== Authentication =====
 
         void add_allowed_user(std::string_view user, std::string_view password);
         void remove_allowed_user(std::string_view user);
@@ -57,24 +54,16 @@ class BasicSshServerHandler: public ISshServerHandler
         void set_auth_password_callback(AuthPasswordCallback callback);
         void set_auth_pubkey_callback(AuthPubkeyCallback callback);
 
-        // ===== Handler Callbacks =====
-
         void set_shell_handler_callback(ShellHandlerCallback callback);
         void set_exec_handler_callback(ExecHandlerCallback callback);
         void set_subsystem_handler_callback(SubsystemHandlerCallback callback);
 
-        // ===== Defaults =====
-
         void set_default_exec_fork_mode(bool enable);
         void set_default_shell(std::string_view shell);
-
-        // ===== Session Info =====
 
         uint64_t session_id(SshSession *session) const;
         size_t session_count() const;
         size_t channel_count(SshSession *session) const;
-
-        // ===== Event Counters (runtime stats) =====
 
         struct EventCounters
         {
@@ -94,8 +83,6 @@ class BasicSshServerHandler: public ISshServerHandler
 
         EventCounters counters() const;
         void reset_counters();
-
-        // ===== ISshServerHandler =====
 
         bool on_auth_password(SshServer *server,
                               SshSession *session,

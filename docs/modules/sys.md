@@ -46,7 +46,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Signals
 
-- `signal` (namespace): process-wide signal handling: `handle`, `unhandle`, `ignore`, `set_exit_config`, `status`, `last_received`, `stop_received`, `termination_received`, `dump_received`, `should_stop`, `reset_received`, `kill`, `name`. `block_thread` and `unblock_thread` are POSIX-only.
+- `signal` (namespace): process-wide signal handling: `handle`, `unhandle`, `ignore`, `set_exit_config`, `status`, `last_received`, `stop_received`, `termination_received`, `dump_received`, `should_stop`, `reset_received`, `kill`, `name`. `block_thread` and `unblock_thread` return `not_supported` on Windows.
 - `SigHandler`: RAII handler for one signal: `handle`, `unhandle`, `call_previous_handler`, `is_handling`.
 - `SigWatcher`: observable watcher that runs a worker thread and calls a callback when watched signals arrive: `add_signal`, `rm_signal`, `set_polling_frequency`, `start`, `stop`, `is_running`. Uses `signalfd` on Linux and `sigwait` on other POSIX systems.
 - `SigWaiter`: waits for one configured signal up to a timeout (`Conf`): `received_signal`.

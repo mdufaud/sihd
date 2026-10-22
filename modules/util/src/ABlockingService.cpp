@@ -13,7 +13,7 @@ void ABlockingService::set_service_wait_stop(bool active)
 void ABlockingService::service_set_ready()
 {
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         this->_ready = true;
     }
     _waitable.notify_all();
@@ -36,9 +36,9 @@ bool ABlockingService::wait_ready(Duration timeout) const
 
 bool ABlockingService::do_start()
 {
-    std::lock_guard l(_running_mutex);
+    std::lock_guard lock(_running_mutex);
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         this->_ready = false;
     }
     _running_thread = std::this_thread::get_id();
@@ -53,7 +53,7 @@ bool ABlockingService::do_stop()
 {
     bool ret = this->on_stop();
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         this->_ready = false;
     }
     // stopped from its own on_start (an observer of the service): it ends when that call returns
@@ -64,7 +64,7 @@ bool ABlockingService::do_stop()
 
 void ABlockingService::service_wait_stop() const
 {
-    std::lock_guard l(_running_mutex);
+    std::lock_guard lock(_running_mutex);
 }
 
 } // namespace sihd::util

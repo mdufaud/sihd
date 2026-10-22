@@ -32,7 +32,6 @@ TEST_F(TestDynLib, test_dynlib_open_close)
     DynLib lib;
     EXPECT_FALSE(lib.is_open());
 
-    // libc should always be available
     EXPECT_TRUE(lib.open(SIHD_TEST_LIBC).has_value());
     EXPECT_TRUE(lib.is_open());
     EXPECT_TRUE(lib.close());

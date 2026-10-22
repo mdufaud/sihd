@@ -3,7 +3,6 @@
 #include <libssh/libssh.h>
 
 #include <sihd/ssh/utils.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/fmt.hpp>
 
@@ -13,17 +12,15 @@ using namespace sihd::util;
 namespace sihd::ssh::utils
 {
 
-SIHD_NEW_LOGGER("sihd::ssh::utils");
-
 namespace
 {
 std::mutex _init_mutex;
 int _ref_count = 0;
 } // namespace
 
-sihd::util::Result<void> init()
+Result<void> init()
 {
-    std::lock_guard l(_init_mutex);
+    std::lock_guard lock(_init_mutex);
     if (_ref_count == 0)
     {
         const int ret = ssh_init();
@@ -34,9 +31,9 @@ sihd::util::Result<void> init()
     return {};
 }
 
-sihd::util::Result<void> finalize()
+Result<void> finalize()
 {
-    std::lock_guard l(_init_mutex);
+    std::lock_guard lock(_init_mutex);
     if (_ref_count == 0)
         return std::unexpected(Error(not_initialized, "ssh not initialized"));
     --_ref_count;
@@ -51,7 +48,7 @@ sihd::util::Result<void> finalize()
 
 bool is_initialized()
 {
-    std::lock_guard l(_init_mutex);
+    std::lock_guard lock(_init_mutex);
     return _ref_count > 0;
 }
 

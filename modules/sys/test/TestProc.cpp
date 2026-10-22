@@ -13,7 +13,7 @@ namespace
 
 std::vector<std::string> cmd_echo(const std::string & arg)
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         return {"cmd", "/c", "echo", arg};
     else
         return {"echo", arg};
@@ -21,7 +21,7 @@ std::vector<std::string> cmd_echo(const std::string & arg)
 
 std::vector<std::string> cmd_true()
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         return {"cmd", "/c", "exit", "0"};
     else
         return {"true"};
@@ -29,7 +29,7 @@ std::vector<std::string> cmd_true()
 
 std::vector<std::string> cmd_false()
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         return {"cmd", "/c", "exit", "1"};
     else
         return {"false"};
@@ -37,7 +37,7 @@ std::vector<std::string> cmd_false()
 
 std::vector<std::string> cmd_bad_path()
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         return {"cmd", "/c", "dir", "Z:\\nonexistent_path_12345"};
     else
         return {"ls", "/nonexistent_path_12345"};
@@ -45,7 +45,7 @@ std::vector<std::string> cmd_bad_path()
 
 std::vector<std::string> cmd_stdin_filter()
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         return {"sort"};
     else
         return {"cat"};

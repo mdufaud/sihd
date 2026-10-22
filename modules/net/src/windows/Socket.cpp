@@ -1,4 +1,4 @@
-#include <ws2tcpip.h> // CSADDR_INFO
+#include <ws2tcpip.h>
 
 #include <expected>
 

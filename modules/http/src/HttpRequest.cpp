@@ -70,12 +70,12 @@ HttpRequest::HttpRequest(std::string_view url, const std::vector<std::string> & 
 
 HttpRequest::~HttpRequest() = default;
 
-void HttpRequest::set_content(sihd::util::ArrCharView data)
+void HttpRequest::set_content(ArrCharView data)
 {
     _array.from_bytes(data);
 }
 
-void HttpRequest::set_content_view(sihd::util::ArrCharView data)
+void HttpRequest::set_content_view(ArrCharView data)
 {
     _array.assign((char *)data.data(), data.size());
 }
@@ -171,7 +171,7 @@ bool HttpRequest::has_content() const
     return _array;
 }
 
-sihd::util::Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
+Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
 {
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
@@ -266,6 +266,71 @@ std::string HttpRequest::to_string() const
         result.append(reinterpret_cast<const char *>(_array.buf()), _array.size());
 
     return result;
+}
+
+const std::string & HttpRequest::client_ip() const
+{
+    return _ip;
+}
+
+const ArrChar & HttpRequest::content() const
+{
+    return _array;
+}
+
+const std::string & HttpRequest::url() const
+{
+    return _url;
+}
+
+const std::vector<std::string> & HttpRequest::uri_args() const
+{
+    return _uri_args_lst;
+}
+
+const std::unordered_map<std::string, std::string> & HttpRequest::path_params() const
+{
+    return _path_params;
+}
+
+const std::unordered_map<std::string, std::string> & HttpRequest::query_params() const
+{
+    return _query_params;
+}
+
+const std::unordered_map<std::string, std::string> & HttpRequest::cookies() const
+{
+    return _cookies;
+}
+
+HttpRequest::RequestType HttpRequest::request_type() const
+{
+    return _request_type;
+}
+
+const std::string & HttpRequest::auth_user() const
+{
+    return _auth_user;
+}
+
+const std::string & HttpRequest::auth_token() const
+{
+    return _auth_token;
+}
+
+bool HttpRequest::is_authenticated() const
+{
+    return !_auth_user.empty() || !_auth_token.empty();
+}
+
+HttpHeader & HttpRequest::http_header()
+{
+    return _http_header;
+}
+
+const HttpHeader & HttpRequest::http_header() const
+{
+    return _http_header;
 }
 
 } // namespace sihd::http

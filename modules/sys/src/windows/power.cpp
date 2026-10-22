@@ -34,6 +34,7 @@ std::vector<Battery> batteries()
     if (status.BatteryFlag == BATTERY_FLAG_NO_BATTERY || status.BatteryFlag == BATTERY_FLAG_UNKNOWN)
         return ret;
     Battery battery;
+
     battery.name = "BAT0";
     // BatteryLifePercent is 255 when unknown
     if (status.BatteryLifePercent <= 100)

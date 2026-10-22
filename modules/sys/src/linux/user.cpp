@@ -10,12 +10,12 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::sys::user
 {
 
 SIHD_NEW_LOGGER("sihd::sys::user");
-
-// === BasicId ===
 
 template <typename Tag>
 BasicId<Tag> BasicId<Tag>::from_native(uint32_t id)
@@ -57,8 +57,6 @@ bool BasicId<Tag>::operator==(const BasicId & other) const
 
 template class BasicId<UserTag>;
 template class BasicId<GroupTag>;
-
-// === identity ===
 
 namespace
 {
@@ -217,40 +215,34 @@ bool is_root()
     return geteuid() == 0;
 }
 
-sihd::util::Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id)
+Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id)
 {
     if constexpr (!can_drop_privileges)
     {
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_supported, "cannot drop privileges on this platform"));
+        return std::unexpected(Error(ErrorCode::not_supported, "cannot drop privileges on this platform"));
     }
     else
     {
         if (!user_id.valid() || !group_id.valid())
-            return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument,
-                                                     "cannot drop privileges: invalid user or group"));
+            return std::unexpected(Error(ErrorCode::invalid_argument, "cannot drop privileges: invalid user or group"));
 
         const uid_t uid = user_id.native();
         const gid_t gid = group_id.native();
 
         // supplementary groups must go first: they can only be cleared while still privileged
         if (setgroups(1, &gid) != 0)
-            return std::unexpected(sihd::util::Error::from_errno("could not setgroups"));
+            return std::unexpected(Error::from_errno("could not setgroups"));
         if (setgid(gid) != 0)
-            return std::unexpected(sihd::util::Error::from_errno("could not setgid"));
+            return std::unexpected(Error::from_errno("could not setgid"));
         if (setuid(uid) != 0)
-            return std::unexpected(sihd::util::Error::from_errno("could not setuid"));
-        // the drop must be irreversible: no capabilities left to setuid()/setgid() back. Heuristic only,
-        // the id checks below stay authoritative; cap::has() is a no-op (false) where unavailable
+            return std::unexpected(Error::from_errno("could not setuid"));
+        // the drop must be irreversible: no capabilities left to setuid()/setgid() back (heuristic only)
         if (uid != 0 && cap::supported && (cap::has(Cap::setuid) || cap::has(Cap::setgid)))
-            return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::permission_denied,
-                                                     "privileges could be restored after dropping to uid {}",
-                                                     uid));
+            return std::unexpected(
+                Error(ErrorCode::permission_denied, "privileges could be restored after dropping to uid {}", uid));
         if (getuid() != uid || geteuid() != uid || getgid() != gid || getegid() != gid)
-            return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::permission_denied,
-                                                     "privileges were not fully dropped to {}:{}",
-                                                     uid,
-                                                     gid));
+            return std::unexpected(
+                Error(ErrorCode::permission_denied, "privileges were not fully dropped to {}:{}", uid, gid));
         return {};
     }
 }

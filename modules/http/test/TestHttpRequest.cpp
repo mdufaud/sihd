@@ -9,18 +9,18 @@ namespace test
 
 SIHD_NEW_LOGGER("test");
 
+using namespace sihd::util;
 using namespace sihd::http;
 
 class TestHttpRequest: public ::testing::Test
 {
     protected:
-        TestHttpRequest() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestHttpRequest() { sihd::util::LoggerManager::clear_loggers(); }
+        TestHttpRequest() { LoggerManager::stream(); }
+        virtual ~TestHttpRequest() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestHttpRequest, test_request_types)
 {
-    // bidirectional string ↔ enum conversion, case-insensitive
     EXPECT_EQ(HttpRequest::type_from_str("get"), HttpRequest::Get);
     EXPECT_EQ(HttpRequest::type_from_str("POST"), HttpRequest::Post);
     EXPECT_EQ(HttpRequest::type_from_str("Put"), HttpRequest::Put);
@@ -42,19 +42,17 @@ TEST_F(TestHttpRequest, test_content)
     EXPECT_FALSE(req.has_content());
 
     std::string body = R"({"key":"val","n":7})";
-    req.set_content(sihd::util::ArrCharView(body.data(), body.size()));
+    req.set_content(ArrCharView(body.data(), body.size()));
     EXPECT_TRUE(req.has_content());
     EXPECT_EQ(req.content().cpp_str(), body);
 
-    // valid json roundtrip
     auto parsed = req.content_as_json();
     ASSERT_TRUE(parsed.has_value());
     EXPECT_EQ((*parsed)["key"].get<std::string>(), "val");
     EXPECT_EQ((*parsed)["n"].get<int32_t>(), 7);
 
-    // invalid json returns nothing
     std::string bad = "{ not json }";
-    req.set_content(sihd::util::ArrCharView(bad.data(), bad.size()));
+    req.set_content(ArrCharView(bad.data(), bad.size()));
     EXPECT_FALSE(req.content_as_json().has_value());
 }
 
@@ -178,7 +176,7 @@ TEST_F(TestHttpRequest, test_auth)
 
     req.set_auth_token("tok");
     EXPECT_EQ(req.auth_token(), "tok");
-    EXPECT_EQ(req.auth_user(), "alice"); // both can be set simultaneously
+    EXPECT_EQ(req.auth_user(), "alice");
     EXPECT_TRUE(req.is_authenticated());
 
     req.set_client_ip("127.0.0.1");

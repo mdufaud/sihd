@@ -1,9 +1,6 @@
 #ifndef __SIHD_SYS_WAYLAND_SCREEN_HPP__
 #define __SIHD_SYS_WAYLAND_SCREEN_HPP__
 
-// Wayland screen backend of the dispatcher in src/linux/screen.cpp: the
-// announced state of every wl_output
-
 #include <sihd/sys/screen.hpp>
 
 namespace sihd::sys::screen::wayland
@@ -14,8 +11,6 @@ namespace sihd::sys::screen::wayland
 sihd::util::Result<std::vector<sihd::sys::screen::Monitor>> monitors();
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<std::vector<sihd::sys::screen::Monitor>> monitors()
 {

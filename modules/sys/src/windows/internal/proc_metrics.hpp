@@ -10,7 +10,6 @@ namespace sihd::sys::internal
 
 uint64_t filetime_ticks(const FILETIME & time);
 uint32_t thread_count_of(DWORD pid);
-// fills the handle-served metrics: times, memory, handles, io, state
 void process_metrics_of(HANDLE handle, ProcessMetrics & metrics);
 
 } // namespace sihd::sys::internal

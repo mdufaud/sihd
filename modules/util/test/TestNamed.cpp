@@ -11,9 +11,9 @@ using namespace sihd::util;
 class TestNamed: public ::testing::Test
 {
     protected:
-        TestNamed() { sihd::util::LoggerManager::stream(); }
+        TestNamed() { LoggerManager::stream(); }
 
-        virtual ~TestNamed() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNamed() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -61,7 +61,6 @@ TEST_F(TestNamed, test_named_ownership)
     Named *unowned = new Named("unowned");
     ASSERT_TRUE(root.add_child(unowned, false));
     EXPECT_FALSE(unowned->is_owned_by_parent());
-    // cleanup: unowned is not deleted by root
     root.remove_child(unowned);
     delete unowned;
 }

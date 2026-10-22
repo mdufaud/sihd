@@ -8,9 +8,8 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
-using sihd::util::Error;
+using namespace sihd::util;
 using enum sihd::util::ErrorCode;
-using sihd::util::error_errno;
 
 namespace sihd::crypto
 {
@@ -18,15 +17,13 @@ namespace sihd::crypto
 namespace
 {
 
-sihd::util::ErrorCode errc_from_ssl(unsigned long ssl_code)
+ErrorCode errc_from_ssl(unsigned long ssl_code)
 {
     const int reason = ERR_GET_REASON(ssl_code);
-    // system errors carry the errno as their reason
     if (ERR_GET_LIB(ssl_code) == ERR_LIB_SYS)
         return error_errno(reason);
     switch (ERR_GET_LIB(ssl_code))
     {
-        // PEM / DER input data that could not be parsed
         case ERR_LIB_PEM:
         case ERR_LIB_ASN1:
         case ERR_LIB_OSSL_DECODER:
@@ -38,10 +35,9 @@ sihd::util::ErrorCode errc_from_ssl(unsigned long ssl_code)
 
 } // namespace
 
-std::unexpected<sihd::util::Error> make_error(std::string_view context)
+std::unexpected<Error> make_error(std::string_view context)
 {
-    // the queue is a per-thread fifo: stale entries from earlier failures may sit in front,
-    // the latest entry is the one from the failing call
+    // per-thread fifo: stale entries may sit in front, the latest one is the failing call's
     unsigned long ssl_code = 0;
     unsigned long entry = 0;
     while ((entry = ERR_get_error()) != 0)
@@ -58,7 +54,7 @@ std::unexpected<sihd::util::Error> make_error(std::string_view context)
 namespace sihd::crypto::utils
 {
 
-sihd::util::Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, const uint8_t *data, size_t len)
+Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, const uint8_t *data, size_t len)
 {
     ERR_clear_error();
     if (!key)
@@ -146,12 +142,12 @@ bool verify_data(const Certificate & cert,
     return ret == 1;
 }
 
-sihd::util::Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, sihd::util::ArrByteView data)
+Result<std::vector<uint8_t>> sign_data(const PrivateKey & key, ArrByteView data)
 {
     return sign_data(key, reinterpret_cast<const uint8_t *>(data.data()), data.size());
 }
 
-bool verify_data(const Certificate & cert, sihd::util::ArrByteView data, sihd::util::ArrByteView signature)
+bool verify_data(const Certificate & cert, ArrByteView data, ArrByteView signature)
 {
     return verify_data(cert,
                        reinterpret_cast<const uint8_t *>(data.data()),

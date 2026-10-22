@@ -69,7 +69,6 @@ std::optional<Duration> units_to_time(std::optional<uint64_t> units, std::option
     return Duration(time::from_double((double)*units / (double)*units_per_hour * 3600.0));
 }
 
-// dir path and name of every power supply whose sysfs type matches
 std::vector<std::pair<std::string, std::string>> power_supplies(std::initializer_list<std::string_view> types)
 {
     std::vector<std::pair<std::string, std::string>> ret;
@@ -80,10 +79,12 @@ std::vector<std::pair<std::string, std::string>> power_supplies(std::initializer
         if (!name.empty() && name.back() == '/')
             name.remove_suffix(1);
         const std::string dir = fs::combine(power_supply_dir, name);
-        const std::string type = read_str(fs::combine(dir, "type")).value_or("");
+        const std::optional<std::string> type = read_str(fs::combine(dir, "type"));
+        if (!type)
+            continue;
         for (std::string_view wanted : types)
         {
-            if (type == wanted)
+            if (*type == wanted)
             {
                 ret.emplace_back(dir, name);
                 break;
@@ -99,8 +100,8 @@ std::optional<Battery> read_battery(std::string_view dir, std::string_view name)
         return std::nullopt;
     Battery battery;
     battery.name = name;
-    battery.state = parse_state(read_str(fs::combine(dir, "status")).value_or(""));
-    // uWh/uW or uAh/uA depending on the driver
+    const std::optional<std::string> status = read_str(fs::combine(dir, "status"));
+    battery.state = status ? parse_state(*status) : BatteryState::unknown;
     const std::optional<uint64_t> now = first_uint({fs::combine(dir, "energy_now"), fs::combine(dir, "charge_now")});
     const std::optional<uint64_t> full = first_uint({fs::combine(dir, "energy_full"), fs::combine(dir, "charge_full")});
     const std::optional<uint64_t> rate = first_uint({fs::combine(dir, "power_now"), fs::combine(dir, "current_now")});

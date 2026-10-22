@@ -85,10 +85,10 @@ TEST_F(TestBitmap, test_bitmap_fill)
     {
         for (size_t x = 0; x < 3; ++x)
         {
-            Color p = bmp.get(x, y);
-            EXPECT_EQ(p.green, 255);
-            EXPECT_EQ(p.red, 0);
-            EXPECT_EQ(p.blue, 0);
+            Color pixel = bmp.get(x, y);
+            EXPECT_EQ(pixel.green, 255);
+            EXPECT_EQ(pixel.red, 0);
+            EXPECT_EQ(pixel.blue, 0);
         }
     }
 }
@@ -116,9 +116,9 @@ TEST_F(TestBitmap, test_bitmap_bmp_roundtrip)
     EXPECT_EQ(bmp2.width(), 4u);
     EXPECT_EQ(bmp2.height(), 4u);
 
-    Color p = bmp2.get(0, 0);
-    EXPECT_EQ(p.blue, 255);
-    EXPECT_EQ(p.red, 0);
+    Color pixel = bmp2.get(0, 0);
+    EXPECT_EQ(pixel.blue, 255);
+    EXPECT_EQ(pixel.red, 0);
 }
 
 TEST_F(TestBitmap, test_bitmap_bitfield_headers)
@@ -131,6 +131,7 @@ TEST_F(TestBitmap, test_bitmap_bitfield_headers)
     {
         auto data = source.to_bmp_data();
         const size_t extension = std::max(header_size - 40, size_t(12));
+
         data.insert(data.begin() + 54, extension, 0);
         data[2] = data.size();
         data[10] = 54 + extension;

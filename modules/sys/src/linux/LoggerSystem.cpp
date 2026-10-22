@@ -33,7 +33,7 @@ LoggerSystem::~LoggerSystem()
         closelog();
 }
 
-sihd::util::Result<void> LoggerSystem::_open_source()
+Result<void> LoggerSystem::_open_source()
 {
     std::lock_guard<std::mutex> lock(g_syslog_mutex);
     if (g_instances > 0)

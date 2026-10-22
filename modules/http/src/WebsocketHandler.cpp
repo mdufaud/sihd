@@ -1,6 +1,8 @@
 #include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -16,12 +18,12 @@ void WebsocketHandler::on_open(std::string_view protocol_name)
         this->callback_open(protocol_name);
 }
 
-bool WebsocketHandler::on_read(const sihd::util::ArrChar & array)
+bool WebsocketHandler::on_read(const ArrChar & array)
 {
     return !this->callback_read || this->callback_read(array);
 }
 
-bool WebsocketHandler::on_write(sihd::util::ArrChar & array, WriteProtocol & protocol)
+bool WebsocketHandler::on_write(ArrChar & array, WriteProtocol & protocol)
 {
     return !this->callback_write || this->callback_write(array, protocol);
 }

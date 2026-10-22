@@ -16,8 +16,7 @@
 namespace sihd::sys::user
 {
 
-// Opaque account identifier: linux a uid_t/gid_t, windows a SID (variable-sized, no integer form:
-// the trailing RID is not unique across domains); Tag keeps user and group identifiers distinct
+// Opaque id: linux uid_t/gid_t, windows SID (variable-sized; the RID is unique only per domain)
 template <typename Tag>
 class BasicId
 {
@@ -68,38 +67,28 @@ constexpr bool supported = !sihd::util::build::is_emscripten;
 // windows has no setuid: dropping is unix only, see Impersonation for the windows counterpart
 constexpr bool can_drop_privileges = sihd::util::build::is_unix && !sihd::util::build::is_emscripten;
 
-// effective_*: identity the CALLING THREAD acts as (follows an Impersonation; windows: thread
-// token, falling back to the process token). real_*: identity at startup, ignores Impersonation
+// effective_*: identity of the calling thread (follows an Impersonation); real_*: startup identity
 
 UserId effective_user();
 UserId real_user();
 GroupId effective_group();
 GroupId real_group();
 
-// name of the effective user
 std::optional<std::string> name();
-// groups the process belongs to. linux: supplementary groups only. windows: every group SID
-// of the effective token, deny-only SIDs excluded
+// linux: supplementary groups only; windows: every group SID of the effective token, minus deny-only
 std::vector<GroupId> groups();
 // linux: effective user is uid 0 - windows: the token is elevated
 bool is_root();
-
-// === lookups ===
 
 std::optional<std::string> name_of(const UserId & id);
 std::optional<std::string> name_of(const GroupId & id);
 std::optional<UserId> user_id_of(std::string_view user_name);
 std::optional<GroupId> group_id_of(std::string_view group_name);
-// primary group of a user account, not a group name lookup
 std::optional<GroupId> primary_group_of(std::string_view user_name);
 std::optional<GroupId> primary_group_of(const UserId & id);
 
-// === privileges ===
-
-// permanently drops to user/group - order matters: setgroups, setgid, then setuid; verifies the
-// drop cannot be reverted. A failure may leave it partially switched: exit on error if it matters
+// order matters: setgroups, setgid, setuid; verifies the drop is irreversible; failure may leave it half-switched
 sihd::util::Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id);
-// same, resolving the primary group of the user
 sihd::util::Result<void> drop_privileges(std::string_view user_name);
 
 } // namespace sihd::sys::user

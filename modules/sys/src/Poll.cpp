@@ -1,4 +1,3 @@
-// sterror errno
 #include <algorithm>
 #include <cerrno>
 #include <chrono>
@@ -7,6 +6,14 @@
 #include <thread>
 
 #include <sihd/sys/Poll.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <poll.h>
+# include <sys/resource.h>
+#else
+# include <winsock2.h>
+#endif
+
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
@@ -17,6 +24,11 @@ namespace sihd::sys
 using namespace sihd::util;
 
 SIHD_LOGGER;
+
+struct Poll::Impl
+{
+        std::vector<struct pollfd> fds;
+};
 
 namespace
 {
@@ -63,20 +75,18 @@ int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
     size_t i = 0;
     while (i < lst_fds.size())
     {
-        // take existing fd
         if ((int)lst_fds[i].fd == fd)
         {
             idx = i;
             break;
         }
-        // take first free fd
+
         if (idx < 0 && (int)lst_fds[i].fd == -1)
             idx = i;
         ++i;
     }
     if (idx < 0 && i < max_fds)
     {
-        // add new entry
         struct pollfd p;
         p.fd = -1;
         p.events = 0;
@@ -89,10 +99,10 @@ int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
 
 } // namespace
 
-Poll::Poll()
+Poll::Poll(): _impl(std::make_unique<Impl>())
 {
     _stop = false;
-    _timeout_milliseconds = -1; // infinite block
+    _timeout_milliseconds = -1;
     _max_fds = 0;
     _last_poll_time = Duration(0);
     _timedout = false;
@@ -113,19 +123,25 @@ Poll::~Poll()
     }
 }
 
+size_t Poll::fds_size() const
+{
+    std::lock_guard lock(_fds_mutex);
+    return _impl->fds.size();
+}
+
 void Poll::resize(int nfds)
 {
     if (nfds < 0)
         return;
     std::lock_guard lock(_fds_mutex);
-    _lst_fds.resize(nfds);
+    _impl->fds.resize(nfds);
     _lst_events.reserve(nfds);
     int i = 0;
     while (i < nfds)
     {
-        _lst_fds[i].events = 0;
-        _lst_fds[i].revents = 0;
-        _lst_fds[i].fd = -1;
+        _impl->fds[i].events = 0;
+        _impl->fds[i].revents = 0;
+        _impl->fds[i].fd = -1;
         ++i;
     }
 }
@@ -146,18 +162,18 @@ bool Poll::set_limit(int limit)
 void Poll::clear_fds()
 {
     std::lock_guard lock(_fds_mutex);
-    _lst_fds.clear();
+    _impl->fds.clear();
 }
 
 bool Poll::clear_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_fd_index(_lst_fds, fd);
+    int idx = get_fd_index(_impl->fds, fd);
     if (idx >= 0)
     {
-        _lst_fds[idx].events = 0;
-        _lst_fds[idx].revents = 0;
-        _lst_fds[idx].fd = -1;
+        _impl->fds[idx].events = 0;
+        _impl->fds[idx].revents = 0;
+        _impl->fds[idx].fd = -1;
     }
     return idx >= 0;
 }
@@ -165,23 +181,23 @@ bool Poll::clear_fd(int fd)
 size_t Poll::read_fds_size() const
 {
     std::lock_guard lock(_fds_mutex);
-    return count_fds_events(_lst_fds, POLLIN | POLLPRI);
+    return count_fds_events(_impl->fds, POLLIN | POLLPRI);
 }
 
 size_t Poll::write_fds_size() const
 {
     std::lock_guard lock(_fds_mutex);
-    return count_fds_events(_lst_fds, POLLOUT);
+    return count_fds_events(_impl->fds, POLLOUT);
 }
 
 bool Poll::set_read_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_or_add_fd(_lst_fds, fd, _max_fds);
+    int idx = get_or_add_fd(_impl->fds, fd, _max_fds);
     if (idx >= 0)
     {
-        _lst_fds[idx].fd = fd;
-        _lst_fds[idx].events |= POLLIN;
+        _impl->fds[idx].fd = fd;
+        _impl->fds[idx].events |= POLLIN;
     }
     return idx >= 0;
 }
@@ -189,11 +205,11 @@ bool Poll::set_read_fd(int fd)
 bool Poll::set_write_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_or_add_fd(_lst_fds, fd, _max_fds);
+    int idx = get_or_add_fd(_impl->fds, fd, _max_fds);
     if (idx >= 0)
     {
-        _lst_fds[idx].fd = fd;
-        _lst_fds[idx].events |= POLLOUT;
+        _impl->fds[idx].fd = fd;
+        _impl->fds[idx].events |= POLLOUT;
     }
     return idx >= 0;
 }
@@ -201,12 +217,12 @@ bool Poll::set_write_fd(int fd)
 bool Poll::rm_read_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_fd_index(_lst_fds, fd);
+    int idx = get_fd_index(_impl->fds, fd);
     if (idx >= 0)
     {
-        _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLIN));
-        if (_lst_fds[idx].events == 0)
-            _lst_fds[idx].fd = -1;
+        _impl->fds[idx].events = (_impl->fds[idx].events & ~(POLLIN));
+        if (_impl->fds[idx].events == 0)
+            _impl->fds[idx].fd = -1;
     }
     return idx >= 0;
 }
@@ -214,12 +230,12 @@ bool Poll::rm_read_fd(int fd)
 bool Poll::rm_write_fd(int fd)
 {
     std::lock_guard lock(_fds_mutex);
-    int idx = get_fd_index(_lst_fds, fd);
+    int idx = get_fd_index(_impl->fds, fd);
     if (idx >= 0)
     {
-        _lst_fds[idx].events = (_lst_fds[idx].events & ~(POLLOUT));
-        if (_lst_fds[idx].events == 0)
-            _lst_fds[idx].fd = -1;
+        _impl->fds[idx].events = (_impl->fds[idx].events & ~(POLLOUT));
+        if (_impl->fds[idx].events == 0)
+            _impl->fds[idx].fd = -1;
     }
     return idx >= 0;
 }
@@ -269,13 +285,15 @@ int Poll::poll(int milliseconds_timeout)
     int saved_errno;
     {
         std::lock_guard lock(_fds_mutex);
-        ret = native_poll(_lst_fds, milliseconds_timeout);
+        ret = native_poll(_impl->fds, milliseconds_timeout);
         saved_errno = os::last_socket_error();
+
         while (ret < 0 && error_errno(saved_errno) == ErrorCode::interrupted)
         {
             // rounded up: a truncated remainder would time out before the deadline
             const time::UnixTime remaining = std::max<time::UnixTime>(deadline - _clock.now().nanoseconds(), 0);
-            ret = native_poll(_lst_fds, milliseconds_timeout < 0 ? -1 : (int)time::to_ms(remaining + time::ms(1) - 1));
+            ret = native_poll(_impl->fds,
+                              milliseconds_timeout < 0 ? -1 : (int)time::to_ms(remaining + time::ms(1) - 1));
             saved_errno = os::last_socket_error();
         }
         _last_poll_time = _clock.now() - before;
@@ -295,10 +313,10 @@ void Poll::process_poll_results(int poll_return, int saved_errno)
     if (poll_return > 0)
     {
         size_t i = 0;
-        while (poll_return > 0 && i < _lst_fds.size())
+        while (poll_return > 0 && i < _impl->fds.size())
         {
-            short revt = _lst_fds[i].revents;
-            int fd = _lst_fds[i].fd;
+            short revt = _impl->fds[i].revents;
+            int fd = _impl->fds[i].fd;
             if (revt != 0)
             {
                 PollEvent evt;

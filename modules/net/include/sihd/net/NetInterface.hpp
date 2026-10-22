@@ -21,41 +21,30 @@ class NetInterface
 
         static sihd::util::Result<std::map<std::string, NetInterface>> get_all_interfaces();
 
-        const std::string & name() const { return _name; }
-        const std::string & mac_addr() const { return _mac_address; }
+        const std::string & name() const;
+        const std::string & mac_addr() const;
 
-        const IpAddr & addr4() const { return _addr4; }
-        const IpAddr & netmask4() const { return _netmask4; }
+        const IpAddr & addr4() const;
+        const IpAddr & netmask4() const;
         // either point-to-point link or broadcast
-        const IpAddr & extra_addr4() const { return _extra_addr4; }
+        const IpAddr & extra_addr4() const;
 
-        const IpAddr & addr6() const { return _addr6; }
-        const IpAddr & netmask6() const { return _netmask6; }
+        const IpAddr & addr6() const;
+        const IpAddr & netmask6() const;
         // either point-to-point link or broadcast
-        const IpAddr & extra_addr6() const { return _extra_addr6; }
+        const IpAddr & extra_addr6() const;
 
-        // Interface is running.
         bool up() const;
-        // Valid broadcast address set.
         bool broadcast() const;
         bool loopback() const;
-        // Interface is a point-to-point link.
         bool point2point() const;
-        // Resources allocated.
         bool running() const;
-        // No arp protocol, L2 destination address not set.
         bool noarp() const;
-        // Interface is in promiscuous mode.
         bool promisc() const;
-        // Avoid use of trailers
         bool notrailers() const;
-        // Master of a load balancing bundle.
         bool master() const;
-        // Slave of a load balancing bundle.
         bool slave() const;
-        // Receive all multicast packets.
         bool all_multicast() const;
-        // Supports multicast
         bool supports_multicast() const;
 
     protected:

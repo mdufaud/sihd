@@ -27,19 +27,15 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         void terminate() override;
 
     private:
-        // ── Per-frame helpers ─────────────────────────────────────────────────
         void _process_mouse_event(ImGuiIO & io, bool & pressed_l, bool & pressed_r);
         bool _process_key_event(int key, ImGuiIO & io);
 
-        // ── State ─────────────────────────────────────────────────────────────
         bool _is_init;
         bool _should_close;
-        bool _mouse_seen;      // true after first real mouse event (avoids hover at 0,0 on startup)
-        bool _ctrl_from_mouse; // last emitted Ctrl state from mouse modifier bits
-        // Deferred button releases: when a press+release land in the same poll, the
-        // release is held one poll so imgui sees the button down for a full frame.
+        bool _mouse_seen; // avoids hover at 0,0 before the first real mouse event
+        bool _ctrl_from_mouse;
+        // a same-poll press+release is held one poll so imgui sees the button down for a full frame
         bool _pending_lrelease, _pending_rrelease;
-        // Persistent mouse state (mirrors imtui static mx/my/lbut/rbut/mstate)
         int _mx, _my;
         int _lbut, _rbut;
         unsigned long _mstate;

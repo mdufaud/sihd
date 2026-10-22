@@ -36,7 +36,7 @@ Timer::~Timer()
 void Timer::cancel()
 {
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _stop = true;
         _waitable.notify();
     }

@@ -36,7 +36,7 @@ class Connection
         class Message
         {
             public:
-                // forward-only reader over a message body or one of its containers, valid while its message lives
+                // forward-only reader over a message body or container, valid while its message lives
                 class Iter
                 {
                     public:

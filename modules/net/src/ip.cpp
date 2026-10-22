@@ -9,13 +9,13 @@
 #include <sihd/util/str.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <arpa/inet.h>  // inet_pton...
-# include <netdb.h>      // getprotobynumber, getprotobyname
-# include <netinet/in.h> // struct inX_addr
+# include <arpa/inet.h>
+# include <netdb.h>
+# include <netinet/in.h>
 #else
 # include <winsock2.h>
 
-# include <ws2tcpip.h> // addrinfo
+# include <ws2tcpip.h>
 #endif
 
 namespace sihd::net::ip
@@ -250,11 +250,10 @@ Result<std::vector<std::string>> public_addresses(const std::string & host)
 Result<bool> is_private_host(const std::string & host)
 {
     const auto addresses = public_addresses(host);
-    if (addresses.has_value())
-        return false;
-    if (addresses.error().code == ErrorCode::permission_denied)
+    if (!addresses.has_value() && addresses.error().code == ErrorCode::permission_denied)
         return true;
-    return std::unexpected(addresses.error());
+    SIHD_UNEXPECTED_RETURN(addresses);
+    return false;
 }
 
 uint32_t to_netmask(uint32_t value)
@@ -272,9 +271,9 @@ bool is_valid_netmask(uint32_t mask)
 {
     if (mask == 0)
         return false;
-    uint32_t y = ~mask;
-    uint32_t z = y + 1;
-    return (z & y) == 0;
+    uint32_t inverted = ~mask;
+    uint32_t next = inverted + 1;
+    return (next & inverted) == 0;
 }
 
 } // namespace sihd::net::ip

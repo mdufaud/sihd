@@ -50,7 +50,6 @@ std::string bash_quote(std::string_view str)
     return out;
 }
 
-// the known values of an option, empty when they cannot be guessed
 std::vector<std::string> completion_values(std::string_view option)
 {
     if (option != "--log-level")
@@ -66,7 +65,6 @@ std::vector<std::string> completion_values(std::string_view option)
     return names;
 }
 
-// the case line of the static script listing what can be typed at one command path
 std::string completion_node_line(std::string_view path,
                                  const std::vector<std::string> & commands,
                                  const std::vector<std::string> & options,
@@ -262,6 +260,7 @@ int CliInterpreter::_parse(const std::vector<std::string> & args)
     catch (const CLI::ParseError & e)
     {
         int status = _cli->exit(e);
+
         _parse_handled = status == 0;
         return status;
     }
@@ -363,6 +362,7 @@ CliInterpreter::TokenKind CliInterpreter::_step_token(TokenWalk & walk, const st
     if (const Command *child = walk.node()->get_command(token))
     {
         walk.chain.push_back(child);
+
         walk.positionals = child->positionals();
         return TokenKind::subcommand;
     }
@@ -412,6 +412,7 @@ int CliInterpreter::_intercept_completion(const std::vector<std::string> & args)
                 if (kind.starts_with(generate_completion_flag) == false)
                     break;
                 kind.remove_prefix(generate_completion_flag.size());
+
                 bool dynamic = false;
                 if (kind.empty() == false)
                 {
@@ -454,6 +455,7 @@ void CliInterpreter::_complete(std::span<const std::string> words) const
             case TokenKind::dashes:
                 at_value = false;
                 break;
+
             case TokenKind::option:
                 if (i + 2 == words.size() && walk.pending_value)
                 {
@@ -564,6 +566,7 @@ bool CliInterpreter::_apply_set_overrides()
             node = _root->path(path.substr(0, key_pos));
             key = path.substr(key_pos + 1);
         }
+
         Command::Binding *binding = node != nullptr ? node->find_binding(key) : nullptr;
         if (binding == nullptr)
         {

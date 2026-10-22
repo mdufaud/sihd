@@ -1,4 +1,4 @@
-#include <fcntl.h> // O_*
+#include <fcntl.h>
 #include <semaphore.h>
 
 #include <cerrno>
@@ -21,7 +21,7 @@ SIHD_LOGGER;
 
 #if defined(__SIHD_UNIX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_APPLE__) && !defined(__SIHD_EMSCRIPTEN__)
 
-sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
+Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -37,7 +37,7 @@ sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned in
     return {};
 }
 
-sihd::util::Result<void> Semaphore::attach(const std::string & name)
+Result<void> Semaphore::attach(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -53,7 +53,7 @@ sihd::util::Result<void> Semaphore::attach(const std::string & name)
     return {};
 }
 
-sihd::util::Result<void> Semaphore::clear()
+Result<void> Semaphore::clear()
 {
     bool ret = true;
     if (_sem != nullptr)
@@ -107,7 +107,7 @@ bool Semaphore::post()
     return _sem != nullptr && sem_post(static_cast<sem_t *>(_sem)) == 0;
 }
 
-sihd::util::Result<int> Semaphore::value() const
+Result<int> Semaphore::value() const
 {
     if (_sem == nullptr)
         return std::unexpected(Error(not_initialized, "semaphore '{}' is not attached", _name));
@@ -122,17 +122,17 @@ sihd::util::Result<int> Semaphore::value() const
 
 // no POSIX named semaphores (android bionic, apple lacks sem_timedwait/sem_getvalue, emscripten)
 
-sihd::util::Result<void> Semaphore::create(const std::string &, unsigned int, mode_t)
+Result<void> Semaphore::create(const std::string &, unsigned int, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> Semaphore::attach(const std::string &)
+Result<void> Semaphore::attach(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> Semaphore::clear()
+Result<void> Semaphore::clear()
 {
     return {};
 }
@@ -157,7 +157,7 @@ bool Semaphore::post()
     return false;
 }
 
-sihd::util::Result<int> Semaphore::value() const
+Result<int> Semaphore::value() const
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

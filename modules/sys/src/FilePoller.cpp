@@ -114,7 +114,7 @@ struct FilePoller::Impl
         std::string watch_path;
         size_t max_depth;
         bool path_exists;
-        sihd::util::Timestamp last_modif;
+        Timestamp last_modif;
         std::vector<FileStat> last;
 
         std::vector<std::string> created;
@@ -173,7 +173,7 @@ void FilePoller::unwatch()
     _impl = std::make_unique<Impl>();
 }
 
-sihd::util::Result<void> FilePoller::watch(const std::string & path, size_t max_depth)
+Result<void> FilePoller::watch(const std::string & path, size_t max_depth)
 {
     if (_impl->watch_path == path)
         return {};
@@ -203,7 +203,7 @@ bool FilePoller::run()
     }
 
     const bool new_path_exists = fs::exists(_impl->watch_path);
-    const sihd::util::Timestamp new_last_modif = last_write_or(_impl->watch_path, _impl->last_modif);
+    const Timestamp new_last_modif = last_write_or(_impl->watch_path, _impl->last_modif);
 
     std::vector<FileStat> new_files;
     new_files.reserve(_impl->last.size());
@@ -217,7 +217,6 @@ bool FilePoller::run()
     {
         put_intersections_into(_impl->__same_files, _impl->last, new_files);
 
-        // build changed files list
         auto old_files_it = _impl->last.begin();
         const auto old_files_end = _impl->last.end();
         auto same_files_it = _impl->__same_files.begin();
@@ -236,14 +235,12 @@ bool FilePoller::run()
             ++same_files_it;
         }
 
-        // build created files list
         put_differences_into(_impl->__created_files, new_files, _impl->__same_files);
         for (auto & file : _impl->__created_files)
         {
             _impl->created.emplace_back(std::move(file.path));
         }
 
-        // build removed files list
         put_differences_into(_impl->__removed_files, _impl->last, new_files);
         for (auto & file : _impl->__removed_files)
         {
@@ -251,7 +248,6 @@ bool FilePoller::run()
         }
     }
 
-    // create changes on the exact watch dir or file
     if (!new_path_exists && _impl->path_exists)
         _impl->removed.emplace_back(_impl->watch_path);
     else if (new_path_exists && !_impl->path_exists)

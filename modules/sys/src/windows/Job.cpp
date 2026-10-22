@@ -37,9 +37,9 @@ std::optional<Job::Event::Kind> event_kind_from_native(DWORD message)
     switch (message)
     {
         case JOB_OBJECT_MSG_END_OF_JOB_TIME:
-            return Job::Event::Kind::end_of_job_time;
+            return Job::Event::Kind::job_time_expired;
         case JOB_OBJECT_MSG_END_OF_PROCESS_TIME:
-            return Job::Event::Kind::end_of_process_time;
+            return Job::Event::Kind::process_time_expired;
         case JOB_OBJECT_MSG_ACTIVE_PROCESS_LIMIT:
             return Job::Event::Kind::active_process_limit;
         case JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO:

@@ -1,3 +1,4 @@
+#include <array>
 #include <csignal>
 #include <optional>
 
@@ -14,6 +15,7 @@
 namespace demo
 {
 
+using namespace sihd::util;
 using namespace sihd::http;
 
 SIHD_NEW_LOGGER("demo");
@@ -24,9 +26,8 @@ void demo_http_cookies()
 
     Navigator nav;
     nav.set_follow_redirects(true);
-    nav.set_ssl_verify(false, false); // skip cert verification for demo
+    nav.set_ssl_verify(false, false);
 
-    // httpbin.org sets cookies via redirect: /cookies/set?name=value → /cookies
     auto resp = nav.get("https://httpbin.org/cookies/set?session=hello&user=navigator");
     if (!resp.has_value())
     {
@@ -40,7 +41,6 @@ void demo_http_cookies()
     for (const auto & [name, value] : cookies)
         SIHD_LOG(info, "  {} = {}", name, value);
 
-    // Now request /cookies — httpbin echoes back the cookies it received
     auto check = nav.get("https://httpbin.org/cookies");
     if (check.has_value())
     {
@@ -56,7 +56,7 @@ void demo_websocket()
     Navigator nav;
     nav.set_ssl_verify(false, false);
 
-    sihd::util::Waitable waitable;
+    Waitable waitable;
     std::optional<std::string> reply;
 
     nav.on_ws_open = [&](std::string_view protocol) {
@@ -65,7 +65,7 @@ void demo_websocket()
 
     nav.on_ws_text = [&](std::string_view msg) {
         SIHD_LOG(info, "[WS] Received: {}", msg);
-        auto l = waitable.guard();
+        auto lock = waitable.guard();
         reply = std::string(msg);
         waitable.notify_all();
     };
@@ -84,11 +84,11 @@ void demo_websocket()
         return;
     }
 
-    const std::string_view messages[] = {
+    constexpr std::array<std::string_view, 3> messages = {{
         "Hello from sihd Navigator!",
         "Testing WebSocket echo",
         "Goodbye",
-    };
+    }};
 
     for (std::string_view msg : messages)
     {
@@ -96,7 +96,7 @@ void demo_websocket()
         SIHD_LOG(info, "[WS] Sending: {}", msg);
         nav.ws_send(msg);
 
-        if (!waitable.wait_for(sihd::util::Duration(sihd::util::time::sec(5)), [&] { return reply.has_value(); }))
+        if (!waitable.wait_for(Duration(time::sec(5)), [&] { return reply.has_value(); }))
         {
             SIHD_LOG(warning, "[WS] Timed out waiting for echo");
             break;

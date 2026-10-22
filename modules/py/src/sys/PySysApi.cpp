@@ -19,13 +19,18 @@
 namespace sihd::py
 {
 
+using namespace sihd::util;
 using namespace sihd::sys;
 SIHD_LOGGER;
 
 namespace
 {
-// from path/bin/script.py -> path/bin -> path
 std::string g_exe_dir = fs::parent(fs::parent(program::path()));
+
+void __attribute__((constructor)) premain()
+{
+    PyApi::add_api("sihd_sys", &PySysApi::add_sys_api);
+}
 } // namespace
 
 void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
@@ -106,9 +111,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("is_run_by_valgrind", &os::is_run_by_valgrind)
         .def("is_run_by_debugger", &os::is_run_by_debugger);
 
-    m_sys.def_submodule("user", "sihd::sys::user")
-        .def("is_root", &user::is_root)
-        .def("name", +[]() -> std::string { return user::name().value_or(""); });
+    m_sys.def_submodule("user", "sihd::sys::user").def("is_root", &user::is_root).def("name", &user::name);
 
     auto m_signal = m_sys.def_submodule("signal", "sihd::sys::signal");
     m_signal.def(
@@ -161,8 +164,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
             "creation_time",
             +[](const ProcessInfo & self) -> int64_t { return self.creation_time(); })
         .def_static("get_all_process_from_name", &ProcessInfo::get_all_process_from_name);
-    // No Process binding for Python on purpose: the stdlib subprocess module covers it - bindings
-    // only cover what the host language lacks (see the Lua Process binding)
+    // no Process binding on purpose: stdlib subprocess covers it
 
     pybind11::class_<Color>(m_sys, "Color")
         .def(pybind11::init<>())
@@ -200,7 +202,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("read_bmp_data",
              [](Bitmap & self, pybind11::bytes data) {
                  std::string bytes = data;
-                 return self.read_bmp_data(sihd::util::ArrByteView(bytes));
+                 return self.read_bmp_data(ArrByteView(bytes));
              })
         .def("empty", &Bitmap::empty)
         .def("width", &Bitmap::width)
@@ -213,11 +215,6 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
     m_screenshot.def("take_under_cursor", &screenshot::take_under_cursor);
     m_screenshot.def("take_focused", &screenshot::take_focused);
     m_screenshot.def("take_window_name", &screenshot::take_window_name);
-}
-
-static void __attribute__((constructor)) premain()
-{
-    PyApi::add_api("sihd_sys", &PySysApi::add_sys_api);
 }
 
 } // namespace sihd::py

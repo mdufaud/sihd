@@ -14,9 +14,6 @@
 #include "connection.hpp"
 #include "outputs.hpp"
 
-// The announced state of every wl_output: layout position, current mode,
-// scale factor and name
-
 using enum sihd::util::ErrorCode;
 
 namespace sihd::sys::screen::wayland
@@ -24,7 +21,7 @@ namespace sihd::sys::screen::wayland
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::screen");
+SIHD_NEW_LOGGER("sihd::sys::screen::wayland");
 
 namespace
 {

@@ -10,14 +10,17 @@ using namespace sihd::lua;
 
 #define PROMPT "$> "
 
-static void run_line(Vm & vm, const std::string & str)
+namespace
+{
+
+void run_line(Vm & vm, const std::string & str)
 {
     if (auto res = vm.do_string(str); !res)
         std::cerr << fmt::format("{} (code = {})\n", res.error().message, (int)res.error().code);
 }
 
 // Order matters: a derived class needs its base registered first.
-static void load_available_apis(Vm & vm)
+void load_available_apis(Vm & vm)
 {
 #if SIHD_LUA_WITH_UTIL
     LuaUtilApi::load_all(vm);
@@ -44,6 +47,8 @@ static void load_available_apis(Vm & vm)
     LuaHttpApi::load_all(vm);
 #endif
 }
+
+} // namespace
 
 int main(void)
 {

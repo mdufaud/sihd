@@ -42,6 +42,7 @@ bool color_supported(FILE *output)
         if (!isatty(fileno(output)))
             return false;
         const char *term_env = ::getenv("TERM");
+
         if (term_env == nullptr || std::strcmp(term_env, "dumb") == 0)
             return false;
         return true;

@@ -47,6 +47,19 @@ constexpr uint64_t value_entry_size_min = 16;
 constexpr uint64_t value_entry2_size = 32;
 constexpr size_t key_length_max = 4096;
 
+constexpr uint64_t header_file_size_off = 16;
+constexpr uint64_t header_node_size_off = 32;
+constexpr uint64_t header_child_entry_size_off = 40;
+constexpr uint64_t header_value_entry_size_off = 48;
+constexpr uint64_t header_root_off = 56;
+constexpr uint64_t node_children_count_off = 8;
+constexpr uint64_t node_values_count_off = 16;
+constexpr uint64_t child_entry_node_off = 8;
+constexpr uint64_t value_entry_value_off = 8;
+constexpr uint64_t value_filename_off = 16;
+constexpr uint64_t value_line_off = 24;
+constexpr uint64_t value_priority_off = 28;
+
 struct Property
 {
         std::string value;
@@ -63,12 +76,13 @@ class Trie
 
         bool valid()
         {
-            if (_data.size() < header_size || !_data.starts_with(signature) || read(16, 8) != _data.size())
+            if (_data.size() < header_size || !_data.starts_with(signature)
+                || read(header_file_size_off, 8) != _data.size())
                 return false;
-            _node_size = read(32, 8);
-            _child_entry_size = read(40, 8);
-            _value_entry_size = read(48, 8);
-            _root = read(56, 8);
+            _node_size = read(header_node_size_off, 8);
+            _child_entry_size = read(header_child_entry_size_off, 8);
+            _value_entry_size = read(header_value_entry_size_off, 8);
+            _root = read(header_root_off, 8);
             return _node_size >= node_size_min && _child_entry_size >= child_entry_size_min
                    && _value_entry_size >= value_entry_size_min && _root != 0;
         }
@@ -109,7 +123,7 @@ class Trie
             return std::string_view(_data).substr(off, end - off);
         }
 
-        uint64_t children_count(uint64_t node) { return read(node + 8, 1); }
+        uint64_t children_count(uint64_t node) { return read(node + node_children_count_off, 1); }
 
         uint64_t child_entry(uint64_t node, uint64_t index) { return node + _node_size + index * _child_entry_size; }
 
@@ -120,14 +134,14 @@ class Trie
             {
                 const uint64_t entry = this->child_entry(node, i);
                 if (this->read(entry, 1) == static_cast<uint8_t>(c))
-                    return this->read(entry + 8, 8);
+                    return this->read(entry + child_entry_node_off, 8);
             }
             return 0;
         }
 
         void add_values(uint64_t node)
         {
-            const uint64_t count = this->read(node + 16, 8);
+            const uint64_t count = this->read(node + node_values_count_off, 8);
             const uint64_t values = node + _node_size + this->children_count(node) * _child_entry_size;
             for (uint64_t i = 0; i < count && !_corrupt; ++i)
             {
@@ -138,12 +152,12 @@ class Trie
                     continue;
 
                 Property property;
-                property.value = this->string(this->read(entry + 8, 8));
+                property.value = this->string(this->read(entry + value_entry_value_off, 8));
                 if (_value_entry_size >= value_entry2_size)
                 {
-                    property.filename_off = this->read(entry + 16, 8);
-                    property.line_number = static_cast<uint32_t>(this->read(entry + 24, 4));
-                    property.file_priority = static_cast<uint16_t>(this->read(entry + 28, 2));
+                    property.filename_off = this->read(entry + value_filename_off, 8);
+                    property.line_number = static_cast<uint32_t>(this->read(entry + value_line_off, 4));
+                    property.file_priority = static_cast<uint16_t>(this->read(entry + value_priority_off, 2));
                 }
 
                 auto [it, inserted] = _properties.try_emplace(std::string(key.substr(1)), property);
@@ -185,11 +199,11 @@ class Trie
             {
                 const uint64_t entry = this->child_entry(node, i);
                 pattern.push_back(static_cast<char>(this->read(entry, 1)));
-                this->match(this->read(entry + 8, 8), 0, pattern, search);
+                this->match(this->read(entry + child_entry_node_off, 8), 0, pattern, search);
                 pattern.pop_back();
             }
 
-            if (this->read(node + 16, 8) > 0 && ::fnmatch(pattern.c_str(), search.c_str(), 0) == 0)
+            if (this->read(node + node_values_count_off, 8) > 0 && ::fnmatch(pattern.c_str(), search.c_str(), 0) == 0)
                 this->add_values(node);
 
             pattern.resize(pattern.size() - tail.size());

@@ -1,13 +1,13 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 #define __SIHD_UTIL_ARRAY_HPP__
 
-#include <cstdint> // int8_t
-#include <cstring> // mem* str*
+#include <cstdint>
+#include <cstring>
 #include <functional>
-#include <limits>    // numeric_limits
-#include <stdexcept> // out of range
+#include <limits>
+#include <stdexcept>
 #include <type_traits>
-#include <utility> // std::enable_if
+#include <utility>
 
 #include <sihd/util/ArrayIterator.hpp>
 #include <sihd/util/ArrayView.hpp>
@@ -57,7 +57,6 @@ class Array: public IArray,
         /* contiguous std containers constructors */
         /*********************************************************************/
 
-        // char specialization
         Array(std::string_view view)
             requires std::same_as<T, char>
             : Array(view.data(), view.size())
@@ -207,7 +206,6 @@ class Array: public IArray,
         /* from */
         /*********************************************************************/
 
-        // char specialization
         bool from_str(std::string_view data)
             requires std::same_as<T, char>
         {
@@ -219,7 +217,6 @@ class Array: public IArray,
         {
             if constexpr (std::is_fundamental_v<T>)
             {
-                // can be optimized with string views
                 Splitter splitter(delimiters);
                 const std::vector<std::string> splits = splitter.split(data);
                 this->reserve(splits.size());
@@ -438,7 +435,6 @@ class Array: public IArray,
         /* is_equal */
         /*********************************************************************/
 
-        // container specialization
         template <traits::HasDataSize Container>
         bool is_equal(const Container & container, size_t byte_offset = 0) const
         {
@@ -456,7 +452,6 @@ class Array: public IArray,
             return this->is_equal(init.begin(), init.size(), byte_offset);
         }
 
-        // compares memory from internal buffer and array of size
         bool is_equal(const T *arr, size_t size, size_t byte_offset = 0) const
         {
             return this->is_bytes_equal(arr, size * this->data_size(), {(ssize_t)(byte_offset * this->data_size())});
@@ -496,14 +491,12 @@ class Array: public IArray,
         /* copy_from */
         /*********************************************************************/
 
-        // container specialization
         template <traits::HasDataSize Container>
         bool copy_from(const Container & container, size_t byte_offset = 0)
         {
             return this->copy_from(container.data(), container.size(), byte_offset);
         }
 
-        // char specialization
         bool copy_from(std::string_view view, size_t byte_offset = 0)
             requires std::same_as<T, char>
         {
@@ -515,7 +508,6 @@ class Array: public IArray,
             return this->copy_from(init.begin(), init.size(), byte_offset);
         }
 
-        // copies values from array
         bool copy_from(const T *arr, size_t size, size_t byte_offset = 0)
         {
             return this->copy_from_bytes(arr, size * this->data_size(), {(ssize_t)(byte_offset * this->data_size())});
@@ -525,7 +517,6 @@ class Array: public IArray,
         /* assign */
         /*********************************************************************/
 
-        // container specialization
         // delete internal buffer if exists then sets it to container buf - does not take ownership
         template <traits::HasDataSize Container>
         bool assign(Container & container)
@@ -533,7 +524,6 @@ class Array: public IArray,
             return this->assign(container.data(), container.size());
         }
 
-        // char specialization
         bool assign(char *str)
             requires std::same_as<T, char>
         {
@@ -541,7 +531,6 @@ class Array: public IArray,
             return this->assign(str, size, size);
         }
 
-        // char specialization
         bool assign(std::string & str)
             requires std::same_as<T, char>
         {
@@ -575,7 +564,6 @@ class Array: public IArray,
             return this->push_back(container.data(), container.size());
         }
 
-        // char specialization
         bool push_back(std::string_view str)
             requires std::same_as<T, char>
         {
@@ -584,10 +572,8 @@ class Array: public IArray,
 
         bool push_back(std::initializer_list<T> init) { return this->push_back(init.begin(), init.size()); }
 
-        // push whole array buf of size at the end of the internal buffer
         bool push_back(const T *buf, size_t size) { return this->insert(buf, size, _size); }
 
-        // push a single value at the end of the array
         bool push_back(const T & value) { return this->insert(value, _size); }
 
         /*********************************************************************/
@@ -600,7 +586,6 @@ class Array: public IArray,
             return this->push_front(container.data(), container.size());
         }
 
-        // char specialization
         bool push_front(std::string_view str)
             requires std::same_as<T, char>
         {
@@ -609,10 +594,8 @@ class Array: public IArray,
 
         bool push_front(std::initializer_list<T> init) { return this->push_front(init.begin(), init.size()); }
 
-        // push whole array buf of size at the front of the internal buffer
         bool push_front(const T *buf, size_t size) { return this->insert(buf, size, 0); }
 
-        // push a single value at the beginning of the array
         bool push_front(const T & value) { return this->insert(value, 0); }
 
         /*********************************************************************/
@@ -621,9 +604,6 @@ class Array: public IArray,
 
         bool insert(const T *buf, size_t size, size_t idx)
         {
-            // ex: insert({4, 5, 6}, 3, 2)
-            // internal buffer: {0, 1, 2, 3}
-
             if (idx > _size)
                 return false;
             if (size == 0)
@@ -640,45 +620,30 @@ class Array: public IArray,
                 return false;
             if (_buf_ptr != nullptr)
             {
-                // have to move 2 and 3 -> 3 * sizeof(int) to the right to leave room for insertion
                 size_t len_move = (_size - idx) * this->data_size();
-                // no need to move if idx == _size
                 if (len_move > 0)
                 {
                     memmove((uint8_t *)(_buf_ptr + (idx + size)), (uint8_t *)(_buf_ptr + idx), len_move);
-                    // -> {0, 1, _, _, _, 2, 3}
                 }
                 memmove((uint8_t *)(_buf_ptr + idx), buf, size * this->data_size());
-                // -> {0, 1, 4, 5}
                 _size += size;
-                // -> {0, 1, 4, 5, 6, 2, 3}
             }
             return _buf_ptr != nullptr;
         }
 
         bool insert(const T & value, size_t idx) { return this->insert(&value, 1, idx); }
 
-        // remove value at idx and returns it
         void pop(size_t idx)
         {
             if (idx >= _size)
                 throw std::out_of_range("Array::pop: index exceeds size");
 
-            // ex: pop(1)
-            // internal buffer: {5, 10, 15}
-
-            // get value - might throw - checks idx
             size_t len = (_size - (idx + 1)) * this->data_size();
 
-            // moving all remaining buffer to current idx
             memmove((uint8_t *)(_buf_ptr + idx), (uint8_t *)(_buf_ptr + idx + 1), len);
-            // -> {5, 15, 15}
 
-            // set to 0 remaining of memory
             memset((uint8_t *)(_buf_ptr + _size - 1), 0, this->data_size());
-            // -> {5, 15, 0}
             --_size;
-            // -> {5, 15}
         }
 
         void pop_back() { pop(_size - 1); }
@@ -711,10 +676,8 @@ class Array: public IArray,
         /* access */
         /*********************************************************************/
 
-        // data first value
         [[nodiscard]] T front() const { return this->at(0); }
 
-        // access last value
         [[nodiscard]] T back() const { return this->at(_size - 1); }
 
         // access value at idx - throws out_of_range
@@ -725,18 +688,16 @@ class Array: public IArray,
             return _buf_ptr[idx];
         }
 
-        // access value arr[idx]
         T operator[](size_t idx) const { return _buf_ptr[idx]; }
 
-        // set value arr[idx] = value
         T & operator[](size_t idx) { return _buf_ptr[idx]; }
 
         /*********************************************************************/
         /* iterator */
         /*********************************************************************/
 
-        typedef ArrayIterator<T> iterator;
-        typedef ArrayIterator<const T> const_iterator;
+        using iterator = ArrayIterator<T>;
+        using const_iterator = ArrayIterator<const T>;
 
         iterator begin() { return iterator(this->data(), this->data(), this->data() + this->size()); }
         iterator end() { return iterator(this->data(), this->data() + this->size(), this->data() + this->size()); }
@@ -754,8 +715,8 @@ class Array: public IArray,
         /* reverse iterator */
         /*********************************************************************/
 
-        typedef ReverseArrayIterator<T> reverse_iterator;
-        typedef ReverseArrayIterator<const T> const_reverse_iterator;
+        using reverse_iterator = ReverseArrayIterator<T>;
+        using const_reverse_iterator = ReverseArrayIterator<const T>;
 
         reverse_iterator rbegin()
         {
@@ -910,19 +871,18 @@ static_assert(std::weakly_incrementable<Array<int>::reverse_iterator>, "Failed t
 static_assert(std::movable<Array<int>::reverse_iterator>, "Failed the moveable test");
 static_assert(std::default_initializable<Array<int>::reverse_iterator>, "Failed the default initializable test");
 
-// typedef for types
-typedef Array<bool> ArrBool;
-typedef Array<char> ArrChar;
-typedef Array<int8_t> ArrByte;
-typedef Array<uint8_t> ArrUByte;
-typedef Array<int16_t> ArrShort;
-typedef Array<uint16_t> ArrUShort;
-typedef Array<int32_t> ArrInt;
-typedef Array<uint32_t> ArrUInt;
-typedef Array<int64_t> ArrLong;
-typedef Array<uint64_t> ArrULong;
-typedef Array<float> ArrFloat;
-typedef Array<double> ArrDouble;
+using ArrBool = Array<bool>;
+using ArrChar = Array<char>;
+using ArrByte = Array<int8_t>;
+using ArrUByte = Array<uint8_t>;
+using ArrShort = Array<int16_t>;
+using ArrUShort = Array<uint16_t>;
+using ArrInt = Array<int32_t>;
+using ArrUInt = Array<uint32_t>;
+using ArrLong = Array<int64_t>;
+using ArrULong = Array<uint64_t>;
+using ArrFloat = Array<float>;
+using ArrDouble = Array<double>;
 
 template <traits::TriviallyCopyable T>
 using ArrayUnique = std::unique_ptr<Array<T>>;

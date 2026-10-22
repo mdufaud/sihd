@@ -20,8 +20,7 @@ TEST(TestKeyboard, test_modifier_combination)
               keyboard::Modifiers::ctrl);
 }
 
-// Wine always provides a session and its SendInput succeeds: the sessionless
-// case is only provable on linux, where it must be a clean not_supported error.
+// Wine always has a session and SendInput succeeds: sessionless is only provable on linux (clean not_supported)
 #if !defined(__SIHD_WINDOWS__)
 
 TEST(TestKeyboard, test_no_session_is_an_error)

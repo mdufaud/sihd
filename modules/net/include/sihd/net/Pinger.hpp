@@ -64,10 +64,9 @@ class Pinger: public sihd::util::Named,
         sihd::util::Result<void> open_unix();
 
         // filled when sending, receiving or timeout - call in observable
-        const PingEvent & event() const { return _event; }
+        const PingEvent & event() const;
 
-        // Total stat
-        const PingResult & result() const { return _result; }
+        const PingResult & result() const;
 
     protected:
         void handle(IcmpSender *sender) override;

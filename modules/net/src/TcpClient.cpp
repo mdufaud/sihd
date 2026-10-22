@@ -5,6 +5,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -12,7 +14,7 @@ SIHD_REGISTER_FACTORY(TcpClient)
 
 SIHD_LOGGER;
 
-TcpClient::TcpClient(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+TcpClient::TcpClient(const std::string & name, Node *parent): Named(name, parent)
 {
     _connected = false;
     _poll.set_timeout(1);
@@ -57,21 +59,26 @@ bool TcpClient::set_recv_timeout(int milliseconds)
     return true;
 }
 
-sihd::util::Result<void> TcpClient::open_socket_unix()
+Result<void> TcpClient::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_STREAM, 0);
 }
 
-sihd::util::Result<void> TcpClient::open_socket(bool ipv6)
+Result<void> TcpClient::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     return _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_STREAM, IPPROTO_TCP);
 }
 
-sihd::util::Result<void> TcpClient::connect(const IpAddr & addr, int timeout_ms)
+bool TcpClient::socket_opened()
+{
+    return _socket.is_open();
+}
+
+Result<void> TcpClient::connect(const IpAddr & addr, int timeout_ms)
 {
     auto res = _socket.connect(addr, timeout_ms);
     _connected = res.has_value();
@@ -83,7 +90,7 @@ sihd::util::Result<void> TcpClient::connect(const IpAddr & addr, int timeout_ms)
     return res;
 }
 
-sihd::util::Result<void> TcpClient::connect(std::string_view path)
+Result<void> TcpClient::connect(std::string_view path)
 {
     auto res = _socket.connect_unix(path);
     _connected = res.has_value();
@@ -92,7 +99,7 @@ sihd::util::Result<void> TcpClient::connect(std::string_view path)
     return res;
 }
 
-sihd::util::Result<void> TcpClient::reconnect(int timeout_ms)
+Result<void> TcpClient::reconnect(int timeout_ms)
 {
     auto res = _socket.reconnect(timeout_ms);
     _connected = res.has_value();
@@ -101,7 +108,7 @@ sihd::util::Result<void> TcpClient::reconnect(int timeout_ms)
     return res;
 }
 
-sihd::util::Result<void> TcpClient::open_and_connect(const IpAddr & ip, int timeout_ms)
+Result<void> TcpClient::open_and_connect(const IpAddr & ip, int timeout_ms)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -109,7 +116,7 @@ sihd::util::Result<void> TcpClient::open_and_connect(const IpAddr & ip, int time
     return this->connect(ip, timeout_ms);
 }
 
-sihd::util::Result<void> TcpClient::open_and_connect(std::string_view ip, int port, int timeout_ms)
+Result<void> TcpClient::open_and_connect(std::string_view ip, int port, int timeout_ms)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -118,7 +125,7 @@ sihd::util::Result<void> TcpClient::open_and_connect(std::string_view ip, int po
     return this->connect(addr, timeout_ms);
 }
 
-sihd::util::Result<void> TcpClient::open_unix_and_connect(std::string_view path)
+Result<void> TcpClient::open_unix_and_connect(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -126,7 +133,7 @@ sihd::util::Result<void> TcpClient::open_unix_and_connect(std::string_view path)
     return this->connect(path);
 }
 
-sihd::util::Result<void> TcpClient::close()
+Result<void> TcpClient::close()
 {
     (void)_socket.shutdown();
     _connected = false;
@@ -171,13 +178,13 @@ bool TcpClient::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
-sihd::util::Result<size_t> TcpClient::receive(IpAddr & addr, sihd::util::IArray & arr)
+Result<size_t> TcpClient::receive(IpAddr & addr, IArray & arr)
 {
     addr = _client_addr;
     return this->receive(arr);
 }
 
-sihd::util::Result<size_t> TcpClient::receive(sihd::util::IArray & arr)
+Result<size_t> TcpClient::receive(IArray & arr)
 {
     auto res = _socket.receive(arr);
     if (_connected)
@@ -185,7 +192,7 @@ sihd::util::Result<size_t> TcpClient::receive(sihd::util::IArray & arr)
     return res;
 }
 
-sihd::util::Result<size_t> TcpClient::receive(void *buf, size_t len)
+Result<size_t> TcpClient::receive(void *buf, size_t len)
 {
     auto res = _socket.receive(buf, len);
     if (_connected)
@@ -193,14 +200,29 @@ sihd::util::Result<size_t> TcpClient::receive(void *buf, size_t len)
     return res;
 }
 
-sihd::util::Result<size_t> TcpClient::send(sihd::util::ArrCharView view)
+Result<size_t> TcpClient::send(ArrCharView view)
 {
     return _socket.send(view);
 }
 
-sihd::util::Result<void> TcpClient::send_all(sihd::util::ArrCharView view)
+Result<void> TcpClient::send_all(ArrCharView view)
 {
     return _socket.send_all(view);
+}
+
+const TlsSocket & TcpClient::socket() const
+{
+    return _socket;
+}
+
+bool TcpClient::connected() const
+{
+    return _connected;
+}
+
+const IpAddr & TcpClient::client_addr() const
+{
+    return _client_addr;
 }
 
 void TcpClient::handle(sihd::sys::Poll *poll)
@@ -220,6 +242,7 @@ void TcpClient::handle(sihd::sys::Poll *poll)
         (void)this->close();
         return;
     }
+
     if (event.closed)
     {
         // the FIN notification is the last one: observers drain the tail, then disconnect

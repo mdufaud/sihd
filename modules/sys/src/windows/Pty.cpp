@@ -23,10 +23,9 @@
 #endif
 #include <windows.h>
 
-// MinGW SDKs may lack the ConPTY types entirely (old _WIN32_WINNT): the API is
-// loaded dynamically, only the handle type is needed here
+// old MinGW SDKs lack the ConPTY types (old _WIN32_WINNT): API loaded dynamically, only the handle is needed
 #ifndef HPCON
-typedef void *HPCON;
+using HPCON = void *;
 #endif
 
 namespace sihd::sys
@@ -73,20 +72,17 @@ class ConPty: public Pty
         ConPty();
         ~ConPty() override;
 
-        // Configuration
         void set_shell(std::string_view shell) override;
         void set_args(std::vector<std::string> args) override;
         void set_env(std::string_view name, std::string_view value) override;
         void set_size(const PtySize & size) override;
         void set_working_directory(std::string_view path) override;
 
-        // Lifecycle
         bool spawn() override;
         bool is_running() const override;
         int wait() override;
         void terminate() override;
 
-        // I/O
         int read_fd() const override;
         ssize_t read(void *buffer, size_t size) override;
         ssize_t write(const void *data, size_t size) override;
@@ -111,50 +107,44 @@ class ConPty: public Pty
         int _exit_status;
 };
 
-// Function pointers for dynamic loading (to support running on older Windows)
-typedef HRESULT(WINAPI *PFN_CreatePseudoConsole)(COORD, HANDLE, HANDLE, DWORD, HPCON *);
-typedef HRESULT(WINAPI *PFN_ResizePseudoConsole)(HPCON, COORD);
-typedef void(WINAPI *PFN_ClosePseudoConsole)(HPCON);
-
-static PFN_CreatePseudoConsole pfnCreatePseudoConsole = nullptr;
-static PFN_ResizePseudoConsole pfnResizePseudoConsole = nullptr;
-static PFN_ClosePseudoConsole pfnClosePseudoConsole = nullptr;
-static bool s_conpty_checked = false;
-static bool s_conpty_available = false;
-
-/**
- * @brief Check if ConPTY is available on this system.
- *
- * ConPTY was introduced in Windows 10 version 1809 (build 17763).
- * We dynamically load the functions to support running on older systems
- * (the executable won't crash, it will just report PTY as unsupported).
- */
-static bool CheckConPtySupport()
+namespace
 {
-    if (s_conpty_checked)
-        return s_conpty_available;
 
-    s_conpty_checked = true;
+using PFN_CreatePseudoConsole = HRESULT(WINAPI *)(COORD, HANDLE, HANDLE, DWORD, HPCON *);
+using PFN_ResizePseudoConsole = HRESULT(WINAPI *)(HPCON, COORD);
+using PFN_ClosePseudoConsole = void(WINAPI *)(HPCON);
 
-    pfnCreatePseudoConsole = reinterpret_cast<PFN_CreatePseudoConsole>(
-        internal::nt_dll_symbol("kernel32", "CreatePseudoConsole"));
-    pfnResizePseudoConsole = reinterpret_cast<PFN_ResizePseudoConsole>(
-        internal::nt_dll_symbol("kernel32", "ResizePseudoConsole"));
-    pfnClosePseudoConsole = reinterpret_cast<PFN_ClosePseudoConsole>(
-        internal::nt_dll_symbol("kernel32", "ClosePseudoConsole"));
+// loaded dynamically: absent before Windows 10 1809
+struct ConPtyApi
+{
+        PFN_CreatePseudoConsole create = nullptr;
+        PFN_ResizePseudoConsole resize = nullptr;
+        PFN_ClosePseudoConsole close = nullptr;
 
-    if (pfnCreatePseudoConsole && pfnResizePseudoConsole && pfnClosePseudoConsole)
-    {
-        s_conpty_available = true;
+        bool available() const { return create && resize && close; }
+};
+
+ConPtyApi load_conpty_api()
+{
+    ConPtyApi api;
+    api.create = reinterpret_cast<PFN_CreatePseudoConsole>(internal::nt_dll_symbol("kernel32", "CreatePseudoConsole"));
+    api.resize = reinterpret_cast<PFN_ResizePseudoConsole>(internal::nt_dll_symbol("kernel32", "ResizePseudoConsole"));
+    api.close = reinterpret_cast<PFN_ClosePseudoConsole>(internal::nt_dll_symbol("kernel32", "ClosePseudoConsole"));
+
+    if (api.available())
         SIHD_LOG(debug, "ConPty: API available (Windows 10 1809+)");
-    }
     else
-    {
         SIHD_LOG(debug, "ConPty: API not available (requires Windows 10 1809+)");
-    }
-
-    return s_conpty_available;
+    return api;
 }
+
+const ConPtyApi & conpty_api()
+{
+    static const ConPtyApi api = load_conpty_api();
+    return api;
+}
+
+} // namespace
 
 ConPty::ConPty():
     _shell("cmd.exe"),
@@ -179,14 +169,12 @@ ConPty::~ConPty()
         wait();
     }
 
-    // Close pseudo console first
-    if (_hpc && pfnClosePseudoConsole)
+    if (_hpc && conpty_api().close)
     {
-        pfnClosePseudoConsole(_hpc);
+        conpty_api().close(_hpc);
         _hpc = nullptr;
     }
 
-    // Close pipes
     if (_pipe_in_read != INVALID_HANDLE_VALUE)
         CloseHandle(_pipe_in_read);
     if (_pipe_in_write != INVALID_HANDLE_VALUE)
@@ -196,13 +184,11 @@ ConPty::~ConPty()
     if (_pipe_out_write != INVALID_HANDLE_VALUE)
         CloseHandle(_pipe_out_write);
 
-    // Close process handles
     if (_pi.hProcess != INVALID_HANDLE_VALUE && _pi.hProcess != nullptr)
         CloseHandle(_pi.hProcess);
     if (_pi.hThread != INVALID_HANDLE_VALUE && _pi.hThread != nullptr)
         CloseHandle(_pi.hThread);
 
-    // Free attribute list
     if (_attr_list)
     {
         DeleteProcThreadAttributeList(_attr_list);
@@ -244,14 +230,12 @@ bool ConPty::spawn()
         return false;
     }
 
-    if (!CheckConPtySupport())
+    if (!conpty_api().available())
     {
         SIHD_LOG(error, "ConPty: not supported on this Windows version");
         return false;
     }
 
-    // pipes for PTY i/o: input - we write _pipe_in_write, PTY reads _pipe_in_read
-    // output - PTY writes _pipe_out_write, we read _pipe_out_read
     if (!CreatePipe(&_pipe_in_read, &_pipe_in_write, nullptr, 0))
     {
         SIHD_LOG(error, "ConPty: failed to create input pipe");
@@ -264,25 +248,20 @@ bool ConPty::spawn()
         return false;
     }
 
-    // Create the pseudo console
     COORD size = {static_cast<SHORT>(_size.cols), static_cast<SHORT>(_size.rows)};
-    HRESULT hr = pfnCreatePseudoConsole(size, _pipe_in_read, _pipe_out_write, 0, &_hpc);
+    HRESULT hr = conpty_api().create(size, _pipe_in_read, _pipe_out_write, 0, &_hpc);
     if (FAILED(hr))
     {
         SIHD_LOG(error, "ConPty: CreatePseudoConsole failed: 0x{:08x}", static_cast<unsigned>(hr));
         return false;
     }
 
-    // Close the pipe ends that the ConPTY owns (they're duplicated internally)
+    // the ConPTY duplicates its pipe ends internally: close ours
     CloseHandle(_pipe_in_read);
     _pipe_in_read = INVALID_HANDLE_VALUE;
     CloseHandle(_pipe_out_write);
     _pipe_out_write = INVALID_HANDLE_VALUE;
 
-    // Create process with the pseudo console attached
-    // We need to use EXTENDED_STARTUPINFO_PRESENT and set the PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
-
-    // First, determine the size of the attribute list
     SIZE_T attr_size = 0;
     InitializeProcThreadAttributeList(nullptr, 1, 0, &attr_size);
 
@@ -302,7 +281,6 @@ bool ConPty::spawn()
 #ifndef PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE
 # define PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE 0x00020016
 #endif
-    // Associate the pseudo console with the process
     if (!UpdateProcThreadAttribute(_attr_list,
                                    0,
                                    PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
@@ -324,7 +302,6 @@ bool ConPty::spawn()
         environment.set(key, value);
     const std::string env_block = internal::to_windows_block(environment);
 
-    // Create the process
     STARTUPINFOEXA si;
     ZeroMemory(&si, sizeof(si));
     si.StartupInfo.cb = sizeof(STARTUPINFOEXA);
@@ -394,8 +371,7 @@ void ConPty::terminate()
     if (!_spawned)
         return;
 
-    // Windows doesn't have a graceful termination signal like SIGTERM
-    // We directly terminate the process
+    // no graceful termination signal like SIGTERM on windows: terminate directly
     TerminateProcess(_pi.hProcess, 1);
 }
 
@@ -418,7 +394,7 @@ ssize_t ConPty::read(void *buffer, size_t size)
 
     if (bytes_available == 0)
     {
-        return 0; // No data available (non-blocking behavior)
+        return 0;
     }
 
     DWORD bytes_read = 0;
@@ -446,13 +422,13 @@ ssize_t ConPty::write(const void *data, size_t size)
 
 bool ConPty::resize(const PtySize & size)
 {
-    if (!_hpc || !pfnResizePseudoConsole)
+    if (!_hpc || !conpty_api().resize)
         return false;
 
     _size = size;
 
     COORD coord = {static_cast<SHORT>(size.cols), static_cast<SHORT>(size.rows)};
-    HRESULT hr = pfnResizePseudoConsole(_hpc, coord);
+    HRESULT hr = conpty_api().resize(_hpc, coord);
 
     return SUCCEEDED(hr);
 }
@@ -468,12 +444,12 @@ void ConPty::send_eof()
 
 bool Pty::is_supported()
 {
-    return CheckConPtySupport();
+    return conpty_api().available();
 }
 
 std::unique_ptr<Pty> Pty::create()
 {
-    if (!CheckConPtySupport())
+    if (!conpty_api().available())
     {
         return nullptr;
     }

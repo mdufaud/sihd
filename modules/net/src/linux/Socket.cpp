@@ -1,5 +1,5 @@
-#include <fcntl.h>    // fcntl
-#include <sys/time.h> // timeval
+#include <fcntl.h>
+#include <sys/time.h>
 
 #include <cstring>
 #include <expected>
@@ -8,7 +8,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Result.hpp>
 
-#include <net/if.h> // IFNAMSIZ
+#include <net/if.h>
 
 namespace sihd::net
 {

@@ -1,11 +1,11 @@
 #include <ncursesw/ncurses.h>
-// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++ builtin-bool probe
-// fails (e.g. musl cross) - undef it so it cannot poison the standard headers / imgui types
+// ncurses may define `bool` as a macro (musl cross): undef it before std/imgui headers
 #undef bool
 
 #include <imgui_internal.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -27,61 +27,54 @@ constexpr float kCrossMaxSpan = 3.0f;
 constexpr float kVertexEpsilon = 0.01f;
 constexpr uint8_t kMinVisibleAlpha = 8;
 
-// ── Small helper utilities ──────────────────────────────────────────────────
-
 inline ImVec2 tri_centroid(ImVec2 a, ImVec2 b, ImVec2 c)
 {
     return {(a.x + b.x + c.x) / 3.0f, (a.y + b.y + c.y) / 3.0f};
 }
 
-} // namespace
-
-// ── Scanline fill (ported verbatim from imtui-impl-text.cpp) ─────────────────
-
-// Bresenham walk along one triangle edge.
-// Updates xr[2*y] (min-x) and xr[2*y+1] (max-x) per scanline row.
-static void scanline_extend(int x1, int y1, int x2, int y2, int ymax, std::vector<int> & xr)
+// xr[2*y] = min x, xr[2*y+1] = max x of each scanline row
+void scanline_extend(int x1, int y1, int x2, int y2, int ymax, std::vector<int> & xr)
 {
     int sx = x2 - x1, sy = y2 - y1;
     int dx1 = (sx > 0) ? 1 : (sx < 0) ? -1 : 0;
     int dy1 = (sy > 0) ? 1 : (sy < 0) ? -1 : 0;
-    int m = std::abs(sx), n = std::abs(sy);
+    int major = std::abs(sx), minor = std::abs(sy);
     int dx2 = dx1, dy2 = 0;
-    if (m < n)
+    if (major < minor)
     {
-        m = std::abs(sy);
-        n = std::abs(sx);
+        major = std::abs(sy);
+        minor = std::abs(sx);
         dx2 = 0;
         dy2 = dy1;
     }
 
-    int x = x1, y = y1;
-    int cnt = m + 1, k = n / 2;
+    int cur_x = x1, cur_y = y1;
+    int cnt = major + 1, k = minor / 2;
     while (cnt--)
     {
-        if (y >= 0 && y < ymax)
+        if (cur_y >= 0 && cur_y < ymax)
         {
-            if (x < xr[2 * y])
-                xr[2 * y] = x;
-            if (x > xr[2 * y + 1])
-                xr[2 * y + 1] = x;
+            if (cur_x < xr[2 * cur_y])
+                xr[2 * cur_y] = cur_x;
+            if (cur_x > xr[2 * cur_y + 1])
+                xr[2 * cur_y + 1] = cur_x;
         }
-        k += n;
-        if (k < m)
+        k += minor;
+        if (k < major)
         {
-            x += dx2;
-            y += dy2;
+            cur_x += dx2;
+            cur_y += dy2;
         }
         else
         {
-            k -= m;
-            x += dx1;
-            y += dy1;
+            k -= major;
+            cur_x += dx1;
+            cur_y += dy1;
         }
     }
 }
 
-// ── Public static helpers (testable without ncurses) ────────────────────────
+} // namespace
 
 bool ImguiRendererNcurses::is_glyph_triangle(const ImDrawVert & v0, const ImDrawVert & v1, const ImDrawVert & v2)
 {
@@ -96,10 +89,7 @@ ImVec4 ImguiRendererNcurses::compute_clip_rect(const ImDrawCmd & cmd, const ImVe
             (cmd.ClipRect.w - off.y) * scale.y};
 }
 
-// ── Color helpers (imtui rgbToAnsi256 formulas) ───────────────────────────────
-
-// Pixel-coord key: round float UV to the nearest atlas texel to survive the
-// tiny fractional offset imgui adds in its render path (≈0.04/tex_width).
+// round float UV to the nearest atlas texel: imgui adds a tiny fractional offset (~0.04/tex_width)
 uint64_t ImguiRendererNcurses::_pack_uv(float u, float v) const
 {
     const uint32_t pu = static_cast<uint32_t>(std::max(0L, std::lroundf(u * static_cast<float>(_tex_w))));
@@ -122,17 +112,16 @@ uint8_t ImguiRendererNcurses::col_to_ansi256(ImU32 col)
 // Background color: alpha-premultiplied (imtui: doAlpha=true for fills).
 uint8_t ImguiRendererNcurses::col_to_ansi256_premul(ImU32 col)
 {
-    uint8_t r = (col) & 0xFF;
-    uint8_t g = (col >> 8) & 0xFF;
-    uint8_t b = (col >> 16) & 0xFF;
-    const uint8_t a = (col >> 24) & 0xFF;
-    const float scale = (float)a / 255.0f;
-    return rgb_to_ansi256((uint8_t)std::roundf(r * scale),
-                          (uint8_t)std::roundf(g * scale),
-                          (uint8_t)std::roundf(b * scale));
+    uint8_t red = (col) & 0xFF;
+    uint8_t green = (col >> 8) & 0xFF;
+    uint8_t blue = (col >> 16) & 0xFF;
+    const uint8_t alpha = (col >> 24) & 0xFF;
+    const float scale = (float)alpha / 255.0f;
+    return rgb_to_ansi256((uint8_t)std::roundf(red * scale),
+                          (uint8_t)std::roundf(green * scale),
+                          (uint8_t)std::roundf(blue * scale));
 }
 
-// Core formula: grayscale ramp (232–255) for r==g==b, 6×6×6 cube otherwise.
 uint8_t ImguiRendererNcurses::rgb_to_ansi256(uint8_t r, uint8_t g, uint8_t b)
 {
     if (r == g && g == b)
@@ -148,8 +137,6 @@ uint8_t ImguiRendererNcurses::rgb_to_ansi256(uint8_t r, uint8_t g, uint8_t b)
     const long bi = std::lroundf(static_cast<float>(b) / 255.0f * 5.0f);
     return static_cast<uint8_t>(16 + 36 * ri + 6 * gi + bi);
 }
-
-// ── Constructor / destructor ─────────────────────────────────────────────────
 
 ImguiRendererNcurses::ImguiRendererNcurses():
     _is_init(false),
@@ -183,8 +170,6 @@ ImVec4 *ImguiRendererNcurses::get_clear_color()
     return _clear_color_ptr;
 }
 
-// ── init() ───────────────────────────────────────────────────────────────────
-
 bool ImguiRendererNcurses::init()
 {
     if (_is_init)
@@ -203,120 +188,116 @@ bool ImguiRendererNcurses::init()
     cfg.GlyphMinAdvanceX = 1.0f;
     io.Fonts->AddFontDefault(&cfg);
 
-    // Build atlas and retrieve pixel data (populates glyph UV coordinates)
     unsigned char *tex_pixels = nullptr;
     io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &_tex_w, &_tex_h);
     SIHD_LOG(info, "ImguiRendererNcurses: font atlas {}x{}", _tex_w, _tex_h);
 
-    // Style — port of ImTui_ImplText_Init()
     _apply_terminal_style();
 
-    // Build UV to codepoint reverse-lookup
     _build_uv_map();
 
-    // Initialise ncurses colour support
     start_color();
     use_default_colors();
 
     _screen_w = COLS;
     _screen_h = LINES;
-    const size_t n = (size_t)(_screen_w * _screen_h);
-    _screen.assign(n, TCell {0, 0, 0});
+    const size_t cell_count = (size_t)(_screen_w * _screen_h);
+    _screen.assign(cell_count, TCell {0, 0, 0});
     // Sentinel: differs from any real cell → forces a full redraw on the first frame
-    _screen_prev.assign(n, TCell {(uint32_t)-1, 0xFFu, 0xFFu});
+    _screen_prev.assign(cell_count, TCell {(uint32_t)-1, 0xFFu, 0xFFu});
 
     _is_init = true;
     return true;
 }
 
-// _apply_terminal_style(): port of ImTui_ImplText_Init() style block, call AFTER StyleColorsDark().
 // Only 4 colors overridden: TitleBgActive/Header blues stay default - that is the ImTui look
 
 void ImguiRendererNcurses::_apply_terminal_style()
 {
     ImGuiIO & io = ImGui::GetIO();
-    ImGuiStyle & s = ImGui::GetStyle();
+    ImGuiStyle & style = ImGui::GetStyle();
 
-    // Geometry: all rounded/padded values collapse to 0 for single-cell rendering.
-    s.Alpha = 1.0f;
-    s.WindowPadding = ImVec2(0.5f, 0.0f);
+    style.Alpha = 1.0f;
+    style.WindowPadding = ImVec2(0.5f, 0.0f);
     // DO NOT change WindowRounding — any value > 0 breaks resize grip '+' and other geometry
-    s.WindowRounding = 0.0f;
-    s.WindowBorderSize = 0.0f; // border=1 shifts ClipRect and clips the first char
-    s.WindowMinSize = ImVec2(4.0f, 2.0f);
-    s.WindowTitleAlign = ImVec2(0.0f, 0.0f);
-    s.WindowMenuButtonPosition = ImGuiDir_Left;
-    s.ChildRounding = 0.0f;
-    s.ChildBorderSize = 0.0f;
-    s.PopupRounding = 0.0f;
-    s.PopupBorderSize = 0.0f;
-    s.FramePadding = ImVec2(1.0f, 0.0f);
-    s.FrameRounding = 0.0f;
-    s.FrameBorderSize = 0.0f;
-    s.ItemSpacing = ImVec2(1.0f, 0.0f);
-    s.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
-    s.TouchExtraPadding = ImVec2(0.5f, 0.0f);
-    s.IndentSpacing = 1.0f;
-    s.ColumnsMinSpacing = 1.0f;
-    s.ScrollbarSize = 0.5f;
-    s.ScrollbarRounding = 0.0f;
-    s.GrabMinSize = 0.1f;
-    s.GrabRounding = 0.0f;
-    s.TabRounding = 0.0f;
-    s.TabBorderSize = 0.0f;
-    s.TabBarBorderSize = 0.0f;
-    s.TabBarOverlineSize = 0.0f;
-    s.LogSliderDeadzone = 0.0f;
-    s.ColorButtonPosition = ImGuiDir_Right;
-    s.ButtonTextAlign = ImVec2(0.5f, 0.0f);
-    s.SelectableTextAlign = ImVec2(0.0f, 0.0f);
-    s.DisplayWindowPadding = ImVec2(0.0f, 0.0f);
-    s.DisplaySafeAreaPadding = ImVec2(0.0f, 0.0f);
-    s.CellPadding = ImVec2(1.0f, 0.0f);
-    s.MouseCursorScale = 1.0f;
-    s.AntiAliasedLines = false; // no AA geometry in terminal
-    s.AntiAliasedFill = false;
-    s.AntiAliasedLinesUseTex = false;
-    s.CurveTessellationTol = 1.25f;
-    s.CircleTessellationMaxError = 5.0f;
-    io.MouseDragThreshold = 1.0f; // 1 cell = 1 unit
+    style.WindowRounding = 0.0f;
+    style.WindowBorderSize = 0.0f; // border=1 shifts ClipRect and clips the first char
+    style.WindowMinSize = ImVec2(4.0f, 2.0f);
+    style.WindowTitleAlign = ImVec2(0.0f, 0.0f);
+    style.WindowMenuButtonPosition = ImGuiDir_Left;
+
+    style.ChildRounding = 0.0f;
+    style.ChildBorderSize = 0.0f;
+    style.PopupRounding = 0.0f;
+    style.PopupBorderSize = 0.0f;
+
+    style.FramePadding = ImVec2(1.0f, 0.0f);
+    style.FrameRounding = 0.0f;
+    style.FrameBorderSize = 0.0f;
+
+    style.ItemSpacing = ImVec2(1.0f, 0.0f);
+    style.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
+    style.TouchExtraPadding = ImVec2(0.5f, 0.0f);
+    style.IndentSpacing = 1.0f;
+    style.ColumnsMinSpacing = 1.0f;
+    style.ScrollbarSize = 0.5f;
+    style.ScrollbarRounding = 0.0f;
+    style.GrabMinSize = 0.1f;
+    style.GrabRounding = 0.0f;
+
+    style.TabRounding = 0.0f;
+    style.TabBorderSize = 0.0f;
+    style.TabBarBorderSize = 0.0f;
+    style.TabBarOverlineSize = 0.0f;
+
+    style.LogSliderDeadzone = 0.0f;
+    style.ColorButtonPosition = ImGuiDir_Right;
+    style.ButtonTextAlign = ImVec2(0.5f, 0.0f);
+    style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
+    style.DisplayWindowPadding = ImVec2(0.0f, 0.0f);
+    style.DisplaySafeAreaPadding = ImVec2(0.0f, 0.0f);
+    style.CellPadding = ImVec2(1.0f, 0.0f);
+
+    style.MouseCursorScale = 1.0f;
+    style.AntiAliasedLines = false;
+    style.AntiAliasedFill = false;
+    style.AntiAliasedLinesUseTex = false;
+    style.CurveTessellationTol = 1.25f;
+    style.CircleTessellationMaxError = 5.0f;
+
+    io.MouseDragThreshold = 1.0f;
     io.ConfigWindowsResizeFromEdges = false;
 
-    // ── Colors ────────────────────────────────────────────────────────────────
-    // Exactly the 4 overrides ImTui makes; nothing else.
-    s.Colors[ImGuiCol_WindowBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-    s.Colors[ImGuiCol_TitleBg] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
-    s.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
-    s.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.75f, 0.75f, 0.75f, 0.50f);
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.35f, 0.35f, 0.35f, 1.00f);
+    style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.15f, 0.15f, 0.15f, 1.00f);
+    style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.75f, 0.75f, 0.75f, 0.50f);
 
-    s.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.70f, 0.70f, 0.70f, 0.60f);
-    s.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.90f, 0.90f, 0.90f, 0.80f);
-    s.Colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.95f);
+    style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.70f, 0.70f, 0.70f, 0.60f);
+    style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.90f, 0.90f, 0.90f, 0.80f);
+    style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(1.00f, 1.00f, 1.00f, 0.95f);
 
-    // NavHighlight draws a border rect that produces visual noise; suppress it.
-    s.Colors[ImGuiCol_NavHighlight] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
     // Resize border hover: 1.91.9 draws a 2-unit-thick highlight line with
     // SeparatorHovered — at terminal scale this is a huge colored bar.
-    s.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-    s.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
 
     // 4.0f default is for pixel displays: at 1 cell per font-unit it captures clicks meant for others
-    s.WindowBorderHoverPadding = 0.5f;
+    style.WindowBorderHoverPadding = 0.5f;
 
     // SeparatorText defaults (BorderSize=3, Padding=(20,3)) are for pixel rendering: at terminal
     // scale they make 7-cell separators with 40-cell padding, breaking popup layout
-    s.SeparatorTextBorderSize = 1.0f;
-    s.SeparatorTextPadding = ImVec2(1.0f, 0.0f);
-    s.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
+    style.SeparatorTextBorderSize = 1.0f;
+    style.SeparatorTextPadding = ImVec2(1.0f, 0.0f);
+    style.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
 
     cache_style_colors();
 }
 
 void ImguiRendererNcurses::cache_style_colors()
 {
-    // Cache CheckMark colour so the checkbox tick (2-triangle polyline) can be
-    // detected and rendered as a single 'x' glyph instead of a coverage blob.
     _check_col = ImGui::GetColorU32(ImGuiCol_CheckMark);
 
     // Cache slider grab colours so the grab handle renders as a single 'I' instead of a coverage
@@ -345,6 +326,7 @@ void ImguiRendererNcurses::_build_uv_map()
             const long pu1 = std::lroundf(g.U1 * (float)_tex_w);
             const long pv0 = std::lroundf(g.V0 * (float)_tex_h);
             const long pv1 = std::lroundf(g.V1 * (float)_tex_h);
+
             for (long pv = pv0; pv <= pv1; ++pv)
             {
                 for (long pu = pu0; pu <= pu1; ++pu)
@@ -361,17 +343,15 @@ void ImguiRendererNcurses::_build_uv_map()
              ImGui::GetIO().Fonts->Fonts.Size);
 }
 
-// ── Per-frame hooks ───────────────────────────────────────────────────────────
-
 void ImguiRendererNcurses::new_frame() {}
 
 void ImguiRendererNcurses::resize()
 {
     _screen_w = COLS;
     _screen_h = LINES;
-    const size_t n = (size_t)(_screen_w * _screen_h);
-    _screen.assign(n, TCell {0, 0, 0});
-    _screen_prev.assign(n, TCell {0, 0, 0});
+    const size_t cell_count = (size_t)(_screen_w * _screen_h);
+    _screen.assign(cell_count, TCell {0, 0, 0});
+    _screen_prev.assign(cell_count, TCell {0, 0, 0});
     _needs_full_redraw = true;
 }
 
@@ -392,18 +372,16 @@ void ImguiRendererNcurses::_inject_resize_grips()
         return;
     for (int i = 0; i < ctx->Windows.Size; ++i)
     {
-        ImGuiWindow *w = ctx->Windows[i];
-        if (w == nullptr || !w->WasActive || w->Hidden)
+        ImGuiWindow *win = ctx->Windows[i];
+        if (win == nullptr || !win->WasActive || win->Hidden)
             continue;
-        if (w->Flags
+        if (win->Flags
             & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_Tooltip
                | ImGuiWindowFlags_Popup))
             continue;
-        const int gx = (int)std::floor(w->Pos.x + w->Size.x);
-        const int gy = (int)std::floor(w->Pos.y + w->Size.y);
+        const int gx = (int)std::floor(win->Pos.x + win->Size.x);
+        const int gy = (int)std::floor(win->Pos.y + win->Size.y);
 
-        // Skip grip if a higher-z window covers the grip cell. ctx->Windows is
-        // back-to-front display order, so windows after i are drawn on top.
         const ImVec2 grip_pt((float)gx + 0.5f, (float)gy + 0.5f);
         bool occluded = false;
         for (int j = i + 1; j < ctx->Windows.Size && !occluded; ++j)
@@ -421,45 +399,44 @@ void ImguiRendererNcurses::_inject_resize_grips()
 
         // Erase resize-grip triangle fill (stock imgui PathFillConvex at the corner, 1-2 cells inside
         // bottom-right): restore by copying bg from a clean neighbor 3 cells left
-        auto clear_block = [&](int cx, int cy) {
-            if (cx < 0 || cx >= _screen_w || cy < 0 || cy >= _screen_h)
-                return;
-            TCell & dst = _screen[(size_t)(cy * _screen_w + cx)];
-            // Skip if another widget/window already painted text here (occluded window).
-            if (dst.ch != 0 && dst.ch != (uint32_t)' ')
-                return;
-            // Inside window bg region → restore window bg (copy clean neighbor).
-            // Outside (grip triangle bled past window edge) → restore terminal bg.
-            const bool inside = (cx < gx && cy < gy);
-            dst.ch = (uint32_t)' ';
-            if (inside)
-            {
-                const int nx = (cx >= 3) ? (cx - 3) : 0;
-                const TCell & src = _screen[(size_t)(cy * _screen_w + nx)];
-                dst.fg = src.fg;
-                dst.bg = src.bg;
-            }
-            else
-            {
-                dst.ch = 0;
-                dst.fg = 0;
-                dst.bg = 0;
-            }
-        };
-        clear_block(gx - 1, gy - 1);
-        clear_block(gx - 2, gy - 1);
-        clear_block(gx - 1, gy - 2);
-        clear_block(gx, gy - 1);
+        _clear_grip_block(gx - 1, gy - 1, gx, gy);
+        _clear_grip_block(gx - 2, gy - 1, gx, gy);
+        _clear_grip_block(gx - 1, gy - 2, gx, gy);
+        _clear_grip_block(gx, gy - 1, gx, gy);
 
-        // Place '+' at actual hit-test cell (one beyond visible window edge).
         if (gx < 0 || gx >= _screen_w || gy < 0 || gy >= _screen_h)
             continue;
         TCell & cell = _screen[(size_t)(gy * _screen_w + gx)];
-        // Skip if another window/widget already painted text at the grip cell (occluded window).
         if (cell.ch != 0 && cell.ch != (uint32_t)' ' && cell.ch != (uint32_t)'+')
             continue;
         cell.ch = (uint32_t)'+';
         cell.fg = 245;
+    }
+}
+
+void ImguiRendererNcurses::_clear_grip_block(int cx, int cy, int grip_x, int grip_y)
+{
+    if (cx < 0 || cx >= _screen_w || cy < 0 || cy >= _screen_h)
+        return;
+    TCell & dst = _screen[(size_t)(cy * _screen_w + cx)];
+    if (dst.ch != 0 && dst.ch != (uint32_t)' ')
+        return;
+
+    const bool inside = (cx < grip_x && cy < grip_y);
+    dst.ch = (uint32_t)' ';
+
+    if (inside)
+    {
+        const int nx = (cx >= 3) ? (cx - 3) : 0;
+        const TCell & src = _screen[(size_t)(cy * _screen_w + nx)];
+        dst.fg = src.fg;
+        dst.bg = src.bg;
+    }
+    else
+    {
+        dst.ch = 0;
+        dst.fg = 0;
+        dst.bg = 0;
     }
 }
 
@@ -507,7 +484,7 @@ void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, 
 
     for (int y = 0; y < ydelta; y++)
     {
-        int x = _scanline_range[(size_t)(2 * y)];
+        int cell_x = _scanline_range[(size_t)(2 * y)];
         int len = 1 + _scanline_range[(size_t)(2 * y + 1)] - _scanline_range[(size_t)(2 * y)];
         if (len <= 0)
             continue;
@@ -515,26 +492,23 @@ void ImguiRendererNcurses::_draw_fill_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, 
         while (len-- > 0)
         {
             const int sy = y + ymin;
-            if (x >= clip_x0 && x < clip_x1 && sy >= clip_y0 && sy < clip_y1)
+            if (cell_x >= clip_x0 && cell_x < clip_x1 && sy >= clip_y0 && sy < clip_y1)
             {
-                TCell & cell = _screen[(size_t)(sy * _screen_w + x)];
+                TCell & cell = _screen[(size_t)(sy * _screen_w + cell_x)];
                 cell.ch = (uint32_t)' ';
                 cell.bg = bg_col;
             }
-            ++x;
+            ++cell_x;
         }
     }
 }
 
-// classify_arrow(): returns '>', '<', '^', 'v' if p0/p1/p2 match stock imgui RenderArrow geometry.
-// Two vertices share one coordinate (the base edge); the third is the apex
-
 uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
 {
-    float xs[3] = {p0.x, p1.x, p2.x};
-    float ys[3] = {p0.y, p1.y, p2.y};
-    std::sort(xs, xs + 3);
-    std::sort(ys, ys + 3);
+    std::array<float, 3> xs = {p0.x, p1.x, p2.x};
+    std::array<float, 3> ys = {p0.y, p1.y, p2.y};
+    std::ranges::sort(xs);
+    std::ranges::sort(ys);
 
     const float xg_lo = xs[1] - xs[0], xg_hi = xs[2] - xs[1];
     const float yg_lo = ys[1] - ys[0], yg_hi = ys[2] - ys[1];
@@ -550,7 +524,6 @@ uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
     if (ratio < 0.4f || ratio > 2.5f)
         return 0;
 
-    // RenderArrow base edge: two vertices aligned on one axis (gap < 0.05)
     const bool x_base = (min_xg < 0.05f);
     const bool y_base = (min_yg < 0.05f);
     if (!x_base && !y_base)
@@ -563,8 +536,7 @@ uint32_t ImguiRendererNcurses::classify_arrow(ImVec2 p0, ImVec2 p1, ImVec2 p2)
     return (uint32_t)((yg_hi > yg_lo) ? 'v' : '^');
 }
 
-// _draw_glyph_quad(): renders one imgui text character; v0 is the quad's top-left vertex
-// (PrimRectUV vertex a), carrying the glyph position and atlas UV
+// v0 = PrimRectUV vertex a (quad top-left), carries the glyph position and atlas UV
 
 void ImguiRendererNcurses::_draw_glyph_quad(const ImDrawVert & v0,
                                             const ImDrawVert & v1,
@@ -691,9 +663,6 @@ void ImguiRendererNcurses::_draw_rect(float xmin, float ymin, float xmax, float 
     }
 }
 
-// _draw_nonglyph_triangle(): standalone non-rect triangles (PathFillConvex fans: arrows,
-// circles, resize grip). Most rects go through _draw_rect now
-
 void ImguiRendererNcurses::_draw_nonglyph_triangle(ImVec2 p0, ImVec2 p1, ImVec2 p2, ImU32 col, const ImVec4 & clip)
 {
     if ((col >> 24) < kMinVisibleAlpha)
@@ -738,14 +707,11 @@ void ImguiRendererNcurses::_draw_nonglyph_triangle(ImVec2 p0, ImVec2 p1, ImVec2 
     _draw_fill_triangle(p0, p1, p2, col_to_ansi256_premul(col), clip);
 }
 
-// is_cross_pattern(): 12 vertices (4 triangles × 3 verts) forming two crossing segments (an X).
-// False for sequential segments (PlotLines), parallel lines, or too little area
-
-bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
+bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[cross_pattern_vertex_count])
 {
     float mnx = pts[0].x, mxx = pts[0].x;
     float mny = pts[0].y, mxy = pts[0].y;
-    for (int vi = 1; vi < 12; ++vi)
+    for (size_t vi = 1; vi < cross_pattern_vertex_count; ++vi)
     {
         mnx = std::min(mnx, pts[vi].x);
         mxx = std::max(mxx, pts[vi].x);
@@ -757,22 +723,21 @@ bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
     if (bw < kSubCellThreshold || bh < kSubCellThreshold || bw > kCrossMaxSpan || bh > kCrossMaxSpan)
         return false;
 
-    // Aspect ratio: a real X is roughly square
     const float ratio = bw / bh;
     if (ratio < 0.35f || ratio > 2.85f)
         return false;
 
-    // Distinct position count: need spread on both axes
-    float ux[12], uy[12];
-    for (int vi = 0; vi < 12; ++vi)
+    std::array<float, cross_pattern_vertex_count> ux;
+    std::array<float, cross_pattern_vertex_count> uy;
+    for (size_t vi = 0; vi < cross_pattern_vertex_count; ++vi)
     {
         ux[vi] = pts[vi].x;
         uy[vi] = pts[vi].y;
     }
-    std::sort(ux, ux + 12);
-    std::sort(uy, uy + 12);
+    std::ranges::sort(ux);
+    std::ranges::sort(uy);
     int nx = 1, ny = 1;
-    for (int vi = 1; vi < 12; ++vi)
+    for (size_t vi = 1; vi < cross_pattern_vertex_count; ++vi)
     {
         if (ux[vi] - ux[vi - 1] > kVertexEpsilon)
             ++nx;
@@ -782,32 +747,30 @@ bool ImguiRendererNcurses::is_cross_pattern(const ImVec2 pts[12])
     if (nx <= 2 || ny <= 2)
         return false;
 
-    // Centroid overlap: both triangle pairs must center close together - a real X has both diagonals
-    // through the center, sequential segments have offset centroids
+    // a real X has both diagonals through the center: sequential segments have offset centroids
     float cx0 = 0, cy0 = 0, cx1 = 0, cy1 = 0;
     for (int vi = 0; vi < 6; ++vi)
     {
         cx0 += pts[vi].x;
         cy0 += pts[vi].y;
     }
-    for (int vi = 6; vi < 12; ++vi)
+    for (size_t vi = 6; vi < cross_pattern_vertex_count; ++vi)
     {
         cx1 += pts[vi].x;
         cy1 += pts[vi].y;
     }
+
     cx0 /= 6.0f;
     cy0 /= 6.0f;
     cx1 /= 6.0f;
     cy1 /= 6.0f;
+
     const float cdist = std::max(std::abs(cx0 - cx1), std::abs(cy0 - cy1));
     if (cdist > std::max(bw, bh) * 0.4f)
         return false;
 
     return true;
 }
-
-// _try_detect_cross(): two AddLine calls (close button X) produce 4 consecutive non-glyph
-// same-color triangles forming a diagonal cross; returns 9 (elements consumed) or 0
 
 // _try_detect_check(): RenderCheckMark emits a 2-segment thick polyline = 4 triangles at font
 // scale, smearing a blob over the 1-cell frame; collapse the run to one 'x' at the centroid
@@ -826,12 +789,13 @@ unsigned int ImguiRendererNcurses::_try_detect_check(const ImDrawList *dl,
     unsigned int count = 0;
     for (unsigned int t = i; t + 2 < cmd.ElemCount; t += 3)
     {
-        const ImDrawVert & a = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 0]];
-        const ImDrawVert & b = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 1]];
-        const ImDrawVert & c = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 2]];
-        if (a.col != _check_col || is_glyph_triangle(a, b, c))
+        const ImDrawVert & va = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 0]];
+        const ImDrawVert & vb = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 1]];
+        const ImDrawVert & vc = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + t + 2]];
+        if (va.col != _check_col || is_glyph_triangle(va, vb, vc))
             break;
-        const ImVec2 tri[3] = {a.pos, b.pos, c.pos};
+
+        const std::array<ImVec2, 3> tri = {va.pos, vb.pos, vc.pos};
         for (int k = 0; k < 3; ++k)
         {
             mnx = std::min(mnx, tri[k].x);
@@ -847,9 +811,9 @@ unsigned int ImguiRendererNcurses::_try_detect_check(const ImDrawList *dl,
     if (count < 2)
         return 0;
 
-    const float w = mxx - mnx;
-    const float h = mxy - mny;
-    if (w < 0.8f || w > 2.5f || h < 0.8f || h > 2.5f)
+    const float width = mxx - mnx;
+    const float height = mxy - mny;
+    if (width < 0.8f || width > 2.5f || height < 0.8f || height > 2.5f)
         return 0;
 
     const int cx = (int)std::floor(sx / (float)(count * 3));
@@ -872,7 +836,7 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     if (i + 9 >= cmd.ElemCount)
         return 0;
 
-    ImVec2 pts[12];
+    std::array<ImVec2, cross_pattern_vertex_count> pts;
     bool cross_ok = true;
     const ImU32 base_col = v0.col;
 
@@ -883,13 +847,13 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     for (unsigned int t = 1; t < 4 && cross_ok; ++t)
     {
         const unsigned int bi = i + t * 3;
-        const ImDrawVert & a = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 0]];
-        const ImDrawVert & b = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 1]];
-        const ImDrawVert & c = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 2]];
-        cross_ok = !is_glyph_triangle(a, b, c) && a.col == base_col;
-        pts[t * 3 + 0] = a.pos;
-        pts[t * 3 + 1] = b.pos;
-        pts[t * 3 + 2] = c.pos;
+        const ImDrawVert & va = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 0]];
+        const ImDrawVert & vb = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 1]];
+        const ImDrawVert & vc = dl->VtxBuffer[cmd.VtxOffset + dl->IdxBuffer[cmd.IdxOffset + bi + 2]];
+        cross_ok = !is_glyph_triangle(va, vb, vc) && va.col == base_col;
+        pts[t * 3 + 0] = va.pos;
+        pts[t * 3 + 1] = vb.pos;
+        pts[t * 3 + 2] = vc.pos;
     }
 
     if (!cross_ok)
@@ -906,13 +870,16 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
             c1.x += pts[k + 6].x;
             c1.y += pts[k + 6].y;
         }
+
         c0.x /= 6.0f;
         c0.y /= 6.0f;
         c1.x /= 6.0f;
         c1.y /= 6.0f;
+
         const float cdx = c0.x - c1.x, cdy = c0.y - c1.y;
         if (cdx * cdx + cdy * cdy > 0.25f)
             return 0;
+
         for (int a = 0; a < 6; ++a)
             for (int b = 6; b < 12; ++b)
             {
@@ -923,12 +890,12 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
             }
     }
 
-    if (!is_cross_pattern(pts))
+    if (!is_cross_pattern(pts.data()))
         return 0;
 
     float mnx = pts[0].x, mxx = pts[0].x;
     float mny = pts[0].y, mxy = pts[0].y;
-    for (int vi = 1; vi < 12; ++vi)
+    for (size_t vi = 1; vi < cross_pattern_vertex_count; ++vi)
     {
         mnx = std::min(mnx, pts[vi].x);
         mxx = std::max(mxx, pts[vi].x);
@@ -946,9 +913,6 @@ unsigned int ImguiRendererNcurses::_try_detect_cross(const ImDrawList *dl,
     }
     return 9;
 }
-
-// _try_detect_rect_pair(): peek at next triangle - same color, non-glyph, combined 6 vertices
-// forming an axis-aligned rect; returns 3 on success, 0 otherwise
 
 unsigned int ImguiRendererNcurses::_try_detect_rect_pair(const ImDrawList *dl,
                                                          const ImDrawCmd & cmd,
@@ -974,7 +938,7 @@ unsigned int ImguiRendererNcurses::_try_detect_rect_pair(const ImDrawList *dl,
     const float rymin = std::min({v0.pos.y, v1.pos.y, v2.pos.y, n0.pos.y, n1.pos.y, n2.pos.y});
     const float rymax = std::max({v0.pos.y, v1.pos.y, v2.pos.y, n0.pos.y, n1.pos.y, n2.pos.y});
 
-    const ImVec2 all[6] = {v0.pos, v1.pos, v2.pos, n0.pos, n1.pos, n2.pos};
+    const std::array<ImVec2, 6> all = {v0.pos, v1.pos, v2.pos, n0.pos, n1.pos, n2.pos};
     for (int vi = 0; vi < 6; ++vi)
     {
         const bool x_ok = (std::abs(all[vi].x - rxmin) < kVertexEpsilon)
@@ -1025,9 +989,6 @@ unsigned int ImguiRendererNcurses::_try_detect_line_quad(const ImDrawList *dl,
     _draw_fill_triangle(v0.pos, v2.pos, n2.pos, bg, clip);
     return 3;
 }
-
-// _rasterize_cmd(): process one ImDrawCmd - optional user callback, then walk its triangle list
-// and dispatch each element to the glyph or geometry renderer
 
 void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl,
                                           const ImDrawCmd & cmd,
@@ -1095,9 +1056,6 @@ void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl,
     }
 }
 
-// ── _rasterize_draw_list() ───────────────────────────────────────────────────
-// Process all draw commands for one ImDrawList.
-
 void ImguiRendererNcurses::_rasterize_draw_list(const ImDrawList *dl,
                                                 int fb_w,
                                                 int fb_h,
@@ -1107,9 +1065,6 @@ void ImguiRendererNcurses::_rasterize_draw_list(const ImDrawList *dl,
     for (int ci = 0; ci < dl->CmdBuffer.Size; ++ci)
         _rasterize_cmd(dl, dl->CmdBuffer[ci], fb_w, fb_h, clip_off, clip_scale);
 }
-
-// ── _rasterize() ─────────────────────────────────────────────────────────────
-// Top-level entry point: clear the cell buffer, then dispatch every draw list.
 
 void ImguiRendererNcurses::_rasterize(ImDrawData *draw_data)
 {
@@ -1146,9 +1101,6 @@ short ImguiRendererNcurses::_get_or_alloc_color_pair(uint8_t fg, uint8_t bg)
     _pair_cache[key] = pid;
     return pid;
 }
-
-// _flush_row(): writes one row to stdscr, batching same color-pair cells to minimize attron()
-// calls; copies the row into _screen_prev
 
 void ImguiRendererNcurses::_flush_row(int y)
 {
@@ -1192,9 +1144,6 @@ void ImguiRendererNcurses::_flush_row(int y)
                 (size_t)_screen_w * sizeof(TCell));
 }
 
-// _flush_to_ncurses(): differential update - skip unchanged rows, delegate changed ones to
-// _flush_row(); matches imtui DrawScreen() behavior
-
 void ImguiRendererNcurses::_flush_to_ncurses()
 {
     if (_needs_full_redraw)
@@ -1213,16 +1162,14 @@ void ImguiRendererNcurses::_flush_to_ncurses()
         for (int x = 0; x < _screen_w && !changed; ++x)
         {
             const size_t i = (size_t)(y * _screen_w + x);
-            const TCell & c = _screen[i];
-            const TCell & p = _screen_prev[i];
-            changed = (c.ch != p.ch || c.fg != p.fg || c.bg != p.bg);
+            const TCell & cell = _screen[i];
+            const TCell & prev_cell = _screen_prev[i];
+            changed = (cell.ch != prev_cell.ch || cell.fg != prev_cell.fg || cell.bg != prev_cell.bg);
         }
         if (changed)
             _flush_row(y);
     }
 }
-
-// ── shutdown ──────────────────────────────────────────────────────────────────
 
 void ImguiRendererNcurses::shutdown()
 {
@@ -1233,15 +1180,13 @@ void ImguiRendererNcurses::shutdown()
     _screen_prev.clear();
 }
 
-// ── Headless test API ───────────────────────────────────────────────────────
-
 bool ImguiRendererNcurses::init_headless(int w, int h)
 {
     _screen_w = w;
     _screen_h = h;
-    const size_t n = (size_t)(w * h);
-    _screen.assign(n, TCell {0, 0, 0});
-    _screen_prev.assign(n, TCell {(uint32_t)-1, 0xFFu, 0xFFu});
+    const size_t cell_count = (size_t)(w * h);
+    _screen.assign(cell_count, TCell {0, 0, 0});
+    _screen_prev.assign(cell_count, TCell {(uint32_t)-1, 0xFFu, 0xFFu});
     _is_init = true;
     return true;
 }

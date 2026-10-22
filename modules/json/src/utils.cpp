@@ -48,7 +48,6 @@ std::expected<Json, std::string> find_first(std::string_view data, std::string_v
         if (val.raw_json().get(raw) != simdjson::SUCCESS)
             break;
 
-        // Json::parse copies the raw bytes into its own padded buffer
         auto parsed = Json::parse(raw);
         if (!parsed)
             return std::unexpected(std::move(parsed.error()));

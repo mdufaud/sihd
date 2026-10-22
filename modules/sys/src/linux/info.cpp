@@ -1,9 +1,9 @@
 #include "../internal/info.hpp"
 
 #include <sys/utsname.h>
-#include <unistd.h> // sysconf gethostname getdomainname
+#include <unistd.h>
 
-#include <cctype> // isdigit
+#include <cctype>
 #include <cstring>
 #include <ranges>
 #include <set>
@@ -25,7 +25,7 @@ SIHD_NEW_LOGGER("sihd::sys::info");
 namespace
 {
 
-sihd::util::Result<uint64_t> read_uint(const std::string & path)
+Result<uint64_t> read_uint(const std::string & path)
 {
     auto content_opt = fs::read_all(path);
     if (!content_opt)
@@ -36,7 +36,7 @@ sihd::util::Result<uint64_t> read_uint(const std::string & path)
 }
 
 // /proc/meminfo values are kibibytes
-sihd::util::Result<uint64_t> read_meminfo_kib(std::string_view key)
+Result<uint64_t> read_meminfo_kib(std::string_view key)
 {
     const auto lines = fs::read_lines("/proc/meminfo");
     if (!lines)
@@ -66,8 +66,7 @@ std::optional<uint64_t> meminfo_kib(std::string_view key)
 std::optional<CpuTimes> parse_cpu_times(std::string_view line)
 {
     const auto fields = str::split(line);
-    // "cpu" label followed by user nice system idle iowait irq softirq steal;
-    // guest times are already counted in user/nice
+    // "cpu" label followed by user nice system idle iowait irq softirq steal; guest times are in user/nice
     if (fields.size() < 9)
         return std::nullopt;
     static const long clk_tck = sysconf(_SC_CLK_TCK);
@@ -91,7 +90,6 @@ std::vector<std::string> cpu_sysfs_dirs()
     std::vector<std::string> dirs;
     for (const std::string & name : fs::children("/sys/devices/system/cpu"))
     {
-        // children() appends the separator to directories
         std::string_view base = name;
         if (!base.empty() && base.back() == '/')
             base.remove_suffix(1);
@@ -167,20 +165,21 @@ uint32_t cpu_count()
 
 std::optional<uint32_t> physical_core_count()
 {
-    // str::split drops empty lines so processor blocks cannot be delimited by them;
-    // a block starts with the "processor" entry (or a "physical id" one)
+    // str::split drops empty lines so processor blocks cannot be delimited by them: one starts at "processor"
     auto content_opt = fs::read_all("/proc/cpuinfo");
     if (content_opt)
     {
         std::set<std::pair<uint64_t, uint64_t>> cores;
         std::optional<uint64_t> physical_id;
         std::optional<uint64_t> core_id;
+
         const auto flush = [&] {
             if (physical_id && core_id)
                 cores.emplace(*physical_id, *core_id);
             physical_id.reset();
             core_id.reset();
         };
+
         for (const auto & line : str::split(*content_opt, '\n'))
         {
             const auto [name, value] = str::split_pair_view(line, ":");
@@ -198,12 +197,14 @@ std::optional<uint32_t> physical_core_count()
                 core_id = parsed ? std::optional<uint64_t>(*parsed) : std::nullopt;
             }
         }
+
         flush();
         if (!cores.empty())
             return (uint32_t)cores.size();
     }
     // architectures without "physical id"/"core id" in /proc/cpuinfo (arm64...)
     std::set<std::pair<uint64_t, uint64_t>> cores;
+
     for (const std::string & dir : cpu_sysfs_dirs())
     {
         const auto package = read_uint(fs::combine({dir, "topology", "physical_package_id"}));
@@ -331,8 +332,8 @@ std::array<double, 3> load_average()
     std::array<double, 3> ret {};
     for (size_t i = 0; i < 3; ++i)
     {
-        if (const auto v = str::convert_from_string<double>(fields[i]))
-            ret[i] = *v;
+        if (const auto value = str::convert_from_string<double>(fields[i]))
+            ret[i] = *value;
     }
     return ret;
 }

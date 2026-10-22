@@ -1,3 +1,5 @@
+#include <array>
+#include <mutex>
 #include <stdexcept>
 
 #include <sihd/sys/platform.hpp>
@@ -13,14 +15,13 @@
 # include <winsock.h>
 # include <ws2def.h>
 
-# include <dbghelp.h> // backtrace
+# include <dbghelp.h>
 # include <winternl.h>
 # include <windows.h>
 # include <io.h>
 // clang-format on
 
-// for usage of sighandler_t in windows
-typedef void (*sighandler_t)(int);
+using sighandler_t = void (*)(int);
 
 // same fallback as the one used by linux/os.cpp when rlimits are unavailable
 #if !defined(__SIHD_UTIL_OS_DEFAULT_MAX_FDS__)
@@ -78,24 +79,40 @@ struct Wsa
 
 Wsa wsa;
 
+namespace
+{
+
+struct SYSTEM_TIMEOFDAY_INFORMATION
+{
+        LARGE_INTEGER BootTime;
+        LARGE_INTEGER CurrentTime;
+        LARGE_INTEGER TimeZoneBias;
+        ULONG TimeZoneId;
+        ULONG Reserved;
+        ULONGLONG BootTimeBias;
+        ULONGLONG SleepTimeBias;
+};
+
+} // namespace
+
 pid_t pid()
 {
     return GetCurrentProcessId();
 }
 
-sihd::util::Result<rlim_t> max_fds()
+Result<rlim_t> max_fds()
 {
     return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
 }
 
-sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
+Result<void> ioctl(int fd, unsigned long request, void *arg_ptr)
 {
     if (::ioctlsocket(fd, request, reinterpret_cast<long unsigned int *>(arg_ptr)) != 0)
         return std::unexpected(Error(ErrorCode::io_error, "could not ioctl: {}", last_socket_error_str()));
     return {};
 }
 
-sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
+Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot setsockopt on a negative socket"));
@@ -104,7 +121,7 @@ sihd::util::Result<void> setsockopt(int socket, int level, int optname, const vo
     return {};
 }
 
-sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
+Result<void> getsockopt(int socket, int level, int optname, void *optval, socklen_t *optlen)
 {
     if (socket < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot getsockopt on a negative socket"));
@@ -113,11 +130,11 @@ sihd::util::Result<void> getsockopt(int socket, int level, int optname, void *op
     return {};
 }
 
-sihd::util::Result<FdType> fd_type(int fd)
+Result<FdType> fd_type(int fd)
 {
     if (fd < 0)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot get file type of a negative fd"));
-    // GetFileType cannot tell a socket from a pipe (wine maps them alike): winsock answers SO_TYPE on sockets only
+    // GetFileType cannot tell a socket from a pipe (wine maps them alike): only sockets answer winsock SO_TYPE
     int so_type = 0;
     int so_len = sizeof(so_type);
     if (::getsockopt(fd, SOL_SOCKET, SO_TYPE, reinterpret_cast<char *>(&so_type), &so_len) == 0)
@@ -158,14 +175,14 @@ bool is_socket(int fd)
     return fd_type(fd) == FdType::socket;
 }
 
-sihd::util::Result<void> set_nonblocking(int fd, bool enable)
+Result<void> set_nonblocking(int fd, bool enable)
 {
     // FIONBIO goes through ioctlsocket, which drives sockets only on windows
     u_long mode = enable ? 1 : 0;
     return ioctl(fd, FIONBIO, &mode);
 }
 
-sihd::util::Result<size_t> bytes_available(int fd)
+Result<size_t> bytes_available(int fd)
 {
     u_long available = 0;
     if (ioctlsocket(fd, FIONREAD, &available) == 0)
@@ -181,7 +198,7 @@ sihd::util::Result<size_t> bytes_available(int fd)
     return std::unexpected(Error(ErrorCode::io_error, "could not read available bytes: {}", error_str(socket_error)));
 }
 
-sihd::util::Result<int> dup(int fd)
+Result<int> dup(int fd)
 {
     const int new_fd = _dup(fd);
     if (new_fd == -1)
@@ -189,7 +206,7 @@ sihd::util::Result<int> dup(int fd)
     return new_fd;
 }
 
-sihd::util::Result<int> dup2(int fd, int to)
+Result<int> dup2(int fd, int to)
 {
     if (_dup2(fd, to) == -1)
         return std::unexpected(Error::from_errno("could not dup2"));
@@ -222,17 +239,6 @@ Timestamp boot_time()
     static Timestamp boot_timestamp = Timestamp(0);
     if (boot_timestamp == 0)
     {
-        typedef struct _SYSTEM_TIMEOFDAY_INFORMATION
-        {
-                LARGE_INTEGER BootTime;
-                LARGE_INTEGER CurrentTime;
-                LARGE_INTEGER TimeZoneBias;
-                ULONG TimeZoneId;
-                ULONG Reserved;
-                ULONGLONG BootTimeBias;
-                ULONGLONG SleepTimeBias;
-        } SYSTEM_TIMEOFDAY_INFORMATION;
-
         SYSTEM_TIMEOFDAY_INFORMATION sysInfo;
 
         _NtQuerySystemInformation fct = reinterpret_cast<_NtQuerySystemInformation>(
@@ -250,8 +256,6 @@ Timestamp boot_time()
     return boot_timestamp;
 }
 
-// debuggers
-
 #ifndef SIHD_MAX_BACKTRACE_SIZE
 # define SIHD_MAX_BACKTRACE_SIZE 50
 #endif
@@ -267,7 +271,7 @@ Timestamp boot_time()
  *          http://creativecommons.org/licenses/by/3.0/deed.en_US
  */
 
-sihd::util::Result<ssize_t> peak_rss()
+Result<ssize_t> peak_rss()
 {
     PROCESS_MEMORY_COUNTERS info;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &info, sizeof(info)) == FALSE)
@@ -318,14 +322,14 @@ std::string last_error_str()
     return error_str(GetLastError());
 }
 
-sihd::util::Result<void> mem_lock(const void *addr, size_t len)
+Result<void> mem_lock(const void *addr, size_t len)
 {
     if (!VirtualLock(const_cast<LPVOID>(addr), len))
         return std::unexpected(Error(ErrorCode::io_error, "could not mem_lock: {}", last_error_str()));
     return {};
 }
 
-sihd::util::Result<void> mem_unlock(const void *addr, size_t len)
+Result<void> mem_unlock(const void *addr, size_t len)
 {
     if (!VirtualUnlock(const_cast<LPVOID>(addr), len))
         return std::unexpected(Error(ErrorCode::io_error, "could not mem_unlock: {}", last_error_str()));
@@ -356,8 +360,8 @@ bool is_run_by_wine()
 ssize_t backtrace(int fd, size_t backtrace_size)
 {
     constexpr size_t buffer_size = SIHD_MAX_BACKTRACE_SIZE;
-    static void *buffer[buffer_size];
-    static std::mutex buffer_mutex;
+    std::array<void *, buffer_size> buffer;
+    static std::mutex dbghelp_mutex;
 
     HANDLE handle = (HANDLE)_get_osfhandle(fd);
     if (handle == nullptr)
@@ -370,11 +374,12 @@ ssize_t backtrace(int fd, size_t backtrace_size)
 
     process = GetCurrentProcess();
 
+    // DbgHelp is single-threaded
+    std::lock_guard lock(dbghelp_mutex);
     SymInitialize(process, NULL, TRUE);
 
-    std::lock_guard l(buffer_mutex);
     const size_t wanted_size = std::min(backtrace_size, buffer_size);
-    frames = CaptureStackBackTrace(0, wanted_size, buffer, NULL);
+    frames = CaptureStackBackTrace(0, wanted_size, buffer.data(), NULL);
     if (frames == 0)
         return -1;
     symbol = (SYMBOL_INFO *)calloc(sizeof(SYMBOL_INFO) + 256 * sizeof(char), 1);

@@ -49,7 +49,6 @@ class CliInterpreter
         int evaluate(const std::vector<std::string> & args);
         // splits with quotes kept then removed before evaluation
         int evaluate(std::string_view line);
-        // ends the current evaluation with this status
         [[noreturn]] void exit(int status);
 
         // a bash completion script snapshotting the current command tree: nothing runs at tab time

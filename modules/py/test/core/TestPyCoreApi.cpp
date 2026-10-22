@@ -16,13 +16,14 @@
 namespace test
 {
 SIHD_LOGGER;
+using namespace sihd::util;
 using namespace sihd::py;
 class TestPyCoreApi: public ::testing::Test
 {
     protected:
-        TestPyCoreApi() { sihd::util::LoggerManager::stream(); }
+        TestPyCoreApi() { LoggerManager::stream(); }
 
-        virtual ~TestPyCoreApi() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPyCoreApi() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -31,29 +32,29 @@ class TestPyCoreApi: public ::testing::Test
 
 TEST_F(TestPyCoreApi, test_pycore_channel)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_channel.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_channel.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_devpulsation)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_devpulsation.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devpulsation.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_observer)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_observer.py"));
 }
 
 TEST_F(TestPyCoreApi, test_pycore_observer_threads)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/core/py/test_observer_threads.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_observer_threads.py"));
 }
 } // namespace test

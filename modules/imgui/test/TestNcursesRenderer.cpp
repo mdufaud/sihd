@@ -1,5 +1,6 @@
 #include <imgui.h>
 
+#include <array>
 #include <cmath>
 
 #include <gtest/gtest.h>
@@ -11,6 +12,19 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::imgui;
+using namespace sihd::util;
+
+namespace
+{
+
+constexpr size_t kCrossVertexCount = ImguiRendererNcurses::cross_pattern_vertex_count;
+
+struct Seg
+{
+        float x0, y0, x1, y1;
+};
+
+} // namespace
 
 // Knowledge base: imgui emits indexed triangles - rects/lines (uniform UVs), glyphs (atlas UVs),
 // PathFillConvex fans; per triangle: glyph -> cross -> rect pair -> arrow or scanline fill
@@ -18,8 +32,8 @@ using namespace sihd::imgui;
 class TestNcursesRenderer: public ::testing::Test
 {
     protected:
-        TestNcursesRenderer() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestNcursesRenderer() { sihd::util::LoggerManager::clear_loggers(); }
+        TestNcursesRenderer() { LoggerManager::stream(); }
+        virtual ~TestNcursesRenderer() { LoggerManager::clear_loggers(); }
 };
 
 // rgb_to_ansi256: grayscale -> ramp 232-255, color -> 6x6x6 cube at 16-231
@@ -36,9 +50,9 @@ TEST_F(TestNcursesRenderer, rgb_white)
 
 TEST_F(TestNcursesRenderer, rgb_mid_gray)
 {
-    uint8_t v = ImguiRendererNcurses::rgb_to_ansi256(128, 128, 128);
-    EXPECT_GE(v, 232);
-    EXPECT_LE(v, 255);
+    uint8_t gray = ImguiRendererNcurses::rgb_to_ansi256(128, 128, 128);
+    EXPECT_GE(gray, 232);
+    EXPECT_LE(gray, 255);
 }
 
 TEST_F(TestNcursesRenderer, rgb_pure_red)
@@ -58,21 +72,21 @@ TEST_F(TestNcursesRenderer, rgb_pure_blue)
 
 TEST_F(TestNcursesRenderer, rgb_near_black_stays_in_cube)
 {
-    uint8_t v = ImguiRendererNcurses::rgb_to_ansi256(1, 1, 1);
-    EXPECT_GE(v, 16);
-    EXPECT_LE(v, 231);
+    uint8_t gray = ImguiRendererNcurses::rgb_to_ansi256(1, 1, 1);
+    EXPECT_GE(gray, 16);
+    EXPECT_LE(gray, 231);
 }
 
 TEST_F(TestNcursesRenderer, rgb_light_gray)
 {
-    uint8_t v = ImguiRendererNcurses::rgb_to_ansi256(200, 200, 200);
-    EXPECT_GE(v, 16);
+    uint8_t gray = ImguiRendererNcurses::rgb_to_ansi256(200, 200, 200);
+    EXPECT_GE(gray, 16);
 }
 
 TEST_F(TestNcursesRenderer, rgb_dark_gray)
 {
-    uint8_t v = ImguiRendererNcurses::rgb_to_ansi256(50, 50, 50);
-    EXPECT_GE(v, 16);
+    uint8_t gray = ImguiRendererNcurses::rgb_to_ansi256(50, 50, 50);
+    EXPECT_GE(gray, 16);
 }
 
 TEST_F(TestNcursesRenderer, rgb_yellow)
@@ -110,8 +124,8 @@ TEST_F(TestNcursesRenderer, col_premul_scales_by_alpha)
 TEST_F(TestNcursesRenderer, col_premul_zero_alpha_is_black)
 {
     ImU32 zero = IM_COL32(255, 128, 64, 0);
-    uint8_t v = ImguiRendererNcurses::col_to_ansi256_premul(zero);
-    EXPECT_EQ(v, ImguiRendererNcurses::rgb_to_ansi256(0, 0, 0));
+    uint8_t color = ImguiRendererNcurses::col_to_ansi256_premul(zero);
+    EXPECT_EQ(color, ImguiRendererNcurses::rgb_to_ansi256(0, 0, 0));
 }
 
 TEST_F(TestNcursesRenderer, col_premul_full_alpha_equals_col)
@@ -137,7 +151,6 @@ TEST_F(TestNcursesRenderer, col_black)
 
 TEST_F(TestNcursesRenderer, arrow_right)
 {
-    // Idealized right arrow: base at x=0, apex at x=1
     ImVec2 p0(0.0f, 0.0f);
     ImVec2 p1(0.0f, 1.0f);
     ImVec2 p2(1.0f, 0.5f);
@@ -170,7 +183,6 @@ TEST_F(TestNcursesRenderer, arrow_up)
 
 TEST_F(TestNcursesRenderer, arrow_equilateral_is_down_arrow)
 {
-    // Equilateral-ish: base at y=0, apex at y=0.866 → down
     ImVec2 p0(0.0f, 0.0f);
     ImVec2 p1(1.0f, 0.0f);
     ImVec2 p2(0.5f, 0.866f);
@@ -179,7 +191,6 @@ TEST_F(TestNcursesRenderer, arrow_equilateral_is_down_arrow)
 
 TEST_F(TestNcursesRenderer, arrow_right_vertex_order_rotated)
 {
-    // Same geometry as right arrow, different vertex winding
     ImVec2 p0(1.0f, 0.5f);
     ImVec2 p1(0.0f, 0.0f);
     ImVec2 p2(0.0f, 1.0f);
@@ -206,15 +217,11 @@ TEST_F(TestNcursesRenderer, arrow_very_narrow_base_rejected)
 
 TEST_F(TestNcursesRenderer, arrow_right_wide_base)
 {
-    // Slightly wider base (1.2): still valid arrow shape
     ImVec2 p0(0.0f, 0.0f);
     ImVec2 p1(0.0f, 1.2f);
     ImVec2 p2(1.0f, 0.6f);
     EXPECT_EQ(ImguiRendererNcurses::classify_arrow(p0, p1, p2), (uint32_t)'>');
 }
-
-// ── classify_arrow: must NOT match (false positive protection) ─────────────
-// These geometries appear in imgui rendering but are NOT arrows.
 
 TEST_F(TestNcursesRenderer, arrow_right_angle_not_arrow)
 {
@@ -278,7 +285,6 @@ TEST_F(TestNcursesRenderer, arrow_symmetric_down_triangle)
 
 TEST_F(TestNcursesRenderer, glyph_uniform_uv_not_glyph)
 {
-    // AddRectFilled / AddTriangleFilled: all UVs point to white pixel
     ImDrawVert v0, v1, v2;
     v0.uv = v1.uv = v2.uv = ImVec2(0.5f, 0.5f);
     EXPECT_FALSE(ImguiRendererNcurses::is_glyph_triangle(v0, v1, v2));
@@ -286,7 +292,6 @@ TEST_F(TestNcursesRenderer, glyph_uniform_uv_not_glyph)
 
 TEST_F(TestNcursesRenderer, glyph_varying_uv_is_glyph)
 {
-    // AddText character: UVs map to different atlas positions
     ImDrawVert v0, v1, v2;
     v0.uv = ImVec2(0.0f, 0.0f);
     v1.uv = ImVec2(0.1f, 0.0f);
@@ -314,7 +319,6 @@ TEST_F(TestNcursesRenderer, glyph_only_v_varies)
 
 TEST_F(TestNcursesRenderer, glyph_tiny_uv_difference_is_glyph)
 {
-    // Even tiny UV differences indicate a glyph (narrow characters)
     ImDrawVert v0, v1, v2;
     v0.uv = ImVec2(0.500f, 0.500f);
     v1.uv = ImVec2(0.501f, 0.500f);
@@ -388,8 +392,7 @@ TEST_F(TestNcursesRenderer, clip_rect_negative_offset)
 
 TEST_F(TestNcursesRenderer, cross_real_x_shape)
 {
-    // Two crossing diagonals with thickness offset ±0.15
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {3.85f, 4.15f},
         {5.85f, 6.15f},
         {4.15f, 3.85f},
@@ -402,13 +405,13 @@ TEST_F(TestNcursesRenderer, cross_real_x_shape)
         {5.85f, 3.85f},
         {4.15f, 6.15f},
         {3.85f, 5.85f},
-    };
-    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_smaller_x_shape)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {0.9f, 1.1f},
         {1.9f, 2.1f},
         {1.1f, 0.9f},
@@ -421,14 +424,13 @@ TEST_F(TestNcursesRenderer, cross_smaller_x_shape)
         {1.9f, 0.9f},
         {1.1f, 2.1f},
         {0.9f, 1.9f},
-    };
-    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_offset_position)
 {
-    // X centered at (20,15) — position-independent detection
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {18.85f, 14.15f},
         {20.85f, 16.15f},
         {19.15f, 13.85f},
@@ -441,8 +443,8 @@ TEST_F(TestNcursesRenderer, cross_offset_position)
         {20.85f, 13.85f},
         {19.15f, 16.15f},
         {18.85f, 15.85f},
-    };
-    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_TRUE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 // False positives that MUST be rejected: patterns from real imgui rendering that look
@@ -450,8 +452,7 @@ TEST_F(TestNcursesRenderer, cross_offset_position)
 
 TEST_F(TestNcursesRenderer, cross_sequential_segments_rejected)
 {
-    // PlotLines: two consecutive line segments — centroids are offset
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {10.0f, 5.1f},
         {11.0f, 4.1f},
         {10.0f, 4.9f},
@@ -464,13 +465,13 @@ TEST_F(TestNcursesRenderer, cross_sequential_segments_rejected)
         {11.0f, 3.9f},
         {12.0f, 6.1f},
         {12.0f, 5.9f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_narrow_horizontal_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {0.0f, 5.0f},
         {3.0f, 5.0f},
         {0.0f, 5.3f},
@@ -483,13 +484,13 @@ TEST_F(TestNcursesRenderer, cross_narrow_horizontal_rejected)
         {0.0f, 4.7f},
         {3.0f, 5.0f},
         {3.0f, 4.7f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_too_small_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {5.0f, 5.0f},
         {5.1f, 5.0f},
         {5.0f, 5.1f},
@@ -502,13 +503,13 @@ TEST_F(TestNcursesRenderer, cross_too_small_rejected)
         {5.0f, 5.0f},
         {5.1f, 5.1f},
         {5.0f, 5.1f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_too_large_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {0.0f, 0.0f},
         {4.0f, 4.0f},
         {0.3f, 0.0f},
@@ -521,13 +522,13 @@ TEST_F(TestNcursesRenderer, cross_too_large_rejected)
         {3.7f, 0.0f},
         {0.0f, 4.0f},
         {0.0f, 3.7f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_parallel_lines_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {1.0f, 1.0f},
         {3.0f, 1.0f},
         {1.0f, 1.2f},
@@ -540,14 +541,13 @@ TEST_F(TestNcursesRenderer, cross_parallel_lines_rejected)
         {1.0f, 2.2f},
         {3.0f, 2.0f},
         {3.0f, 2.2f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_v_shape_rejected)
 {
-    // Two lines meeting at a point (V), not crossing through center
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {1.0f, 1.1f},
         {2.0f, 2.1f},
         {1.0f, 0.9f},
@@ -560,14 +560,13 @@ TEST_F(TestNcursesRenderer, cross_v_shape_rejected)
         {3.0f, 0.9f},
         {2.0f, 2.1f},
         {2.0f, 1.9f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_plotlines_zigzag_rejected)
 {
-    // PlotLines zigzag: 4 short segments up-down
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {0.0f, 1.1f},
         {1.0f, 0.1f},
         {0.0f, 0.9f},
@@ -580,14 +579,13 @@ TEST_F(TestNcursesRenderer, cross_plotlines_zigzag_rejected)
         {1.0f, -0.1f},
         {2.0f, 1.1f},
         {2.0f, 0.9f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_l_shape_two_lines_rejected)
 {
-    // L-shape: two perpendicular lines meeting at corner, centroids far apart
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {1.0f, 3.15f},
         {3.0f, 3.15f},
         {1.0f, 2.85f},
@@ -600,13 +598,13 @@ TEST_F(TestNcursesRenderer, cross_l_shape_two_lines_rejected)
         {2.85f, 3.0f},
         {3.15f, 1.0f},
         {2.85f, 1.0f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_narrow_vertical_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {5.0f, 0.0f},
         {5.0f, 3.0f},
         {5.3f, 0.0f},
@@ -619,68 +617,66 @@ TEST_F(TestNcursesRenderer, cross_narrow_vertical_rejected)
         {4.7f, 0.0f},
         {5.0f, 3.0f},
         {4.7f, 3.0f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
-
-// ── is_cross_pattern: edge cases ───────────────────────────────────────────
 
 TEST_F(TestNcursesRenderer, cross_at_boundary_size_min)
 {
-    float s = 0.5f;
+    float scale = 0.5f;
     float off = 0.05f;
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {-off, off},
-        {s - off, s + off},
+        {scale - off, scale + off},
         {off, -off},
         {off, -off},
-        {s - off, s + off},
-        {s + off, s - off},
-        {s + off, off},
-        {off, s + off},
-        {s - off, -off},
-        {s - off, -off},
-        {off, s + off},
-        {-off, s - off},
-    };
-    ImguiRendererNcurses::is_cross_pattern(pts);
+        {scale - off, scale + off},
+        {scale + off, scale - off},
+        {scale + off, off},
+        {off, scale + off},
+        {scale - off, -off},
+        {scale - off, -off},
+        {off, scale + off},
+        {-off, scale - off},
+    }};
+    ImguiRendererNcurses::is_cross_pattern(pts.data());
 }
 
 TEST_F(TestNcursesRenderer, cross_at_boundary_size_max)
 {
-    float s = 2.95f;
+    float scale = 2.95f;
     float off = 0.1f;
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {-off, off},
-        {s - off, s + off},
+        {scale - off, scale + off},
         {off, -off},
         {off, -off},
-        {s - off, s + off},
-        {s + off, s - off},
-        {s + off, off},
-        {off, s + off},
-        {s - off, -off},
-        {s - off, -off},
-        {off, s + off},
-        {-off, s - off},
-    };
-    ImguiRendererNcurses::is_cross_pattern(pts);
+        {scale - off, scale + off},
+        {scale + off, scale - off},
+        {scale + off, off},
+        {off, scale + off},
+        {scale - off, -off},
+        {scale - off, -off},
+        {off, scale + off},
+        {-off, scale - off},
+    }};
+    ImguiRendererNcurses::is_cross_pattern(pts.data());
 }
 
 TEST_F(TestNcursesRenderer, cross_all_same_point_rejected)
 {
-    ImVec2 pts[12];
-    for (int i = 0; i < 12; ++i)
+    std::array<ImVec2, kCrossVertexCount> pts;
+    for (size_t i = 0; i < kCrossVertexCount; ++i)
         pts[i] = ImVec2(5.0f, 5.0f);
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, cross_collinear_points_rejected)
 {
-    ImVec2 pts[12];
-    for (int i = 0; i < 12; ++i)
+    std::array<ImVec2, kCrossVertexCount> pts;
+    for (size_t i = 0; i < kCrossVertexCount; ++i)
         pts[i] = ImVec2((float)i * 0.2f, (float)i * 0.2f);
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 // classify_arrow - real widget arrows: Combo dropdown, TreeNode collapse/expand, Scrollbar
@@ -688,7 +684,6 @@ TEST_F(TestNcursesRenderer, cross_collinear_points_rejected)
 
 TEST_F(TestNcursesRenderer, arrow_combo_dropdown_right)
 {
-    // Combo [imgui_widgets.cpp:1898]: RenderArrow(ImGuiDir_Down) — but test right
     ImVec2 p0(68.0f, 3.0f);
     ImVec2 p1(68.0f, 4.0f);
     ImVec2 p2(69.0f, 3.5f);
@@ -737,11 +732,8 @@ TEST_F(TestNcursesRenderer, arrow_menu_submenu_right)
     EXPECT_EQ(ImguiRendererNcurses::classify_arrow(p0, p1, p2), (uint32_t)'>');
 }
 
-// ── classify_arrow: non-arrow geometry from other widgets ──────────────────
-
 TEST_F(TestNcursesRenderer, arrow_checkbox_corner_not_arrow)
 {
-    // Checkbox border: right-angle triangle at corner → both axes have base
     ImVec2 p0(5.0f, 3.0f);
     ImVec2 p1(6.0f, 3.0f);
     ImVec2 p2(5.0f, 4.0f);
@@ -750,7 +742,6 @@ TEST_F(TestNcursesRenderer, arrow_checkbox_corner_not_arrow)
 
 TEST_F(TestNcursesRenderer, arrow_rect_fill_half_not_arrow)
 {
-    // Half of AddRectFilled PrimRect — right-angle, too large
     ImVec2 p0(10.0f, 5.0f);
     ImVec2 p1(15.0f, 5.0f);
     ImVec2 p2(10.0f, 8.0f);
@@ -759,17 +750,15 @@ TEST_F(TestNcursesRenderer, arrow_rect_fill_half_not_arrow)
 
 TEST_F(TestNcursesRenderer, arrow_circle_fan_slice_not_arrow)
 {
-    // Circle fan triangle from AddCircleFilled (RenderBullet): center + 2 rim points
     ImVec2 p0(10.0f, 10.0f);
     ImVec2 p1(11.0f, 10.5f);
     ImVec2 p2(10.8f, 11.0f);
-    uint32_t r = ImguiRendererNcurses::classify_arrow(p0, p1, p2);
-    (void)r;
+    uint32_t arrow = ImguiRendererNcurses::classify_arrow(p0, p1, p2);
+    (void)arrow;
 }
 
 TEST_F(TestNcursesRenderer, arrow_resize_grip_not_arrow)
 {
-    // Resize grip: right-angle corner triangle → both axes base → rejected
     ImVec2 p0(79.0f, 24.0f);
     ImVec2 p1(79.0f, 23.0f);
     ImVec2 p2(78.0f, 24.0f);
@@ -791,7 +780,7 @@ TEST_F(TestNcursesRenderer, plotlines_flat_segment_no_arrow)
 
 TEST_F(TestNcursesRenderer, plotlines_45deg_segment_cross_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {-0.1f, 0.1f},
         {0.9f, 1.1f},
         {0.1f, -0.1f},
@@ -804,13 +793,13 @@ TEST_F(TestNcursesRenderer, plotlines_45deg_segment_cross_rejected)
         {1.1f, 0.9f},
         {1.9f, 0.1f},
         {2.1f, -0.1f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, plotlines_same_direction_segments_cross_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {10.07f, 5.04f},
         {10.87f, 4.24f},
         {9.93f, 4.96f},
@@ -823,13 +812,13 @@ TEST_F(TestNcursesRenderer, plotlines_same_direction_segments_cross_rejected)
         {10.73f, 4.16f},
         {11.67f, 3.44f},
         {11.53f, 3.36f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 TEST_F(TestNcursesRenderer, plotlines_horizontal_segments_cross_rejected)
 {
-    ImVec2 pts[12] = {
+    std::array<ImVec2, kCrossVertexCount> pts = {{
         {0.0f, 3.1f},
         {2.0f, 3.1f},
         {0.0f, 2.9f},
@@ -842,8 +831,8 @@ TEST_F(TestNcursesRenderer, plotlines_horizontal_segments_cross_rejected)
         {2.0f, 4.9f},
         {4.0f, 5.1f},
         {4.0f, 4.9f},
-    };
-    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts));
+    }};
+    EXPECT_FALSE(ImguiRendererNcurses::is_cross_pattern(pts.data()));
 }
 
 // Area ratio gates arrows vs slivers: real arrows area/bbox ≈ 0.5, AddLine slivers < 0.25 -
@@ -915,14 +904,14 @@ TEST_F(TestNcursesRenderer, sliver_ratio_narrow_down_arrow)
 TEST_F(TestNcursesRenderer, histogram_bar_is_axis_aligned)
 {
     // Verify PrimRect geometry: all 6 vertices on rect corners
-    ImVec2 all[6] = {
+    std::array<ImVec2, 6> all = {{
         {10.0f, 8.0f},
         {10.8f, 8.0f},
         {10.0f, 16.0f},
         {10.8f, 8.0f},
         {10.8f, 16.0f},
         {10.0f, 16.0f},
-    };
+    }};
     float rxmin = 10.0f, rxmax = 10.8f, rymin = 8.0f, rymax = 16.0f;
     for (int vi = 0; vi < 6; ++vi)
     {
@@ -1000,10 +989,10 @@ class TestNcursesRendererDraw: public ::testing::Test
 
         TestNcursesRendererDraw()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             renderer.init_headless(W, H);
         }
-        virtual ~TestNcursesRendererDraw() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNcursesRendererDraw() { LoggerManager::clear_loggers(); }
 
         bool cell_has_arrow(int x, int y)
         {
@@ -1019,8 +1008,8 @@ class TestNcursesRendererDraw: public ::testing::Test
 
         bool cell_is_bg_fill(int x, int y)
         {
-            const TCell & c = renderer.get_cell(x, y);
-            return (c.ch == 0 || c.ch == ' ') && c.bg != 0;
+            const TCell & cell = renderer.get_cell(x, y);
+            return (cell.ch == 0 || cell.ch == ' ') && cell.bg != 0;
         }
 };
 
@@ -1040,7 +1029,6 @@ TEST_F(TestNcursesRendererDraw, rect_normal_fill)
 
 TEST_F(TestNcursesRendererDraw, rect_thin_horizontal_no_dash)
 {
-    // Thin horizontal (separator, table border): space+bg, never dashes
     renderer.draw_rect(10.0f, 10.0f, 15.0f, 10.3f, kWhite, kFullClip);
     for (int x = 10; x <= 14; ++x)
         EXPECT_FALSE(cell_has_dash(x, 10)) << "dash at cell(" << x << ",10)";
@@ -1052,8 +1040,6 @@ TEST_F(TestNcursesRendererDraw, rect_thin_vertical_no_pipe)
     for (int y = 5; y < 10; ++y)
         EXPECT_FALSE(cell_has_dash(20, y)) << "pipe at cell(20," << y << ")";
 }
-
-// ── _draw_nonglyph_triangle: RenderArrow geometry → arrow character ────────
 
 TEST_F(TestNcursesRendererDraw, nonglyph_real_right_arrow)
 {
@@ -1113,7 +1099,6 @@ TEST_F(TestNcursesRendererDraw, nonglyph_plotlines_shallow_sliver_no_arrow)
 
 TEST_F(TestNcursesRendererDraw, nonglyph_thin_sliver_no_dash)
 {
-    // Thin horizontal sliver (separator): must not produce dashes
     renderer.draw_nonglyph_triangle(ImVec2(5.0f, 10.07f),
                                     ImVec2(15.0f, 10.07f),
                                     ImVec2(5.0f, 9.93f),
@@ -1122,8 +1107,6 @@ TEST_F(TestNcursesRendererDraw, nonglyph_thin_sliver_no_dash)
     for (int x = 5; x <= 15; ++x)
         EXPECT_FALSE(cell_has_dash(x, 10)) << "dash at cell(" << x << ",10)";
 }
-
-// ── Histogram bar via draw_rect ────────────────────────────────────────────
 
 TEST_F(TestNcursesRendererDraw, rect_histogram_bar_fill)
 {
@@ -1143,32 +1126,24 @@ TEST_F(TestNcursesRendererDraw, rect_thin_bar_between_columns_no_dash)
         EXPECT_FALSE(cell_has_dash(15, y)) << "pipe at cell(15," << y << ")";
 }
 
-// ── _draw_fill_triangle: scanline fill → space + bg ────────────────────────
-
 TEST_F(TestNcursesRendererDraw, fill_triangle_produces_bg)
 {
     uint8_t bg = ImguiRendererNcurses::col_to_ansi256_premul(kYellow);
     renderer.draw_fill_triangle(ImVec2(10.0f, 5.0f), ImVec2(20.0f, 5.0f), ImVec2(15.0f, 15.0f), bg, kFullClip);
-    const TCell & c = renderer.get_cell(15, 8);
-    EXPECT_EQ(c.bg, bg);
+    const TCell & cell = renderer.get_cell(15, 8);
+    EXPECT_EQ(cell.bg, bg);
     EXPECT_FALSE(cell_has_arrow(15, 8));
     EXPECT_FALSE(cell_has_dash(15, 8));
 }
 
-// ── Multiple PlotLines segments: sequence of slivers, ZERO arrows ──────────
-
 TEST_F(TestNcursesRendererDraw, nonglyph_plotlines_sequence_no_arrows)
 {
-    struct Seg
-    {
-            float x0, y0, x1, y1;
-    };
-    Seg segs[] = {
+    const std::array<Seg, 4> segs = {{
         {10, 5, 11, 4},
         {11, 4, 12, 6},
         {12, 6, 13, 5.5},
         {13, 5.5, 14, 3},
-    };
+    }};
     constexpr float thick = 0.15f;
     for (const auto & seg : segs)
     {
@@ -1188,16 +1163,13 @@ TEST_F(TestNcursesRendererDraw, nonglyph_plotlines_sequence_no_arrows)
             EXPECT_FALSE(cell_has_arrow(x, y)) << "arrow at cell(" << x << "," << y << ")";
 }
 
-// ── Default path: non-glyph non-arrow triangles → space + bg ───────────────
-
 TEST_F(TestNcursesRendererDraw, nonglyph_default_is_fill)
 {
-    // Large triangle: falls through arrow check → scanline fill
     renderer.draw_nonglyph_triangle(ImVec2(10.0f, 5.0f), ImVec2(13.0f, 5.0f), ImVec2(11.5f, 8.0f), kYellow, kFullClip);
     uint8_t expected_bg = ImguiRendererNcurses::col_to_ansi256_premul(kYellow);
-    const TCell & c = renderer.get_cell(11, 6);
-    EXPECT_EQ(c.ch, (uint32_t)' ');
-    EXPECT_EQ(c.bg, expected_bg);
+    const TCell & cell = renderer.get_cell(11, 6);
+    EXPECT_EQ(cell.ch, (uint32_t)' ');
+    EXPECT_EQ(cell.bg, expected_bg);
     EXPECT_FALSE(cell_has_arrow(11, 6));
 }
 
@@ -1215,7 +1187,6 @@ TEST_F(TestNcursesRendererDraw, small_triangle_no_plus)
 
 TEST_F(TestNcursesRendererDraw, thin_triangle_is_filled)
 {
-    // Thin horizontal: must produce bg fill, not be silently dropped
     renderer.draw_nonglyph_triangle(ImVec2(5.0f, 10.0f), ImVec2(10.0f, 10.0f), ImVec2(7.5f, 10.3f), kYellow, kFullClip);
     bool any_filled = false;
     for (int x = 5; x <= 10; ++x)
@@ -1226,7 +1197,6 @@ TEST_F(TestNcursesRendererDraw, thin_triangle_is_filled)
 
 TEST_F(TestNcursesRendererDraw, medium_triangle_not_suppressed)
 {
-    // 3x2 cell triangle: must not be suppressed by any filter
     renderer.draw_nonglyph_triangle(ImVec2(10.0f, 10.0f),
                                     ImVec2(13.0f, 10.0f),
                                     ImVec2(11.5f, 12.0f),
@@ -1245,14 +1215,12 @@ TEST_F(TestNcursesRendererDraw, medium_triangle_not_suppressed)
 
 TEST_F(TestNcursesRendererDraw, rect_thin_vertical_slider_grab_I)
 {
-    // width=0.3, height=4 → 'I' at center (20, 12)
     renderer.draw_rect(20.0f, 10.0f, 20.3f, 14.0f, kWhite, kFullClip);
     EXPECT_EQ(renderer.get_cell(20, 12).ch, (uint32_t)'I');
 }
 
 TEST_F(TestNcursesRendererDraw, rect_wide_no_slider_grab_I)
 {
-    // width=2, height=4 → NOT slider grab, just bg fill
     renderer.draw_rect(20.0f, 10.0f, 22.0f, 14.0f, kWhite, kFullClip);
     for (int y = 10; y < 14; ++y)
         for (int x = 20; x < 22; ++x)
@@ -1261,31 +1229,27 @@ TEST_F(TestNcursesRendererDraw, rect_wide_no_slider_grab_I)
 
 TEST_F(TestNcursesRendererDraw, rect_all_sizes_plain_fill)
 {
-    // Narrow tall → 'I' (real slider grab width ≈ 0.1 from dump)
     renderer.draw_rect(10.0f, 5.0f, 10.1f, 15.0f, kYellow, kFullClip);
     EXPECT_EQ(renderer.get_cell(10, 10).ch, (uint32_t)'I');
 
     renderer.clear_screen();
 
-    // Wide thin → space+bg, no dashes
     renderer.draw_rect(5.0f, 10.0f, 15.0f, 10.2f, kYellow, kFullClip);
     for (int x = 5; x < 15; ++x)
     {
         EXPECT_FALSE(cell_has_dash(x, 10)) << "cell(" << x << ",10)";
-        const TCell & c = renderer.get_cell(x, 10);
-        EXPECT_TRUE(c.ch == 0 || c.ch == ' ') << "cell(" << x << ",10) ch=" << c.ch;
+        const TCell & cell = renderer.get_cell(x, 10);
+        EXPECT_TRUE(cell.ch == 0 || cell.ch == ' ') << "cell(" << x << ",10) ch=" << cell.ch;
     }
 
     renderer.clear_screen();
 
-    // Small 1x1 → space+bg
     renderer.draw_rect(20.0f, 10.0f, 21.0f, 11.0f, kYellow, kFullClip);
-    const TCell & c = renderer.get_cell(20, 10);
-    EXPECT_TRUE(c.ch == 0 || c.ch == ' ');
-    EXPECT_TRUE(c.bg != 0) << "small rect must have bg color set";
+    const TCell & cell = renderer.get_cell(20, 10);
+    EXPECT_TRUE(cell.ch == 0 || cell.ch == ' ');
+    EXPECT_TRUE(cell.bg != 0) << "small rect must have bg color set";
 }
 
-// ── Exact RenderArrow geometry → correct arrow at expected cell ────────────
 // imgui RenderArrow: r = FontSize * 0.40 * scale, center = pos + (0.5, 0.5)
 
 TEST_F(TestNcursesRendererDraw, arrow_exact_renderarrow_right)
@@ -1335,7 +1299,6 @@ TEST_F(TestNcursesRendererDraw, arrow_exact_renderarrow_up)
 
 TEST_F(TestNcursesRendererDraw, arrow_reject_large_triangle)
 {
-    // 3x2 pointy triangle: too large for RenderArrow (span > 1.2)
     renderer.draw_nonglyph_triangle(ImVec2(10.0f, 10.0f),
                                     ImVec2(10.0f, 12.0f),
                                     ImVec2(13.0f, 11.0f),
@@ -1345,8 +1308,6 @@ TEST_F(TestNcursesRendererDraw, arrow_reject_large_triangle)
         for (int x = 10; x <= 13; ++x)
             EXPECT_FALSE(cell_has_arrow(x, y)) << "large triangle at (" << x << "," << y << ")";
 }
-
-// ── classify_arrow aspect ratio: rejects plot slivers ──────────────────────
 
 TEST_F(TestNcursesRendererDraw, arrow_reject_plot_sliver_aspect_ratio)
 {
@@ -1382,8 +1343,6 @@ TEST_F(TestNcursesRendererDraw, fill_triangle_ydelta_fractional_max)
     EXPECT_NE(renderer.get_cell(15, 8).bg, bg) << "row 8 must NOT bleed past floor(max_y)";
 }
 
-// ── Small triangles: no '+' (false positive prevention) ────────────────────
-
 TEST_F(TestNcursesRendererDraw, small_triangle_no_plus_anywhere)
 {
     renderer.draw_nonglyph_triangle(ImVec2(10.2f, 10.1f),
@@ -1412,10 +1371,10 @@ class TestNcursesGuardRails: public ::testing::Test
 
         TestNcursesGuardRails()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             renderer.init_headless(W, H);
         }
-        virtual ~TestNcursesGuardRails() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNcursesGuardRails() { LoggerManager::clear_loggers(); }
 
         // Simulate AddLine: quad = 2 triangles with perpendicular thickness offset, skipping the +0.5
         // endpoint offset (test coordinates are already framebuffer space)
@@ -1428,12 +1387,13 @@ class TestNcursesGuardRails: public ::testing::Test
                 return;
             float nx = -dy / len * thickness * 0.5f;
             float ny = dx / len * thickness * 0.5f;
-            ImVec2 a(x0 + nx, y0 + ny);
-            ImVec2 b(x1 + nx, y1 + ny);
-            ImVec2 c(x0 - nx, y0 - ny);
-            ImVec2 d(x1 - nx, y1 - ny);
-            renderer.draw_nonglyph_triangle(a, b, c, col, kFullClip);
-            renderer.draw_nonglyph_triangle(b, d, c, col, kFullClip);
+            ImVec2 tri_a(x0 + nx, y0 + ny);
+            ImVec2 tri_b(x1 + nx, y1 + ny);
+            ImVec2 tri_c(x0 - nx, y0 - ny);
+            ImVec2 tri_d(x1 - nx, y1 - ny);
+
+            renderer.draw_nonglyph_triangle(tri_a, tri_b, tri_c, col, kFullClip);
+            renderer.draw_nonglyph_triangle(tri_b, tri_d, tri_c, col, kFullClip);
         }
 
         // Simulate AddRectFilled [imgui_draw.cpp:1466]: PrimRect → _draw_rect
@@ -1447,11 +1407,11 @@ class TestNcursesGuardRails: public ::testing::Test
             for (int y = y0; y <= y1; ++y)
                 for (int x = x0; x <= x1; ++x)
                 {
-                    const TCell & c = renderer.get_cell(x, y);
-                    if (c.bg == 0 && c.ch == 0)
+                    const TCell & cell = renderer.get_cell(x, y);
+                    if (cell.bg == 0 && cell.ch == 0)
                         continue;
-                    EXPECT_TRUE(c.ch == 0 || c.ch == ' ')
-                        << context << ": cell(" << x << "," << y << ") has ch=" << (char)c.ch << " (" << c.ch
+                    EXPECT_TRUE(cell.ch == 0 || cell.ch == ' ')
+                        << context << ": cell(" << x << "," << y << ") has ch=" << (char)cell.ch << " (" << cell.ch
                         << "), expected bg fill only";
                 }
         }
@@ -1554,11 +1514,11 @@ TEST_F(TestNcursesGuardRails, window_background_pure_bg)
 
 TEST_F(TestNcursesGuardRails, renderarrow_right_produces_arrow)
 {
-    float r = 0.40f;
+    float radius = 0.40f;
     float cx = 20.5f, cy = 15.5f;
-    renderer.draw_nonglyph_triangle(ImVec2(cx + 0.750f * r, cy),
-                                    ImVec2(cx - 0.750f * r, cy + 0.866f * r),
-                                    ImVec2(cx - 0.750f * r, cy - 0.866f * r),
+    renderer.draw_nonglyph_triangle(ImVec2(cx + 0.750f * radius, cy),
+                                    ImVec2(cx - 0.750f * radius, cy + 0.866f * radius),
+                                    ImVec2(cx - 0.750f * radius, cy - 0.866f * radius),
                                     kWhite,
                                     kFullClip);
     EXPECT_EQ(renderer.get_cell(20, 15).ch, (uint32_t)'>');
@@ -1566,11 +1526,11 @@ TEST_F(TestNcursesGuardRails, renderarrow_right_produces_arrow)
 
 TEST_F(TestNcursesGuardRails, renderarrow_down_produces_arrow)
 {
-    float r = 0.40f;
+    float radius = 0.40f;
     float cx = 20.5f, cy = 15.5f;
-    renderer.draw_nonglyph_triangle(ImVec2(cx, cy + 0.750f * r),
-                                    ImVec2(cx - 0.866f * r, cy - 0.750f * r),
-                                    ImVec2(cx + 0.866f * r, cy - 0.750f * r),
+    renderer.draw_nonglyph_triangle(ImVec2(cx, cy + 0.750f * radius),
+                                    ImVec2(cx - 0.866f * radius, cy - 0.750f * radius),
+                                    ImVec2(cx + 0.866f * radius, cy - 0.750f * radius),
                                     kWhite,
                                     kFullClip);
     EXPECT_EQ(renderer.get_cell(20, 15).ch, (uint32_t)'v');
@@ -1578,11 +1538,11 @@ TEST_F(TestNcursesGuardRails, renderarrow_down_produces_arrow)
 
 TEST_F(TestNcursesGuardRails, renderarrow_left_produces_arrow)
 {
-    float r = 0.40f;
+    float radius = 0.40f;
     float cx = 20.5f, cy = 15.5f;
-    renderer.draw_nonglyph_triangle(ImVec2(cx - 0.750f * r, cy),
-                                    ImVec2(cx + 0.750f * r, cy - 0.866f * r),
-                                    ImVec2(cx + 0.750f * r, cy + 0.866f * r),
+    renderer.draw_nonglyph_triangle(ImVec2(cx - 0.750f * radius, cy),
+                                    ImVec2(cx + 0.750f * radius, cy - 0.866f * radius),
+                                    ImVec2(cx + 0.750f * radius, cy + 0.866f * radius),
                                     kWhite,
                                     kFullClip);
     EXPECT_EQ(renderer.get_cell(20, 15).ch, (uint32_t)'<');
@@ -1590,11 +1550,11 @@ TEST_F(TestNcursesGuardRails, renderarrow_left_produces_arrow)
 
 TEST_F(TestNcursesGuardRails, renderarrow_up_produces_arrow)
 {
-    float r = 0.40f;
+    float radius = 0.40f;
     float cx = 20.5f, cy = 15.5f;
-    renderer.draw_nonglyph_triangle(ImVec2(cx, cy - 0.750f * r),
-                                    ImVec2(cx + 0.866f * r, cy + 0.750f * r),
-                                    ImVec2(cx - 0.866f * r, cy + 0.750f * r),
+    renderer.draw_nonglyph_triangle(ImVec2(cx, cy - 0.750f * radius),
+                                    ImVec2(cx + 0.866f * radius, cy + 0.750f * radius),
+                                    ImVec2(cx - 0.866f * radius, cy + 0.750f * radius),
                                     kWhite,
                                     kFullClip);
     EXPECT_EQ(renderer.get_cell(20, 15).ch, (uint32_t)'^');
@@ -1649,19 +1609,17 @@ TEST_F(TestNcursesRendererDraw, fill_triangle_no_leak_sideways)
 TEST_F(TestNcursesGuardRails, arrow_adjacent_to_fill_no_bleed)
 {
     draw_filled_rect(10.0f, 10.0f, 20.0f, 15.0f, kYellow);
-    float r = 0.40f;
+    float radius = 0.40f;
     float cx = 9.5f, cy = 12.5f;
-    renderer.draw_nonglyph_triangle(ImVec2(cx + 0.750f * r, cy),
-                                    ImVec2(cx - 0.750f * r, cy + 0.866f * r),
-                                    ImVec2(cx - 0.750f * r, cy - 0.866f * r),
+    renderer.draw_nonglyph_triangle(ImVec2(cx + 0.750f * radius, cy),
+                                    ImVec2(cx - 0.750f * radius, cy + 0.866f * radius),
+                                    ImVec2(cx - 0.750f * radius, cy - 0.866f * radius),
                                     kWhite,
                                     kFullClip);
 
     EXPECT_EQ(renderer.get_cell(9, 12).ch, (uint32_t)'>');
     assert_only_bg_fill(10, 10, 19, 14, "Rect next to arrow");
 }
-
-// ── GUARD: Rect fill completeness — every interior cell filled ─────────────
 
 TEST_F(TestNcursesGuardRails, rect_fill_complete_interior)
 {
@@ -1686,7 +1644,7 @@ class TestNcursesSliderGrab: public ::testing::Test
 
         TestNcursesSliderGrab()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             ctx = ImGui::CreateContext();
             ImGui::StyleColorsDark();
             renderer.init_headless(W, H);
@@ -1695,17 +1653,17 @@ class TestNcursesSliderGrab: public ::testing::Test
         virtual ~TestNcursesSliderGrab()
         {
             ImGui::DestroyContext(ctx);
-            sihd::util::LoggerManager::clear_loggers();
+            LoggerManager::clear_loggers();
         }
 
         int count_char(uint32_t ch)
         {
-            int n = 0;
+            int count = 0;
             for (int y = 0; y < H; ++y)
                 for (int x = 0; x < W; ++x)
                     if (renderer.get_cell(x, y).ch == ch)
-                        ++n;
-            return n;
+                        ++count;
+            return count;
         }
 };
 
@@ -1777,30 +1735,32 @@ class TestNcursesHistogram: public ::testing::Test
 
         TestNcursesHistogram()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             ctx = ImGui::CreateContext();
             ImGuiIO & io = ImGui::GetIO();
             io.DisplaySize = ImVec2((float)W, (float)H);
             io.DeltaTime = 1.0f / 60.0f;
+
             unsigned char *pix = nullptr;
             int tw = 0, th = 0;
             io.Fonts->GetTexDataAsAlpha8(&pix, &tw, &th);
             io.Fonts->SetTexID((ImTextureID)1);
             ImGui::StyleColorsDark();
+
             // Match production terminal geometry so plot sizing mirrors the demo.
-            ImGuiStyle & s = ImGui::GetStyle();
-            s.WindowPadding = ImVec2(0.5f, 0.0f);
-            s.WindowBorderSize = 0.0f;
-            s.FramePadding = ImVec2(1.0f, 0.0f);
-            s.ItemSpacing = ImVec2(1.0f, 0.0f);
-            s.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
+            ImGuiStyle & style = ImGui::GetStyle();
+            style.WindowPadding = ImVec2(0.5f, 0.0f);
+            style.WindowBorderSize = 0.0f;
+            style.FramePadding = ImVec2(1.0f, 0.0f);
+            style.ItemSpacing = ImVec2(1.0f, 0.0f);
+            style.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
             renderer.init_headless(W, H);
             renderer.cache_style_colors();
         }
         virtual ~TestNcursesHistogram()
         {
             ImGui::DestroyContext(ctx);
-            sihd::util::LoggerManager::clear_loggers();
+            LoggerManager::clear_loggers();
         }
 
         static float Sin(void *, int i) { return sinf(i * 0.1f); }
@@ -1817,6 +1777,7 @@ class TestNcursesHistogram: public ::testing::Test
             ImGui::PlotHistogram("##h", Sin, nullptr, count, 0, nullptr, -1.0f, 1.0f, ImVec2(0, 12));
             ImGui::End();
             ImGui::Render();
+
             renderer.rasterize_headless(ImGui::GetDrawData());
         }
 
@@ -1824,12 +1785,12 @@ class TestNcursesHistogram: public ::testing::Test
         // bg differs from it (the histogram bars) so the bar pattern is visible.
         void dump_grid(const char *tag)
         {
-            int freq[256] = {0};
+            std::array<int, 256> freq {};
             for (int i = 0; i < W * H; ++i)
             {
-                const TCell & c = renderer.get_cell(i % W, i / W);
-                if (c.bg != 0)
-                    ++freq[c.bg];
+                const TCell & cell = renderer.get_cell(i % W, i / W);
+                if (cell.bg != 0)
+                    ++freq[cell.bg];
             }
             int dom = 0, best = 0;
             for (int i = 1; i < 256; ++i)
@@ -1843,6 +1804,7 @@ class TestNcursesHistogram: public ::testing::Test
                 if (freq[i] > 0)
                     std::fprintf(stderr, " %d:%d", i, freq[i]);
             std::fprintf(stderr, " ===\n");
+
             // Bar colour = least-frequent non-window, non-zero bg (the histogram bars).
             int bar = 0, bar_best = W * H + 1;
             for (int i = 1; i < 256; ++i)
@@ -1865,9 +1827,9 @@ class TestNcursesHistogram: public ::testing::Test
                 std::fprintf(stderr, "%3d ", y);
                 for (int x = 0; x < W; ++x)
                 {
-                    const TCell & c = renderer.get_cell(x, y);
-                    char g = (c.bg == bar) ? 'B' : (c.bg != 0 && c.bg != dom) ? '.' : ' ';
-                    std::fputc(g, stderr);
+                    const TCell & cell = renderer.get_cell(x, y);
+                    char mark = (cell.bg == bar) ? 'B' : (cell.bg != 0 && cell.bg != dom) ? '.' : ' ';
+                    std::fputc(mark, stderr);
                 }
                 std::fputc('\n', stderr);
             }
@@ -1890,17 +1852,17 @@ TEST_F(TestNcursesHistogram, high_sample_count_paints_full_height_bars)
     const uint8_t bar_bg = ImguiRendererNcurses::col_to_ansi256_premul(ImGui::GetColorU32(ImGuiCol_PlotHistogram));
 
     auto bar_cells_in_row = [&](int y) {
-        int n = 0;
+        int count = 0;
         for (int x = 0; x < W; ++x)
             if (renderer.get_cell(x, y).bg == bar_bg)
-                ++n;
-        return n;
+                ++count;
+        return count;
     };
     auto total_bar_cells = [&]() {
-        int n = 0;
+        int count = 0;
         for (int y = 0; y < H; ++y)
-            n += bar_cells_in_row(y);
-        return n;
+            count += bar_cells_in_row(y);
+        return count;
     };
 
     // count=200 exceeds the fixture's inner plot width → bars clamp to 1px.
@@ -1923,40 +1885,43 @@ class TestNcursesCheckbox: public ::testing::Test
 
         TestNcursesCheckbox()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             ctx = ImGui::CreateContext();
             ImGuiIO & io = ImGui::GetIO();
             io.DisplaySize = ImVec2((float)W, (float)H);
             io.DeltaTime = 1.0f / 60.0f;
+
             // Match production: 1 font unit = 1 terminal cell, else widget geometry
             // is 13x too large and the check tick polyline is misclassified.
             ImFontConfig cfg;
             cfg.SizePixels = 1.0f;
             cfg.GlyphMinAdvanceX = 1.0f;
             io.Fonts->AddFontDefault(&cfg);
+
             unsigned char *pix = nullptr;
             int tw = 0, th = 0;
             io.Fonts->GetTexDataAsAlpha8(&pix, &tw, &th);
             io.Fonts->SetTexID((ImTextureID)1);
             ImGui::StyleColorsDark();
-            ImGuiStyle & s = ImGui::GetStyle();
-            s.WindowPadding = ImVec2(0.5f, 0.0f);
-            s.WindowBorderSize = 0.0f;
-            s.FramePadding = ImVec2(1.0f, 0.0f);
-            s.ItemSpacing = ImVec2(1.0f, 0.0f);
-            s.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
+
+            ImGuiStyle & style = ImGui::GetStyle();
+            style.WindowPadding = ImVec2(0.5f, 0.0f);
+            style.WindowBorderSize = 0.0f;
+            style.FramePadding = ImVec2(1.0f, 0.0f);
+            style.ItemSpacing = ImVec2(1.0f, 0.0f);
+            style.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
             // No AA geometry in terminal — else thick polylines (check tick) bloat
             // their bbox and fail the checkmark gate.
-            s.AntiAliasedLines = false;
-            s.AntiAliasedFill = false;
-            s.AntiAliasedLinesUseTex = false;
+            style.AntiAliasedLines = false;
+            style.AntiAliasedFill = false;
+            style.AntiAliasedLinesUseTex = false;
             renderer.init_headless(W, H);
             renderer.cache_style_colors();
         }
         virtual ~TestNcursesCheckbox()
         {
             ImGui::DestroyContext(ctx);
-            sihd::util::LoggerManager::clear_loggers();
+            LoggerManager::clear_loggers();
         }
 
         void render_checkbox(bool checked)
@@ -1968,21 +1933,22 @@ class TestNcursesCheckbox: public ::testing::Test
                          nullptr,
                          ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
                              | ImGuiWindowFlags_NoScrollbar);
-            bool b = checked;
-            ImGui::Checkbox("Animate", &b);
+            bool value = checked;
+            ImGui::Checkbox("Animate", &value);
             ImGui::End();
             ImGui::Render();
+
             renderer.rasterize_headless(ImGui::GetDrawData());
         }
 
         int count_char(char ch)
         {
-            int n = 0;
+            int count = 0;
             for (int y = 0; y < H; ++y)
                 for (int x = 0; x < W; ++x)
                     if (renderer.get_cell(x, y).ch == (uint32_t)ch)
-                        ++n;
-            return n;
+                        ++count;
+            return count;
         }
 };
 
@@ -2009,36 +1975,39 @@ class TestNcursesButton: public ::testing::Test
 
         TestNcursesButton()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             ctx = ImGui::CreateContext();
             ImGuiIO & io = ImGui::GetIO();
             io.DisplaySize = ImVec2((float)W, (float)H);
             io.DeltaTime = 1.0f / 60.0f;
+
             ImFontConfig cfg;
             cfg.SizePixels = 1.0f;
             cfg.GlyphMinAdvanceX = 1.0f;
             io.Fonts->AddFontDefault(&cfg);
+
             unsigned char *pix = nullptr;
             int tw = 0, th = 0;
             io.Fonts->GetTexDataAsAlpha8(&pix, &tw, &th);
             io.Fonts->SetTexID((ImTextureID)1);
             ImGui::StyleColorsDark();
-            ImGuiStyle & s = ImGui::GetStyle();
-            s.WindowPadding = ImVec2(0.5f, 0.0f);
-            s.WindowBorderSize = 0.0f;
-            s.FramePadding = ImVec2(1.0f, 0.0f);
-            s.ItemSpacing = ImVec2(1.0f, 0.0f);
-            s.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
-            s.AntiAliasedLines = false;
-            s.AntiAliasedFill = false;
-            s.AntiAliasedLinesUseTex = false;
+
+            ImGuiStyle & style = ImGui::GetStyle();
+            style.WindowPadding = ImVec2(0.5f, 0.0f);
+            style.WindowBorderSize = 0.0f;
+            style.FramePadding = ImVec2(1.0f, 0.0f);
+            style.ItemSpacing = ImVec2(1.0f, 0.0f);
+            style.ItemInnerSpacing = ImVec2(1.0f, 0.0f);
+            style.AntiAliasedLines = false;
+            style.AntiAliasedFill = false;
+            style.AntiAliasedLinesUseTex = false;
             renderer.init_headless(W, H);
             renderer.cache_style_colors();
         }
         virtual ~TestNcursesButton()
         {
             ImGui::DestroyContext(ctx);
-            sihd::util::LoggerManager::clear_loggers();
+            LoggerManager::clear_loggers();
         }
 
         // Render a full-width height-2 button. hovered=true places the mouse over it.
@@ -2061,17 +2030,18 @@ class TestNcursesButton: public ::testing::Test
                 ImGui::End();
                 ImGui::Render();
             }
+
             renderer.rasterize_headless(ImGui::GetDrawData());
         }
 
         int count_char(char ch)
         {
-            int n = 0;
+            int count = 0;
             for (int y = 0; y < H; ++y)
                 for (int x = 0; x < W; ++x)
                     if (renderer.get_cell(x, y).ch == (uint32_t)ch)
-                        ++n;
-            return n;
+                        ++count;
+            return count;
         }
 };
 

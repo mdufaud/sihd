@@ -5,11 +5,13 @@
 namespace sihd::core
 {
 
+using namespace sihd::util;
+
 SIHD_REGISTER_FACTORY(MemRecorder)
 
 SIHD_LOGGER;
 
-MemRecorder::MemRecorder(const std::string & name, sihd::util::Node *parent): ACoreObject(name, parent)
+MemRecorder::MemRecorder(const std::string & name, Node *parent): ACoreObject(name, parent)
 {
     _running = false;
     _providing = false;
@@ -28,11 +30,11 @@ bool MemRecorder::set_stop_providing_when_empty(bool active)
     return true;
 }
 
-void MemRecorder::add_record(const std::string & name, sihd::util::Timestamp timestamp, const sihd::util::IArray *array)
+void MemRecorder::add_record(const std::string & name, Timestamp timestamp, const IArray *array)
 {
-    sihd::util::IArrayShared arr(array->clone_array());
-    std::lock_guard l(_mutex);
-    _map_sorted_records.insert(std::pair<sihd::util::Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
+    IArrayShared arr(array->clone_array());
+    std::lock_guard lock(_mutex);
+    _map_sorted_records.insert(std::pair<Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
 }
 
 void MemRecorder::add_record(const PlayableRecord & record)
@@ -54,7 +56,7 @@ void MemRecorder::add_records(const std::list<PlayableRecord> & records)
 
 bool MemRecorder::empty() const
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     return _map_sorted_records.empty();
 }
 
@@ -65,7 +67,7 @@ bool MemRecorder::providing() const
 
 bool MemRecorder::provide(PlayableRecord *record)
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     if (_map_sorted_records.empty())
         return false;
     *record = _map_sorted_records.begin()->second;
@@ -82,7 +84,7 @@ void MemRecorder::handle(const std::string & name, const Channel *channel)
 
 MapListRecordedValues MemRecorder::make_recorded_values() const
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     MapListRecordedValues map_record;
     for (const auto & [_, playable_record] : _map_sorted_records)
     {
@@ -108,7 +110,7 @@ std::string MemRecorder::hexdump_recorded_values(const MapListRecordedValues & r
 std::string MemRecorder::hexdump_records(std::string_view separation_cols, char separation_data)
 {
     std::string str;
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
 
     for (const auto & [_, playable_record] : _map_sorted_records)
     {
@@ -146,9 +148,14 @@ bool MemRecorder::is_running() const
     return _running;
 }
 
+const SortedRecordedValues & MemRecorder::sorted_recorded_values() const
+{
+    return _map_sorted_records;
+}
+
 void MemRecorder::clear()
 {
-    std::lock_guard l(_mutex);
+    std::lock_guard lock(_mutex);
     _map_sorted_records.clear();
 }
 

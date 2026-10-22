@@ -1,3 +1,4 @@
+#include <array>
 #include <atomic>
 #include <thread>
 
@@ -40,8 +41,7 @@ constexpr int sig_alt = SIGWINCH;
 void send_self(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
-    // windows has no kill(); raise() delivers to the calling thread but the
-    // handler sets process-global state that the pollers observe
+    // no kill() on windows: raise() hits the calling thread, the handler sets process-global state
     raise(sig);
 #else
     kill(getpid(), sig);
@@ -52,9 +52,9 @@ void send_self(int sig)
 class TestSignal: public ::testing::Test
 {
     protected:
-        TestSignal() { sihd::util::LoggerManager::stream(); }
+        TestSignal() { LoggerManager::stream(); }
 
-        virtual ~TestSignal() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSignal() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -90,12 +90,11 @@ TEST_F(TestSignal, test_signal_handle)
     auto sig_status = signal::status(sig);
     ASSERT_TRUE(sig_status);
     EXPECT_EQ(sig_status->received, 1U);
-    sihd::util::Timestamp last_time = sig_status->time_received.load();
+    Timestamp last_time = sig_status->time_received.load();
 
     if constexpr (build::is_emscripten)
     {
-        // emscripten clock granularity is coarse: space the two raises so the second
-        // time_received is strictly greater instead of tying
+        // emscripten clock granularity is coarse: space the raises so time_received is strictly greater
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 
@@ -118,7 +117,7 @@ TEST_F(TestSignal, test_signal_waiter)
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
     auto signal_waiter = [](int sig) {
-        Timer t([sig] { send_self(sig); }, std::chrono::milliseconds(20));
+        Timer timer([sig] { send_self(sig); }, std::chrono::milliseconds(20));
 
         SigWaiter wait({.signal = sig, .timeout = std::chrono::milliseconds(100)});
 
@@ -163,8 +162,7 @@ TEST_F(TestSignal, test_signal_watcher)
 }
 
 #if !defined(__SIHD_WINDOWS__)
-// unix-only: relies on SIGWINCH's default action being ignore so an unhandled raise() does not
-// terminate - no windows signal (SIGINT/SIGTERM/SIGABRT) is ignored by default
+// unix-only: SIGWINCH is ignored by default so an unhandled raise() does not terminate; no windows signal is
 TEST_F(TestSignal, test_signal_tmp)
 {
     if (os::is_run_by_valgrind())
@@ -206,8 +204,6 @@ TEST_F(TestSignal, test_signal_tmp)
         EXPECT_EQ(sig_status->received, 2u);
     }
 
-    // still handling signal
-
     raise(sig);
 
     (void)signal::unhandle(sig);
@@ -219,7 +215,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
 TEST_F(TestSignal, test_block_thread_set)
 {
-    const int sigs[] = {sig_term, sig_alt};
+    const std::array sigs = {sig_term, sig_alt};
     ASSERT_TRUE(signal::block_thread(sigs));
 
     raise(sig_term);
@@ -262,8 +258,8 @@ TEST_F(TestSignal, test_sig_thread_blocker_restores_mask)
     sigset_t after;
     sigemptyset(&after);
     ASSERT_EQ(pthread_sigmask(SIG_BLOCK, nullptr, &after), 0);
-    EXPECT_EQ(sigismember(&after, sig_term), 1); // was pre-blocked -> restored
-    EXPECT_EQ(sigismember(&after, sig_alt), 0);  // unblocked on scope exit
+    EXPECT_EQ(sigismember(&after, sig_term), 1);
+    EXPECT_EQ(sigismember(&after, sig_alt), 0);
 
     pthread_sigmask(SIG_UNBLOCK, &pre, nullptr);
 }
@@ -308,7 +304,7 @@ TEST_F(TestSignal, test_signal_reset_received_single)
 {
     ASSERT_TRUE(signal::handle(sig_term));
     ASSERT_TRUE(signal::handle(sig_alt));
-    sihd::util::Defer unhandle_all([] {
+    Defer unhandle_all([] {
         (void)signal::unhandle(sig_term);
         (void)signal::unhandle(sig_alt);
         signal::reset_all_received();
@@ -361,7 +357,7 @@ TEST_F(TestSignal, test_signal_watcher_rm_signal)
     watcher.add_observer(&handler);
     ASSERT_TRUE(watcher.add_signal(sig_term));
     watcher.start();
-    sihd::util::Defer stop_watcher([&] {
+    Defer stop_watcher([&] {
         watcher.stop();
 #if !defined(__SIHD_WINDOWS__)
         (void)signal::unblock_thread(sig_term);
@@ -388,7 +384,7 @@ TEST_F(TestSignal, test_signal_exit_config_exits_with_sig_number)
         GTEST_SKIP() << "fork under valgrind";
 
     signal::set_exit_config({.on_termination = true, .exit_with_sig_number = true});
-    sihd::util::Defer reset_config([] { signal::set_exit_config(signal::SigExitConfig {}); });
+    Defer reset_config([] { signal::set_exit_config(signal::SigExitConfig {}); });
 
     fflush(stdout);
     const pid_t pid = fork();
@@ -406,5 +402,29 @@ TEST_F(TestSignal, test_signal_exit_config_exits_with_sig_number)
     EXPECT_EQ(WEXITSTATUS(wstatus), SIGTERM);
 }
 #endif
+
+TEST_F(TestSignal, test_block_thread_not_supported_on_windows)
+{
+    if constexpr (!build::is_windows)
+        GTEST_SKIP() << "per-thread signal mask exists outside windows";
+
+    const std::array sigs = {sig_term, sig_alt};
+
+    auto blocked = signal::block_thread(sig_term);
+    ASSERT_FALSE(blocked);
+    EXPECT_EQ(blocked.error().code, ErrorCode::not_supported);
+
+    auto blocked_set = signal::block_thread(sigs);
+    ASSERT_FALSE(blocked_set);
+    EXPECT_EQ(blocked_set.error().code, ErrorCode::not_supported);
+
+    auto unblocked = signal::unblock_thread(sig_term);
+    ASSERT_FALSE(unblocked);
+    EXPECT_EQ(unblocked.error().code, ErrorCode::not_supported);
+
+    auto unblocked_set = signal::unblock_thread(sigs);
+    ASSERT_FALSE(unblocked_set);
+    EXPECT_EQ(unblocked_set.error().code, ErrorCode::not_supported);
+}
 
 } // namespace test

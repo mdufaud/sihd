@@ -23,37 +23,34 @@ class AChannelContainer: public sihd::util::Node,
 
         sihd::util::Result<Channel *> get_channel(const std::string & name);
 
-        // store channel configuration, when links are resolved, create the channel if unlinked or get the
-        // linked one
+        // store channel configuration, created if unlinked or fetched from the link once links are resolved
         Channel *add_unlinked_channel(const std::string & name,
                                       sihd::util::Type type,
                                       size_t size = 1,
                                       bool check_match = true);
         Channel *add_unlinked_channel(const std::string & name,
-                                      std::string_view type,
+                                      std::string_view type_str,
                                       size_t size = 1,
                                       bool check_match = true);
 
-        // creates a channel and adds it as a child
         Channel *add_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
-        Channel *add_channel(const std::string & name, std::string_view type, size_t size = 1);
+        Channel *add_channel(const std::string & name, std::string_view type_str, size_t size = 1);
 
-        // resizable variants: the resizable flag is always verified at link time;
-        // check_match additionally gates the type/size verification
+        // the resizable flag is always verified at link time, check_match additionally gates type/size
         Channel *add_unlinked_channel_resizable(const std::string & name,
                                                 sihd::util::Type type,
                                                 size_t size,
                                                 size_t capacity,
                                                 bool check_match = true);
         Channel *add_unlinked_channel_resizable(const std::string & name,
-                                                std::string_view type,
+                                                std::string_view type_str,
                                                 size_t size,
                                                 size_t capacity,
                                                 bool check_match = true);
 
-        // creates a resizable channel and adds it as a child
         Channel *add_channel_resizable(const std::string & name, sihd::util::Type type, size_t size, size_t capacity);
-        Channel *add_channel_resizable(const std::string & name, std::string_view type, size_t size, size_t capacity);
+        Channel *
+            add_channel_resizable(const std::string & name, std::string_view type_str, size_t size, size_t capacity);
 
         sihd::util::Result<void> observe_channel(const std::string & channel_name);
         bool observe_channel(Channel *c);

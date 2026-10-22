@@ -16,7 +16,6 @@ class MessageField: public Named,
         MessageField(const std::string & name, Node *parent = nullptr);
         virtual ~MessageField();
 
-        // IMessageField
         virtual size_t field_size() const override { return _size; }
         virtual size_t field_byte_size() const override { return _size * type::size(_dt); }
         virtual Type field_type() const override { return _dt; }
@@ -29,10 +28,8 @@ class MessageField: public Named,
 
         virtual bool build_array(Type dt, size_t size);
 
-        // Named
         virtual std::string description() const override;
 
-        // ICloneable
         virtual IMessageField *clone() const override;
 
         template <typename T>

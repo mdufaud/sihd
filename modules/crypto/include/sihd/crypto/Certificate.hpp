@@ -26,8 +26,8 @@ struct CertOptions
         std::string locality;
         std::string email;
         std::vector<std::string> subject_alt_names; // "DNS:host" / "IP:1.2.3.4"
-        int days = 365;                             // validity from now
-        uint64_t serial = 0;                        // 0 => random
+        int days = 365;
+        uint64_t serial = 0; // 0 => random
         bool is_ca = false;
         // opt out of the DNS/IP/email/URI kinds: otherName, RID, dirName pass, separators never do
         bool any_alt_name_kind = false;
@@ -44,7 +44,7 @@ class Certificate
         Certificate(Certificate && other) noexcept = default;
         Certificate & operator=(Certificate && other) noexcept = default;
 
-        operator bool() const { return _handle != nullptr; }
+        operator bool() const;
 
         sihd::util::Result<void>
             generate_self_signed(const PrivateKey & key, std::string_view common_name, int days = 365);
@@ -69,11 +69,10 @@ class Certificate
 
         void clear();
 
-        void *native() const { return _handle.get(); }
+        void *native() const;
 
     private:
-        // type-erased X509: the deleter freeing it is bound at acquisition,
-        // keeping openssl types out of this header
+        // type-erased X509, deleter bound at acquisition: keeps openssl types out of this header
         std::shared_ptr<void> _handle;
 };
 

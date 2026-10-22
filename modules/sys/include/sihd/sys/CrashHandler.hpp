@@ -11,11 +11,9 @@ class CrashHandler
     public:
         struct Options
         {
-                // crash dump file: minidump on windows, text report on unix;
-                // empty keeps the report on stderr only
+                // crash dump file: minidump on windows, text report on unix; empty keeps stderr only
                 std::string dump_path;
-                // unix: re-raise with the default disposition, preserving the core dump;
-                // windows: chain to WER/JIT — false terminates with the exception code
+                // unix: re-raise with default disposition (core dump kept); windows: chain to WER/JIT, false terminates
                 bool rethrow = true;
         };
 

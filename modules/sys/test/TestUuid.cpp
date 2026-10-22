@@ -16,9 +16,9 @@ using namespace sihd::sys;
 class TestUuid: public ::testing::Test
 {
     protected:
-        TestUuid() { sihd::util::LoggerManager::stream(); }
+        TestUuid() { LoggerManager::stream(); }
 
-        virtual ~TestUuid() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestUuid() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

@@ -65,7 +65,7 @@ void *SshKey::key() const
     return _impl_ptr->ssh_key_ptr;
 }
 
-sihd::util::Result<void> SshKey::generate(KeyType type, int parameter)
+Result<void> SshKey::generate(KeyType type, int parameter)
 {
     this->clear_key();
     if (ssh_pki_generate(to_libssh(type), parameter, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -73,7 +73,7 @@ sihd::util::Result<void> SshKey::generate(KeyType type, int parameter)
     return {};
 }
 
-sihd::util::Result<void> SshKey::import_privkey_file(const std::string & path, const char *passphrase)
+Result<void> SshKey::import_privkey_file(const std::string & path, const char *passphrase)
 {
     this->clear_key();
     if (ssh_pki_import_privkey_file(path.c_str(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -81,7 +81,7 @@ sihd::util::Result<void> SshKey::import_privkey_file(const std::string & path, c
     return {};
 }
 
-sihd::util::Result<void> SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
+Result<void> SshKey::import_privkey_mem(const char *base64_key, const char *passphrase)
 {
     this->clear_key();
     if (ssh_pki_import_privkey_base64(base64_key, passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -89,7 +89,7 @@ sihd::util::Result<void> SshKey::import_privkey_mem(const char *base64_key, cons
     return {};
 }
 
-sihd::util::Result<void> SshKey::import_pubkey_file(const std::string & path)
+Result<void> SshKey::import_pubkey_file(const std::string & path)
 {
     this->clear_key();
     if (ssh_pki_import_pubkey_file(path.c_str(), &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -97,7 +97,7 @@ sihd::util::Result<void> SshKey::import_pubkey_file(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
+Result<void> SshKey::import_pubkey_mem(const char *base64_key, KeyType type)
 {
     this->clear_key();
     if (ssh_pki_import_pubkey_base64(base64_key, to_libssh(type), &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -149,7 +149,7 @@ std::string SshKey::base64() const
     return result;
 }
 
-sihd::util::Result<void> SshKey::export_privkey_file(const std::string & path, const char *passphrase) const
+Result<void> SshKey::export_privkey_file(const std::string & path, const char *passphrase) const
 {
     if (_impl_ptr->ssh_key_ptr == nullptr || !this->is_private())
         return std::unexpected(Error(not_initialized, "cannot export - no private key available"));

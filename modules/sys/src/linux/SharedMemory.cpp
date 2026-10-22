@@ -1,7 +1,7 @@
-#include <fcntl.h>    // O_*
-#include <string.h>   // strerror
-#include <sys/mman.h> // shm_open, mmap, munmap
-#include <unistd.h>   // ftruncate, close
+#include <fcntl.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 #include <sihd/sys/SharedMemory.hpp>
 #include <sihd/sys/os.hpp>
@@ -27,7 +27,7 @@ struct Shm
         void *addr;
 };
 
-sihd::util::Result<Shm> __open(const std::string & id, mode_t mode, int shm_flags)
+Result<Shm> __open(const std::string & id, mode_t mode, int shm_flags)
 {
     int fd = shm_open(id.c_str(), shm_flags, mode);
     if (fd == -1)
@@ -35,7 +35,7 @@ sihd::util::Result<Shm> __open(const std::string & id, mode_t mode, int shm_flag
     return Shm {fd, nullptr};
 }
 
-sihd::util::Result<Shm> __mmap(Shm shm, size_t size, int mmap_flags)
+Result<Shm> __mmap(Shm shm, size_t size, int mmap_flags)
 {
     void *addr = mmap(nullptr, size, mmap_flags, MAP_SHARED, shm.fd, 0);
     if (addr == MAP_FAILED)
@@ -44,7 +44,7 @@ sihd::util::Result<Shm> __mmap(Shm shm, size_t size, int mmap_flags)
     return shm;
 }
 
-sihd::util::Result<Shm> create_shm(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+Result<Shm> create_shm(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
     auto shm = __open(id, mode, shm_flags);
     if (!shm)
@@ -63,7 +63,7 @@ sihd::util::Result<Shm> create_shm(const std::string & id, size_t size, mode_t m
     return mapped;
 }
 
-sihd::util::Result<Shm> shm_attach(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
+Result<Shm> shm_attach(const std::string & id, size_t size, mode_t mode, int shm_flags, int mmap_flags)
 {
     auto shm = __open(id, mode, shm_flags);
     if (!shm)
@@ -77,7 +77,7 @@ sihd::util::Result<Shm> shm_attach(const std::string & id, size_t size, mode_t m
 
 } // namespace
 
-sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -94,7 +94,7 @@ sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t siz
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -112,7 +112,7 @@ sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t siz
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -130,7 +130,7 @@ sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::clear()
+Result<void> SharedMemory::clear()
 {
     bool ret = true;
     if (_addr != nullptr && _addr != MAP_FAILED)
@@ -158,22 +158,22 @@ sihd::util::Result<void> SharedMemory::clear()
 
 // no POSIX shared memory (android bionic, emscripten)
 
-sihd::util::Result<void> SharedMemory::create(const std::string &, size_t, mode_t)
+Result<void> SharedMemory::create(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> SharedMemory::attach(const std::string &, size_t, mode_t)
+Result<void> SharedMemory::attach(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(const std::string &, size_t, mode_t)
+Result<void> SharedMemory::attach_read_only(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> SharedMemory::clear()
+Result<void> SharedMemory::clear()
 {
     return {};
 }

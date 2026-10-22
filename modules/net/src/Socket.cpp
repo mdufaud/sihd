@@ -11,13 +11,13 @@
 #include <sihd/util/build.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <netinet/tcp.h> // tcp nodelay
-# include <sys/un.h>      // unix sockets
+# include <netinet/tcp.h>
+# include <sys/un.h>
 
-# include <net/if.h> // if_nametoindex
+# include <net/if.h>
 #else
-# include <afunix.h>   // AF_UNIX
-# include <ws2tcpip.h> // IP_TTL
+# include <afunix.h>
+# include <ws2tcpip.h>
 
 #endif
 
@@ -35,14 +35,10 @@ void adapt_array_size(IArray & arr, size_t sent)
         arr.byte_resize(sent);
 }
 
-bool interrupted_error([[maybe_unused]] int err)
+bool interrupted_error(int err)
 {
     // winsock operations are not interrupted by signals
-#if !defined(__SIHD_WINDOWS__)
-    return err == EINTR;
-#else
-    return false;
-#endif
+    return !build::is_windows && err == EINTR;
 }
 
 template <typename Syscall>
@@ -66,9 +62,8 @@ Result<ssize_t> socket_call(std::string_view op, auto && syscall)
 
 Result<size_t> size_result(Result<ssize_t> && res)
 {
-    if (res)
-        return (size_t)*res;
-    return std::unexpected(std::move(res).error());
+    SIHD_UNEXPECTED_RETURN(res);
+    return (size_t)*res;
 }
 
 Result<void> opt_result(std::string_view op, Result<void> res)
@@ -289,6 +284,16 @@ Socket::~Socket()
 {
     (void)this->shutdown();
     (void)this->close();
+}
+
+Socket::operator int() const
+{
+    return _socket;
+}
+
+Socket::operator bool() const
+{
+    return this->is_open();
 }
 
 void Socket::_clear_socket_info()
@@ -648,6 +653,11 @@ Result<void> Socket::shutdown() const
     return std::unexpected(make_error("shutdown error"));
 }
 
+bool Socket::is_open() const
+{
+    return _socket >= 0;
+}
+
 /* ************************************************************************* */
 /* Socket sockaddr operations */
 /* ************************************************************************* */
@@ -748,18 +758,22 @@ Result<void> Socket::reconnect(int timeout_ms)
     return this->connect(_connect_addr, timeout_ms);
 }
 
+const IpAddr & Socket::connect_addr() const
+{
+    return _connect_addr;
+}
+
+std::string Socket::connect_unix_path() const
+{
+    return _connect_unix_path;
+}
+
 Result<size_t> Socket::send(ArrCharView view)
 {
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("send"));
 
-    return size_result(socket_call("send", [&] {
-#if !defined(__SIHD_WINDOWS__)
-        return ::send(_socket, view.data(), view.size(), _send_flags);
-#else
-        return ::send(_socket, (const char *)view.data(), view.size(), _send_flags);
-#endif
-    }));
+    return size_result(socket_call("send", [&] { return ::send(_socket, view.data(), view.size(), _send_flags); }));
 }
 
 Result<void> Socket::send_all(ArrCharView view)
@@ -814,11 +828,7 @@ Result<size_t> Socket::send_to(const sockaddr *addr, socklen_t addr_len, ArrChar
         return std::unexpected(closed_socket_error("send_to"));
 
     return size_result(socket_call("send_to", [&] {
-#if !defined(__SIHD_WINDOWS__)
         return ::sendto(_socket, view.data(), view.size(), _send_flags, addr, addr_len);
-#else
-        return ::sendto(_socket, (const char *)view.data(), view.size(), _send_flags, addr, addr_len);
-#endif
     }));
 }
 
@@ -882,6 +892,36 @@ Result<size_t> Socket::receive_from_unix(std::string & path, IArray & arr)
     if (res)
         adapt_array_size(arr, *res);
     return res;
+}
+
+void Socket::set_send_flags(int flags)
+{
+    _send_flags = flags;
+}
+
+void Socket::set_receive_flags(int flags)
+{
+    _rcv_flags = flags;
+}
+
+int Socket::domain() const
+{
+    return _domain;
+}
+
+int Socket::type() const
+{
+    return _type;
+}
+
+int Socket::protocol() const
+{
+    return _protocol;
+}
+
+int Socket::socket() const
+{
+    return _socket;
 }
 
 bool Socket::is_unix() const

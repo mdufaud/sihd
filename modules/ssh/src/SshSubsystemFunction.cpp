@@ -3,6 +3,8 @@
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::ssh
 {
 
@@ -47,11 +49,11 @@ bool SshSubsystemFunction::on_start(SshChannel *channel,
     {
         if (!result.output.empty())
         {
-            _channel->write(sihd::util::ArrCharView(result.output.data(), result.output.size()));
+            _channel->write(ArrCharView(result.output.data(), result.output.size()));
         }
         if (!result.error_output.empty())
         {
-            _channel->write_stderr(sihd::util::ArrCharView(result.error_output.data(), result.error_output.size()));
+            _channel->write_stderr(ArrCharView(result.error_output.data(), result.error_output.size()));
         }
         // exit_status + eof + close are handled by BasicSshServerHandler::on_poll()
         // via on_close() return value, since manages_channel_io() is false.
@@ -62,14 +64,10 @@ bool SshSubsystemFunction::on_start(SshChannel *channel,
 
 int SshSubsystemFunction::on_data([[maybe_unused]] const void *data, [[maybe_unused]] size_t len)
 {
-    // Callback mode is synchronous - no data expected after start
     return 0;
 }
 
-void SshSubsystemFunction::on_resize([[maybe_unused]] const WinSize & winsize)
-{
-    // No-op: callback mode doesn't use PTY
-}
+void SshSubsystemFunction::on_resize([[maybe_unused]] const WinSize & winsize) {}
 
 void SshSubsystemFunction::on_eof()
 {
@@ -81,6 +79,31 @@ int SshSubsystemFunction::on_close()
     SIHD_LOG(debug, "SshSubsystemFunction: close");
     _channel = nullptr;
     return _exit_code;
+}
+
+const std::string & SshSubsystemFunction::command() const
+{
+    return _command;
+}
+
+int SshSubsystemFunction::stdout_fd() const
+{
+    return -1;
+}
+
+int SshSubsystemFunction::stderr_fd() const
+{
+    return -1;
+}
+
+SshChannel *SshSubsystemFunction::channel() const
+{
+    return _channel;
+}
+
+bool SshSubsystemFunction::is_running() const
+{
+    return false;
 }
 
 } // namespace sihd::ssh

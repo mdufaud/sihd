@@ -2,6 +2,7 @@
 #include <libloaderapi.h>
 #include <windows.h>
 
+#include <array>
 #include <iterator>
 
 #include <sihd/sys/DynLib.hpp>
@@ -29,8 +30,7 @@ std::string get_error()
 
 #if !defined(SIHD_STATIC)
 
-// GetLastError codes share mingw errno numbers (ERROR_MOD_NOT_FOUND == ECONNRESET):
-// error_errno cannot classify them, the errno meaning would win
+// GetLastError codes share mingw errno numbers (ERROR_MOD_NOT_FOUND == ECONNRESET): error_errno misclassifies
 bool is_not_found_error(int code)
 {
     return code == ERROR_FILE_NOT_FOUND || code == ERROR_PATH_NOT_FOUND || code == ERROR_MOD_NOT_FOUND
@@ -57,14 +57,14 @@ bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
+Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
 {
 #if !defined(SIHD_STATIC)
     this->close();
-    constexpr std::string_view patterns[] = {"lib{}.dll", "{}.dll", "{}"};
-    for (size_t i = 0; i < std::size(patterns); ++i)
+    constexpr auto patterns = std::to_array<std::string_view>({"lib{}.dll", "{}.dll", "{}"});
+    for (const std::string_view pattern : patterns)
     {
-        if (try_load_lib(fmt::format(fmt::runtime(patterns[i]), lib_name), &_handle, _name))
+        if (try_load_lib(fmt::format(fmt::runtime(pattern), lib_name), &_handle, _name))
             return {};
     }
     return lib_error();
@@ -73,7 +73,7 @@ sihd::util::Result<void> DynLib::open([[maybe_unused]] const std::string & lib_n
 #endif
 }
 
-sihd::util::Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
+Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(SIHD_STATIC)
     if (this->is_open() == false)

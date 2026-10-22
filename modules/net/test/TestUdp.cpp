@@ -20,9 +20,9 @@ using namespace sihd::net;
 class TestUdp: public ::testing::Test
 {
     protected:
-        TestUdp() { sihd::util::LoggerManager::stream(); }
+        TestUdp() { LoggerManager::stream(); }
 
-        virtual ~TestUdp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestUdp() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -31,24 +31,24 @@ class TestUdp: public ::testing::Test
 
 TEST_F(TestUdp, test_udp_receiver_run)
 {
-    sihd::util::ArrInt array_send = {1, 2, 3, 4, 5, 6};
-    sihd::util::ArrInt array_rcv(array_send.size());
+    ArrInt array_send = {1, 2, 3, 4, 5, 6};
+    ArrInt array_rcv(array_send.size());
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
     EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}).has_value());
     EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}).has_value());
 
-    sihd::util::Synchronizer start_sync(2);
+    Synchronizer start_sync(2);
     ssize_t receive_ret = -1;
-    sihd::util::Handler<INetReceiver *> handler([&receive_ret, &array_rcv, &start_sync](INetReceiver *rcv) {
+    Handler<INetReceiver *> handler([&receive_ret, &array_rcv, &start_sync](INetReceiver *rcv) {
         receive_ret = (ssize_t)rcv->receive(array_rcv).value_or(0);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(' '), array_rcv.byte_size());
         (void)start_sync.sync(std::chrono::milliseconds(500));
     });
     receiver.add_observer(&handler);
     receiver.set_poll_timeout(1);
-    sihd::util::Worker worker([&receiver] { return receiver.start(); });
+    Worker worker([&receiver] { return receiver.start(); });
     SIHD_LOG(debug, "Starting receiver");
     EXPECT_TRUE(worker.start_sync_worker("receiver"));
 
@@ -65,7 +65,7 @@ TEST_F(TestUdp, test_udp_receiver_run)
 
 TEST_F(TestUdp, test_udp_sendrcv_connect)
 {
-    sihd::util::ArrChar array_rcv(40);
+    ArrChar array_rcv(40);
 
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
@@ -77,7 +77,7 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
     EXPECT_TRUE(receiver.socket().set_blocking(false));
     EXPECT_TRUE(sender.socket_opened());
 
-    sihd::util::Handler<INetReceiver *> handler([&array_rcv](INetReceiver *rcv) {
+    Handler<INetReceiver *> handler([&array_rcv](INetReceiver *rcv) {
         (void)rcv->receive(array_rcv);
         SIHD_LOG(debug, "Data received: {} - {} bytes", array_rcv.str(), array_rcv.byte_size());
     });
@@ -101,7 +101,7 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
 TEST_F(TestUdp, test_udp_sendrcv_broadcast)
 {
     const char helloworld[] = "hello world";
-    sihd::util::ArrChar array_rcv(40);
+    ArrChar array_rcv(40);
 
     UdpSender sender("udp-sender");
     EXPECT_TRUE(sender.open_socket().has_value());
@@ -113,7 +113,6 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     EXPECT_TRUE(receiver.open_and_bind(any_ip).has_value());
     EXPECT_TRUE(receiver.socket_opened());
 
-    // send to broadcast ip
     EXPECT_EQ(sender.send_to({"127.255.255.255", 4253}, helloworld), (ssize_t)strlen(helloworld));
 
     IpAddr iprcv;
@@ -128,10 +127,10 @@ TEST_F(TestUdp, test_udp_receiver_poll_timeout_and_unbound_errors)
 {
     UdpReceiver receiver("udp-receiver");
 
-    sihd::util::ArrChar array_rcv(64);
+    ArrChar array_rcv(64);
     auto unbound = receiver.receive(array_rcv);
     ASSERT_FALSE(unbound.has_value());
-    EXPECT_EQ(unbound.error().code, sihd::util::ErrorCode::closed);
+    EXPECT_EQ(unbound.error().code, ErrorCode::closed);
 
     EXPECT_FALSE(receiver.poll(20));
 
@@ -178,7 +177,7 @@ TEST_F(TestUdp, test_udp_unix_roundtrip)
     ASSERT_TRUE(sender.open_unix_and_connect(path).has_value());
 
     const char helloworld[] = "hello unix dgram";
-    sihd::util::ArrChar array_rcv(64);
+    ArrChar array_rcv(64);
     ASSERT_EQ(sender.send(helloworld), (ssize_t)strlen(helloworld));
     EXPECT_EQ(receiver.receive(array_rcv), (ssize_t)strlen(helloworld));
     EXPECT_TRUE(array_rcv.is_equal(helloworld));

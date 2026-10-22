@@ -19,25 +19,19 @@ namespace sihd::csv::utils
 using CsvLine = std::vector<std::string>;
 using CsvData = std::vector<CsvLine>;
 
-// encloses with quotes and escape quotes in string with another quote
-// escape_str("hello \"world\"") -> "\"hello \"\"world\"\"\"
 std::string escape_str(std::string_view view);
 
-// get rows/columns from a CSV string
 CsvData csv_from_string(std::string_view content, bool remove_header, int delimiter = ',', char comment_char = '#');
 
-// get rows/columns from CSV file
 sihd::util::Result<CsvData>
     read_csv(const std::string & path, bool remove_header, int delimiter = ',', char comment_char = '#');
 
-// check if tuple size and header size is the same
 template <typename... Args>
 bool same_number_of_columns(const std::vector<std::string> & columns_tags, const std::vector<std::tuple<Args...>> &)
 {
     return columns_tags.size() == sizeof...(Args);
 }
 
-// get a string from rows/columns
 template <typename... Args>
 std::string csv_to_str(const std::vector<std::string> & columns_tags,
                        const std::vector<std::tuple<Args...>> & rows,

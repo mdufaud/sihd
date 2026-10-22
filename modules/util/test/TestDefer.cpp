@@ -19,7 +19,7 @@ TEST_F(TestDefer, test_defer_calls_on_scope_exit)
 {
     bool called = false;
     {
-        Defer d([&called] { called = true; });
+        Defer defer([&called] { called = true; });
         EXPECT_FALSE(called);
     }
     EXPECT_TRUE(called);
@@ -39,8 +39,8 @@ TEST_F(TestDefer, test_defer_cancel)
 {
     bool called = false;
     {
-        Defer d([&called] { called = true; });
-        d.cancel();
+        Defer defer([&called] { called = true; });
+        defer.cancel();
         EXPECT_FALSE(called);
     }
     EXPECT_FALSE(called);

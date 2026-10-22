@@ -16,9 +16,9 @@ using namespace sihd::util;
 class TestProviders: public ::testing::Test
 {
     protected:
-        TestProviders() { sihd::util::LoggerManager::stream(); }
+        TestProviders() { LoggerManager::stream(); }
 
-        virtual ~TestProviders() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestProviders() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -48,9 +48,9 @@ TEST_F(TestProviders, test_provider_fun)
         return true;
     });
 
-    int a = 0;
-    EXPECT_TRUE(provider.provide(&a));
-    EXPECT_EQ(a, 10);
+    int value = 0;
+    EXPECT_TRUE(provider.provide(&value));
+    EXPECT_EQ(value, 10);
 }
 
 TEST_F(TestProviders, test_provider_struct)

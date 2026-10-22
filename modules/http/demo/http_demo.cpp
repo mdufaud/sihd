@@ -1,5 +1,3 @@
-#include <unistd.h> // usleep
-
 #include <thread>
 
 #include <sihd/http/HttpServer.hpp>
@@ -90,21 +88,19 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 HttpRequest::Put);
         }
 
-        // IWebsocketHandler
-
         void on_open(std::string_view protocol_name)
         {
             SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
         };
 
-        bool on_read(const sihd::util::ArrChar & array)
+        bool on_read(const ArrChar & array)
         {
             SIHD_LOG(debug, "Read from client websocket: {}", array.str());
             _client_wrote = true;
             return true;
         };
 
-        bool on_write(sihd::util::ArrChar & array, WriteProtocol & protocol)
+        bool on_write(ArrChar & array, WriteProtocol & protocol)
         {
             if (_client_wrote)
             {
@@ -127,13 +123,14 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         }
 
         bool _client_wrote = false;
-        // websocket
         WebsocketHandler _websocket_handler;
-        // webservice
         WebService *_webservice;
 };
 
-static void http_test(sihd::util::CliApp & app)
+namespace
+{
+
+void http_test(CliApp & app)
 {
     SimpleHttpServer server;
 
@@ -155,6 +152,8 @@ static void http_test(sihd::util::CliApp & app)
     server.stop();
     server_thread.join();
 }
+
+} // namespace
 
 } // namespace demo
 

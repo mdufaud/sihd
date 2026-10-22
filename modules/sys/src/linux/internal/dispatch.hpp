@@ -6,8 +6,7 @@
 namespace sihd::sys::internal
 {
 
-// Calls the session-matching backend first, the other one on failure; the
-// session backend's error wins when both fail.
+// Calls the session-matching backend first, the other on failure; the session backend's error wins
 template <typename Fn, typename... Args>
 std::invoke_result_t<Fn, Args...> try_first(bool wayland_first, Fn wayland_fn, Fn x11_fn, Args &&...args)
 {

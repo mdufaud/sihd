@@ -10,26 +10,13 @@
 namespace test
 {
 
-// one interpreter for the whole binary: pybind11 does not support finalizing
-// then re-initializing (internals are freed, next get_internals is use-after-free).
-// Owned by a gtest environment so the finalization runs inside main, before the
-// leak check.
+// one interpreter per binary: pybind11 cannot re-initialize after finalize
 class __attribute__((visibility("hidden"))) PyEnvironment: public ::testing::Environment
 {
     public:
-        void SetUp() override
-        {
-            _interpreter = std::make_unique<pybind11::scoped_interpreter>();
-            _current = _interpreter.get();
-        }
+        void SetUp() override { _interpreter = std::make_unique<pybind11::scoped_interpreter>(); }
 
-        void TearDown() override
-        {
-            _current = nullptr;
-            _interpreter.reset();
-        }
-
-        inline static pybind11::scoped_interpreter *_current = nullptr;
+        void TearDown() override { _interpreter.reset(); }
 
     private:
         std::unique_ptr<pybind11::scoped_interpreter> _interpreter;
@@ -40,10 +27,9 @@ inline const int py_env_registered = [] {
     return 0;
 }();
 
-inline pybind11::scoped_interpreter & py_interpreter()
+inline void require_py_environment()
 {
     (void)py_env_registered;
-    return *PyEnvironment::_current;
 }
 
 } // namespace test

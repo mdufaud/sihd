@@ -120,7 +120,7 @@ TEST_F(TestLogFormatter, test_logformatter_refused_patterns)
     };
     for (const std::string & pattern : bad_patterns)
     {
-        const sihd::util::Result<void> res = formatter.set_pattern(pattern);
+        const Result<void> res = formatter.set_pattern(pattern);
         ASSERT_FALSE(res.has_value());
         EXPECT_NE(res.error().message.find("at "), std::string::npos) << pattern;
     }

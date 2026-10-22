@@ -23,39 +23,41 @@ SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::core;
 
-std::mutex LuaCoreApi::_handler_map_mutex;
-std::map<lua_State *, std::unique_ptr<LuaCoreApi::LuaChannelHandler>> LuaCoreApi::_handler_map;
+namespace
+{
+
+std::mutex handler_map_mutex;
+std::map<lua_State *, std::unique_ptr<LuaCoreApi::LuaChannelHandler>> handler_map;
+
+} // namespace
 
 LuaCoreApi::LuaChannelHandler *LuaCoreApi::get_handler(lua_State *state)
 {
-    std::lock_guard l(_handler_map_mutex);
-    auto it = _handler_map.find(state);
-    if (it != _handler_map.end())
+    std::lock_guard lock(handler_map_mutex);
+    auto it = handler_map.find(state);
+    if (it != handler_map.end())
         return it->second.get();
     return nullptr;
 }
 
 void LuaCoreApi::unload(Vm & vm)
 {
-    std::lock_guard l(_handler_map_mutex);
-    _handler_map.erase(vm.lua_state());
+    std::lock_guard lock(handler_map_mutex);
+    handler_map.erase(vm.lua_state());
 }
 
 void LuaCoreApi::load(Vm & vm)
 {
-    // Create a handler for this VM
     {
-        std::lock_guard l(_handler_map_mutex);
-        _handler_map[vm.lua_state()] = std::make_unique<LuaChannelHandler>(vm.lua_state());
+        std::lock_guard lock(handler_map_mutex);
+        handler_map[vm.lua_state()] = std::make_unique<LuaChannelHandler>(vm.lua_state());
     }
 
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("core")
-        .deriveClass<Device, sihd::util::Node>("Device")
-        // Configurable
+        .deriveClass<Device, Node>("Device")
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Device>)
-        // AChannelContainer
         .addFunction(
             "find_channel",
             +[](Device *self, const std::string & name) -> Channel * {
@@ -85,16 +87,15 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("device_state_str", &Device::device_state_str)
         .addFunction(
             "service_ctrl",
-            +[](Device *self) -> sihd::util::ServiceController * {
+            +[](Device *self) -> ServiceController * {
                 // service_ctrl() is public on AService (protected override on Device)
-                return dynamic_cast<sihd::util::ServiceController *>(
-                    static_cast<sihd::util::AService *>(self)->service_ctrl());
+                return dynamic_cast<ServiceController *>(static_cast<AService *>(self)->service_ctrl());
             })
         .endClass()
         .deriveClass<Core, Device>("Core")
         .addConstructorFrom<SmartNodePtr<Core>, void(const std::string &, Node *)>()
         .endClass()
-        .deriveClass<Channel, sihd::util::Named>("Channel")
+        .deriveClass<Channel, Named>("Channel")
         .addConstructorFrom<SmartNodePtr<Channel>, void(const std::string &, const std::string &, size_t, Node *)>()
         .addFunction("set_write_on_change", &Channel::set_write_on_change)
         .addFunction("notify", &Channel::notify)
@@ -103,7 +104,7 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("capacity", &Channel::capacity)
         .addFunction("reserve", &Channel::reserve)
         .addFunction("resize", &Channel::resize)
-        .addFunction("array", static_cast<const sihd::util::IArray *(Channel::*)() const>(&Channel::array))
+        .addFunction("array", static_cast<const IArray *(Channel::*)() const>(&Channel::array))
         .addFunction(
             "set_observer",
             +[](Channel *self, luabridge::LuaRef fun, lua_State *state) {
@@ -221,7 +222,7 @@ void LuaCoreApi::load(Vm & vm)
                 return ret;
             })
         .endClass()
-        .deriveClass<ACoreObject, sihd::util::Named>("ACoreObject")
+        .deriveClass<ACoreObject, Named>("ACoreObject")
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<ACoreObject>)
         .addFunction("setup", static_cast<bool (ACoreObject::*)()>(&ACoreService::setup))
         .addFunction("init", static_cast<bool (ACoreObject::*)()>(&ACoreService::init))
@@ -232,8 +233,8 @@ void LuaCoreApi::load(Vm & vm)
         .endClass()
         .beginClass<ChannelWaiter>("ChannelWaiter")
         .addConstructor<void (*)(Channel *)>()
-        .addFunction("observe", &sihd::util::ObserverWaiter<Channel>::observe)
-        .addFunction("clear", &sihd::util::ObserverWaiter<Channel>::clear)
+        .addFunction("observe", &ObserverWaiter<Channel>::observe)
+        .addFunction("clear", &ObserverWaiter<Channel>::clear)
         .addFunction(
             "wait",
             +[](ChannelWaiter *self, uint32_t notifications, lua_State *state) {
@@ -262,8 +263,8 @@ void LuaCoreApi::load(Vm & vm)
                 LuaGilRelease release(state);
                 return self->prev_wait_for(dur, notifications);
             })
-        .addFunction("observing", &sihd::util::ObserverWaiter<Channel>::observing)
-        .addFunction("notifications", &sihd::util::ObserverWaiter<Channel>::notifications)
+        .addFunction("observing", &ObserverWaiter<Channel>::observing)
+        .addFunction("notifications", &ObserverWaiter<Channel>::notifications)
         .endClass()
         .deriveClass<DevFilter, Device>("DevFilter")
         .addConstructorFrom<SmartNodePtr<DevFilter>, void(const std::string &, Node *)>()
@@ -291,10 +292,6 @@ void LuaCoreApi::load(Vm & vm)
         .endNamespace();
 }
 
-/* ************************************************************************* */
-/* LuaChannelHandler */
-/* ************************************************************************* */
-
 LuaCoreApi::LuaChannelHandler::LuaChannelHandler(lua_State *state): _state(state) {}
 
 LuaCoreApi::LuaChannelHandler::~LuaChannelHandler() = default;
@@ -304,12 +301,10 @@ void LuaCoreApi::LuaChannelHandler::handle(Channel *c)
     // GIL before _mutex_map: set_observer takes the map with the GIL held
     LuaGilGuard guard(_state);
     {
-        std::lock_guard l(_mutex_map);
-        // find lua method
+        std::lock_guard lock(_mutex_map);
         auto it = _map_handler.find(c);
         if (it == _map_handler.end())
             return;
-        // handle channel
         it->second.thread_runner.call_lua_method_noret<Channel *>(c);
     }
 }
@@ -317,24 +312,20 @@ void LuaCoreApi::LuaChannelHandler::handle(Channel *c)
 void LuaCoreApi::LuaChannelHandler::add_channel_obs(Channel *c, lua_State *state, luabridge::LuaRef ref)
 {
     LuaSingleChannelHandler lsch(state, ref);
-    // make non owning LuaVm from lua_State
     Vm current_vm(state);
-    // create a thread from current stack
     lua_State *new_thread_state = current_vm.new_luathread();
     if (new_thread_state == nullptr)
         return;
-    // set new thread's lua_State to LuaThreadRunner
     lsch.thread_runner.new_lua_state(new_thread_state);
     {
-        // set infos to handling map
-        std::lock_guard l(_mutex_map);
+        std::lock_guard lock(_mutex_map);
         _map_handler.insert({c, std::move(lsch)});
     }
 }
 
 void LuaCoreApi::LuaChannelHandler::remove_channel_obs(Channel *c)
 {
-    std::lock_guard l(_mutex_map);
+    std::lock_guard lock(_mutex_map);
     _map_handler.erase(c);
 }
 

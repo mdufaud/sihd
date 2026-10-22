@@ -1,3 +1,5 @@
+#include <array>
+
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpStatus.hpp>
@@ -61,7 +63,7 @@ std::string method_list_to_header(const std::vector<HttpRequest::RequestType> & 
     return ret;
 }
 
-constexpr RequestHeader request_headers[] = {
+constexpr std::array<RequestHeader, 9> request_headers = {{
     {WSI_TOKEN_HOST, "host"},
     {WSI_TOKEN_HTTP_CONTENT_TYPE, "content-type"},
     {WSI_TOKEN_HTTP_CONTENT_LENGTH, "content-length"},
@@ -71,7 +73,7 @@ constexpr RequestHeader request_headers[] = {
     {WSI_TOKEN_HTTP_AUTHORIZATION, "authorization"},
     {WSI_TOKEN_HTTP_COOKIE, "cookie"},
     {WSI_TOKEN_HTTP_REFERER, "referer"},
-};
+}};
 
 bool has_line_break_or_nul(std::string_view str)
 {
@@ -756,7 +758,7 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
     size_t first_slash_idx = path_view.find('/');
     if (first_slash_idx == std::string_view::npos)
         return false;
-    std::string rest_of_path(path_view.substr(first_slash_idx + 1));
+    std::string service_path(path_view.substr(first_slash_idx + 1));
 
     {
         const std::optional<std::string_view> content_type = request.http_header().content_type();
@@ -779,23 +781,23 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
     bool called = false;
     try
     {
-        called = webservice->call(rest_of_path, request, response);
+        called = webservice->call(service_path, request, response);
     }
     catch (const std::exception & error)
     {
-        SIHD_LOG(error, "HttpServer: handler of '{}' threw: {}", rest_of_path, error.what());
+        SIHD_LOG(error, "HttpServer: handler of '{}' threw: {}", service_path, error.what());
         this->send_http_error(session, HttpStatus::InternalServerError);
         return true;
     }
     if (called == false)
     {
-        const std::vector<HttpRequest::RequestType> allowed = webservice->allowed_methods(rest_of_path);
+        const std::vector<HttpRequest::RequestType> allowed = webservice->allowed_methods(service_path);
         if (allowed.empty())
             return false;
         SIHD_LOG(debug,
                  "HttpServer: {} not allowed on '{}'",
                  HttpRequest::type_str(request.request_type()),
-                 rest_of_path);
+                 service_path);
         this->send_http_error(session, HttpStatus::MethodNotAllowed, method_list_to_header(allowed));
         return true;
     }
@@ -824,7 +826,7 @@ HttpServer::Impl::AuthResult HttpServer::Impl::parse_authorization(std::string_v
     }
     else if (auth_header_value.starts_with(basic_prefix))
     {
-        const auto decoded = sihd::util::str::from_base64(auth_header_value.substr(basic_prefix.size()));
+        const auto decoded = str::from_base64(auth_header_value.substr(basic_prefix.size()));
         if (!decoded)
             SIHD_LOG(warning, "HttpServer: could not decode the basic authorization header");
         else

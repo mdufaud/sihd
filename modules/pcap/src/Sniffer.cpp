@@ -7,8 +7,8 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/time.hpp>
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum sihd::util::ErrorCode;
 
 namespace sihd::pcap
 {
@@ -29,8 +29,8 @@ SIHD_REGISTER_FACTORY(Sniffer)
 
 SIHD_LOGGER;
 
-Sniffer::Sniffer(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
+Sniffer::Sniffer(const std::string & name, Node *parent):
+    Named(name, parent),
     _impl_ptr(std::make_unique<Impl>()),
     _active(false),
     _max_sniff(-1),
@@ -62,13 +62,12 @@ Sniffer::~Sniffer()
     this->close();
 }
 
-sihd::util::Result<void> Sniffer::open(const std::string & source)
+Result<void> Sniffer::open(const std::string & source)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     _impl_ptr->pcap_ptr = pcap_create(source.c_str(), errbuf);
     if (_impl_ptr->pcap_ptr == nullptr)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot create capture on '{}': {}", source, errbuf));
+        return std::unexpected(Error(ErrorCode::io_error, "cannot create capture on '{}': {}", source, errbuf));
     return {};
 }
 
@@ -94,12 +93,12 @@ bool Sniffer::is_active() const
     return _active;
 }
 
-sihd::util::Result<void> Sniffer::activate()
+Result<void> Sniffer::activate()
 {
     int ret = pcap_activate(_impl_ptr->pcap_ptr);
     if (ret == PCAP_ERROR)
     {
-        auto error = sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot activate capture: {}", this->error());
+        auto error = Error(ErrorCode::io_error, "cannot activate capture: {}", this->error());
         this->close();
         return std::unexpected(std::move(error));
     }
@@ -110,8 +109,7 @@ sihd::util::Result<void> Sniffer::activate()
     if (ret < 0)
     {
         this->close();
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::io_error, "cannot activate capture: {}", utils::status_str(ret)));
+        return std::unexpected(Error(ErrorCode::io_error, "cannot activate capture: {}", utils::status_str(ret)));
     }
     return {};
 }
@@ -151,15 +149,15 @@ bool Sniffer::sniff()
     return ret == 0;
 }
 
-sihd::util::Result<bool> Sniffer::read_next()
+Result<bool> Sniffer::read_next()
 {
     if (this->is_open() == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "not open"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "not open"));
     struct pcap_pkthdr *hdr;
     u_char *data;
     int ret = pcap_next_ex(_impl_ptr->pcap_ptr, &hdr, (const u_char **)(&data));
     if (ret == PCAP_ERROR)
-        return std::unexpected(sihd::util::Error(io_error, "{}", this->error()));
+        return std::unexpected(Error(io_error, "{}", this->error()));
     if (ret > 0)
         this->_new_packet(hdr, data);
     return ret > 0;
@@ -177,45 +175,49 @@ Result<size_t> Sniffer::inject(ArrCharView frame)
     return static_cast<size_t>(ret);
 }
 
-// data retrieval
-
 void Sniffer::_new_packet(const void *hdr, const void *bytes)
 {
-    const auto *h = static_cast<const struct pcap_pkthdr *>(hdr);
+    const auto *pkt_hdr = static_cast<const struct pcap_pkthdr *>(hdr);
     const auto *data = static_cast<const u_char *>(bytes);
     if (_nano_precision)
-        _pkt_nano_timestamp = sihd::util::Timestamp(sihd::util::time::nano_tv(h->ts));
+        _pkt_nano_timestamp = Timestamp(time::nano_tv(pkt_hdr->ts));
     else
-        _pkt_nano_timestamp = sihd::util::Timestamp(sihd::util::time::tv(h->ts));
-    _array.resize(h->len);
-    _array.copy_from_bytes(data, h->len);
+        _pkt_nano_timestamp = Timestamp(time::tv(pkt_hdr->ts));
+    _array.resize(pkt_hdr->len);
+    _array.copy_from_bytes(data, pkt_hdr->len);
     this->notify_observers(this);
 }
 
-const sihd::util::ArrByte & Sniffer::data() const
+const ArrByte & Sniffer::data() const
 {
     return _array;
 }
 
-bool Sniffer::get_read_data(sihd::util::ArrCharView & view) const
+const ArrByte & Sniffer::array() const
+{
+    return _array;
+}
+
+bool Sniffer::get_read_data(ArrCharView & view) const
 {
     view = {_array.buf(), _array.byte_size()};
     return true;
 }
 
-sihd::util::Result<sihd::util::Timestamp> Sniffer::get_read_timestamp() const
+Result<Timestamp> Sniffer::get_read_timestamp() const
 {
     return _pkt_nano_timestamp;
 }
 
-// polling utilities
-
-int Sniffer::pollable_fd()
+Result<int> Sniffer::pollable_fd()
 {
 #if !defined(__SIHD_WINDOWS__)
-    return pcap_get_selectable_fd(_impl_ptr->pcap_ptr);
+    const int fd = pcap_get_selectable_fd(_impl_ptr->pcap_ptr);
+    if (fd < 0)
+        return std::unexpected(Error(not_found, "no selectable fd"));
+    return fd;
 #else
-    return -1;
+    return std::unexpected(Error(not_supported, "no selectable fd on windows"));
 #endif
 }
 
@@ -232,8 +234,6 @@ std::optional<Sniffer::Stats> Sniffer::stats()
     this->_log_if_error(PCAP_ERROR);
     return std::nullopt;
 }
-
-// error utilities
 
 std::string Sniffer::error()
 {
@@ -258,19 +258,17 @@ void Sniffer::_log_if_error(int ret)
     }
 }
 
-// helpers
-
 std::vector<int> Sniffer::datalinks()
 {
     std::vector<int> ret;
-    int *lst = nullptr;
-    int n = pcap_list_datalinks(_impl_ptr->pcap_ptr, &lst);
-    if (n >= 0)
+    int *list = nullptr;
+    int count = pcap_list_datalinks(_impl_ptr->pcap_ptr, &list);
+    if (count >= 0)
     {
-        ret.reserve(n);
-        for (int i = 0; i < n; ++i)
-            ret.push_back(lst[i]);
-        pcap_free_datalinks(lst);
+        ret.reserve(count);
+        for (int i = 0; i < count; ++i)
+            ret.push_back(list[i]);
+        pcap_free_datalinks(list);
     }
     else
         SIHD_LOG(error, "Sniffer: {}", this->error());
@@ -280,21 +278,19 @@ std::vector<int> Sniffer::datalinks()
 std::vector<int> Sniffer::timestamp_types()
 {
     std::vector<int> ret;
-    int *lst = nullptr;
-    int n = pcap_list_tstamp_types(_impl_ptr->pcap_ptr, &lst);
-    if (n >= 0)
+    int *list = nullptr;
+    int count = pcap_list_tstamp_types(_impl_ptr->pcap_ptr, &list);
+    if (count >= 0)
     {
-        ret.reserve(n);
-        for (int i = 0; i < n; ++i)
-            ret.push_back(lst[i]);
-        pcap_free_tstamp_types(lst);
+        ret.reserve(count);
+        for (int i = 0; i < count; ++i)
+            ret.push_back(list[i]);
+        pcap_free_tstamp_types(list);
     }
     else
         SIHD_LOG(error, "Sniffer: {}", this->error());
     return ret;
 }
-
-// getters
 
 bool Sniffer::can_monitor()
 {
@@ -337,8 +333,6 @@ int Sniffer::datalink()
     return pcap_datalink(_impl_ptr->pcap_ptr);
 }
 
-// settings
-
 bool Sniffer::set_filter(const std::string & filter)
 {
     bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
@@ -372,9 +366,9 @@ bool Sniffer::set_direction(std::string_view direction)
     return ret == 0;
 }
 
-bool Sniffer::set_max_sniff(size_t n)
+bool Sniffer::set_max_sniff(size_t max)
 {
-    _max_sniff = n;
+    _max_sniff = max;
     return true;
 }
 

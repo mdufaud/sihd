@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <iterator>
 #include <stdexcept>
@@ -61,15 +62,15 @@ bool print_completion_tip(const std::vector<std::string> & args, const char *pro
     return false;
 }
 
-constexpr std::string_view sink_entry_keys[] = {"logger",
-                                                "plugin",
-                                                "name",
-                                                "source_regex",
-                                                "thread_regex",
-                                                "message_regex",
-                                                "level_lower",
-                                                "level_higher",
-                                                "level_eq"};
+constexpr std::array<std::string_view, 9> sink_entry_keys = {"logger",
+                                                             "plugin",
+                                                             "name",
+                                                             "source_regex",
+                                                             "thread_regex",
+                                                             "message_regex",
+                                                             "level_lower",
+                                                             "level_higher",
+                                                             "level_eq"};
 
 constexpr uint64_t key(CliApp::State state, CliApp::Event evt)
 {
@@ -153,7 +154,7 @@ int CliApp::run(int argc, char **argv)
         SIHD_LOG(error, "CliApp: invalid argument vector");
         return EXIT_FAILURE;
     }
-    std::vector<std::string> args(argv + 1, argv + argc); // argv[0] is the program name
+    std::vector<std::string> args(argv + 1, argv + argc);
     this->_transition(Event::boot);
     int help_status = this->_intercept_help(args);
     if (help_status >= 0)
@@ -161,6 +162,7 @@ int CliApp::run(int argc, char **argv)
         this->_transition(Event::halt);
         return help_status;
     }
+
     if (print_completion_tip(args, argv[0]))
     {
         this->_transition(Event::halt);
@@ -183,6 +185,7 @@ int CliApp::run(int argc, char **argv)
         this->_transition(Event::halt);
         return status;
     }
+
     // precedence: struct (current values) -> json -> cli -> --set
     this->root().snapshot_cli_bindings(false);
     if (_conf_loader)
@@ -204,6 +207,7 @@ int CliApp::run(int argc, char **argv)
             if (!parsed)
             {
                 SIHD_LOG(error, "CliApp: conf loading failed: {}", parsed.error());
+
                 this->_transition(Event::fail);
                 return EXIT_FAILURE;
             }
@@ -226,6 +230,7 @@ int CliApp::run(int argc, char **argv)
         this->_transition(Event::fail);
         return EXIT_FAILURE;
     }
+
     if (_options.setup_logging && this->install_logging() == false)
     {
         this->_transition(Event::fail);
@@ -272,6 +277,7 @@ bool CliApp::reload()
         SIHD_LOG(error, "CliApp: conf reload failed: {}", parsed.error());
         return false;
     }
+
     if (this->apply_conf(*parsed) == false)
     {
         SIHD_LOG(error, "CliApp: conf reload failed");
@@ -358,6 +364,7 @@ void CliApp::_transition(Event evt)
         case Event::terminate:
             this->on_terminate();
             break;
+
         case Event::halt:
             this->on_halt();
             break;
@@ -370,7 +377,7 @@ void CliApp::_transition(Event evt)
 
 bool CliApp::_check_logging_conf(const sihd::json::Json & logging)
 {
-    static constexpr std::string_view logging_keys[] = {"console", "level", "sinks"};
+    static constexpr std::array<std::string_view, 3> logging_keys = {"console", "level", "sinks"};
     if (logging.is_object() == false)
     {
         SIHD_LOG(error, "CliApp: conf 'logging' must be an object");
@@ -389,6 +396,7 @@ bool CliApp::_check_logging_conf(const sihd::json::Json & logging)
             SIHD_LOG(error, "CliApp: conf 'logging.console' must be a boolean");
             return false;
         }
+
         if (conf_key == "level")
         {
             const sihd::json::Json & level = logging["level"];
@@ -424,6 +432,7 @@ bool CliApp::_check_sinks_conf(const sihd::json::Json & sinks)
             SIHD_LOG(error, "CliApp: conf 'logging.sinks' entries must name a string 'logger'");
             return false;
         }
+
         if (entry.contains("plugin") && entry["plugin"].is_string() == false)
         {
             SIHD_LOG(error, "CliApp: conf 'logging.sinks.plugin' must be a string");
@@ -441,6 +450,7 @@ bool CliApp::_check_sinks_conf(const sihd::json::Json & sinks)
             if (std::find(std::begin(sink_entry_keys), std::end(sink_entry_keys), entry_key)
                 == std::end(sink_entry_keys))
                 continue;
+
             if (entry_it.value().is_string() == false)
             {
                 SIHD_LOG(error, "CliApp: conf 'logging.sinks.{}' must be a string", entry_key);
@@ -454,6 +464,7 @@ bool CliApp::_check_sinks_conf(const sihd::json::Json & sinks)
             }
         }
     }
+
     return true;
 }
 
@@ -512,15 +523,16 @@ bool CliApp::apply_sink_filters(ALogger *logger) const
         opts.source_regex = entry["source_regex"].get_or<std::string>("");
         opts.thread_regex = entry["thread_regex"].get_or<std::string>("");
         opts.message_regex = entry["message_regex"].get_or<std::string>("");
-        const std::pair<std::string_view, LogLevel *> level_keys[] = {
+        const std::array<std::pair<std::string_view, LogLevel *>, 3> level_keys = {{
             {"level_lower", &opts.level_lower},
             {"level_higher", &opts.level_higher},
             {"level_eq", &opts.level_eq},
-        };
+        }};
         for (const auto & [level_key, target] : level_keys)
         {
             if (entry.contains(level_key) == false)
                 continue;
+
             const std::optional<LogLevel> level = level_from_conf(entry, level_key);
             if (level.has_value() == false)
             {
@@ -556,6 +568,7 @@ bool CliApp::_install_sinks()
             SIHD_LOG(error, "CliApp: sink entry must name a 'logger'");
             return false;
         }
+
         if (this->sinks().get_child(name) != nullptr)
         {
             SIHD_LOG(error, "CliApp: duplicate sink name '{}'", name);
@@ -576,13 +589,14 @@ bool CliApp::_install_sinks()
             SIHD_LOG(error, "CliApp: cannot install logger sink '{}'", type);
             return false;
         }
+
         for (auto it = entry.begin(); it != entry.end(); ++it)
         {
             const std::string_view sink_key = it.key();
             if (std::find(std::begin(sink_entry_keys), std::end(sink_entry_keys), sink_key)
                 != std::end(sink_entry_keys))
                 continue;
-            sihd::util::Result<void> res = sink->set_conf(std::string(sink_key), it.value());
+            Result<void> res = sink->set_conf(std::string(sink_key), it.value());
             if (!res)
             {
                 SIHD_LOG(error, "CliApp: sink '{}': {}", name, res.error().message);
@@ -606,6 +620,7 @@ bool CliApp::install_logging()
     this->CliApp::uninstall_logging();
     // an install always stamps it, absent config resets to default
     LoggerManager::set_level(this->_log_level().value_or(LogLevel::debug));
+
     // the sinks conf replaces the default logger entirely
     const bool has_sinks_conf = _log_sinks_conf.is_array() && _log_sinks_conf.empty() == false;
     if (_options.default_logger && has_sinks_conf == false)

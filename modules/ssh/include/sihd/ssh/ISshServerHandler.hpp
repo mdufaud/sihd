@@ -26,7 +26,6 @@ class ISshServerHandler
         virtual bool
             on_auth_pubkey(SshServer *server, SshSession *session, std::string_view user, const SshKey & key) = 0;
 
-        // Session lifecycle
         virtual void on_session_opened(SshServer *server, SshSession *session) = 0;
         virtual void on_session_closed(SshServer *server, SshSession *session) = 0;
 
@@ -60,10 +59,10 @@ class ISshServerHandler
                                            const WinSize & size) = 0;
 
         // Called on each event loop iteration (poll child FDs, forward data, etc.)
-        virtual void on_poll([[maybe_unused]] SshServer *server) {}
+        virtual void on_poll(SshServer *server);
 
         // When true, channel data is left in libssh's buffers for the handler to read directly
-        virtual bool channel_bypasses_data_callback([[maybe_unused]] SshChannel *channel) const { return false; }
+        virtual bool channel_bypasses_data_callback(SshChannel *channel) const;
 };
 
 } // namespace sihd::ssh

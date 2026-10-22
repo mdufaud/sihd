@@ -1,6 +1,6 @@
 // clang-format off
 #include <windows.h>
-#include <sddl.h> // ConvertSidToStringSidA
+#include <sddl.h>
 // clang-format on
 
 #include <vector>
@@ -9,6 +9,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::sys::user
 {
 
@@ -16,8 +18,6 @@ SIHD_NEW_LOGGER("sihd::sys::user");
 
 static_assert(UserId::max_native_size == SECURITY_MAX_SID_SIZE,
               "BasicId inline storage must hold the largest possible SID");
-
-// === BasicId ===
 
 template <typename Tag>
 BasicId<Tag> BasicId<Tag>::from_native(const void *sid, size_t size)
@@ -77,17 +77,13 @@ bool BasicId<Tag>::operator==(const BasicId & other) const
 template class BasicId<UserTag>;
 template class BasicId<GroupTag>;
 
-// === identity ===
-
 namespace
 {
 
-// RAII around an identity token: every identity query reads from one
 class IdentityToken
 {
     public:
-        // effective identity: the thread token when impersonating, the process token otherwise -
-        // OpenThreadToken fails with ERROR_NO_TOKEN when the thread carries none
+        // effective identity: thread token when impersonating, else process token (no thread token: ERROR_NO_TOKEN)
         static IdentityToken effective(DWORD access = TOKEN_QUERY)
         {
             IdentityToken ret;
@@ -123,7 +119,6 @@ class IdentityToken
         bool valid() const { return _token != nullptr; }
         HANDLE handle() const { return _token; }
 
-        // reads a variable sized TOKEN_* structure out of the token
         std::vector<BYTE> information(TOKEN_INFORMATION_CLASS type) const
         {
             if (_token == nullptr)
@@ -150,7 +145,6 @@ Id id_from_sid(PSID sid)
     return Id::from_native(sid, GetLengthSid(sid));
 }
 
-// windows accounts are looked up by name through the local authority
 template <typename Id>
 std::optional<Id> lookup_account(std::string_view account_name)
 {
@@ -160,7 +154,6 @@ std::optional<Id> lookup_account(std::string_view account_name)
     DWORD domain_size = 0;
     SID_NAME_USE use;
 
-    // first call sizes the domain buffer
     LookupAccountNameA(nullptr, name_str.c_str(), sid.data(), &sid_size, nullptr, &domain_size, &use);
     if (domain_size == 0)
         return std::nullopt;
@@ -187,7 +180,6 @@ std::optional<std::string> lookup_name(const Id & id)
     DWORD domain_size = 0;
     SID_NAME_USE use;
 
-    // first call sizes both buffers
     LookupAccountSidA(nullptr, sid, nullptr, &name_size, nullptr, &domain_size, &use);
     if (name_size == 0)
         return std::nullopt;
@@ -311,13 +303,10 @@ bool is_root()
     return elevation.TokenIsElevated != 0;
 }
 
-// windows has no setuid: a process cannot permanently become another account.
-// see sihd::sys::Impersonation for the thread scoped, credential based counterpart.
-sihd::util::Result<void> drop_privileges([[maybe_unused]] const UserId & user_id,
-                                         [[maybe_unused]] const GroupId & group_id)
+// windows has no setuid: no permanent account switch; sihd::sys::Impersonation is the thread-scoped one
+Result<void> drop_privileges([[maybe_unused]] const UserId & user_id, [[maybe_unused]] const GroupId & group_id)
 {
-    return std::unexpected(
-        sihd::util::Error(sihd::util::ErrorCode::not_supported, "cannot drop privileges on windows"));
+    return std::unexpected(Error(ErrorCode::not_supported, "cannot drop privileges on windows"));
 }
 
 } // namespace sihd::sys::user

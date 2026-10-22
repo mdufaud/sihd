@@ -75,21 +75,18 @@ TEST(TestRateLimitFilter, test_rate_limit_filter_eviction)
     filter.set_max_entries(2);
     filter.set_clock(&clock);
 
-    const HttpFilterInfo a {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.1", .headers = {}};
-    const HttpFilterInfo b {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.2", .headers = {}};
-    const HttpFilterInfo c {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.3", .headers = {}};
+    const HttpFilterInfo client_a {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.1", .headers = {}};
+    const HttpFilterInfo client_b {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.2", .headers = {}};
+    const HttpFilterInfo client_c {.uri = "/", .method = HttpRequest::Get, .client_ip = "10.0.0.3", .headers = {}};
 
-    EXPECT_TRUE(filter.on_filter_connection(a));
-    // a consumed its budget: advancing past the window refills it to full
+    EXPECT_TRUE(filter.on_filter_connection(client_a));
     clock.advance(time::seconds(1));
-    EXPECT_TRUE(filter.on_filter_connection(b));
+    EXPECT_TRUE(filter.on_filter_connection(client_b));
 
-    // map is full: the idle (full budget) entry a is evicted for c
-    EXPECT_TRUE(filter.on_filter_connection(c));
+    EXPECT_TRUE(filter.on_filter_connection(client_c));
 
-    // a fresh a is allowed again, b is still tracked and drained
-    EXPECT_TRUE(filter.on_filter_connection(a));
-    EXPECT_FALSE(filter.on_filter_connection(b));
+    EXPECT_TRUE(filter.on_filter_connection(client_a));
+    EXPECT_FALSE(filter.on_filter_connection(client_b));
 }
 
 TEST(TestRateLimitFilter, test_rate_limit_filter_server)

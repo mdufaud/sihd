@@ -75,8 +75,8 @@ TEST_F(TestCollector, test_collector_service_lifecycle)
     Handler<Collector<int> *> handler([&](Collector<int> *) { ++notification_count; });
     collector.add_observer(&handler);
 
-    std::thread t([&collector] { collector.start(); });
-    t.join();
+    std::thread worker([&collector] { collector.start(); });
+    worker.join();
 
     EXPECT_EQ(notification_count.load(), 3);
     EXPECT_EQ(collector.data(), 30);

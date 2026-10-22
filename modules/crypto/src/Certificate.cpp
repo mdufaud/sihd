@@ -1,5 +1,7 @@
 #include <array>
 
+#include <fmt/format.h>
+
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/error.hpp>
@@ -9,7 +11,7 @@
 #include <sihd/util/time.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <arpa/inet.h> // inet_ntop
+# include <arpa/inet.h>
 #else
 # include <ws2tcpip.h>
 #endif
@@ -25,7 +27,7 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
-using sihd::util::Error;
+using namespace sihd::util;
 using enum sihd::util::ErrorCode;
 
 namespace sihd::crypto
@@ -33,6 +35,8 @@ namespace sihd::crypto
 
 namespace
 {
+
+constexpr int x509_version_3 = 2;
 
 struct X509Free
 {
@@ -92,26 +96,25 @@ std::string name_common_name(X509_NAME *name)
     return result;
 }
 
-sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
+Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 {
     if (!time)
-        return sihd::util::Timestamp(0);
+        return Timestamp(0);
     std::unique_ptr<ASN1_TIME, Asn1TimeFree> epoch(ASN1_TIME_set(nullptr, 0));
     if (epoch == nullptr)
-        return sihd::util::Timestamp(0);
+        return Timestamp(0);
     int days = 0;
     int secs = 0;
     int ok = ASN1_TIME_diff(&days, &secs, epoch.get(), time);
     if (ok != 1)
-        return sihd::util::Timestamp(0);
+        return Timestamp(0);
     int64_t total = static_cast<int64_t>(days) * 86400 + secs;
-    return sihd::util::Timestamp(sihd::util::time::seconds(total));
+    return Timestamp(time::seconds(total));
 }
 
 } // namespace
 
-sihd::util::Result<void>
-    Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
+Result<void> Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
 {
     CertOptions opts;
     opts.common_name = std::string(common_name);
@@ -119,7 +122,7 @@ sihd::util::Result<void>
     return this->generate_self_signed(key, opts);
 }
 
-sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
+Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
 {
     ERR_clear_error();
     this->clear();
@@ -132,7 +135,7 @@ sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & ke
     if (opts.days <= 0)
         return std::unexpected(Error(invalid_argument, "certificate validity must be at least 1 day"));
 
-    if (X509_set_version(cert.get(), 2) != 1) // X509 v3
+    if (X509_set_version(cert.get(), x509_version_3) != 1)
         return make_error("X509_set_version");
 
     if (opts.serial != 0)
@@ -170,7 +173,7 @@ sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & ke
         if (value.find('\0') != std::string::npos)
             return std::unexpected(Error(invalid_argument, "subject field {} contains a NUL byte", field));
         if (!add_name_entry(name, field, value))
-            return make_error("invalid subject field {}", field);
+            return make_error(fmt::format("invalid subject field {}", field));
     }
     if (X509_set_issuer_name(cert.get(), name) != 1)
         return make_error("X509_set_issuer_name");
@@ -182,7 +185,7 @@ sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & ke
     }
     if (!opts.subject_alt_names.empty())
     {
-        std::string san = sihd::util::str::join(opts.subject_alt_names, ",");
+        std::string san = str::join(opts.subject_alt_names, ",");
         std::unique_ptr<X509_EXTENSION, X509ExtFree> ext(
             X509V3_EXT_conf_nid(nullptr, nullptr, NID_subject_alt_name, const_cast<char *>(san.c_str())));
         if (ext == nullptr)
@@ -215,7 +218,7 @@ sihd::util::Result<void> Certificate::generate_self_signed(const PrivateKey & ke
     return {};
 }
 
-sihd::util::Result<void> Certificate::load_pem(std::string_view path)
+Result<void> Certificate::load_pem(std::string_view path)
 {
     ERR_clear_error();
     this->clear();
@@ -225,23 +228,23 @@ sihd::util::Result<void> Certificate::load_pem(std::string_view path)
     std::unique_ptr<X509, X509Free> cert(PEM_read_X509(fp, nullptr, nullptr, nullptr));
     fclose(fp);
     if (cert == nullptr)
-        return make_error("read PEM from '{}'", path);
+        return make_error(fmt::format("read PEM from '{}'", path));
     _handle = make_handle(cert.release());
     return {};
 }
 
-sihd::util::Result<void> Certificate::save_pem(std::string_view path) const
+Result<void> Certificate::save_pem(std::string_view path) const
 {
     ERR_clear_error();
     if (!_handle)
         return std::unexpected(Error(not_initialized, "no certificate loaded"));
     const std::string pem = this->to_pem_string();
     if (pem.empty())
-        return make_error("write PEM to '{}'", path);
+        return make_error(fmt::format("write PEM to '{}'", path));
     return sihd::sys::fs::write(std::string(path), pem);
 }
 
-sihd::util::Result<void> Certificate::load_der(const uint8_t *data, size_t len)
+Result<void> Certificate::load_der(const uint8_t *data, size_t len)
 {
     ERR_clear_error();
     this->clear();
@@ -253,7 +256,7 @@ sihd::util::Result<void> Certificate::load_der(const uint8_t *data, size_t len)
     return {};
 }
 
-sihd::util::Result<void> Certificate::load_pem_string(std::string_view pem)
+Result<void> Certificate::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
     this->clear();
@@ -324,6 +327,7 @@ std::vector<std::string> Certificate::subject_alt_names() const
         X509_get_ext_d2i(static_cast<X509 *>(_handle.get()), NID_subject_alt_name, nullptr, nullptr));
     if (!names)
         return result;
+
     int count = sk_GENERAL_NAME_num(names);
     for (int i = 0; i < count; ++i)
     {
@@ -340,9 +344,10 @@ std::vector<std::string> Certificate::subject_alt_names() const
             const ASN1_OCTET_STRING *ip = gen->d.iPAddress;
             const unsigned char *data = ASN1_STRING_get0_data(ip);
             int len = ASN1_STRING_length(ip);
+
             if (len == 4)
             {
-                result.push_back(sihd::util::str::format("IP:%u.%u.%u.%u", data[0], data[1], data[2], data[3]));
+                result.push_back(str::format("IP:%u.%u.%u.%u", data[0], data[1], data[2], data[3]));
             }
             else if (len == 16)
             {
@@ -352,21 +357,22 @@ std::vector<std::string> Certificate::subject_alt_names() const
             }
         }
     }
+
     GENERAL_NAMES_free(names);
     return result;
 }
 
-sihd::util::Timestamp Certificate::not_before() const
+Timestamp Certificate::not_before() const
 {
     if (!_handle)
-        return sihd::util::Timestamp(0);
+        return Timestamp(0);
     return asn1_time_to_timestamp(X509_get0_notBefore(static_cast<X509 *>(_handle.get())));
 }
 
-sihd::util::Timestamp Certificate::not_after() const
+Timestamp Certificate::not_after() const
 {
     if (!_handle)
-        return sihd::util::Timestamp(0);
+        return Timestamp(0);
     return asn1_time_to_timestamp(X509_get0_notAfter(static_cast<X509 *>(_handle.get())));
 }
 
@@ -397,6 +403,16 @@ bool Certificate::is_ca() const
 void Certificate::clear()
 {
     _handle.reset();
+}
+
+Certificate::operator bool() const
+{
+    return _handle != nullptr;
+}
+
+void *Certificate::native() const
+{
+    return _handle.get();
 }
 
 } // namespace sihd::crypto

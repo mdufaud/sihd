@@ -15,7 +15,7 @@ namespace
 
 std::string bytes_str(std::optional<uint64_t> bytes)
 {
-    return bytes.has_value() ? sihd::util::str::bytes_str((int64_t)*bytes) : "n/a";
+    return bytes.has_value() ? str::bytes_str((int64_t)*bytes) : "n/a";
 }
 
 std::string hz_str(std::optional<uint64_t> hz)
@@ -53,7 +53,7 @@ int main(int argc, char **argv)
         fmt::print("  max       : {}\n", hz_str(info::cpu_max_frequency()));
 
         info::CpuUsage usage;
-        sihd::util::time::msleep(200);
+        time::msleep(200);
         usage.sample();
         fmt::print("  usage     : {:.1f}%\n", usage.usage());
         fmt::print("  per core  :");

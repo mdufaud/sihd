@@ -36,6 +36,8 @@ int main(int argc, char **argv)
 
         bool show_demo_window = true;
         bool show_another_window = false;
+        float slider_value = 0.0f;
+        int click_count = 0;
 
         imgui.set_backend(&win32_backend);
         imgui.set_renderer(&dx_renderer);
@@ -44,22 +46,19 @@ int main(int argc, char **argv)
                 ImGui::ShowDemoWindow(&show_demo_window);
 
             {
-                static float f = 0.0f;
-                static int counter = 0;
-
                 ImGui::Begin("Hello, world!");
 
                 ImGui::Text("This is some useful text.");
                 ImGui::Checkbox("Demo Window", &show_demo_window);
                 ImGui::Checkbox("Another Window", &show_another_window);
 
-                ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+                ImGui::SliderFloat("float", &slider_value, 0.0f, 1.0f);
                 ImGui::ColorEdit3("clear color", (float *)&clear_color);
 
                 if (ImGui::Button("Button"))
-                    counter++;
+                    click_count++;
                 ImGui::SameLine();
-                ImGui::Text("counter = %d", counter);
+                ImGui::Text("counter = %d", click_count);
 
                 ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
                             1000.0f / ImGui::GetIO().Framerate,

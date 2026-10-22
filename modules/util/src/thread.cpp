@@ -8,13 +8,11 @@
 # include <sys/prctl.h>
 #elif defined(__SIHD_WINDOWS__)
 # include <windows.h>
-// # include <processthreadsapi.h>
 #endif
-
-using enum sihd::util::ErrorCode;
 
 namespace sihd::util::thread
 {
+using enum ErrorCode;
 
 namespace
 {
@@ -79,7 +77,7 @@ std::string id_str(pthread_t id)
     return to_id_str(id);
 }
 
-sihd::util::Result<void> set_name(const std::string & name)
+Result<void> set_name(const std::string & name)
 {
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
     const std::string subname = name.substr(0, 15);

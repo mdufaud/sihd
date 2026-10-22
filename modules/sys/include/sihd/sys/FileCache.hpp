@@ -11,7 +11,6 @@ namespace sihd::sys
 class FileCache: public sihd::util::IHandler<FileWatcher *>
 {
     public:
-        // FileCache invalidation relies on FileWatcher
         static constexpr bool supported = FileWatcher::supported;
 
         using FilePath = std::string;

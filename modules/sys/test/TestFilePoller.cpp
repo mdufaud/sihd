@@ -30,9 +30,9 @@ std::filesystem::path normalized_path(std::string path)
 class TestFilePoller: public ::testing::Test
 {
     protected:
-        TestFilePoller() { sihd::util::LoggerManager::stream(); }
+        TestFilePoller() { LoggerManager::stream(); }
 
-        virtual ~TestFilePoller() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestFilePoller() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -55,8 +55,8 @@ TEST_F(TestFilePoller, test_filepoller_created_removed_changed)
 
     const std::string file_a = watched + "/a.txt";
     {
-        std::ofstream f(file_a);
-        f << "one";
+        std::ofstream stream(file_a);
+        stream << "one";
     }
     EXPECT_TRUE(poller.run());
     ASSERT_EQ(poller.created().size(), 1u);
@@ -65,8 +65,8 @@ TEST_F(TestFilePoller, test_filepoller_created_removed_changed)
 
     time::msleep(20);
     {
-        std::ofstream f(file_a, std::ios::app);
-        f << "two";
+        std::ofstream stream(file_a, std::ios::app);
+        stream << "two";
     }
     EXPECT_TRUE(poller.run());
     ASSERT_EQ(poller.changed().size(), 1u);
@@ -80,8 +80,8 @@ TEST_F(TestFilePoller, test_filepoller_created_removed_changed)
     EXPECT_EQ(normalized_path(poller.created()[0]), normalized_path(nested));
 
     {
-        std::ofstream f(nested + "/deep.txt");
-        f << "deep";
+        std::ofstream stream(nested + "/deep.txt");
+        stream << "deep";
     }
     EXPECT_TRUE(poller.run());
     EXPECT_TRUE(poller.created().empty());
@@ -111,8 +111,8 @@ TEST_F(TestFilePoller, test_filepoller_unwatch_stops_reporting)
 
     const std::string file_b = watched + "/b.txt";
     {
-        std::ofstream f(file_b);
-        f << "reborn";
+        std::ofstream stream(file_b);
+        stream << "reborn";
     }
     EXPECT_TRUE(poller.run());
     ASSERT_EQ(poller.created().size(), 1u);

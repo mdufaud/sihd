@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <sihd/ssh/ISshSubsystemHandler.hpp>
+#include <sihd/sys/platform.hpp>
 
 namespace sihd::ssh
 {
@@ -25,9 +26,9 @@ class SshSubsystemSftp: public ISshSubsystemHandler
         {
                 std::string name;
                 std::string longname; // ls -l format
-                uint32_t permissions;
-                uint32_t uid;
-                uint32_t gid;
+                mode_t permissions;
+                uid_t uid;
+                gid_t gid;
                 uint64_t size;
                 uint64_t atime;
                 uint64_t mtime;
@@ -91,14 +92,14 @@ class SshSubsystemSftp: public ISshSubsystemHandler
         void on_eof() override;
         int on_close() override;
 
-        int stdout_fd() const override { return -1; }
-        int stderr_fd() const override { return -1; }
+        int stdout_fd() const override;
+        int stderr_fd() const override;
         SshChannel *channel() const override;
         bool is_running() const override;
         bool forward_output() override;
 
         // SFTP manages its own channel I/O via sftp_get_client_message
-        bool manages_channel_io() const override { return true; }
+        bool manages_channel_io() const override;
 
     private:
         struct Impl;

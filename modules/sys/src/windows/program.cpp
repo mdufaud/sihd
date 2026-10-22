@@ -22,7 +22,7 @@ std::string path()
     return ".";
 }
 
-sihd::util::Result<void *> find_symbol([[maybe_unused]] const std::string & symbol_name)
+Result<void *> find_symbol([[maybe_unused]] const std::string & symbol_name)
 {
 #if !defined(SIHD_STATIC)
     DWORD needed = 0;

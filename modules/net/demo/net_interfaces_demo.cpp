@@ -42,7 +42,9 @@ int main(int argc, char **argv)
                 fmt::print(" supports_multicast");
             if (netif.loopback())
                 fmt::print(" loopback");
+
             fmt::printf("\n");
+
             if (netif.addr4().has_ip())
             {
                 fmt::print("  IPV4:\n");

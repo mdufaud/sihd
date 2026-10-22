@@ -9,7 +9,8 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
-using sihd::util::Error;
+using namespace sihd::util;
+
 using enum sihd::util::ErrorCode;
 
 namespace sihd::http
@@ -51,7 +52,7 @@ std::optional<size_t> skip_delimiter_end(std::string_view body, size_t pos)
 {
     while (pos < body.size() && (body[pos] == ' ' || body[pos] == '\t'))
         ++pos;
-    return sihd::util::str::starts_with(body.substr(pos), "\r\n") ? std::optional<size_t>(pos + 2) : std::nullopt;
+    return str::starts_with(body.substr(pos), "\r\n") ? std::optional<size_t>(pos + 2) : std::nullopt;
 }
 
 // boundary-like bytes inside part data are not delimiters unless they end a line
@@ -65,7 +66,7 @@ std::optional<Delimiter> next_delimiter(std::string_view body, std::string_view 
             return std::nullopt;
 
         const size_t after_boundary = pos + marker.size();
-        if (sihd::util::str::starts_with(body.substr(after_boundary), "--"))
+        if (str::starts_with(body.substr(after_boundary), "--"))
             return Delimiter {.data_end = pos, .after_line = after_boundary + 2, .closing = true};
 
         const std::optional<size_t> after_line = skip_delimiter_end(body, after_boundary);
@@ -109,7 +110,7 @@ bool Multipart::is_content_type(std::string_view content_type)
     const size_t params = content_type.find(';');
     if (params != std::string_view::npos)
         content_type = content_type.substr(0, params);
-    return sihd::util::str::iequals(sihd::util::str::trim(content_type), "multipart/form-data");
+    return str::iequals(str::trim(content_type), "multipart/form-data");
 }
 
 std::optional<std::string> Multipart::boundary(std::string_view content_type)
@@ -119,7 +120,7 @@ std::optional<std::string> Multipart::boundary(std::string_view content_type)
     return header_param(content_type, "boundary");
 }
 
-sihd::util::Result<Multipart> Multipart::parse(std::string_view body, std::string_view content_type)
+Result<Multipart> Multipart::parse(std::string_view body, std::string_view content_type)
 {
     const std::optional<std::string> boundary = Multipart::boundary(content_type);
     if (boundary.has_value() == false)
@@ -136,7 +137,7 @@ sihd::util::Result<Multipart> Multipart::parse(std::string_view body, std::strin
     pos += delimiter.size();
 
     Multipart multipart;
-    if (sihd::util::str::starts_with(body.substr(pos), "--"))
+    if (str::starts_with(body.substr(pos), "--"))
         return multipart;
 
     const std::optional<size_t> headers_pos = skip_delimiter_end(body, pos);

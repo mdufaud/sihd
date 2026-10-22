@@ -2,8 +2,8 @@
 #include <sihd/sys/services.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <netdb.h>      // getservbyname, getservbyport
-# include <netinet/in.h> // ntohs, htons
+# include <netdb.h>
+# include <netinet/in.h>
 #else
 # include <winsock2.h>
 

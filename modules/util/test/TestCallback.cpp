@@ -34,9 +34,9 @@ int ret_args(int a, int b)
 class TestCallback: public ::testing::Test
 {
     protected:
-        TestCallback() { sihd::util::LoggerManager::stream(); }
+        TestCallback() { LoggerManager::stream(); }
 
-        virtual ~TestCallback() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCallback() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() { non_member_counter = 0; }
 

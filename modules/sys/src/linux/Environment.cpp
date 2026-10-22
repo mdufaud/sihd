@@ -3,13 +3,9 @@
 #include <fmt/format.h>
 
 #include <sihd/sys/env.hpp>
-#include <sihd/util/Logger.hpp>
+#include <sihd/util/Result.hpp>
 
-namespace sihd::sys
-{
-
-SIHD_LOGGER;
-}
+using namespace sihd::util;
 
 namespace sihd::sys::internal
 {
@@ -29,10 +25,16 @@ ExecEnviron to_exec_environ(const Environment & env)
     return ret;
 }
 
-void apply(const Environment & env)
+Result<void> apply(const Environment & env)
 {
+    Result<void> ret;
     for (const auto & [key, value] : env.entries())
-        SIHD_UNEXPECTED_LOG(env::set(key, value));
+    {
+        auto set = env::set(key, value);
+        if (!set && ret)
+            ret = std::move(set);
+    }
+    return ret;
 }
 
 } // namespace sihd::sys::internal

@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include <array>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -20,18 +21,12 @@ SIHD_NEW_LOGGER("sihd::sys::mouse");
 namespace
 {
 
-constexpr DWORD button_downs[] = {MOUSEEVENTF_LEFTDOWN,
-                                  MOUSEEVENTF_MIDDLEDOWN,
-                                  MOUSEEVENTF_RIGHTDOWN,
-                                  MOUSEEVENTF_XDOWN,
-                                  MOUSEEVENTF_XDOWN};
-constexpr DWORD button_ups[] = {MOUSEEVENTF_LEFTUP,
-                                MOUSEEVENTF_MIDDLEUP,
-                                MOUSEEVENTF_RIGHTUP,
-                                MOUSEEVENTF_XUP,
-                                MOUSEEVENTF_XUP};
+constexpr auto button_downs = std::to_array<DWORD>(
+    {MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_MIDDLEDOWN, MOUSEEVENTF_RIGHTDOWN, MOUSEEVENTF_XDOWN, MOUSEEVENTF_XDOWN});
+constexpr auto button_ups = std::to_array<DWORD>(
+    {MOUSEEVENTF_LEFTUP, MOUSEEVENTF_MIDDLEUP, MOUSEEVENTF_RIGHTUP, MOUSEEVENTF_XUP, MOUSEEVENTF_XUP});
 // The mouseData payload of the XBUTTON events, zero otherwise.
-constexpr DWORD xbutton_data[] = {0, 0, 0, XBUTTON1, XBUTTON2};
+constexpr auto xbutton_data = std::to_array<DWORD>({0, 0, 0, XBUTTON1, XBUTTON2});
 
 INPUT mouse_input(DWORD flags, LONG dx = 0, LONG dy = 0, DWORD mouse_data = 0)
 {

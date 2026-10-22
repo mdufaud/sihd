@@ -11,7 +11,6 @@
 namespace sihd::core
 {
 
-// checks a channel value at an index against a comparison
 class ChannelMatch
 {
     public:
@@ -47,53 +46,14 @@ class ChannelMatch
         static const char *comparison_str(Comparison comparison);
         static Comparison comparison_from_str(std::string_view str);
 
-        template <typename T>
-        static ChannelMatch equal(T val)
-        {
-            return {Equal, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch superior(T val)
-        {
-            return {Superior, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch superior_equal(T val)
-        {
-            return {SuperiorEqual, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch inferior(T val)
-        {
-            return {Inferior, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch inferior_equal(T val)
-        {
-            return {InferiorEqual, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch byte_and(T val)
-        {
-            return {ByteAnd, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch byte_or(T val)
-        {
-            return {ByteOr, sihd::util::Value(val)};
-        }
-
-        template <typename T>
-        static ChannelMatch byte_xor(T val)
-        {
-            return {ByteXor, sihd::util::Value(val)};
-        }
+        static ChannelMatch equal(sihd::util::Value val);
+        static ChannelMatch superior(sihd::util::Value val);
+        static ChannelMatch superior_equal(sihd::util::Value val);
+        static ChannelMatch inferior(sihd::util::Value val);
+        static ChannelMatch inferior_equal(sihd::util::Value val);
+        static ChannelMatch byte_and(sihd::util::Value val);
+        static ChannelMatch byte_or(sihd::util::Value val);
+        static ChannelMatch byte_xor(sihd::util::Value val);
 
         Comparison comparison = None;
         size_t idx = 0;

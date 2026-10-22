@@ -17,7 +17,7 @@ SIHD_NEW_LOGGER("demo");
 
 int main(int argc, char **argv)
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
     {
         console::set_output_utf8();
     }

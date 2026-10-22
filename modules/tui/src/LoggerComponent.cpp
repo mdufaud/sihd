@@ -19,17 +19,42 @@ namespace sihd::tui
 {
 
 using namespace ftxui;
+using namespace sihd::util;
 
 namespace
 {
 
+struct SavedLog
+{
+        SavedLog(const LogInfo & log_info, std::string_view log_msg, std::string searched):
+            info(log_info),
+            msg(log_msg),
+            source(log_info.source),
+            thread_name(log_info.thread_name),
+            search_str(std::move(searched))
+        {
+            info.source = source;
+            info.thread_name = thread_name;
+        }
+
+        // the LogInfo views point at this instance's strings: copies and moves are refused
+        SavedLog(const SavedLog &) = delete;
+        SavedLog & operator=(const SavedLog &) = delete;
+
+        LogInfo info;
+        std::string msg;
+        std::string source;
+        std::string thread_name;
+        std::string search_str;
+};
+
 class LoggerBase: public ComponentBase,
-                  public sihd::util::ALogger
+                  public ALogger
 {
     public:
         LoggerBase(LoggerOptions && options): ALogger("logger"), _options(std::move(options))
         {
-            sihd::util::LoggerManager::get()->add_logger(this);
+            LoggerManager::get()->add_logger(this);
             if (_options.add_bar)
             {
                 // the prompt space is the cell the caret falls back on when the filter is empty
@@ -38,40 +63,15 @@ class LoggerBase: public ComponentBase,
                 _filter->on_enter = [this] {
                     _str_filter = _filter->content();
                     _str_filter_lower = _str_filter;
-                    sihd::util::str::to_lower(_str_filter_lower);
+                    str::to_lower(_str_filter_lower);
                 };
                 _filter_input = std::move(input_line);
                 Add(_filter_input);
             }
         }
-        ~LoggerBase() { sihd::util::LoggerManager::get()->remove_logger(this); }
+        ~LoggerBase() { LoggerManager::get()->remove_logger(this); }
 
     private:
-        struct SavedLog
-        {
-                SavedLog(const sihd::util::LogInfo & log_info, std::string_view log_msg, std::string searched):
-                    info(log_info),
-                    msg(log_msg),
-                    source(log_info.source),
-                    thread_name(log_info.thread_name),
-                    search_str(std::move(searched))
-                {
-                    info.source = source;
-                    info.thread_name = thread_name;
-                }
-
-                // the LogInfo views point at this instance's strings: copies and moves are refused
-                SavedLog(const SavedLog &) = delete;
-                SavedLog & operator=(const SavedLog &) = delete;
-
-                sihd::util::LogInfo info;
-                std::string msg;
-                std::string source;
-                std::string thread_name;
-                // message + source + thread name, lowercased once for case insensitive search
-                std::string search_str;
-        };
-
         bool check_filter(const SavedLog & log)
         {
             if (_options.add_bar == false || _selected_level_filter == 0)
@@ -88,7 +88,6 @@ class LoggerBase: public ComponentBase,
 
         Element OnRender() override
         {
-            // Drain pending logs from other threads
             {
                 std::lock_guard<std::mutex> lock(_log_mutex);
                 _saved_logs.splice(_saved_logs.end(), _pending_logs);
@@ -214,8 +213,7 @@ class LoggerBase: public ComponentBase,
             if (event.is_mouse() && _log_box.Contain(event.mouse().x, event.mouse().y))
                 TakeFocus();
 
-            // When leaving auto-scroll via any navigation, start from the last visible
-            // position — otherwise _focused_log stays at 0 and jumps to the top.
+            // leaving auto-scroll: start from the last visible position, else _focused_log jumps to the top
             if (_options.scroll_to_last_log && _visible_count > 0)
                 _focused_log = _visible_count - 1;
 
@@ -253,35 +251,35 @@ class LoggerBase: public ComponentBase,
 
             switch (log.info.level)
             {
-                case sihd::util::LogLevel::emergency:
+                case LogLevel::emergency:
                     level = "EMER";
                     color = ftxui::color(Color::Magenta1) | bold;
                     break;
-                case sihd::util::LogLevel::alert:
+                case LogLevel::alert:
                     level = "A";
                     color = ftxui::color(Color::DarkViolet) | bold;
                     break;
-                case sihd::util::LogLevel::critical:
+                case LogLevel::critical:
                     level = "C";
                     color = ftxui::color(Color::DeepPink1) | bold;
                     break;
-                case sihd::util::LogLevel::error:
+                case LogLevel::error:
                     level = "E";
                     color = ftxui::color(Color::RedLight);
                     break;
-                case sihd::util::LogLevel::warning:
+                case LogLevel::warning:
                     level = "W";
                     color = ftxui::color(Color::Orange1);
                     break;
-                case sihd::util::LogLevel::notice:
+                case LogLevel::notice:
                     level = "N";
                     color = ftxui::color(Color::GrayLight);
                     break;
-                case sihd::util::LogLevel::info:
+                case LogLevel::info:
                     level = "I";
                     color = ftxui::color(Color::GreenLight);
                     break;
-                case sihd::util::LogLevel::debug:
+                case LogLevel::debug:
                     level = "D";
                     color = ftxui::color(Color::GrayDark);
                     break;
@@ -299,14 +297,13 @@ class LoggerBase: public ComponentBase,
             return make_searched_paragraph(log_str) | color;
         }
 
-        // paragraph() with the searched substrings highlighted - words still wrap
         Element make_searched_paragraph(const std::string & str)
         {
             if (_str_filter_lower.empty())
                 return paragraph(str);
 
             Elements words;
-            for (const auto & word : sihd::util::str::split(str, ' '))
+            for (const auto & word : str::split(str, ' '))
                 words.push_back(make_searched_word(word));
             return flexbox(std::move(words), FlexboxConfig().SetGap(1, 0));
         }
@@ -314,7 +311,7 @@ class LoggerBase: public ComponentBase,
         Element make_searched_word(const std::string & word)
         {
             std::string lowered = word;
-            sihd::util::str::to_lower(lowered);
+            str::to_lower(lowered);
 
             Elements parts;
             size_t pos = 0;
@@ -333,10 +330,10 @@ class LoggerBase: public ComponentBase,
             return hbox(std::move(parts));
         }
 
-        void log(const sihd::util::LogInfo & info, std::string_view msg) override
+        void log(const LogInfo & info, std::string_view msg) override
         {
             std::string search_str = fmt::format("{} {} {}", msg, info.source, info.thread_name);
-            sihd::util::str::to_lower(search_str);
+            str::to_lower(search_str);
 
             std::lock_guard<std::mutex> lock(_log_mutex);
             if (_pending_logs.size() >= _options.max_logs)

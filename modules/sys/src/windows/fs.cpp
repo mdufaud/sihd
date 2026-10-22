@@ -1,10 +1,10 @@
-#include <direct.h> // _mkdir _rmdir
-#include <fcntl.h>  // _O_WRONLY
-#include <io.h>     // _access _open _close _chsize_s
-#include <shlobj.h> // SHGetKnownFolderPath / FOLDERID_*
+#include <direct.h>
+#include <fcntl.h>
+#include <io.h>
+#include <shlobj.h>
 #include <sys/stat.h>
-#include <windows.h>  // HANDLE / CreateFileA / CloseHandle / DeviceIoControl
-#include <winioctl.h> // IOCTL_STORAGE_QUERY_PROPERTY / IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS
+#include <windows.h>
+#include <winioctl.h>
 
 #include <cstdio>
 #include <cstring>
@@ -107,7 +107,6 @@ std::string env_str(const char *name)
     return env::get(name).value_or("");
 }
 
-// roaming: settings and user data follow the user across machines
 std::string roaming_folder()
 {
     std::string path = known_folder(FOLDERID_RoamingAppData);
@@ -153,8 +152,6 @@ std::string download_path()
     return path;
 }
 
-// stat
-
 bool exists(const std::string & path)
 {
     return _access(path.c_str(), 0) == 0;
@@ -175,7 +172,7 @@ bool is_executable(const std::string & path)
     return _access(path.c_str(), 04) == 0;
 }
 
-sihd::util::Result<FileTimes> times(const std::string & path)
+Result<FileTimes> times(const std::string & path)
 {
     HANDLE handle = CreateFileA(path.c_str(),
                                 // query access: metadata does not need read rights
@@ -205,15 +202,13 @@ Timestamp last_write(const std::string & path)
     return times(path).value_or(FileTimes()).write;
 }
 
-sihd::util::Result<size_t> file_size(const std::string & path)
+Result<size_t> file_size(const std::string & path)
 {
     struct stat s;
     if (!do_stat(path.c_str(), &s))
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     return s.st_size;
 }
-
-// directories
 
 std::string tmp_path()
 {
@@ -228,7 +223,7 @@ std::string tmp_path()
     return tmp_path.value_or("C:\\Windows\\TEMP\\");
 }
 
-sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
+Result<std::string> make_tmp_directory(const std::string & prefix)
 {
     std::error_code ec;
     auto tmp_path = std::filesystem::temp_directory_path(ec);
@@ -238,7 +233,7 @@ sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
     }
     // like mkdtemp on unix: the random characters are appended to the prefix path
     const std::string base = prefix.empty() ? ensure_separation(tmp_path.string()) : prefix;
-    sihd::util::Result<void> made = std::unexpected(Error(io_error, "no directory created"));
+    Result<void> made = std::unexpected(Error(io_error, "no directory created"));
     for (int attempt = 0; attempt < 8; ++attempt)
     {
         const std::string path = base + str::generate_random_printable(8);
@@ -249,7 +244,7 @@ sihd::util::Result<std::string> make_tmp_directory(const std::string & prefix)
     return std::unexpected(std::move(made).error());
 }
 
-sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode)
+Result<void> make_directory(const std::string & path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -306,9 +301,7 @@ std::vector<std::string> recursive_children(const std::string & path, uint32_t m
     return ret;
 }
 
-// files
-
-sihd::util::Result<void> truncate(const std::string & path, int64_t size)
+Result<void> truncate(const std::string & path, int64_t size)
 {
     int fd = _open(path.c_str(), _O_WRONLY);
     if (fd < 0)
@@ -326,7 +319,7 @@ sihd::util::Result<void> truncate(const std::string & path, int64_t size)
     return {};
 }
 
-sihd::util::Result<void>
+Result<void>
     copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
 {
     const std::wstring wfrom = str::to_wstr(from);
@@ -339,8 +332,7 @@ sihd::util::Result<void>
     params.pProgressRoutine = &copy_progress_cb;
     params.pvCallbackContext = &ctx;
 
-    // a failing CopyFile2 that never started the copy leaves the destination untouched:
-    // only remove a destination we made or a cancel left partial
+    // a failing CopyFile2 that never started the copy leaves the destination untouched: remove only ours
     const bool dest_existed = ::GetFileAttributesW(wto.c_str()) != INVALID_FILE_ATTRIBUTES;
     const HRESULT hr = ::CopyFile2(wfrom.c_str(), wto.c_str(), &params);
     if (SUCCEEDED(hr))
@@ -370,8 +362,7 @@ Result<void> rename(const std::string & from, const std::string & to)
 
 std::string realpath(const std::string & path)
 {
-    // POSIX realpath requires every path component to exist; _fullpath is purely
-    // lexical and succeeds for nonexistent paths -> guard to keep the same contract
+    // POSIX realpath requires every component to exist; _fullpath is lexical: guard to keep the contract
     if (!fs::exists(path))
         return "";
     char resolved[PATH_MAX];
@@ -380,7 +371,7 @@ std::string realpath(const std::string & path)
     return std::string(resolved);
 }
 
-sihd::util::Result<void> chdir(const std::string & path)
+Result<void> chdir(const std::string & path)
 {
     if (::_chdir(path.c_str()) != 0)
     {
@@ -395,8 +386,7 @@ MountType mount_type([[maybe_unused]] const std::string & path)
     if (path.size() >= 2 && (path[0] == '\\' || path[0] == '/') && (path[1] == '\\' || path[1] == '/'))
         return MountType::network;
 
-    // GetVolumePathNameA resolves a nonexistent path to its drive root (local);
-    // match the POSIX statfs-fails behavior so unresolvable paths are unknown
+    // GetVolumePathNameA resolves a nonexistent path to its drive root (local): unresolvable must be unknown
     if (!exists(path))
         return MountType::unknown;
 
@@ -471,11 +461,12 @@ StorageMedium storage_medium([[maybe_unused]] const std::string & path)
             CloseHandle(disk);
         }
     }
+
     CloseHandle(volume);
     return ret;
 }
 
-sihd::util::Result<uint64_t> free_space(const std::string & path)
+Result<uint64_t> free_space(const std::string & path)
 {
     ULARGE_INTEGER free_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
@@ -483,7 +474,7 @@ sihd::util::Result<uint64_t> free_space(const std::string & path)
     return free_bytes.QuadPart;
 }
 
-sihd::util::Result<uint64_t> total_space(const std::string & path)
+Result<uint64_t> total_space(const std::string & path)
 {
     ULARGE_INTEGER total_bytes;
     if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))

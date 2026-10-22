@@ -18,6 +18,21 @@ class TestTask: public ::testing::Test
         virtual void TearDown() {}
 };
 
+namespace
+{
+
+struct SimpleRunnable: public IRunnable
+{
+        bool ran = false;
+        bool run() override
+        {
+            ran = true;
+            return true;
+        }
+};
+
+} // namespace
+
 TEST_F(TestTask, test_task_options_stored)
 {
     TaskOptions opts;
@@ -25,10 +40,10 @@ TEST_F(TestTask, test_task_options_stored)
     opts.run_in = Duration(100);
     opts.reschedule_time = Duration(50);
 
-    Task t(opts);
-    EXPECT_EQ(t.run_at, (time_t)0);
-    EXPECT_EQ(t.run_in, (time_t)100);
-    EXPECT_EQ(t.reschedule_time, (time_t)50);
+    Task task(opts);
+    EXPECT_EQ(task.run_at, (time_t)0);
+    EXPECT_EQ(task.run_in, (time_t)100);
+    EXPECT_EQ(task.reschedule_time, (time_t)50);
 }
 
 TEST_F(TestTask, test_task_run_at_and_run_in_throws)
@@ -37,7 +52,7 @@ TEST_F(TestTask, test_task_run_at_and_run_in_throws)
     opts.run_at = Timestamp(100);
     opts.run_in = Duration(100);
 
-    EXPECT_THROW(Task t(opts), std::logic_error);
+    EXPECT_THROW(Task task(opts), std::logic_error);
 }
 
 TEST_F(TestTask, test_task_set_method)
@@ -54,27 +69,17 @@ TEST_F(TestTask, test_task_set_method)
 
 TEST_F(TestTask, test_task_set_runnable)
 {
-    struct SimpleRunnable: public IRunnable
-    {
-            bool ran = false;
-            bool run() override
-            {
-                ran = true;
-                return true;
-            }
-    };
-
     SimpleRunnable inner;
-    Task t(&inner);
+    Task task(&inner);
 
-    EXPECT_TRUE(t.run());
+    EXPECT_TRUE(task.run());
     EXPECT_TRUE(inner.ran);
 }
 
 TEST_F(TestTask, test_task_no_callable_returns_false)
 {
-    Task t;
-    EXPECT_FALSE(t.run());
+    Task task;
+    EXPECT_FALSE(task.run());
 }
 
 } // namespace test

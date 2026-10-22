@@ -1,7 +1,10 @@
 #include <algorithm>
+#include <array>
 
 #include <sihd/http/Route.hpp>
 #include <sihd/util/str.hpp>
+
+using namespace sihd::util;
 
 namespace sihd::http
 {
@@ -10,7 +13,7 @@ namespace
 {
 
 // the allow header lists methods in a stable order
-constexpr HttpRequest::RequestType allowed_method_order[] = {
+constexpr std::array allowed_method_order = {
     HttpRequest::Get,
     HttpRequest::Post,
     HttpRequest::Put,
@@ -24,10 +27,10 @@ constexpr HttpRequest::RequestType allowed_method_order[] = {
 
 std::string normalize_path(std::string_view raw)
 {
-    auto segments = sihd::util::str::split(raw, '/');
+    auto segments = str::split(raw, '/');
     if (segments.empty())
         return "";
-    return sihd::util::str::join(std::span<const std::string>(segments), "/");
+    return str::join(std::span<const std::string>(segments), "/");
 }
 
 Route::Route(std::string_view pattern, Handler handler):
@@ -37,7 +40,7 @@ Route::Route(std::string_view pattern, Handler handler):
     _specificity(0),
     _handler(std::move(handler))
 {
-    auto parts = sihd::util::str::split(pattern, '/');
+    auto parts = str::split(pattern, '/');
     _segments.reserve(parts.size());
     for (const auto & part : parts)
     {
@@ -46,7 +49,7 @@ Route::Route(std::string_view pattern, Handler handler):
             std::string_view name(part);
             name = name.substr(1, name.size() - 2);
             bool catch_all = false;
-            if (name.size() >= 4 && sihd::util::str::ends_with(name, "..."))
+            if (name.size() >= 4 && str::ends_with(name, "..."))
             {
                 name = name.substr(0, name.size() - 3);
                 catch_all = true;
@@ -65,7 +68,7 @@ Route::Route(std::string_view pattern, Handler handler):
 
 RouteMatch Route::match(std::string_view path) const
 {
-    auto parts = sihd::util::str::split(path, '/');
+    auto parts = str::split(path, '/');
     RouteMatch result;
 
     if (_has_catch_all)
@@ -120,19 +123,16 @@ std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType 
 
     std::string normalized = normalize_path(path);
 
-    // exact routes first (no params, no catch-all)
     for (const auto & route : it->second)
     {
         if (route.is_parameterized() == false)
         {
-            auto m = route.match(normalized);
-            if (m.matched)
-                return FindResult {route.handler(), std::move(m)};
+            auto route_match = route.match(normalized);
+            if (route_match.matched)
+                return FindResult {route.handler(), std::move(route_match)};
         }
     }
 
-    // parameterized routes sorted by specificity (most literal segments first)
-    // catch-all routes last
     std::vector<const Route *> param_routes;
     for (const auto & route : it->second)
     {
@@ -147,9 +147,9 @@ std::optional<RouteTable::FindResult> RouteTable::find(HttpRequest::RequestType 
 
     for (const auto *route : param_routes)
     {
-        auto m = route->match(normalized);
-        if (m.matched)
-            return FindResult {route->handler(), std::move(m)};
+        auto route_match = route->match(normalized);
+        if (route_match.matched)
+            return FindResult {route->handler(), std::move(route_match)};
     }
     return std::nullopt;
 }
@@ -174,6 +174,31 @@ std::vector<HttpRequest::RequestType> RouteTable::allowed_methods(std::string_vi
         }
     }
     return allowed;
+}
+
+bool Route::is_parameterized() const
+{
+    return _has_params;
+}
+
+bool Route::has_catch_all() const
+{
+    return _has_catch_all;
+}
+
+const std::string & Route::pattern() const
+{
+    return _pattern;
+}
+
+size_t Route::specificity() const
+{
+    return _specificity;
+}
+
+const Route::Handler & Route::handler() const
+{
+    return _handler;
 }
 
 } // namespace sihd::http

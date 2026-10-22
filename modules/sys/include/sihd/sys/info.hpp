@@ -18,7 +18,6 @@ std::optional<uint64_t> available_ram();
 std::optional<uint64_t> total_swap();
 std::optional<uint64_t> free_swap();
 
-// logical processors
 uint32_t cpu_count();
 std::optional<uint32_t> physical_core_count();
 

@@ -22,7 +22,6 @@ class CallbackManager
 
         void remove(const std::string & name) { _callbacks.erase(name); }
 
-        // Non-member functions binding
         template <typename R, typename... Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
@@ -31,7 +30,6 @@ class CallbackManager
                                })));
         }
 
-        // Member functions binding
         template <typename C, typename R, typename... Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
@@ -48,7 +46,6 @@ class CallbackManager
             _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
-        // Calling
         template <typename... Targs>
         void call(const std::string & name, Targs... args)
         {
@@ -77,7 +74,6 @@ class CallbackManager
         }
 
     private:
-        // Class stored in CallbackManager's map
         class CallbackBase
         {
             public:

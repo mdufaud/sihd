@@ -23,9 +23,9 @@ class TestScheduler: public ::testing::Test,
                      public IRunnable
 {
     protected:
-        TestScheduler() { sihd::util::LoggerManager::stream(); }
+        TestScheduler() { LoggerManager::stream(); }
 
-        virtual ~TestScheduler() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestScheduler() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -121,7 +121,6 @@ TEST_F(TestScheduler, test_sched_perf)
 
     Scheduler sched("sched");
 
-    // most overruns are below 100 microseconds
     this->delta_us = 100;
     sched.overrun_at = Duration(time::micro(this->delta_us));
 
@@ -141,7 +140,6 @@ TEST_F(TestScheduler, test_sched_perf)
 
     auto level = num::near(this->ran, expected_run, 1) ? LogLevel::info : LogLevel::error;
 
-    // 10% miss maximum
     const int expected_overruns = this->ran / 10;
 
     SIHD_LOG(info,
@@ -175,7 +173,7 @@ TEST_F(TestScheduler, test_sched_stop)
         [&]() -> bool {
             SIHD_TRACE("Should run once");
             {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 first_ran = true;
             }
             waitable.notify_all();
@@ -186,13 +184,14 @@ TEST_F(TestScheduler, test_sched_stop)
         [&]() -> bool {
             SIHD_TRACE("Should not run");
             {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 second_ran = true;
             }
             waitable.notify_all();
             return true;
         },
         {.run_in = Duration(time::milli(70))}));
+
     sched.set_start_synchronised(true);
     sched.start();
 
@@ -270,6 +269,7 @@ TEST_F(TestScheduler, test_sched_as_fast)
     sched.add_task(new Task(fun, {.run_in = Duration(time::milli(50))}));
     sched.set_no_delay(true);
     sched.set_start_synchronised(true);
+
     sched.start();
     SIHD_LOG(debug, "Started scheduler");
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -289,15 +289,14 @@ TEST_F(TestScheduler, test_sched_burst)
         ++lambda_ran;
         return true;
     };
-    // repeat task as fast as possible
     sched.add_task(new Task(fun, {.reschedule_time = Duration(1)}));
-    // spam state change
     std::thread t1([&]() {
         int i = 0;
         while (i < 100)
         {
             sched.start();
             std::this_thread::sleep_for(std::chrono::microseconds(200));
+
             sched.pause();
             std::this_thread::sleep_for(std::chrono::microseconds(200));
             sched.resume();
@@ -306,7 +305,6 @@ TEST_F(TestScheduler, test_sched_burst)
             ++i;
         }
     });
-    // spam new tasks
     std::thread t2([&]() {
         int i = 0;
         while (i < 100)
@@ -316,36 +314,36 @@ TEST_F(TestScheduler, test_sched_burst)
             sched.add_task(new Task(fun, {.run_in = Duration(time::us(300))}));
             sched.add_task(new Task(fun, {.run_in = Duration(time::us(400))}));
             std::this_thread::sleep_for(std::chrono::microseconds(300));
+
             ++i;
         }
     });
-    // create and delete new tasks
     std::thread t3([&]() {
         int i = 0;
         while (i < 100)
         {
-            Task *t = new Task(
+            Task *task = new Task(
                 [] {
                     SIHD_LOG(error, "Should not be played ever");
                     return false;
                 },
                 {.run_in = Duration(time::seconds(303))});
-            sched.add_task(t);
+            sched.add_task(task);
             std::this_thread::sleep_for(std::chrono::microseconds(500));
-            ASSERT_TRUE(sched.remove_task(t));
-            delete t;
+            ASSERT_TRUE(sched.remove_task(task));
+            delete task;
             ++i;
         }
     });
-    // thread 1 start scheduler
     t1.join();
+
     t2.join();
     t3.join();
     SIHD_LOG(debug, "Total executions: {}", lambda_ran.load());
 }
 
 // clock wrapper counting every query - exposes scheduling loop health as a plain counter
-class CountingSteadyClock: public sihd::util::IClock
+class CountingSteadyClock: public IClock
 {
     public:
         Timestamp now() const override
@@ -383,7 +381,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
     // the far deadline the worker sleeps on at start
     sched.add_task(new Task(
         [&] {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             far_seq = seq.fetch_add(1);
             far_ran = true;
             waitable.notify_all();
@@ -397,7 +395,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
         sched.add_task(new Task(
             [&] {
                 ++bulk_ran;
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 if (bulk_seq < 0)
                     bulk_seq = seq.fetch_add(1);
                 return true;
@@ -414,7 +412,7 @@ TEST_F(TestScheduler, test_sched_wakeups_qualifying)
 
     sched.add_task(new Task(
         [&] {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             urgent_seq = seq.fetch_add(1);
             urgent_ran = true;
             waitable.notify_all();
@@ -454,7 +452,7 @@ TEST_F(TestScheduler, test_sched_idle_gap_classifying)
 
     sched.add_task(new Task(
         [&] {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             first_ran = true;
             waitable.notify_all();
             return true;
@@ -502,7 +500,7 @@ TEST_F(TestScheduler, test_sched_exception_survives)
         new Task([&]() -> bool { throw std::runtime_error("poison"); }, {.run_in = Duration(time::milli(1))}));
     sched.add_task(new Task(
         [&] {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             after_poison_ran = true;
             waitable.notify_all();
             return true;
@@ -535,7 +533,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
         Task *task = nullptr;
         task = new Task(
             [&] {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 if (played.size() < 8)
                     played.push_back(task->run_at);
                 waitable.notify_all();
@@ -568,7 +566,7 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
         Task *task = nullptr;
         task = new Task(
             [&] {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 if (played.size() < 8)
                     played.push_back(task->run_at);
                 waitable.notify_all();
@@ -610,7 +608,7 @@ TEST_F(TestScheduler, test_sched_spin_sleep_classification)
 
     sched.add_task(new Task(
         [&] {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             ran = true;
             waitable.notify_all();
             return true;

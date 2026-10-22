@@ -145,6 +145,32 @@ std::shared_ptr<void> handshake_and_session(TlsContext & server_ctx, TlsContext 
     return pair.client_conn.session();
 }
 
+PrivateKey generate_key()
+{
+    PrivateKey key;
+    (void)key.generate_rsa(2048);
+    return key;
+}
+
+const PrivateKey & tls_key()
+{
+    static const PrivateKey key = generate_key();
+    return key;
+}
+
+Certificate generate_cert()
+{
+    Certificate cert;
+    (void)cert.generate_self_signed(tls_key(), "localhost");
+    return cert;
+}
+
+const Certificate & tls_cert()
+{
+    static const Certificate cert = generate_cert();
+    return cert;
+}
+
 } // namespace
 
 class TestTlsTcp: public ::testing::Test
@@ -154,20 +180,11 @@ class TestTlsTcp: public ::testing::Test
 
         virtual ~TestTlsTcp() { LoggerManager::clear_loggers(); }
 
-        static void SetUpTestSuite()
-        {
-            ASSERT_TRUE(_key.generate_rsa(2048));
-            ASSERT_TRUE(_cert.generate_self_signed(_key, "localhost"));
-        }
-
-        static void TearDownTestSuite()
-        {
-            _cert = Certificate();
-            _key = PrivateKey();
-        }
-
         void SetUp() override
         {
+            ASSERT_TRUE(_key);
+            ASSERT_TRUE(_cert);
+
             (void)_server_ctx.init(true);
             ASSERT_TRUE(_server_ctx.set_certificate(_cert));
             ASSERT_TRUE(_server_ctx.set_private_key(_key));
@@ -176,8 +193,8 @@ class TestTlsTcp: public ::testing::Test
             ASSERT_TRUE(_client_ctx.set_verify_peer(false));
         }
 
-        static inline PrivateKey _key;
-        static inline Certificate _cert;
+        const PrivateKey & _key = tls_key();
+        const Certificate & _cert = tls_cert();
         TlsContext _server_ctx;
         TlsContext _client_ctx;
 };
@@ -248,15 +265,15 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     const std::string payload(128 * 1024, 'x');
     ASSERT_TRUE(client.send_all({payload.data(), payload.size()}).has_value());
     std::string echoed;
-    char buffer[8192];
+    std::array<char, 8192> buffer;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (echoed.size() < payload.size() && std::chrono::steady_clock::now() < deadline)
     {
         if (!client.socket().tls_pending() && !client.poll(100))
             continue;
-        const auto size = client.receive(buffer, sizeof(buffer));
+        const auto size = client.receive(buffer.data(), buffer.size());
         if (size && size.value() > 0)
-            echoed.append(buffer, size.value());
+            echoed.append(buffer.data(), size.value());
         else if (!size && !size.error().retryable())
             break;
     }
@@ -342,15 +359,16 @@ TEST_F(TestTlsTcp, tls_timed_handshake_on_blocking_socket)
     const char msg[] = "blocking handshake";
     ASSERT_GT((ssize_t)pair.client_conn.write(msg, sizeof(msg) - 1).value_or(0), 0);
 
-    char recv_buf[32] = {0};
+    std::array<char, 32> recv_buf {};
     size_t total = 0;
     while (total < sizeof(msg) - 1)
     {
-        ssize_t received_size = (ssize_t)pair.server_conn.read(recv_buf + total, sizeof(recv_buf) - total).value_or(0);
+        ssize_t received_size = (ssize_t)pair.server_conn.read(recv_buf.data() + total, recv_buf.size() - total)
+                                    .value_or(0);
         ASSERT_GT(received_size, 0);
         total += (size_t)received_size;
     }
-    EXPECT_EQ(std::string(recv_buf, total), "blocking handshake");
+    EXPECT_EQ(std::string(recv_buf.data(), total), "blocking handshake");
 }
 
 TEST_F(TestTlsTcp, tls_stale_openssl_error_does_not_fail_healthy_io)

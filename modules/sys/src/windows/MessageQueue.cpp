@@ -38,7 +38,6 @@ bool pipe_has_data(HANDLE handle)
     return PeekNamedPipe(handle, nullptr, 0, nullptr, &available, nullptr) != FALSE && available > 0;
 }
 
-// disconnecting re-arms the pipe for the next client
 Error closed_error(HANDLE handle, bool created, bool & connected, std::string_view name)
 {
     if (created && connected)
@@ -47,7 +46,7 @@ Error closed_error(HANDLE handle, bool created, bool & connected, std::string_vi
     return Error(closed, "message queue '{}': pipe peer is gone", name);
 }
 
-sihd::util::Result<void> pipe_connect(HANDLE handle, bool & connected, Duration timeout)
+Result<void> pipe_connect(HANDLE handle, bool & connected, Duration timeout)
 {
     if (connected)
         return {};
@@ -71,6 +70,7 @@ sihd::util::Result<void> pipe_connect(HANDLE handle, bool & connected, Duration 
                 {
                     if (pipe_has_data(handle))
                         break;
+
                     DisconnectNamedPipe(handle);
                     continue;
                 }
@@ -91,7 +91,7 @@ sihd::util::Result<void> pipe_connect(HANDLE handle, bool & connected, Duration 
     return {};
 }
 
-sihd::util::Result<DWORD> pipe_write(HANDLE handle, const void *buffer, DWORD size, Duration timeout)
+Result<DWORD> pipe_write(HANDLE handle, const void *buffer, DWORD size, Duration timeout)
 {
     OVERLAPPED overlapped = {};
     overlapped.hEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -108,7 +108,7 @@ sihd::util::Result<DWORD> pipe_write(HANDLE handle, const void *buffer, DWORD si
             Error(io_error, "could not write pipe: {}", os::error_str(static_cast<int>(last_error))));
     }
 
-    sihd::util::Result<DWORD> ret = 0;
+    Result<DWORD> ret = 0;
     if (WaitForSingleObject(overlapped.hEvent, deadline_ms(timeout)) != WAIT_OBJECT_0)
     {
         CancelIoEx(handle, &overlapped);
@@ -137,7 +137,7 @@ sihd::util::Result<DWORD> pipe_write(HANDLE handle, const void *buffer, DWORD si
     return ret;
 }
 
-sihd::util::Result<std::string> pipe_read(HANDLE handle, size_t initial_size, Duration timeout)
+Result<std::string> pipe_read(HANDLE handle, size_t initial_size, Duration timeout)
 {
     std::string buffer(initial_size > 0 ? initial_size : 4096, '\0');
     OVERLAPPED overlapped = {};
@@ -146,7 +146,7 @@ sihd::util::Result<std::string> pipe_read(HANDLE handle, size_t initial_size, Du
         return std::unexpected(Error(io_error, "could not create pipe event: {}", os::last_error_str()));
 
     size_t offset = 0;
-    sihd::util::Result<std::string> ret = std::unexpected(Error(io_error, "pipe read did not run"));
+    Result<std::string> ret = std::unexpected(Error(io_error, "pipe read did not run"));
     bool done = false;
     while (!done)
     {
@@ -181,6 +181,7 @@ sihd::util::Result<std::string> pipe_read(HANDLE handle, size_t initial_size, Du
         DWORD transferred = 0;
         const BOOL result_ok = GetOverlappedResult(handle, &overlapped, &transferred, FALSE);
         const DWORD last_error = GetLastError();
+
         if (result_ok == FALSE && last_error != ERROR_MORE_DATA)
         {
             if (is_disconnect(last_error) && pipe_has_data(handle))
@@ -207,13 +208,13 @@ sihd::util::Result<std::string> pipe_read(HANDLE handle, size_t initial_size, Du
     return ret;
 }
 
-sihd::util::Result<void> queue_send(HANDLE handle,
-                                    bool created,
-                                    bool & connected,
-                                    std::string_view name,
-                                    Duration wait,
-                                    ArrByteView data,
-                                    unsigned priority)
+Result<void> queue_send(HANDLE handle,
+                        bool created,
+                        bool & connected,
+                        std::string_view name,
+                        Duration wait,
+                        ArrByteView data,
+                        unsigned priority)
 {
     (void)priority; // named pipes carry no priority: delivery stays FIFO
 
@@ -226,31 +227,28 @@ sihd::util::Result<void> queue_send(HANDLE handle,
         }
 
         auto transferred = pipe_write(handle, data.data(), static_cast<DWORD>(data.byte_size()), wait);
-        if (!transferred)
+        if (!transferred && transferred.error().code == closed)
         {
-            if (transferred.error().code == closed)
-            {
-                // a reader took nothing and left: re-arm, the next one gets the message
-                closed_error(handle, created, connected, name);
-                if (wait.get() == 0)
-                    return std::unexpected(Error(would_block, "could not send '{}': queue is full", name));
-                continue;
-            }
-            return std::unexpected(std::move(transferred).error());
+            // a reader took nothing and left: re-arm, the next one gets the message
+            closed_error(handle, created, connected, name);
+            if (wait.get() == 0)
+                return std::unexpected(Error(would_block, "could not send '{}': queue is full", name));
+            continue;
         }
+        SIHD_UNEXPECTED_RETURN(transferred);
         if (*transferred != data.byte_size())
             return std::unexpected(Error(io_error, "could not send '{}': short write", name));
         return {};
     }
 }
 
-sihd::util::Result<std::string> queue_receive(HANDLE handle,
-                                              bool created,
-                                              bool & connected,
-                                              std::string_view name,
-                                              size_t msg_size,
-                                              Duration wait,
-                                              unsigned *priority)
+Result<std::string> queue_receive(HANDLE handle,
+                                  bool created,
+                                  bool & connected,
+                                  std::string_view name,
+                                  size_t msg_size,
+                                  Duration wait,
+                                  unsigned *priority)
 {
     if (priority != nullptr)
         *priority = 0;
@@ -264,26 +262,22 @@ sihd::util::Result<std::string> queue_receive(HANDLE handle,
         }
 
         auto message = pipe_read(handle, msg_size, wait);
-        if (!message)
+        if (!message && message.error().code == closed)
         {
-            if (message.error().code == closed)
-            {
-                // a writer left nothing behind: re-arm, the next one may write
-                closed_error(handle, created, connected, name);
-                if (wait.get() == 0)
-                    return std::unexpected(Error(would_block, "could not receive '{}': queue is empty", name));
-                continue;
-            }
-            return std::unexpected(std::move(message).error());
+            // a writer left nothing behind: re-arm, the next one may write
+            closed_error(handle, created, connected, name);
+            if (wait.get() == 0)
+                return std::unexpected(Error(would_block, "could not receive '{}': queue is empty", name));
+            continue;
         }
+        SIHD_UNEXPECTED_RETURN(message);
         return message;
     }
 }
 
 } // namespace
 
-sihd::util::Result<void>
-    MessageQueue::create(const std::string & name, size_t max_messages, size_t max_message_size, mode_t mode)
+Result<void> MessageQueue::create(const std::string & name, size_t max_messages, size_t max_message_size, mode_t mode)
 {
     (void)mode;
 
@@ -322,7 +316,7 @@ sihd::util::Result<void>
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::open(const std::string & name)
+Result<void> MessageQueue::open(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -364,13 +358,13 @@ sihd::util::Result<void> MessageQueue::open(const std::string & name)
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::unlink(const std::string &)
+Result<void> MessageQueue::unlink(const std::string &)
 {
     // named pipes are refcounted kernel objects: nothing to unlink
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::clear()
+Result<void> MessageQueue::clear()
 {
     bool ret = true;
     if (_mq != -1)
@@ -392,7 +386,7 @@ sihd::util::Result<void> MessageQueue::clear()
     return {};
 }
 
-sihd::util::Result<void> MessageQueue::send(ArrByteView data, unsigned priority)
+Result<void> MessageQueue::send(ArrByteView data, unsigned priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -404,7 +398,7 @@ sihd::util::Result<void> MessageQueue::send(ArrByteView data, unsigned priority)
     return ret;
 }
 
-sihd::util::Result<void> MessageQueue::try_send(ArrByteView data, unsigned priority)
+Result<void> MessageQueue::try_send(ArrByteView data, unsigned priority)
 {
     auto ret = this->timed_send(data, Duration(0), priority);
     if (!ret && ret.error().code == ErrorCode::timeout)
@@ -412,7 +406,7 @@ sihd::util::Result<void> MessageQueue::try_send(ArrByteView data, unsigned prior
     return ret;
 }
 
-sihd::util::Result<void> MessageQueue::timed_send(ArrByteView data, Duration timeout, unsigned priority)
+Result<void> MessageQueue::timed_send(ArrByteView data, Duration timeout, unsigned priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -420,7 +414,7 @@ sihd::util::Result<void> MessageQueue::timed_send(ArrByteView data, Duration tim
     return queue_send(reinterpret_cast<HANDLE>(_mq), _created, _connected, _name, timeout, data, priority);
 }
 
-sihd::util::Result<std::string> MessageQueue::receive(unsigned *priority)
+Result<std::string> MessageQueue::receive(unsigned *priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -440,7 +434,7 @@ std::optional<std::string> MessageQueue::try_receive(unsigned *priority)
     return std::move(*ret);
 }
 
-sihd::util::Result<std::string> MessageQueue::timed_receive(Duration timeout, unsigned *priority)
+Result<std::string> MessageQueue::timed_receive(Duration timeout, unsigned *priority)
 {
     if (_mq == -1)
         return std::unexpected(Error(not_initialized, "message queue is not open"));
@@ -448,12 +442,12 @@ sihd::util::Result<std::string> MessageQueue::timed_receive(Duration timeout, un
     return queue_receive(reinterpret_cast<HANDLE>(_mq), _created, _connected, _name, _msg_size, timeout, priority);
 }
 
-sihd::util::Result<MessageQueue::Attributes> MessageQueue::attributes() const
+Result<MessageQueue::Attributes> MessageQueue::attributes() const
 {
     return std::unexpected(Error(not_supported, "no message queue attributes on windows"));
 }
 
-sihd::util::Result<void> MessageQueue::set_nonblocking(bool active)
+Result<void> MessageQueue::set_nonblocking(bool active)
 {
     _nonblocking = active;
     return {};

@@ -116,16 +116,14 @@ void Scheduler::_wait_until_deadline(Duration delay, uint64_t seq)
 
 void Scheduler::_wait_for_next_task()
 {
-    // wait for resume if paused
     _waitable_pause.wait([this] { return this->stop_requested || _paused == false; });
 
     uint64_t seq = 0;
     Timestamp next_run_at(0);
-    // wait for new task if empty
     _waitable_task.wait([this] { return this->stop_requested || _task_map.empty() == false; });
     {
         // a map mutation after this snapshot (seq mismatch) makes the timed waits below return early
-        auto l = _waitable_task.guard();
+        auto lock = _waitable_task.guard();
         seq = _task_map_seq.load();
         next_run_at = _next_run;
     }
@@ -172,11 +170,12 @@ void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
         else
         {
             frozen_polls = 0;
+
             previous = now;
         }
         if (++polls % 64 == 0)
         {
-            auto l = _waitable_task.guard();
+            auto lock = _waitable_task.guard();
             if (_task_map.empty() || _task_map_seq.load() != seq)
                 return;
         }
@@ -185,7 +184,7 @@ void Scheduler::_spin_until(Timestamp deadline, uint64_t seq)
 
 Task *Scheduler::_get_playable_task(Timestamp now)
 {
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
     if (_task_map.empty())
         return nullptr;
 
@@ -195,7 +194,6 @@ Task *Scheduler::_get_playable_task(Timestamp now)
     if (task->run_at > 0 && -diff > this->overrun_at)
         this->overruns += 1;
 
-    // play task if near the time to be played or if in no delay mode
     if (_no_delay || (diff - this->acceptable_task_preplay_ns_time) <= 0)
     {
         _task_map.erase(_task_map.begin());
@@ -222,7 +220,7 @@ void Scheduler::_play_task(Task *task, Timestamp now)
         SIHD_LOG(error, "Scheduler '{}': task raised unknown exception", this->name());
     }
 
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
     if (task->reschedule_time > 0)
     {
         if (task->run_at == 0)
@@ -253,7 +251,7 @@ void Scheduler::_play_task(Task *task, Timestamp now)
 
 void Scheduler::_prepare_tasks()
 {
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
     for (Task *task : _tasks_to_add)
     {
         if (task->run_in > 0)
@@ -297,12 +295,9 @@ bool Scheduler::on_work_start()
         if (this->stop_requested == false && _paused == false)
         {
             now = _clock_ptr->now();
-            // returns most urgent task to play
             task = this->_get_playable_task(now);
-            // run and reschedule or add to delete list
             if (task != nullptr)
                 this->_play_task(task, now);
-            // delete tasks in delete list
             this->_delete_trashed_tasks();
         }
     }
@@ -313,7 +308,7 @@ bool Scheduler::on_work_start()
 void Scheduler::pause()
 {
     {
-        auto l = _waitable_pause.guard();
+        auto lock = _waitable_pause.guard();
         if (_paused)
             return;
         _paused = true;
@@ -328,7 +323,7 @@ void Scheduler::_resume_tasks()
     if (_paused_time_at == 0)
         return;
 
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
 
     if (_tasks_prepared == false)
         return;
@@ -352,7 +347,7 @@ void Scheduler::_resume_tasks()
 
 void Scheduler::resume()
 {
-    auto l = _waitable_pause.guard();
+    auto lock = _waitable_pause.guard();
 
     if (_paused == false)
         return;
@@ -366,12 +361,12 @@ void Scheduler::resume()
 bool Scheduler::on_work_stop()
 {
     {
-        auto l = _waitable_pause.guard();
+        auto lock = _waitable_pause.guard();
         _paused = false;
         _waitable_pause.notify();
     }
     {
-        auto l = _waitable_task.guard();
+        auto lock = _waitable_task.guard();
         _begin_run = Timestamp(0);
         _waitable_task.notify();
     }
@@ -391,7 +386,7 @@ void Scheduler::add_task(Task *task)
 {
     bool wake_worker = false;
     {
-        auto l = _waitable_task.guard();
+        auto lock = _waitable_task.guard();
 
         if (_tasks_prepared)
         {
@@ -412,7 +407,7 @@ void Scheduler::add_task(Task *task)
 
 bool Scheduler::remove_task(Task *task)
 {
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
 
     bool found = false;
 
@@ -447,7 +442,7 @@ void Scheduler::clear_tasks()
 {
     this->_delete_trashed_tasks();
 
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
 
     for (Task *task : _tasks_to_add)
     {
@@ -470,7 +465,7 @@ void Scheduler::clear_tasks()
 
 void Scheduler::_delete_trashed_tasks()
 {
-    auto l = _waitable_task.guard();
+    auto lock = _waitable_task.guard();
     for (Task *to_remove : _trash_task_list)
     {
         if (to_remove == nullptr)

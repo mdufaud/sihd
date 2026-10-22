@@ -14,9 +14,9 @@ using namespace sihd::sys;
 class TestCapabilities: public ::testing::Test
 {
     protected:
-        TestCapabilities() { sihd::util::LoggerManager::stream(); }
+        TestCapabilities() { LoggerManager::stream(); }
 
-        virtual ~TestCapabilities() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCapabilities() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -71,10 +71,8 @@ TEST_F(TestCapabilities, test_capabilities_query)
     CapabilitySet caps;
     EXPECT_TRUE(caps.refresh().has_value());
 
-    // querying own capabilities never requires privileges
     for (Cap cap : cap::all())
     {
-        // a capability cannot be effective without being permitted
         if (caps.is_enabled(cap))
         {
             EXPECT_TRUE(caps.permitted(cap));
@@ -84,7 +82,6 @@ TEST_F(TestCapabilities, test_capabilities_query)
     for (Cap cap : caps.enabled())
         SIHD_LOG(info, "effective: {}", cap::to_name(cap));
 
-    // a freshly refreshed snapshot must agree with the live state
     for (Cap cap : cap::all())
         EXPECT_EQ(cap::has(cap), caps.is_enabled(cap));
 }
@@ -97,7 +94,6 @@ TEST_F(TestCapabilities, test_capabilities_raise_not_permitted)
     {
         if (caps.permitted(cap))
             continue;
-        // raising a capability outside of the permitted set must fail
         EXPECT_FALSE(caps.raise(cap));
         EXPECT_FALSE(caps.is_enabled(cap));
     }
@@ -121,7 +117,6 @@ TEST_F(TestCapabilities, test_capabilities_raise_permitted_as_root)
     if (!found)
         GTEST_SKIP() << "process holds no permitted capability";
 
-    // a permitted capability can leave and re-enter the effective set
     EXPECT_TRUE(caps.drop(permitted_cap));
     EXPECT_FALSE(caps.is_enabled(permitted_cap));
     EXPECT_TRUE(caps.apply().has_value());
@@ -142,24 +137,20 @@ TEST_F(TestCapabilities, test_capabilities_drop)
 {
     CapabilitySet caps;
 
-    // dropping is not permanent as long as the capabilities stay permitted: save them to give the
-    // rest of the test binary back the state it had
+    // dropping is not permanent while permitted: save the set to give the rest of the binary its state back
     const std::vector<Cap> saved = caps.enabled();
 
-    // dropping never requires privileges
     caps.drop_all();
     for (Cap cap : cap::all())
         EXPECT_FALSE(caps.is_enabled(cap));
 
     EXPECT_TRUE(caps.apply().has_value());
 
-    // the process really lost them
     EXPECT_TRUE(caps.refresh().has_value());
     EXPECT_TRUE(caps.enabled().empty());
     for (Cap cap : saved)
         EXPECT_FALSE(cap::has(cap));
 
-    // restore: the permitted set was untouched, so every saved capability can be raised again
     for (Cap cap : saved)
         EXPECT_TRUE(caps.raise(cap));
     EXPECT_TRUE(caps.apply().has_value());
@@ -183,9 +174,7 @@ TEST_F(TestCapabilities, test_capabilities_linux_sets)
     }
     else
     {
-        // an unprivileged process holds no ambient capability
         EXPECT_FALSE(cap::ambient(Cap::net_raw));
-        // setting an ambient capability requires it to be permitted and inheritable
         if (!caps.permitted(Cap::net_raw))
         {
             EXPECT_FALSE(cap::set_ambient(Cap::net_raw, true));

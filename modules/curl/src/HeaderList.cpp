@@ -5,7 +5,7 @@
 
 #include "impl.hpp"
 
-using sihd::util::Error;
+using namespace sihd::util;
 using enum sihd::util::ErrorCode;
 
 namespace sihd::curl
@@ -35,7 +35,7 @@ HeaderList & HeaderList::operator=(HeaderList && other)
     return *this;
 }
 
-sihd::util::Result<void> HeaderList::append(std::string_view line)
+Result<void> HeaderList::append(std::string_view line)
 {
     // curl sends the line as is: a line break would smuggle another header or request
     if (line.find_first_of(std::string_view("\r\n\0", 3)) != std::string_view::npos)

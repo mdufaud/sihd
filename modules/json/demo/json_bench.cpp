@@ -20,9 +20,6 @@ double to_ms(Ns ns)
     return static_cast<double>(ns.count()) / 1'000'000.0;
 }
 
-// DOM is expected to win full traversals: one SIMD parse pass then cheap pointer-chasing;
-// On-Demand pays per-token overhead
-
 size_t traverse_json(const sihd::json::Json & j)
 {
     switch (j.type())
@@ -115,9 +112,6 @@ size_t traverse_dom(simdjson::dom::element elem)
     }
 }
 
-// Still walks the whole top-level array (moderate On-Demand fit); its sweet spot is early exit,
-// benchmarked below
-
 size_t partial_ondemand(simdjson::ondemand::document & doc, std::string_view field_name)
 {
     size_t count = 0;
@@ -180,22 +174,19 @@ bool first_field_json(const sihd::json::Json & doc, std::string_view field_name)
     return false;
 }
 
-// ─── File I/O ───
-
 std::string read_file(const char *path)
 {
-    std::ifstream f(path, std::ios::binary);
-    if (!f)
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
     {
         std::fprintf(stderr, "cannot open: %s\n", path);
         return {};
     }
     std::ostringstream ss;
-    ss << f.rdbuf();
+    ss << file.rdbuf();
     return ss.str();
 }
 
-// detect if JSON is array-of-objects (for partial benchmark)
 std::string_view detect_first_key(simdjson::ondemand::parser & parser, simdjson::padded_string & padded)
 {
     auto doc = parser.iterate(padded);
@@ -205,8 +196,8 @@ std::string_view detect_first_key(simdjson::ondemand::parser & parser, simdjson:
     {
         if (elem.type() == simdjson::ondemand::json_type::object)
         {
-            for (simdjson::ondemand::field f : elem.get_object())
-                return std::string_view(f.escaped_key());
+            for (simdjson::ondemand::field field : elem.get_object())
+                return std::string_view(field.escaped_key());
         }
         break;
     }
@@ -234,7 +225,6 @@ void bench_file(const char *path)
 
     std::printf("\n  === Full traversal (DOM should be fastest) ===\n");
 
-    // ─── [simdjson DOM] raw parse + traverse ───
     {
         simdjson::dom::parser parser;
         Ns total {};
@@ -265,7 +255,6 @@ void bench_file(const char *path)
         }
     }
 
-    // ─── [simdjson OD] raw on-demand parse + traverse ───
     {
         simdjson::ondemand::parser parser;
         Ns total {};
@@ -296,7 +285,6 @@ void bench_file(const char *path)
         }
     }
 
-    // ─── [Json] parse + traverse ───
     {
         Ns total {};
         size_t node_count = 0;
@@ -326,19 +314,16 @@ void bench_file(const char *path)
         }
     }
 
-    // ─── Partial access benchmark (OD should be fastest) ───
     {
         simdjson::ondemand::parser od_parser;
         std::string first_key_str;
 
-        // detect if array-of-objects
         auto key_view = detect_first_key(od_parser, padded);
         if (!key_view.empty())
         {
             first_key_str = std::string(key_view);
             std::printf("\n  === Partial access: extract \"%s\" from each object ===\n", first_key_str.c_str());
 
-            // DOM partial
             {
                 simdjson::dom::parser parser;
                 Ns total {};
@@ -358,7 +343,6 @@ void bench_file(const char *path)
                             hit_count);
             }
 
-            // OD partial
             {
                 Ns total {};
                 size_t hit_count = 0;
@@ -377,7 +361,6 @@ void bench_file(const char *path)
                             hit_count);
             }
 
-            // Json partial
             {
                 Ns total {};
                 size_t hit_count = 0;
@@ -409,7 +392,6 @@ void bench_file(const char *path)
 
             std::printf("\n  === Early exit: extract \"%s\" from first object only ===\n", first_key_str.c_str());
 
-            // DOM first object only
             {
                 simdjson::dom::parser parser;
                 Ns total {};
@@ -429,7 +411,6 @@ void bench_file(const char *path)
                             hit ? "hit" : "miss");
             }
 
-            // OD first object only
             {
                 Ns total {};
                 bool hit = false;
@@ -448,7 +429,6 @@ void bench_file(const char *path)
                             hit ? "hit" : "miss");
             }
 
-            // od::find_first — OD early-exit returning Json
             {
                 Ns total {};
                 bool hit = false;
@@ -467,7 +447,6 @@ void bench_file(const char *path)
                             hit ? "hit" : "miss");
             }
 
-            // Json first object only
             {
                 Ns total {};
                 bool hit = false;

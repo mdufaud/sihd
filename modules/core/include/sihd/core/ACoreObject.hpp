@@ -22,15 +22,15 @@ class ACoreObject: public sihd::util::Named,
         using ACoreService::start;
         using ACoreService::stop;
 
-        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr): sihd::util::Named(name, parent) {}
+        ACoreObject(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~ACoreObject() = default;
 
-        bool is_running() const override { return false; }
+        bool is_running() const override;
 
     protected:
         using ACoreService::handle;
 
-        virtual void handle([[maybe_unused]] Channel *channel) override {};
+        virtual void handle(Channel *channel) override;
 };
 
 } // namespace sihd::core

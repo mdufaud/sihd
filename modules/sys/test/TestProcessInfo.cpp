@@ -21,9 +21,9 @@ using namespace sihd::sys;
 class TestProcessInfo: public ::testing::Test
 {
     protected:
-        TestProcessInfo() { sihd::util::LoggerManager::stream(); }
+        TestProcessInfo() { LoggerManager::stream(); }
 
-        virtual ~TestProcessInfo() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestProcessInfo() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {

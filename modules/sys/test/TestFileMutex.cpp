@@ -19,9 +19,9 @@ using namespace sihd::sys;
 class TestFileMutex: public ::testing::Test
 {
     protected:
-        TestFileMutex() { sihd::util::LoggerManager::stream(); }
+        TestFileMutex() { LoggerManager::stream(); }
 
-        virtual ~TestFileMutex() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestFileMutex() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -38,7 +38,7 @@ TEST_F(TestFileMutex, test_filemutex_guard)
     FileMutex mutex(std::move(file));
     SIHD_TRACE("Lock guard mutex: {}", mutex.file().path());
 
-    std::lock_guard l(mutex);
+    std::lock_guard lock(mutex);
 }
 
 TEST_F(TestFileMutex, test_filemutex_unique)
@@ -50,10 +50,10 @@ TEST_F(TestFileMutex, test_filemutex_unique)
     FileMutex mutex(std::move(file));
     SIHD_TRACE("Unique lock mutex: {}", mutex.file().path());
 
-    std::unique_lock l(mutex);
-    EXPECT_TRUE(l.owns_lock());
-    ASSERT_NO_THROW(l.unlock());
-    ASSERT_TRUE(l.try_lock());
+    std::unique_lock lock(mutex);
+    EXPECT_TRUE(lock.owns_lock());
+    ASSERT_NO_THROW(lock.unlock());
+    ASSERT_TRUE(lock.try_lock());
 
 #if !defined(__SIHD_WINDOWS__)
     Process proc;
@@ -99,11 +99,11 @@ TEST_F(TestFileMutex, test_filemutex_shared)
     FileMutex mutex(std::move(file));
     SIHD_TRACE("Shared lock mutex: {}", mutex.file().path());
 
-    std::shared_lock l(mutex);
+    std::shared_lock lock(mutex);
 
-    EXPECT_TRUE(l.owns_lock());
-    ASSERT_NO_THROW(l.unlock());
-    ASSERT_TRUE(l.try_lock());
+    EXPECT_TRUE(lock.owns_lock());
+    ASSERT_NO_THROW(lock.unlock());
+    ASSERT_TRUE(lock.try_lock());
 
 #if !defined(__SIHD_WINDOWS__)
     Process proc;

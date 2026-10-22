@@ -20,8 +20,8 @@ struct DelegateSource
 class TestObservableDelegate: public ::testing::Test
 {
     protected:
-        TestObservableDelegate() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestObservableDelegate() { sihd::util::LoggerManager::clear_loggers(); }
+        TestObservableDelegate() { LoggerManager::stream(); }
+        virtual ~TestObservableDelegate() { LoggerManager::clear_loggers(); }
         virtual void SetUp() {}
         virtual void TearDown() {}
 };

@@ -15,9 +15,9 @@ using namespace sihd::util;
 class TestWaitable: public ::testing::Test
 {
     protected:
-        TestWaitable() { sihd::util::LoggerManager::stream(); }
+        TestWaitable() { LoggerManager::stream(); }
 
-        virtual ~TestWaitable() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestWaitable() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -36,7 +36,7 @@ TEST_F(TestWaitable, test_waitable_basic)
     std::thread t([&]() {
         synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto l = waitable.guard();
+        auto lock = waitable.guard();
         data = true;
         waitable.notify(1);
     });
@@ -59,7 +59,7 @@ TEST_F(TestWaitable, test_waitable_for)
     std::thread t([&]() {
         synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto l = waitable.guard();
+        auto lock = waitable.guard();
         data = true;
         waitable.notify(1);
     });
@@ -84,7 +84,7 @@ TEST_F(TestWaitable, test_waitable_until)
     std::thread t([&]() {
         synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto l = waitable.guard();
+        auto lock = waitable.guard();
         data = true;
         waitable.notify(1);
     });
@@ -107,7 +107,7 @@ TEST_F(TestWaitable, test_waitable_for_elapsed)
         synchro_start.sync();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         {
-            auto l = waitable.guard();
+            auto lock = waitable.guard();
             data = true;
         }
         waitable.notify(1);

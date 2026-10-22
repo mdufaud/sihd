@@ -13,9 +13,7 @@ namespace sihd::sys::signal
 
 SIHD_NEW_LOGGER("sihd::sys::signal");
 
-// utilities
-
-sihd::util::Result<void> kill(pid_t pid, int sig)
+Result<void> kill(pid_t pid, int sig)
 {
     HANDLE handle = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
     if (handle == nullptr)
@@ -29,6 +27,26 @@ sihd::util::Result<void> kill(pid_t pid, int sig)
     }
     CloseHandle(handle);
     return {};
+}
+
+Result<void> block_thread([[maybe_unused]] int sig)
+{
+    return std::unexpected(Error(not_supported, "no per-thread signal mask on windows"));
+}
+
+Result<void> block_thread([[maybe_unused]] std::span<const int> sigs)
+{
+    return std::unexpected(Error(not_supported, "no per-thread signal mask on windows"));
+}
+
+Result<void> unblock_thread([[maybe_unused]] int sig)
+{
+    return std::unexpected(Error(not_supported, "no per-thread signal mask on windows"));
+}
+
+Result<void> unblock_thread([[maybe_unused]] std::span<const int> sigs)
+{
+    return std::unexpected(Error(not_supported, "no per-thread signal mask on windows"));
 }
 
 std::string name(int sig)

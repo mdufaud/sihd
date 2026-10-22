@@ -19,6 +19,20 @@ constexpr size_t max_read_array = max_read_per_poll * 2;
 
 } // namespace
 
+BasicServerHandler::Client::Client(int sock):
+    socket(sock),
+    time_connected(0),
+    time_total(0),
+    error(false),
+    disconnected(false)
+{
+}
+
+int BasicServerHandler::Client::fd() const
+{
+    return socket.socket();
+}
+
 BasicServerHandler::BasicServerHandler()
 {
     _last_time = Timestamp(0);
@@ -129,6 +143,26 @@ std::vector<BasicServerHandler::ClientPtr> BasicServerHandler::clients() const
     return result;
 }
 
+const std::vector<BasicServerHandler::ClientPtr> & BasicServerHandler::read_activity() const
+{
+    return _read_event_lst;
+}
+
+const std::vector<BasicServerHandler::ClientPtr> & BasicServerHandler::write_activity() const
+{
+    return _write_event_lst;
+}
+
+const std::vector<BasicServerHandler::ClientPtr> & BasicServerHandler::new_clients() const
+{
+    return _connect_event_lst;
+}
+
+Duration BasicServerHandler::poll_time() const
+{
+    return _poll_time;
+}
+
 bool BasicServerHandler::send_to_client(const ClientPtr & client, const IArray & arr)
 {
     if (!client)
@@ -148,6 +182,7 @@ bool BasicServerHandler::send_to_client(const ClientPtr & client, const IArray &
             return false;
         client->write_offset = 0;
     }
+
     // no registration means no POLLOUT to drain: hand the buffer back
     if (_server == nullptr || this->server()->add_client_write(client->fd()) == false)
     {
@@ -232,12 +267,14 @@ void BasicServerHandler::handle_new_client(INetServer *server)
             return;
         }
     }
+
     auto client = std::make_shared<Client>(socket);
     client->read_array.reserve(4096);
     client->write_array.reserve(4096);
     client->addr = addr;
     client->time_connected = _clock.now();
     client->last_activity = _steady_clock.now();
+
     SIHD_UNEXPECTED_LOG(client->socket.set_keepalive(true));
     if (_tls_ctx)
     {
@@ -254,6 +291,7 @@ void BasicServerHandler::handle_new_client(INetServer *server)
             std::lock_guard lock(_mutex);
             if (this->_client_limit_reached())
                 return;
+
             const bool registered = step == TlsHandshakeStep::want_read ? server->add_client_read(socket)
                                                                         : server->add_client_write(socket);
             if (!registered)
@@ -298,6 +336,7 @@ void BasicServerHandler::_advance_tls_handshake(INetServer *server,
         return;
     }
     const TlsHandshakeStep step = *stepped;
+
     if (step == TlsHandshakeStep::complete)
     {
         server->remove_client_write(socket);
@@ -402,9 +441,11 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
             if (next_capacity == client->read_array.byte_capacity() || !client->read_array.byte_reserve(next_capacity))
                 break;
         }
+
         const size_t budget = total_read < max_read_per_poll ? max_read_per_poll - total_read
                                                              : client->read_array.byte_capacity() - size;
         const size_t available = std::min(client->read_array.byte_capacity() - size, budget);
+
         const auto more = client->socket.receive(client->read_array.buf() + size, available);
         if (!more)
         {
@@ -425,6 +466,7 @@ void BasicServerHandler::handle_client_read(INetServer *server, int socket)
         }
         total_read += more.value();
     }
+
     client_lock.unlock();
 
     map_lock.lock();
@@ -457,6 +499,7 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
     }
     // keep the client alive across the map erase below
     ClientPtr client = it->second;
+
     bool fully_sent = false;
     {
         std::lock_guard lk(client->mutex);
@@ -481,9 +524,11 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
                 // a zero send with bytes left would spin a level-triggered poll
                 client->error = sent.value() == 0;
             }
+
             fully_sent = !client->error && client->write_offset >= client->write_array.byte_size();
         }
     }
+
     if (client->error)
     {
         this->_drop_client(server, it);
@@ -492,6 +537,7 @@ void BasicServerHandler::handle_client_write(INetServer *server, int socket)
     {
         server->remove_client_write(socket);
     }
+
     _write_event_lst.push_back(client);
 }
 

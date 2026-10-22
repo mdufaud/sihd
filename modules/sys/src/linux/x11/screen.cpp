@@ -1,8 +1,7 @@
 #include <algorithm>
 #include <vector>
 
-// sihd headers first: Xlib poisons common identifiers (None, Status, True,
-// False, ...) with its macros.
+// sihd headers first: Xlib poisons common identifiers (None, Status, True, False, ...) with macros
 #include <sihd/sys/screen.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -12,9 +11,6 @@
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 
-// RandR monitors of the root window; without the extension, the single
-// X screen stands in
-
 using enum sihd::util::ErrorCode;
 
 namespace sihd::sys::screen::x11
@@ -22,7 +18,7 @@ namespace sihd::sys::screen::x11
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::screen");
+SIHD_NEW_LOGGER("sihd::sys::screen::x11");
 
 namespace
 {
@@ -74,8 +70,7 @@ Result<std::vector<Monitor>> monitors()
 
     int count = 0;
     XRRMonitorInfo *infos = XRRGetMonitors(display, DefaultRootWindow(display), True, &count);
-    // Xvfb and extensionless servers report no monitors at all: the single
-    // X screen stands in.
+    // Xvfb and extensionless servers report no monitors at all: the single X screen stands in
     if (infos == nullptr || count <= 0)
     {
         XRRFreeMonitors(infos);
@@ -93,8 +88,7 @@ Result<std::vector<Monitor>> monitors()
         XFree(name);
     }
     XRRFreeMonitors(infos);
-    // RandR may designate no primary output: the first one stands in, like the
-    // wayland backend.
+    // RandR may designate no primary output: the first one stands in, like the wayland backend
     if (std::ranges::contains(monitors, true, &Monitor::primary) == false)
         monitors.front().primary = true;
     return monitors;

@@ -27,7 +27,6 @@ using namespace sihd::sys;
 namespace
 {
 
-// list current directory, returns 0
 std::vector<std::string> cmd_list()
 {
 #if defined(__SIHD_WINDOWS__)
@@ -37,7 +36,6 @@ std::vector<std::string> cmd_list()
 #endif
 }
 
-// print "hello world" on stdout, returns 0
 std::vector<std::string> cmd_echo_hello_world()
 {
 #if defined(__SIHD_WINDOWS__)
@@ -57,7 +55,6 @@ std::vector<std::string> cmd_stdin_passthrough()
 #endif
 }
 
-// access a path that does not exist -> non-empty stderr + non-zero return
 std::vector<std::string> cmd_bad_path()
 {
 #if defined(__SIHD_WINDOWS__)
@@ -67,7 +64,6 @@ std::vector<std::string> cmd_bad_path()
 #endif
 }
 
-// long running process (to be killed by timeout)
 std::vector<std::string> cmd_sleep()
 {
     return {helper_path(), "sleep", "10"};
@@ -84,9 +80,9 @@ constexpr const char *expected_hello_world = "hello world\n";
 class TestProcess: public ::testing::Test
 {
     protected:
-        TestProcess() { sihd::util::LoggerManager::stream(); }
+        TestProcess() { LoggerManager::stream(); }
 
-        virtual ~TestProcess() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestProcess() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -115,7 +111,7 @@ TEST_F(TestProcess, test_process_service)
 
     proc.stdin_from("hello")
         .stdout_to([&res, &waitable](std::string_view buffer) {
-            auto l = waitable.guard();
+            auto guard = waitable.guard();
             res.emplace_back(buffer);
             SIHD_LOG(debug, "{}", buffer);
         })
@@ -125,11 +121,9 @@ TEST_F(TestProcess, test_process_service)
 
     ASSERT_TRUE(worker.start_sync_worker("proc"));
 
-    // waiting passthrough process to boot
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
 #if !defined(__SIHD_WINDOWS__)
-    // cat echoes each write back immediately
     ASSERT_FALSE(res.empty());
     EXPECT_EQ(res.back(), "hello");
 
@@ -155,7 +149,6 @@ TEST_F(TestProcess, test_process_service)
 
     EXPECT_EQ(res.back(), "you");
 #else
-    // sort only flushes at stdin EOF: feed everything, close stdin, collect once
     proc.stdin_from("world");
     proc.stdin_from("how");
     proc.stdin_from("are");
@@ -226,7 +219,7 @@ TEST_F(TestProcess, test_process_argument_boundaries)
     const std::vector<std::string> args = {helper_path(), "args", "a b", "", "a\"b", "tail\\", "a b\\"};
     auto result = proc::execute(args, options);
     EXPECT_EQ(result.get(), 0);
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
         EXPECT_EQ(output, "a b\r\n\r\na\"b\r\ntail\\\r\na b\\\r\n");
     else
         EXPECT_EQ(output, "a b\n\na\"b\ntail\\\na b\\\n");
@@ -268,7 +261,6 @@ TEST_F(TestProcess, test_process_in_cat)
     proc.stdout_to(output);
     EXPECT_TRUE(proc.execute());
 
-    // passthrough starting time
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     proc.stdin_from("1");
@@ -277,10 +269,7 @@ TEST_F(TestProcess, test_process_in_cat)
     constexpr int ms_timeout = 20;
 
 #if !defined(__SIHD_WINDOWS__)
-    // cat echoes back each write immediately
-    // reading stdout
     proc.read_pipes(ms_timeout);
-    // maybe there is '2' to read
     proc.read_pipes(ms_timeout);
 
     EXPECT_EQ(output, "hello world12");
@@ -291,7 +280,6 @@ TEST_F(TestProcess, test_process_in_cat)
 
     EXPECT_TRUE(proc.terminate());
 #else
-    // sort only flushes at stdin EOF
     proc.stdin_from("3");
     proc.stdin_close();
     (void)proc.wait_any();
@@ -314,8 +302,7 @@ TEST_F(TestProcess, test_process_in_wc)
     Process proc {"wc", "-c"};
     constexpr const char *expected_result = "11\n";
 #else
-    // no byte-count command on windows: passthrough still proves
-    // that closing stdin flushes the child and ends it
+    // no byte-count command on windows: passthrough proves closing stdin flushes the child and ends it
     Process proc(cmd_stdin_passthrough());
     constexpr const char *expected_result = "hello world";
 #endif
@@ -326,13 +313,10 @@ TEST_F(TestProcess, test_process_in_wc)
 
     EXPECT_TRUE(proc.execute());
 
-    // child boot time
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    // close stdin to get the child's output
     proc.stdin_close();
 
-    // wait for the child to process the pipe closing and quit
     (void)proc.wait_any();
 
     EXPECT_TRUE(proc.terminate());
@@ -384,8 +368,7 @@ TEST_F(TestProcess, test_process_file_out)
 }
 
 #if !defined(__SIHD_WINDOWS__)
-// windows _do_child_process uses CreateProcess and cannot run an in-process
-// function child (no fork) -> function-based Process stays unix-only
+// windows CreateProcess cannot run an in-process function child (no fork): function-based Process is unix-only
 TEST_F(TestProcess, test_process_file_out_err)
 {
     std::string stdout_path = fs::combine(_tmp_dir.path(), "file_out_err_stdout.txt");
@@ -426,7 +409,6 @@ TEST_F(TestProcess, test_process_close)
     EXPECT_TRUE(proc.terminate());
     EXPECT_TRUE(proc.has_exited());
 #if !defined(__SIHD_WINDOWS__)
-    // bad file descriptor: ls fails writing to the closed stdout/stderr
     EXPECT_EQ((int)proc.return_code(), 2);
 #endif
 
@@ -436,16 +418,13 @@ TEST_F(TestProcess, test_process_close)
     cat.stdin_close().stderr_close();
     EXPECT_TRUE(cat.execute());
 
-    // wait child boot
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     EXPECT_TRUE(cat.terminate());
     EXPECT_TRUE(cat.has_exited());
 #if !defined(__SIHD_WINDOWS__)
-    // bad file descriptor
     EXPECT_EQ((int)cat.return_code(), 1);
 #else
-    // sort sees EOF on the closed stdin and exits cleanly
     EXPECT_EQ((int)cat.return_code(), 0);
 #endif
 }
@@ -479,7 +458,6 @@ TEST_F(TestProcess, test_process_chain)
     EXPECT_TRUE(echo.wait_any().value_or(false));
     EXPECT_TRUE(echo.terminate());
 
-    // wait for wc to process the pipe closing
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 
     EXPECT_TRUE(wc.wait_any().value_or(false));
@@ -521,8 +499,7 @@ TEST_F(TestProcess, test_process_stderr)
 }
 
 #if !defined(__SIHD_WINDOWS__)
-// signal-exit semantics (has_exited_by_signal / signal_exit_number) are unix-only:
-// windows TerminateProcess makes the child exit with a code, never "by signal"
+// windows TerminateProcess exits with a code, never "by signal": signal-exit semantics are unix-only
 TEST_F(TestProcess, test_process_signal_kill)
 {
     if (console::is_interactive() == false)
@@ -539,7 +516,6 @@ TEST_F(TestProcess, test_process_signal_kill)
     EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
 }
 
-// SIGSTOP / SIGCONT have no windows equivalent
 TEST_F(TestProcess, test_process_signal_stop)
 {
     if (console::is_interactive() == false)
@@ -563,7 +539,6 @@ TEST_F(TestProcess, test_process_signal_stop)
     EXPECT_EQ(cat.signal_exit_number(), SIGTERM);
 }
 
-// windows cannot run an in-process function child (no fork)
 TEST_F(TestProcess, test_process_fun)
 {
     Process proc([]() -> int {
@@ -613,8 +588,7 @@ TEST_F(TestProcess, test_process_bad_cmd)
     Process proc {"ellesse", "-la"};
     if (os::is_run_by_qemu())
     {
-        // qemu breaks posix_spawn's synchronous exec-failure report: the spawn "succeeds",
-        // the child execve fails and _exit(127), same as the fork path below
+        // qemu breaks posix_spawn exec-failure report: spawn "succeeds", child execve fails and _exit(127)
         EXPECT_TRUE(proc.execute());
         EXPECT_TRUE(proc.wait_any().value_or(false));
         EXPECT_EQ((int)proc.return_code(), 127);
@@ -629,17 +603,13 @@ TEST_F(TestProcess, test_process_bad_cmd)
     }
 
 #if !defined(__SIHD_WINDOWS__)
-    // Try with fork (windows _do_execute ignores _force_fork: no fork available)
 
     EXPECT_TRUE(proc.reset());
     proc.set_force_fork(true);
 
     // with fork you cannot know at the fork time if the binary is found or not
-    // fork succeeded
     EXPECT_TRUE(proc.execute());
-    // wait for child process fork to end
     EXPECT_TRUE(proc.wait_any().value_or(false));
-    // the exit status
     EXPECT_EQ((int)proc.return_code(), 255);
 #endif
 }
@@ -698,7 +668,6 @@ TEST_F(TestProcess, test_process_exec_timeout)
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(20)), std::future_status::timeout);
     // wide margin: under wine/qemu the kill + reap after the 80ms timeout lands late
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(1000)), std::future_status::ready);
-    // killed by signal / terminated
     ASSERT_EQ(exit_code.get(), 255);
 }
 
@@ -741,7 +710,7 @@ TEST_F(TestProcess, test_process_child_policy)
 
 TEST_F(TestProcess, test_process_child_scheduler)
 {
-    if constexpr (sihd::util::build::is_windows || sihd::util::build::is_emscripten)
+    if constexpr (build::is_windows || build::is_emscripten)
         GTEST_SKIP() << "scheduler policies are a linux feature";
     auto probe = sched::scheduler(os::pid());
     if (probe.has_value() == false)

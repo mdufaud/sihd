@@ -23,14 +23,11 @@ class ConfigurableObj: public Configurable
     public:
         ConfigurableObj()
         {
-            // By lambda
             this->add_conf<bool>("bool", [&](bool test) {
                 this->bool_val = test;
                 return true;
             });
-            // By bind
             this->add_conf<int8_t>("char", std::bind(&ConfigurableObj::set_char, this, std::placeholders::_1));
-            // By ptr
             this->add_conf("uchar", &ConfigurableObj::set_uchar);
             this->add_conf("short", &ConfigurableObj::set_short);
             this->add_conf("ushort", &ConfigurableObj::set_ushort);
@@ -39,12 +36,12 @@ class ConfigurableObj: public Configurable
             this->add_conf("long", &ConfigurableObj::set_long);
             this->add_conf("ulong", &ConfigurableObj::set_ulong);
             this->add_conf("float", &ConfigurableObj::set_float);
+
             this->add_conf("double", &ConfigurableObj::set_double);
             this->add_conf("str", &ConfigurableObj::set_str);
             this->add_conf("cstr", &ConfigurableObj::set_cstr);
             this->add_conf("list", &ConfigurableObj::set_list);
             this->add_conf("json", &ConfigurableObj::set_json);
-            // Multiple args
             this->add_conf<bool, int>("dual", [&](bool b, int i) {
                 SIHD_LOG(debug, "{} {}", b, i);
                 return true;
@@ -163,9 +160,9 @@ class ConfigurableObj: public Configurable
 class TestConfigurable: public ::testing::Test
 {
     protected:
-        TestConfigurable() { sihd::util::LoggerManager::stream(); }
+        TestConfigurable() { LoggerManager::stream(); }
 
-        virtual ~TestConfigurable() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestConfigurable() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -230,12 +227,10 @@ TEST_F(TestConfigurable, test_configurable_class)
     EXPECT_TRUE(obj.set_conf("bool", true).has_value());
     EXPECT_EQ(obj.bool_val, true);
 
-    // Default template is int
     EXPECT_EQ(obj.int_val, 0);
     EXPECT_TRUE(obj.set_conf("int", 20).has_value());
     EXPECT_EQ(obj.int_val, 20);
 
-    // Try catch for good type
     EXPECT_EQ(obj.char_val, 0);
     EXPECT_TRUE(obj.set_conf_int("char", 'a').has_value());
     EXPECT_EQ(obj.char_val, 'a');
@@ -268,9 +263,6 @@ TEST_F(TestConfigurable, test_configurable_class)
     EXPECT_TRUE(obj.set_conf_int("ulong", -1).has_value());
     EXPECT_EQ(obj.ulong_val, 18446744073709551615ul);
 
-    // Floats
-
-    // double is default type
     EXPECT_EQ(obj.double_val, 0.0);
     EXPECT_TRUE(obj.set_conf("double", 11.11).has_value());
     EXPECT_FLOAT_EQ(obj.double_val, 11.11);
@@ -283,9 +275,6 @@ TEST_F(TestConfigurable, test_configurable_class)
     EXPECT_TRUE(obj.set_conf_float("double", 12345.678).has_value());
     EXPECT_FLOAT_EQ(obj.double_val, 12345.678);
 
-    // Strings
-
-    // default is const char
     EXPECT_EQ(obj.str_val, "");
     EXPECT_TRUE(obj.set_conf("cstr", "hello").has_value());
     EXPECT_EQ(obj.str_val, "hello");

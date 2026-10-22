@@ -68,7 +68,6 @@ void LuaCsvApi::load_base(Vm & vm)
                     return luabridge::LuaRef(state, luabridge::LuaNil());
                 return luabridge::LuaRef(state, *data);
             })
-        // parse a CSV string -> table of rows
         .addFunction(
             "from_string",
             +[](const std::string & content,
@@ -82,17 +81,16 @@ void LuaCsvApi::load_base(Vm & vm)
                                                              static_cast<char>(opt_char(comment, '#')));
                 return luabridge::LuaRef(state, data);
             })
-        // write a table of rows (each row a table of string cells) to a CSV file
         .addFunction(
             "write",
             +[](const std::string & path,
                 const std::vector<std::vector<std::string>> & rows,
                 luabridge::LuaRef delimiter) -> bool {
                 CsvWriter writer;
+                if (!delimiter.isNil() && SIHD_UNEXPECTED_LOG(writer.set_delimiter(opt_char(delimiter, ','))))
+                    return false;
                 if (SIHD_UNEXPECTED_LOG(writer.open(path)))
                     return false;
-                if (!delimiter.isNil())
-                    SIHD_UNEXPECTED_LOG(writer.set_delimiter(opt_char(delimiter, ',')));
                 for (const auto & row : rows)
                 {
                     if (writer.write_row(row) < 0)
@@ -106,7 +104,6 @@ void LuaCsvApi::load_base(Vm & vm)
         .addFunction(
             "escape_str",
             +[](const std::string & str) -> std::string { return utils::escape_str(str); })
-        // streaming reader
         .beginClass<CsvReader>("CsvReader")
         .addConstructor<void (*)()>()
         .addFunction(
@@ -136,7 +133,6 @@ void LuaCsvApi::load_base(Vm & vm)
             })
         .addFunction("columns", &CsvReader::columns)
         .endClass()
-        // streaming writer
         .beginClass<CsvWriter>("CsvWriter")
         .addConstructor<void (*)()>()
         .addFunction(

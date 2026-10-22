@@ -25,10 +25,8 @@ class SshServer: public sihd::util::Named,
         SshServer(const std::string & name, sihd::util::Node *parent = nullptr);
         virtual ~SshServer();
 
-        // Default backstop applied to each connection's blocking key exchange
         static constexpr int default_kex_timeout_sec = 10;
 
-        // Configuration methods (call before start)
         sihd::util::Result<void> set_port(int port);
         sihd::util::Result<void> set_bind_address(std::string_view addr);
         sihd::util::Result<void> set_rsa_key(std::string_view key_path);
@@ -40,15 +38,12 @@ class SshServer: public sihd::util::Named,
         // Bound the blocking key exchange (seconds) to defuse connect-and-stall DoS
         sihd::util::Result<void> set_kex_timeout(int seconds);
 
-        // Handler
         void set_server_handler(ISshServerHandler *handler);
-        ISshServerHandler *server_handler() const { return _server_handler_ptr; }
+        ISshServerHandler *server_handler() const;
 
-        // Get the actual bound port (useful when port 0 is used for dynamic allocation)
         int get_port() const;
 
-        // Check if server should stop (used by event loop)
-        bool should_stop() const { return _stop.load(); }
+        bool should_stop() const;
 
     protected:
         bool on_start() override;

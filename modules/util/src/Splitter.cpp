@@ -23,9 +23,9 @@ std::string_view SplitterOptions::all_encloses()
 
 Splitter::Splitter(const SplitterOptions & options): _empty_delimitations(false)
 {
-    if (sihd::util::tools::maximum_one_true(options.delimiter_char != 0,
-                                            options.delimiter_str.size() > 0,
-                                            options.delimiter_method != nullptr)
+    if (tools::maximum_one_true(options.delimiter_char != 0,
+                                options.delimiter_str.size() > 0,
+                                options.delimiter_method != nullptr)
         == false)
     {
         throw std::logic_error("Cannot have two delimiter types");
@@ -125,6 +125,7 @@ bool Splitter::_next_token_range(std::string_view view, int *pos, int *begin, in
             *pos = i;
             return true;
         }
+
         i = i + delimiter_offset;
         ++delimiter_count;
     }
@@ -141,7 +142,7 @@ bool Splitter::_next_token_range(std::string_view view, int *pos, int *begin, in
                                                               i,
                                                               _authorized_open_escape_sequences.c_str(),
                                                               _escape_char);
-            // jump over the enclosure
+
             if (closed_at > 0)
             {
                 i = closed_at;

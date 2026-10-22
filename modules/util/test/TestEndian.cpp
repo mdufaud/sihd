@@ -10,9 +10,9 @@ using namespace sihd::util;
 class TestEndian: public ::testing::Test
 {
     protected:
-        TestEndian() { sihd::util::LoggerManager::stream(); }
+        TestEndian() { LoggerManager::stream(); }
 
-        virtual ~TestEndian() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestEndian() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -82,7 +82,6 @@ TEST_F(TestEndian, test_endian_convert)
     uint16_t u16_big = endian::convert<uint16_t, std::endian::big>(u16);
     uint16_t u16_little = endian::convert<uint16_t, std::endian::little>(u16);
 
-    // Asserting the right endianness for the test
     ptr = (uint8_t *)&u16;
     EXPECT_EQ((uint8_t)0x34, ptr[0]);
     EXPECT_EQ((uint8_t)0x12, ptr[1]);

@@ -32,6 +32,7 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/build.hpp>
 
 SIHD_NEW_LOGGER("ssh-demo");
 
@@ -105,12 +106,9 @@ int main(int argc, char **argv)
             SIHD_LOG(info, "Opening interactive shell (pty {}x{})", winsize.ws_col, winsize.ws_row);
 
             auto *pty = new SshSubsystemPty();
-#if !defined(__SIHD_WINDOWS__)
-            pty->set_shell("/bin/bash");
-            pty->set_args({"-i"});
-#else
-            pty->set_shell("cmd.exe");
-#endif
+            pty->set_shell(build::is_windows ? "cmd.exe" : "/bin/bash");
+            if constexpr (!build::is_windows)
+                pty->set_args({"-i"});
             return pty;
         });
 

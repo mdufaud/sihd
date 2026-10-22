@@ -31,6 +31,7 @@ bool switch_buffer_endianness(void *buf, ByteSize size, size_t buf_size)
             }
             break;
         }
+
         case ByteSize::b4:
         {
             auto *buf4 = static_cast<int32_t *>(buf);
@@ -41,6 +42,7 @@ bool switch_buffer_endianness(void *buf, ByteSize size, size_t buf_size)
             }
             break;
         }
+
         case ByteSize::b8:
         {
             auto *buf8 = static_cast<int64_t *>(buf);

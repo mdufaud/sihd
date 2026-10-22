@@ -11,9 +11,6 @@
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/str.hpp>
 
-// pid, resource limits, socket ioctls, boot time, backtrace, memory queries,
-// error strings and debugger detection live in src/linux|windows/os.cpp
-
 namespace sihd::sys::os
 {
 
@@ -47,8 +44,7 @@ bool is_run_by_valgrind()
 
 bool is_run_by_qemu()
 {
-    // qemu-user passes its own QEMU_LD_PREFIX into the guest environment (cross sysroot).
-    // No reliable non-env signal: qemu-11 emulates the vDSO and fakes uname/auxv to the guest.
+    // qemu-user passes QEMU_LD_PREFIX into the guest env; no reliable non-env signal (qemu-11 fakes vDSO/uname/auxv)
     return env::get("QEMU_LD_PREFIX").has_value();
 }
 

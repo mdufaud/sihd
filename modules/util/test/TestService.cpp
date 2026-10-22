@@ -32,11 +32,11 @@ class FakeThreadedService: public AThreadedService
 
         bool on_start() override
         {
-            auto b = std::make_shared<Synchronizer>(3);
-            thread1 = std::thread([b] { b->sync(); });
-            thread2 = std::thread([b] { b->sync(); });
-            thread3 = std::thread([b, this] {
-                b->sync();
+            auto barrier = std::make_shared<Synchronizer>(3);
+            thread1 = std::thread([barrier] { barrier->sync(); });
+            thread2 = std::thread([barrier] { barrier->sync(); });
+            thread3 = std::thread([barrier, this] {
+                barrier->sync();
                 started = true;
                 this->notify_service_thread_started();
             });
@@ -117,16 +117,19 @@ class FakeService: public AService
             ++n_init;
             return !fail_init;
         }
+
         bool do_start()
         {
             ++n_start;
             return !fail_start;
         }
+
         bool do_stop()
         {
             ++n_stop;
             return !fail_stop;
         }
+
         bool do_reset()
         {
             ++n_reset;
@@ -202,9 +205,9 @@ class TestService: public ::testing::Test,
                    public IHandler<ServiceController *>
 {
     protected:
-        TestService() { sihd::util::LoggerManager::stream(); }
+        TestService() { LoggerManager::stream(); }
 
-        virtual ~TestService() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestService() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() { obs_changed = 0; }
 
@@ -233,7 +236,6 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_NE(service.service_ctrl(), nullptr);
     service.ctrl.add_observer(this);
 
-    // cannot do anything else than setup (except reset)
     EXPECT_FALSE(service.init());
     EXPECT_FALSE(service.start());
     EXPECT_FALSE(service.stop());
@@ -243,13 +245,10 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_EQ(service.n_stop, 0);
     EXPECT_EQ(obs_changed, 0);
 
-    // setup
     EXPECT_TRUE(service.setup());
     EXPECT_EQ(service.n_setup, 1);
-    // none -> CONFIGURING -> CONFIGURED
     EXPECT_EQ(obs_changed, 2);
 
-    // cannot do anything else than init (except reset)
     EXPECT_FALSE(service.start());
     EXPECT_FALSE(service.stop());
     EXPECT_EQ(service.n_init, 0);
@@ -258,14 +257,11 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_FALSE(service.setup());
     EXPECT_EQ(obs_changed, 2);
 
-    // init
     EXPECT_TRUE(service.init());
     EXPECT_EQ(service.n_setup, 1);
     EXPECT_EQ(service.n_init, 1);
-    // CONFIGURED -> initializing -> stopped
     EXPECT_EQ(obs_changed, 4);
 
-    // cannot do anything else than start (except reset)
     EXPECT_TRUE(service.stop());
     EXPECT_EQ(service.n_start, 0);
     EXPECT_EQ(service.n_stop, 0);
@@ -273,7 +269,6 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_FALSE(service.init());
     EXPECT_EQ(obs_changed, 4);
 
-    // start
     EXPECT_FALSE(service.is_running());
     EXPECT_TRUE(service.start());
     EXPECT_TRUE(service.is_running());
@@ -281,48 +276,34 @@ TEST_F(TestService, test_service_ctrl)
     EXPECT_EQ(service.n_init, 1);
     EXPECT_EQ(service.n_start, 1);
     EXPECT_EQ(service.n_stop, 0);
-    // stopped -> starting -> running
     EXPECT_EQ(obs_changed, 6);
 
-    // cannot do previous states
     EXPECT_FALSE(service.setup());
     EXPECT_FALSE(service.init());
 
-    // stop
     EXPECT_TRUE(service.stop());
     EXPECT_EQ(service.n_stop, 1);
-    // running -> stopping -> stopped
     EXPECT_EQ(obs_changed, 8);
-    // start
     EXPECT_TRUE(service.start());
     EXPECT_EQ(service.n_start, 2);
-    // stopped -> starting -> running
     EXPECT_EQ(obs_changed, 10);
 
-    // cannot reset from start
     EXPECT_FALSE(service.reset());
 
-    // stop
     EXPECT_TRUE(service.stop());
     EXPECT_EQ(service.n_stop, 2);
-    // running -> stopping -> stopped
     EXPECT_EQ(obs_changed, 12);
 
-    // reset
     EXPECT_TRUE(service.reset());
     EXPECT_EQ(service.n_reset, 1);
-    // stopped -> resetting -> none
     EXPECT_EQ(obs_changed, 14);
 
-    // cannot re-reset
     EXPECT_FALSE(service.reset());
     EXPECT_EQ(service.n_reset, 1);
 
-    // setup -> rest
     EXPECT_TRUE(service.setup());
     EXPECT_TRUE(service.reset());
 
-    // init -> reset
     EXPECT_TRUE(service.setup());
     EXPECT_TRUE(service.init());
     EXPECT_TRUE(service.reset());

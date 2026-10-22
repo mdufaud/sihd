@@ -1,8 +1,7 @@
 #ifndef __SIHD_SYS_X11_SCREEN_HPP__
 #define __SIHD_SYS_X11_SCREEN_HPP__
 
-// X11 screen backend of the dispatcher in src/linux/screen.cpp: RandR monitors,
-// one whole-screen entry when the extension is missing
+// RandR monitors, one whole-screen entry when the extension is missing
 
 #include <sihd/sys/screen.hpp>
 
@@ -14,8 +13,6 @@ namespace sihd::sys::screen::x11
 sihd::util::Result<std::vector<sihd::sys::screen::Monitor>> monitors();
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<std::vector<sihd::sys::screen::Monitor>> monitors()
 {

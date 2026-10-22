@@ -31,10 +31,10 @@ class BasicServerHandler: public INetServerHandler,
                     ready
                 };
 
-                Client(int sock): socket(sock), time_connected(0), time_total(0), error(false), disconnected(false) {}
+                Client(int sock);
                 ~Client() = default;
 
-                int fd() const { return socket.socket(); }
+                int fd() const;
 
                 TlsSocket socket;
                 mutable std::mutex mutex;
@@ -73,10 +73,10 @@ class BasicServerHandler: public INetServerHandler,
 
         std::vector<ClientPtr> clients() const;
         // activity lists are only valid inside the observer callback
-        const std::vector<ClientPtr> & read_activity() const { return _read_event_lst; }
-        const std::vector<ClientPtr> & write_activity() const { return _write_event_lst; }
-        const std::vector<ClientPtr> & new_clients() const { return _connect_event_lst; }
-        sihd::util::Duration poll_time() const { return _poll_time; }
+        const std::vector<ClientPtr> & read_activity() const;
+        const std::vector<ClientPtr> & write_activity() const;
+        const std::vector<ClientPtr> & new_clients() const;
+        sihd::util::Duration poll_time() const;
         INetServer *server();
         size_t client_count() const;
         ClientPtr client(int socket);

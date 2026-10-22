@@ -12,7 +12,7 @@ BlockingServiceController::BlockingServiceController()
 
 Transition BlockingServiceController::op_start(AService::Operation op)
 {
-    std::lock_guard l(_state_mutex);
+    std::lock_guard lock(_state_mutex);
     switch (op)
     {
         case AService::Operation::Start:
@@ -37,7 +37,7 @@ Transition BlockingServiceController::op_start(AService::Operation op)
 
 bool BlockingServiceController::op_end(AService::Operation op, bool status)
 {
-    std::lock_guard l(_state_mutex);
+    std::lock_guard lock(_state_mutex);
     switch (op)
     {
         case AService::Operation::Start:

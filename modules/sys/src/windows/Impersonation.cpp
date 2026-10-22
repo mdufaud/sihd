@@ -65,16 +65,16 @@ Impersonation::~Impersonation()
     _impl->close();
 }
 
-sihd::util::Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
-                                                       [[maybe_unused]] const user::GroupId & group_id)
+Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId & user_id,
+                                           [[maybe_unused]] const user::GroupId & group_id)
 {
     // a token for an arbitrary account cannot be obtained without its credentials
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> Impersonation::impersonate_with_credentials(std::string_view user_name,
-                                                                     std::string_view password,
-                                                                     std::string_view domain)
+Result<void> Impersonation::impersonate_with_credentials(std::string_view user_name,
+                                                         std::string_view password,
+                                                         std::string_view domain)
 {
     if (_impl->active)
         return std::unexpected(Error(not_initialized, "already impersonating"));
@@ -107,7 +107,7 @@ sihd::util::Result<void> Impersonation::impersonate_with_credentials(std::string
     return {};
 }
 
-sihd::util::Result<void> Impersonation::revert()
+Result<void> Impersonation::revert()
 {
     if (!_impl->active)
         return std::unexpected(Error(not_initialized, "not impersonating"));

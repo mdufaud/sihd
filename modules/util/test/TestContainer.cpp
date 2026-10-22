@@ -87,17 +87,13 @@ TEST_F(TestContainer, test_container_vector)
     EXPECT_FALSE(container::emplace_back_unique(vec, 4));
     EXPECT_EQ(vec.size(), 5u);
 
-    // 1 2 3 4 5
-
     EXPECT_FALSE(container::erase(vec, 0));
     EXPECT_TRUE(container::erase(vec, 3));
     EXPECT_EQ(vec.size(), 4u);
 
-    // 1 2 4 5
     const int total_vector = 12;
 
     EXPECT_EQ(container::sum(vec), total_vector);
-    // EXPECT_EQ(container::sum(vec, [](auto val) { return val * 2; }), total_vector * 2);
 
     EXPECT_FLOAT_EQ(container::average(vec), total_vector / vec.size());
 

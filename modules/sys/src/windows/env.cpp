@@ -1,4 +1,4 @@
-#include <windows.h> // GetEnvironmentVariableA / SetEnvironmentVariableA / GetEnvironmentStringsA
+#include <windows.h>
 
 #include <fmt/format.h>
 
@@ -29,11 +29,10 @@ std::optional<std::string> get(std::string_view key)
     return value;
 }
 
-sihd::util::Result<void> set(std::string_view key, std::string_view value)
+Result<void> set(std::string_view key, std::string_view value)
 {
     if (::SetEnvironmentVariableA(std::string(key).c_str(), std::string(value).c_str()) == 0)
     {
-        // same failure classes as the errno mapping on linux
         const DWORD err = ::GetLastError();
         const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
                                : err == ERROR_INVALID_PARAMETER ? invalid_argument
@@ -43,7 +42,7 @@ sihd::util::Result<void> set(std::string_view key, std::string_view value)
     return {};
 }
 
-sihd::util::Result<void> unset(std::string_view key)
+Result<void> unset(std::string_view key)
 {
     if (::SetEnvironmentVariableA(std::string(key).c_str(), nullptr) == 0)
     {

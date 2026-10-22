@@ -2,8 +2,7 @@
 #include <cstring>
 #include <string_view>
 
-// sihd headers first: Xlib poisons common identifiers (None, Status, True,
-// False, ...) with its macros.
+// sihd headers first: Xlib poisons common identifiers (None, Status, True, False) with macros
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
@@ -13,15 +12,12 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-// X11 screenshot backend - XGetImage based captures of root, focused,
-// pointed-at or named windows.
-
 namespace sihd::sys::screenshot::x11
 {
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::screenshot");
+SIHD_NEW_LOGGER("sihd::sys::screenshot::x11");
 
 namespace
 {
@@ -45,7 +41,6 @@ uint8_t extract_channel(unsigned long pixel, unsigned long mask)
         return 0;
     const int shift = count_trailing_zeros(mask);
     const unsigned long extracted = (pixel & mask) >> shift;
-    // Normalize to 8-bit (handle masks of different sizes)
     const unsigned long mask_max = mask >> shift;
     if (mask_max == 0)
         return 0;
@@ -56,7 +51,6 @@ bool image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image)
 {
     try
     {
-        // Always create 32-bit bitmap for consistency
         bm.create(width, height, 32);
 
         const unsigned long red_mask = image->red_mask;
@@ -97,10 +91,8 @@ bool window_readable(const XWindowAttributes & gwa)
     // InputOnly windows have no drawable content
     if (gwa.c_class != InputOutput)
         return false;
-    // Window must be mapped and viewable
     if (gwa.map_state != IsViewable)
         return false;
-    // Sanity check dimensions
     if (gwa.width <= 0 || gwa.height <= 0)
         return false;
     return true;
@@ -201,7 +193,7 @@ bool take_window_name(Bitmap & bm, std::string_view name)
         return false;
     }
 
-    Defer d([&list_win] { XFree(list_win); });
+    Defer defer([&list_win] { XFree(list_win); });
 
     for (unsigned int i = 0; i < nchildren; ++i)
     {

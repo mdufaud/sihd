@@ -7,6 +7,8 @@
 
 SIHD_NEW_LOGGER("test::loggerfile");
 
+using namespace sihd::util;
+
 namespace test
 {
 using namespace sihd::sys;
@@ -17,7 +19,7 @@ class TestLoggerFile: public ::testing::Test
         TestLoggerFile() = default;
         virtual ~TestLoggerFile() = default;
         virtual void SetUp() {}
-        virtual void TearDown() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual void TearDown() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestLoggerFile, test_loggerfile_write)
@@ -30,11 +32,11 @@ TEST_F(TestLoggerFile, test_loggerfile_write)
     {
         auto *logger = new LoggerFile(path, true, "");
         ASSERT_TRUE(logger->is_open());
-        sihd::util::LoggerManager::add(logger);
+        LoggerManager::add(logger);
 
         SIHD_LOG(info, "test message for log file");
 
-        sihd::util::LoggerManager::clear_loggers();
+        LoggerManager::clear_loggers();
     }
 
     auto content = fs::read_all(path);

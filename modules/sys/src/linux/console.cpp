@@ -33,7 +33,7 @@ bool set_attr(int fd, const struct termios & term)
 
 } // namespace
 
-sihd::util::Result<WindowSize> size(int fd)
+Result<WindowSize> size(int fd)
 {
     struct winsize ws = {};
     auto res = os::ioctl(fd, TIOCGWINSZ, &ws);
@@ -118,7 +118,7 @@ bool NoEcho::valid() const
     return _impl->applied;
 }
 
-sihd::util::Result<void> enable_vt(int fd)
+Result<void> enable_vt(int fd)
 {
     (void)fd;
     return {};

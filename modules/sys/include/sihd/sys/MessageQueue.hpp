@@ -1,8 +1,6 @@
 #ifndef __SIHD_SYS_MESSAGEQUEUE_HPP__
 #define __SIHD_SYS_MESSAGEQUEUE_HPP__
 
-#include <sys/stat.h> // mode_t
-
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -12,10 +10,6 @@
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# define mode_t unsigned int
-#endif
 
 namespace sihd::sys
 {
@@ -79,9 +73,5 @@ class MessageQueue
 };
 
 } // namespace sihd::sys
-
-#if defined(__SIHD_EMSCRIPTEN__)
-# undef mode_t
-#endif
 
 #endif

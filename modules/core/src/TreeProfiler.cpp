@@ -19,36 +19,36 @@ using namespace sihd::util;
 namespace
 {
 
-using Op = sihd::util::AService::Operation;
+using Op = AService::Operation;
 
 struct WalkGuard
 {
-        sihd::util::WaitableRecursive & waitable;
+        WaitableRecursive & waitable;
         bool & walk_in_progress;
 
         ~WalkGuard()
         {
             {
-                auto l = waitable.guard();
+                auto lock = waitable.guard();
                 walk_in_progress = false;
             }
             waitable.notify_all();
         }
 };
 
-std::optional<Op> op_from_state(sihd::util::ServiceController::State state)
+std::optional<Op> op_from_state(ServiceController::State state)
 {
     switch (state)
     {
-        case sihd::util::ServiceController::Configuring:
+        case ServiceController::Configuring:
             return Op::Setup;
-        case sihd::util::ServiceController::Initializing:
+        case ServiceController::Initializing:
             return Op::Init;
-        case sihd::util::ServiceController::Starting:
+        case ServiceController::Starting:
             return Op::Start;
-        case sihd::util::ServiceController::Stopping:
+        case ServiceController::Stopping:
             return Op::Stop;
-        case sihd::util::ServiceController::Resetting:
+        case ServiceController::Resetting:
             return Op::Reset;
         default:
             return std::nullopt;
@@ -76,10 +76,10 @@ const char *op_str(Op op)
 
 std::string duration_str(time::UnixTime nano)
 {
-    return sihd::util::Duration(nano).str();
+    return Duration(nano).str();
 }
 
-std::string stat_str(const sihd::util::Stat<time::UnixTime> & stat, std::string_view count_label = "n")
+std::string stat_str(const Stat<time::UnixTime> & stat, std::string_view count_label = "n")
 {
     if (stat.samples == 0)
         return fmt::format("{}=0", count_label);
@@ -92,28 +92,28 @@ std::string stat_str(const sihd::util::Stat<time::UnixTime> & stat, std::string_
                        duration_str(stat.max));
 }
 
-std::string observer_label(sihd::util::IHandler<Channel *> *obs)
+std::string observer_label(IHandler<Channel *> *obs)
 {
-    const std::string class_name = sihd::util::str::demangle(typeid(*obs).name());
-    const sihd::util::Named *named = dynamic_cast<const sihd::util::Named *>(obs);
+    const std::string class_name = str::demangle(typeid(*obs).name());
+    const Named *named = dynamic_cast<const Named *>(obs);
     if (named != nullptr)
         return fmt::format("{} ({})", named->name(), class_name);
     return class_name;
 }
 
-std::string service_name(const sihd::util::AService *service)
+std::string service_name(const AService *service)
 {
-    const sihd::util::Named *named = dynamic_cast<const sihd::util::Named *>(service);
+    const Named *named = dynamic_cast<const Named *>(service);
     if (named != nullptr)
         return named->full_name();
-    return sihd::util::str::demangle(typeid(*service).name());
+    return str::demangle(typeid(*service).name());
 }
 
 } // namespace
 
 SIHD_LOGGER;
 
-TreeProfiler::ChannelEntry::ObsStat *TreeProfiler::ChannelEntry::_find_stat(sihd::util::IHandler<Channel *> *obs)
+TreeProfiler::ChannelEntry::ObsStat *TreeProfiler::ChannelEntry::_find_stat(IHandler<Channel *> *obs)
 {
     for (ObsStat & stat : stats)
     {
@@ -128,10 +128,10 @@ void TreeProfiler::ChannelEntry::_prune_stats()
     // sizes diverge only when an observer came or went
     if (stats.size() == channel->observers_count())
         return;
-    std::set<sihd::util::IHandler<Channel *> *> live;
-    channel->for_each_observer([&live](sihd::util::IHandler<Channel *> *obs) { live.insert(obs); });
+    std::set<IHandler<Channel *> *> live;
+    channel->for_each_observer([&live](IHandler<Channel *> *obs) { live.insert(obs); });
     stats.erase(
-        std::remove_if(stats.begin(), stats.end(), [&live](const ObsStat & stat) { return live.count(stat.obs) == 0; }),
+        std::remove_if(stats.begin(), stats.end(), [&live](const ObsStat & stat) { return !live.contains(stat.obs); }),
         stats.end());
 }
 
@@ -145,12 +145,12 @@ void TreeProfiler::ChannelEntry::after_notification([[maybe_unused]] Channel *se
     profiler->_notify_end(this);
 }
 
-void TreeProfiler::ChannelEntry::before_observer(sihd::util::IHandler<Channel *> *obs, [[maybe_unused]] Channel *sender)
+void TreeProfiler::ChannelEntry::before_observer(IHandler<Channel *> *obs, [[maybe_unused]] Channel *sender)
 {
     profiler->_observer_begin(this, obs);
 }
 
-void TreeProfiler::ChannelEntry::after_observer(sihd::util::IHandler<Channel *> *obs, [[maybe_unused]] Channel *sender)
+void TreeProfiler::ChannelEntry::after_observer(IHandler<Channel *> *obs, [[maybe_unused]] Channel *sender)
 {
     profiler->_observer_end(this, obs);
 }
@@ -176,7 +176,7 @@ void TreeProfiler::set_trace(bool active)
     _trace = active;
 }
 
-void TreeProfiler::set_clock(sihd::util::IClock *clock)
+void TreeProfiler::set_clock(IClock *clock)
 {
     _clock_ptr = clock;
 }
@@ -196,7 +196,7 @@ void TreeProfiler::set_queue_warning(size_t warning_threshold)
     _queue_warning = warning_threshold;
 }
 
-bool TreeProfiler::add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_front)
+bool TreeProfiler::add_observer(IHandler<Event *> *obs, bool add_to_front)
 {
     const bool ret = Observable<Event>::add_observer(obs, add_to_front);
     if (ret)
@@ -204,14 +204,14 @@ bool TreeProfiler::add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_
     return ret;
 }
 
-void TreeProfiler::remove_observer(sihd::util::IHandler<Event *> *obs)
+void TreeProfiler::remove_observer(IHandler<Event *> *obs)
 {
     Observable<Event>::remove_observer(obs);
     // an in-flight dispatch may still hold obs in its snapshot
     std::lock_guard dispatching(_dispatch_mutex);
 }
 
-bool TreeProfiler::flush(sihd::util::Duration timeout) const
+bool TreeProfiler::flush(Duration timeout) const
 {
     return _dispatch_queue.waitable.wait_for(timeout, [this] { return _dispatch_queue.pending == 0; });
 }
@@ -238,7 +238,7 @@ void TreeProfiler::_stop_dispatcher()
     if (_dispatcher_running.exchange(false) == false)
         return;
     {
-        auto l = _dispatch_queue.waitable.guard();
+        auto lock = _dispatch_queue.waitable.guard();
         _stop_dispatch = true;
     }
     _dispatch_queue.waitable.notify_all();
@@ -253,14 +253,15 @@ void TreeProfiler::_dispatch(Event && event)
     bool errored = false;
     std::string source;
     size_t queue_size = 0;
+
     {
-        auto l = _dispatch_queue.waitable.guard();
+        auto lock = _dispatch_queue.waitable.guard();
         queue_size = _dispatch_queue.items.size();
         const size_t queue_max = _queue_max;
+
         if (queue_max > 0 && queue_size >= queue_max)
         {
             _dropped_events_total += 1;
-            // one error per source until the queue drains again
             errored = _errored_sources.insert(event.source).second;
             if (errored)
                 source = event.source;
@@ -268,7 +269,6 @@ void TreeProfiler::_dispatch(Event && event)
         else
         {
             const size_t warning_threshold = _queue_warning;
-            // one warning per source until the queue drains again
             warned = warning_threshold > 0 && queue_size >= warning_threshold
                      && _warned_sources.insert(event.source).second;
             if (warned)
@@ -285,12 +285,14 @@ void TreeProfiler::_dispatch(Event && event)
                  _dropped_events_total.load());
         return;
     }
+
     if (warned)
         SIHD_LOG(warning,
                  "TreeProfiler: dispatch queue almost full ({}/{}), events from '{}' stack up",
                  queue_size,
                  _queue_max.load(),
                  source);
+
     _dispatch_queue.waitable.notify_all();
 }
 
@@ -301,8 +303,9 @@ void TreeProfiler::_dispatch_loop()
     {
         batch.clear();
         _dispatch_queue.waitable.wait([this] { return _stop_dispatch || _dispatch_queue.items.empty() == false; });
+
         {
-            auto l = _dispatch_queue.waitable.guard();
+            auto lock = _dispatch_queue.waitable.guard();
             if (_stop_dispatch && _dispatch_queue.items.empty())
                 break;
             batch.reserve(_dispatch_queue.items.size());
@@ -310,23 +313,22 @@ void TreeProfiler::_dispatch_loop()
                 batch.push_back(std::move(event));
             _dispatch_queue.items.clear();
         }
+
         for (Event & event : batch)
         {
-            // snapshot per event: hooks may add or remove observers, and run without holding the observable
-            // lock so producers never stall on a slow observer
+            // snapshot per event: hooks may add or remove observers and run without the observable lock
             std::lock_guard dispatching(_dispatch_mutex);
-            std::vector<sihd::util::IHandler<Event *> *> observers;
-            this->for_each_observer([&observers](sihd::util::IHandler<Event *> *obs) { observers.push_back(obs); });
-            for (sihd::util::IHandler<Event *> *obs : observers)
+            std::vector<IHandler<Event *> *> observers;
+            this->for_each_observer([&observers](IHandler<Event *> *obs) { observers.push_back(obs); });
+            for (IHandler<Event *> *obs : observers)
             {
                 if (this->is_observer(obs))
                     obs->handle(&event);
             }
         }
         {
-            auto l = _dispatch_queue.waitable.guard();
+            auto lock = _dispatch_queue.waitable.guard();
             _dispatch_queue.pending -= batch.size();
-            // sources get one warning or error log again at the next pressure
             const size_t warning_threshold = _queue_warning;
             if (warning_threshold == 0 || _dispatch_queue.items.size() < warning_threshold)
                 _warned_sources.clear();
@@ -337,14 +339,14 @@ void TreeProfiler::_dispatch_loop()
     }
 }
 
-bool TreeProfiler::observe(sihd::util::Node *root, size_t max_recursion)
+bool TreeProfiler::observe(Node *root, size_t max_recursion)
 {
     if (root == nullptr)
         return false;
-    sihd::util::AService *service = dynamic_cast<sihd::util::AService *>(root);
+    AService *service = dynamic_cast<AService *>(root);
     if (service != nullptr)
         this->_observe_service(service);
-    std::set<sihd::util::Node *> visited;
+    std::set<Node *> visited;
     this->_observe_node(root, 0, max_recursion, visited);
     this->_add_root(root);
     this->_resolve_pending_conditions();
@@ -361,46 +363,46 @@ bool TreeProfiler::observe(Channel *channel)
     return ret;
 }
 
-bool TreeProfiler::observe(sihd::util::AService *service)
+bool TreeProfiler::observe(AService *service)
 {
     if (service == nullptr)
         return false;
     const bool ret = this->_observe_service(service);
-    // the concrete service is usually a Named: it joins the report roots
-    sihd::util::Named *named = dynamic_cast<sihd::util::Named *>(service);
+    Named *named = dynamic_cast<Named *>(service);
     if (named != nullptr)
         this->_add_root(named);
     this->_resolve_pending_conditions();
     return ret;
 }
 
-void TreeProfiler::_add_root(sihd::util::Named *root)
+void TreeProfiler::_add_root(Named *root)
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     if (std::find(_roots.begin(), _roots.end(), root) == _roots.end())
         _roots.push_back(root);
 }
 
 void TreeProfiler::reset()
 {
-    // liveness comes from a walk of the roots: children destroyed by a service state change are not
-    // in it anymore, their stale entries are dropped without dereferencing them
-    std::set<const sihd::util::Named *> nameds;
-    std::set<const sihd::util::AService *> services;
+    // liveness comes from a walk of the roots: stale entries of destroyed children are dropped undereferenced
+    std::set<const Named *> nameds;
+    std::set<const AService *> services;
     std::vector<Channel *> channels;
-    std::vector<sihd::util::ServiceController *> ctrls;
+    std::vector<ServiceController *> ctrls;
     {
-        auto l = _waitable.guard();
-        for (sihd::util::Named *root : _roots)
+        auto lock = _waitable.guard();
+        for (Named *root : _roots)
             this->_collect_live(root, nameds, services);
+
         for (auto & [channel, entry] : _channels)
         {
-            if (nameds.count(channel) > 0)
+            if (nameds.contains(channel))
                 channels.push_back(entry->channel);
         }
+
         for (auto & [ctrl, entry] : _services)
         {
-            if (services.count(entry->service) > 0)
+            if (services.contains(entry->service))
                 ctrls.push_back(entry->ctrl);
         }
         _roots.clear();
@@ -408,10 +410,10 @@ void TreeProfiler::reset()
     // lock order: set_watcher takes the channel lock
     for (Channel *channel : channels)
         channel->set_watcher(nullptr);
-    for (sihd::util::ServiceController *ctrl : ctrls)
+    for (ServiceController *ctrl : ctrls)
         ctrl->remove_observer(this);
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _channels.clear();
         _services.clear();
         _events.clear();
@@ -424,7 +426,7 @@ void TreeProfiler::reset()
 
 void TreeProfiler::clear()
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     for (auto & [channel, entry] : _channels)
         entry->notify_stat.clear();
     for (auto & [ctrl, entry] : _services)
@@ -436,7 +438,6 @@ void TreeProfiler::clear()
         cond->satisfied = false;
     _window_done = false;
     _capturing = _start_conditions.empty();
-    // start conditions may already be satisfied by the current state
     for (auto & cond : _start_conditions)
     {
         if (cond->attached)
@@ -446,35 +447,37 @@ void TreeProfiler::clear()
 
 size_t TreeProfiler::channels_count() const
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     return _channels.size();
 }
 
 size_t TreeProfiler::services_count() const
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     return _services.size();
 }
 
-void TreeProfiler::handle(sihd::util::ServiceController *ctrl)
+void TreeProfiler::handle(ServiceController *ctrl)
 {
     std::optional<std::string> trace;
-    sihd::util::AService *service = nullptr;
+    AService *service = nullptr;
     ServiceEntry *entry = nullptr;
     std::string name;
     std::optional<Op> started_op;
     bool wait_for_walk = false;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
+
         entry = this->_find_service_entry(ctrl);
         if (entry == nullptr)
             return;
+
         service = entry->service;
         name = service_name(service);
         started_op = op_from_state(ctrl->state());
-        // the op body runs after this notification returned: blocking here stops it
-        // before it touches children; nested ops run on a thread already inside the walk
-        wait_for_walk = _ops_depth.count(std::this_thread::get_id()) == 0;
+
+        // blocking holds the op body before it touches children; a nested op is already inside the walk
+        wait_for_walk = !_ops_depth.contains(std::this_thread::get_id());
         if (wait_for_walk == false)
         {
             trace = this->_handle_op(entry, ctrl, started_op, name);
@@ -482,27 +485,30 @@ void TreeProfiler::handle(sihd::util::ServiceController *ctrl)
                 return;
         }
     }
+
     if (wait_for_walk)
     {
-        auto l = _waitable.wait_guard([&] { return _walk_in_progress == false; });
+        auto lock = _waitable.wait_guard([&] { return _walk_in_progress == false; });
         trace = this->_handle_op(entry, ctrl, started_op, name);
         if (trace.has_value() == false)
             return;
     }
     if (trace->empty() == false)
         SIHD_LOG(debug, "{}", *trace);
-    // pick up children created during the op, without the profiler lock
-    sihd::util::Node *node = dynamic_cast<sihd::util::Node *>(service);
+
+    // pick up children created during the op, without the profiler lock (lock order)
+    Node *node = dynamic_cast<Node *>(service);
     if (node != nullptr)
     {
-        std::set<sihd::util::Node *> visited;
+        std::set<Node *> visited;
         this->_observe_node(node, 0, 0, visited);
     }
+
     this->_resolve_pending_conditions();
 }
 
 std::optional<std::string> TreeProfiler::_handle_op(ServiceEntry *entry,
-                                                    sihd::util::ServiceController *ctrl,
+                                                    ServiceController *ctrl,
                                                     const std::optional<Op> & started_op,
                                                     const std::string & name)
 {
@@ -529,7 +535,7 @@ void TreeProfiler::_pop_ops_depth()
 }
 
 std::string TreeProfiler::_handle_op_enter(ServiceEntry *entry,
-                                           sihd::util::ServiceController *ctrl,
+                                           ServiceController *ctrl,
                                            Op started_op,
                                            const std::string & name)
 {
@@ -550,8 +556,7 @@ std::string TreeProfiler::_handle_op_enter(ServiceEntry *entry,
     return fmt::format("service '{}' op={} ...", name, what);
 }
 
-std::string
-    TreeProfiler::_handle_op_exit(ServiceEntry *entry, sihd::util::ServiceController *ctrl, const std::string & name)
+std::string TreeProfiler::_handle_op_exit(ServiceEntry *entry, ServiceController *ctrl, const std::string & name)
 {
     this->_pop_ops_depth();
 
@@ -583,10 +588,7 @@ std::string
                        success ? "success" : "error");
 }
 
-void TreeProfiler::_observe_node(sihd::util::Node *node,
-                                 size_t current_recursion,
-                                 size_t max_recursion,
-                                 std::set<sihd::util::Node *> & visited)
+void TreeProfiler::_observe_node(Node *node, size_t current_recursion, size_t max_recursion, std::set<Node *> & visited)
 {
     if (max_recursion != 0 && current_recursion == max_recursion)
         return;
@@ -594,16 +596,16 @@ void TreeProfiler::_observe_node(sihd::util::Node *node,
         return;
     for (const std::string & name : node->children_keys())
     {
-        sihd::util::Named *child = node->get_child(name);
+        Named *child = node->get_child(name);
         if (child == nullptr)
             continue;
         Channel *channel = dynamic_cast<Channel *>(child);
         if (channel != nullptr)
             this->_observe_channel(channel);
-        sihd::util::AService *service = dynamic_cast<sihd::util::AService *>(child);
+        AService *service = dynamic_cast<AService *>(child);
         if (service != nullptr)
             this->_observe_service(service);
-        sihd::util::Node *child_node = dynamic_cast<sihd::util::Node *>(child);
+        Node *child_node = dynamic_cast<Node *>(child);
         if (child_node != nullptr)
             this->_observe_node(child_node, current_recursion + 1, max_recursion, visited);
     }
@@ -611,23 +613,24 @@ void TreeProfiler::_observe_node(sihd::util::Node *node,
 
 bool TreeProfiler::_observe_channel(Channel *channel)
 {
-    // the map entry is claimed first: a concurrent observe finds it and never installs its own, so
-    // the watcher slot is never stolen from an entry that is about to be destroyed
+    // the map entry is claimed first so a concurrent observe never steals the watcher slot of a dying entry
     ChannelEntry *entry_ptr = nullptr;
     {
-        auto l = _waitable.guard();
-        if (_channels.count(channel) > 0)
+        auto lock = _waitable.guard();
+        if (_channels.contains(channel))
             return true;
+
         auto entry = std::make_unique<ChannelEntry>();
         entry->channel = channel;
         entry->profiler = this;
         entry_ptr = entry.get();
         _channels.emplace(channel, std::move(entry));
     }
+
     if (channel->watcher() != nullptr)
     {
         SIHD_LOG(warning, "TreeProfiler: channel '{}' is already watched, it is not observed", channel->full_name());
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _channels.erase(channel);
         return false;
     }
@@ -636,41 +639,43 @@ bool TreeProfiler::_observe_channel(Channel *channel)
     if (channel->watcher() != entry_ptr)
     {
         SIHD_LOG(warning, "TreeProfiler: could not watch channel '{}'", channel->full_name());
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         _channels.erase(channel);
         return false;
     }
     return true;
 }
 
-bool TreeProfiler::_observe_service(sihd::util::AService *service)
+bool TreeProfiler::_observe_service(AService *service)
 {
-    auto *ctrl = dynamic_cast<sihd::util::ServiceController *>(service->service_ctrl());
+    auto *ctrl = dynamic_cast<ServiceController *>(service->service_ctrl());
     if (ctrl == nullptr)
     {
-        sihd::util::Named *named = dynamic_cast<sihd::util::Named *>(service);
+        Named *named = dynamic_cast<Named *>(service);
         const std::string name = named != nullptr ? named->name() : "<unnamed>";
         SIHD_LOG(debug, "TreeProfiler: service '{}' has no service controller", name);
         return false;
     }
     {
-        auto l = _waitable.guard();
-        if (_services.count(ctrl) > 0)
+        auto lock = _waitable.guard();
+        if (_services.contains(ctrl))
             return true;
     }
+
     if (ctrl->add_observer(this) == false)
     {
-        sihd::util::Named *named = dynamic_cast<sihd::util::Named *>(service);
+        Named *named = dynamic_cast<Named *>(service);
         const std::string name = named != nullptr ? named->name() : "<unnamed>";
         SIHD_LOG(warning, "TreeProfiler: could not observe service '{}'", name);
         return false;
     }
+
     auto entry = std::make_unique<ServiceEntry>();
     entry->service = service;
     entry->ctrl = ctrl;
     {
-        auto l = _waitable.guard();
-        if (_services.count(ctrl) > 0)
+        auto lock = _waitable.guard();
+        if (_services.contains(ctrl))
         {
             ctrl->remove_observer(this);
             return true;
@@ -684,7 +689,7 @@ void TreeProfiler::_notify_begin(ChannelEntry *entry)
 {
     std::string trace;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         const Timestamp begin = this->_now();
 
         entry->_prune_stats();
@@ -709,7 +714,7 @@ void TreeProfiler::_notify_end(ChannelEntry *entry)
 {
     std::string trace;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         if (entry->write_in_flight == false)
             return;
         entry->write_in_flight = false;
@@ -734,18 +739,18 @@ void TreeProfiler::_notify_end(ChannelEntry *entry)
         SIHD_LOG(debug, "{}", trace);
 }
 
-void TreeProfiler::_observer_begin(ChannelEntry *entry, sihd::util::IHandler<Channel *> *obs)
+void TreeProfiler::_observer_begin(ChannelEntry *entry, IHandler<Channel *> *obs)
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     if (entry->_find_stat(obs) == nullptr)
         entry->stats.push_back(ChannelEntry::ObsStat {obs, observer_label(obs), {}, 0});
     entry->pending_obs = obs;
     entry->pending_begin = this->_now();
 }
 
-void TreeProfiler::_observer_end(ChannelEntry *entry, sihd::util::IHandler<Channel *> *obs)
+void TreeProfiler::_observer_end(ChannelEntry *entry, IHandler<Channel *> *obs)
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     if (entry->pending_obs != obs)
         return;
     entry->pending_obs = nullptr;
@@ -774,7 +779,7 @@ bool TreeProfiler::start_when(Channel *channel, ChannelCondition cond)
     return this->_when(true, channel, std::move(cond));
 }
 
-bool TreeProfiler::start_when(sihd::util::AService *service, ServiceCondition cond)
+bool TreeProfiler::start_when(AService *service, ServiceCondition cond)
 {
     return this->_when(true, service, std::move(cond));
 }
@@ -804,7 +809,7 @@ bool TreeProfiler::stop_when(Channel *channel, ChannelCondition cond)
     return this->_when(false, channel, std::move(cond));
 }
 
-bool TreeProfiler::stop_when(sihd::util::AService *service, ServiceCondition cond)
+bool TreeProfiler::stop_when(AService *service, ServiceCondition cond)
 {
     return this->_when(false, service, std::move(cond));
 }
@@ -844,7 +849,7 @@ bool TreeProfiler::_when(bool is_start, Channel *channel, ChannelCondition cond)
     return this->_add_condition(is_start, std::move(entry));
 }
 
-bool TreeProfiler::_when(bool is_start, sihd::util::AService *service, ServiceCondition cond)
+bool TreeProfiler::_when(bool is_start, AService *service, ServiceCondition cond)
 {
     if (service == nullptr || cond == nullptr)
         return false;
@@ -886,21 +891,21 @@ bool TreeProfiler::_when(bool is_start, const std::string & path, ServiceConditi
 
 TreeProfiler::ServiceCondition TreeProfiler::running()
 {
-    return [](sihd::util::ServiceController *ctrl) {
-        return ctrl->state() == sihd::util::ServiceController::Running;
+    return [](ServiceController *ctrl) {
+        return ctrl->state() == ServiceController::Running;
     };
 }
 
 TreeProfiler::ServiceCondition TreeProfiler::stopped()
 {
-    return [](sihd::util::ServiceController *ctrl) {
-        return ctrl->state() == sihd::util::ServiceController::Stopped;
+    return [](ServiceController *ctrl) {
+        return ctrl->state() == ServiceController::Stopped;
     };
 }
 
 void TreeProfiler::start_capture()
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     _window_done = false;
     if (_capturing.load() == false)
         this->_open_window();
@@ -908,7 +913,7 @@ void TreeProfiler::start_capture()
 
 void TreeProfiler::stop_capture()
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     if (_capturing.load())
         this->_close_window();
 }
@@ -918,9 +923,9 @@ bool TreeProfiler::capturing() const
     return _capturing.load();
 }
 
-sihd::util::Duration TreeProfiler::session_duration() const
+Duration TreeProfiler::session_duration() const
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     if (_capturing.load())
         return _now() - _session_begin;
     return _last_session_duration;
@@ -935,9 +940,8 @@ bool TreeProfiler::_add_condition(bool is_start, CaptureCondition && entry)
 {
     entry.is_start = is_start;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         ConditionList & conditions = is_start ? _start_conditions : _stop_conditions;
-        // the first start condition closes the capture until it is satisfied
         if (is_start && conditions.empty() && _capturing.load())
             _capturing = false;
         conditions.push_back(std::make_shared<CaptureCondition>(std::move(entry)));
@@ -950,7 +954,7 @@ void TreeProfiler::_resolve_pending_conditions()
 {
     std::vector<std::shared_ptr<CaptureCondition>> pending;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         for (auto & cond : _start_conditions)
         {
             if (cond->attached == false)
@@ -966,7 +970,7 @@ void TreeProfiler::_resolve_pending_conditions()
     for (const std::shared_ptr<CaptureCondition> & cond : pending)
         this->_resolve_condition(cond);
 
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     _start_conditions.remove_if([](const std::shared_ptr<CaptureCondition> & cond) { return cond->dropped; });
     _stop_conditions.remove_if([](const std::shared_ptr<CaptureCondition> & cond) { return cond->dropped; });
 }
@@ -974,7 +978,7 @@ void TreeProfiler::_resolve_pending_conditions()
 void TreeProfiler::_resolve_condition(const std::shared_ptr<CaptureCondition> & cond)
 {
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         if (cond->attached || cond->dropped)
             return;
     }
@@ -988,10 +992,10 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
 {
     Channel *channel = cond->channel;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         if (channel == nullptr)
         {
-            sihd::util::Named *named = this->_find_from_roots(cond->path);
+            Named *named = this->_find_from_roots(cond->path);
             if (named == nullptr)
                 return true;
             channel = dynamic_cast<Channel *>(named);
@@ -1005,6 +1009,7 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
                 return false;
             }
         }
+
         const ChannelMatch *match = std::get_if<ChannelMatch>(&cond->matcher);
         if (match != nullptr && match->verify(channel) == false)
         {
@@ -1015,12 +1020,12 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
     if (this->_observe_channel(channel) == false)
     {
         SIHD_LOG(warning, "TreeProfiler: cannot observe channel '{}', condition dropped", channel->full_name());
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         cond->dropped = true;
         return false;
     }
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         cond->channel = channel;
         cond->attached = true;
     }
@@ -1031,15 +1036,15 @@ bool TreeProfiler::_resolve_channel_condition(const std::shared_ptr<CaptureCondi
 
 bool TreeProfiler::_resolve_service_condition(const std::shared_ptr<CaptureCondition> & cond)
 {
-    sihd::util::AService *service = cond->service;
+    AService *service = cond->service;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         if (service == nullptr)
         {
-            sihd::util::Named *named = this->_find_from_roots(cond->path);
+            Named *named = this->_find_from_roots(cond->path);
             if (named == nullptr)
                 return true;
-            service = dynamic_cast<sihd::util::AService *>(named);
+            service = dynamic_cast<AService *>(named);
             if (service == nullptr)
             {
                 SIHD_LOG(warning,
@@ -1051,25 +1056,28 @@ bool TreeProfiler::_resolve_service_condition(const std::shared_ptr<CaptureCondi
             }
         }
     }
-    auto *ctrl = dynamic_cast<sihd::util::ServiceController *>(service->service_ctrl());
+
+    auto *ctrl = dynamic_cast<ServiceController *>(service->service_ctrl());
     if (ctrl == nullptr)
     {
         SIHD_LOG(warning,
                  "TreeProfiler: service '{}' has no service controller, condition dropped",
                  service_name(service));
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         cond->dropped = true;
         return false;
     }
+
     if (this->_observe_service(service) == false)
     {
         SIHD_LOG(warning, "TreeProfiler: cannot observe service '{}', condition dropped", service_name(service));
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         cond->dropped = true;
         return false;
     }
+
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         cond->service = service;
         cond->ctrl = ctrl;
         cond->attached = true;
@@ -1079,11 +1087,11 @@ bool TreeProfiler::_resolve_service_condition(const std::shared_ptr<CaptureCondi
     return true;
 }
 
-sihd::util::Named *TreeProfiler::_find_from_roots(const std::string & path)
+Named *TreeProfiler::_find_from_roots(const std::string & path)
 {
-    for (sihd::util::Named *root : _roots)
+    for (Named *root : _roots)
     {
-        sihd::util::Named *named = root->find(path);
+        Named *named = root->find(path);
         if (named == nullptr)
         {
             // accept the root name as a prefix: "root.parent" from the root "root"
@@ -1107,7 +1115,7 @@ TreeProfiler::WindowCheck TreeProfiler::_evaluate_window_conditions(Channel *cha
     return this->_evaluate_window_conditions(channel, false);
 }
 
-TreeProfiler::WindowCheck TreeProfiler::_evaluate_window_conditions(sihd::util::ServiceController *ctrl)
+TreeProfiler::WindowCheck TreeProfiler::_evaluate_window_conditions(ServiceController *ctrl)
 {
     return this->_evaluate_window_conditions(ctrl, true);
 }
@@ -1124,11 +1132,10 @@ TreeProfiler::WindowCheck TreeProfiler::_evaluate_window_conditions(const void *
 
 void TreeProfiler::_evaluate_conditions(const void *target, bool by_ctrl)
 {
-    // the predicates may add conditions, reset or clear: they run against a
-    // snapshot so the lists below are never mutated while iterated
+    // predicates may add conditions, reset or clear: they run against a snapshot of the lists
     std::vector<std::shared_ptr<CaptureCondition>> conds;
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         for (ConditionList *list : {&_start_conditions, &_stop_conditions})
         {
             for (const auto & cond : *list)
@@ -1146,8 +1153,7 @@ void TreeProfiler::_evaluate_conditions(const void *target, bool by_ctrl)
 
 void TreeProfiler::_evaluate_condition(const std::shared_ptr<CaptureCondition> & cond)
 {
-    auto l = _waitable.guard();
-    // start conditions wait for a closed window, stop conditions for an open one
+    auto lock = _waitable.guard();
     if (cond->attached == false)
         return;
     if (cond->is_start && (_capturing.load() || _window_done))
@@ -1216,29 +1222,30 @@ std::string TreeProfiler::report_str() const
 std::string TreeProfiler::report_str(const ReportOpts & opts) const
 {
     {
-        auto l = _waitable.guard();
+        auto lock = _waitable.guard();
         // an op body is the shadow zone of its own op: its report can never be awaited
-        if (_ops_depth.count(std::this_thread::get_id()) > 0)
+        if (_ops_depth.contains(std::this_thread::get_id()))
             return {};
     }
-    // concurrent reports queue here, with the ops blocked in op_start
-    auto l = _waitable.wait_guard([&] { return _walk_in_progress == false; });
+
+    auto lock = _waitable.wait_guard([&] { return _walk_in_progress == false; });
     _walk_in_progress = true;
-    l.unlock();
-    l = _waitable.wait_guard([&] { return _ops_in_flight == 0; });
-    l.unlock();
+    lock.unlock();
+    lock = _waitable.wait_guard([&] { return _ops_in_flight == 0; });
+    lock.unlock();
+
     WalkGuard walk_guard {_waitable, _walk_in_progress};
-    // the report reflects every queued notification, or gives up when the
-    // dispatch thread itself is held by this report (report from a hook)
-    this->flush(sihd::util::Duration(sihd::util::time::milli(100)));
-    std::string s;
+    // gives up when the dispatch thread itself is held by this report (report from a hook)
+    this->flush(Duration(time::milli(100)));
+
+    std::string report;
     {
-        auto l = _waitable.guard();
-        std::set<const sihd::util::Named *> visited;
-        for (sihd::util::Named *root : _roots)
-            this->_report_named(root, nullptr, root->name(), s, opts, 0, visited);
+        auto lock = _waitable.guard();
+        std::set<const Named *> visited;
+        for (Named *root : _roots)
+            this->_report_named(root, nullptr, root->name(), report, opts, 0, visited);
     }
-    return s;
+    return report;
 }
 
 void TreeProfiler::log_report() const
@@ -1253,36 +1260,36 @@ void TreeProfiler::log_report(const ReportOpts & opts) const
 
 std::vector<TreeProfiler::Event> TreeProfiler::events() const
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     return std::vector<Event>(_events.begin(), _events.end());
 }
 
 std::string TreeProfiler::events_str() const
 {
-    std::string s;
-    auto l = _waitable.guard();
+    std::string out;
+    auto lock = _waitable.guard();
     for (const Event & event : _events)
     {
-        s += fmt::format("[{}] {} {} ", thread::id_str(event.thread_id), event.source, event.what);
+        out += fmt::format("[{}] {} {} ", thread::id_str(event.thread_id), event.source, event.what);
         if (event.kind == Event::enter)
-            s += "...";
+            out += "...";
         else
         {
-            s += fmt::format("= {}", duration_str(event.duration));
+            out += fmt::format("= {}", duration_str(event.duration));
             if (event.success == false)
-                s += " (error)";
+                out += " (error)";
         }
-        s += "\n";
+        out += "\n";
     }
-    return s;
+    return out;
 }
 
-void TreeProfiler::_emit_enter(sihd::util::Timestamp timestamp, const std::string & source, const std::string & what)
+void TreeProfiler::_emit_enter(Timestamp timestamp, const std::string & source, const std::string & what)
 {
     this->_dispatch(this->_push_event(timestamp, source, what, Event::enter, 0, true));
 }
 
-void TreeProfiler::_emit_exit(sihd::util::Timestamp timestamp,
+void TreeProfiler::_emit_exit(Timestamp timestamp,
                               const std::string & source,
                               const std::string & what,
                               time::UnixTime duration,
@@ -1291,7 +1298,7 @@ void TreeProfiler::_emit_exit(sihd::util::Timestamp timestamp,
     this->_dispatch(this->_push_event(timestamp, source, what, Event::exit, duration, success));
 }
 
-TreeProfiler::Event TreeProfiler::_push_event(sihd::util::Timestamp timestamp,
+TreeProfiler::Event TreeProfiler::_push_event(Timestamp timestamp,
                                               const std::string & source,
                                               const std::string & what,
                                               Event::Kind kind,
@@ -1313,19 +1320,18 @@ TreeProfiler::Event TreeProfiler::_push_event(sihd::util::Timestamp timestamp,
     return event;
 }
 
-void TreeProfiler::_report_named(const sihd::util::Named *named,
-                                 const sihd::util::Node *parent,
+void TreeProfiler::_report_named(const Named *named,
+                                 const Node *parent,
                                  const std::string & key,
                                  std::string & s,
                                  const ReportOpts & opts,
                                  size_t depth,
-                                 std::set<const sihd::util::Named *> & visited) const
+                                 std::set<const Named *> & visited) const
 {
     const Channel *channel = dynamic_cast<const Channel *>(named);
-    const sihd::util::AService *service = dynamic_cast<const sihd::util::AService *>(named);
-    const sihd::util::Node *node = dynamic_cast<const sihd::util::Node *>(named);
-    // nodes are walked, so they are deduplicated to break cycles; linked channels
-    // are leaves and show up under every alias
+    const AService *service = dynamic_cast<const AService *>(named);
+    const Node *node = dynamic_cast<const Node *>(named);
+    // nodes are deduplicated to break cycles; linked channels are leaves shown under every alias
     if (node != nullptr && visited.emplace(named).second == false)
         return;
     const std::string indent(depth * 2, ' ');
@@ -1340,7 +1346,7 @@ void TreeProfiler::_report_named(const sihd::util::Named *named,
     }
     const ServiceEntry *service_entry = service != nullptr ? this->_cfind_service_entry(service) : nullptr;
     if (service_entry != nullptr)
-        s += fmt::format(" [{}]", sihd::util::ServiceController::state_str(service_entry->ctrl->state()));
+        s += fmt::format(" [{}]", ServiceController::state_str(service_entry->ctrl->state()));
     if (opts.description)
     {
         const std::string desc = named->description();
@@ -1360,7 +1366,7 @@ void TreeProfiler::_report_named(const sihd::util::Named *named,
         if (it != _channels.end())
         {
             const ChannelEntry *entry = it->second.get();
-            const sihd::util::Stat<time::UnixTime> & stat = entry->notify_stat;
+            const Stat<time::UnixTime> & stat = entry->notify_stat;
             if (stat.samples > 0)
                 s += fmt::format("{}  {}\n", indent, stat_str(stat, "writes"));
             for (const ChannelEntry::ObsStat & obs_stat : entry->stats)
@@ -1372,19 +1378,19 @@ void TreeProfiler::_report_named(const sihd::util::Named *named,
         return;
     for (const std::string & name : node->children_keys())
     {
-        const sihd::util::Named *child = node->get_child(name);
+        const Named *child = node->get_child(name);
         if (child != nullptr)
             this->_report_named(child, node, name, s, opts, depth + 1, visited);
     }
 }
 
-TreeProfiler::ServiceEntry *TreeProfiler::_find_service_entry(sihd::util::ServiceController *ctrl)
+TreeProfiler::ServiceEntry *TreeProfiler::_find_service_entry(ServiceController *ctrl)
 {
     auto it = _services.find(ctrl);
     return it != _services.end() ? it->second.get() : nullptr;
 }
 
-const TreeProfiler::ServiceEntry *TreeProfiler::_cfind_service_entry(const sihd::util::AService *service) const
+const TreeProfiler::ServiceEntry *TreeProfiler::_cfind_service_entry(const AService *service) const
 {
     for (const auto & [ctrl, entry] : _services)
     {
@@ -1394,23 +1400,23 @@ const TreeProfiler::ServiceEntry *TreeProfiler::_cfind_service_entry(const sihd:
     return nullptr;
 }
 
-void TreeProfiler::_collect_live(const sihd::util::Named *named,
-                                 std::set<const sihd::util::Named *> & nameds,
-                                 std::set<const sihd::util::AService *> & services) const
+void TreeProfiler::_collect_live(const Named *named,
+                                 std::set<const Named *> & nameds,
+                                 std::set<const AService *> & services) const
 {
     if (named == nullptr || nameds.insert(named).second == false)
         return;
-    const sihd::util::AService *service = dynamic_cast<const sihd::util::AService *>(named);
+    const AService *service = dynamic_cast<const AService *>(named);
     if (service != nullptr)
         services.insert(service);
-    const sihd::util::Node *node = dynamic_cast<const sihd::util::Node *>(named);
+    const Node *node = dynamic_cast<const Node *>(named);
     if (node == nullptr)
         return;
     for (const std::string & name : node->children_keys())
         this->_collect_live(node->get_child(name), nameds, services);
 }
 
-sihd::util::Timestamp TreeProfiler::_now() const
+Timestamp TreeProfiler::_now() const
 {
     return _clock_ptr != nullptr ? _clock_ptr->now() : _clock.now();
 }

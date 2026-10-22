@@ -5,6 +5,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -12,7 +14,7 @@ SIHD_REGISTER_FACTORY(DeviceTcpServer)
 
 SIHD_LOGGER;
 
-DeviceTcpServer::DeviceTcpServer(const std::string & name, sihd::util::Node *parent):
+DeviceTcpServer::DeviceTcpServer(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _tcp_server("tcp-server"),
     _port(0),
@@ -90,9 +92,9 @@ bool DeviceTcpServer::set_max_clients(size_t max)
 
 bool DeviceTcpServer::on_init()
 {
-    this->add_unlinked_channel_resizable("rx", sihd::util::Type::TYPE_BYTE, 1, _buffer_capacity);
-    this->add_unlinked_channel_resizable("tx", sihd::util::Type::TYPE_BYTE, 1, _buffer_capacity);
-    this->add_unlinked_channel("client_count", sihd::util::Type::TYPE_INT, 1);
+    this->add_unlinked_channel_resizable("rx", Type::TYPE_BYTE, 1, _buffer_capacity);
+    this->add_unlinked_channel_resizable("tx", Type::TYPE_BYTE, 1, _buffer_capacity);
+    this->add_unlinked_channel("client_count", Type::TYPE_INT, 1);
     return true;
 }
 

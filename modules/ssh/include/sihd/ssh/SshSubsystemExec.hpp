@@ -33,25 +33,23 @@ class SshSubsystemExec: public ISshSubsystemHandler
         explicit SshSubsystemExec(std::string_view command);
         ~SshSubsystemExec() override;
 
-        // Configuration (call before on_start)
         void set_shell(std::string_view shell);
         void set_fork_mode(bool enable);
         void set_parse_mode(ParseMode mode);
         void set_env(std::string_view name, std::string_view value);
         void set_working_directory(std::string_view path);
 
-        const std::string & command() const { return _command; }
+        const std::string & command() const;
 
-        // ISshSubsystemHandler
         bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) override;
         int on_data(const void *data, size_t len) override;
         void on_resize(const WinSize & winsize) override;
         void on_eof() override;
         int on_close() override;
 
-        int stdout_fd() const override { return -1; }
-        int stderr_fd() const override { return -1; }
-        SshChannel *channel() const override { return _channel; }
+        int stdout_fd() const override;
+        int stderr_fd() const override;
+        SshChannel *channel() const override;
         bool is_running() const override;
         bool forward_output() override;
 
@@ -77,7 +75,6 @@ class SshSubsystemExec: public ISshSubsystemHandler
         std::string _sync_out;
         std::string _sync_err;
 
-        // Process-based execution (both modes, async/non-blocking)
         sihd::sys::Process _process;
 };
 

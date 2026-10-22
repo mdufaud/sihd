@@ -26,9 +26,9 @@ using namespace sihd::sys;
 class TestFS: public ::testing::Test
 {
     protected:
-        TestFS() { sihd::util::LoggerManager::stream(); }
+        TestFS() { LoggerManager::stream(); }
 
-        virtual ~TestFS() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestFS() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -77,6 +77,7 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::parent("/path/to/test/.."), "/path");
     EXPECT_EQ(fs::parent("/path/to/"), "/path");
     EXPECT_EQ(fs::parent("/path/to////"), "/path");
+
     EXPECT_EQ(fs::parent("/path"), "");
     EXPECT_EQ(fs::parent("////path"), "");
     EXPECT_EQ(fs::parent("////path//"), "");
@@ -92,6 +93,7 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::trim_path(test, "/path/"), "to/test");
     fs::trim_in_path(test, "/path");
     EXPECT_EQ(test, "to/test");
+
     std::vector<std::string> dirs = {
         "some/default/path/to/test",
         "some/default/path/another/test",
@@ -126,38 +128,30 @@ TEST_F(TestFS, test_fs_jail)
 {
     fs::set_sep('/');
 
-    // Empty root: no jail, path returned unchanged
     EXPECT_EQ(fs::jail("", "any/../path"), "any/../path");
 
-    // Use a nonexistent root so realpath fails and jail returns the
-    // lexically-jailed candidate (deterministic, filesystem-independent)
+    // nonexistent root: realpath fails, jail returns the lexically-jailed candidate
     EXPECT_EQ(fs::jail("/srv/ftp", "file.txt"), "/srv/ftp/file.txt");
     EXPECT_EQ(fs::jail("/srv/ftp", "sub/dir/file.txt"), "/srv/ftp/sub/dir/file.txt");
 
-    // Leading '/' on the client path is treated as relative to the jail root
     EXPECT_EQ(fs::jail("/srv/ftp", "/file.txt"), "/srv/ftp/file.txt");
 
-    // Trailing slash on root is normalized away
     EXPECT_EQ(fs::jail("/srv/ftp/", "file.txt"), "/srv/ftp/file.txt");
 
-    // Internal '..' that stays inside the jail is collapsed
     EXPECT_EQ(fs::jail("/srv/ftp", "sub/../file.txt"), "/srv/ftp/file.txt");
 
-    // Escape attempts clamp to the jail root
     EXPECT_EQ(fs::jail("/srv/ftp", "../../etc/passwd"), "/srv/ftp");
     EXPECT_EQ(fs::jail("/srv/ftp", "../ftp_evil"), "/srv/ftp");
     EXPECT_EQ(fs::jail("/srv/ftp", "/../etc/passwd"), "/srv/ftp");
 
 #if !defined(__SIHD_WINDOWS__)
     // symlink creation + realpath resolution are POSIX-specific (windows symlinks need privilege)
-    // A symlink inside the jail that points outside must be clamped to root
     TmpDir root_dir;
     ASSERT_TRUE(static_cast<bool>(root_dir));
     const std::string & root = root_dir.path();
     ASSERT_TRUE(fs::make_file_link("/etc/passwd", fs::combine(root, "escape")).has_value());
     EXPECT_EQ(fs::jail(root, "escape"), root);
 
-    // A real file inside the jail resolves to itself
     const std::string inside = fs::combine(root, "inside.txt");
     ASSERT_TRUE(fs::write(inside, "data").has_value());
     EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
@@ -314,11 +308,9 @@ TEST_F(TestFS, test_fs_mount_type)
     // the build tree lives on a real local disk on every CI we run
     EXPECT_EQ(fs::mount_type(fs::cwd()), fs::MountType::local);
 
-    // unresolvable paths never crash, report unknown
     EXPECT_EQ(fs::mount_type(""), fs::MountType::unknown);
     EXPECT_EQ(fs::mount_type("/nonexistent/zzz"), fs::MountType::unknown);
 
-    // storage_medium contract: no rotational backing for these kinds
     const fs::MountType type = fs::mount_type(fs::cwd());
     if (type == fs::MountType::network || type == fs::MountType::ram || type == fs::MountType::readonly)
     {
@@ -336,7 +328,6 @@ TEST_F(TestFS, test_fs_mount_type)
 
 #if defined(__SIHD_WINDOWS__)
     EXPECT_EQ(fs::mount_type("C:\\"), fs::MountType::local);
-    // pure path-prefix branch, no real share needed
     EXPECT_EQ(fs::mount_type("\\\\nonexistent\\share"), fs::MountType::network);
 #endif
 }
@@ -388,8 +379,7 @@ TEST_F(TestFS, test_fs_mounts)
     EXPECT_TRUE(found_root);
     EXPECT_TRUE(found_local);
 # if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
-    // pseudo filesystems have no storage backing (paths exist under wine's Z:;
-    // /dev can be devtmpfs or tmpfs depending on the setup)
+    // pseudo filesystems have no storage backing (/dev can be devtmpfs or tmpfs; paths exist under wine's Z:)
     EXPECT_EQ(fs::mount_type("/proc"), fs::MountType::unknown);
     EXPECT_EQ(fs::mount_type("/sys"), fs::MountType::unknown);
 # endif
@@ -438,8 +428,7 @@ TEST_F(TestFS, test_fs_copy_file)
         content[i] = (char)(i * 31 % 251);
     ASSERT_TRUE(fs::write(src, content, false, true).has_value());
 
-    // Wine does not implement the CopyFile2 progress callback ("not supported" in kernelbase/file.c):
-    // the callback never runs there, so progress counting and cancellation cannot be verified
+    // Wine lacks the CopyFile2 progress callback (kernelbase/file.c): progress and cancellation cannot be verified
     size_t transferred = 0;
     EXPECT_TRUE(fs::copy_file(src, dst, [&](size_t progress, size_t total) {
                     EXPECT_EQ(total, content.size());
@@ -447,36 +436,32 @@ TEST_F(TestFS, test_fs_copy_file)
                     transferred = progress;
                     return true;
                 }).has_value());
+
     EXPECT_TRUE(fs::are_equals(src, dst));
     if (!os::is_run_by_wine())
     {
         EXPECT_EQ(transferred, content.size());
     }
-    // the copy preserves the source write time (CopyFile2 / futimens)
     const auto src_times = fs::times(src);
     const auto dst_times = fs::times(dst);
     ASSERT_TRUE(src_times.has_value());
     ASSERT_TRUE(dst_times.has_value());
     EXPECT_EQ(dst_times->write.get(), src_times->write.get());
 
-    // overwrite without progress callback
     EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
 
-    // same size, different content
     ASSERT_TRUE(fs::write(dst, std::string(content.size(), 'z'), false, true).has_value());
     EXPECT_FALSE(fs::are_equals(src, dst));
     EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
 
-    // copying a file onto itself is refused and keeps it intact
     ASSERT_TRUE(fs::copy_file(src, same).has_value());
     EXPECT_FALSE(fs::copy_file(same, same).has_value());
     EXPECT_EQ(fs::file_size(same).value_or(0), content.size());
 
     if (!os::is_run_by_wine())
     {
-        // cancellation removes the partial destination
         bool cancelled = false;
         EXPECT_FALSE(fs::copy_file(src, dst_cancel, [&](size_t progress, size_t total) {
                          if (progress >= total / 2)
@@ -490,14 +475,12 @@ TEST_F(TestFS, test_fs_copy_file)
         EXPECT_FALSE(fs::is_file(dst_cancel));
     }
 
-    // empty files copy fine
     const std::string empty_src = fs::combine({tmp_path.path(), "empty_src.bin"});
     const std::string empty_dst = fs::combine({tmp_path.path(), "empty_dst.bin"});
     ASSERT_TRUE(fs::write(empty_src, "").has_value());
     EXPECT_TRUE(fs::copy_file(empty_src, empty_dst).has_value());
     EXPECT_TRUE(fs::are_equals(empty_src, empty_dst));
 
-    // missing source
     EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.path(), "nope.bin"}), dst).has_value());
 }
 
@@ -528,7 +511,6 @@ TEST_F(TestFS, test_fs_xdg_paths)
         EXPECT_TRUE(str::ends_with(fs::data_path(), "/.local/share"));
     }
 
-    // no HOME means no default under home
     {
         ScopedEnv no_home("HOME", std::nullopt);
         ScopedEnv no_config("XDG_CONFIG_HOME", std::nullopt);
@@ -546,22 +528,17 @@ TEST_F(TestFS, test_fs_download_path)
 
     ScopedEnv config("XDG_CONFIG_HOME", tmp_config.path());
 
-    // no user-dirs.dirs: falls back to ~/Downloads
     EXPECT_EQ(fs::download_path(), fallback);
 
-    // $HOME is expanded
     ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"$HOME/Telechargements\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fs::combine(fs::home_path(), "Telechargements"));
 
-    // absolute values are used as-is
     ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"/data/downloads\"\n").has_value());
     EXPECT_EQ(fs::download_path(), "/data/downloads");
 
-    // an unusable value falls back to ~/Downloads
     ASSERT_TRUE(fs::write(dirs_file, "XDG_DOWNLOAD_DIR=\"relative/dir\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fallback);
 
-    // other keys are ignored
     ASSERT_TRUE(fs::write(dirs_file, "XDG_MUSIC_DIR=\"$HOME/Music\"\n").has_value());
     EXPECT_EQ(fs::download_path(), fallback);
 }
@@ -636,7 +613,7 @@ TEST_F(TestFS, test_fs_chdir_roundtrip)
     ASSERT_TRUE(tmp_dir);
 
     const std::string previous = fs::cwd();
-    sihd::util::Defer restore_cwd([&] { (void)fs::chdir(previous); });
+    Defer restore_cwd([&] { (void)fs::chdir(previous); });
     ASSERT_TRUE(fs::chdir(tmp_dir.path()).has_value());
     EXPECT_EQ(fs::cwd(), tmp_dir.path());
     EXPECT_TRUE(fs::chdir(previous).has_value());

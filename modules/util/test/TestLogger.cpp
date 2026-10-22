@@ -16,12 +16,11 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/Waitable.hpp>
 
-using enum sihd::util::ErrorCode;
-
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
+using enum ErrorCode;
 class LogCounter: public ALogger
 {
     public:
@@ -62,6 +61,7 @@ class LogCounter: public ALogger
                 case LogLevel::warning:
                     ++this->warning;
                     break;
+
                 case LogLevel::notice:
                     ++this->notice;
                     break;
@@ -123,7 +123,7 @@ class SharedStateSink: public ALogger
         {
             (void)info;
             _state->count.fetch_add(1, std::memory_order_relaxed);
-            std::lock_guard<std::mutex> l(_state->mutex);
+            std::lock_guard<std::mutex> lock(_state->mutex);
             _state->last = std::string(msg);
         }
 
@@ -229,7 +229,7 @@ TEST_F(TestLogger, test_logger_basic)
     Logger log("test::logger");
 
     LoggerManager::add(new LoggerStream());
-    log.log(sihd::util::LogLevel::info, "test");
+    log.log(LogLevel::info, "test");
     ASSERT_EQ(log_counter->src, "test::logger");
     ASSERT_EQ(log_counter->msg, "test");
     log.debug("debug");
@@ -242,6 +242,7 @@ TEST_F(TestLogger, test_logger_basic)
     ASSERT_EQ(log_counter->msg, "error");
     log.critical("critical");
     ASSERT_EQ(log_counter->msg, "critical");
+
     log.alert("alert");
     ASSERT_EQ(log_counter->msg, "alert");
     log.notice("notice");
@@ -263,6 +264,7 @@ TEST_F(TestLogger, test_logger_every_levels)
     log.notice("notice");
     log.info("info");
     log.debug("debug");
+
     ASSERT_TRUE(this->has_logged_every_levels());
     ASSERT_EQ(log_counter->emergency, 1);
     ASSERT_EQ(log_counter->alert, 1);
@@ -315,10 +317,10 @@ TEST_F(TestLogger, test_logger_macros)
 
 TEST_F(TestLogger, test_logger_expected)
 {
-    sihd::util::Result<int> ok = 42;
+    Result<int> ok = 42;
     ASSERT_FALSE(SIHD_UNEXPECTED_LOG(ok));
 
-    sihd::util::Result<int> err = std::unexpected(Error(invalid_argument, "oops"));
+    Result<int> err = std::unexpected(Error(invalid_argument, "oops"));
     ASSERT_TRUE(SIHD_UNEXPECTED_LOG(err));
     ASSERT_EQ(log_counter->src, "test");
     ASSERT_TRUE(log_counter->msg.starts_with("TestLogger:"));
@@ -408,7 +410,6 @@ TEST_F(TestLogger, test_logger_filter_message)
 
 TEST_F(TestLogger, test_logger_filter_thread)
 {
-    // test filter all threads except main
     LoggerManager::filter(new LoggerFilter({
         .thread_ne = thread::id(),
     }));
@@ -422,8 +423,6 @@ TEST_F(TestLogger, test_logger_filter_thread)
 
     LoggerManager::clear_filters();
 
-    // test filter main thread id
-
     LoggerManager::filter(new LoggerFilter({
         .thread_eq = thread::id(),
     }));
@@ -435,8 +434,6 @@ TEST_F(TestLogger, test_logger_filter_thread)
     EXPECT_EQ(log_counter->critical, 1);
 
     LoggerManager::clear_filters();
-
-    // test filter thread named main or titi
 
     LoggerManager::filter(new LoggerFilter({
         .thread_regex = "^(main|titi)$",

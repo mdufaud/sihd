@@ -10,8 +10,7 @@
 namespace sihd::sys
 {
 
-// Snapshot of the caller's privileges (linux: libcap permitted/effective sets, per thread;
-// windows: process token privileges). refresh/raise/drop/apply mutate, cap::has() reads live
+// snapshot of the caller's privileges (linux: libcap sets per thread, windows: token); cap::has() reads live
 class CapabilitySet
 {
     public:
@@ -23,21 +22,13 @@ class CapabilitySet
         CapabilitySet(CapabilitySet &&) = delete;
         CapabilitySet & operator=(CapabilitySet &&) = delete;
 
-        // reloads the snapshot, discarding uncommitted changes
         sihd::util::Result<void> refresh();
-
-        // === query (never requires privileges) ===
 
         // state in the SNAPSHOT: reflects raise()/drop() that apply() has not committed yet
         bool is_enabled(Cap cap) const;
-        // capability can be raised into the effective set
         bool permitted(Cap cap) const;
-        // every capability is_enabled() in the snapshot
         std::vector<Cap> enabled() const;
 
-        // === snapshot mutation, committed by apply() ===
-
-        // fails if the capability is not permitted
         bool raise(Cap cap);
         // dropping a capability that is not held is a successful no-op
         bool drop(Cap cap);

@@ -13,9 +13,9 @@ using namespace sihd::util;
 class TestArrayView: public ::testing::Test
 {
     protected:
-        TestArrayView() { sihd::util::LoggerManager::stream(); }
+        TestArrayView() { LoggerManager::stream(); }
 
-        virtual ~TestArrayView() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestArrayView() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -40,6 +40,17 @@ class TestArrayView: public ::testing::Test
             return view.size();
         }
 };
+
+namespace
+{
+
+struct Point
+{
+        int x;
+        int y;
+};
+
+} // namespace
 
 TEST_F(TestArrayView, test_arrayview_fundamental)
 {
@@ -69,28 +80,22 @@ TEST_F(TestArrayView, test_arrayview_byte_count)
 
 TEST_F(TestArrayView, test_arrayview_struct)
 {
-    struct Test
-    {
-            int x;
-            int y;
-    };
-
-    Test mono;
+    Point mono;
     mono.x = 42;
     mono.y = 1337;
 
-    ArrayView<Test> mono_view(mono);
+    ArrayView<Point> mono_view(mono);
     EXPECT_EQ(mono_view[0].x, 42);
     EXPECT_EQ(mono_view[0].y, 1337);
 
     ArrByteView byte_mono_view(mono);
-    EXPECT_EQ(byte_mono_view.size(), sizeof(Test));
+    EXPECT_EQ(byte_mono_view.size(), sizeof(Point));
 
-    Test arr[3];
+    Point arr[3];
     arr[0].x = 42;
     arr[0].y = 1337;
 
-    ArrayView<Test> view(arr, 3);
+    ArrayView<Point> view(arr, 3);
     EXPECT_EQ(view[0].x, 42);
     EXPECT_EQ(view[0].y, 1337);
 }
@@ -218,10 +223,8 @@ TEST(TestArrayViewSpan, test_arrayview_from_span)
     EXPECT_EQ(view[2], 30);
     EXPECT_EQ(view[3], 40);
 
-    // Check that data pointers match
     EXPECT_EQ(view.data(), span.data());
 
-    // Check is_equal with span
     EXPECT_TRUE(view.is_equal(span));
 }
 

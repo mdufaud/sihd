@@ -42,9 +42,7 @@ TEST(TestRingBuffer, test_ring_buffer_full)
     EXPECT_EQ(ring.write(std::vector<int> {1, 2}), 2u);
     EXPECT_TRUE(ring.full());
     EXPECT_EQ(ring.available(), 0u);
-    // bounded: refuses rather than overwrites
     EXPECT_EQ(ring.write(std::vector<int> {3}), 0u);
-    // partial writes clamp to the available space
     EXPECT_EQ(ring.skip(1), 1u);
     EXPECT_EQ(ring.write(std::vector<int> {3, 4, 5}), 1u);
     EXPECT_TRUE(ring.full());
@@ -63,7 +61,6 @@ TEST(TestRingBuffer, test_ring_buffer_wrap)
 
     int out[2] = {};
     EXPECT_EQ(ring.read(out, 2), 2u);
-    // wraps over the consumed head
     EXPECT_EQ(ring.write(std::vector<int> {5, 6}), 2u);
     EXPECT_EQ(ring.size(), 4u);
 

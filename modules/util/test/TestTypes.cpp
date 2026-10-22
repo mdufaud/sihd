@@ -10,14 +10,24 @@ using namespace sihd::util;
 class TestTypes: public ::testing::Test
 {
     protected:
-        TestTypes() { sihd::util::LoggerManager::stream(); }
+        TestTypes() { LoggerManager::stream(); }
 
-        virtual ~TestTypes() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestTypes() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
+
+namespace
+{
+
+struct RandomStruct
+{
+        int hello;
+};
+
+} // namespace
 
 TEST_F(TestTypes, test_types_from_str)
 {
@@ -34,6 +44,7 @@ TEST_F(TestTypes, test_types_from_str)
     EXPECT_EQ(type::from_str("ulong"), TYPE_ULONG);
     EXPECT_EQ(type::from_str("float"), TYPE_FLOAT);
     EXPECT_EQ(type::from_str("double"), TYPE_DOUBLE);
+
     EXPECT_EQ(type::from_str("object"), TYPE_OBJECT);
 }
 
@@ -52,6 +63,7 @@ TEST_F(TestTypes, test_types_str)
     EXPECT_STREQ(type::str(TYPE_ULONG), "ulong");
     EXPECT_STREQ(type::str(TYPE_FLOAT), "float");
     EXPECT_STREQ(type::str(TYPE_DOUBLE), "double");
+
     EXPECT_STREQ(type::str(TYPE_OBJECT), "object");
 }
 
@@ -69,11 +81,7 @@ TEST_F(TestTypes, test_types_template)
     EXPECT_EQ(type::from<uint64_t>(), TYPE_ULONG);
     EXPECT_EQ(type::from<float>(), TYPE_FLOAT);
     EXPECT_EQ(type::from<double>(), TYPE_DOUBLE);
-    struct randomstruct
-    {
-            int hello;
-    };
-    EXPECT_EQ(type::from<randomstruct>(), TYPE_OBJECT);
+    EXPECT_EQ(type::from<RandomStruct>(), TYPE_OBJECT);
 }
 
 TEST_F(TestTypes, test_type_sizes)

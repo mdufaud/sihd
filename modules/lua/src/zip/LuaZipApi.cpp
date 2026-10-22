@@ -27,7 +27,6 @@ void LuaZipApi::load_base(Vm & vm)
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("zip")
-        // whole-archive helpers (highest value, simplest)
         .addFunction(
             "list_entries",
             +[](const std::string & archive) -> std::vector<std::string> { return sihd::zip::list_entries(archive); })
@@ -41,7 +40,6 @@ void LuaZipApi::load_base(Vm & vm)
             +[](const std::string & archive, const std::string & dest) -> bool {
                 return !SIHD_UNEXPECTED_LOG(sihd::zip::unzip(archive, dest));
             })
-        // fuller control
         .beginClass<ZipFile>("ZipFile")
         .addConstructor<void (*)()>()
         .addFunction(
@@ -106,7 +104,6 @@ void LuaZipApi::load_base(Vm & vm)
             "entry_comment",
             +[](ZipFile *self) -> std::string { return std::string(self->entry_comment()); })
         .addFunction("is_entry_directory", &ZipFile::is_entry_directory)
-        // read loaded entry content
         .addFunction(
             "read_next",
             +[](ZipFile *self) -> bool {
@@ -129,7 +126,6 @@ void LuaZipApi::load_base(Vm & vm)
             +[](ZipFile *self, const std::string & path, luabridge::LuaRef password) -> bool {
                 return !SIHD_UNEXPECTED_LOG(self->dump_entry_to_fs(path, password.isNil() ? "" : password.tostring()));
             })
-        // modify entries
         .addFunction(
             "remove_entry",
             +[](ZipFile *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->remove_entry()); })

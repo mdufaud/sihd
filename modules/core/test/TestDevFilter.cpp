@@ -19,9 +19,9 @@ using namespace sihd::sys;
 class TestDevFilter: public ::testing::Test
 {
     protected:
-        TestDevFilter() { sihd::util::LoggerManager::stream(); }
+        TestDevFilter() { LoggerManager::stream(); }
 
-        virtual ~TestDevFilter() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestDevFilter() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -59,11 +59,8 @@ TEST_F(TestDevFilter, test_devfilter_superior)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    dev_ptr->set_filter(DevFilter::Rule(ChannelMatch::Superior)
-                            .in("..in_channel")
-                            .trigger<int>(1, 10)
-                            .out("..out_channel")
-                            .write<int>(2, 15));
+    dev_ptr->set_filter(
+        DevFilter::Rule(ChannelMatch::Superior).in("..in_channel").trigger(1, 10).out("..out_channel").write(2, 15));
     ASSERT_TRUE(dev_ptr->set_conf_str("filter_superior_equal", "in=..in_channel;out=..out_channel;trigger=0x200"));
 
     core.add_channel("in_channel", "int", 3);
@@ -160,7 +157,6 @@ TEST_F(TestDevFilter, test_devfilter_float)
 
     ChannelWaiter waiter(out_channel);
 
-    // delay -> 100ms
     EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<float>(0, 3.14f);
     EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
@@ -168,7 +164,6 @@ TEST_F(TestDevFilter, test_devfilter_float)
     EXPECT_TRUE(waiter.prev_wait_for(std::chrono::milliseconds(300)));
     EXPECT_EQ(out_channel->read<int>(0), 1);
 
-    // delay -> 0.1 = 100ms
     EXPECT_EQ(out_channel->read<int>(0), 1);
     in_channel->write<float>(0, 6.28f);
     EXPECT_FALSE(waiter.prev_wait_for(std::chrono::milliseconds(10)));
@@ -200,7 +195,6 @@ TEST_F(TestDevFilter, test_devfilter_byte)
     SIHD_LOG(debug, "Testing byte_and filter");
     EXPECT_EQ(out_channel->read<int>(0), 0);
     in_channel->write<int>(0, 1);
-    // only writes uneven
     EXPECT_EQ(out_channel->read<int>(0), 1);
     in_channel->write<int>(0, 2);
     EXPECT_EQ(out_channel->read<int>(0), 1);
@@ -212,7 +206,6 @@ TEST_F(TestDevFilter, test_devfilter_byte)
     in_channel->write<int>(1, 1);
     EXPECT_EQ(out_channel->read<int>(1), 0);
     in_channel->write<int>(1, 2);
-    // only writes even
     EXPECT_EQ(out_channel->read<int>(1), 2);
     in_channel->write<int>(1, 3);
     EXPECT_EQ(out_channel->read<int>(1), 2);
@@ -246,11 +239,8 @@ TEST_F(TestDevFilter, test_devfilter_start_error)
     Core core;
 
     DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
-    dev_ptr->set_filter(DevFilter::Rule(ChannelMatch::Equal)
-                            .in("..in_channel")
-                            .trigger<int>(0, 10)
-                            .out("..out_channel")
-                            .write<int>(5, 15));
+    dev_ptr->set_filter(
+        DevFilter::Rule(ChannelMatch::Equal).in("..in_channel").trigger(0, 10).out("..out_channel").write(5, 15));
 
     core.add_channel("in_channel", "int", 3);
     core.add_channel("out_channel", "int", 3);

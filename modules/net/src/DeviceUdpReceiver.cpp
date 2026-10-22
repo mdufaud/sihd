@@ -3,6 +3,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -10,7 +12,7 @@ SIHD_REGISTER_FACTORY(DeviceUdpReceiver)
 
 SIHD_LOGGER;
 
-DeviceUdpReceiver::DeviceUdpReceiver(const std::string & name, sihd::util::Node *parent):
+DeviceUdpReceiver::DeviceUdpReceiver(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _udp_receiver("udp-receiver"),
     _start_sync(2),
@@ -63,7 +65,7 @@ bool DeviceUdpReceiver::set_poll_timeout(int milliseconds)
 
 bool DeviceUdpReceiver::on_init()
 {
-    this->add_unlinked_channel_resizable("rx", sihd::util::Type::TYPE_BYTE, 1, _buffer_capacity);
+    this->add_unlinked_channel_resizable("rx", Type::TYPE_BYTE, 1, _buffer_capacity);
     return true;
 }
 
@@ -133,7 +135,7 @@ void DeviceUdpReceiver::handle([[maybe_unused]] sihd::core::Channel *c) {}
 
 void DeviceUdpReceiver::handle(INetReceiver *receiver)
 {
-    sihd::util::ArrByte buf(_buffer_capacity);
+    ArrByte buf(_buffer_capacity);
     auto received = receiver->receive(buf);
     if (SIHD_UNEXPECTED_LOG(received))
         return;

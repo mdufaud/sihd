@@ -13,9 +13,9 @@ using namespace sihd::util;
 class TestSniffer: public ::testing::Test
 {
     protected:
-        TestSniffer() { sihd::util::LoggerManager::stream(); }
+        TestSniffer() { LoggerManager::stream(); }
 
-        virtual ~TestSniffer() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSniffer() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

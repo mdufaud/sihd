@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -29,36 +30,33 @@
         .def(pybind11::init<const std::vector<PrimitiveType>>())                                                       \
         .def("clone", &ArrType::clone)                                                                                 \
         .def("push_back", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_back))                  \
-        .def("push_back", &PyUtilApi::_array_py_push_back_list<PrimitiveType>)                                         \
-        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<PrimitiveType>)                                        \
+        .def("push_back", &array_py_push_back_list<PrimitiveType>)                                                     \
+        .def("push_back", &array_py_push_back_tuple<PrimitiveType>)                                                    \
         .def("push_front", static_cast<bool (ArrType::*)(const PrimitiveType &)>(&ArrType::push_front))                \
-        .def("push_front", &PyUtilApi::_array_py_push_front_list<PrimitiveType>)                                       \
-        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<PrimitiveType>)                                      \
+        .def("push_front", &array_py_push_front_list<PrimitiveType>)                                                   \
+        .def("push_front", &array_py_push_front_tuple<PrimitiveType>)                                                  \
         .def("pop", &ArrType::pop)                                                                                     \
         .def("front", &ArrType::front)                                                                                 \
         .def("back", &ArrType::back)                                                                                   \
         .def("at", &ArrType::at)                                                                                       \
         .def("__setitem__", &ArrType::set)                                                                             \
-        .def("__getitem__", &PyUtilApi::_array_py_getitem<PrimitiveType>)                                              \
-        .def("__contains__", &PyUtilApi::_array_py_contains<PrimitiveType>)                                            \
-        .def("__reversed__", &PyUtilApi::_array_py_reversed<PrimitiveType>)                                            \
-        .def("__iter__", &PyUtilApi::_array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
+        .def("__getitem__", &array_py_getitem<PrimitiveType>)                                                          \
+        .def("__contains__", &array_py_contains<PrimitiveType>)                                                        \
+        .def("__reversed__", &array_py_reversed<PrimitiveType>)                                                        \
+        .def("__iter__", &array_py_iter<PrimitiveType>, pybind11::keep_alive<0, 1>());
 
 namespace sihd::py
 {
 
 using namespace sihd::util;
-// global api logger
 SIHD_NEW_LOGGER("sihd::py");
 
 namespace
 {
-// logger used by python code
 Logger g_py_logger("sihd::py");
 
-// Bridges an Observable<ServiceController> notification to a python callback; the notify may fire
-// on a service thread, so acquire the GIL and hold the callable via shared_ptr (GIL-safe teardown)
-class PyServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
+// notify may fire on a service thread: take the GIL, and hold the callable via shared_ptr (GIL-taking deleter)
+class PyServiceObserver: public IHandler<ServiceController *>
 {
     public:
         explicit PyServiceObserver(pybind11::function fun):
@@ -69,7 +67,7 @@ class PyServiceObserver: public sihd::util::IHandler<sihd::util::ServiceControll
         {
         }
 
-        void handle(sihd::util::ServiceController *ctrl) override
+        void handle(ServiceController *ctrl) override
         {
             pybind11::gil_scoped_acquire acquire;
             (*_fun)(pybind11::cast(ctrl, pybind11::return_value_policy::reference));
@@ -79,8 +77,102 @@ class PyServiceObserver: public sihd::util::IHandler<sihd::util::ServiceControll
         std::shared_ptr<pybind11::function> _fun;
 };
 
+template <typename T>
+bool array_py_push_back_list(Array<T> & self, pybind11::list list)
+{
+    bool ret = true;
+    for (const auto & item : list)
+    {
+        if (self.push_back(item.cast<T>()) == false)
+        {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+bool array_py_push_back_tuple(Array<T> & self, pybind11::tuple tuple)
+{
+    bool ret = true;
+    for (const auto & item : tuple)
+    {
+        if (self.push_back(item.cast<T>()) == false)
+        {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+bool array_py_push_front_list(Array<T> & self, pybind11::list list)
+{
+    bool ret = true;
+    for (const auto & item : list)
+    {
+        if (self.push_front(item.cast<T>()) == false)
+        {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+bool array_py_push_front_tuple(Array<T> & self, pybind11::tuple tuple)
+{
+    bool ret = true;
+    for (const auto & item : tuple)
+    {
+        if (self.push_front(item.cast<T>()) == false)
+        {
+            ret = false;
+            break;
+        }
+    }
+    return ret;
+}
+
+template <typename T>
+T array_py_getitem(const Array<T> & self, size_t idx)
+{
+    if (idx >= self.size())
+        throw pybind11::index_error();
+    return self.at(idx);
+}
+
+template <typename T>
+pybind11::iterator array_py_iter(const Array<T> & self)
+{
+    return pybind11::make_iterator(self.cbegin(), self.cend());
+}
+
+template <typename T>
+bool array_py_contains(const Array<T> & self, T value)
+{
+    return std::find(self.cbegin(), self.cend(), value) != self.cend();
+}
+
+template <typename T>
+Array<T> array_py_reversed(const Array<T> & self)
+{
+    Array<T> ret;
+    ret.resize(self.size());
+    std::copy(self.crbegin(), self.crend(), ret.begin());
+    return ret;
+}
+
 std::mutex g_service_obs_mutex;
-std::multimap<sihd::util::ServiceController *, std::unique_ptr<PyServiceObserver>> g_service_observers;
+std::multimap<ServiceController *, std::unique_ptr<PyServiceObserver>> g_service_observers;
+
+void __attribute__((constructor)) premain()
+{
+    PyApi::add_api("sihd_util", &PyUtilApi::add_util_api);
+}
 } // namespace
 
 void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
@@ -128,14 +220,13 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             "debug",
             +[](std::string_view log) { g_py_logger.log(LogLevel::debug, log); },
             pybind11::call_guard<pybind11::gil_scoped_release>())
-        // sink configuration - wire SIHD's C++ logger output from python
         .def(
             "console",
-            +[]() { sihd::util::LoggerManager::console(); })
+            +[]() { LoggerManager::console(); })
         .def(
             "stream",
-            +[]() { sihd::util::LoggerManager::stream(); })
-        .def("clear", +[]() { sihd::util::LoggerManager::clear_loggers(); });
+            +[]() { LoggerManager::stream(); })
+        .def("clear", +[]() { LoggerManager::clear_loggers(); });
 
     m_util.def_submodule("types", "sihd::util::Types")
         .def("type_size", &type::size)
@@ -153,16 +244,11 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             })
         .def("name", &thread::name);
 
-    // path namespace removed - use PathManager class instead (see below)
-
-    m_util
-        .def_submodule("time", "sihd::util::time")
-        // sleep
+    m_util.def_submodule("time", "sihd::util::time")
         .def("nsleep", &time::nsleep, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("usleep", &time::usleep, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("msleep", &time::msleep, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("sleep", &time::sleep, pybind11::call_guard<pybind11::gil_scoped_release>())
-        // convert from nano
         .def("to_us", &time::to_micro)
         .def("to_ms", &time::to_milli)
         .def("to_sec", &time::to_sec)
@@ -171,7 +257,6 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("to_days", &time::to_days)
         .def("to_double", &time::to_double)
         .def("to_hz", &time::to_freq)
-        // convert to nano
         .def("us", &time::micro)
         .def("ms", &time::milli)
         .def("sec", &time::sec)
@@ -188,8 +273,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("str", &Duration::str, pybind11::arg("total_parenthesis") = false, pybind11::arg("nano") = false)
         .def("__int__", [](const Duration & self) { return static_cast<int64_t>(self); })
         .def("__str__", [](const Duration & self) { return self.str(); });
-    // nanoseconds -> Duration, so any api taking a Duration accepts a plain int:
-    // waiter.wait_for(sihd.util.time.ms(500), 1)  instead of Duration(time.ms(500))
+    // a plain int (ns) converts to Duration: wait_for(sihd.util.time.ms(500), 1)
     pybind11::implicitly_convertible<int64_t, Duration>();
 
     pybind11::class_<Splitter>(m_util, "Splitter")
@@ -205,8 +289,6 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
     pybind11::class_<Configurable>(m_util, "Configurable").def("set_conf", &PyUtilApi::_configurable_set_conf);
 
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
-        // keep_alive 1 -> this | 2 -> first arg | 3 -> parent
-        // keeps alive parent while named object is alive
         .def(pybind11::init([](const std::string & name, Node *parent) {
                  Named *node = new Named(name);
                  if (parent != nullptr)
@@ -242,7 +324,6 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def_readonly("ownership", &Node::ChildEntry::ownership);
 
     pybind11::class_<Node, Named, SmartNodePtr<Node>>(m_util, "Node")
-        // keeps alive parent while node object is alive
         .def(pybind11::init([](const std::string & name, Node *parent) {
                  Node *node = new Node(name);
                  if (parent != nullptr)
@@ -272,7 +353,6 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("resolve_links", [](Node *self) { return !SIHD_UNEXPECTED_LOG(self->resolve_links()); })
         .def("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .def("tree_desc_str", &Node::tree_desc_str)
-        // ties lifetime of return to 'this'
         .def("children", &Node::children, pybind11::return_value_policy::reference_internal)
         .def("children_keys", &Node::children_keys, pybind11::return_value_policy::reference_internal);
 
@@ -298,7 +378,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
                  auto obs = std::make_unique<PyServiceObserver>(std::move(fun));
                  PyServiceObserver *ptr = obs.get();
                  {
-                     std::lock_guard l(g_service_obs_mutex);
+                     std::lock_guard lock(g_service_obs_mutex);
                      g_service_observers.emplace(&self, std::move(obs));
                  }
                  pybind11::gil_scoped_release release;
@@ -307,7 +387,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("remove_observers", [](ServiceController & self) {
             std::vector<std::unique_ptr<PyServiceObserver>> removed;
             {
-                std::lock_guard l(g_service_obs_mutex);
+                std::lock_guard lock(g_service_obs_mutex);
                 auto range = g_service_observers.equal_range(&self);
                 for (auto it = range.first; it != range.second; ++it)
                     removed.push_back(std::move(it->second));
@@ -385,9 +465,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
                 LatenessPolicy late_policy) {
                 self.add_task(new PyUtilApi::PyTask(task,
                                                     util::TaskOptions {
-                                                        .run_at = sihd::util::Timestamp(run_at),
-                                                        .run_in = sihd::util::Duration(run_in),
-                                                        .reschedule_time = sihd::util::Duration(reschedule_time),
+                                                        .run_at = Timestamp(run_at),
+                                                        .run_in = Duration(run_in),
+                                                        .reschedule_time = Duration(reschedule_time),
                                                         .late_policy = late_policy,
                                                     }));
             },
@@ -426,20 +506,20 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<std::string_view>())
         .def("clone", &ArrChar::clone)
         .def("push_back", static_cast<bool (ArrChar::*)(std::string_view)>(&ArrChar::push_back))
-        .def("push_back", &PyUtilApi::_array_py_push_back_list<char>)
-        .def("push_back", &PyUtilApi::_array_py_push_back_tuple<char>)
+        .def("push_back", &array_py_push_back_list<char>)
+        .def("push_back", &array_py_push_back_tuple<char>)
         .def("push_front", static_cast<bool (ArrChar::*)(std::string_view)>(&ArrChar::push_front))
-        .def("push_front", &PyUtilApi::_array_py_push_front_list<char>)
-        .def("push_front", &PyUtilApi::_array_py_push_front_tuple<char>)
+        .def("push_front", &array_py_push_front_list<char>)
+        .def("push_front", &array_py_push_front_tuple<char>)
         .def("pop", &ArrChar::pop)
         .def("front", &ArrChar::front)
         .def("back", &ArrChar::back)
         .def("at", &ArrChar::at)
         .def("__setitem__", &ArrChar::set)
-        .def("__getitem__", &PyUtilApi::_array_py_getitem<char>)
-        .def("__contains__", &PyUtilApi::_array_py_contains<char>)
-        .def("__reversed__", &PyUtilApi::_array_py_reversed<char>)
-        .def("__iter__", &PyUtilApi::_array_py_iter<char>, pybind11::keep_alive<0, 1>());
+        .def("__getitem__", &array_py_getitem<char>)
+        .def("__contains__", &array_py_contains<char>)
+        .def("__reversed__", &array_py_reversed<char>)
+        .def("__iter__", &array_py_iter<char>, pybind11::keep_alive<0, 1>());
     DECLARE_ARRAY_USERTYPE(ArrBool, bool)
     DECLARE_ARRAY_USERTYPE(ArrByte, int8_t)
     DECLARE_ARRAY_USERTYPE(ArrUByte, uint8_t)
@@ -490,7 +570,7 @@ bool PyUtilApi::_configurable_set_conf(Configurable *self, const pybind11::kwarg
     return ret;
 }
 
-bool PyUtilApi::_configurable_set_single_conf(sihd::util::Configurable *self,
+bool PyUtilApi::_configurable_set_single_conf(Configurable *self,
                                               const std::string & key,
                                               const pybind11::handle & handle)
 {
@@ -529,16 +609,7 @@ bool PyUtilApi::_configurable_set_single_conf(sihd::util::Configurable *self,
     return false;
 }
 
-static void __attribute__((constructor)) premain()
-{
-    PyApi::add_api("sihd_util", &PyUtilApi::add_util_api);
-}
-
-/* ************************************************************************* */
-/* PyTask */
-/* ************************************************************************* */
-
-PyUtilApi::PyTask::PyTask(const pybind11::function & task, const sihd::util::TaskOptions & options):
+PyUtilApi::PyTask::PyTask(const pybind11::function & task, const TaskOptions & options):
     Task(nullptr, options),
     _fun(task)
 {

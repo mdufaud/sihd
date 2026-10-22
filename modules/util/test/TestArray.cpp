@@ -17,9 +17,9 @@ using namespace sihd::util;
 class TestArray: public ::testing::Test
 {
     protected:
-        TestArray() { sihd::util::LoggerManager::stream(); }
+        TestArray() { LoggerManager::stream(); }
 
-        virtual ~TestArray() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestArray() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() { _array_ptr = nullptr; }
 
@@ -43,21 +43,32 @@ class TestArray: public ::testing::Test
         IArray *_array_ptr;
 };
 
+namespace
+{
+
+struct PerfItem
+{
+        int a;
+        int b;
+};
+
+struct Point
+{
+        int x;
+        int y;
+};
+
+} // namespace
+
 TEST_F(TestArray, test_array_perf)
 {
-    struct Test
-    {
-            int a;
-            int b;
-    };
-
     constexpr int test_multiplier = 1;
 
-    Array<Test>::mult_resize_capacity = 2;
+    Array<PerfItem>::mult_resize_capacity = 2;
     constexpr int iterations = 30000 * test_multiplier;
     constexpr int ncopies = 100 * test_multiplier;
-    std::vector<Test> vec;
-    Array<Test> arr;
+    std::vector<PerfItem> vec;
+    Array<PerfItem> arr;
 
     {
         Perf perf_vector("vector");
@@ -82,6 +93,7 @@ TEST_F(TestArray, test_array_perf)
         }
         perf_vector.log();
         perf_array.log();
+
         ASSERT_TRUE(arr.is_equal(vec));
     }
 
@@ -137,6 +149,7 @@ TEST_F(TestArray, test_array_perf)
             {
                 perf_array.begin();
                 [[maybe_unused]] auto b = arr.back();
+
                 [[maybe_unused]] auto f = arr.front();
                 arr.pop_back();
                 perf_array.end();
@@ -203,6 +216,7 @@ TEST_F(TestArray, test_array_iterator_for)
     {
         SIHD_LOG(debug, "{}", *it);
         val = *it;
+
         ++idx;
     }
     EXPECT_EQ(val, 10);
@@ -215,7 +229,6 @@ TEST_F(TestArray, test_array_iterator_embedded)
 
     i.resize(4);
     std::generate(i.begin(), i.end(), [n = 1]() mutable { return n++; });
-    // {1, 2, 3, 4}
     EXPECT_EQ(container::find(i, 1).idx(), 0u);
     EXPECT_EQ(container::find(i, 2).idx(), 1u);
     EXPECT_EQ(container::find(i, 4).idx(), 3u);
@@ -275,28 +288,23 @@ TEST_F(TestArray, test_array_iterator_algo)
     SIHD_LOG(debug, "Reverse before: {}", arr_byte.str(' '));
     std::reverse(arr_byte.rbegin(), arr_byte.rend());
     SIHD_LOG(debug, "Reverse after: {}", arr_byte.str(' '));
-    // {4, 3, 2, 1}
     EXPECT_TRUE(arr_byte.is_equal(reversed_bytes, 4));
 
     SIHD_LOG(debug, "Removing 4");
     auto it_remove = std::remove(arr_byte.begin(), arr_byte.end(), 4);
-    // {3, 2, 1, 4}
     EXPECT_EQ(*it_remove, 1);
     auto it_rm_find = std::find(arr_byte.begin(), it_remove, 4);
     EXPECT_EQ(it_rm_find, it_remove);
     arr_byte.resize(3);
-    // {3, 2, 1}
     SIHD_LOG(debug, "Remove after: {}", arr_byte.str(' '));
 
     SIHD_LOG(debug, "Replace 3 -> 4");
     std::replace(arr_byte.begin(), arr_byte.end(), 3, 4);
-    // {4, 2, 1}
     SIHD_LOG(debug, "Replace after: {}", arr_byte.str(' '));
     EXPECT_EQ(arr_byte[0], 4);
 
     SIHD_LOG(debug, "Rotate left by 1");
     std::rotate(arr_byte.begin(), arr_byte.begin() + 1, arr_byte.end());
-    // {2, 1, 4}
     SIHD_LOG(debug, "Rotate after: {}", arr_byte.str(' '));
     EXPECT_EQ(arr_byte[0], 2);
     EXPECT_EQ(arr_byte[1], 1);
@@ -335,42 +343,34 @@ TEST_F(TestArray, test_array_char_trim)
 {
     ArrChar arr;
 
-    // Test trim leading spaces
     EXPECT_TRUE(arr.from("   hello"));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello");
 
-    // Test trim trailing spaces
     EXPECT_TRUE(arr.from("hello   "));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello");
 
-    // Test trim both leading and trailing spaces
     EXPECT_TRUE(arr.from("   hello world   "));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello world");
 
-    // Test trim with tabs and newlines
     EXPECT_TRUE(arr.from("\t\n  hello  \n\t"));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello");
 
-    // Test trim empty string
     EXPECT_TRUE(arr.from(""));
     arr.trim();
     EXPECT_EQ(arr.str(), "");
 
-    // Test trim whitespace-only string
     EXPECT_TRUE(arr.from("   \t\n  "));
     arr.trim();
     EXPECT_EQ(arr.str(), "");
 
-    // Test trim no spaces
     EXPECT_TRUE(arr.from("hello"));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello");
 
-    // Test trim internal spaces preserved
     EXPECT_TRUE(arr.from("  hello   world  "));
     arr.trim();
     EXPECT_EQ(arr.str(), "hello   world");
@@ -486,19 +486,13 @@ TEST_F(TestArray, test_array_push_front)
 TEST_F(TestArray, test_array_push_back)
 {
     Array<float> arr(4);
-    // capacity = 0
     arr.push_back(0.1);
-    // capacity = 1
     arr.push_back(0.2);
-    // capacity = 1 * 2 = 2
     arr.push_back(0.3);
-    // capacity = 2 * 2 = 4
     arr.push_back(0.4);
-    // capacity = 4
     EXPECT_EQ(arr.size(), 4ul);
     EXPECT_EQ(arr.capacity(), 4ul);
     arr.push_back({0.5, 0.6});
-    // capacity = 4 * 2 = 8
     ASSERT_EQ(arr.size(), 6ul);
     EXPECT_EQ(arr.capacity(), 8ul);
     EXPECT_FLOAT_EQ(arr[4], 0.5);
@@ -519,6 +513,7 @@ TEST_F(TestArray, test_array_push_back_array)
     EXPECT_EQ(arr[3], 4);
     SIHD_LOG(info, "Appending another");
     arr.push_back(arr8, 4);
+
     EXPECT_EQ(arr.size(), 8ul);
     EXPECT_EQ(arr.capacity(), 20ul);
     this->test_array(arr);
@@ -531,11 +526,11 @@ TEST_F(TestArray, test_array_push_back_array)
     arr.push_back(arr8, 4);
     EXPECT_EQ(arr.size(), 20ul);
     EXPECT_EQ(arr.capacity(), 20ul);
+
     this->test_array(arr);
     SIHD_LOG(info, "Appending after limit");
     arr.push_back(arr8, 4);
     EXPECT_EQ(arr.size(), 24ul);
-    // capacity = 20 * 2 = 40
     EXPECT_EQ(arr.capacity(), 40ul);
     this->test_array(arr);
 }
@@ -569,17 +564,16 @@ TEST_F(TestArray, test_array_assign)
     delete[] arr8;
 }
 
-// Test storing in IArray
 TEST_F(TestArray, test_array_store)
 {
-    sihd::util::ArrByte buffer_byte(200);
+    ArrByte buffer_byte(200);
     buffer_byte[0] = 127;
     buffer_byte[1] = 25;
     IArray *buffer = &buffer_byte;
     EXPECT_EQ(buffer->buf()[0], 127);
     EXPECT_EQ(buffer->buf()[1], 25u);
 
-    sihd::util::ArrInt buffer_int(2);
+    ArrInt buffer_int(2);
     buffer_int[0] = 123;
     buffer_int[1] = 456;
     buffer = &buffer_int;
@@ -587,7 +581,6 @@ TEST_F(TestArray, test_array_store)
     EXPECT_EQ(((int *)buffer->buf())[1], 456);
 }
 
-// Test all types
 template <typename ArrayType, typename ValueType, typename TypeEnum>
 void test_array_type(ValueType test_value, TypeEnum expected_type)
 {
@@ -600,25 +593,24 @@ void test_array_type(ValueType test_value, TypeEnum expected_type)
 
 TEST_F(TestArray, test_array_all)
 {
-    test_array_type<sihd::util::ArrByte, int8_t>(127, Type::TYPE_BYTE);
-    test_array_type<sihd::util::ArrUByte, uint8_t>(255, Type::TYPE_UBYTE);
-    test_array_type<sihd::util::ArrShort, int16_t>(2, Type::TYPE_SHORT);
-    test_array_type<sihd::util::ArrUShort, uint16_t>(2, Type::TYPE_USHORT);
-    test_array_type<sihd::util::ArrInt, int32_t>(2, Type::TYPE_INT);
-    test_array_type<sihd::util::ArrUInt, uint32_t>(static_cast<uint32_t>(-1), Type::TYPE_UINT);
-    test_array_type<sihd::util::ArrLong, int64_t>(int64_t(1), Type::TYPE_LONG);
-    test_array_type<sihd::util::ArrULong, uint64_t>(static_cast<uint64_t>(-1), Type::TYPE_ULONG);
+    test_array_type<ArrByte, int8_t>(127, Type::TYPE_BYTE);
+    test_array_type<ArrUByte, uint8_t>(255, Type::TYPE_UBYTE);
+    test_array_type<ArrShort, int16_t>(2, Type::TYPE_SHORT);
+    test_array_type<ArrUShort, uint16_t>(2, Type::TYPE_USHORT);
+    test_array_type<ArrInt, int32_t>(2, Type::TYPE_INT);
+    test_array_type<ArrUInt, uint32_t>(static_cast<uint32_t>(-1), Type::TYPE_UINT);
+    test_array_type<ArrLong, int64_t>(int64_t(1), Type::TYPE_LONG);
+    test_array_type<ArrULong, uint64_t>(static_cast<uint64_t>(-1), Type::TYPE_ULONG);
 
-    // For float and double, use EXPECT_FLOAT_EQ for comparison
     {
-        sihd::util::ArrFloat arr(1);
+        ArrFloat arr(1);
         arr[0] = 133.7f;
         EXPECT_FLOAT_EQ(arr[0], 133.7f);
         EXPECT_EQ(arr.data_size(), sizeof(float));
         EXPECT_EQ(arr.data_type(), Type::TYPE_FLOAT);
     }
     {
-        sihd::util::ArrDouble arr(1);
+        ArrDouble arr(1);
         arr[0] = 123.4;
         EXPECT_FLOAT_EQ(arr[0], 123.4);
         EXPECT_EQ(arr.data_size(), sizeof(double));
@@ -701,13 +693,7 @@ TEST_F(TestArray, test_array_util_create)
 
 TEST_F(TestArray, test_array_struct)
 {
-    struct Test
-    {
-            int x;
-            int y;
-    };
-
-    Array<Test> arr;
+    Array<Point> arr;
     arr.push_back({
         .x = 42,
         .y = 1337,
@@ -746,7 +732,6 @@ void test_array_from_container(const Container & container)
         ++idx;
     }
 
-    // If container is mutable, modify and test copy semantics
     if constexpr (!std::is_const_v<typename std::remove_reference_t<Container>>)
     {
         auto copy = container;

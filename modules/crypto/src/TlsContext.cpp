@@ -1,3 +1,5 @@
+#include <fmt/format.h>
+
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/TlsContext.hpp>
@@ -81,9 +83,9 @@ Result<void> TlsContext::load_ca_cert(std::string_view path)
     ERR_clear_error();
     if (!_handle)
         return error_not_initialized();
-    std::string p(path);
-    if (SSL_CTX_load_verify_locations(static_cast<SSL_CTX *>(_handle.get()), p.c_str(), nullptr) != 1)
-        return make_error("load CA cert from '{}'", path);
+    const std::string path_str(path);
+    if (SSL_CTX_load_verify_locations(static_cast<SSL_CTX *>(_handle.get()), path_str.c_str(), nullptr) != 1)
+        return make_error(fmt::format("load CA cert from '{}'", path));
     return {};
 }
 
@@ -127,6 +129,16 @@ Result<void> TlsContext::set_renegotiation(bool allow)
 void TlsContext::clear()
 {
     _handle.reset();
+}
+
+TlsContext::operator bool() const
+{
+    return _handle != nullptr;
+}
+
+void *TlsContext::native() const
+{
+    return _handle.get();
 }
 
 } // namespace sihd::crypto

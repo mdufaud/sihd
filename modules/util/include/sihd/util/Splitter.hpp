@@ -16,9 +16,7 @@ struct SplitterOptions
         int escape_char = '\\';
         // choose one of the three delimiter types
         int delimiter_char = 0;
-        // choose one of the three delimiter types
         std::string_view delimiter_str = "";
-        // choose one of the three delimiter types
         SplitterDelimiterMethod delimiter_method = {};
 
         std::string_view open_escape_sequences = "";
@@ -54,9 +52,7 @@ class Splitter
         std::vector<std::string> split(std::string_view str) const;
         std::vector<std::string_view> split_view(std::string_view str) const;
 
-        // count number of tokens to return
         int count_tokens(std::string_view view) const;
-        // return the next token and updates the index
         std::string_view next_token(std::string_view view, int *idx) const;
 
     protected:
@@ -76,7 +72,6 @@ class Splitter
         // a series of opening sequences like '(' that'll ignore split when between an opening and closing sequence
         std::string _authorized_open_escape_sequences;
         // a method to match delimiter - overrides delimiter
-        // int (*_compare_method)(int c);
         SplitterDelimiterMethod _compare_method;
 };
 

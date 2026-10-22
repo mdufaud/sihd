@@ -1,3 +1,4 @@
+#include <array>
 #include <cstring>
 
 #include <sihd/util/hash.hpp>
@@ -8,27 +9,28 @@ namespace sihd::util::hash
 namespace
 {
 
-// SHA1 context structure
+constexpr size_t block_size = 64;
+constexpr size_t state_words = 5;
+constexpr size_t schedule_words = 80;
+constexpr size_t length_bytes = 8;
+
 struct SHA1Context
 {
-        uint32_t state[5];
-        uint32_t count[2];
-        uint8_t buffer[64];
+        std::array<uint32_t, state_words> state;
+        std::array<uint32_t, 2> count;
+        std::array<uint8_t, block_size> buffer;
 };
 
-// Rotate left circular shift
 inline uint32_t rol(uint32_t value, uint32_t bits)
 {
     return (value << bits) | (value >> (32 - bits));
 }
 
-// SHA1 block transformation
-void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
+void sha1_transform(std::array<uint32_t, state_words> & state, const uint8_t *buffer)
 {
     uint32_t a, b, c, d, e;
-    uint32_t w[80];
+    std::array<uint32_t, schedule_words> w;
 
-    // Prepare message schedule
     for (int i = 0; i < 16; i++)
     {
         w[i] = ((uint32_t)buffer[i * 4] << 24) | ((uint32_t)buffer[i * 4 + 1] << 16)
@@ -40,14 +42,12 @@ void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
         w[i] = rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
     }
 
-    // Initialize working variables
     a = state[0];
     b = state[1];
     c = state[2];
     d = state[3];
     e = state[4];
 
-    // Main loop
     for (int i = 0; i < 80; i++)
     {
         uint32_t f, k;
@@ -81,7 +81,6 @@ void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
         a = temp;
     }
 
-    // Add this chunk's hash to result so far
     state[0] += a;
     state[1] += b;
     state[2] += c;
@@ -89,7 +88,6 @@ void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
     state[4] += e;
 }
 
-// Initialize SHA1 context
 void sha1_init(SHA1Context *ctx)
 {
     ctx->state[0] = 0x67452301;
@@ -101,7 +99,6 @@ void sha1_init(SHA1Context *ctx)
     ctx->count[1] = 0;
 }
 
-// Update SHA1 context with new data
 void sha1_update(SHA1Context *ctx, const uint8_t *data, size_t len)
 {
     size_t i, j;
@@ -117,7 +114,7 @@ void sha1_update(SHA1Context *ctx, const uint8_t *data, size_t len)
     {
         i = 64 - j;
         memcpy(&ctx->buffer[j], data, i);
-        sha1_transform(ctx->state, ctx->buffer);
+        sha1_transform(ctx->state, ctx->buffer.data());
 
         for (; i + 63 < len; i += 64)
         {
@@ -135,12 +132,11 @@ void sha1_update(SHA1Context *ctx, const uint8_t *data, size_t len)
         memcpy(&ctx->buffer[j], &data[i], len - i);
 }
 
-// Finalize SHA1 hash
-void sha1_final(uint8_t digest[20], SHA1Context *ctx)
+void sha1_final(uint8_t digest[sha1_size], SHA1Context *ctx)
 {
-    uint8_t finalcount[8];
+    std::array<uint8_t, length_bytes> finalcount;
 
-    for (int i = 0; i < 8; i++)
+    for (size_t i = 0; i < finalcount.size(); i++)
     {
         finalcount[i] = (uint8_t)((ctx->count[(i >= 4 ? 0 : 1)] >> ((3 - (i & 3)) * 8)) & 255);
     }
@@ -152,9 +148,9 @@ void sha1_final(uint8_t digest[20], SHA1Context *ctx)
         sha1_update(ctx, (const uint8_t *)"\0", 1);
     }
 
-    sha1_update(ctx, finalcount, 8);
+    sha1_update(ctx, finalcount.data(), finalcount.size());
 
-    for (int i = 0; i < 20; i++)
+    for (size_t i = 0; i < sha1_size; i++)
     {
         digest[i] = (uint8_t)((ctx->state[i >> 2] >> ((3 - (i & 3)) * 8)) & 255);
     }
@@ -162,7 +158,7 @@ void sha1_final(uint8_t digest[20], SHA1Context *ctx)
 
 } // namespace
 
-void sha1(const uint8_t *data, size_t len, uint8_t output[20])
+void sha1(const uint8_t *data, size_t len, uint8_t output[sha1_size])
 {
     SHA1Context ctx;
     sha1_init(&ctx);

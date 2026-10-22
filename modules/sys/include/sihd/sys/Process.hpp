@@ -31,7 +31,8 @@ class Process: public sihd::util::IHandler<Poll *>,
 #if !defined(__SIHD_WINDOWS__)
         using FileDescType = int;
 #else
-        using FileDescType = HANDLE;
+        // HANDLE, spelled without windows.h
+        using FileDescType = void *;
 #endif
 
         static constexpr bool supported = !sihd::util::build::is_emscripten;
@@ -62,22 +63,17 @@ class Process: public sihd::util::IHandler<Poll *>,
 
         ~Process();
 
-        // reset so you can run again
         void reset_proc();
-        // reset and clear file descriptors configurations
         void clear();
-        // execute binary / function
         sihd::util::Result<void> execute();
 
         bool is_process_running() const;
 
         // wait for process: false means the process did not terminate
         sihd::util::Result<bool> wait(int options = 0);
-        // wait for process but do not hang
         sihd::util::Result<bool> wait_no_hang();
 
         bool can_read_pipes() const;
-        // read pipes to call the callbacks on pipes
         bool read_pipes(int milliseconds_timeout = 1);
         /**
          * Read remaining pipes
@@ -86,7 +82,6 @@ class Process: public sihd::util::IHandler<Poll *>,
          * Call this when piped processes (calls wait())
          */
         bool terminate();
-        // send signal to process - SIGTERM by default
         sihd::util::Result<void> kill(int sig = -1);
 
         /**
@@ -96,7 +91,6 @@ class Process: public sihd::util::IHandler<Poll *>,
         Process & stdin_from(const std::string & input);
         bool stdin_from_file(const std::string & path);
         Process & stdin_from(FileDescType fd);
-        // Close stdin pipe after execution so that the process do not hang
         Process & stdin_close_after_exec(bool activate);
 
         Process & stdout_close();
@@ -137,17 +131,12 @@ class Process: public sihd::util::IHandler<Poll *>,
         bool set_affinity(const std::vector<bool> & cpu_mask);
 
 #if !defined(__SIHD_WINDOWS__)
-        // LINUX only methods
-
         // need admin rights and work only with forks
         void set_chroot(std::string_view path);
 
-        // use fork instead of spawn
         void set_force_fork(bool active);
 
-        // wait for process - report stopped child: false means it did not stop
         sihd::util::Result<bool> wait_stop(int options = 0);
-        // wait for process - report continued child: false means it did not continue
         sihd::util::Result<bool> wait_continue(int options = 0);
 
         bool has_core_dumped() const;
@@ -157,18 +146,15 @@ class Process: public sihd::util::IHandler<Poll *>,
         uint8_t signal_exit_number() const;
         uint8_t signal_stop_number() const;
 
-        // get running process id
         pid_t pid() const;
 #else
-        // get running process id
-        DWORD pid() const;
-        // get running process handle
-        HANDLE process() const;
+        // DWORD / HANDLE, spelled without windows.h
+        unsigned long pid() const;
+        void *process() const;
 #endif
 
-        // wait for process - report dead child (options = timeout ms, 0 = block): false means not terminated
+        // options = timeout ms, 0 = block; false means not terminated
         sihd::util::Result<bool> wait_exit(int options = 0);
-        // wait for process (options = timeout ms, 0 = block): false means not terminated
         sihd::util::Result<bool> wait_any(int options = 0);
         // windows processes always terminate by exit (no signal/stop semantics)
         bool has_exited() const;
@@ -182,16 +168,20 @@ class Process: public sihd::util::IHandler<Poll *>,
         std::vector<std::string> env() const;
         const Environment & environment() const { return _env; }
 
-        // default file opening mode
         mode_t open_mode;
 
     protected:
-        // start process then if stdout or stderr is piped, polls them until the process is stopped
         bool on_start() override;
         bool on_stop() override;
         bool wait_process_end(sihd::util::Duration nano_duration = {});
 
     private:
+        struct Scheduler
+        {
+                sched::Policy policy;
+                sched::Priority priority;
+        };
+
         struct Impl;
 
         void handle(Poll *poll) override;
@@ -213,7 +203,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         std::string _chdir;
         bool _force_fork;
         std::optional<int> _nice;
-        std::optional<std::pair<sched::Policy, sched::Priority>> _scheduler;
+        std::optional<Scheduler> _scheduler;
         std::vector<bool> _affinity;
         std::function<int()> _fun_to_execute;
         sihd::util::Waitable _waitable;

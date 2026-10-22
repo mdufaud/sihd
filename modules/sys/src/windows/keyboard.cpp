@@ -1,5 +1,6 @@
 #include <windows.h>
 
+#include <array>
 #include <cstdint>
 #include <string_view>
 #include <utility>
@@ -22,26 +23,24 @@ namespace
 {
 
 // Virtual key codes indexed by Key, skipping Key::none.
-constexpr WORD key_codes[] = {
+constexpr auto key_codes = std::to_array<WORD>({
     'A',     'B',    'C',      'D',     'E',      'F',       'G',     'H',       'I',     'J',       'K',
     'L',     'M',    'N',      'O',     'P',      'Q',       'R',     'S',       'T',     'U',       'V',
     'W',     'X',    'Y',      'Z',     '0',      '1',       '2',     '3',       '4',     '5',       '6',
     '7',     '8',    '9',      VK_F1,   VK_F2,    VK_F3,     VK_F4,   VK_F5,     VK_F6,   VK_F7,     VK_F8,
     VK_F9,   VK_F10, VK_F11,   VK_F12,  VK_SPACE, VK_RETURN, VK_TAB,  VK_ESCAPE, VK_BACK, VK_DELETE, VK_INSERT,
     VK_HOME, VK_END, VK_PRIOR, VK_NEXT, VK_UP,    VK_DOWN,   VK_LEFT, VK_RIGHT,
-};
+});
 
-constexpr WORD modifier_codes[] = {VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN};
+constexpr auto modifier_codes = std::to_array<WORD>({VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN});
 
-static_assert(sizeof(key_codes) / sizeof(key_codes[0]) == std::to_underlying(Key::right),
-              "the virtual key table must cover every Key");
+static_assert(key_codes.size() == std::to_underlying(Key::right), "the virtual key table must cover every Key");
 
 WORD key_code_of(Key key)
 {
     return key_codes[std::to_underlying(key) - 1];
 }
 
-// The navigation, editing and arrow keys carry the extended flag.
 bool extended_key(Key key)
 {
     return std::to_underlying(key) >= std::to_underlying(Key::del);
@@ -69,8 +68,7 @@ Result<void> type_text(std::string_view utf8_text)
 {
     if (utf8_text.empty())
         return {};
-    // utf-16 units typed as unicode scan codes: surrogates ride along as two
-    // units and every layout produces the same characters.
+    // utf-16 units typed as unicode scan codes: surrogates ride along as two units, layout independent
     const int size = MultiByteToWideChar(CP_UTF8,
                                          MB_ERR_INVALID_CHARS,
                                          utf8_text.data(),

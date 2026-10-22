@@ -21,7 +21,6 @@ using namespace sihd::sys;
 namespace
 {
 
-// asserts no read error and returns whether a line was read
 bool read_next_ok(LineReader & reader)
 {
     auto res = reader.read_next();
@@ -40,11 +39,11 @@ class TestLineReader: public ::testing::Test
     protected:
         TestLineReader()
         {
-            sihd::util::LoggerManager::stream();
+            LoggerManager::stream();
             ::srand(::time(NULL));
         }
 
-        virtual ~TestLineReader() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestLineReader() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -72,7 +71,6 @@ TEST_F(TestLineReader, test_linereader_one_line)
     EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
-    // testing with a line feed at the end
     SIHD_LOG(info, "Writing test file with linefeed at the end: {}", path);
     EXPECT_TRUE(fs::write(path, "hello world\n").has_value());
 
@@ -113,7 +111,6 @@ TEST_F(TestLineReader, test_linereader_two_lines)
     EXPECT_FALSE(read_next_ok(reader));
     EXPECT_TRUE(reader.close());
 
-    // testing with a line feed at the end
     SIHD_LOG(info, "Writing test file with linefeed at the end: {}", path);
     EXPECT_TRUE(fs::write(path, "hello world\nhow are you\n").has_value());
 
@@ -201,7 +198,6 @@ TEST_F(TestLineReader, test_linereader_low_buffer)
     EXPECT_TRUE(reader.set_read_buffsize(1));
     EXPECT_TRUE(reader.open(path).has_value());
     EXPECT_TRUE(read_next_ok(reader));
-    // test read
     EXPECT_TRUE(reader.get_read_data(view));
     ASSERT_TRUE(view);
     EXPECT_EQ(view, "hello world");
@@ -365,9 +361,10 @@ TEST_F(TestLineReader, test_linereader_perf)
     size_t total_file = 0;
     ASSERT_TRUE(writer.open(path_file, "wb"));
     {
-        Timeit t("std::getline");
+        Timeit timeit("std::getline");
         File file;
         ASSERT_TRUE(file.open(path_input, "rb").has_value());
+
         while (true)
         {
             auto read = file.read_line(&line, &size);
@@ -406,6 +403,7 @@ TEST_F(TestLineReader, test_linereader_perf)
         }
         ASSERT_TRUE(reader.close());
     }
+
     ASSERT_TRUE(writer.close());
 
     size_t total_rl_no_memory = 0;

@@ -43,7 +43,7 @@ size_t StrConfiguration::size() const
 
 bool StrConfiguration::has(const std::string & key) const
 {
-    return _configuration.count(key) > 0;
+    return _configuration.contains(key);
 }
 
 std::optional<std::string> StrConfiguration::find(const std::string & key) const

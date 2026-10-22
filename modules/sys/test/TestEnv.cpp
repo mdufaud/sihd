@@ -57,7 +57,6 @@ TEST(TestEnv, test_expand)
     EXPECT_EQ(env::expand("say ${SIHD_TEST_VAR}!"), "say hello!");
     EXPECT_EQ(env::expand("$SIHD_TEST_VAR$SIHD_TEST_VAR"), "hellohello");
 
-    // unknown or malformed references are left as-is
     EXPECT_EQ(env::expand("$SIHD_TEST_NOPE_VAR/x"), "$SIHD_TEST_NOPE_VAR/x");
     EXPECT_EQ(env::expand("${SIHD_TEST_NOPE_VAR}"), "${SIHD_TEST_NOPE_VAR}");
     EXPECT_EQ(env::expand("${unterminated"), "${unterminated");

@@ -44,15 +44,15 @@ class HttpResponse
         void set_cookie(std::string_view name, std::string_view value, std::string_view options = {});
 
         void set_stream_provider(StreamProvider provider);
-        bool is_streaming() const { return _stream_provider != nullptr; }
-        StreamProvider & stream_provider() { return _stream_provider; }
+        bool is_streaming() const;
+        StreamProvider & stream_provider();
 
-        uint32_t status() const { return _status; }
-        HttpHeader & http_header() { return _http_header; }
-        const HttpHeader & http_header() const { return _http_header; }
-        const std::vector<std::string> & set_cookie_headers() const { return _cookies; }
+        uint32_t status() const;
+        HttpHeader & http_header();
+        const HttpHeader & http_header() const;
+        const std::vector<std::string> & set_cookie_headers() const;
 
-        const sihd::util::ArrByte & content() const { return _array; }
+        const sihd::util::ArrByte & content() const;
 
     protected:
 

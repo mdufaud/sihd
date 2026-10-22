@@ -57,6 +57,7 @@ TEST(TestScreen, test_containing_and_primary)
             EXPECT_GT(monitor.height, 0);
             EXPECT_GT(monitor.scale, 0.0);
         }
+
         if (!res->empty())
         {
             const screen::Monitor & first = res->front();

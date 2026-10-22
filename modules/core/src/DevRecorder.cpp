@@ -10,11 +10,13 @@
 namespace sihd::core
 {
 
+using namespace sihd::util;
+
 SIHD_REGISTER_FACTORY(DevRecorder)
 
 SIHD_LOGGER;
 
-DevRecorder::DevRecorder(const std::string & name, sihd::util::Node *parent):
+DevRecorder::DevRecorder(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
     _channel_records_ptr(nullptr)
@@ -36,7 +38,7 @@ bool DevRecorder::set_handler(std::string_view path)
 
 bool DevRecorder::add_record_channel(std::string_view conf)
 {
-    sihd::util::Splitter splitter("=");
+    Splitter splitter("=");
     std::vector<std::string> split = splitter.split(conf);
     if (split.size() != 2)
     {
@@ -62,7 +64,7 @@ bool DevRecorder::is_running() const
 
 void DevRecorder::handle(sihd::core::Channel *channel)
 {
-    std::lock_guard l(_run_mutex);
+    std::lock_guard lock(_run_mutex);
     if (_running == false || _channel_records_ptr == nullptr)
         return;
     std::string & alias = _map_channels[channel];
@@ -74,13 +76,13 @@ void DevRecorder::handle(sihd::core::Channel *channel)
 
 bool DevRecorder::on_init()
 {
-    _handler_ptr = this->find<sihd::util::IHandler<const std::string &, const Channel *>>(_handler_path);
+    _handler_ptr = this->find<IHandler<const std::string &, const Channel *>>(_handler_path);
     if (_handler_ptr == nullptr)
     {
         SIHD_LOG(error, "DevRecorder: handler not found: {}", _handler_path);
         return false;
     }
-    this->add_unlinked_channel(CHANNEL_RECORDS, sihd::util::TYPE_UINT, 1);
+    this->add_unlinked_channel(CHANNEL_RECORDS, TYPE_UINT, 1);
     return true;
 }
 
@@ -90,7 +92,6 @@ bool DevRecorder::on_start()
     if (!records)
         return !SIHD_UNEXPECTED_LOG(records);
     _channel_records_ptr = *records;
-    // find channels and observe them
     Channel *channel_ptr;
     for (const auto & pair : _map_channels_alias)
     {
@@ -110,7 +111,7 @@ bool DevRecorder::on_start()
 bool DevRecorder::on_stop()
 {
     {
-        std::lock_guard l(_run_mutex);
+        std::lock_guard lock(_run_mutex);
         _running = false;
     }
     _channel_records_ptr = nullptr;

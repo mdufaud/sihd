@@ -294,4 +294,14 @@ void TlsConnection::clear()
     _socket = nullptr;
 }
 
+TlsConnection::operator bool() const
+{
+    return _handle != nullptr;
+}
+
+void *TlsConnection::native() const
+{
+    return _handle.get();
+}
+
 } // namespace sihd::net

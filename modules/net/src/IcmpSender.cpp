@@ -9,13 +9,15 @@
 #include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <arpa/inet.h>     // inet_ntop
-# include <netinet/icmp6.h> // icmpv6 macros
+# include <arpa/inet.h>
+# include <netinet/icmp6.h>
 # include <netinet/ip6.h>
-# include <netinet/ip_icmp.h> // icmp macros
+# include <netinet/ip_icmp.h>
 #else
-# include <ws2ipdef.h> // icmpv6 macros
+# include <ws2ipdef.h>
 # include <ws2tcpip.h>
+
+# include "windows/utils.hpp"
 #endif
 
 #if defined(__SIHD_WINDOWS__)
@@ -44,6 +46,8 @@ struct ip6_hdr
 # define ip6_hops ip6_ctlun.ip6_un1.ip6_un1_hlim
 #endif
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -61,8 +65,8 @@ bool in_bounds(size_t offset, size_t size, size_t total)
 
 } // namespace
 
-IcmpSender::IcmpSender(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
+IcmpSender::IcmpSender(const std::string & name, Node *parent):
+    Named(name, parent),
     _config_applied(false),
     _echo_mode(false),
     _type(-1),
@@ -147,18 +151,18 @@ bool IcmpSender::_set_conf_data_size(int byte_size)
     return this->set_data_size(static_cast<size_t>(byte_size));
 }
 
-sihd::util::Result<void> IcmpSender::open_socket_unix()
+Result<void> IcmpSender::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     _config_applied = false;
     return _socket.open(AF_UNIX, SOCK_RAW, IPPROTO_ICMP);
 }
 
-sihd::util::Result<void> IcmpSender::open_socket(bool ipv6)
+Result<void> IcmpSender::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     _config_applied = false;
 
     // Default: use SOCK_RAW for both IPv4 and IPv6 (cross-platform)
@@ -181,7 +185,7 @@ sihd::util::Result<void> IcmpSender::open_socket(bool ipv6)
     return res;
 }
 
-sihd::util::Result<void> IcmpSender::close()
+Result<void> IcmpSender::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
@@ -231,7 +235,7 @@ void IcmpSender::set_seq(int seq)
     _seq = seq;
 }
 
-bool IcmpSender::set_data(sihd::util::ArrByteView view)
+bool IcmpSender::set_data(ArrByteView view)
 {
     _config_applied = false;
     if (!_data_to_set)
@@ -243,11 +247,9 @@ void IcmpSender::_apply_config()
 {
     const bool is_ipv6 = _socket.is_ipv6();
 
-    // Apply TTL
     if (_ttl >= 0)
         SIHD_UNEXPECTED_LOG(_socket.set_ttl(_ttl));
 
-    // Apply echo mode or explicit type/code
     if (_echo_mode)
     {
         if (is_ipv6)
@@ -277,19 +279,16 @@ void IcmpSender::_apply_config()
             icmp()->icmp_code = _code;
     }
 
-    // Apply ID
     if (is_ipv6)
         icmp6()->icmp6_id = htons(_id);
     else
         icmp()->icmp_id = htons(_id);
 
-    // Apply sequence
     if (is_ipv6)
         icmp6()->icmp6_seq = htons(_seq);
     else
         icmp()->icmp_seq = htons(_seq);
 
-    // Apply data
     if (_data_to_set && _data_to_set->size() > 0)
     {
         if (is_ipv6)
@@ -301,11 +300,10 @@ void IcmpSender::_apply_config()
     _config_applied = true;
 }
 
-sihd::util::Result<void> IcmpSender::send_to(const IpAddr & addr)
+Result<void> IcmpSender::send_to(const IpAddr & addr)
 {
     if (!_socket.is_open())
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "cannot send - socket not opened"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "cannot send - socket not opened"));
 
     if (_config_applied == false)
         this->_apply_config();
@@ -358,6 +356,26 @@ bool IcmpSender::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
+int IcmpSender::poll_timeout()
+{
+    return _poll.timeout();
+}
+
+bool IcmpSender::socket_opened()
+{
+    return _socket.is_open();
+}
+
+const Socket & IcmpSender::socket() const
+{
+    return _socket;
+}
+
+const IcmpResponse & IcmpSender::response() const
+{
+    return _icmp_response;
+}
+
 void IcmpSender::handle(sihd::sys::Poll *poll)
 {
     auto events = poll->events();
@@ -390,17 +408,14 @@ void IcmpSender::_read_socket()
                                           &addr_len,
                                           _array_rcv_ptr->buf(),
                                           _array_rcv_ptr->byte_capacity());
-    if (!ret)
-    {
-        if (!ret.error().retryable())
-            SIHD_UNEXPECTED_LOG(ret);
+    if (!ret && ret.error().retryable())
         return;
-    }
+    if (SIHD_UNEXPECTED_LOG(ret))
+        return;
     if (ret.value() > 0)
     {
         _array_rcv_ptr->byte_resize(ret.value());
 
-        // Extract IP address from sockaddr
         if (addr_storage.ss_family == AF_INET6)
         {
             struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&addr_storage;

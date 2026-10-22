@@ -77,7 +77,6 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
 
     _impl = std::make_unique<Impl>();
 
-    // Build input buffer = namespace UUID + name
     std::vector<unsigned char> data;
     data.reserve(16 + name.size());
 
@@ -91,24 +90,19 @@ Uuid::Uuid(const Uuid & uuid_namespace, std::string_view name)
     const auto *bytes = reinterpret_cast<const unsigned char *>(&le);
     data.insert(data.end(), bytes, bytes + sizeof(le));
 #else
-    // UUID already in network byte order
     data.insert(data.end(),
                 (unsigned char *)uuid_namespace._impl->uuid,
                 (unsigned char *)uuid_namespace._impl->uuid + 16);
 #endif
 
-    // Append the name bytes
     data.insert(data.end(), name.begin(), name.end());
 
-    // Compute SHA-1
     unsigned char hash[20];
     hash::sha1(data.data(), data.size(), hash);
 
-    // Set Version and Variant bits
     hash[6] = (hash[6] & 0x0F) | 0x50; // version 5
     hash[8] = (hash[8] & 0x3F) | 0x80; // variant RFC4122
 
-    // Write the result into the uuid structure
 #if defined(__SIHD_WINDOWS__)
     GUID *guid_ptr = (GUID *)(&_impl->uuid);
     // hash is in network order: the fields load little-endian, byteswap them back

@@ -19,9 +19,9 @@ using namespace sihd::sys;
 class TestMappedFile: public ::testing::Test
 {
     protected:
-        TestMappedFile() { sihd::util::LoggerManager::stream(); }
+        TestMappedFile() { LoggerManager::stream(); }
 
-        virtual ~TestMappedFile() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestMappedFile() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -43,8 +43,8 @@ TEST_F(TestMappedFile, test_mappedfile_create)
 
     auto read_file = [](const std::string & p, size_t n) {
         std::string out(n, '\0');
-        const ssize_t r = fs::read_binary(p, out.data(), n);
-        return r == (ssize_t)n ? out : std::string();
+        const ssize_t bytes = fs::read_binary(p, out.data(), n);
+        return bytes == (ssize_t)n ? out : std::string();
     };
 
     std::string expected(size, '\0');
@@ -72,7 +72,6 @@ TEST_F(TestMappedFile, test_mappedfile_create)
         EXPECT_EQ(read_only.size(), size);
         EXPECT_EQ(std::memcmp(read_only.data(), expected.data(), expected.size()), 0);
         EXPECT_TRUE(read_only.clear());
-        // clear is idempotent
         EXPECT_TRUE(read_only.clear());
     }
 
@@ -86,7 +85,6 @@ TEST_F(TestMappedFile, test_mappedfile_create)
     }
     EXPECT_EQ(read_file(path, expected.size()), expected);
 
-    // create truncates back to the requested size
     MappedFile truncated;
     ASSERT_TRUE(truncated.create(path, size / 2));
     EXPECT_EQ(truncated.size(), size / 2);

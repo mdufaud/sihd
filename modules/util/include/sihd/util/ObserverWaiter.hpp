@@ -26,7 +26,7 @@ class ObserverWaiter: public IHandler<T *>
         {
             Observable<T> *obs_to_remove = nullptr;
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 obs_to_remove = _obs_ptr;
                 _obs_ptr = nullptr;
                 _current_count = 0;
@@ -42,21 +42,21 @@ class ObserverWaiter: public IHandler<T *>
             if (obs == nullptr)
                 return false;
             {
-                auto l = _waitable.guard();
+                auto lock = _waitable.guard();
                 if (_obs_ptr == obs)
                     return true;
             }
             this->clear();
             if (obs->add_observer(this) == false)
                 return false;
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             _obs_ptr = obs;
             return true;
         }
 
         void handle([[maybe_unused]] T *obj)
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             ++_current_count;
             _waitable.notify(1);
         }
@@ -110,7 +110,7 @@ class ObserverWaiter: public IHandler<T *>
 
         Observable<T> *observing() const
         {
-            auto l = _waitable.guard();
+            auto lock = _waitable.guard();
             return _obs_ptr;
         }
 

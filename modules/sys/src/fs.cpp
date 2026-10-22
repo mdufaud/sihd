@@ -1,6 +1,6 @@
-#include <unistd.h> // getcwd
+#include <unistd.h>
 
-#include <cstdio> // remove
+#include <cstdio>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -17,8 +17,7 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 
-// home/executable paths, children iteration, truncation, mount and storage queries,
-// chdir and tmp directories live in src/linux|windows/fs.cpp
+// home/exe paths, children iteration, truncation, mount/storage queries, chdir, tmp dirs: src/linux|windows/fs.cpp
 
 using namespace sihd::util;
 using enum sihd::util::ErrorCode;
@@ -31,7 +30,7 @@ SIHD_NEW_LOGGER("sihd::sys::fs");
 namespace
 {
 
-char g_separator_char = sihd::util::build::is_windows ? '\\' : '/';
+char g_separator_char = build::is_windows ? '\\' : '/';
 
 bool is_file_type(std::string_view path, std::filesystem::file_type expected_type)
 {
@@ -51,8 +50,15 @@ std::string combine_impl(std::string_view path1, std::string_view path2)
     return fmt::format("{0}{1}{2}", path1, g_separator_char, path2);
 }
 
-sihd::util::Result<void>
-    internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
+bool is_under_root(const std::string & root, const std::string & path)
+{
+    if (root == "/")
+        return !path.empty() && path[0] == '/';
+    return path == root
+           || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 && path[root.size()] == '/');
+}
+
+Result<void> internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
 {
     std::error_code ec;
     std::filesystem::permissions(path, static_cast<std::filesystem::perms>(mode), option, ec);
@@ -78,8 +84,6 @@ std::string combine_lst_impl(const T & list)
 
 } // namespace
 
-// utils
-
 void set_sep(char c)
 {
     g_separator_char = c;
@@ -103,8 +107,6 @@ std::string cwd()
         return std::string(cwd);
     return "";
 }
-
-// stat
 
 bool is_file(const std::string & path)
 {
@@ -147,7 +149,8 @@ std::string permission_to_str(unsigned int mode)
     using std::filesystem::perms;
     perms p = static_cast<perms>(mode);
     std::string ret;
-    ret.reserve(9); // in case there is no short string opt ?
+
+    ret.reserve(9);
     ret += (p & perms::owner_read) == perms::none ? "-" : "r";
     ret += (p & perms::owner_write) == perms::none ? "-" : "w";
     ret += (p & perms::owner_exec) == perms::none ? "-" : "x";
@@ -186,17 +189,17 @@ unsigned int permission_from_str(std::string_view mode)
     return static_cast<unsigned int>(p);
 }
 
-sihd::util::Result<void> permission_add(const std::string & path, unsigned int mode)
+Result<void> permission_add(const std::string & path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::add);
 }
 
-sihd::util::Result<void> permission_rm(const std::string & path, unsigned int mode)
+Result<void> permission_rm(const std::string & path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::remove);
 }
 
-sihd::util::Result<void> permission_set(const std::string & path, unsigned int mode)
+Result<void> permission_set(const std::string & path, unsigned int mode)
 {
     return internal_set_perm(path, mode, std::filesystem::perm_options::replace);
 }
@@ -204,15 +207,13 @@ sihd::util::Result<void> permission_set(const std::string & path, unsigned int m
 unsigned int permission_get(const std::string & path)
 {
     std::error_code ec;
-    auto p = std::filesystem::status(path, ec).permissions();
+    auto perms = std::filesystem::status(path, ec).permissions();
     if (ec)
         SIHD_LOG(debug, "permission_get: {}: {}", ec.message(), path);
-    return ec ? 0 : static_cast<unsigned int>(p);
+    return ec ? 0 : static_cast<unsigned int>(perms);
 }
 
-// directories
-
-sihd::util::Result<void> remove_directory(const std::string & path)
+Result<void> remove_directory(const std::string & path)
 {
     if (rmdir(path.c_str()) != 0)
     {
@@ -221,10 +222,10 @@ sihd::util::Result<void> remove_directory(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> remove_directories(const std::string & path)
+Result<void> remove_directories(const std::string & path)
 {
     std::vector<std::string> children = recursive_children(path);
-    sihd::util::Result<void> res = {};
+    Result<void> res = {};
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
         auto removed = is_dir(*it) ? remove_directory(*it) : remove_file(*it);
@@ -234,9 +235,9 @@ sihd::util::Result<void> remove_directories(const std::string & path)
     return res;
 }
 
-sihd::util::Result<void> make_directory(const std::string & path, unsigned int mode);
+Result<void> make_directory(const std::string & path, unsigned int mode);
 
-sihd::util::Result<void> make_directories(const std::string & path, unsigned int mode)
+Result<void> make_directories(const std::string & path, unsigned int mode)
 {
     if (path.empty())
         return {};
@@ -245,7 +246,8 @@ sihd::util::Result<void> make_directories(const std::string & path, unsigned int
     std::vector<std::string> dirnames = splitter.split(path);
     std::string current_path;
     size_t start = 0;
-    if constexpr (sihd::util::build::is_windows)
+
+    if constexpr (build::is_windows)
     {
         // drive-absolute path "C:\..." -> first token "C:" is the root, not a dir to create
         if (!dirnames.empty() && dirnames[0].size() == 2 && dirnames[0][1] == ':')
@@ -262,6 +264,7 @@ sihd::util::Result<void> make_directories(const std::string & path, unsigned int
     {
         current_path = separator;
     }
+
     for (size_t i = start; i < dirnames.size(); ++i)
     {
         current_path = combine(current_path, dirnames[i]);
@@ -273,8 +276,6 @@ sihd::util::Result<void> make_directories(const std::string & path, unsigned int
     }
     return {};
 }
-
-// path manipulation
 
 std::string normalize(std::string_view path)
 {
@@ -389,7 +390,7 @@ std::string ensure_separation(std::string_view path)
 
 bool is_absolute(std::string_view path)
 {
-    if constexpr (sihd::util::build::is_windows)
+    if constexpr (build::is_windows)
     {
         return (path.length() > 1 && path[0] == g_separator_char && path[1] == g_separator_char)
                || (path.length() > 2 && path[1] == ':' && path[2] == g_separator_char);
@@ -399,8 +400,6 @@ bool is_absolute(std::string_view path)
         return path.length() > 0 && path[0] == g_separator_char;
     }
 }
-
-// files
 
 std::optional<std::string> read_link(const std::string & path)
 {
@@ -416,7 +415,7 @@ std::optional<std::string> read_link(const std::string & path)
     return {link_path.string()};
 }
 
-sihd::util::Result<void> make_file_link(const std::string & target, const std::string & link)
+Result<void> make_file_link(const std::string & target, const std::string & link)
 {
     std::error_code ec;
     std::filesystem::create_symlink(target, link, ec);
@@ -427,7 +426,7 @@ sihd::util::Result<void> make_file_link(const std::string & target, const std::s
     return {};
 }
 
-sihd::util::Result<void> make_dir_link(const std::string & target, const std::string & link)
+Result<void> make_dir_link(const std::string & target, const std::string & link)
 {
     std::error_code ec;
     std::filesystem::create_directory_symlink(target, link, ec);
@@ -439,7 +438,7 @@ sihd::util::Result<void> make_dir_link(const std::string & target, const std::st
     return {};
 }
 
-sihd::util::Result<void> make_hard_link(const std::string & target, const std::string & link)
+Result<void> make_hard_link(const std::string & target, const std::string & link)
 {
     std::error_code ec;
     std::filesystem::create_hard_link(target, link, ec);
@@ -482,7 +481,7 @@ bool are_equals(const std::string & path1, const std::string & path2)
     return true;
 }
 
-sihd::util::Result<void> remove_file(const std::string & path)
+Result<void> remove_file(const std::string & path)
 {
     if (remove(path.c_str()) != 0)
     {
@@ -496,41 +495,30 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     if (root_view.empty())
         return std::string(path_view);
 
-    // Normalize the root and drop trailing separators (keep a bare "/")
     std::string root = normalize(root_view);
     while (root.size() > 1 && root.back() == '/')
         root.pop_back();
 
-    // Treat the client path as relative to the jail root
     std::string clean_path(path_view);
     if (!clean_path.empty() && clean_path[0] == '/')
         clean_path.erase(0, 1);
 
-    // Lexically resolve '.'/'..' before touching the filesystem so not-yet-existing create/write
-    // targets are jailed too; avoid a '//' prefix when root is "/" (normalize does not collapse it)
+    // lexical resolve first so not-yet-existing targets are jailed; no '//' prefix when root is "/"
     std::string joined = (root == "/") ? ("/" + clean_path) : (root + "/" + clean_path);
     std::string candidate = normalize(joined);
 
-    auto under_root = [&root](const std::string & p) {
-        if (root == "/")
-            return !p.empty() && p[0] == '/';
-        return p == root || (p.size() > root.size() && p.compare(0, root.size(), root) == 0 && p[root.size()] == '/');
-    };
-
-    // Escape attempt (e.g. ../../etc/passwd): clamp to the jail root
-    if (!under_root(candidate))
+    if (!is_under_root(root, candidate))
         return root;
 
-    // If the target exists, resolve symlinks and re-check to catch links that
-    // escape the jail; nonexistent targets keep the lexically-jailed path
+    // resolve symlinks and re-check to catch escaping links; nonexistent targets keep the lexical path
     std::string real_str = realpath(candidate);
     if (!real_str.empty())
-        return under_root(real_str) ? real_str : root;
+        return is_under_root(root, real_str) ? real_str : root;
 
     return candidate;
 }
 
-sihd::util::Result<void> write(const std::string & path, std::string_view view, bool append, bool binary)
+Result<void> write(const std::string & path, std::string_view view, bool append, bool binary)
 {
     const char *mode = binary ? (append ? "ab" : "wb") : (append ? "a" : "w");
     File file;
@@ -545,7 +533,7 @@ sihd::util::Result<void> write(const std::string & path, std::string_view view, 
     return {};
 }
 
-sihd::util::Result<std::string> read(const std::string & path, sihd::util::Slice slice, bool binary)
+Result<std::string> read(const std::string & path, Slice slice, bool binary)
 {
     File file;
     auto opened = file.open(path, binary ? "rb" : "r");
@@ -572,7 +560,7 @@ sihd::util::Result<std::string> read(const std::string & path, sihd::util::Slice
     return str;
 }
 
-sihd::util::Result<std::string> read_line(const std::string & path, size_t line_number)
+Result<std::string> read_line(const std::string & path, size_t line_number)
 {
     std::ifstream file(path.c_str(), std::ifstream::in);
     if (!file.is_open())
@@ -588,12 +576,12 @@ sihd::util::Result<std::string> read_line(const std::string & path, size_t line_
     return line;
 }
 
-sihd::util::Result<std::vector<std::string>> read_lines(const std::string & path)
+Result<std::vector<std::string>> read_lines(const std::string & path)
 {
     return read_all(path).transform([](const std::string & content) { return str::split(content, '\n'); });
 }
 
-sihd::util::Result<std::string> read_all(const std::string & path, bool binary)
+Result<std::string> read_all(const std::string & path, bool binary)
 {
     const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
     std::ifstream file(path.c_str(), mode);

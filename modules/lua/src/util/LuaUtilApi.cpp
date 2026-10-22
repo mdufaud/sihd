@@ -25,13 +25,13 @@
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
     .deriveClass<ArrType, IArray>(#ArrType)                                                                            \
-        .addStaticFunction("new", &LuaUtilApi::_array_lua_new<PrimitiveType>)                                          \
+        .addStaticFunction("new", &array_lua_new<PrimitiveType>)                                                       \
         .addConstructor<void (*)()>()                                                                                  \
         .addFunction("clone", &ArrType::clone)                                                                         \
-        .addFunction("push_back", &LuaUtilApi::_array_lua_push_back<PrimitiveType>)                                    \
-        .addFunction("push_front", &LuaUtilApi::_array_lua_push_front<PrimitiveType>)                                  \
-        .addFunction("copy_from", &LuaUtilApi::_array_lua_copy_table<PrimitiveType>)                                   \
-        .addFunction("from", &LuaUtilApi::_array_lua_from<PrimitiveType>)                                              \
+        .addFunction("push_back", &array_lua_push_back<PrimitiveType>)                                                 \
+        .addFunction("push_front", &array_lua_push_front<PrimitiveType>)                                               \
+        .addFunction("copy_from", &array_lua_copy_table<PrimitiveType>)                                                \
+        .addFunction("from", &array_lua_from<PrimitiveType>)                                                           \
         .addFunction("pop", &ArrType::pop)                                                                             \
         .addFunction("front", &ArrType::front)                                                                         \
         .addFunction("back", &ArrType::back)                                                                           \
@@ -48,12 +48,11 @@ SIHD_LOGGER;
 
 namespace
 {
-// logger used by lua code
 Logger g_lua_logger("sihd::lua");
 
 // Bridges an Observable<ServiceController> notification to a Lua callback; the notify may fire on
 // a service thread, so run through a LuaThreadRunner (own coroutine + universe GIL)
-class LuaServiceObserver: public sihd::util::IHandler<sihd::util::ServiceController *>
+class LuaServiceObserver: public IHandler<ServiceController *>
 {
     public:
         LuaServiceObserver(lua_State *state, luabridge::LuaRef fun): _runner(fun)
@@ -64,18 +63,187 @@ class LuaServiceObserver: public sihd::util::IHandler<sihd::util::ServiceControl
                 _runner.new_lua_state(thread);
         }
 
-        void handle(sihd::util::ServiceController *ctrl) override
-        {
-            _runner.call_lua_method_noret<sihd::util::ServiceController *>(ctrl);
-        }
+        void handle(ServiceController *ctrl) override { _runner.call_lua_method_noret<ServiceController *>(ctrl); }
 
     private:
         LuaUtilApi::LuaThreadRunner _runner;
 };
 
+template <typename T>
+Array<T> array_lua_new(luabridge::LuaRef ref, lua_State *state)
+{
+    Array<T> array;
+    if constexpr (std::is_same_v<T, char>)
+    {
+        if (ref.isString())
+        {
+            array.from(std::string(ref));
+            return array;
+        }
+    }
+    if (ref.isTable())
+    {
+        array.reserve(ref.length());
+        for (const auto & pair : luabridge::pairs(ref))
+            array.push_back(T(pair.second));
+    }
+    else
+        luaL_error(state, "Array new argument must be a table");
+    return array;
+}
+
+template <typename T>
+bool array_lua_push_back(Array<T> *self, luabridge::LuaRef ref)
+{
+    bool ret = true;
+    if constexpr (std::is_same_v<T, char>)
+    {
+        if (ref.isString())
+        {
+            self->push_back(std::string(ref));
+            return true;
+        }
+    }
+    if (ref.isTable())
+    {
+        self->reserve(self->size() + ref.length());
+        for (const auto & pair : luabridge::pairs(ref))
+            ret = ret && self->push_back(T(pair.second));
+    }
+    else
+        ret = self->push_back(T(ref));
+    return ret;
+}
+
+template <typename T>
+bool array_lua_push_front(Array<T> *self, luabridge::LuaRef ref)
+{
+    bool ret = true;
+    if constexpr (std::is_same_v<T, char>)
+    {
+        if (ref.isString())
+        {
+            self->push_front(std::string(ref));
+            return true;
+        }
+    }
+    if (ref.isTable())
+    {
+        self->reserve(self->size() + ref.length());
+        for (const auto & pair : luabridge::pairs(ref))
+            ret = ret && self->push_front(T(pair.second));
+    }
+    else
+        ret = self->push_front(T(ref));
+    return ret;
+}
+
+template <typename T>
+bool array_lua_copy_table(Array<T> *self, luabridge::LuaRef ref, luabridge::LuaRef from_ref)
+{
+    size_t from_idx = 0;
+    if (from_ref.isNil() == false)
+        from_idx = static_cast<size_t>(from_ref);
+    if constexpr (std::is_same_v<T, char>)
+    {
+        if (ref.isString())
+        {
+            self->copy_from(std::string(ref), from_idx);
+            return true;
+        }
+    }
+    if (ref.isTable() == false)
+        return false;
+    if ((size_t)ref.length() > (from_idx + self->size()))
+        return false;
+    for (const auto & pair : luabridge::pairs(ref))
+    {
+        self->set(from_idx, T(pair.second));
+        ++from_idx;
+    }
+    return true;
+}
+
+template <typename T>
+bool array_lua_from(Array<T> *self, luabridge::LuaRef ref)
+{
+    bool ret = true;
+    if constexpr (std::is_same_v<T, char>)
+    {
+        if (ref.isString())
+        {
+            self->from(std::string(ref));
+            return true;
+        }
+    }
+    self->delete_buffer();
+    if (ref.isTable())
+    {
+        self->reserve(self->size() + ref.length());
+        for (const auto & pair : luabridge::pairs(ref))
+            ret = ret && self->push_back(T(pair.second));
+    }
+    else
+        ret = self->push_back(T(ref));
+    return ret;
+}
+
+void bind_task_state(Task *task, lua_State *state)
+{
+    LuaUtilApi::LuaTask *lua_task = dynamic_cast<LuaUtilApi::LuaTask *>(task);
+    if (lua_task != nullptr)
+        lua_task->new_lua_state(state);
+}
+
+void unbind_task_state(Task *task)
+{
+    LuaUtilApi::LuaTask *lua_task = dynamic_cast<LuaUtilApi::LuaTask *>(task);
+    if (lua_task != nullptr)
+        lua_task->reset_lua_state();
+}
+
 std::mutex g_service_obs_mutex;
-std::multimap<sihd::util::ServiceController *, std::unique_ptr<LuaServiceObserver>> g_service_observers;
+std::multimap<ServiceController *, std::unique_ptr<LuaServiceObserver>> g_service_observers;
 } // namespace
+
+Duration to_duration(const luabridge::LuaRef & ref)
+{
+    if (ref.isNumber())
+        return Duration(ref.cast<int64_t>().value());
+    return ref.cast<Duration>().value();
+}
+
+Timestamp to_timestamp(const luabridge::LuaRef & ref)
+{
+    if (ref.isNumber())
+        return Timestamp(ref.cast<int64_t>().value());
+    return ref.cast<Timestamp>().value();
+}
+
+lua_State *LuaUtilApi::LuaThreadRunner::_guard_state()
+{
+    return _exec_state != nullptr ? _exec_state : _fun.state();
+}
+
+void LuaUtilApi::LuaCoroutine::set_state(lua_State *parent)
+{
+    _parent = parent;
+}
+
+lua_State *LuaUtilApi::LuaCoroutine::parent() const
+{
+    return _parent;
+}
+
+lua_State *LuaUtilApi::LuaCoroutine::state() const
+{
+    return _vm.lua_state();
+}
+
+void LuaUtilApi::LuaCoroutine::destroy()
+{
+    _vm.close_state();
+}
 
 bool LuaUtilApi::_configurable_recursive_set(Configurable *obj, const std::string & key, luabridge::LuaRef ref)
 {
@@ -133,9 +301,7 @@ void LuaUtilApi::load_threading(Vm & vm)
          */
         .deriveClass<LuaScheduler, Named>("Scheduler")
         .addConstructorFrom<SmartNodePtr<LuaScheduler>, void(const std::string &, Node *)>()
-        // Configurable
         .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaScheduler>)
-        // Scheduler
         .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
         .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
         .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
@@ -165,7 +331,6 @@ void LuaUtilApi::load_threading(Vm & vm)
             +[](LuaScheduler *self, luabridge::LuaRef val) {
                 self->acceptable_task_preplay_ns_time = sihd::lua::to_duration(val);
             })
-        // LuaScheduler
         .addFunction("start",
                      std::function<bool(LuaScheduler *, lua_State *)>(+[](LuaScheduler *self, lua_State *state) {
                          self->set_state(state);
@@ -476,7 +641,6 @@ void LuaUtilApi::load_tools(Vm & vm)
          * Namespaces
          */
         .beginNamespace("time")
-        // sleep
         .addFunction(
             "nsleep",
             +[](time::UnixTime t, lua_State *state) {
@@ -501,7 +665,6 @@ void LuaUtilApi::load_tools(Vm & vm)
                 LuaGilRelease release(state);
                 return time::sleep(t);
             })
-        // convert from nano
         .addFunction("to_us", &time::to_micro)
         .addFunction("to_ms", &time::to_milli)
         .addFunction("to_sec", &time::to_sec)
@@ -510,7 +673,6 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("to_days", &time::to_days)
         .addFunction("to_double", &time::to_double)
         .addFunction("to_hz", &time::to_freq)
-        // convert to nano
         .addFunction("us", &time::micro)
         .addFunction("ms", &time::milli)
         .addFunction("sec", &time::sec)
@@ -519,7 +681,7 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("days", &time::days)
         .addFunction("from_double", &time::from_double)
         .addFunction("hz", &time::freq)
-        .endNamespace() // time
+        .endNamespace()
         .beginNamespace("thread")
         .addFunction("id", &thread::id)
         .addFunction("id_str", thread::id_str)
@@ -530,7 +692,7 @@ void LuaUtilApi::load_tools(Vm & vm)
                 return !SIHD_UNEXPECTED_LOG(res);
             })
         .addFunction("name", &thread::name)
-        .endNamespace() // thread
+        .endNamespace()
         .beginNamespace("str")
         .addFunction("timeoffset_str", &str::timeoffset_str)
         .addFunction("localtimeoffset_str", &str::localtimeoffset_str)
@@ -546,16 +708,15 @@ void LuaUtilApi::load_tools(Vm & vm)
                 Splitter splitter(delimiter);
                 return splitter.split(str);
             })
-        .endNamespace() // str
+        .endNamespace()
         .beginNamespace("num")
         .addFunction(
             "seed",
             +[] { return static_cast<int64_t>(num::seed()); })
-        .endNamespace() // num
-        // path namespace removed - use PathManager class instead
+        .endNamespace()
         .beginNamespace("term")
         .addFunction("is_interactive", &sihd::sys::console::is_interactive)
-        .endNamespace() // term
+        .endNamespace()
         .beginNamespace("endian")
         .addFunction(
             "is_big",
@@ -563,9 +724,9 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction(
             "is_little",
             +[] { return std::endian::native == std::endian::little; })
-        .endNamespace()  // edian
-        .endNamespace()  // util
-        .endNamespace(); // sihd
+        .endNamespace()
+        .endNamespace()
+        .endNamespace();
 }
 
 void LuaUtilApi::load_base(Vm & vm)
@@ -615,16 +776,15 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction(
             "debug",
             +[](const std::string & log) { g_lua_logger.log(LogLevel::debug, log); })
-        // sink configuration - wire SIHD's logger output from a config script
         .addFunction(
             "console",
-            +[]() { sihd::util::LoggerManager::console(); })
+            +[]() { LoggerManager::console(); })
         .addFunction(
             "stream",
-            +[]() { sihd::util::LoggerManager::stream(); })
+            +[]() { LoggerManager::stream(); })
         .addFunction(
             "clear",
-            +[]() { sihd::util::LoggerManager::clear_loggers(); })
+            +[]() { LoggerManager::clear_loggers(); })
         .endNamespace()
         /**
          * Nodes
@@ -677,7 +837,7 @@ void LuaUtilApi::load_base(Vm & vm)
         .addIndexMetaMethod([](Named & self, const luabridge::LuaRef & key, lua_State *L) {
             Named *res = self.find(key.tostring());
             if (res == nullptr)
-                return luabridge::LuaRef(L, luabridge::LuaNil()); // or luaL_error("Failed lookup of key !")
+                return luabridge::LuaRef(L, luabridge::LuaNil());
             return luabridge::LuaRef(L, res);
         })
         .endClass()
@@ -757,8 +917,6 @@ void LuaUtilApi::load_base(Vm & vm)
                 return self->str(static_cast<char>(ref));
             })
         .addFunction("clear", &IArray::clear)
-        // .addFunction("is_same_type", static_cast<bool (IArray::*)(const IArray &)
-        // const>(&IArray::is_same_type))
         .endClass() DECLARE_ARRAY_USERTYPE(ArrBool, bool) DECLARE_ARRAY_USERTYPE(ArrChar, char)
             DECLARE_ARRAY_USERTYPE(ArrByte, int8_t) DECLARE_ARRAY_USERTYPE(ArrUByte, uint8_t)
                 DECLARE_ARRAY_USERTYPE(ArrShort, int16_t) DECLARE_ARRAY_USERTYPE(ArrUShort, uint16_t)
@@ -786,7 +944,6 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction(
             "state_str",
             +[](ServiceController *self) -> std::string { return ServiceController::state_str(self->state()); })
-        // observe service state transitions from a config script
         .addFunction(
             "add_observer",
             +[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) {
@@ -798,7 +955,7 @@ void LuaUtilApi::load_base(Vm & vm)
                 auto obs = std::make_unique<LuaServiceObserver>(state, fun);
                 LuaServiceObserver *ptr = obs.get();
                 {
-                    std::lock_guard l(g_service_obs_mutex);
+                    std::lock_guard lock(g_service_obs_mutex);
                     g_service_observers.emplace(self, std::move(obs));
                 }
                 LuaGilRelease release(state);
@@ -809,7 +966,7 @@ void LuaUtilApi::load_base(Vm & vm)
             +[](ServiceController *self, lua_State *state) {
                 std::vector<std::unique_ptr<LuaServiceObserver>> removed;
                 {
-                    std::lock_guard l(g_service_obs_mutex);
+                    std::lock_guard lock(g_service_obs_mutex);
                     auto range = g_service_observers.equal_range(self);
                     for (auto it = range.first; it != range.second; ++it)
                         removed.push_back(std::move(it->second));
@@ -852,24 +1009,15 @@ void LuaUtilApi::load_all(Vm & vm)
     LuaUtilApi::load_threading(vm);
 }
 
-/* ************************************************************************* */
-/* LuaCoroutine */
-/* ************************************************************************* */
-
 bool LuaUtilApi::LuaCoroutine::create()
 {
     if (_parent == nullptr)
         return false;
-    // make non owning Vm from the parent state, derive the coroutine into _vm
     Vm parent(_parent);
     return parent.new_thread(_vm);
 }
 
-/* ************************************************************************* */
-/* LuaScheduler */
-/* ************************************************************************* */
-
-LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, sihd::util::Node *parent): Scheduler(name, parent) {}
+LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, Node *parent): Scheduler(name, parent) {}
 
 LuaUtilApi::LuaScheduler::~LuaScheduler()
 {
@@ -885,28 +1033,21 @@ bool LuaUtilApi::LuaScheduler::start()
     if (this->is_running())
         return true;
 
-    // create new lua stack for thread
     if (_lua_coroutine.create() == false)
         return false;
 
     lua_State *state_ptr = _lua_coroutine.state();
 
     {
-        auto l = _waitable_task.guard();
+        auto guard = _waitable_task.guard();
         // Point every lua task at the freshly created worker coroutine: tasks that survived a previous
         // stop() (rescheduling ones) live in _task_map and would keep a dangling _exec_state
-        const auto set_state = [state_ptr](sihd::util::Task *task) {
-            LuaTask *lua_task = dynamic_cast<LuaTask *>(task);
-            if (lua_task != nullptr)
-                lua_task->new_lua_state(state_ptr);
-        };
         for (const auto & task : _tasks_to_add)
-            set_state(task);
+            bind_task_state(task, state_ptr);
         for (const auto & [_, task] : _task_map)
-            set_state(task);
+            bind_task_state(task, state_ptr);
     }
 
-    // Enable synchronized start so that the scheduler thread is fully ready before returning
     this->set_start_synchronised(true);
 
     const bool started = Scheduler::start();
@@ -928,16 +1069,11 @@ bool LuaUtilApi::LuaScheduler::stop()
         {
             // drop the coroutine pointer from every surviving task before the coroutine
             // is closed, so no task keeps a dangling _exec_state across a restart
-            auto l = _waitable_task.guard();
-            const auto reset_state = [](sihd::util::Task *task) {
-                LuaTask *lua_task = dynamic_cast<LuaTask *>(task);
-                if (lua_task != nullptr)
-                    lua_task->reset_lua_state();
-            };
+            auto guard = _waitable_task.guard();
             for (const auto & task : _tasks_to_add)
-                reset_state(task);
+                unbind_task_state(task);
             for (const auto & [_, task] : _task_map)
-                reset_state(task);
+                unbind_task_state(task);
         }
         _lua_coroutine.destroy();
     }
@@ -946,7 +1082,6 @@ bool LuaUtilApi::LuaScheduler::stop()
 
 void LuaUtilApi::LuaScheduler::add_lua_task(LuaTask *task_ptr)
 {
-    // if thread is running and new task is added, change lua state to thread state
     if (this->is_running() && _lua_coroutine.state() != nullptr)
     {
         task_ptr->new_lua_state(_lua_coroutine.state());
@@ -958,10 +1093,6 @@ void LuaUtilApi::LuaScheduler::set_state(lua_State *state)
 {
     _lua_coroutine.set_state(state);
 }
-
-/* ************************************************************************* */
-/* LuaThreadRunner */
-/* ************************************************************************* */
 
 LuaUtilApi::LuaThreadRunner::LuaThreadRunner(luabridge::LuaRef lua_ref): _fun(lua_ref) {}
 
@@ -994,10 +1125,6 @@ luabridge::LuaRef LuaUtilApi::LuaThreadRunner::_exec_fun()
     return luabridge::LuaRef::fromStack(_exec_state);
 }
 
-/* ************************************************************************* */
-/* LuaRunnable */
-/* ************************************************************************* */
-
 LuaUtilApi::LuaRunnable::LuaRunnable(luabridge::LuaRef lua_ref): LuaThreadRunner(lua_ref) {}
 
 LuaUtilApi::LuaRunnable::~LuaRunnable() = default;
@@ -1014,10 +1141,6 @@ bool LuaUtilApi::LuaRunnable::run()
     }
     return false;
 }
-
-/* ************************************************************************* */
-/* LuaTask */
-/* ************************************************************************* */
 
 LuaUtilApi::LuaTask::LuaTask(luabridge::LuaRef lua_ref, const util::TaskOptions & options):
     Task(nullptr, options),
@@ -1043,10 +1166,6 @@ bool LuaUtilApi::LuaTask::run()
     }
     return false;
 }
-
-/* ************************************************************************* */
-/* LuaWorker */
-/* ************************************************************************* */
 
 LuaUtilApi::LuaWorker::LuaWorker(luabridge::LuaRef lua_ref): _lua_runnable(lua_ref)
 {
@@ -1087,10 +1206,6 @@ bool LuaUtilApi::LuaWorker::stop_worker()
     _lua_coroutine.destroy();
     return ret;
 }
-
-/* ************************************************************************* */
-/* LuaStepWorker */
-/* ************************************************************************* */
 
 LuaUtilApi::LuaStepWorker::LuaStepWorker(luabridge::LuaRef lua_ref): _lua_runnable(lua_ref)
 {

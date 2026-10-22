@@ -16,7 +16,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
+Result<void> Semaphore::create(const std::string & name, unsigned int value, mode_t mode)
 {
     (void)mode;
 
@@ -37,7 +37,7 @@ sihd::util::Result<void> Semaphore::create(const std::string & name, unsigned in
     return {};
 }
 
-sihd::util::Result<void> Semaphore::attach(const std::string & name)
+Result<void> Semaphore::attach(const std::string & name)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -53,7 +53,7 @@ sihd::util::Result<void> Semaphore::attach(const std::string & name)
     return {};
 }
 
-sihd::util::Result<void> Semaphore::clear()
+Result<void> Semaphore::clear()
 {
     bool ret = true;
     if (_sem != nullptr)
@@ -92,7 +92,7 @@ bool Semaphore::post()
     return _sem != nullptr && ReleaseSemaphore(static_cast<HANDLE>(_sem), 1, nullptr) != 0;
 }
 
-sihd::util::Result<int> Semaphore::value() const
+Result<int> Semaphore::value() const
 {
     return std::unexpected(Error(not_supported, "no semaphore value on windows"));
 }

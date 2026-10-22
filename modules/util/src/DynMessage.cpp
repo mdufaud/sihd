@@ -9,7 +9,7 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-DynMessage::DynMessage(const std::string & name, sihd::util::Node *parent): sihd::util::Message(name, parent)
+DynMessage::DynMessage(const std::string & name, Node *parent): Message(name, parent)
 {
     _next_rule_id = 0;
     _total_dyn_size = 0;
@@ -114,6 +114,7 @@ bool DynMessage::field_read_from(const void *buffer, size_t size)
         }
         if (!field->field_read_from((uint8_t *)buffer + current, field->field_byte_size()))
             return false;
+
         this->_play_rules(name, field);
         current += field->field_byte_size();
         _total_dyn_size = current;
@@ -164,7 +165,7 @@ bool DynMessage::hide_field(const std::string & name, bool active)
 
 bool DynMessage::_is_hidden(const IMessageField *field) const
 {
-    return _hidden_fields.count(field) > 0;
+    return _hidden_fields.contains(field);
 }
 
 IMessageField *DynMessage::clone() const
@@ -187,6 +188,7 @@ IMessageField *DynMessage::clone() const
             if (this->_is_hidden(field) && cloned->hide_field(name, true) == false)
             {
                 SIHD_LOG(error, "DynMessage: could not hide field '{}' in the clone", name);
+
                 error = true;
                 break;
             }

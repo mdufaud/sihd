@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <cstring>
 #include <map>
@@ -26,9 +27,6 @@
 #include "protocols/ext-data-control-v1-client-protocol.h"
 #include "protocols/wlr-data-control-unstable-v1-client-protocol.h"
 
-// Native wayland clipboard backend: ext_data_control_v1 (KWin, recent wlroots),
-// wlr_data_control_v1 (older), core wl_data_device (Mutter). One-shot set.
-
 using sihd::sys::internal::wayland::dispatch_until;
 using sihd::sys::internal::wayland::roundtrip_bounded;
 
@@ -37,25 +35,21 @@ namespace sihd::sys::clipboard::wayland
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::clipboard");
+SIHD_NEW_LOGGER("sihd::sys::clipboard::wayland");
 
 namespace
 {
-
-// Connection and registry
 
 class Connection: public internal::wayland::Connection
 {
     public:
         explicit Connection(Timestamp deadline): internal::wayland::Connection() { bind_globals(deadline); }
 
-        // Globals bound from the registry: data-control managers preferred, the
-        // core data device manager is the fallback for compositors without it.
+        // data-control managers preferred, the core data device manager is the fallback
         wl_seat *seat = nullptr;
         ext_data_control_manager_v1 *ext_manager = nullptr;
         zwlr_data_control_manager_v1 *wlr_manager = nullptr;
         wl_data_device_manager *data_device_manager = nullptr;
-        // Serial the core wl_data_device.set_selection wants.
         uint32_t keyboard_serial = 0;
 
     protected:
@@ -88,8 +82,7 @@ class Connection: public internal::wayland::Connection
     private:
         void on_seat_capabilities(wl_seat *seat_proxy, uint32_t capabilities)
         {
-            // Serials come from the keyboard: the core wl_data_device
-            // set_selection wants one.
+            // Serials come from the keyboard: the core wl_data_device set_selection wants one
             if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) == 0)
                 return;
 
@@ -120,10 +113,7 @@ class Connection: public internal::wayland::Connection
         };
 };
 
-// Event loops and fd pumps
-
-// Reads `fd` until EOF or deadline. Each read is guarded by a poll so a slow
-// writer cannot hang us past the deadline.
+// Reads `fd` until EOF or deadline; each read is poll-guarded so a slow writer cannot hang past it
 bool read_fd_until_eof(int fd, Timestamp deadline, ArrByte & out)
 {
     Poll poll {1};
@@ -132,13 +122,13 @@ bool read_fd_until_eof(int fd, Timestamp deadline, ArrByte & out)
     for (;;)
     {
         char buf[4096];
-        ssize_t n = ::read(fd, buf, sizeof(buf));
-        if (n > 0)
+        ssize_t bytes = ::read(fd, buf, sizeof(buf));
+        if (bytes > 0)
         {
-            out.push_back(reinterpret_cast<const int8_t *>(buf), static_cast<size_t>(n));
+            out.push_back(reinterpret_cast<const int8_t *>(buf), static_cast<size_t>(bytes));
             continue;
         }
-        if (n == 0)
+        if (bytes == 0)
             return true;
         if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK)
             return false;
@@ -148,11 +138,9 @@ bool read_fd_until_eof(int fd, Timestamp deadline, ArrByte & out)
     }
 }
 
-// Writes all of `data` to `fd` or gives up at the deadline.
 bool write_fd_all(int fd, Timestamp deadline, std::string_view data)
 {
-    // Non-blocking: on a blocking fd a full pipe hangs the write in the kernel
-    // and the deadline never gets a chance to hit.
+    // Non-blocking: on a blocking fd a full pipe hangs the write in the kernel and the deadline never hits
     if (fcntl(fd, F_SETFL, O_NONBLOCK) != 0)
         return false;
     Poll poll {1};
@@ -161,10 +149,10 @@ bool write_fd_all(int fd, Timestamp deadline, std::string_view data)
     size_t written = 0;
     while (written < data.size())
     {
-        ssize_t n = ::write(fd, data.data() + written, data.size() - written);
-        if (n > 0)
+        ssize_t bytes = ::write(fd, data.data() + written, data.size() - written);
+        if (bytes > 0)
         {
-            written += static_cast<size_t>(n);
+            written += static_cast<size_t>(bytes);
             continue;
         }
         if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK)
@@ -176,29 +164,20 @@ bool write_fd_all(int fd, Timestamp deadline, std::string_view data)
     return true;
 }
 
-// Shared clipboard state and serving
-
-// State of one get or set operation, shared by the event listeners. A protocol
-// class keeps a reference to it.
 struct SelectionState
 {
-        // get: mime types advertised per offer proxy, and the offer holding the
-        // current selection.
         std::map<wl_proxy *, std::vector<std::string>> offer_mimes;
         wl_proxy *selection_offer = nullptr;
         bool selection_seen = false;
         bool finished = false;
 
-        // the representations to serve, the completion flags and the serve deadline shared by the set
-        // operation; views over the caller buffers, which outlive the blocking dispatch
+        // the representations to serve and completion flags; views over caller buffers outliving the dispatch
         std::vector<RawContentView> offered;
         Timestamp deadline = {};
         bool served = false;
         bool cancelled = false;
 };
 
-// Returns true once the current selection offer is known and its mime types
-// were advertised (or the clipboard is empty).
 bool selection_offer_ready(const SelectionState & state)
 {
     if (!state.selection_seen)
@@ -209,8 +188,7 @@ bool selection_offer_ready(const SelectionState & state)
     return found != state.offer_mimes.end() && !found->second.empty();
 }
 
-// Serves a consumer request with the payload matching the requested mime type.
-// This is the only place `served` becomes true.
+// Serves a consumer request with the payload matching the mime; the only place `served` becomes true
 void serve_source_request(SelectionState & state, const char *mime_type, int32_t fd)
 {
     std::string_view wanted = mime_type != nullptr ? mime_type : "";
@@ -231,13 +209,12 @@ void serve_source_request(SelectionState & state, const char *mime_type, int32_t
     state.served = state.served || ok;
 }
 
-// Receives the offered data through a pipe: Derived::receive writes the offer
-// fd to the compositor, the mime must be one of the mimes the offer advertises.
+// The mime must be one the offer advertises (Derived::receive writes the offer fd to the compositor)
 template <typename Derived, typename Offer>
 std::optional<ArrByte> receive_offer_data(Connection & conn, Timestamp deadline, Offer *offer, const char *mime)
 {
-    int fds[2];
-    if (pipe(fds) != 0)
+    std::array<int, 2> fds;
+    if (pipe(fds.data()) != 0)
         return std::nullopt;
     // FD_CLOEXEC keeps the ends out of exec'd children, O_NONBLOCK makes the reads poll-guarded:
     // both must hold or the deadline cannot be enforced
@@ -261,18 +238,12 @@ std::optional<ArrByte> receive_offer_data(Connection & conn, Timestamp deadline,
     return data;
 }
 
-// Protocol classes
-
-// The ext, wlr and core protocols share the get and set flows, written once over the Derived
-// protocol surface (static request functions); each class keeps its C listener structs
 template <typename Derived>
 class DataControl
 {
     public:
         DataControl(Connection & conn, SelectionState & state): _conn(conn), _state(state) {}
 
-        // Fetches the wanted mimes the selection offers in one snapshot:
-        // nullopt on protocol failure, empty on an empty clipboard.
         std::optional<std::vector<RawContent>> read(const std::vector<std::string_view> & wanted_mimes,
                                                     Timestamp deadline)
         {
@@ -286,7 +257,7 @@ class DataControl
             if (!dispatch_until(_conn, deadline, [&] { return selection_offer_ready(_state); }))
                 return std::nullopt;
             if (_state.selection_offer == nullptr)
-                return std::vector<RawContent>(); // empty clipboard
+                return std::vector<RawContent>();
 
             auto found = _state.offer_mimes.find(_state.selection_offer);
             if (found == _state.offer_mimes.end())
@@ -311,7 +282,6 @@ class DataControl
             return contents;
         }
 
-        // offers the representations, then serves until first consumer, deadline or cancellation
         bool write(const std::vector<RawContentView> & contents, Timestamp deadline)
         {
             _state.offered = contents;
@@ -323,8 +293,7 @@ class DataControl
             this->derived().add_source_listener(source);
             for (const RawContentView & content : contents)
             {
-                // The offer request takes a C string: the mime views come from
-                // users and are not guaranteed null-terminated.
+                // The offer request takes a C string: user-supplied mime views may not be null-terminated
                 Derived::offer_source(source, std::string(content.mime).c_str());
             }
 
@@ -426,7 +395,6 @@ class ExtDataControl: public DataControl<ExtDataControl>
                             Device *,
                             Offer *offer) { static_cast<ExtDataControl *>(data)->on_device_selection(offer); },
             .finished = [](void *data, Device *) { static_cast<ExtDataControl *>(data)->on_device_finished(); },
-            // Primary selection is out of scope.
             .primary_selection = [](void *, Device *, Offer *) {},
         };
 
@@ -502,7 +470,6 @@ class WlrDataControl: public DataControl<WlrDataControl>
                             Device *,
                             Offer *offer) { static_cast<WlrDataControl *>(data)->on_device_selection(offer); },
             .finished = [](void *data, Device *) { static_cast<WlrDataControl *>(data)->on_device_finished(); },
-            // Primary selection is out of scope.
             .primary_selection = [](void *, Device *, Offer *) {},
         };
 
@@ -522,8 +489,7 @@ class WlrDataControl: public DataControl<WlrDataControl>
         };
 };
 
-// core wl_data_device - fallback for compositors without data-control,
-// i.e. Mutter/GNOME
+// core wl_data_device - fallback for compositors without data-control (Mutter/GNOME)
 class CoreDataDevice: public DataControl<CoreDataDevice>
 {
     public:
@@ -546,6 +512,7 @@ class CoreDataDevice: public DataControl<CoreDataDevice>
         {
             return wl_data_device_manager_create_data_source(conn.data_device_manager);
         }
+
         static void destroy_source(Source *) {}
         static void offer_source(Source *source, const char *mime) { wl_data_source_offer(source, mime); }
         static void set_selection(const Connection & conn, Device *device, Source *source)
@@ -599,14 +566,9 @@ class CoreDataDevice: public DataControl<CoreDataDevice>
         };
 };
 
-// Read and write flows, tried on each protocol in order
-
-// Reads the wanted mime types the current selection offers through the first
-// available protocol; a protocol hard-failing hands the read to the next one.
 std::vector<RawContent> read_contents(const std::vector<std::string_view> & wanted_mimes)
 {
-    // One budget for the whole read: connection roundtrips, offer discovery
-    // and every mime fetch.
+    // One budget for the whole read: connection roundtrips, offer discovery and every mime fetch
     const Timestamp deadline = internal::deadline_from_now(get_timeout);
     Connection conn(deadline);
     if (!conn.ok())
@@ -646,8 +608,6 @@ std::vector<RawContent> read_contents(const std::vector<std::string_view> & want
     return {};
 }
 
-// Offers the representations through the first available protocol, serving
-// within the deadline set by the platform dispatcher.
 bool write_all(const std::vector<RawContentView> & contents, Timestamp deadline)
 {
     if (contents.empty())

@@ -34,7 +34,6 @@ TEST_F(TestSmartNodePtr, test_smart_node_ptr_deletes_unowned)
     {
         SmartNodePtr<TrackNamed> ptr(new TrackNamed("tracked", destroyed));
         EXPECT_FALSE(destroyed);
-        // ptr goes out of scope → not owned by parent → SmartNodeDeleter calls delete
     }
     EXPECT_TRUE(destroyed);
 }
@@ -50,10 +49,8 @@ TEST_F(TestSmartNodePtr, test_smart_node_ptr_skips_owned)
 
     {
         SmartNodePtr<TrackNamed> ptr(child);
-        // ptr goes out of scope → is_owned_by_parent() == true → SmartNodeDeleter skips delete
     }
 
-    // child must still be accessible via parent
     EXPECT_EQ(parent.get_child("child"), child);
     EXPECT_FALSE(destroyed);
 }

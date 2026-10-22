@@ -1,7 +1,6 @@
 #ifndef __SIHD_SYS_WAYLAND_KEYBOARD_HPP__
 #define __SIHD_SYS_WAYLAND_KEYBOARD_HPP__
 
-// Wayland keyboard backend of the dispatcher in src/linux/keyboard.cpp:
 // zwp_virtual_keyboard_v1 with a generated keymap, wtype style
 
 #include <string_view>
@@ -22,8 +21,6 @@ sihd::util::Result<void> key_down(Key key);
 sihd::util::Result<void> key_up(Key key);
 
 #else
-
-// The backend is not compiled in: inert inline fallbacks.
 
 inline sihd::util::Result<void> type_text([[maybe_unused]] std::string_view utf8_text)
 {

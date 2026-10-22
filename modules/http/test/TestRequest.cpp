@@ -28,8 +28,8 @@ using namespace sihd::http;
 class TestRequest: public ::testing::Test
 {
     protected:
-        TestRequest() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestRequest() { sihd::util::LoggerManager::clear_loggers(); }
+        TestRequest() { LoggerManager::stream(); }
+        virtual ~TestRequest() { LoggerManager::clear_loggers(); }
 };
 
 TEST_F(TestRequest, test_http_get_external)
@@ -49,7 +49,6 @@ TEST_F(TestRequest, test_invalid_url)
     EXPECT_FALSE(resp.error().message.empty());
 }
 
-// GET, POST, PUT, DELETE and CORS OPTIONS all work via the free functions
 TEST_F(TestRequest, test_http_methods)
 {
     ServerScope scope;
@@ -131,7 +130,6 @@ TEST_F(TestRequest, test_http_methods)
     }
 
     {
-        // a plain OPTIONS reaches the routes
         auto response = http::options(shard_url("localhost:3004/api/opts"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->status(), HttpStatus::Ok);
@@ -147,7 +145,6 @@ TEST_F(TestRequest, test_http_methods)
     }
 
     {
-        // the same answer is reached through the body path
         auto response = http::post(shard_url("localhost:3004/api/opts"), "body");
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->status(), HttpStatus::MethodNotAllowed);
@@ -155,14 +152,12 @@ TEST_F(TestRequest, test_http_methods)
     }
 
     {
-        // nothing routes that path
         auto response = http::options(shard_url("localhost:3004/api/missing"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->status(), HttpStatus::NotFound);
     }
 }
 
-// async_get, async_post, parallel fan-out all work correctly
 TEST_F(TestRequest, test_async_requests)
 {
     ServerScope scope;
@@ -185,7 +180,6 @@ TEST_F(TestRequest, test_async_requests)
     EXPECT_EQ(ping_future.get()->content().cpp_str(), "pong");
     EXPECT_EQ(echo_future.get()->content().cpp_str(), "hello");
 
-    // fan-out: 10 concurrent GETs all succeed
     constexpr int request_count = 10;
     std::vector<FutureHttpResponse> futures;
     futures.reserve(request_count);
@@ -196,7 +190,6 @@ TEST_F(TestRequest, test_async_requests)
     EXPECT_EQ(calls.load(), 2 + request_count);
 }
 
-// basic-auth and bearer-token enforce access and propagate identity to the handler
 TEST_F(TestRequest, test_auth)
 {
     ServerScope scope;
@@ -210,14 +203,12 @@ TEST_F(TestRequest, test_auth)
     });
     scope.start(shard_port(3004));
 
-    // no credentials → 401
     {
         auto response = http::get(shard_url("localhost:3004/api/who"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->status(), HttpStatus::Unauthorized);
     }
 
-    // wrong password → 401
     RequestOptions wrong_credentials;
     wrong_credentials.username = "admin";
     wrong_credentials.password = "wrong";
@@ -227,7 +218,6 @@ TEST_F(TestRequest, test_auth)
         EXPECT_EQ(response->status(), HttpStatus::Unauthorized);
     }
 
-    // basic auth → 200, user propagated
     RequestOptions basic;
     basic.username = "admin";
     basic.password = "secret";
@@ -239,7 +229,6 @@ TEST_F(TestRequest, test_auth)
     EXPECT_EQ(captured_user, "admin");
     EXPECT_TRUE(captured_token.empty());
 
-    // bearer token → 200, token propagated
     captured_user.clear();
     RequestOptions token;
     token.token = "my-secret-token-123";
@@ -252,7 +241,6 @@ TEST_F(TestRequest, test_auth)
     EXPECT_EQ(captured_token, "my-secret-token-123");
 }
 
-// route matching: path params, catchall, specificity (literal beats {param}), 404 on miss
 TEST_F(TestRequest, test_routing)
 {
     ServerScope scope;
@@ -267,28 +255,24 @@ TEST_F(TestRequest, test_routing)
     });
     scope.start(shard_port(3004));
 
-    // parameterized route
     {
         auto response = http::get(shard_url("localhost:3004/api/items/42"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->content().cpp_str(), "42");
     }
 
-    // literal beats {id}
     {
         auto response = http::get(shard_url("localhost:3004/api/items/special"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->content().cpp_str(), "literal");
     }
 
-    // catchall
     {
         auto response = http::get(shard_url("localhost:3004/api/fs/a/b/c.txt"));
         ASSERT_TRUE(response.has_value());
         EXPECT_EQ(response->content().cpp_str(), "a/b/c.txt");
     }
 
-    // unmatched route → 404
     {
         auto response = http::get(shard_url("localhost:3004/api/missing"));
         ASSERT_TRUE(response.has_value());
@@ -420,13 +404,11 @@ TEST_F(TestRequest, test_max_response_size_overflow)
     EXPECT_EQ(response->status(), HttpStatus::Ok);
     EXPECT_LE(response->content().size(), 1024u);
 
-    // without the limit the whole body comes through
     auto unlimited_response = http::get(shard_url("localhost:3005/api/big"));
     ASSERT_TRUE(unlimited_response.has_value());
     EXPECT_EQ(unlimited_response->content().size(), 8192u);
 }
 
-// query parameters reach the handler and the progress callback observes the transfer
 TEST_F(TestRequest, test_request_options_parameters_and_progress)
 {
     ServerScope scope;

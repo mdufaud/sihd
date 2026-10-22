@@ -23,7 +23,7 @@ class PrivateKey
         PrivateKey(PrivateKey && other) noexcept = default;
         PrivateKey & operator=(PrivateKey && other) noexcept = default;
 
-        operator bool() const { return _handle != nullptr; }
+        operator bool() const;
 
         sihd::util::Result<void> generate_rsa(int bits = 2048);
         sihd::util::Result<void> generate_ec(std::string_view curve_name = "prime256v1");
@@ -36,11 +36,10 @@ class PrivateKey
 
         void clear();
 
-        void *native() const { return _handle.get(); }
+        void *native() const;
 
     private:
-        // type-erased EVP_PKEY: the deleter freeing it is bound at acquisition,
-        // keeping openssl types out of this header
+        // type-erased EVP_PKEY, deleter bound at acquisition: keeps openssl types out of this header
         std::shared_ptr<void> _handle;
 };
 

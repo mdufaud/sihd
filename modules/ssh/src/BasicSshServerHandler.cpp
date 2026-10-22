@@ -24,8 +24,6 @@ BasicSshServerHandler::~BasicSshServerHandler()
     SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-// ===== Authentication Configuration =====
-
 void BasicSshServerHandler::add_allowed_user(std::string_view user, std::string_view password)
 {
     _allowed_users[std::string(user)] = std::string(password);
@@ -56,8 +54,6 @@ void BasicSshServerHandler::set_auth_pubkey_callback(AuthPubkeyCallback callback
     _auth_pubkey_callback = std::move(callback);
 }
 
-// ===== Handler Callbacks =====
-
 void BasicSshServerHandler::set_shell_handler_callback(ShellHandlerCallback callback)
 {
     _shell_callback = std::move(callback);
@@ -73,8 +69,6 @@ void BasicSshServerHandler::set_subsystem_handler_callback(SubsystemHandlerCallb
     _subsystem_callback = std::move(callback);
 }
 
-// ===== Defaults Configuration =====
-
 void BasicSshServerHandler::set_default_exec_fork_mode(bool enable)
 {
     _default_exec_fork_mode = enable;
@@ -84,8 +78,6 @@ void BasicSshServerHandler::set_default_shell(std::string_view shell)
 {
     _default_shell = shell;
 }
-
-// ===== Session Info =====
 
 uint64_t BasicSshServerHandler::session_id(SshSession *session) const
 {
@@ -115,8 +107,6 @@ size_t BasicSshServerHandler::channel_count(SshSession *session) const
     return 0;
 }
 
-// ===== Event Counters =====
-
 BasicSshServerHandler::EventCounters BasicSshServerHandler::counters() const
 {
     std::lock_guard<std::mutex> lock(_counters_mtx);
@@ -135,14 +125,11 @@ void BasicSshServerHandler::inc_counter(size_t EventCounters::*field)
     ++(_counters.*field);
 }
 
-// ===== ISshServerHandler Implementation =====
-
 bool BasicSshServerHandler::on_auth_password([[maybe_unused]] SshServer *server,
                                              SshSession *session,
                                              std::string_view user,
                                              std::string_view password)
 {
-    // Check allowed users list first
     auto it = _allowed_users.find(std::string(user));
     if (it != _allowed_users.end() && it->second == password)
     {
@@ -151,7 +138,6 @@ bool BasicSshServerHandler::on_auth_password([[maybe_unused]] SshServer *server,
         return true;
     }
 
-    // Try custom callback
     if (_auth_password_callback && _auth_password_callback(session, user, password))
     {
         SIHD_LOG(debug, "BasicSshServerHandler: password auth (callback) success for user '{}'", user);
@@ -169,7 +155,6 @@ bool BasicSshServerHandler::on_auth_pubkey([[maybe_unused]] SshServer *server,
                                            std::string_view user,
                                            const SshKey & key)
 {
-    // Check allowed pubkeys list
     auto it = _allowed_pubkeys.find(std::string(user));
     if (it != _allowed_pubkeys.end())
     {
@@ -185,7 +170,6 @@ bool BasicSshServerHandler::on_auth_pubkey([[maybe_unused]] SshServer *server,
         }
     }
 
-    // Try custom callback
     if (_auth_pubkey_callback && _auth_pubkey_callback(session, user, key))
     {
         SIHD_LOG(debug, "BasicSshServerHandler: pubkey auth (callback) success for user '{}'", user);
@@ -462,20 +446,17 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
 
             if (!ch_state.handler->is_running())
             {
-                // Handler finished, cleanup
                 int exit_code = ch_state.handler->on_close();
 
                 // Handlers managing their own I/O (like SFTP) get the channel closed internally (via sftp_free);
                 // other handlers close the channel themselves
                 if (!ch_state.handler->manages_channel_io())
                 {
-                    // Send exit status if available
                     if (exit_code >= 0)
                     {
                         SIHD_UNEXPECTED_LOG(channel->request_send_exit_status(exit_code));
                     }
 
-                    // Send EOF and close channel to notify client
                     SIHD_UNEXPECTED_LOG(channel->send_eof());
                     SIHD_UNEXPECTED_LOG(channel->close());
                 }
@@ -484,11 +465,9 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
                 continue;
             }
 
-            // Poll handler FDs
             poll_handler(channel, ch_state.handler.get());
         }
 
-        // Cleanup finished handlers
         if (!channels_to_cleanup.empty())
         {
             std::lock_guard<std::mutex> lock(_sessions_mtx);
@@ -500,8 +479,6 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
         }
     }
 }
-
-// ===== Private Methods =====
 
 BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(SshSession *session, SshChannel *channel)
 {
@@ -531,7 +508,6 @@ void BasicSshServerHandler::poll_handler(SshChannel *channel, ISshSubsystemHandl
         return;
     }
 
-    // Let the handler forward its pending output to the channel
     handler->forward_output();
 }
 

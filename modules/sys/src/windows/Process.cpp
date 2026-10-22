@@ -1,3 +1,5 @@
+#include <winsock2.h>
+
 #include <cerrno>
 #include <cstdio>
 #include <stdexcept>
@@ -61,8 +63,7 @@ std::pair<HANDLE, HANDLE> make_pipe()
     HANDLE rw;
     SECURITY_ATTRIBUTES saAttr;
 
-    // locked-down default: neither end inherited by a child, read end non-blocking (parent peeks);
-    // each call site opts a specific end into inheritance / blocking when it needs it
+    // locked-down default: no inheritance, read end non-blocking; call sites opt in when they need otherwise
     saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
     saAttr.bInheritHandle = FALSE;
     saAttr.lpSecurityDescriptor = NULL;
@@ -78,7 +79,6 @@ std::pair<HANDLE, HANDLE> make_pipe()
         throw std::runtime_error("Cannot make pipe: SetNamedPipeHandleState");
     }
 
-    // read - write;
     return std::make_pair(rd, rw);
 }
 
@@ -89,7 +89,6 @@ void make_read_blocking(HANDLE fd_read)
     SetNamedPipeHandleState(fd_read, &mode, NULL, NULL);
 }
 
-// opt an end into inheritance so the child receives it (read end = its stdin, write end = its stdout/stderr)
 void make_read_inheritable(HANDLE fd_read)
 {
     SetHandleInformation(fd_read, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
@@ -135,10 +134,9 @@ bool read_pipe_into_file(HANDLE fd, const std::string & path, bool append)
     if (!file.is_open())
         return false;
 
-    auto fun = [&file](std::string_view buffer) {
+    return read_pipe_into_callback(fd, [&file](std::string_view buffer) {
         SIHD_UNEXPECTED_LOG(file.write(buffer.data(), buffer.size()));
-    };
-    return read_pipe_into_callback(fd, fun);
+    });
 }
 
 } // namespace
@@ -166,12 +164,9 @@ struct StdFdWrapper
         std::function<void(std::string_view)> fun;
         std::string path;
 
-        // fd utilities
         void add_pipe();
-        // process fds once child process executed
         bool process_read_pipe();
 
-        // fd redirections setting
         void close();
         void redirect_to(std::function<void(std::string_view)> && fun);
         void redirect_to(std::string & output);
@@ -299,12 +294,11 @@ struct ProcessWatcher
 
 bool ProcessWatcher::check_status(int options)
 {
-    std::lock_guard l(this->mutex);
+    std::lock_guard lock(this->mutex);
     const DWORD timeout_ms = options == 0 ? INFINITE : options;
     const DWORD result = WaitForSingleObject(this->procinfo.hProcess, timeout_ms);
     if (result == WAIT_OBJECT_0)
     {
-        // The child process was terminated
         const BOOL got_code = GetExitCodeProcess(this->procinfo.hProcess, &this->code);
         if (got_code)
         {
@@ -324,7 +318,6 @@ bool ProcessWatcher::check_status(int options)
     }
     if (result == WAIT_TIMEOUT)
     {
-        // The child process is still running
         this->exited = false;
         return true;
     }
@@ -334,7 +327,7 @@ bool ProcessWatcher::check_status(int options)
 
 bool ProcessWatcher::has_terminated()
 {
-    std::lock_guard l(this->mutex);
+    std::lock_guard lock(this->mutex);
     return this->exited;
 }
 
@@ -433,8 +426,6 @@ void Process::clear()
     _impl->pipe.reset();
 }
 
-// Pipe stdin
-
 Process & Process::stdin_close()
 {
     _impl->pipe.std_in.close();
@@ -478,8 +469,6 @@ bool Process::stdin_from_file(const std::string & path)
     return success;
 }
 
-// Pipe stdout
-
 Process & Process::stdout_close()
 {
     _impl->pipe.std_out.close();
@@ -507,8 +496,7 @@ Process & Process::stdout_to(FileDescType fd)
 Process & Process::stdout_to(Process & proc)
 {
     _impl->pipe.std_out.add_pipe();
-    // both ends go to children: this child writes its stdout (write end), proc reads it as its
-    // stdin (read end), so both must be inherited and the read end must be blocking
+    // child writes the write end, proc reads the read end as stdin: both inherited, read end blocking
     make_write_inheritable(_impl->pipe.std_out.fd_write);
     make_read_inheritable(_impl->pipe.std_out.fd_read);
     make_read_blocking(_impl->pipe.std_out.fd_read);
@@ -521,8 +509,6 @@ bool Process::stdout_to_file(const std::string & path, bool append)
 {
     return _impl->pipe.std_out.redirect_to_file(path, append, this->open_mode);
 }
-
-// Pipe stderr
 
 Process & Process::stderr_close()
 {
@@ -551,8 +537,7 @@ Process & Process::stderr_to(FileDescType fd)
 Process & Process::stderr_to(Process & proc)
 {
     _impl->pipe.std_err.add_pipe();
-    // both ends go to children: this child writes its stderr (write end), proc reads it as its
-    // stdin (read end), so both must be inherited and the read end must be blocking
+    // child writes the write end, proc reads the read end as stdin: both inherited, read end blocking
     make_write_inheritable(_impl->pipe.std_err.fd_write);
     make_read_inheritable(_impl->pipe.std_err.fd_read);
     make_read_blocking(_impl->pipe.std_err.fd_read);
@@ -566,28 +551,24 @@ bool Process::stderr_to_file(const std::string & path, bool append)
     return _impl->pipe.std_err.redirect_to_file(path, append, this->open_mode);
 }
 
-// Execution
-
-sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> &)
+Result<void> Process::_do_fork(const std::vector<const char *> &)
 {
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no fork on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "no fork on this platform"));
 }
 
-sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> &)
+Result<void> Process::_do_spawn(const std::vector<const char *> &)
 {
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no spawn on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "no spawn on this platform"));
 }
 
-sihd::util::Result<void> Process::_do_child_process(const std::vector<const char *> & argv)
+Result<void> Process::_do_child_process(const std::vector<const char *> & argv)
 {
     if (_fun_to_execute)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported,
-                                                 "set_function is not supported on windows (no fork)"));
+        return std::unexpected(Error(ErrorCode::not_supported, "set_function is not supported on windows (no fork)"));
 
     STARTUPINFO start_info;
     BOOL success = FALSE;
 
-    // Set up members of the STARTUPINFO structure.
     ZeroMemory(&start_info, sizeof(STARTUPINFO));
     start_info.cb = sizeof(STARTUPINFO);
 
@@ -619,47 +600,41 @@ sihd::util::Result<void> Process::_do_child_process(const std::vector<const char
 
     const std::string env_block = internal::to_windows_block(_env);
 
-    // Create the child process.
-
-    // const DWORD creation_flags = NORMAL_PRIORITY_CLASS | CREATE_NO_WINDOW;
     const DWORD creation_flags = 0;
 
     success = CreateProcess(NULL,
-                            cmd_line.data(),                                     // command line
-                            NULL,                                                // process security attributes
-                            NULL,                                                // primary thread security attributes
-                            TRUE,                                                // handles are inherited
-                            creation_flags,                                      // creation flags
-                            env_block.empty() ? NULL : (LPVOID)env_block.data(), // environment
-                            _chdir.empty() ? NULL : _chdir.data(),               // current directory
-                            &start_info,                                         // STARTUPINFO pointer
-                            &_impl->process_watcher.procinfo);                   // receives PROCESS_INFORMATION
+                            cmd_line.data(),
+                            NULL,
+                            NULL,
+                            TRUE,
+                            creation_flags,
+                            env_block.empty() ? NULL : (LPVOID)env_block.data(),
+                            _chdir.empty() ? NULL : _chdir.data(),
+                            &start_info,
+                            &_impl->process_watcher.procinfo);
 
-    // If an error occurs, exit the application.
     if (!success)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::io_error, "{}", os::last_error_str()));
+        return std::unexpected(Error(ErrorCode::io_error, "{}", os::last_error_str()));
     return {};
 }
 
-sihd::util::Result<void> Process::_do_execute(const std::vector<const char *> & argv)
+Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
     return this->_do_child_process(argv);
 }
 
-sihd::util::Result<void> Process::execute()
+Result<void> Process::execute()
 {
     if (this->is_process_running() || _executing.exchange(true) == true)
     {
         _executing.store(false);
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process already running or executing"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "process already running or executing"));
     }
 
-    Defer d([this] { _executing.store(false); });
+    Defer defer([this] { _executing.store(false); });
 
     if (!_fun_to_execute && _argv.size() == 0)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "could not run process with no arguments"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "could not run process with no arguments"));
 
     std::vector<const char *> c_argv;
     c_argv.reserve(_argv.size() + 1);
@@ -758,19 +733,16 @@ bool Process::terminate()
     return this->is_process_running() == false;
 }
 
-sihd::util::Result<void> Process::kill(int sig)
+Result<void> Process::kill(int sig)
 {
     if (this->is_process_running() == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process is not running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "process is not running"));
     // own the process handle: kill it with a POSIX-like code so return_code() matches unix
     (void)sig;
     if (TerminateProcess(_impl->process_watcher.procinfo.hProcess, failure_return_code) == 0)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::io_error, "could not kill: {}", os::last_error_str()));
+        return std::unexpected(Error(ErrorCode::io_error, "could not kill: {}", os::last_error_str()));
     return {};
 }
-
-// Run
 
 void Process::handle(Poll *poll)
 {
@@ -784,8 +756,7 @@ bool Process::on_start()
         return false;
 
     this->service_set_ready();
-    // exits when the child terminates (reaped by wait_no_hang) or when on_stop's
-    // reset_proc terminates the process, mirroring the unix poll loop in handle()
+    // exits when the child terminates or on_stop's reset_proc kills it, like the unix poll loop in handle()
     while (this->is_running() && this->is_process_running())
     {
         constexpr DWORD timeout_ms = 50;
@@ -802,20 +773,18 @@ bool Process::on_stop()
     return true;
 }
 
-// Check process
-
 bool Process::is_process_running() const
 {
     return _started.load();
 }
 
-sihd::util::Result<bool> Process::wait_no_hang()
+Result<bool> Process::wait_no_hang()
 {
     constexpr DWORD timeout_ms = 5;
     return this->wait(timeout_ms);
 }
 
-sihd::util::Result<bool> Process::wait(int options)
+Result<bool> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
@@ -824,7 +793,7 @@ sihd::util::Result<bool> Process::wait(int options)
     const bool terminated = _impl->process_watcher.has_terminated();
     if (terminated)
     {
-        auto l = _waitable.guard();
+        auto guard = _waitable.guard();
         _started.store(false);
         _waitable.notify_all();
     }
@@ -841,12 +810,12 @@ bool Process::has_terminated() const
     return _impl->process_watcher.has_terminated();
 }
 
-sihd::util::Result<bool> Process::wait_exit(int options)
+Result<bool> Process::wait_exit(int options)
 {
     return this->wait(options);
 }
 
-sihd::util::Result<bool> Process::wait_any(int options)
+Result<bool> Process::wait_any(int options)
 {
     return this->wait(options);
 }

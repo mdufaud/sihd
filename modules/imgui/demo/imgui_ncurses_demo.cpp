@@ -22,7 +22,29 @@
 using namespace sihd::util;
 using namespace sihd::imgui;
 
-static void HelpMarker(const char *desc)
+namespace
+{
+
+enum Element
+{
+    Element_Fire,
+    Element_Earth,
+    Element_Air,
+    Element_Water,
+    Element_COUNT
+};
+
+float plot_sin(void *, int i)
+{
+    return sinf(i * 0.1f);
+}
+
+float plot_saw(void *, int i)
+{
+    return (i & 1) ? 1.0f : -1.0f;
+}
+
+void HelpMarker(const char *desc)
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -35,7 +57,7 @@ static void HelpMarker(const char *desc)
     }
 }
 
-static void ShowExampleMenuFile()
+void ShowExampleMenuFile()
 {
     ImGui::MenuItem("(demo)", nullptr, false, false);
     if (ImGui::MenuItem("New"))
@@ -85,8 +107,10 @@ static void ShowExampleMenuFile()
         for (int i = 0; i < ImGuiCol_COUNT; i++)
         {
             const char *name = ImGui::GetStyleColorName((ImGuiCol)i);
-            ImVec2 p = ImGui::GetCursorScreenPos();
-            ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + sz, p.y + sz), ImGui::GetColorU32((ImGuiCol)i));
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            ImGui::GetWindowDrawList()->AddRectFilled(pos,
+                                                      ImVec2(pos.x + sz, pos.y + sz),
+                                                      ImGui::GetColorU32((ImGuiCol)i));
             ImGui::Dummy(ImVec2(sz, sz));
             ImGui::SameLine();
             ImGui::MenuItem(name);
@@ -99,13 +123,13 @@ static void ShowExampleMenuFile()
     }
 }
 
-static bool _debug_open_all()
+bool _debug_open_all()
 {
     static const bool v = std::getenv("SIHD_IMGUI_NCURSES_OPENALL") != nullptr;
     return v;
 }
 
-static void ShowDemoWindowWidgets()
+void ShowDemoWindowWidgets()
 {
     if (_debug_open_all())
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
@@ -290,14 +314,6 @@ static void ShowDemoWindowWidgets()
 
             ImGui::Dummy(ImVec2(0, 1));
 
-            enum Element
-            {
-                Element_Fire,
-                Element_Earth,
-                Element_Air,
-                Element_Water,
-                Element_COUNT
-            };
             const char *element_names[Element_COUNT] = {"Fire", "Earth", "Air", "Water"};
             static int current_element = Element_Fire;
             const char *current_element_name = (current_element >= 0 && current_element < Element_COUNT)
@@ -629,21 +645,21 @@ static void ShowDemoWindowWidgets()
                 ImGui::PushID(i);
                 if (ImGui::Selectable("Sailor", &selected3[i], 0, ImVec2(8, 4)))
                 {
-                    int x = i % 4;
-                    int y = i / 4;
-                    if (x > 0)
+                    int col = i % 4;
+                    int row = i / 4;
+                    if (col > 0)
                     {
                         selected3[i - 1] ^= 1;
                     }
-                    if (x < 3 && i < 15)
+                    if (col < 3 && i < 15)
                     {
                         selected3[i + 1] ^= 1;
                     }
-                    if (y > 0 && i > 3)
+                    if (row > 0 && i > 3)
                     {
                         selected3[i - 4] ^= 1;
                     }
-                    if (y < 3 && i < 12)
+                    if (row < 3 && i < 12)
                     {
                         selected3[i + 4] ^= 1;
                     }
@@ -788,11 +804,6 @@ static void ShowDemoWindowWidgets()
         ImGui::Text("Histogram");
         ImGui::PlotHistogram("##histogram", arr, IM_ARRAYSIZE(arr), 0, nullptr, 0.0f, 1.5f, ImVec2(0, 16));
 
-        struct Funcs
-        {
-                static float Sin(void *, int i) { return sinf(i * 0.1f); }
-                static float Saw(void *, int i) { return (i & 1) ? 1.0f : -1.0f; }
-        };
         static int func_type = 0, display_count = 70;
 
         ImGui::Dummy(ImVec2(0, 1));
@@ -803,7 +814,7 @@ static void ShowDemoWindowWidgets()
         ImGui::SetNextItemWidth(40.0f);
         ImGui::SliderInt("Sample count", &display_count, 1, 200);
 
-        float (*func)(void *, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
+        float (*func)(void *, int) = (func_type == 0) ? plot_sin : plot_saw;
         ImGui::TextUnformatted("");
         ImGui::Text("Lines");
         ImGui::PlotLines("##lines_func", func, nullptr, display_count, 0, nullptr, -1.0f, 1.0f, ImVec2(0, 12));
@@ -844,7 +855,7 @@ static void ShowDemoWindowWidgets()
     }
 }
 
-static void ShowDemoWindowLayout()
+void ShowDemoWindowLayout()
 {
     if (!ImGui::CollapsingHeader("Layout & Scrolling"))
         return;
@@ -949,7 +960,7 @@ static void ShowDemoWindowLayout()
     }
 }
 
-static void ShowDemoWindowPopups()
+void ShowDemoWindowPopups()
 {
     if (!ImGui::CollapsingHeader("Popups & Modal windows"))
         return;
@@ -1128,7 +1139,7 @@ static void ShowDemoWindowPopups()
     }
 }
 
-static void ShowDemoWindow()
+void ShowDemoWindow()
 {
     static bool show_app_about = false;
 
@@ -1191,6 +1202,8 @@ static void ShowDemoWindow()
     ImGui::PopItemWidth();
     ImGui::End();
 }
+
+} // namespace
 
 int main(int argc, char **argv)
 {

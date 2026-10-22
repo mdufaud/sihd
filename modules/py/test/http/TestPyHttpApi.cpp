@@ -20,9 +20,9 @@ using namespace sihd::util;
 class TestPyHttpApi: public ::testing::Test
 {
     protected:
-        TestPyHttpApi() { sihd::util::LoggerManager::stream(); }
+        TestPyHttpApi() { LoggerManager::stream(); }
 
-        virtual ~TestPyHttpApi() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPyHttpApi() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -38,15 +38,15 @@ class TestPyHttpApi: public ::testing::Test
 
 TEST_F(TestPyHttpApi, test_pyhttp_navigator)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_http.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/http/py/test_http.py"));
 }
 
 TEST_F(TestPyHttpApi, test_pyhttp_server)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/http/py/test_server.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/http/py/test_server.py"));
 }
 } // namespace test

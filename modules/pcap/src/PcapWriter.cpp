@@ -6,6 +6,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::pcap
 {
 
@@ -19,8 +21,8 @@ SIHD_REGISTER_FACTORY(PcapWriter)
 
 SIHD_LOGGER;
 
-PcapWriter::PcapWriter(const std::string & name, sihd::util::Node *parent):
-    sihd::util::Named(name, parent),
+PcapWriter::PcapWriter(const std::string & name, Node *parent):
+    Named(name, parent),
     _impl_ptr(std::make_unique<Impl>()),
     _clock_ptr(&_default_clock),
     _linktype(0),
@@ -60,34 +62,32 @@ bool PcapWriter::set_snaplen(int len)
     return true;
 }
 
-sihd::util::Result<void> PcapWriter::open(const std::string & path, int datalink, int snaplen)
+Result<void> PcapWriter::open(const std::string & path, int datalink, int snaplen)
 {
     if (this->set_datalink(datalink) == false || this->set_snaplen(snaplen) == false)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot set datalink or snaplen"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot set datalink or snaplen"));
     return this->open(path);
 }
 
-sihd::util::Result<void> PcapWriter::open(const std::string & path, int datalink)
+Result<void> PcapWriter::open(const std::string & path, int datalink)
 {
     if (this->set_datalink(datalink) == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "cannot set datalink"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "cannot set datalink"));
     return this->open(path);
 }
 
-sihd::util::Result<void> PcapWriter::open(const std::string & path)
+Result<void> PcapWriter::open(const std::string & path)
 {
     this->close();
     _impl_ptr->pcap_ptr = pcap_open_dead(_linktype, _snaplen);
     if (_impl_ptr->pcap_ptr == nullptr)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::io_error, "can not open fake pcap for writing"));
+        return std::unexpected(Error(ErrorCode::io_error, "can not open fake pcap for writing"));
     if ((_impl_ptr->dumper_ptr = pcap_dump_open(_impl_ptr->pcap_ptr, path.c_str())) == nullptr)
     {
-        auto error = sihd::util::Error(sihd::util::ErrorCode::io_error,
-                                       "can not open pcap for writing '{}': {}",
-                                       path,
-                                       pcap_geterr(_impl_ptr->pcap_ptr));
+        auto error = Error(ErrorCode::io_error,
+                           "can not open pcap for writing '{}': {}",
+                           path,
+                           pcap_geterr(_impl_ptr->pcap_ptr));
         this->close();
         return std::unexpected(std::move(error));
     }
@@ -119,7 +119,7 @@ FILE *PcapWriter::file()
     return pcap_dump_file(_impl_ptr->dumper_ptr);
 }
 
-ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp timestamp)
+ssize_t PcapWriter::write(ArrCharView view, Timestamp timestamp)
 {
     pcap_pkthdr hdr;
     hdr.caplen = view.size();
@@ -129,12 +129,12 @@ ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::Timestamp ti
     return view.size();
 }
 
-ssize_t PcapWriter::write(sihd::util::ArrCharView view)
+ssize_t PcapWriter::write(ArrCharView view)
 {
     return write(view, _clock_ptr->now());
 }
 
-ssize_t PcapWriter::write(sihd::util::ArrCharView view, sihd::util::time::UnixTime sec, sihd::util::time::UnixTime usec)
+ssize_t PcapWriter::write(ArrCharView view, time::UnixTime sec, time::UnixTime usec)
 {
     pcap_pkthdr hdr;
     hdr.caplen = view.size();

@@ -4,10 +4,9 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include "sihd/util/Array.hpp"
-#include "sihd/util/ArrayView.hpp"
+#include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 
-// Formatter specialization for Array<char> to format as string instead of range
 template <>
 struct fmt::formatter<sihd::util::Array<char>>: fmt::formatter<std::string>
 {
@@ -18,7 +17,6 @@ struct fmt::formatter<sihd::util::Array<char>>: fmt::formatter<std::string>
         }
 };
 
-// Formatter specialization for Array<char> to format as string instead of range
 template <>
 struct fmt::formatter<sihd::util::ArrayView<char>>: fmt::formatter<std::string>
 {

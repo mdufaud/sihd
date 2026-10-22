@@ -37,6 +37,7 @@ MappedFile & MappedFile::operator=(MappedFile && other)
         _mapping = other._mapping;
         _size = other._size;
         _addr = other._addr;
+
         _read_only = other._read_only;
         _path = std::move(other._path);
         other._fd = -1;

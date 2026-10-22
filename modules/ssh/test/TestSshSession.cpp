@@ -24,9 +24,9 @@ using namespace sihd::ssh;
 class TestSshSession: public ::testing::Test
 {
     protected:
-        TestSshSession() { sihd::util::LoggerManager::stream(); }
+        TestSshSession() { LoggerManager::stream(); }
 
-        virtual ~TestSshSession() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestSshSession() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -54,7 +54,6 @@ TEST_F(TestSshSession, test_sshsession_connect)
 
 TEST_F(TestSshSession, test_sshsession_auth_key)
 {
-    // Read public key to add to allowed keys
     SshKey client_pubkey;
     ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
     std::string pubkey_base64 = client_pubkey.base64();
@@ -68,7 +67,6 @@ TEST_F(TestSshSession, test_sshsession_auth_key)
     int port = test_server->port;
     ASSERT_GT(port, 0);
 
-    // Test auth_key_file
     SshSession session;
     ASSERT_TRUE(session.fast_connect({.user = "testuser", .host = "127.0.0.1", .port = port, .process_config = false})
                     .has_value());

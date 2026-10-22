@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <csignal>
 #include <cstdlib>
 #include <optional>
@@ -29,7 +30,7 @@ struct SigName
         int sig;
 };
 
-constexpr SigName sig_names[] = {
+constexpr auto sig_names = std::to_array<SigName>({
     {"INT", SIGINT},
     {"TERM", SIGTERM},
     {"ABRT", SIGABRT},
@@ -51,7 +52,7 @@ constexpr SigName sig_names[] = {
 #if defined(SIGPIPE)
     {"PIPE", SIGPIPE},
 #endif
-};
+});
 
 std::optional<int> sig_from_conf_value(const std::string & name)
 {
@@ -107,22 +108,23 @@ void App::on_signal(std::function<void(int)> fn)
     _on_signal = std::move(fn);
 }
 
-sihd::util::ALogger *App::create_logger_sink(const std::string & plugin,
-                                             const std::string & type,
-                                             const std::string & name,
-                                             sihd::util::Node *parent)
+ALogger *App::create_logger_sink(const std::string & plugin,
+                                 const std::string & type,
+                                 const std::string & name,
+                                 Node *parent)
 {
     if (plugin.empty() == false)
     {
         auto created = PluginLoader::create_from_library(plugin, type, name, parent);
         if (SIHD_UNEXPECTED_LOG(created))
             return nullptr;
-        sihd::util::ALogger *sink = dynamic_cast<sihd::util::ALogger *>(created.value());
+        ALogger *sink = dynamic_cast<ALogger *>(created.value());
         if (sink == nullptr)
         {
             SIHD_LOG(error, "App: plugin '{}' factory did not create a logger sink", plugin);
             this->sinks().remove_child(created.value());
         }
+
         return sink;
     }
     auto linked = PluginLoader::create_from_linked(type, name, parent);
@@ -149,6 +151,7 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
     if (conf.contains("signals"))
     {
         const sihd::json::Json signals = conf["signals"];
+
         if (signals.is_object() == false)
         {
             SIHD_LOG(error, "App: conf 'signals' must be an object");
@@ -168,6 +171,7 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
                 return false;
         }
     }
+
     if (conf.contains("daemon"))
     {
         const sihd::json::Json daemon = conf["daemon"];
@@ -183,6 +187,7 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
             if (daemon.contains(key) && daemon[key].is_string() == false)
             {
                 SIHD_LOG(error, "App: conf 'daemon.{}' must be a string", key);
+
                 return false;
             }
         }
@@ -288,29 +293,31 @@ bool App::_set_signal_action(int64_t sig, SigAction action)
     return true;
 }
 
+bool App::_signal_action_from_entry(const sihd::json::Json & entry, SigAction action)
+{
+    if (entry.is_number_integer() || entry.is_number_unsigned())
+        return this->_set_signal_action(entry.get<int64_t>(), action);
+    std::optional<int> sig = sig_from_conf_value(entry.get_or<std::string>(""));
+    if (sig.has_value() == false)
+    {
+        SIHD_LOG(error, "App: unknown signal in conf '{}'", entry.get_or<std::string>(""));
+        return false;
+    }
+    return this->_set_signal_action(*sig, action);
+}
+
 bool App::_signal_actions_from_json(const sihd::json::Json & json, SigAction action)
 {
-    auto apply_one = [this, action](const sihd::json::Json & entry) -> bool {
-        if (entry.is_number_integer() || entry.is_number_unsigned())
-            return this->_set_signal_action(entry.get<int64_t>(), action);
-        std::optional<int> sig = sig_from_conf_value(entry.get_or<std::string>(""));
-        if (sig.has_value() == false)
-        {
-            SIHD_LOG(error, "App: unknown signal in conf '{}'", entry.get_or<std::string>(""));
-            return false;
-        }
-        return this->_set_signal_action(*sig, action);
-    };
     if (json.is_array())
     {
         for (auto it = json.begin(); it != json.end(); ++it)
         {
-            if (apply_one(it.value()) == false)
+            if (this->_signal_action_from_entry(it.value(), action) == false)
                 return false;
         }
         return true;
     }
-    return apply_one(json);
+    return this->_signal_action_from_entry(json, action);
 }
 
 void App::_install_signals()
@@ -325,8 +332,9 @@ void App::_install_signals()
             continue;
         }
         auto installed = state.action == SigAction::ignore ? signal::ignore(sig) : signal::handle(sig);
-        if (!SIHD_UNEXPECTED_LOG(installed))
-            state.installed = true;
+        if (SIHD_UNEXPECTED_LOG(installed))
+            continue;
+        state.installed = true;
     }
 }
 

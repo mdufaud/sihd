@@ -64,10 +64,7 @@ struct BitmapInfoHeader
         uint32_t image_size;
         uint32_t pixel_per_meter_x;
         uint32_t pixel_per_meter_y;
-        // Specifies the number of color indexes in the color table that are actually used by the bitmap
         uint32_t nb_colors;
-        // Specifies the number of color indexes required for displaying the bitmap. If this value is zero,
-        // all colors are required.
         uint32_t nb_important_colors;
 };
 #pragma pack(pop)
@@ -80,6 +77,7 @@ void convert_headers(BitmapFileHeader & file, BitmapInfoHeader & info)
     info.header_size = endian::convert(info.header_size, std::endian::little);
     info.width = endian::convert(info.width, std::endian::little);
     info.height = endian::convert(info.height, std::endian::little);
+
     info.planes = endian::convert(info.planes, std::endian::little);
     info.bits_per_pixel = endian::convert(info.bits_per_pixel, std::endian::little);
     info.compression = endian::convert(info.compression, std::endian::little);
@@ -127,7 +125,6 @@ void Bitmap::create(size_t width, size_t height, uint8_t bit_per_pixel)
     if (bit_per_pixel > 32)
         throw std::invalid_argument("Bitmaps with more than 32 pixels are not supported");
 
-    // implementation limitations
     if (bit_per_pixel < 8)
         throw std::invalid_argument("Bitmaps with less than 8 bit per pixel are not supported");
     if (bit_per_pixel != 24 && bit_per_pixel != 32)
@@ -232,7 +229,6 @@ Bitmap::PixelBuffer Bitmap::to_bmp_data() const
 
     PixelBuffer bmp_data(file_size, 0);
 
-    // Fill file header
     BitmapFileHeader *file_hdr = reinterpret_cast<BitmapFileHeader *>(bmp_data.data());
     ((unsigned char *)&file_hdr->signature)[0] = 'B';
     ((unsigned char *)&file_hdr->signature)[1] = 'M';
@@ -240,7 +236,6 @@ Bitmap::PixelBuffer Bitmap::to_bmp_data() const
     file_hdr->reserved = 0;
     file_hdr->fileoffset_to_pixelarray = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader);
 
-    // Fill info header
     BitmapInfoHeader *info_hdr = reinterpret_cast<BitmapInfoHeader *>(bmp_data.data() + sizeof(BitmapFileHeader));
     info_hdr->header_size = sizeof(BitmapInfoHeader);
     info_hdr->width = _width;
@@ -288,7 +283,6 @@ bool Bitmap::read_bmp(const std::string & path)
     if (!file.is_open())
         return false;
 
-    // Get file size
     (void)file.seek_end(0);
     const auto file_size = file.tell();
     if (!file_size || *file_size <= 0)
@@ -296,17 +290,15 @@ bool Bitmap::read_bmp(const std::string & path)
 
     (void)file.seek_begin(0);
 
-    // Read entire file into memory
     PixelBuffer data(*file_size);
     const auto read = file.read(data.data(), *file_size);
     if (!read || *read != (size_t)*file_size)
         return false;
 
-    // Parse BMP from memory
     return this->read_bmp_data(data);
 }
 
-bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
+bool Bitmap::read_bmp_data(ArrByteView data)
 {
     this->clear();
 
@@ -322,7 +314,6 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
     const auto *file_hdr = &file_header;
     const auto *info_hdr = &info_header;
 
-    // Validate signature
     if (((unsigned char *)&file_hdr->signature)[0] != 'B' || ((unsigned char *)&file_hdr->signature)[1] != 'M')
         return false;
 
@@ -340,8 +331,7 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
         || (compression == BI_BITFIELDS && bpp != 16 && bpp != 32))
         return false;
 
-    // Handle negative height (top-down DIB). Unsigned negation: -INT_MIN is
-    // undefined on the signed int32 the header stores.
+    // top-down DIB has a negative height; negate unsigned: -INT_MIN is undefined on the signed int32 field
     const bool top_down = static_cast<int32_t>(info_hdr->height) < 0;
     const uint32_t abs_height = top_down ? 0u - info_hdr->height : info_hdr->height;
     if (static_cast<int32_t>(width) <= 0 || abs_height == 0)
@@ -402,7 +392,6 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
     if (pixels > std::numeric_limits<size_t>::max() / 4)
         return false;
 
-    // Color is 32-bit, so decode every depth to 32bpp.
     this->create(width, abs_height, 32);
 
     const uint8_t *pixel_data = bytes + pixel_offset;
@@ -423,7 +412,7 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
 
         for (uint32_t x = 0; x < width; ++x)
         {
-            Color c;
+            Color color;
             if (indexed)
             {
                 uint32_t idx;
@@ -431,16 +420,17 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
                     idx = row[x];
                 else if (bpp == 4)
                     idx = (row[x / 2] >> ((x & 1) ? 0 : 4)) & 0xF;
-                else // bpp == 1
+                else
                     idx = (row[x / 8] >> (7 - (x & 7))) & 0x1;
+
                 if (idx >= palette_count)
                     idx = 0;
                 // Stored BGR.
                 const uint8_t *entry = palette + static_cast<size_t>(idx) * palette_entry_size;
-                c.red = entry[2];
-                c.green = entry[1];
-                c.blue = entry[0];
-                c.alpha = 255;
+                color.red = entry[2];
+                color.green = entry[1];
+                color.blue = entry[0];
+                color.alpha = 255;
             }
             else
             {
@@ -449,40 +439,40 @@ bool Bitmap::read_bmp_data(sihd::util::ArrByteView data)
                     packed = endian::read_le<uint32_t>(row + x * 4, sizeof(uint32_t));
                 else if (bpp == 24)
                     packed = endian::read_le<uint32_t>(row + x * 3, 3);
-                else // bpp == 16
+                else
                     packed = endian::read_le<uint16_t>(row + x * 2, sizeof(uint16_t));
 
                 if (bitfields)
                 {
-                    c.red = channel_from_mask(packed, red_mask);
-                    c.green = channel_from_mask(packed, green_mask);
-                    c.blue = channel_from_mask(packed, blue_mask);
-                    c.alpha = alpha_mask != 0 ? channel_from_mask(packed, alpha_mask) : 255;
+                    color.red = channel_from_mask(packed, red_mask);
+                    color.green = channel_from_mask(packed, green_mask);
+                    color.blue = channel_from_mask(packed, blue_mask);
+                    color.alpha = alpha_mask != 0 ? channel_from_mask(packed, alpha_mask) : 255;
                 }
                 else if (bpp == 32)
                 {
                     // Keep the stored 4th byte as alpha so the format round-trips.
-                    c.red = row[x * 4 + 2];
-                    c.green = row[x * 4 + 1];
-                    c.blue = row[x * 4];
-                    c.alpha = row[x * 4 + 3];
+                    color.red = row[x * 4 + 2];
+                    color.green = row[x * 4 + 1];
+                    color.blue = row[x * 4];
+                    color.alpha = row[x * 4 + 3];
                 }
                 else if (bpp == 24)
                 {
-                    c.red = row[x * 3 + 2];
-                    c.green = row[x * 3 + 1];
-                    c.blue = row[x * 3];
-                    c.alpha = 255;
+                    color.red = row[x * 3 + 2];
+                    color.green = row[x * 3 + 1];
+                    color.blue = row[x * 3];
+                    color.alpha = 255;
                 }
                 else // BI_RGB 16bpp is 5-5-5
                 {
-                    c.red = channel_from_mask(packed, 0x7C00);
-                    c.green = channel_from_mask(packed, 0x03E0);
-                    c.blue = channel_from_mask(packed, 0x001F);
-                    c.alpha = 255;
+                    color.red = channel_from_mask(packed, 0x7C00);
+                    color.green = channel_from_mask(packed, 0x03E0);
+                    color.blue = channel_from_mask(packed, 0x001F);
+                    color.alpha = 255;
                 }
             }
-            this->set(x, dst_y, c);
+            this->set(x, dst_y, color);
         }
     }
 

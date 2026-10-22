@@ -9,12 +9,13 @@
 # define ENABLE_FORK
 #endif
 
-#include <fcntl.h>    // open
-#include <sys/stat.h> // open
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <array>
 #include <cerrno>
 #include <cstdio>
 #include <stdexcept>
@@ -108,11 +109,10 @@ void dup_close(int fd_from, int fd_to)
 
 std::pair<int, int> make_pipe()
 {
-    int fd[2];
+    std::array<int, 2> fd;
 
-    if (pipe(fd) < 0)
+    if (pipe(fd.data()) < 0)
         throw std::runtime_error("Cannot make pipe");
-    // read - write;
     return std::make_pair(fd[0], fd[1]);
 }
 
@@ -143,10 +143,9 @@ bool read_pipe_into_file(int fd, const std::string & path, bool append)
     if (!file.is_open())
         return false;
 
-    auto fun = [&file](std::string_view buffer) {
+    return read_pipe_into_callback(fd, [&file](std::string_view buffer) {
         SIHD_UNEXPECTED_LOG(file.write(buffer.data(), buffer.size()));
-    };
-    return read_pipe_into_callback(fd, fun);
+    });
 }
 
 void init_poller(sihd::sys::Poll & poll, int stdout_fd, int stderr_fd)
@@ -187,12 +186,9 @@ struct StdFdWrapper
         std::function<void(std::string_view)> fun;
         std::string path;
 
-        // fd utilities
         void add_pipe();
-        // process fds once child process executed
         bool process_read_pipe();
 
-        // fd redirections setting
         void close();
         void redirect_to(std::function<void(std::string_view)> && fun);
         void redirect_to(std::string & output);
@@ -306,7 +302,7 @@ struct ProcessWatcher
 
 bool ProcessWatcher::check_status(int options)
 {
-    std::lock_guard l(this->mutex);
+    std::lock_guard lock(this->mutex);
     siginfo_t info;
     int ret = waitid(P_PID, this->pid, &info, options);
     if (ret >= 0)
@@ -314,6 +310,7 @@ bool ProcessWatcher::check_status(int options)
         // WNOHANG with a live child leaves the siginfo unspecified
         if (info.si_pid == 0)
             return false;
+
         this->code = info.si_code;
         this->status = info.si_status;
         if (this->code == CLD_EXITED || this->code == CLD_KILLED)
@@ -322,7 +319,6 @@ bool ProcessWatcher::check_status(int options)
     }
     if (errno == ECHILD)
     {
-        // child has exited
         this->pid = -1;
         return true;
     }
@@ -331,7 +327,7 @@ bool ProcessWatcher::check_status(int options)
 
 bool ProcessWatcher::has_terminated()
 {
-    std::lock_guard l(this->mutex);
+    std::lock_guard lock(this->mutex);
     return this->code == CLD_EXITED || this->code == CLD_KILLED;
 }
 
@@ -344,7 +340,7 @@ void ProcessWatcher::reset()
 
 Process::ReturnCodeType ProcessWatcher::return_code()
 {
-    std::lock_guard l(mutex);
+    std::lock_guard lock(mutex);
     const bool has_exited = this->code == CLD_EXITED;
     return has_exited ? this->status : -1;
 }
@@ -428,8 +424,6 @@ void Process::clear()
     _impl->pipe.reset();
 }
 
-// Pipe stdin
-
 Process & Process::stdin_close()
 {
     _impl->pipe.std_in.close();
@@ -458,8 +452,6 @@ bool Process::stdin_from_file(const std::string & path)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
     return success;
 }
-
-// Pipe stdout
 
 Process & Process::stdout_close()
 {
@@ -498,8 +490,6 @@ bool Process::stdout_to_file(const std::string & path, bool append)
     return _impl->pipe.std_out.redirect_to_file(path, append, this->open_mode);
 }
 
-// Pipe stderr
-
 Process & Process::stderr_close()
 {
     _impl->pipe.std_err.close();
@@ -537,11 +527,9 @@ bool Process::stderr_to_file(const std::string & path, bool append)
     return _impl->pipe.std_err.redirect_to_file(path, append, this->open_mode);
 }
 
-// Execution
-
 #if defined(ENABLE_FORK)
 
-sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> & argv)
+Result<void> Process::_do_fork(const std::vector<const char *> & argv)
 {
     // the exec array is owned here: nothing may allocate in the forked child
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
@@ -582,6 +570,7 @@ sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> & arg
             dup_close(_impl->pipe.std_out.fd_write, STDOUT_FILENO);
             safe_close(_impl->pipe.std_out.fd_read);
         }
+
         if (_impl->pipe.std_err.action == Close)
             close(STDERR_FILENO);
         else
@@ -592,7 +581,7 @@ sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> & arg
         int status = 0;
         if (_fun_to_execute)
         {
-            internal::apply(_env);
+            SIHD_UNEXPECTED_LOG(internal::apply(_env));
             status = _fun_to_execute();
         }
         else
@@ -607,16 +596,16 @@ sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> & arg
 
 #else
 
-sihd::util::Result<void> Process::_do_fork(const std::vector<const char *> &)
+Result<void> Process::_do_fork(const std::vector<const char *> &)
 {
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no fork on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "no fork on this platform"));
 }
 
 #endif
 
 #if defined(ENABLE_SPAWN)
 
-sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> & argv)
+Result<void> Process::_do_spawn(const std::vector<const char *> & argv)
 {
     internal::ExecEnviron exec_env = internal::to_exec_environ(_env);
     pid_t pid;
@@ -641,6 +630,7 @@ sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> & ar
         add_dup_action(&actions, _impl->pipe.std_out.fd_write, STDOUT_FILENO);
         add_close_action(&actions, _impl->pipe.std_out.fd_read);
     }
+
     if (_impl->pipe.std_err.action == Close)
         add_close_action(&actions, STDERR_FILENO);
     else
@@ -664,20 +654,19 @@ sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> & ar
 
 #else
 
-sihd::util::Result<void> Process::_do_spawn(const std::vector<const char *> &)
+Result<void> Process::_do_spawn(const std::vector<const char *> &)
 {
-    return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_supported, "no spawn on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "no spawn on this platform"));
 }
 
 #endif
 
-sihd::util::Result<void> Process::_do_child_process(const std::vector<const char *> &)
+Result<void> Process::_do_child_process(const std::vector<const char *> &)
 {
-    return std::unexpected(
-        sihd::util::Error(sihd::util::ErrorCode::not_supported, "no child process on this platform"));
+    return std::unexpected(Error(ErrorCode::not_supported, "no child process on this platform"));
 }
 
-sihd::util::Result<void> Process::_do_execute(const std::vector<const char *> & argv)
+Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
     init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
@@ -689,20 +678,18 @@ sihd::util::Result<void> Process::_do_execute(const std::vector<const char *> & 
 #endif
 }
 
-sihd::util::Result<void> Process::execute()
+Result<void> Process::execute()
 {
     if (this->is_process_running() || _executing.exchange(true) == true)
     {
         _executing.store(false);
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process already running or executing"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "process already running or executing"));
     }
 
-    Defer d([this] { _executing.store(false); });
+    Defer defer([this] { _executing.store(false); });
 
     if (!_fun_to_execute && _argv.size() == 0)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "could not run process with no arguments"));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "could not run process with no arguments"));
 
     std::vector<const char *> c_argv;
     c_argv.reserve(_argv.size() + 1);
@@ -731,8 +718,6 @@ sihd::util::Result<void> Process::execute()
         return executed;
     return {};
 }
-
-// Linux only methods
 
 void Process::set_chroot(std::string_view path)
 {
@@ -794,16 +779,14 @@ bool Process::terminate()
     return this->is_process_running() == false;
 }
 
-sihd::util::Result<void> Process::kill(int sig)
+Result<void> Process::kill(int sig)
 {
     if (this->is_process_running() == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::not_initialized, "process is not running"));
+        return std::unexpected(Error(ErrorCode::not_initialized, "process is not running"));
     if (sig < 0)
         sig = SIGTERM;
     return signal::kill(this->pid(), sig);
 }
-
-// Run
 
 void Process::handle(Poll *poll)
 {
@@ -811,6 +794,7 @@ void Process::handle(Poll *poll)
     for (auto & event : events)
     {
         int fd = event.fd;
+
         if (fd == _impl->pipe.std_out.fd_read)
         {
             if (!event.readable || _impl->pipe.std_out.process_read_pipe() == false)
@@ -857,19 +841,17 @@ bool Process::on_stop()
     return ret;
 }
 
-// Check process
-
 bool Process::is_process_running() const
 {
     return _started.load();
 }
 
-sihd::util::Result<bool> Process::wait_no_hang()
+Result<bool> Process::wait_no_hang()
 {
     return this->wait(WEXITED | WNOHANG);
 }
 
-sihd::util::Result<bool> Process::wait(int options)
+Result<bool> Process::wait(int options)
 {
     if (this->is_process_running() == false)
         return false;
@@ -878,7 +860,7 @@ sihd::util::Result<bool> Process::wait(int options)
     const bool terminated = _impl->process_watcher.has_terminated();
     if (terminated)
     {
-        auto l = _waitable.guard();
+        auto guard = _waitable.guard();
         _started.store(false);
         _waitable.notify_all();
     }
@@ -895,67 +877,67 @@ bool Process::has_terminated() const
     return _impl->process_watcher.has_terminated();
 }
 
-sihd::util::Result<bool> Process::wait_exit(int options)
+Result<bool> Process::wait_exit(int options)
 {
     return this->wait(WEXITED | options);
 }
 
-sihd::util::Result<bool> Process::wait_stop(int options)
+Result<bool> Process::wait_stop(int options)
 {
     return this->wait(WSTOPPED | options);
 }
 
-sihd::util::Result<bool> Process::wait_continue(int options)
+Result<bool> Process::wait_continue(int options)
 {
     return this->wait(WCONTINUED | options);
 }
 
-sihd::util::Result<bool> Process::wait_any(int options)
+Result<bool> Process::wait_any(int options)
 {
     return this->wait(WEXITED | WSTOPPED | WCONTINUED | options);
 }
 
 bool Process::has_exited() const
 {
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return _impl->process_watcher.code == CLD_EXITED;
 }
 
 bool Process::has_core_dumped() const
 {
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return _impl->process_watcher.code == CLD_DUMPED;
 }
 
 bool Process::has_stopped_by_signal() const
 {
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return _impl->process_watcher.code == CLD_STOPPED;
 }
 
 bool Process::has_exited_by_signal() const
 {
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return _impl->process_watcher.code == CLD_KILLED;
 }
 
 bool Process::has_continued() const
 {
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return _impl->process_watcher.code == CLD_CONTINUED;
 }
 
 uint8_t Process::signal_exit_number() const
 {
     const bool cond = this->has_exited_by_signal();
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return cond ? _impl->process_watcher.status : -1;
 }
 
 uint8_t Process::signal_stop_number() const
 {
     const bool cond = this->has_stopped_by_signal();
-    std::lock_guard l(_impl->process_watcher.mutex);
+    std::lock_guard lock(_impl->process_watcher.mutex);
     return cond ? _impl->process_watcher.status : -1;
 }
 

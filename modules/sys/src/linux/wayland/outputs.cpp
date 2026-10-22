@@ -46,6 +46,7 @@ Outputs::Extents Outputs::extents() const
     {
         if (output.mode_width == 0 || output.mode_height == 0)
             continue;
+
         // The mode is in device pixels, the layout is logical.
         const int right = output.x + output.mode_width / output.scale;
         const int bottom = output.y + output.mode_height / output.scale;
@@ -65,6 +66,7 @@ Outputs::Extents Outputs::extents() const
             max_bottom = std::max(max_bottom, bottom);
         }
     }
+
     out.x = min_x;
     out.y = min_y;
     out.width = max_right - min_x;

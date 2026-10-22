@@ -14,33 +14,33 @@
 
 #include "test_helper.hpp"
 
-namespace
-{
-
-sihd::util::ArrByteView to_bytes(const char *str)
-{
-    return sihd::util::ArrByteView((const int8_t *)str, strlen(str));
-}
-
-sihd::util::ArrByteView to_bytes(const std::string & str)
-{
-    return sihd::util::ArrByteView((const int8_t *)str.data(), str.size());
-}
-
-} // namespace
-
 namespace test
 {
 SIHD_NEW_LOGGER("test");
 using namespace sihd::util;
 using namespace sihd::sys;
 
+namespace
+{
+
+ArrByteView to_bytes(const char *str)
+{
+    return ArrByteView((const int8_t *)str, strlen(str));
+}
+
+ArrByteView to_bytes(const std::string & str)
+{
+    return ArrByteView((const int8_t *)str.data(), str.size());
+}
+
+} // namespace
+
 class TestMessageQueue: public ::testing::Test
 {
     protected:
-        TestMessageQueue() { sihd::util::LoggerManager::stream(); }
+        TestMessageQueue() { LoggerManager::stream(); }
 
-        virtual ~TestMessageQueue() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestMessageQueue() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -85,7 +85,7 @@ TEST_F(TestMessageQueue, test_message_queue)
     else
     {
         ASSERT_FALSE(exists);
-        EXPECT_EQ(exists.error().code, sihd::util::ErrorCode::already_exists);
+        EXPECT_EQ(exists.error().code, ErrorCode::already_exists);
     }
 
     MessageQueue attached;
@@ -95,7 +95,7 @@ TEST_F(TestMessageQueue, test_message_queue)
     EXPECT_FALSE(mq.try_receive().has_value());
     auto none = mq.timed_receive(std::chrono::milliseconds(50));
     ASSERT_FALSE(none);
-    EXPECT_EQ(none.error().code, sihd::util::ErrorCode::timeout);
+    EXPECT_EQ(none.error().code, ErrorCode::timeout);
 
     // fifo across the two handles: posix is one kernel queue, windows one pipe direction each
     ASSERT_TRUE(attached.send(to_bytes("one")));
@@ -177,10 +177,10 @@ TEST_F(TestMessageQueue, test_message_queue_try_full)
     ASSERT_TRUE(mq.try_send(to_bytes("b")));
     auto full = mq.try_send(to_bytes("c"));
     ASSERT_FALSE(full);
-    EXPECT_EQ(full.error().code, sihd::util::ErrorCode::would_block);
+    EXPECT_EQ(full.error().code, ErrorCode::would_block);
     auto timed = mq.timed_send(to_bytes("d"), std::chrono::milliseconds(50));
     ASSERT_FALSE(timed);
-    EXPECT_EQ(timed.error().code, sihd::util::ErrorCode::timeout);
+    EXPECT_EQ(timed.error().code, ErrorCode::timeout);
 
     ASSERT_TRUE(mq.receive().has_value());
     ASSERT_TRUE(mq.try_send(to_bytes("e")));
@@ -197,7 +197,7 @@ TEST_F(TestMessageQueue, test_message_queue_nonblocking)
     ASSERT_TRUE(mq.set_nonblocking(true));
     auto empty = mq.receive();
     ASSERT_FALSE(empty);
-    EXPECT_EQ(empty.error().code, sihd::util::ErrorCode::would_block);
+    EXPECT_EQ(empty.error().code, ErrorCode::would_block);
 
     ASSERT_TRUE(peer.try_send(to_bytes("x")));
     auto msg = mq.receive();
@@ -207,7 +207,7 @@ TEST_F(TestMessageQueue, test_message_queue_nonblocking)
     ASSERT_TRUE(mq.set_nonblocking(false));
     auto none = mq.timed_receive(std::chrono::milliseconds(20));
     ASSERT_FALSE(none);
-    EXPECT_EQ(none.error().code, sihd::util::ErrorCode::timeout);
+    EXPECT_EQ(none.error().code, ErrorCode::timeout);
 }
 
 TEST_F(TestMessageQueue, test_message_queue_attributes)
@@ -255,7 +255,7 @@ TEST_F(TestMessageQueue, test_message_queue_unlink)
     EXPECT_FALSE(gone.unlink());
     auto reopened = gone.open(_prefix + "_unlink");
     ASSERT_FALSE(reopened);
-    EXPECT_EQ(reopened.error().code, sihd::util::ErrorCode::not_found);
+    EXPECT_EQ(reopened.error().code, ErrorCode::not_found);
 }
 
 TEST_F(TestMessageQueue, test_message_queue_process)

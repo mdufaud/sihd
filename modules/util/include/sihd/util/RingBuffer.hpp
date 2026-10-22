@@ -36,46 +36,46 @@ class RingBuffer
 
         size_t write(const T *data, size_t size)
         {
-            const size_t n = std::min(size, this->available());
-            if (n == 0)
+            const size_t count = std::min(size, this->available());
+            if (count == 0)
                 return 0;
             const size_t tail = (_head + _size) % this->capacity();
-            const size_t first = std::min(n, this->capacity() - tail);
+            const size_t first = std::min(count, this->capacity() - tail);
             std::copy_n(data, first, _buffer.data() + tail);
-            std::copy_n(data + first, n - first, _buffer.data());
-            _size += n;
+            std::copy_n(data + first, count - first, _buffer.data());
+            _size += count;
             _writable_span_size = 0;
-            return n;
+            return count;
         }
 
         size_t write(ArrayView<T> data) { return this->write(data.data(), data.size()); }
 
         size_t read(T *out, size_t size)
         {
-            const size_t n = this->_copy_out(out, size);
-            if (n == 0)
+            const size_t count = this->_copy_out(out, size);
+            if (count == 0)
                 return 0;
-            _head = (_head + n) % this->capacity();
-            _size -= n;
-            return n;
+            _head = (_head + count) % this->capacity();
+            _size -= count;
+            return count;
         }
 
         size_t peek(T *out, size_t size) const { return this->_copy_out(out, size); }
 
         size_t skip(size_t size)
         {
-            const size_t n = std::min(size, _size);
-            if (n == 0)
+            const size_t count = std::min(size, _size);
+            if (count == 0)
                 return 0;
-            _head = (_head + n) % this->capacity();
-            _size -= n;
-            return n;
+            _head = (_head + count) % this->capacity();
+            _size -= count;
+            return count;
         }
 
         ArrayView<T> read_span() const
         {
-            const size_t n = std::min(_size, this->capacity() - _head);
-            return ArrayView<T>(_buffer.data() + _head, n);
+            const size_t count = std::min(_size, this->capacity() - _head);
+            return ArrayView<T>(_buffer.data() + _head, count);
         }
 
         // fill write_span() then produce what was written
@@ -94,22 +94,22 @@ class RingBuffer
 
         size_t produce(size_t size)
         {
-            const size_t n = std::min(size, _writable_span_size);
-            _size += n;
+            const size_t count = std::min(size, _writable_span_size);
+            _size += count;
             _writable_span_size = 0;
-            return n;
+            return count;
         }
 
     private:
         size_t _copy_out(T *out, size_t size) const
         {
-            const size_t n = std::min(size, _size);
-            if (n == 0)
+            const size_t count = std::min(size, _size);
+            if (count == 0)
                 return 0;
-            const size_t first = std::min(n, this->capacity() - _head);
+            const size_t first = std::min(count, this->capacity() - _head);
             std::copy_n(_buffer.data() + _head, first, out);
-            std::copy_n(_buffer.data(), n - first, out + first);
-            return n;
+            std::copy_n(_buffer.data(), count - first, out + first);
+            return count;
         }
 
         Array<T> _buffer;

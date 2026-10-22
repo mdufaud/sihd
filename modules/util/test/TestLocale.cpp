@@ -58,7 +58,6 @@ TEST_F(TestLocale, test_locale_create_throws_on_invalid)
         GTEST_SKIP() << "emscripten/musl libc++ ships no locale data: std::locale(invalid) "
                         "silently yields the C locale instead of throwing";
     }
-    // Invalid locale should throw
     EXPECT_THROW(locale::create_locale("this_does_not_exist_XYZ.UTF-99"), std::runtime_error);
 }
 

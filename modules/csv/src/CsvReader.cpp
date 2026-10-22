@@ -6,8 +6,8 @@
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/str.hpp>
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum ErrorCode;
 
 namespace sihd::csv
 {
@@ -55,7 +55,7 @@ CsvReader::CsvReader(const std::string & path): CsvReader()
 
 CsvReader::~CsvReader() = default;
 
-sihd::util::Result<void> CsvReader::set_delimiter(int c)
+Result<void> CsvReader::set_delimiter(int c)
 {
     if (std::isprint(c) == 0)
         return std::unexpected(Error(invalid_argument, "delimiter {} is not a printable character", c));
@@ -64,7 +64,7 @@ sihd::util::Result<void> CsvReader::set_delimiter(int c)
     return {};
 }
 
-sihd::util::Result<void> CsvReader::set_commentary(int c)
+Result<void> CsvReader::set_commentary(int c)
 {
     if (std::isprint(c))
     {
@@ -84,7 +84,7 @@ void CsvReader::set_timestamp_format(std::string format)
     _timestamp_fmt = std::move(format);
 }
 
-sihd::util::Result<void> CsvReader::open(const std::string & path)
+Result<void> CsvReader::open(const std::string & path)
 {
     this->_reset_line();
     return _line_reader.open(path);
@@ -108,7 +108,7 @@ void CsvReader::_reset_line()
     _csv_cols.clear();
 }
 
-sihd::util::Result<bool> CsvReader::read_next()
+Result<bool> CsvReader::read_next()
 {
     this->_reset_line();
     if (!this->is_open())
@@ -123,7 +123,6 @@ sihd::util::Result<bool> CsvReader::read_next()
         ArrCharView view;
         _line_reader.get_read_data(view);
 
-        // always empty lines
         if (view.empty())
             continue;
 
@@ -131,18 +130,16 @@ sihd::util::Result<bool> CsvReader::read_next()
         const bool is_commentary = !searching_for_end_quote && view[0] == _comment;
         const bool is_unnecessary_spaces = !searching_for_end_quote && str::is_all_spaces(view);
 
-        // skip spaces or linefeed only if we are not searching for an end quote
         if (is_commentary || is_unnecessary_spaces)
             continue;
 
         _line.append(view.data(), view.size());
 
-        const bool number_of_quotes_are_odd = count_unescaped_quotes(view) % 2;
-        const bool quotes_are_even = searching_for_end_quote ? number_of_quotes_are_odd : !number_of_quotes_are_odd;
+        const bool odd_quotes = count_unescaped_quotes(view) % 2;
+        const bool quotes_are_even = searching_for_end_quote ? odd_quotes : !odd_quotes;
 
         if (quotes_are_even)
         {
-            // remove last linefeed
             if (!_line.empty())
                 _line.resize(_line.size() - 1);
             _has_data = true;
@@ -152,7 +149,7 @@ sihd::util::Result<bool> CsvReader::read_next()
     return false;
 }
 
-bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
+bool CsvReader::get_read_data(ArrCharView & view) const
 {
     if (_has_data == false)
         return false;
@@ -160,7 +157,7 @@ bool CsvReader::get_read_data(sihd::util::ArrCharView & view) const
     return true;
 }
 
-sihd::util::Result<Timestamp> CsvReader::get_read_timestamp() const
+Result<Timestamp> CsvReader::get_read_timestamp() const
 {
     if (_has_data == false)
         return std::unexpected(Error(not_initialized, "no data read"));

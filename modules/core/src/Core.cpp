@@ -5,11 +5,13 @@
 namespace sihd::core
 {
 
+using namespace sihd::util;
+
 SIHD_REGISTER_FACTORY(Core)
 
 SIHD_LOGGER;
 
-Core::Core(const std::string & name, sihd::util::Node *parent): sihd::core::Device(name, parent)
+Core::Core(const std::string & name, Node *parent): sihd::core::Device(name, parent)
 {
     _running = false;
     _is_reset = true;
@@ -21,6 +23,11 @@ Core::~Core()
         this->stop();
     if (_is_reset == false)
         this->reset();
+}
+
+bool Core::is_running() const
+{
+    return _running;
 }
 
 bool Core::on_init()

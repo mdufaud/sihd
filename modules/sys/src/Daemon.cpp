@@ -7,8 +7,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
-// run(), set_user()/set_group() account resolution live in src/linux|windows/Daemon.cpp
-
 namespace sihd::sys
 {
 
@@ -18,7 +16,7 @@ SIHD_REGISTER_FACTORY(Daemon)
 
 SIHD_LOGGER;
 
-Daemon::Daemon(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+Daemon::Daemon(const std::string & name, Node *parent): Named(name, parent)
 {
     _signals_handled = false;
 #if !defined(__SIHD_WINDOWS__)

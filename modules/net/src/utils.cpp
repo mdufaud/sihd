@@ -9,7 +9,7 @@ uint16_t checksum(uint16_t *addr, int len)
 {
     int nleft = len;
     uint32_t sum = 0;
-    uint16_t *w = addr;
+    uint16_t *words = addr;
     uint16_t answer = 0;
 
     /*
@@ -19,14 +19,14 @@ uint16_t checksum(uint16_t *addr, int len)
      */
     while (nleft > 1)
     {
-        sum += *w++;
+        sum += *words++;
         nleft -= 2;
     }
 
     /* 4mop ​​up an odd byte, if necessary */
     if (nleft == 1)
     {
-        *(unsigned char *)(&answer) = *(unsigned char *)w;
+        *(unsigned char *)(&answer) = *(unsigned char *)words;
         sum += answer;
     }
 

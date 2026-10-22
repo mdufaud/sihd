@@ -1,8 +1,7 @@
 #include <imgui.h>
 
 #include <ncursesw/ncurses.h>
-// ncurses defines `bool` as a macro (NCURSES_BOOL) on builds where the C++ builtin-bool probe
-// fails (e.g. musl cross) - undef it so it cannot poison the standard headers / imgui types
+// ncurses may define `bool` as a macro (musl cross): undef it before std/imgui headers
 #undef bool
 #include <sys/stat.h>
 
@@ -18,7 +17,10 @@ namespace sihd::imgui
 
 SIHD_LOGGER;
 
-static ImGuiKey _ncurses_key_to_imgui(int key)
+namespace
+{
+
+ImGuiKey _ncurses_key_to_imgui(int key)
 {
     switch (key)
     {
@@ -82,14 +84,15 @@ static ImGuiKey _ncurses_key_to_imgui(int key)
     }
 }
 
-// Emit Shift + arrow combo (new imgui API)
-static void _emit_shift_arrow(ImGuiIO & io, ImGuiKey arrow_key)
+void _emit_shift_arrow(ImGuiIO & io, ImGuiKey arrow_key)
 {
     io.AddKeyEvent(ImGuiKey_LeftShift, true);
     io.AddKeyEvent(arrow_key, true);
     io.AddKeyEvent(arrow_key, false);
     io.AddKeyEvent(ImGuiKey_LeftShift, false);
 }
+
+} // namespace
 
 ImguiBackendNcurses::ImguiBackendNcurses():
     _is_init(false),
@@ -116,8 +119,7 @@ bool ImguiBackendNcurses::init()
     if (_is_init)
         return true;
 
-    // vcpkg's ncurses compiles in a terminfo prefix pointing at its install dir, empty at runtime;
-    // without a user TERMINFO override, append the system terminfo dirs to TERMINFO_DIRS
+    // vcpkg's ncurses has a compiled-in terminfo prefix that is empty at runtime: add the system dirs
     if (!sihd::sys::env::get("TERMINFO").has_value())
     {
         static const char *candidates[] = {
@@ -153,22 +155,19 @@ bool ImguiBackendNcurses::init()
     keypad(stdscr, TRUE);
     nodelay(stdscr, TRUE);
     wtimeout(stdscr, 0);
-    set_escdelay(25); // ESC responds in 25ms instead of 1s
+    set_escdelay(25);
     curs_set(0);
     mouseinterval(0); // disable click-detection delay: critical for drag
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr);
-    // Enable all-motion mouse tracking (xterm mode 1003) so the terminal
-    // sends position events on every cell movement, enabling window drag.
+    // xterm mode 1003: report every cell movement, needed for window drag
     printf("\033[?1003h\n");
     fflush(stdout);
 
     ImGuiIO & io = ImGui::GetIO();
     io.BackendPlatformName = "imgui_impl_ncurses";
-    // Key repeat: imtui sets both to 50ms for snappy keyboard navigation
     io.KeyRepeatDelay = 0.050f;
     io.KeyRepeatRate = 0.050f;
-    // Apply the whole input queue every frame: mode-1003 motion floods would grow the deferred queue
-    // unbounded across frames; same-poll press+release is handled by the release-latch below
+    // apply the whole input queue every frame: mode-1003 motion floods would grow the deferred queue
     io.ConfigInputTrickleEventQueue = false;
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
@@ -196,8 +195,7 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     _mstate = ev.bstate;
     _mouse_seen = true;
 
-    // On release after a same-poll press, defer one poll (_pending_lrelease) so imgui sees the button
-    // down for a full NewFrame and registers the click; otherwise release immediately
+    // a release after a same-poll press is deferred one poll so imgui registers the click
     if (_mstate & BUTTON1_PRESSED)
     {
         pressed_l = true;
@@ -207,6 +205,7 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
             io.AddMouseButtonEvent(0, true);
         }
     }
+
     if (_mstate & BUTTON1_RELEASED)
     {
         if (pressed_l)
@@ -217,6 +216,7 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
             io.AddMouseButtonEvent(0, false);
         }
     }
+
     if (_mstate & BUTTON3_PRESSED)
     {
         pressed_r = true;
@@ -226,6 +226,7 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
             io.AddMouseButtonEvent(1, true);
         }
     }
+
     if (_mstate & BUTTON3_RELEASED)
     {
         if (pressed_r)
@@ -242,7 +243,6 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     if (_mstate & BUTTON5_PRESSED)
         io.AddMouseWheelEvent(0.0f, -1.0f);
 
-    // Emit Ctrl only when the modifier bit actually transitions.
     const bool new_ctrl = (_mstate & BUTTON_CTRL) != 0;
     if (new_ctrl != _ctrl_from_mouse)
     {
@@ -263,7 +263,6 @@ bool ImguiBackendNcurses::_process_key_event(int key, ImGuiIO & io)
         return false;
     }
 
-    // Shift+arrow keys
     if (key == KEY_SLEFT)
     {
         _emit_shift_arrow(io, ImGuiKey_LeftArrow);
@@ -305,7 +304,6 @@ bool ImguiBackendNcurses::_process_key_event(int key, ImGuiIO & io)
     if (key >= 0x20 && key < 0x7F)
         io.AddInputCharacter((unsigned int)key);
 
-    // Ctrl+A..Z combos (key==3 already handled above)
     if (key >= 1 && key <= 26 && key != 3 && imgui_key == ImGuiKey_None)
     {
         io.AddKeyEvent(ImGuiKey_LeftCtrl, true);
@@ -320,8 +318,7 @@ void ImguiBackendNcurses::poll()
 {
     ImGuiIO & io = ImGui::GetIO();
 
-    // Flush releases deferred from the previous poll: the down state has now been
-    // visible for a full frame, so the click was detected and we can release.
+    // releases deferred from the previous poll: the button was down for a full frame
     if (_pending_lrelease)
     {
         _pending_lrelease = false;
@@ -335,7 +332,6 @@ void ImguiBackendNcurses::poll()
         io.AddMouseButtonEvent(1, false);
     }
 
-    // Track press transitions within THIS poll so a same-poll release gets latched.
     bool pressed_l = false, pressed_r = false;
 
     while (true)
@@ -359,8 +355,7 @@ void ImguiBackendNcurses::poll()
             _should_close = true;
     }
 
-    // Coalesce all motion into a single position event per poll (mode-1003 can emit
-    // dozens per poll; trickle is off so only the last would matter anyway).
+    // mode-1003 emits dozens of motions per poll and only the last matters
     if (_mouse_seen)
         io.AddMousePosEvent((float)_mx, (float)_my);
     else
@@ -376,8 +371,7 @@ void ImguiBackendNcurses::new_frame()
     io.DeltaTime = (delta > 0.0f) ? delta : (1.0f / 60.0f);
     _last_time = _frame_start;
 
-    // Update display size every frame; on KEY_RESIZE ncurses already resized stdscr and the renderer
-    // redraws itself - do NOT clear() here, it erases stdscr and blanks the screen after a resize
+    // do NOT clear() on KEY_RESIZE: it erases stdscr and blanks the screen
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
     io.DisplaySize = {(float)sx, (float)sy};
@@ -398,7 +392,7 @@ void ImguiBackendNcurses::shutdown()
 {
     if (_is_init)
     {
-        printf("\033[?1003l\n"); // disable all-motion mouse tracking
+        printf("\033[?1003l\n");
         fflush(stdout);
         endwin();
         _is_init = false;

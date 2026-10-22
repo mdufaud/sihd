@@ -21,8 +21,8 @@ struct SimpleSource: public Observable<SimpleSource>
 class TestObserverWaiter: public ::testing::Test
 {
     protected:
-        TestObserverWaiter() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestObserverWaiter() { sihd::util::LoggerManager::clear_loggers(); }
+        TestObserverWaiter() { LoggerManager::stream(); }
+        virtual ~TestObserverWaiter() { LoggerManager::clear_loggers(); }
         virtual void SetUp() {}
         virtual void TearDown() {}
 };
@@ -32,13 +32,13 @@ TEST_F(TestObserverWaiter, test_observer_waiter_wait)
     SimpleSource src;
     ObserverWaiter<SimpleSource> waiter(&src);
 
-    std::thread t([&src] {
+    std::thread worker([&src] {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         src.notify();
     });
 
     waiter.wait(1);
-    t.join();
+    worker.join();
 
     EXPECT_EQ(waiter.notifications(), 1u);
     EXPECT_EQ(waiter.observing(), &src);
@@ -70,7 +70,7 @@ TEST_F(TestObserverWaiter, test_observer_waiter_wait_multiple)
     ObserverWaiter<SimpleSource> waiter(&src);
 
     constexpr int target = 5;
-    std::thread t([&src] {
+    std::thread worker([&src] {
         for (int i = 0; i < target; ++i)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
@@ -79,7 +79,7 @@ TEST_F(TestObserverWaiter, test_observer_waiter_wait_multiple)
     });
 
     waiter.wait(target);
-    t.join();
+    worker.join();
 
     EXPECT_EQ(waiter.notifications(), static_cast<uint32_t>(target));
 }
@@ -97,7 +97,6 @@ TEST_F(TestObserverWaiter, test_observer_waiter_clear)
     EXPECT_EQ(waiter.observing(), nullptr);
     EXPECT_EQ(waiter.notifications(), 0u);
 
-    // Source should not crash when notified after clear
     src.notify();
     EXPECT_EQ(waiter.notifications(), 0u);
 }
@@ -116,15 +115,14 @@ TEST_F(TestObserverWaiter, test_observer_waiter_observe_new)
     EXPECT_EQ(waiter.observing(), &src2);
     EXPECT_EQ(waiter.notifications(), 0u);
 
-    std::thread t([&src2] {
+    std::thread worker([&src2] {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         src2.notify();
     });
     waiter.wait(1);
-    t.join();
+    worker.join();
 
     EXPECT_EQ(waiter.notifications(), 1u);
-    // src1 no longer notifies waiter
     src1.notify();
     EXPECT_EQ(waiter.notifications(), 1u);
 }

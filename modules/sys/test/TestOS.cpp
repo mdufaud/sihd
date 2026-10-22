@@ -32,9 +32,9 @@ using namespace sihd::sys;
 class TestOs: public ::testing::Test
 {
     protected:
-        TestOs() { sihd::util::LoggerManager::stream(); }
+        TestOs() { LoggerManager::stream(); }
 
-        virtual ~TestOs() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestOs() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -55,7 +55,6 @@ TEST_F(TestOs, test_os_resources)
 {
     auto max_fds = sihd::sys::os::max_fds();
     ASSERT_TRUE(max_fds.has_value());
-    // in bytes
     auto peak = sihd::sys::os::peak_rss();
     ASSERT_TRUE(peak.has_value());
     size_t current = sihd::sys::os::current_rss();
@@ -84,10 +83,10 @@ TEST_F(TestOs, test_os_exists_in_path)
 
 TEST_F(TestOs, test_os_boot_time)
 {
-    sihd::util::SystemClock system_clock;
-    const sihd::util::Timestamp boot = sihd::sys::os::boot_time();
-    const sihd::util::Timestamp now(system_clock.now());
-    EXPECT_GT(boot, sihd::util::Timestamp(0));
+    SystemClock system_clock;
+    const Timestamp boot = sihd::sys::os::boot_time();
+    const Timestamp now(system_clock.now());
+    EXPECT_GT(boot, Timestamp(0));
     EXPECT_LT(boot, now);
 }
 

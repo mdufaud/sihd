@@ -34,13 +34,13 @@ class CsvWriter: public sihd::util::IWriter
 
         sihd::util::Result<void> new_row();
 
-        int delimiter() const { return _delimiter; }
-        int comment() const { return _comment; }
-        size_t current_row() const { return _row; }
-        size_t current_col() const { return _col; }
-        size_t max_col() const { return _max_col; }
+        int delimiter() const;
+        int comment() const;
+        size_t current_row() const;
+        size_t current_col() const;
+        size_t max_col() const;
 
-        const sihd::sys::File & file() const { return _file; };
+        const sihd::sys::File & file() const;
 
     protected:
 

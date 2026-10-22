@@ -13,9 +13,9 @@ using namespace sihd::util;
 class TestTimestamp: public ::testing::Test
 {
     protected:
-        TestTimestamp() { sihd::util::LoggerManager::stream(); }
+        TestTimestamp() { LoggerManager::stream(); }
 
-        virtual ~TestTimestamp() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestTimestamp() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -144,10 +144,8 @@ TEST_F(TestTimestamp, test_timestamp)
     std::chrono::seconds s = timestamp;
     EXPECT_EQ(s.count(), 2);
 
-    // auto converted to time_t
     EXPECT_EQ(timestamp, time::seconds(2));
 
-    // comparisons
     EXPECT_EQ(timestamp, Timestamp(timestamp));
     EXPECT_EQ(timestamp, timestamp);
     EXPECT_EQ(timestamp, timestamp.get());
@@ -156,7 +154,6 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_GT(timestamp, Timestamp(timestamp - 1));
     EXPECT_GT(timestamp, timestamp - 1);
 
-    // operations
     timestamp += time::seconds(1);
     timestamp += std::chrono::seconds(1);
     EXPECT_EQ(timestamp - std::chrono::seconds(1), std::chrono::seconds(3));
@@ -169,25 +166,21 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(timestamp.hours(), 0);
     EXPECT_EQ(timestamp.days(), 0);
 
-    // format
     SIHD_LOG(debug, "Time offset");
     SIHD_LOG(debug, "{}", timestamp.timeoffset_str());
     SIHD_LOG(debug, "{}", timestamp.localtimeoffset_str());
 
-    // test conversion
     auto fun = [](std::chrono::seconds sec) {
         return sec.count();
     };
     EXPECT_EQ(fun(timestamp), 4);
 
-    // convert with clock
     std::chrono::system_clock clock;
 
     auto timepoint = clock.now();
     Timestamp tclock = Timestamp(timepoint);
     EXPECT_EQ(tclock, timepoint.time_since_epoch());
 
-    // calendar and clocktime
     SIHD_LOG(debug, "From clocktime - flat time");
     Timestamp ts({
         .hour = 10,
@@ -237,7 +230,6 @@ TEST_F(TestTimestamp, test_timestamp)
     EXPECT_EQ(clo.second, 1);
     SIHD_LOG(debug, "Should be year=2022 mon=10 day=1 hour=10 min=5 sec=1: {}", ts.local_str());
 
-    // interval
     ts = Timestamp({
         .hour = 10,
         .minute = 5,

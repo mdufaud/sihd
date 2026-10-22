@@ -36,10 +36,8 @@ class LuaSysApi
                 // Called from Process reader thread - thread-safe
                 void operator()(std::string_view data);
 
-                // Called from Lua thread to process queued data
                 void flush();
 
-                // Check if there's pending data
                 bool has_pending() const;
 
             private:

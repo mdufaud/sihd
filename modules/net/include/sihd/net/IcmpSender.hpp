@@ -57,16 +57,14 @@ class IcmpSender: public sihd::util::Named,
         sihd::util::Result<void> send_to(const IpAddr & addr);
 
         bool set_poll_timeout(int milliseconds);
-        // poll for x milliseconds - returns true if socket is read
         bool poll(int milliseconds);
-        // poll once with configured timeout
         bool poll();
 
         // in ms
-        int poll_timeout() { return _poll.timeout(); }
-        bool socket_opened() { return _socket.is_open(); }
-        const Socket & socket() const { return _socket; }
-        const IcmpResponse & response() const { return _icmp_response; }
+        int poll_timeout();
+        bool socket_opened();
+        const Socket & socket() const;
+        const IcmpResponse & response() const;
 
     protected:
         void handle(sihd::sys::Poll *poll) override;
@@ -99,7 +97,6 @@ class IcmpSender: public sihd::util::Named,
 
         IcmpResponse _icmp_response;
 
-        // Configuration stored internall
         bool _config_applied;
         bool _echo_mode;
         int _type;

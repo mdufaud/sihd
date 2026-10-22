@@ -16,8 +16,7 @@ constexpr bool supported = true;
 constexpr bool supported = false;
 #endif
 
-// One physical display of the virtual desktop. x, y, width and height are
-// logical desktop units; on X11 they are the raw pixels.
+// One physical display; x, y, width and height are logical desktop units (raw pixels on X11)
 struct Monitor
 {
         std::string name;
@@ -36,7 +35,6 @@ sihd::util::Result<std::vector<Monitor>> monitors();
 
 sihd::util::Result<Monitor> primary();
 
-// The monitor holding the desktop point, not_found when the point is off screen.
 sihd::util::Result<Monitor> containing(int x, int y);
 
 } // namespace sihd::sys::screen

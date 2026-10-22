@@ -14,27 +14,24 @@ AChannelContainer::AChannelContainer(const std::string & name, Node *parent): No
 
 AChannelContainer::~AChannelContainer() = default;
 
-sihd::util::Result<Channel *> AChannelContainer::find_channel(const std::string & path)
+Result<Channel *> AChannelContainer::find_channel(const std::string & path)
 {
-    Channel *c = this->find<Channel>(path);
-    if (c == nullptr)
+    Channel *channel = this->find<Channel>(path);
+    if (channel == nullptr)
         return std::unexpected(Error(not_found, "no such channel '{}' in '{}'", path, this->full_name()));
-    return c;
+    return channel;
 }
 
-sihd::util::Result<Channel *> AChannelContainer::get_channel(const std::string & name)
+Result<Channel *> AChannelContainer::get_channel(const std::string & name)
 {
     Named *child = this->get_child(name);
-    Channel *c = child != nullptr ? dynamic_cast<Channel *>(child) : nullptr;
-    if (c == nullptr)
+    Channel *channel = child != nullptr ? dynamic_cast<Channel *>(child) : nullptr;
+    if (channel == nullptr)
         return std::unexpected(Error(not_found, "no such channel '{}' in '{}'", name, this->full_name()));
-    return c;
+    return channel;
 }
 
-Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
-                                                 sihd::util::Type type,
-                                                 size_t size,
-                                                 bool check_match)
+Channel *AChannelContainer::add_unlinked_channel(const std::string & name, Type type, size_t size, bool check_match)
 {
     if (this->is_link(name))
     {
@@ -46,15 +43,15 @@ Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
 }
 
 Channel *AChannelContainer::add_unlinked_channel(const std::string & name,
-                                                 std::string_view type,
+                                                 std::string_view type_str,
                                                  size_t size,
                                                  bool check_match)
 {
-    return this->add_unlinked_channel(name, sihd::util::type::from_str(type), size, check_match);
+    return this->add_unlinked_channel(name, type::from_str(type_str), size, check_match);
 }
 
 Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & name,
-                                                           sihd::util::Type type,
+                                                           Type type,
                                                            size_t size,
                                                            size_t capacity,
                                                            bool check_match)
@@ -69,18 +66,18 @@ Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & n
 }
 
 Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & name,
-                                                           std::string_view type,
+                                                           std::string_view type_str,
                                                            size_t size,
                                                            size_t capacity,
                                                            bool check_match)
 {
-    return this->add_unlinked_channel_resizable(name, sihd::util::type::from_str(type), size, capacity, check_match);
+    return this->add_unlinked_channel_resizable(name, type::from_str(type_str), size, capacity, check_match);
 }
 
-Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Type type, size_t size)
+Channel *AChannelContainer::add_channel(const std::string & name, Type type, size_t size)
 {
-    Channel *c = new Channel(name, type, size);
-    auto added = this->add_child(c, true);
+    Channel *channel = new Channel(name, type, size);
+    auto added = this->add_child(channel, true);
     if (added.has_value() == false)
     {
         SIHD_LOG(error,
@@ -88,36 +85,33 @@ Channel *AChannelContainer::add_channel(const std::string & name, sihd::util::Ty
                  this->full_name(),
                  name,
                  added.error().message);
-        delete c;
+        delete channel;
         return nullptr;
     }
-    return c;
+    return channel;
 }
 
-Channel *AChannelContainer::add_channel(const std::string & name, std::string_view type, size_t size)
+Channel *AChannelContainer::add_channel(const std::string & name, std::string_view type_str, size_t size)
 {
-    return this->add_channel(name, sihd::util::type::from_str(type), size);
+    return this->add_channel(name, type::from_str(type_str), size);
 }
 
-Channel *AChannelContainer::add_channel_resizable(const std::string & name,
-                                                  sihd::util::Type type,
-                                                  size_t size,
-                                                  size_t capacity)
+Channel *AChannelContainer::add_channel_resizable(const std::string & name, Type type, size_t size, size_t capacity)
 {
-    Channel *c = this->add_channel(name, type, size);
-    if (c == nullptr)
+    Channel *channel = this->add_channel(name, type, size);
+    if (channel == nullptr)
         return nullptr;
-    c->reserve(capacity);
-    c->set_resizable(true);
-    return c;
+    channel->reserve(capacity);
+    channel->set_resizable(true);
+    return channel;
 }
 
 Channel *AChannelContainer::add_channel_resizable(const std::string & name,
-                                                  std::string_view type,
+                                                  std::string_view type_str,
                                                   size_t size,
                                                   size_t capacity)
 {
-    return this->add_channel_resizable(name, sihd::util::type::from_str(type), size, capacity);
+    return this->add_channel_resizable(name, type::from_str(type_str), size, capacity);
 }
 
 bool AChannelContainer::on_check_link(const std::string & name, Named *child)
@@ -141,16 +135,18 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
                  chan->resizable());
         ret = false;
     }
+
     if (conf.match && conf.type != chan->array()->data_type())
     {
         SIHD_LOG(error,
                  "ChannelContainer: '{}' channel link size not same type '{}': '{}' != '{}'",
                  this->full_name(),
                  name,
-                 sihd::util::type::str(conf.type),
+                 type::str(conf.type),
                  chan->array()->data_type_str());
         ret = false;
     }
+
     if (conf.match && conf.size != chan->array()->size())
     {
         SIHD_LOG(error,
@@ -164,21 +160,21 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
     return ret;
 }
 
-sihd::util::Result<void> AChannelContainer::observe_channel(const std::string & channel_name)
+Result<void> AChannelContainer::observe_channel(const std::string & channel_name)
 {
-    auto c = this->get_channel(channel_name);
-    SIHD_UNEXPECTED_RETURN(c);
-    this->observe_channel(*c);
+    auto channel = this->get_channel(channel_name);
+    SIHD_UNEXPECTED_RETURN(channel);
+    this->observe_channel(*channel);
     return {};
 }
 
-bool AChannelContainer::observe_channel(Channel *c)
+bool AChannelContainer::observe_channel(Channel *channel)
 {
-    if (c != nullptr)
+    if (channel != nullptr)
     {
         // false if already added
-        if (c->add_observer(this))
-            _observed_channels.push_back(c);
+        if (channel->add_observer(this))
+            _observed_channels.push_back(channel);
         return true;
     }
     return false;
@@ -186,9 +182,9 @@ bool AChannelContainer::observe_channel(Channel *c)
 
 void AChannelContainer::remove_channels_observation()
 {
-    for (Channel *c : _observed_channels)
+    for (Channel *channel : _observed_channels)
     {
-        c->remove_observer(this);
+        channel->remove_observer(this);
     }
     _observed_channels.clear();
 }

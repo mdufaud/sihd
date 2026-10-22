@@ -10,9 +10,9 @@ using namespace sihd::util;
 class TestNode: public ::testing::Test
 {
     protected:
-        TestNode() { sihd::util::LoggerManager::stream(); }
+        TestNode() { LoggerManager::stream(); }
 
-        virtual ~TestNode() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNode() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -39,7 +39,6 @@ TEST_F(TestNode, test_node_tree)
 
     SIHD_COUT("{}\n", root.tree_str());
 
-    // Parent - child
     auto [child1, child2] = root.find_all("child1", "child2");
 
     EXPECT_NE(child2, nullptr);
@@ -52,11 +51,9 @@ TEST_F(TestNode, test_node_tree)
     EXPECT_EQ(parent->parent(), &root);
     EXPECT_EQ(child1->root(), &root);
 
-    // Node casting
     EXPECT_EQ(dynamic_cast<Node *>(root.get_child("parent")), parent);
     EXPECT_EQ(dynamic_cast<Node *>(child3), nullptr);
 
-    // Find
     Named *found = root.find("parent.cousin1");
     ASSERT_NE(found, nullptr);
     EXPECT_EQ(found->name(), "cousin1");
@@ -67,9 +64,7 @@ TEST_F(TestNode, test_node_tree)
     EXPECT_EQ(&root, child3->find(".."));
     EXPECT_EQ(&root, child3->find<Node>(".."));
 
-    // Root
     EXPECT_EQ(parent->root(), &root);
-    // From root
     EXPECT_EQ(cousin3, parent->find("/parent.cousin3"));
     EXPECT_EQ(cousin3, root.find("parent.cousin3"));
 }
@@ -171,7 +166,6 @@ TEST_F(TestNode, test_node_ownership)
 
     root.set_child_ownership(owned, false);
     EXPECT_FALSE(root.has_ownership(owned));
-    // cleanup manually since ownership was released
     delete owned;
 }
 

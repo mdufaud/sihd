@@ -14,6 +14,8 @@ namespace sihd::http
 
 SIHD_LOGGER;
 
+using namespace sihd::util;
+
 namespace
 {
 constexpr size_t stream_chunk_size = 64 * 1024;
@@ -60,7 +62,7 @@ bool HttpResponse::set_file_content(std::string_view path)
 
     this->set_content_type_from_extension(sihd::sys::fs::extension(path));
     _http_header.set_content_length(*size);
-    this->set_stream_provider([file = std::move(file)](sihd::util::ArrByte & chunk) mutable {
+    this->set_stream_provider([file = std::move(file)](ArrByte & chunk) mutable {
         chunk.resize(stream_chunk_size);
         const auto read = file.read(chunk.data(), chunk.size());
         if (!read)
@@ -81,7 +83,7 @@ bool HttpResponse::set_plain_content(std::string_view str)
     return !SIHD_UNEXPECTED_LOG(this->set_content(str));
 }
 
-bool HttpResponse::set_byte_content(sihd::util::ArrByteView data)
+bool HttpResponse::set_byte_content(ArrByteView data)
 {
     this->_set_mime_type_if_not_set(MimeTypes::MIME_APPLICATION_OCTET);
     return !SIHD_UNEXPECTED_LOG(this->set_content(data));
@@ -92,12 +94,11 @@ void HttpResponse::set_status(uint32_t status)
     _status = status;
 }
 
-sihd::util::Result<void> HttpResponse::set_content(sihd::util::ArrCharView data)
+Result<void> HttpResponse::set_content(ArrCharView data)
 {
     if (_array.resize(data.byte_size()) == false)
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::out_of_memory,
-                                                 "could not resize content to {} bytes",
-                                                 data.byte_size()));
+        return std::unexpected(
+            Error(ErrorCode::out_of_memory, "could not resize content to {} bytes", data.byte_size()));
     _array.copy_from_bytes(data.buf(), data.byte_size());
     return {};
 }
@@ -124,10 +125,8 @@ void HttpResponse::set_cookie(std::string_view name, std::string_view value, std
     _cookies.emplace_back(std::move(cookie_str));
 }
 
-sihd::util::Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
+Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
 {
-    using namespace sihd::util;
-
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
         return std::unexpected(Error(invalid_argument, "response has no header separator"));
@@ -177,8 +176,6 @@ sihd::util::Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
 
 std::string HttpResponse::to_string() const
 {
-    using namespace sihd::util;
-
     std::string result;
     result += "HTTP/1.1 ";
     result += std::to_string(_status);
@@ -210,6 +207,41 @@ std::string HttpResponse::to_string() const
         result.append(reinterpret_cast<const char *>(_array.buf()), _array.size());
 
     return result;
+}
+
+bool HttpResponse::is_streaming() const
+{
+    return _stream_provider != nullptr;
+}
+
+HttpResponse::StreamProvider & HttpResponse::stream_provider()
+{
+    return _stream_provider;
+}
+
+uint32_t HttpResponse::status() const
+{
+    return _status;
+}
+
+HttpHeader & HttpResponse::http_header()
+{
+    return _http_header;
+}
+
+const HttpHeader & HttpResponse::http_header() const
+{
+    return _http_header;
+}
+
+const std::vector<std::string> & HttpResponse::set_cookie_headers() const
+{
+    return _cookies;
+}
+
+const ArrByte & HttpResponse::content() const
+{
+    return _array;
 }
 
 } // namespace sihd::http

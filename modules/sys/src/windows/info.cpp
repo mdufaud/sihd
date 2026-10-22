@@ -50,8 +50,7 @@ bool memory_status(MEMORYSTATUSEX & status)
     return GlobalMemoryStatusEx(&status) != 0;
 }
 
-// same layout as RTL_OSVERSIONINFOW, redefined to not depend on winternl.h's
-// (possibly absent) definition
+// same layout as RTL_OSVERSIONINFOW, redefined as winternl.h's definition may be absent
 struct NtOsVersionInfo
 {
         ULONG size;
@@ -104,7 +103,6 @@ std::string registry_string(const char *key_path, const char *value_name)
     return ret;
 }
 
-// max is false for the current frequency, true for the max one
 std::optional<uint64_t> power_info_mhz(bool max)
 {
     void *ptr = internal::nt_dll_symbol("powrprof", "CallNtPowerInformation");
@@ -114,7 +112,6 @@ std::optional<uint64_t> power_info_mhz(bool max)
     const size_t count = cpu_count();
     if (count == 0)
         return std::nullopt;
-    // ProcessorInformation
     std::vector<ProcessorPower> infos(count);
     if (call(11, nullptr, 0, infos.data(), (ULONG)(infos.size() * sizeof(ProcessorPower))) != 0)
         return std::nullopt;
@@ -233,6 +230,7 @@ std::vector<CpuTimes> per_core_cpu_times()
     const auto query = (NtQuerySystemInformation_t)ptr;
     ULONG size = 0;
     query(SystemProcessorPerformanceInformation, nullptr, 0, &size);
+
     if (size < sizeof(ProcessorPerformance))
         return ret;
     std::vector<ProcessorPerformance> infos(size / sizeof(ProcessorPerformance));
@@ -276,6 +274,7 @@ OsInfo os_info()
     {
         NtOsVersionInfo version {};
         version.size = sizeof(version);
+
         if (((RtlGetVersion_t)ptr)(&version) == 0)
         {
             build = version.build;
@@ -344,8 +343,7 @@ std::array<double, 3> load_average()
 HardwareIdentity hardware_identity()
 {
     HardwareIdentity id;
-    // 'RSMB' firmware table: 8 bytes RawSmbiosData header (method, major, minor,
-    // revision, length) then the SMBIOS structures
+    // 'RSMB' table: 8-byte RawSmbiosData header (method, major, minor, revision, length), then SMBIOS structures
     const DWORD signature = 0x52534D42; // 'RSMB' as a multi-character constant trips -Wmultichar
     const DWORD size = GetSystemFirmwareTable(signature, 0, nullptr, 0);
     if (size < 8)
@@ -353,36 +351,38 @@ HardwareIdentity hardware_identity()
     std::vector<char> buffer(size);
     if (GetSystemFirmwareTable(signature, 0, buffer.data(), size) < size)
         return id;
+
     uint32_t table_size = 0;
     std::memcpy(&table_size, buffer.data() + 4, 4);
     const uint8_t *data = (const uint8_t *)buffer.data() + 8;
     const uint8_t *end = data + std::min<uint32_t>(table_size, size - 8);
     std::string sys_vendor, sys_model, sys_serial;
     std::string board_vendor, board_model, board_serial;
-    const uint8_t *p = data;
-    while (p + 4 <= end)
+    const uint8_t *record = data;
+
+    while (record + 4 <= end)
     {
-        const uint8_t type = p[0];
-        const uint8_t formatted_len = p[1];
-        if (formatted_len < 4 || p + formatted_len > end)
+        const uint8_t type = record[0];
+        const uint8_t formatted_len = record[1];
+        if (formatted_len < 4 || record + formatted_len > end)
             break;
-        // string indices 0x04 manufacturer, 0x05 product, 0x07 serial are
-        // shared by System Information (1) and Base Board (2)
+        // string indices 0x04 manufacturer, 0x05 product, 0x07 serial are shared by types 1 and 2
         if ((type == 1 || type == 2) && formatted_len >= 8)
         {
-            const char *strings = (const char *)p + formatted_len;
+            const char *strings = (const char *)record + formatted_len;
             std::string & vendor = type == 1 ? sys_vendor : board_vendor;
             std::string & model = type == 1 ? sys_model : board_model;
             std::string & serial = type == 1 ? sys_serial : board_serial;
-            vendor = smb_string(strings, (const char *)end, p[0x04]);
-            model = smb_string(strings, (const char *)end, p[0x05]);
-            serial = smb_string(strings, (const char *)end, p[0x07]);
+
+            vendor = smb_string(strings, (const char *)end, record[0x04]);
+            model = smb_string(strings, (const char *)end, record[0x05]);
+            serial = smb_string(strings, (const char *)end, record[0x07]);
         }
         // skip the double-NUL terminated string table
-        const uint8_t *q = p + formatted_len;
-        while (q + 1 < end && !(q[0] == 0 && q[1] == 0))
-            ++q;
-        p = q + 2;
+        const uint8_t *cursor = record + formatted_len;
+        while (cursor + 1 < end && !(cursor[0] == 0 && cursor[1] == 0))
+            ++cursor;
+        record = cursor + 2;
     }
     id.vendor = internal::dmi_identity_field(sys_vendor, board_vendor);
     id.model = internal::dmi_identity_field(sys_model, board_model);

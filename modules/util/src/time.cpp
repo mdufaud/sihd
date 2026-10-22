@@ -133,12 +133,11 @@ std::string get_timezone_name()
     else
         return "";
 
-    // Convert wide string to UTF-8 using Windows API (std::wstring_convert is deprecated)
     int size = WideCharToMultiByte(CP_UTF8, 0, wname, -1, nullptr, 0, nullptr, nullptr);
     if (size <= 0)
         return "";
 
-    std::string result(size - 1, '\0'); // size includes null terminator
+    std::string result(size - 1, '\0');
     WideCharToMultiByte(CP_UTF8, 0, wname, -1, &result[0], size, nullptr, nullptr);
     return result;
 #else
@@ -257,8 +256,7 @@ struct tm to_tm(UnixTime nano, bool localtime)
     if (sec < 0)
         throw std::out_of_range("local calendar is unavailable before 1970 on Windows");
     static std::mutex unsafe_c_mutex;
-    std::lock_guard l(unsafe_c_mutex);
-    // make a copy
+    std::lock_guard lock(unsafe_c_mutex);
     const struct tm *result = ::localtime(&sec);
     if (result == nullptr)
         throw std::out_of_range("local calendar is outside the platform range");

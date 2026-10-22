@@ -1,10 +1,8 @@
 #include <sihd/imgui/ImguiBackendWin32.hpp>
 #include <sihd/util/Logger.hpp>
 
-// Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Win32 message handler
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     sihd::imgui::ImguiBackendWin32 *backend_ptr = (sihd::imgui::ImguiBackendWin32 *)GetWindowLongPtr(hWnd,
@@ -36,6 +34,7 @@ bool ImguiBackendWin32::init_window(const std::string & name, size_t width, size
     }
     _close = false;
     _is_init = false;
+
     _win_cls.cbSize = sizeof(WNDCLASSEX);
     _win_cls.style = CS_CLASSDC;
     _win_cls.lpfnWndProc = WndProc;
@@ -48,6 +47,7 @@ bool ImguiBackendWin32::init_window(const std::string & name, size_t width, size
     _win_cls.lpszMenuName = NULL;
     _win_cls.lpszClassName = _T("sihd-imgui-backend-win32");
     _win_cls.hIconSm = NULL;
+
     ::RegisterClassEx(&_win_cls);
     _window = ::CreateWindow(_win_cls.lpszClassName,
                              name.c_str(),
@@ -137,6 +137,11 @@ bool ImguiBackendWin32::should_close()
 void ImguiBackendWin32::pre_render() {}
 
 void ImguiBackendWin32::post_render() {}
+
+HWND ImguiBackendWin32::window()
+{
+    return _window;
+}
 
 void ImguiBackendWin32::shutdown()
 {

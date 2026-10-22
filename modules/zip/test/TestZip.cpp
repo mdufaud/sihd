@@ -22,9 +22,9 @@ using namespace sihd::sys;
 class TestZip: public ::testing::Test
 {
     protected:
-        TestZip() { sihd::util::LoggerManager::stream(); }
+        TestZip() { LoggerManager::stream(); }
 
-        virtual ~TestZip() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestZip() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -78,7 +78,6 @@ TEST_F(TestZip, test_list_entries)
     auto entries = sihd::zip::list_entries(archive_path);
     EXPECT_FALSE(entries.empty());
 
-    // check that known entries are present
     bool has_dir = false;
     bool has_file1 = false;
     bool has_file2 = false;

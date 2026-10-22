@@ -71,8 +71,8 @@ TEST_F(TestStrConfiguration, test_strconf_empty)
 TEST_F(TestStrConfiguration, test_strconf_roundtrip)
 {
     StrConfiguration conf("a=1;b=2");
-    std::string s = conf.str();
-    StrConfiguration conf2(s);
+    std::string text = conf.str();
+    StrConfiguration conf2(text);
     EXPECT_EQ(conf2.get("a"), "1");
     EXPECT_EQ(conf2.get("b"), "2");
 }

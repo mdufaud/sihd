@@ -58,7 +58,6 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
     LuaCoreApi::load(_vm);
     LuaHttpApi::load_base(_vm);
 
-    // the lua script builds an HttpServer with a lua route handler on port 3021
     this->do_script("test/http/lua/test_server.lua");
 
     luabridge::LuaRef server_ref = luabridge::getGlobal(_vm.lua_state(), "server");
@@ -76,13 +75,12 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
 
     RequestOptions opt;
     opt.proxy = "";
-    opt.timeout = sihd::util::Duration(sihd::util::time::sec(5));
+    opt.timeout = Duration(time::sec(5));
     auto resp = sihd::http::post("localhost:3021/api/compute", "payload", opt);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), 200u);
     EXPECT_EQ(resp->content().cpp_str(), "from-lua:payload");
 
-    // a lua handler reads a multipart body through the request bindings
     Multipart form;
     form.add_field("field", "lua-multipart-value");
     opt.multipart = form;

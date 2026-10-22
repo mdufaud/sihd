@@ -10,12 +10,13 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::net;
+using namespace sihd::util;
 class TestNetInterface: public ::testing::Test
 {
     protected:
-        TestNetInterface() { sihd::util::LoggerManager::stream(); }
+        TestNetInterface() { LoggerManager::stream(); }
 
-        virtual ~TestNetInterface() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestNetInterface() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -27,7 +28,6 @@ TEST_F(TestNetInterface, test_netinterface)
     auto opt_interfaces = NetInterface::get_all_interfaces();
     ASSERT_TRUE(opt_interfaces.has_value());
     ASSERT_FALSE(opt_interfaces->empty());
-    // loopback should be here
     ASSERT_TRUE(opt_interfaces->find("lo") != opt_interfaces->end());
 
     for (const auto & [name, netif] : *opt_interfaces)
@@ -51,7 +51,9 @@ TEST_F(TestNetInterface, test_netinterface)
             fmt::print(" supports_multicast");
         if (netif.loopback())
             fmt::print(" loopback");
+
         fmt::printf("\n");
+
         if (netif.addr4().has_ip())
         {
             fmt::print("  IPV4:\n");

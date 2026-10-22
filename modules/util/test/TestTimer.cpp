@@ -25,7 +25,7 @@ TEST_F(TestTimer, test_timer_fires)
     std::atomic<bool> fired {false};
 
     {
-        Timer t([&fired] { fired = true; }, std::chrono::milliseconds(20));
+        Timer timer([&fired] { fired = true; }, std::chrono::milliseconds(20));
         std::this_thread::sleep_for(std::chrono::milliseconds(60));
     }
 
@@ -37,8 +37,8 @@ TEST_F(TestTimer, test_timer_cancel)
     std::atomic<bool> fired {false};
 
     {
-        Timer t([&fired] { fired = true; }, std::chrono::milliseconds(200));
-        t.cancel();
+        Timer timer([&fired] { fired = true; }, std::chrono::milliseconds(200));
+        timer.cancel();
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -50,8 +50,7 @@ TEST_F(TestTimer, test_timer_destructor_cancels)
     std::atomic<bool> fired {false};
 
     {
-        Timer t([&fired] { fired = true; }, std::chrono::milliseconds(100));
-        // destroy before timeout → implicit cancel
+        Timer timer([&fired] { fired = true; }, std::chrono::milliseconds(100));
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
@@ -64,7 +63,7 @@ TEST_F(TestTimer, test_timer_throwing_callback)
     std::future<void> fired_future = fired.get_future();
 
     {
-        Timer t(
+        Timer timer(
             [&fired] {
                 fired.set_value();
                 throw std::runtime_error("timer callback failure");

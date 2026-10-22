@@ -1,9 +1,9 @@
 #ifndef __SIHD_UTIL_ARRAYITERATOR_HPP__
 #define __SIHD_UTIL_ARRAYITERATOR_HPP__
 
-#include <cstddef>   // std::ptrdiff_t, size_t
-#include <iterator>  // std::contiguous_iterator_tag
-#include <stdexcept> // out of range
+#include <cstddef>
+#include <iterator>
+#include <stdexcept>
 
 namespace sihd::util
 {
@@ -13,7 +13,6 @@ template <typename IteratorType>
 class ArrayIterator
 {
     public:
-        // Iterator traits - typedefs and types required to be STL compliant
         using iterator_category = std::contiguous_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = IteratorType;
@@ -130,7 +129,6 @@ template <typename IteratorType>
 class ReverseArrayIterator
 {
     public:
-        // Iterator traits - typedefs and types required to be STL compliant
         using iterator_category = std::contiguous_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = IteratorType;

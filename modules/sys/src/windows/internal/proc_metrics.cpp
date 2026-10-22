@@ -44,6 +44,7 @@ void process_metrics_of(HANDLE handle, ProcessMetrics & metrics)
         metrics.system_time = os::filetime_to_duration(filetime_ticks(kernel_time));
     }
     PROCESS_MEMORY_COUNTERS memory_counters = {};
+
     if (GetProcessMemoryInfo(handle, &memory_counters, sizeof(memory_counters)))
     {
         metrics.rss_bytes = memory_counters.WorkingSetSize;

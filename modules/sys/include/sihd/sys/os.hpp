@@ -13,7 +13,6 @@
 namespace sihd::sys::os
 {
 
-// syscalls linux - windows
 sihd::util::Result<void> ioctl(int fd, unsigned long request, void *arg_ptr = nullptr);
 
 sihd::util::Result<void> setsockopt(int socket, int level, int optname, const void *optval, socklen_t optlen);
@@ -46,7 +45,6 @@ sihd::util::Timestamp boot_time();
 // 100ns ticks since 1601-01-01 (FILETIME / ULARGE_INTEGER::QuadPart) -> unix epoch timestamp
 sihd::util::Timestamp filetime_to_timestamp(uint64_t filetime_ticks);
 sihd::util::Duration filetime_to_duration(uint64_t filetime_ticks);
-// current system time (GetSystemTimePreciseAsFileTime, 100ns resolution)
 sihd::util::Timestamp filetime_now();
 #endif
 
@@ -55,11 +53,8 @@ pid_t pid();
 
 // real backtrace only on glibc (linux) and windows; no-op elsewhere (musl/android/emscripten/apple)
 constexpr bool backtrace_supported = sihd::util::build::is_windows || sihd::util::build::is_gnu;
-// prints formatted backtrace into file descriptor
 ssize_t backtrace(int fd, size_t backtrace_size = -1);
-// bytes
 sihd::util::Result<ssize_t> peak_rss();
-// bytes
 ssize_t current_rss();
 
 constexpr bool mem_lock_supported = sihd::util::build::is_windows
@@ -72,12 +67,10 @@ bool exists_in_path(std::string_view binary_name);
 std::string error_str(int error_code);
 
 // the last general os error: GetLastError on windows, errno on posix.
-// win32 apis (LoadLibrary, CreateFile...) set this
 int last_error();
 std::string last_error_str();
 
 // the last socket error: WSAGetLastError on windows, errno on posix.
-// winsock apis (send, WSAPoll...) set this
 int last_socket_error();
 std::string last_socket_error_str();
 

@@ -25,7 +25,6 @@ class DevRecorder: public sihd::core::Device
         bool set_handler(std::string_view path);
         // expects conf: ALIAS=CHANNEL_NAME
         bool add_record_channel(std::string_view conf);
-        // removes channel from alias
         bool remove_recorded_channel(const std::string & alias);
 
     protected:
@@ -38,9 +37,7 @@ class DevRecorder: public sihd::core::Device
 
     private:
         std::mutex _run_mutex;
-        // list of channels path to get at start
         std::map<std::string, std::string> _map_channels_alias;
-        // corresponding channel ptr to its recorded path
         std::map<Channel *, std::string> _map_channels;
 
         std::atomic<bool> _running;

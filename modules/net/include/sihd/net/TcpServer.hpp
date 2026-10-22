@@ -27,10 +27,10 @@ class TcpServer: public INetServer,
 
         sihd::util::Result<void> open_socket(bool ipv6 = false);
         sihd::util::Result<void> open_socket_unix();
-        bool socket_opened() { return _socket.is_open(); }
+        bool socket_opened();
 
         sihd::util::Result<void> bind(const IpAddr & addr);
-        sihd::util::Result<void> bind_unix(std::string_view path) { return _socket.bind_unix(path); }
+        sihd::util::Result<void> bind_unix(std::string_view path);
 
         sihd::util::Result<void> open_and_bind(const IpAddr & ip);
         sihd::util::Result<void> open_and_bind(std::string_view ip, int port);
@@ -38,7 +38,6 @@ class TcpServer: public INetServer,
 
         sihd::util::Result<void> close();
 
-        // INetServer
         sihd::util::Result<int> accept_client(IpAddr *client_ip = nullptr, int timeout_ms = -1) override;
         bool add_client_read(int socket) override;
         bool add_client_write(int socket) override;
@@ -52,8 +51,8 @@ class TcpServer: public INetServer,
         void set_server_handler(INetServerHandler *handler);
 
         // to set blocking/broadcast
-        const Socket & socket() const { return _socket; }
-        size_t queue_size() const { return _queue_size; }
+        const Socket & socket() const;
+        size_t queue_size() const;
 
     protected:
         void handle(sihd::sys::Poll *poll) override;

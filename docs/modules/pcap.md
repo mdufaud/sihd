@@ -15,7 +15,7 @@ Packet capture, packet injection and capture-file I/O on top of libpcap. It offe
 ### Live capture
 
 - `Sniffer`: `Configurable`, `IReaderTimestamp`, blocking service and `Observable<Sniffer>`. Typical sequence, from the demo: `open(source)`, configure, `activate()`, `set_filter(bpf)`, `sniff()`, `close()`.
-  - Lifecycle: `open`, `close`, `is_open`, `activate`, `is_active`, `pollable_fd`.
+  - Lifecycle: `open`, `close`, `is_open`, `activate`, `is_active`, `pollable_fd` (`Result<int>`, `not_found` without a selectable fd, `not_supported` on Windows).
   - Reading: `sniff` (one buffer of packets), `read_next` (one packet), `get_read_data`, `get_read_timestamp`, `array` / `data`.
   - Injection: `inject(frame)` sends a raw link-layer frame (Ethernet header included on `DLT_EN10MB`) and returns the number of bytes sent. Errors: `not_initialized` when the handle is not open or not activated, `io_error` with the libpcap message otherwise. It needs the same privileges as capturing (`CAP_NET_RAW` on Linux). A libpcap handle is not thread-safe: while `start()` captures on another thread, inject from a second `Sniffer` opened on the same device.
   - Capture options: `set_filter` (BPF), `set_promiscuous`, `set_monitor`, `set_immediate`, `set_nonblock`, `set_timeout`, `set_snaplen`, `set_buffer_size`, `set_direction`, `set_datalink`, `set_timestamp_type`, `set_timestamp_nano`, `set_max_sniff`, `set_linux_protocol`.

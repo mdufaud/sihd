@@ -1,5 +1,6 @@
 #include <fcntl.h>
 
+#include <array>
 #include <cstring>
 
 #include <libssh/libssh.h>
@@ -83,7 +84,7 @@ Sftp::~Sftp()
     SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-sihd::util::Result<void> Sftp::open()
+Result<void> Sftp::open()
 {
     _impl_ptr->sftp_session_ptr = sftp_new(_impl_ptr->ssh_session_ptr);
     if (_impl_ptr->sftp_session_ptr == nullptr)
@@ -117,7 +118,7 @@ void Sftp::close()
     }
 }
 
-sihd::util::Result<void> Sftp::send_file(const std::string & local_path, const std::string & remote_path, mode_t mode)
+Result<void> Sftp::send_file(const std::string & local_path, const std::string & remote_path, mode_t mode)
 {
     sihd::sys::File local_file(local_path, "rb");
     if (local_file.is_open() == false)
@@ -133,15 +134,15 @@ sihd::util::Result<void> Sftp::send_file(const std::string & local_path, const s
                                      sftp_error_str(_impl_ptr->sftp_session_ptr)));
     }
 
-    char buf[SIHD_SSH_SFTP_BUFSIZE + 1];
+    std::array<char, SIHD_SSH_SFTP_BUFSIZE + 1> buf;
     while (true)
     {
-        const auto read = local_file.read(buf, SIHD_SSH_SFTP_BUFSIZE);
+        const auto read = local_file.read(buf.data(), SIHD_SSH_SFTP_BUFSIZE);
         SIHD_UNEXPECTED_RETURN(read);
         if (*read == 0)
             break;
         const ssize_t nread = (ssize_t)*read;
-        const int nwritten = sftp_write(remote_file.get(), buf, nread);
+        const int nwritten = sftp_write(remote_file.get(), buf.data(), static_cast<size_t>(nread));
         if (nwritten != nread)
         {
             return std::unexpected(Error(_impl_ptr->sftp_session_ptr,
@@ -155,7 +156,7 @@ sihd::util::Result<void> Sftp::send_file(const std::string & local_path, const s
     return {};
 }
 
-sihd::util::Result<void> Sftp::get_file(const std::string & remote_path, const std::string & local_path)
+Result<void> Sftp::get_file(const std::string & remote_path, const std::string & local_path)
 {
     sihd::sys::File local_file(local_path, "wb");
     if (local_file.is_open() == false)
@@ -171,10 +172,10 @@ sihd::util::Result<void> Sftp::get_file(const std::string & remote_path, const s
                                      sftp_error_str(_impl_ptr->sftp_session_ptr)));
     }
 
-    char buf[SIHD_SSH_SFTP_BUFSIZE + 1];
+    std::array<char, SIHD_SSH_SFTP_BUFSIZE + 1> buf;
     while (true)
     {
-        const ssize_t nread = sftp_read(remote_file.get(), buf, SIHD_SSH_SFTP_BUFSIZE);
+        const ssize_t nread = sftp_read(remote_file.get(), buf.data(), SIHD_SSH_SFTP_BUFSIZE);
         if (nread < 0)
         {
             return std::unexpected(Error(_impl_ptr->sftp_session_ptr,
@@ -184,7 +185,7 @@ sihd::util::Result<void> Sftp::get_file(const std::string & remote_path, const s
         }
         if (nread == 0)
             break;
-        const auto nwritten = local_file.write(buf, nread);
+        const auto nwritten = local_file.write(buf.data(), static_cast<size_t>(nread));
         SIHD_UNEXPECTED_RETURN(nwritten);
         if (*nwritten != (size_t)nread)
         {
@@ -198,7 +199,7 @@ sihd::util::Result<void> Sftp::get_file(const std::string & remote_path, const s
     return {};
 }
 
-sihd::util::Result<void> Sftp::mkdir(const std::string & path, mode_t mode)
+Result<void> Sftp::mkdir(const std::string & path, mode_t mode)
 {
     if (sftp_mkdir(_impl_ptr->sftp_session_ptr, path.c_str(), mode) == SSH_FX_OK)
         return {};
@@ -208,7 +209,7 @@ sihd::util::Result<void> Sftp::mkdir(const std::string & path, mode_t mode)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::symlink(const std::string & from, const std::string & to)
+Result<void> Sftp::symlink(const std::string & from, const std::string & to)
 {
     if (sftp_symlink(_impl_ptr->sftp_session_ptr, from.c_str(), to.c_str()) == SSH_FX_OK)
         return {};
@@ -219,7 +220,7 @@ sihd::util::Result<void> Sftp::symlink(const std::string & from, const std::stri
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::list_dir_filenames(const std::string & path, std::vector<std::string> & list)
+Result<void> Sftp::list_dir_filenames(const std::string & path, std::vector<std::string> & list)
 {
     std::vector<SftpAttribute> attrs;
     if (auto res = this->list_dir(path, attrs); !res)
@@ -238,7 +239,7 @@ sihd::util::Result<void> Sftp::list_dir_filenames(const std::string & path, std:
     return {};
 }
 
-sihd::util::Result<void> Sftp::list_dir(const std::string & path, std::vector<SftpAttribute> & list)
+Result<void> Sftp::list_dir(const std::string & path, std::vector<SftpAttribute> & list)
 {
     SftpDirPtr dir(sftp_opendir(_impl_ptr->sftp_session_ptr, path.c_str()));
     if (dir.get() == nullptr)
@@ -275,7 +276,7 @@ std::string Sftp::readlink(const std::string & path)
     return std::string(ret);
 }
 
-sihd::util::Result<void> Sftp::rename(const std::string & from, const std::string & to)
+Result<void> Sftp::rename(const std::string & from, const std::string & to)
 {
     if (sftp_rename(_impl_ptr->sftp_session_ptr, from.c_str(), to.c_str()) == SSH_FX_OK)
         return {};
@@ -286,7 +287,7 @@ sihd::util::Result<void> Sftp::rename(const std::string & from, const std::strin
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::rm(const std::string & path)
+Result<void> Sftp::rm(const std::string & path)
 {
     if (sftp_unlink(_impl_ptr->sftp_session_ptr, path.c_str()) == SSH_FX_OK)
         return {};
@@ -296,7 +297,7 @@ sihd::util::Result<void> Sftp::rm(const std::string & path)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::rmdir(const std::string & path)
+Result<void> Sftp::rmdir(const std::string & path)
 {
     if (sftp_rmdir(_impl_ptr->sftp_session_ptr, path.c_str()) == SSH_FX_OK)
         return {};
@@ -306,7 +307,7 @@ sihd::util::Result<void> Sftp::rmdir(const std::string & path)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::chmod(const std::string & path, mode_t mode)
+Result<void> Sftp::chmod(const std::string & path, mode_t mode)
 {
     if (sftp_chmod(_impl_ptr->sftp_session_ptr, path.c_str(), mode) == SSH_FX_OK)
         return {};
@@ -317,7 +318,7 @@ sihd::util::Result<void> Sftp::chmod(const std::string & path, mode_t mode)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-sihd::util::Result<void> Sftp::chown(const std::string & path, uid_t owner, gid_t group)
+Result<void> Sftp::chown(const std::string & path, uid_t owner, gid_t group)
 {
     if (sftp_chown(_impl_ptr->sftp_session_ptr, path.c_str(), owner, group) == SSH_FX_OK)
         return {};

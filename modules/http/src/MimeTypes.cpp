@@ -1,6 +1,8 @@
 #include <sihd/http/MimeTypes.hpp>
 #include <sihd/util/str.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -28,7 +30,7 @@ MimeTypes::~MimeTypes() = default;
 std::string MimeTypes::get(std::string_view ext) const
 {
     std::string lower_ext(ext);
-    sihd::util::str::to_lower(lower_ext);
+    str::to_lower(lower_ext);
     const auto it = _types.find(lower_ext);
     if (it != _types.end())
         return it->second;
@@ -38,7 +40,7 @@ std::string MimeTypes::get(std::string_view ext) const
 void MimeTypes::add(std::string_view ext, std::string_view content_type)
 {
     std::string lower_ext(ext);
-    sihd::util::str::to_lower(lower_ext);
+    str::to_lower(lower_ext);
     _types[std::move(lower_ext)] = std::string(content_type);
 }
 

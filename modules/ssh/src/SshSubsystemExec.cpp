@@ -5,6 +5,9 @@
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Splitter.hpp>
+#include <sihd/util/build.hpp>
+
+using namespace sihd::util;
 
 namespace sihd::ssh
 {
@@ -14,11 +17,7 @@ SIHD_LOGGER;
 SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _channel(nullptr),
     _command(command),
-#if !defined(__SIHD_WINDOWS__)
-    _shell("/bin/sh"),
-#else
-    _shell("cmd.exe"),
-#endif
+    _shell(build::is_windows ? "cmd.exe" : "/bin/sh"),
     _parse_mode(ParseMode::Shell),
     _fork_mode(true),
     _started(false),
@@ -85,16 +84,12 @@ void SshSubsystemExec::configure_process_command()
     if (_parse_mode == ParseMode::Shell)
     {
         _process.add_argv(_shell);
-#if !defined(__SIHD_WINDOWS__)
-        _process.add_argv("-c");
-#else
-        _process.add_argv("/c");
-#endif
+        _process.add_argv(build::is_windows ? "/c" : "-c");
         _process.add_argv(_command);
     }
     else
     {
-        sihd::util::Splitter splitter;
+        Splitter splitter;
         splitter.set_delimiter_spaces();
         splitter.set_escape_sequences_all();
         auto args = splitter.split(_command);
@@ -135,11 +130,10 @@ bool SshSubsystemExec::start_process_mode()
 {
     configure_process_command();
 
-    // Stream stdout/stderr to the channel incrementally
     _process.stdout_to([this](std::string_view data) {
         if (_channel)
         {
-            const int wrote = _channel->write(sihd::util::ArrCharView(data.data(), data.size()));
+            const int wrote = _channel->write(ArrCharView(data.data(), data.size()));
             if (wrote < 0)
                 SIHD_LOG(error, "SshSubsystemExec: could not write stdout to channel");
         }
@@ -148,7 +142,7 @@ bool SshSubsystemExec::start_process_mode()
     _process.stderr_to([this](std::string_view data) {
         if (_channel)
         {
-            const int wrote = _channel->write_stderr(sihd::util::ArrCharView(data.data(), data.size()));
+            const int wrote = _channel->write_stderr(ArrCharView(data.data(), data.size()));
             if (wrote < 0)
                 SIHD_LOG(error, "SshSubsystemExec: could not write stderr to channel");
         }
@@ -216,13 +210,12 @@ int SshSubsystemExec::on_close()
         _process.terminate();
         _exit_code = static_cast<int>(_process.return_code());
 
-        // In buffered (non-fork) mode, flush the accumulated output now.
         if (!_fork_mode && _channel)
         {
             if (!_sync_out.empty())
-                _channel->write(sihd::util::ArrCharView(_sync_out.data(), _sync_out.size()));
+                _channel->write(ArrCharView(_sync_out.data(), _sync_out.size()));
             if (!_sync_err.empty())
-                _channel->write_stderr(sihd::util::ArrCharView(_sync_err.data(), _sync_err.size()));
+                _channel->write_stderr(ArrCharView(_sync_err.data(), _sync_err.size()));
         }
     }
 
@@ -230,6 +223,26 @@ int SshSubsystemExec::on_close()
     _channel = nullptr;
 
     return _exit_code;
+}
+
+const std::string & SshSubsystemExec::command() const
+{
+    return _command;
+}
+
+int SshSubsystemExec::stdout_fd() const
+{
+    return -1;
+}
+
+int SshSubsystemExec::stderr_fd() const
+{
+    return -1;
+}
+
+SshChannel *SshSubsystemExec::channel() const
+{
+    return _channel;
 }
 
 } // namespace sihd::ssh

@@ -3,11 +3,10 @@
 
 #include <sihd/http/RateLimitFilter.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
-
-using sihd::util::Duration;
-using sihd::util::RateLimiter;
 
 RateLimitFilter::RateLimitFilter(size_t max_events, Duration window):
     _max_events(max_events),
@@ -29,7 +28,7 @@ void RateLimitFilter::set_max_entries(size_t max_entries)
     _max_entries = max_entries;
 }
 
-void RateLimitFilter::set_clock(sihd::util::IClock *clock)
+void RateLimitFilter::set_clock(IClock *clock)
 {
     std::lock_guard lock(_mutex);
     _clock_ptr = clock;

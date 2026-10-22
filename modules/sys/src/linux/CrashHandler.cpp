@@ -23,8 +23,7 @@ struct CrashHandler::Impl
         stack_t previous_stack;
 };
 
-// the signal dispositions are process state: like signal.cpp, the handler's
-// values live at file scope, guarded by g_installed
+// signal dispositions are process state: like signal.cpp, values live at file scope, guarded by g_installed
 namespace
 {
 
@@ -82,7 +81,6 @@ void write_hex(int fd, uintptr_t value)
         buf[--i] = digits[value & 0xf];
         value >>= 4;
     }
-    // skip leading zeros, keep at least one digit
     size_t start = 2;
     while (start < sizeof(buf) - 1 && buf[start] == '0')
         ++start;
@@ -195,10 +193,12 @@ bool CrashHandler::install(const Options & options)
         g_installed.store(false);
         return false;
     }
+
     g_dump_path = options.dump_path;
     g_rethrow.store(options.rethrow);
     bool ok = true;
     int last_installed = 0;
+
     for (int sig = 1; sig < signal::max_signal; ++sig)
     {
         if (signal::is_category_dump(sig) == false)
@@ -215,6 +215,7 @@ bool CrashHandler::install(const Options & options)
         }
         last_installed = sig;
     }
+
     if (ok == false)
     {
         restore_previous(last_installed);

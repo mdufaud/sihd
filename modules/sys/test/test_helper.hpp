@@ -25,7 +25,6 @@
 namespace test
 {
 
-// path to a test binary built next to the module binaries
 inline std::string bin_path(std::string_view name)
 {
     namespace fs = sihd::sys::fs;
@@ -43,7 +42,6 @@ inline std::string helper_path()
     return bin_path("sihd_sys_test_helper");
 }
 
-// sets the variable for the scope; a nullopt value unsets it; the previous state is restored
 struct ScopedEnv
 {
         ScopedEnv(std::string_view name, std::optional<std::string_view> value): _name(name)
@@ -74,15 +72,14 @@ struct ScopedEnv
 
 inline bool ensure_wsa()
 {
-    static bool started = [] {
+    static const bool started = [] {
         WSADATA data;
         return WSAStartup(MAKEWORD(2, 2), &data) == 0;
     }();
     return started;
 }
 
-// WSAPoll only polls sockets, so build a connected loopback TCP socket pair:
-// fds[0] = read end (server), fds[1] = write end (client)
+// WSAPoll only polls sockets: connected loopback TCP pair, fds[0] = read (server), fds[1] = write (client)
 inline bool make_fd_pair(std::array<int, 2> & fds)
 {
     if (!ensure_wsa())
@@ -139,7 +136,6 @@ inline bool make_fd_pair(std::array<int, 2> & fds)
     return true;
 }
 
-// pair io goes through winsock
 inline ssize_t read_fd(int fd, void *buf, size_t count)
 {
     return ::recv((SOCKET)fd, (char *)buf, (int)count, 0);

@@ -3,10 +3,10 @@
 # include <dbghelp.h>
 // clang-format on
 
-#include <io.h> // _write
+#include <io.h>
 
 #include <atomic>
-#include <cstring> // strlen
+#include <cstring>
 #include <new>
 
 #include <sihd/sys/CrashHandler.hpp>
@@ -20,8 +20,7 @@ struct CrashHandler::Impl
         LPTOP_LEVEL_EXCEPTION_FILTER previous_filter = nullptr;
 };
 
-// the unhandled exception filter is process state: the handler's values live
-// at file scope, guarded by g_installed
+// the unhandled exception filter is process state: handler values live at file scope, guarded by g_installed
 namespace
 {
 
@@ -61,7 +60,6 @@ void write_hex(int fd, uintptr_t value)
         buf[--i] = digits[value & 0xf];
         value >>= 4;
     }
-    // skip leading zeros, keep at least one digit
     size_t start = 2;
     while (start < sizeof(buf) - 1 && buf[start] == '0')
         ++start;
@@ -85,6 +83,7 @@ LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
         else
         {
             MINIDUMP_EXCEPTION_INFORMATION dump_info;
+
             dump_info.ThreadId = GetCurrentThreadId();
             dump_info.ExceptionPointers = info;
             dump_info.ClientPointers = FALSE;
@@ -98,6 +97,7 @@ LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
             CloseHandle(file);
         }
     }
+
     if (info != nullptr && info->ExceptionRecord != nullptr)
     {
         write_str(stderr_fd, "fatal exception 0x");
@@ -107,8 +107,7 @@ LONG WINAPI unhandled_filter(EXCEPTION_POINTERS *info)
         write_str(stderr_fd, "\n");
     }
     os::backtrace(stderr_fd);
-    // rethrow chains to WER/JIT; otherwise terminate with the exception code,
-    // symmetric to the unix rethrow=false (_exit 128+sig)
+    // rethrow chains to WER/JIT, else terminate with the exception code (unix equivalent: _exit 128+sig)
     if (g_rethrow.load(std::memory_order_relaxed))
         return EXCEPTION_CONTINUE_SEARCH;
     DWORD code = (DWORD)-1;
@@ -130,6 +129,7 @@ bool CrashHandler::install(const Options & options)
         return false;
     }
     _impl = new (std::nothrow) Impl;
+
     if (_impl == nullptr)
     {
         g_installed.store(false);

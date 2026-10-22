@@ -13,19 +13,24 @@ using namespace sihd::util;
 class TestCommand: public ::testing::Test
 {
     protected:
-        TestCommand() { sihd::util::LoggerManager::stream(); }
+        TestCommand() { LoggerManager::stream(); }
 
-        virtual ~TestCommand() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestCommand() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
 
-static int eval(CliApp & app, std::vector<std::string> args)
+namespace
+{
+
+int eval(CliApp & app, std::vector<std::string> args)
 {
     return app.evaluate(args);
 }
+
+} // namespace
 
 TEST_F(TestCommand, test_tree)
 {
@@ -84,7 +89,6 @@ TEST_F(TestCommand, test_add_remove_live)
     EXPECT_EQ(app.root().path("service.toto"), nullptr);
     EXPECT_NE(eval(app, {"service", "toto"}), 3);
 
-    // a removed branch takes its children with it
     Command & nested = service.add_command("nested", "nested");
     nested.add_command("deep", "deep");
     EXPECT_TRUE(service.remove_command("nested"));
@@ -117,7 +121,6 @@ TEST_F(TestCommand, test_bind_aliases)
     app.root().bind("port", port, "a port", "p");
     app.root().on_run([] {});
 
-    // short aliases feed the same targets as the long names
     EXPECT_EQ(eval(app, {"-k", "file.pem", "-p", "1234"}), EXIT_SUCCESS);
     EXPECT_EQ(key, "file.pem");
     EXPECT_EQ(port, 1234);
@@ -125,7 +128,6 @@ TEST_F(TestCommand, test_bind_aliases)
     EXPECT_EQ(eval(app, {"--key", "other.pem"}), EXIT_SUCCESS);
     EXPECT_EQ(key, "other.pem");
 
-    // aliases show up in the help
     std::string help = app.root().help();
     EXPECT_NE(help.find("-k"), std::string::npos);
     EXPECT_NE(help.find("--key"), std::string::npos);

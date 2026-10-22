@@ -20,9 +20,9 @@ using namespace sihd::sys;
 class TestFileWatcher: public ::testing::Test
 {
     protected:
-        TestFileWatcher() { sihd::util::LoggerManager::stream(); }
+        TestFileWatcher() { LoggerManager::stream(); }
 
-        virtual ~TestFileWatcher() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestFileWatcher() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp()
         {
@@ -47,6 +47,7 @@ TEST_F(TestFileWatcher, test_watch_renamed_file)
     const std::filesystem::path native_renamed(reinterpret_cast<const char8_t *>(renamed.c_str()));
     {
         std::ofstream file(native_path);
+
         ASSERT_TRUE(file);
         file << "data";
     }
@@ -74,6 +75,7 @@ TEST_F(TestFileWatcher, test_watch_separate_buffers)
     ASSERT_TRUE(first);
     ASSERT_TRUE(second);
     FileWatcher watcher;
+
     watcher.set_run_timeout(1000);
     ASSERT_TRUE(watcher.watch(first.path()));
     ASSERT_TRUE(watcher.watch(second.path()));
@@ -82,6 +84,7 @@ TEST_F(TestFileWatcher, test_watch_separate_buffers)
     EXPECT_TRUE(watcher.run());
     bool found_first = false;
     bool found_second = false;
+
     for (const FileWatcherEvent & event : watcher.events())
     {
         if (event.type != FileWatcherEventType::created)

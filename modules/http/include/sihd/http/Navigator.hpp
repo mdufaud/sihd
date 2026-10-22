@@ -62,7 +62,6 @@ class Navigator
         Navigator(Navigator &&) = delete;
         Navigator & operator=(Navigator &&) = delete;
 
-        // HTTP methods
         sihd::util::Result<NavigatorResponse> get(std::string_view url);
         sihd::util::Result<NavigatorResponse> post(std::string_view url, sihd::util::ArrCharView data = {});
         sihd::util::Result<NavigatorResponse> put(std::string_view url, sihd::util::ArrCharView data);
@@ -78,7 +77,6 @@ class Navigator
         // connections opened by the last request; 0 means an existing one was reused
         long new_connection_count() const;
 
-        // Configuration
         void set_verbose(bool verbose);
         void set_follow_redirects(bool follow);
         void set_max_redirects(long max);
@@ -92,23 +90,19 @@ class Navigator
         void set_max_response_size(size_t bytes);
         void set_ssrf_guard(bool enable);
 
-        // Authentication (persistent across requests)
         void set_basic_auth(std::string_view user, std::string_view password);
         void set_digest_auth(std::string_view user, std::string_view password);
         void set_token_auth(std::string_view token);
         void clear_auth();
 
-        // Form-based login (auto CSRF extraction)
         sihd::util::Result<void> form_login(const FormLoginParams & params);
 
-        // Persistent headers
         void set_header(std::string_view name, std::string_view value);
         void remove_header(std::string_view name);
         void clear_headers();
         // names of the headers sent along a redirect to another origin, every other one is dropped
         void set_cross_origin_headers(std::vector<std::string> names);
 
-        // Cookies (in-memory cookie jar)
         std::map<std::string, std::string> cookies() const;
         sihd::util::Result<void>
             set_cookie(std::string_view name, std::string_view value, std::string_view domain = "");
@@ -116,7 +110,6 @@ class Navigator
         sihd::util::Result<void> save_cookies(std::string_view path);
         sihd::util::Result<void> load_cookies(std::string_view path);
 
-        // Proxy
         void set_proxy(std::string_view url, ProxyType type = ProxyType::Http);
         void set_proxy_auth(std::string_view user, std::string_view password);
         void clear_proxy();
@@ -126,14 +119,11 @@ class Navigator
         // Retry (max_wait_ms caps each backoff and each Retry-After wait, 0 = no cap)
         void set_retry(int max_attempts, long initial_backoff_ms = 500, long max_wait_ms = 0);
 
-        // Per-domain rate limiting
         void set_domain_delay_ms(long ms);
 
-        // User-agent rotation
         void add_user_agent(std::string_view ua);
         void set_user_agent_rotation(bool enable);
 
-        // WebSocket
         sihd::util::Result<void> ws_connect(std::string_view url, std::string_view protocol = "");
         bool ws_send(std::string_view text);
         bool ws_send_binary(sihd::util::ArrByteView data);
@@ -144,7 +134,6 @@ class Navigator
         std::function<bool(RequestInfo &)> on_before_request;
         std::function<void(const NavigatorResponse &)> on_after_response;
 
-        // Callbacks
         std::function<void(std::string_view protocol)> on_ws_open;
         std::function<void(std::string_view message)> on_ws_text;
         std::function<void(sihd::util::ArrByteView data)> on_ws_binary;

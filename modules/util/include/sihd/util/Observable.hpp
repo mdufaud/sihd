@@ -31,7 +31,7 @@ class Observable
 
         bool add_observer(IHandler<T *> *obs, bool add_to_front = false)
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
 
             if (this->is_observer(obs))
                 return false;
@@ -46,7 +46,7 @@ class Observable
 
         void remove_observer(IHandler<T *> *obs)
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             const auto it = std::ranges::find(_observers, obs);
             if (it == _observers.end())
                 return;
@@ -63,13 +63,13 @@ class Observable
 
         bool is_observer(IHandler<T *> *obs) const
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             return std::ranges::contains(_observers, obs);
         }
 
         size_t observers_count() const
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             return _observers.size();
         }
 
@@ -78,7 +78,7 @@ class Observable
         {
             std::vector<IHandler<T *> *> observers;
             {
-                std::lock_guard l(_mutex);
+                std::lock_guard lock(_mutex);
                 observers.assign(_observers.begin(), _observers.end());
             }
             for (IHandler<T *> *obs : observers)
@@ -89,13 +89,13 @@ class Observable
         // call, and must be detached before being destroyed
         void set_watcher(IObserverWatcher<T> *watcher)
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             _watcher = watcher;
         }
 
         IObserverWatcher<T> *watcher() const
         {
-            std::lock_guard l(_mutex);
+            std::lock_guard lock(_mutex);
             return _watcher;
         }
 

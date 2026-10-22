@@ -8,11 +8,10 @@
 namespace sihd::util::locale
 {
 
-// Normalize locale name for cross-platform compatibility
 // POSIX: en_US.UTF-8 -> Windows: en-US (removes codeset, replaces _ with -)
 std::string normalize_locale_name(std::string_view name);
 
-// Create locale from name - throws std::runtime_error if locale not available
+// throws std::runtime_error when the locale is unavailable
 std::locale create_locale(std::string_view name);
 
 } // namespace sihd::util::locale

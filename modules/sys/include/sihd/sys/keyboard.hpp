@@ -97,10 +97,8 @@ Modifiers operator|(Modifiers lhs, Modifiers rhs);
 
 Modifiers operator&(Modifiers lhs, Modifiers rhs);
 
-// Types `utf8_text` into the focused window.
 sihd::util::Result<void> type_text(std::string_view utf8_text);
 
-// Presses and releases `key`, holding `mods` for the duration of the press.
 sihd::util::Result<void> key_press(Key key, Modifiers mods = Modifiers::none);
 
 sihd::util::Result<void> key_down(Key key);

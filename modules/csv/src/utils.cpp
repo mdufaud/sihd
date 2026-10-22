@@ -3,17 +3,19 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::csv::utils
 {
 
 std::string escape_str(std::string_view view)
 {
-    return fmt::format("\"{}\"", sihd::util::str::replace(view, "\"", "\"\""));
+    return fmt::format("\"{}\"", str::replace(view, "\"", "\"\""));
 }
 
 CsvData csv_from_string(std::string_view content, bool remove_header, int delimiter, char comment_char)
 {
-    sihd::util::Splitter rows_splitter;
+    Splitter rows_splitter;
     rows_splitter.set_delimiter("\n");
     rows_splitter.set_escape_char('\"');
     rows_splitter.set_open_escape_sequences("\"");
@@ -21,19 +23,19 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     std::vector<CsvLine> ret;
     std::vector<std::string_view> lines = rows_splitter.split_view(content);
 
-    sihd::util::Splitter cols_splitter;
+    Splitter cols_splitter;
     cols_splitter.set_delimiter_char(delimiter);
     cols_splitter.set_escape_char('\"');
     cols_splitter.set_open_escape_sequences("\"");
     cols_splitter.set_empty_delimitations(true);
 
-    size_t number_of_comments_and_empty_lines = (int)remove_header;
+    size_t skipped_lines = (int)remove_header;
     for (std::string_view & line : lines)
     {
         if (line.empty() || line[0] == comment_char)
-            ++number_of_comments_and_empty_lines;
+            ++skipped_lines;
     }
-    ret.reserve(lines.size() - number_of_comments_and_empty_lines);
+    ret.reserve(lines.size() - skipped_lines);
 
     bool first = true;
     for (std::string_view & line : lines)
@@ -50,7 +52,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
         std::vector<std::string> columns = cols_splitter.split(line);
         for (std::string & column : columns)
         {
-            column = sihd::util::str::remove_escape_char(column, '"');
+            column = str::remove_escape_char(column, '"');
         }
         ret.emplace_back(std::move(columns));
     }
@@ -58,7 +60,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     return ret;
 }
 
-sihd::util::Result<CsvData> read_csv(const std::string & path, bool remove_header, int delimiter, char comment_char)
+Result<CsvData> read_csv(const std::string & path, bool remove_header, int delimiter, char comment_char)
 {
     CsvReader reader;
 

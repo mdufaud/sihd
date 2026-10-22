@@ -40,29 +40,20 @@ class Sniffer: public sihd::util::Named,
         sihd::util::Result<void> activate();
         bool is_active() const;
 
-        // sniff bufferful of packets from a pcap_t open for a live capture then leave
         bool sniff();
         // sniff one packet: false means no packet, an error means the read failed
         sihd::util::Result<bool> read_next() override;
         sihd::util::Result<size_t> inject(sihd::util::ArrCharView frame);
-        // get datas
         bool get_read_data(sihd::util::ArrCharView & view) const override;
         sihd::util::Result<sihd::util::Timestamp> get_read_timestamp() const override;
         const sihd::util::ArrByte & data() const;
 
-        // maximum pkts to sniff before stopping
         bool set_max_sniff(size_t n);
-        // protocol linux
         bool set_linux_protocol(int protocol);
-        // promiscuous mode
         bool set_promiscuous(bool active);
-        // rfmon monitor mode
         bool set_monitor(bool active);
-        // no buffering
         bool set_immediate(bool active);
-        // micro or nano precision
         bool set_timestamp_nano(bool active);
-        // non blocking sniff
         bool set_nonblock(bool block);
         bool set_datalink(int datalink);
         bool set_timestamp_type(int ts_type);
@@ -85,12 +76,12 @@ class Sniffer: public sihd::util::Named,
         int snaplen();
         int datalink();
 
-        int pollable_fd();
+        sihd::util::Result<int> pollable_fd();
         std::optional<Stats> stats();
 
         std::string error();
 
-        const sihd::util::ArrByte & array() const { return _array; }
+        const sihd::util::ArrByte & array() const;
 
     protected:
         bool on_start() override;

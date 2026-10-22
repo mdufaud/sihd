@@ -12,8 +12,7 @@ namespace test
 using namespace sihd::util;
 using namespace sihd::sys;
 
-// Wine always provides a session and its SendInput succeeds: the sessionless
-// case is only provable on linux, where it must be a clean not_supported error.
+// Wine always has a session and SendInput succeeds: sessionless is only provable on linux (not_supported)
 #if !defined(__SIHD_WINDOWS__)
 
 TEST(TestMouse, test_no_session_is_an_error)

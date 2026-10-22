@@ -11,6 +11,7 @@ SIHD_LOGGER;
 ImguiBackendAndroid::ImguiBackendAndroid():
     _is_init(false),
     _egl_ready(false),
+    _want_text_input_last(false),
     _app(nullptr),
     _window_ptr(nullptr),
     _egl_display(EGL_NO_DISPLAY),
@@ -131,7 +132,6 @@ bool ImguiBackendAndroid::init_egl()
         return false;
     }
 
-    // Poll until the native window is available (APP_CMD_INIT_WINDOW fires)
     while (!_egl_ready)
     {
         int out_events;
@@ -159,12 +159,10 @@ bool ImguiBackendAndroid::init_backend()
     if (!_is_init)
         return false;
 
-    // Save imgui.ini to app internal storage
     _ini_filename = std::string(_app->activity->internalDataPath) + "/imgui.ini";
     ImGuiIO & io = ImGui::GetIO();
     io.IniFilename = _ini_filename.c_str();
 
-    // DPI scaling based on screen density
     ImGuiStyle & style = ImGui::GetStyle();
     float scale = 2.0f;
     if (_app->config != nullptr)
@@ -206,11 +204,10 @@ void ImguiBackendAndroid::new_frame()
 
     _poll_unicode_chars();
 
-    static bool want_text_input_last = false;
     ImGuiIO & io = ImGui::GetIO();
-    if (io.WantTextInput && !want_text_input_last)
+    if (io.WantTextInput && !_want_text_input_last)
         _show_soft_keyboard_input();
-    want_text_input_last = io.WantTextInput;
+    _want_text_input_last = io.WantTextInput;
 
     ImGui_ImplAndroid_NewFrame();
 }
@@ -226,6 +223,11 @@ void ImguiBackendAndroid::post_render()
 {
     if (_egl_ready)
         eglSwapBuffers(_egl_display, _egl_surface);
+}
+
+ANativeWindow *ImguiBackendAndroid::window()
+{
+    return _window_ptr;
 }
 
 void ImguiBackendAndroid::shutdown()

@@ -1,3 +1,5 @@
+#include <array>
+
 #include <sihd/sys/SigThreadBlocker.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
@@ -7,7 +9,7 @@ namespace sihd::sys
 
 SigThreadBlocker::SigThreadBlocker(int sig): _blocking(false)
 {
-    const int sigs[] = {sig};
+    const std::array<int, 1> sigs = {sig};
     this->_block(sigs);
 }
 

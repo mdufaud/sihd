@@ -11,14 +11,11 @@
 namespace sihd::sys
 {
 
-// Runs the CALLING THREAD as another account, reversibly (revert()/dtor); drop_privileges stays
-// permanent process-wide. While impersonating, effective_user() = target, real_user() = original
+// impersonates the CALLING THREAD only, reversibly: effective_user() = target, real_user() = original meanwhile
 class Impersonation
 {
     public:
-        // windows: LogonUser + ImpersonateLoggedOnUser
         static constexpr bool supports_credentials = sihd::util::build::is_windows;
-        // linux: per-thread setresgid/setresuid
         static constexpr bool supports_privileged = sihd::util::build::is_linux && !sihd::util::build::is_emscripten;
 
         Impersonation();
@@ -29,17 +26,15 @@ class Impersonation
         Impersonation(Impersonation &&) = delete;
         Impersonation & operator=(Impersonation &&) = delete;
 
-        // authenticates the account then impersonates it - domain may be empty for a local account
+        // authenticates then impersonates; domain may be empty for a local account
         sihd::util::Result<void> impersonate_with_credentials(std::string_view user_name,
                                                               std::string_view password,
                                                               std::string_view domain = {});
 
-        // switches the thread identity without authenticating - requires CAP_SETUID unless the
-        // target is an identity the thread already holds
+        // switches the thread identity without authenticating: needs CAP_SETUID unless the target is already held
         sihd::util::Result<void> impersonate_as(const user::UserId & user_id, const user::GroupId & group_id);
 
-        // restores the thread identity held when impersonation started, also done by the
-        // destructor - a pre-existing impersonation is not restored
+        // restores the identity held at impersonation start (also done by the dtor); a prior one is not restored
         sihd::util::Result<void> revert();
 
         [[nodiscard]] bool impersonating() const;

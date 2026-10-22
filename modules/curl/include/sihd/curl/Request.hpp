@@ -15,7 +15,6 @@
 namespace sihd::curl
 {
 
-// Download and upload totals and progress, in bytes
 struct XferProgress
 {
         long dltotal = 0;
@@ -41,8 +40,7 @@ enum class Proxy
 class HeaderList;
 class Mime;
 
-// One transfer to or from an url. Reusing a request keeps its connection pool alive: keep it
-// around, do not recreate per transfer, and never at static storage duration (curl exits early)
+// Keep a request around to reuse its connection pool; never at static storage duration (curl exits early)
 class Request
 {
     public:
@@ -79,7 +77,7 @@ class Request
         sihd::util::Result<void> set_auth(Auth auth);
         // empty url disables any proxy, including the environment's
         sihd::util::Result<void> set_proxy(std::string_view url, Proxy type = Proxy::Http);
-        // nullopt-like state: proxy comes back from the environment
+        // unlike set_proxy(""), the proxy comes back from the environment
         sihd::util::Result<void> clear_proxy();
         sihd::util::Result<void> set_proxy_auth(std::string_view user, std::string_view password);
         sihd::util::Result<void> set_headers(const HeaderList & headers);
@@ -89,7 +87,6 @@ class Request
         // the body is copied by the transfer handle
         sihd::util::Result<void> set_body(sihd::util::ArrCharView data);
         sihd::util::Result<void> set_upload(bool on);
-        // total upload size, expected by some protocols (http content-length, smtp size...)
         sihd::util::Result<void> set_infilesize(int64_t size);
         sihd::util::Result<void> set_http_get(bool on);
         sihd::util::Result<void> set_http_post(bool on);
@@ -119,7 +116,7 @@ class Request
         std::vector<std::string> cookie_list() const;
 
         sihd::util::Result<void> perform();
-        // error of the last failed operation - option setting or transfer - since the last reset()
+        // error of the last failed operation, option setting or transfer, since the last reset()
         std::string last_error() const;
         void reset();
 

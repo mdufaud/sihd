@@ -16,12 +16,33 @@ class TestRunnable: public ::testing::Test
         virtual void TearDown() {}
 };
 
+namespace
+{
+
+struct Target
+{
+        bool flag = false;
+        bool trigger() { return (flag = true); }
+};
+
+struct InnerRunnable: public IRunnable
+{
+        bool ran = false;
+        bool run() override
+        {
+            ran = true;
+            return true;
+        }
+};
+
+} // namespace
+
 TEST_F(TestRunnable, test_runnable_no_method)
 {
-    Runnable r;
-    EXPECT_FALSE(r.has_method());
-    EXPECT_FALSE(r.run());
-    EXPECT_FALSE(r());
+    Runnable runnable;
+    EXPECT_FALSE(runnable.has_method());
+    EXPECT_FALSE(runnable.run());
+    EXPECT_FALSE(runnable());
 }
 
 TEST_F(TestRunnable, test_runnable_lambda)
@@ -38,38 +59,22 @@ TEST_F(TestRunnable, test_runnable_lambda)
 
 TEST_F(TestRunnable, test_runnable_set_method_member_ptr)
 {
-    struct Target
-    {
-            bool flag = false;
-            bool trigger() { return (flag = true); }
-    };
+    Target target;
+    Runnable runnable;
+    runnable.set_method(&target, &Target::trigger);
 
-    Target t;
-    Runnable r;
-    r.set_method(&t, &Target::trigger);
-
-    EXPECT_TRUE(r.has_method());
-    EXPECT_TRUE(r.run());
-    EXPECT_TRUE(t.flag);
+    EXPECT_TRUE(runnable.has_method());
+    EXPECT_TRUE(runnable.run());
+    EXPECT_TRUE(target.flag);
 }
 
 TEST_F(TestRunnable, test_runnable_set_runnable)
 {
-    struct InnerRunnable: public IRunnable
-    {
-            bool ran = false;
-            bool run() override
-            {
-                ran = true;
-                return true;
-            }
-    };
-
     InnerRunnable inner;
-    Runnable r(&inner);
+    Runnable runnable(&inner);
 
-    EXPECT_TRUE(r.has_method());
-    EXPECT_TRUE(r.run());
+    EXPECT_TRUE(runnable.has_method());
+    EXPECT_TRUE(runnable.run());
     EXPECT_TRUE(inner.ran);
 }
 

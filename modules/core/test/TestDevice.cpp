@@ -18,9 +18,9 @@ using namespace sihd::core;
 class TestDevice: public ::testing::Test
 {
     protected:
-        TestDevice() { sihd::util::LoggerManager::stream(); }
+        TestDevice() { LoggerManager::stream(); }
 
-        virtual ~TestDevice() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestDevice() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -36,12 +36,11 @@ class SomeDevice: public Device
 
         bool is_running() const { return _running; }
 
-        void handle(Channel *c) { (void)c; }
+        void handle(Channel *channel) { (void)channel; }
 
     protected:
         bool on_init()
         {
-            // returns nullptr if channel is linked
             this->add_channel("c1", "byte");
             this->add_unlinked_channel("c2", "int");
             return true;
@@ -72,7 +71,7 @@ class ResizableDevice: public Device
 
         bool is_running() const { return false; }
 
-        void handle(Channel *c) { (void)c; }
+        void handle(Channel *channel) { (void)channel; }
 
     protected:
         bool on_init()
@@ -100,22 +99,22 @@ TEST_F(TestDevice, test_device_service)
     EXPECT_EQ(dev->get_channel("c1").value_or(nullptr), nullptr);
     EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
     EXPECT_EQ(dev->get_channel("c3").value_or(nullptr), nullptr);
-    // device init the channel
+
     EXPECT_TRUE(dev->init());
     EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
     EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
     EXPECT_EQ(dev->get_channel("c3").value_or(nullptr), nullptr);
-    // links are done
+
     EXPECT_TRUE(dev->start());
     EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
     EXPECT_NE(dev->get_channel("c2").value_or(nullptr), nullptr);
     EXPECT_NE(dev->get_channel("c3").value_or(nullptr), nullptr);
-    // remove observations
+
     EXPECT_TRUE(dev->stop());
     EXPECT_NE(dev->get_channel("c1").value_or(nullptr), nullptr);
     EXPECT_NE(dev->get_channel("c2").value_or(nullptr), nullptr);
     EXPECT_NE(dev->get_channel("c3").value_or(nullptr), nullptr);
-    // delete_children
+
     EXPECT_TRUE(dev->reset());
     EXPECT_EQ(dev->get_channel("c1").value_or(nullptr), nullptr);
     EXPECT_EQ(dev->get_channel("c2").value_or(nullptr), nullptr);
@@ -128,11 +127,11 @@ TEST_F(TestDevice, test_device_channel_resizable)
     ResizableDevice *dev = root.add_child<ResizableDevice>("device");
 
     EXPECT_TRUE(dev->init());
-    Channel *c = dev->get_channel("local").value_or(nullptr);
-    ASSERT_NE(c, nullptr);
-    EXPECT_TRUE(c->resizable());
-    EXPECT_EQ(c->size(), 1u);
-    EXPECT_EQ(c->capacity(), 128u);
+    Channel *channel = dev->get_channel("local").value_or(nullptr);
+    ASSERT_NE(channel, nullptr);
+    EXPECT_TRUE(channel->resizable());
+    EXPECT_EQ(channel->size(), 1u);
+    EXPECT_EQ(channel->capacity(), 128u);
 }
 
 TEST_F(TestDevice, test_device_resizable_link_match)
@@ -146,7 +145,6 @@ TEST_F(TestDevice, test_device_resizable_link_match)
     dev->add_link("shared", "..ext");
 
     EXPECT_TRUE(dev->init());
-    // both ends resizable -> link contract satisfied
     EXPECT_TRUE(dev->start());
     EXPECT_TRUE(dev->stop());
 }
@@ -154,7 +152,6 @@ TEST_F(TestDevice, test_device_resizable_link_match)
 TEST_F(TestDevice, test_device_resizable_link_mismatch)
 {
     Node root("root");
-    // ext is not resizable -> contract violated
     new Channel("ext", "byte", 1, &root);
 
     ResizableDevice *dev = root.add_child<ResizableDevice>("device");
@@ -303,12 +300,14 @@ TEST_F(TestDevice, test_factories_registered)
         }
         else
         {
-            if constexpr (sihd::util::build::is_statically_linked)
+            if constexpr (build::is_statically_linked)
                 GTEST_SKIP() << "no factory resolution in this build";
+
             auto found = sihd::sys::program::find_symbol(std::string("sihd_factory_") + symbol_suffix);
             ASSERT_TRUE(found.has_value()) << symbol_suffix;
             using CreateFn = Named *(*)(const std::string &, Node *);
             const auto create = reinterpret_cast<CreateFn>(*found);
+
             named = create(symbol_suffix, nullptr);
             ASSERT_NE(named, nullptr) << symbol_suffix;
         }

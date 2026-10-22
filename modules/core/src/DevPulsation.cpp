@@ -15,7 +15,7 @@ SIHD_REGISTER_FACTORY(DevPulsation)
 
 SIHD_LOGGER;
 
-DevPulsation::DevPulsation(const std::string & name, sihd::util::Node *parent):
+DevPulsation::DevPulsation(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _step_worker(this),
     _channel_heartbeat_ptr(nullptr),
@@ -64,8 +64,8 @@ bool DevPulsation::run()
 
 bool DevPulsation::on_init()
 {
-    this->add_unlinked_channel(CHANNEL_HEART, sihd::util::TYPE_UINT, 1);
-    this->add_unlinked_channel(CHANNEL_ACTIVATE, sihd::util::TYPE_BOOL, 1);
+    this->add_unlinked_channel(CHANNEL_HEART, TYPE_UINT, 1);
+    this->add_unlinked_channel(CHANNEL_ACTIVATE, TYPE_BOOL, 1);
     return true;
 }
 

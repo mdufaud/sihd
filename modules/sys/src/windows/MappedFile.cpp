@@ -29,7 +29,7 @@ HANDLE int_to_handle(int fd)
     return reinterpret_cast<HANDLE>(static_cast<intptr_t>(fd));
 }
 
-sihd::util::Result<Mapping> open_map(const std::string & path, DWORD desired_access, DWORD protect, DWORD view_access)
+Result<Mapping> open_map(const std::string & path, DWORD desired_access, DWORD protect, DWORD view_access)
 {
     HANDLE handle = CreateFileA(path.c_str(),
                                 desired_access,
@@ -45,6 +45,7 @@ sihd::util::Result<Mapping> open_map(const std::string & path, DWORD desired_acc
     {
         auto error = Error(io_error, "could not get size of '{}': {}", path, os::last_error_str());
         CloseHandle(handle);
+
         return std::unexpected(std::move(error));
     }
     if (li.QuadPart <= 0)
@@ -54,6 +55,7 @@ sihd::util::Result<Mapping> open_map(const std::string & path, DWORD desired_acc
     }
     // a zero size maps the whole current file
     HANDLE mapping = CreateFileMappingA(handle, nullptr, protect, 0, 0, nullptr);
+
     if (mapping == nullptr)
     {
         auto error = Error(io_error, "could not create file mapping of '{}': {}", path, os::last_error_str());
@@ -76,7 +78,7 @@ sihd::util::Result<Mapping> open_map(const std::string & path, DWORD desired_acc
 
 } // namespace
 
-sihd::util::Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
+Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
 {
     (void)mode;
     auto cleared = this->clear();
@@ -93,6 +95,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
                                 nullptr);
     if (handle == INVALID_HANDLE_VALUE)
         return std::unexpected(Error(io_error, "could not create '{}': {}", path, os::last_error_str()));
+
     // commit the file size now, a bare mapping would extend it lazily
     LARGE_INTEGER offset {};
     offset.QuadPart = static_cast<LONGLONG>(size);
@@ -102,6 +105,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
         CloseHandle(handle);
         return std::unexpected(std::move(error));
     }
+
     HANDLE mapping = CreateFileMappingA(handle,
                                         nullptr,
                                         PAGE_READWRITE,
@@ -115,6 +119,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
         return std::unexpected(std::move(error));
     }
     void *addr = MapViewOfFile(mapping, FILE_MAP_ALL_ACCESS, 0, 0, size);
+
     if (addr == nullptr)
     {
         auto error = Error(io_error, "could not map view of '{}': {}", path, os::last_error_str());
@@ -131,7 +136,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
+Result<void> MappedFile::open_read_only(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -147,7 +152,7 @@ sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
+Result<void> MappedFile::open_read_write(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -163,7 +168,7 @@ sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::clear()
+Result<void> MappedFile::clear()
 {
     bool ret = true;
     if (_addr != nullptr)
@@ -176,6 +181,7 @@ sihd::util::Result<void> MappedFile::clear()
     {
         if (!CloseHandle(int_to_handle(_mapping)))
             ret = false;
+
         _mapping = -1;
     }
     if (_fd != -1)
@@ -192,7 +198,7 @@ sihd::util::Result<void> MappedFile::clear()
     return {};
 }
 
-sihd::util::Result<void> MappedFile::sync(bool async)
+Result<void> MappedFile::sync(bool async)
 {
     if (_addr == nullptr)
         return std::unexpected(Error(not_initialized, "no mapping"));

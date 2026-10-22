@@ -30,7 +30,6 @@ bool ImguiBackendSDL::_sdl_init()
 {
     if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
     {
-        // Setup SDL
         if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
         {
             SIHD_LOG(error, "ImguiBackendSDL: {}", SDL_GetError());
@@ -42,7 +41,6 @@ bool ImguiBackendSDL::_sdl_init()
 
 void ImguiBackendSDL::select_opengl2()
 {
-    // GL ES 2.0 + GLSL 100
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
@@ -51,7 +49,6 @@ void ImguiBackendSDL::select_opengl2()
 
 void ImguiBackendSDL::select_opengl3()
 {
-    // GL 3.0 + GLSL 130
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -60,7 +57,6 @@ void ImguiBackendSDL::select_opengl3()
 
 void ImguiBackendSDL::select_opengl32()
 {
-    // GL 3.2 Core + GLSL 150
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
                         SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -89,10 +85,11 @@ bool ImguiBackendSDL::init_window(const std::string & name, size_t width, size_t
     if (this->_sdl_init() == false)
         return false;
     _close = false;
-    // Create window with graphics context
+
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
                                                      | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     _sdl_window_ptr = SDL_CreateWindow(name.c_str(), width, height, window_flags);
@@ -118,7 +115,7 @@ bool ImguiBackendSDL::init_backend_opengl()
         return false;
     }
     SDL_GL_MakeCurrent(_sdl_window_ptr, _sdl_context_ptr);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
+    SDL_GL_SetSwapInterval(1);
     _is_init = ImGui_ImplSDL3_InitForOpenGL(_sdl_window_ptr, _sdl_context_ptr);
     return _is_init;
 }
@@ -183,6 +180,16 @@ void ImguiBackendSDL::post_render()
     SDL_GL_SwapWindow(_sdl_window_ptr);
 }
 
+SDL_Window *ImguiBackendSDL::window()
+{
+    return _sdl_window_ptr;
+}
+
+SDL_GLContext ImguiBackendSDL::context()
+{
+    return _sdl_context_ptr;
+}
+
 void ImguiBackendSDL::shutdown()
 {
     if (_is_init)
@@ -204,9 +211,9 @@ void ImguiBackendSDL::terminate()
     }
 }
 
-#if defined(__SIHD_WINDOWS__)
 void *ImguiBackendSDL::windows_window()
 {
+#if defined(__SIHD_WINDOWS__)
     if (_sdl_window_ptr == nullptr)
     {
         SIHD_LOG(error, "ImguiBackendSDL: window not initialized");
@@ -215,7 +222,10 @@ void *ImguiBackendSDL::windows_window()
     return (HWND)SDL_GetPointerProperty(SDL_GetWindowProperties(_sdl_window_ptr),
                                         SDL_PROP_WINDOW_WIN32_HWND_POINTER,
                                         nullptr);
-}
+#else
+    SIHD_LOG(error, "ImguiBackendSDL: windows_window is not supported on this platform");
+    return nullptr;
 #endif
+}
 
 } // namespace sihd::imgui

@@ -12,12 +12,13 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::crypto;
+using namespace sihd::util;
 
 class TestUtils: public ::testing::Test
 {
     protected:
-        TestUtils() { sihd::util::LoggerManager::stream(); }
-        ~TestUtils() { sihd::util::LoggerManager::clear_loggers(); }
+        TestUtils() { LoggerManager::stream(); }
+        ~TestUtils() { LoggerManager::clear_loggers(); }
 
         void SetUp() override
         {

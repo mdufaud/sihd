@@ -18,9 +18,9 @@ using namespace sihd::sys;
 class TestZipFile: public ::testing::Test
 {
     protected:
-        TestZipFile() { sihd::util::LoggerManager::stream(); }
+        TestZipFile() { LoggerManager::stream(); }
 
-        virtual ~TestZipFile() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestZipFile() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -99,6 +99,7 @@ TEST_F(TestZipFile, test_zip_write_read)
 
 TEST_F(TestZipFile, test_zip_not_open)
 {
+    const TmpDir tmp_dir;
     ZipFile zip;
 
     EXPECT_FALSE(zip.is_open());
@@ -120,11 +121,10 @@ TEST_F(TestZipFile, test_zip_not_open)
     EXPECT_FALSE(zip.add_from_fs("name", "/nonexistent").has_value());
     EXPECT_FALSE(zip.add_file_from_fs("name", "/nonexistent").has_value());
     EXPECT_FALSE(zip.add_dir_from_fs("name", "/nonexistent").has_value());
-    EXPECT_FALSE(zip.dump_entry_to_fs("/tmp/nope").has_value());
+    EXPECT_FALSE(zip.dump_entry_to_fs(fs::combine(tmp_dir.path(), "nope")).has_value());
 
     EXPECT_FALSE(zip.set_buffer_size(0).has_value());
     EXPECT_FALSE(zip.set_password("pass").has_value());
-    // close on a not-open zip is a no-op and returns true
     EXPECT_TRUE(zip.close().has_value());
 }
 
@@ -140,7 +140,7 @@ TEST_F(TestZipFile, test_zip_entry_not_loaded)
     EXPECT_FALSE(zip.unchange_entry().has_value());
     EXPECT_FALSE(zip.remove_entry().has_value());
     EXPECT_FALSE(zip.rename_entry("whatever").has_value());
-    EXPECT_FALSE(zip.modify_entry_time(sihd::util::Timestamp(0)).has_value());
+    EXPECT_FALSE(zip.modify_entry_time(Timestamp(0)).has_value());
     EXPECT_FALSE(zip.comment_entry("comment").has_value());
     EXPECT_FALSE(zip.encrypt_entry("pass").has_value());
     EXPECT_FALSE(zip.replace_entry("data").has_value());
@@ -193,7 +193,6 @@ TEST_F(TestZipFile, test_zip_add_file_from_fs)
     {
         ZipFile zip(zip_path);
         ASSERT_TRUE(zip.is_open());
-        // this is the first entry (index 0) - previously returned false due to ssize_t -> bool bug
         EXPECT_TRUE(zip.add_file_from_fs("first_file.txt", file_path).has_value());
         EXPECT_TRUE(zip.add_file_from_fs("second_file.txt", file_path).has_value());
         ASSERT_TRUE(zip.close().has_value());
@@ -237,7 +236,6 @@ TEST_F(TestZipFile, test_zip_multi_chunk_read)
         ASSERT_TRUE(zip.is_open());
         EXPECT_TRUE(zip.load_entry("big_file.txt").has_value());
 
-        // small buffer forces multiple reads
         (void)zip.set_buffer_size(128);
 
         std::string result;
@@ -290,7 +288,6 @@ TEST_F(TestZipFile, test_zip_ireader_interface)
         EXPECT_TRUE(reader.get_read_data(view));
         EXPECT_EQ(view.str(), content);
 
-        // second read_next should return false (no more data)
         auto second = reader.read_next();
         ASSERT_TRUE(second.has_value());
         EXPECT_FALSE(second.value());
@@ -306,7 +303,6 @@ TEST_F(TestZipFile, test_zip_read_existing_archive)
     const ssize_t entry_count = zip.count_entries();
     EXPECT_GT(entry_count, 0);
 
-    // iterate all entries
     size_t dir_count = 0;
     size_t file_count = 0;
     for (;;)
@@ -341,7 +337,6 @@ TEST_F(TestZipFile, test_zip_discard)
         EXPECT_FALSE(zip.is_open());
     }
 
-    // archive should not exist or be empty since we discarded
     EXPECT_FALSE(fs::exists(zip_path));
 }
 
@@ -407,13 +402,11 @@ TEST_F(TestZipFile, test_zip_dump_entry_to_fs)
         ZipFile zip(zip_path, true);
         ASSERT_TRUE(zip.is_open());
 
-        // dump directory
         EXPECT_TRUE(zip.load_entry("subdir/").has_value());
         const std::string dir_out = fs::combine(tmp_dir.path(), "out_dir");
         EXPECT_TRUE(zip.dump_entry_to_fs(dir_out).has_value());
         EXPECT_TRUE(fs::is_dir(dir_out));
 
-        // dump file
         EXPECT_TRUE(zip.load_entry("subdir/file.txt").has_value());
         const std::string file_out = fs::combine(dir_out, "file.txt");
         EXPECT_TRUE(zip.dump_entry_to_fs(file_out).has_value());

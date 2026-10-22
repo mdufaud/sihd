@@ -123,6 +123,11 @@ vcpkg_no_default_features = [
     "libusb",  # udev default requires libudev headers (no vcpkg port for libudev exists)
 ]
 
+# Native builds too: usb names devices with its own hwdb.bin parser, so libusb needs no libudev
+vcpkg_no_default_features_native = [
+    "libusb",
+]
+
 # Force-add the libs above only when an extlib that pulls them is in the build, else a
 # cross build of unrelated modules drags in e.g. libusb (fails on riscv64-musl).
 #   no entry -> always (legacy). [] -> never. [requirer,...] -> only if a requirer present.

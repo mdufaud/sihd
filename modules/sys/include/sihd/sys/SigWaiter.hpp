@@ -22,7 +22,6 @@ class SigWaiter
         explicit SigWaiter(const Conf & conf);
         ~SigWaiter();
 
-        // Check if received a signal
         bool received_signal() const;
 
     private:

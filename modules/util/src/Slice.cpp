@@ -30,13 +30,13 @@ Slice Slice::from_size(size_t offset, size_t size)
 Slice::Range Slice::resolve(size_t size) const
 {
     const ssize_t sz = static_cast<ssize_t>(size);
-    ssize_t f = from < 0 ? from + sz : from;
-    ssize_t t = to < 0 ? to + sz : to;
-    f = std::clamp(f, ssize_t(0), sz);
-    t = std::clamp(t, ssize_t(-1), sz - 1);
-    if (f > t)
+    ssize_t from_idx = from < 0 ? from + sz : from;
+    ssize_t to_idx = to < 0 ? to + sz : to;
+    from_idx = std::clamp(from_idx, ssize_t(0), sz);
+    to_idx = std::clamp(to_idx, ssize_t(-1), sz - 1);
+    if (from_idx > to_idx)
         return {0, 0};
-    return {static_cast<size_t>(f), static_cast<size_t>(t + 1)};
+    return {static_cast<size_t>(from_idx), static_cast<size_t>(to_idx + 1)};
 }
 
 } // namespace sihd::util

@@ -52,13 +52,12 @@ class ThreadPool
                 mutable std::mutex _stat_mutex;
         };
 
-        ThreadPool(std::string_view name, size_t number_of_threads);
+        ThreadPool(std::string_view name, size_t thread_count);
         ~ThreadPool();
 
         template <typename Function>
         std::future<CallableReturnType<Function>> add_job(Function && function)
         {
-            // wrap a callable target with std::packaged_task
             using PackagedTask = std::packaged_task<CallableReturnType<Function>()>;
 
             auto packed_task = std::make_unique<PackagedTask>(std::forward<Function>(function));
@@ -68,14 +67,14 @@ class ThreadPool
         }
 
         template <typename Function>
-        CompleteAllJobsReturnType<Function> complete_all_jobs(size_t number_of_jobs, Function && function)
+        CompleteAllJobsReturnType<Function> complete_all_jobs(size_t job_count, Function && function)
         {
             using ReturnType = CallableReturnType<Function, size_t>;
 
             std::vector<std::future<ReturnType>> futures;
-            futures.reserve(number_of_jobs);
+            futures.reserve(job_count);
 
-            for (size_t i = 0; i < number_of_jobs; ++i)
+            for (size_t i = 0; i < job_count; ++i)
             {
                 futures.emplace_back(this->add_job([function, i] { return function(i); }));
             }
@@ -89,7 +88,7 @@ class ThreadPool
             if constexpr (!std::is_void_v<ReturnType>)
             {
                 std::vector<ReturnType> results;
-                results.reserve(number_of_jobs);
+                results.reserve(job_count);
                 for (auto & future : futures)
                 {
                     // if the promise is broken, it will throw std::future_error

@@ -1,6 +1,5 @@
 #include <sihd/imgui/ImguiRendererOpenGL.hpp>
-// Android GLES3 / Emscripten ES2 get their GL symbols via their headers; desktop uses imgui's GL
-// loader so glViewport/glClear/glClearColor resolve to dynamic pointers (no libGL link)
+// desktop resolves glViewport/glClear/glClearColor through imgui's GL loader (no libGL link)
 #if !defined(__ANDROID__) && !defined(IMGUI_IMPL_OPENGL_ES2)
 # include <imgui_impl_opengl3_loader.h>
 #endif
@@ -52,10 +51,7 @@ void ImguiRendererOpenGL::new_frame()
     ImGui_ImplOpenGL3_NewFrame();
 }
 
-void ImguiRendererOpenGL::resize()
-{
-    // nothing to do
-}
+void ImguiRendererOpenGL::resize() {}
 
 void ImguiRendererOpenGL::render(ImDrawData *draw_data)
 {

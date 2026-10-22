@@ -4,6 +4,8 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::ssh
 {
 
@@ -48,14 +50,12 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
 {
     _channel = channel;
 
-    // Check PTY support
     if (!sys::Pty::is_supported())
     {
         SIHD_LOG(error, "SshSubsystemPty: PTY not supported on this platform");
         return false;
     }
 
-    // Create PTY
     _pty = sys::Pty::create();
     if (!_pty)
     {
@@ -63,7 +63,6 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
         return false;
     }
 
-    // Apply configuration
     if (!_shell.empty())
     {
         _pty->set_shell(_shell);
@@ -84,7 +83,6 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
         _pty->set_working_directory(_working_dir);
     }
 
-    // Set terminal size
     sys::PtySize size;
     size.cols = winsize.ws_col;
     size.rows = winsize.ws_row;
@@ -92,13 +90,11 @@ bool SshSubsystemPty::on_start(SshChannel *channel, bool has_pty, const WinSize 
     size.ypixel = winsize.ws_ypixel;
     _pty->set_size(size);
 
-    // Warn if no PTY was requested (shell may not work properly)
     if (!has_pty)
     {
         SIHD_LOG(warning, "SshSubsystemPty: client did not request PTY, shell may not work properly");
     }
 
-    // Spawn the shell
     if (!_pty->spawn())
     {
         SIHD_LOG(error, "SshSubsystemPty: failed to spawn shell");
@@ -191,15 +187,12 @@ int SshSubsystemPty::on_close()
     if (!_pty)
         return -1;
 
-    // Terminate the shell process gracefully
     _pty->terminate();
 
-    // Wait for exit and get exit code
     int exit_code = _pty->wait();
 
     SIHD_LOG(debug, "SshSubsystemPty: shell exited with code {}", exit_code);
 
-    // Clean up
     _pty.reset();
 
     return exit_code;
@@ -226,20 +219,28 @@ bool SshSubsystemPty::forward_output()
     if (!_pty || !_channel)
         return false;
 
-    // Flush any client input the PTY could not accept earlier before reading.
     this->drain_pending_input();
 
     if (_read_buf.byte_capacity() < 4096 && !_read_buf.reserve(4096))
         return false;
 
-    ssize_t n = _pty->read(_read_buf.buf(), _read_buf.byte_capacity());
-    if (n > 0)
+    ssize_t nread = _pty->read(_read_buf.buf(), _read_buf.byte_capacity());
+    if (nread > 0)
     {
-        _channel->write(
-            sihd::util::ArrCharView(reinterpret_cast<const char *>(_read_buf.buf()), static_cast<size_t>(n)));
+        _channel->write(ArrCharView(reinterpret_cast<const char *>(_read_buf.buf()), static_cast<size_t>(nread)));
         return true;
     }
     return false;
+}
+
+int SshSubsystemPty::stderr_fd() const
+{
+    return -1;
+}
+
+SshChannel *SshSubsystemPty::channel() const
+{
+    return _channel;
 }
 
 } // namespace sihd::ssh

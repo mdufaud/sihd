@@ -42,8 +42,6 @@ class TestNavigator: public ::testing::Test
         virtual void TearDown() {}
 };
 
-// --- Tests ---
-
 TEST_F(TestNavigator, test_navigator_basic)
 {
     ServerScope scope;
@@ -161,7 +159,6 @@ TEST_F(TestNavigator, test_navigator_cookies)
     EXPECT_EQ(jar["session"], "abc123");
 }
 
-// Manual redirect loop: verifies redirect_history, final_url, and POST→GET downgrade
 TEST_F(TestNavigator, test_navigator_redirect)
 {
     ServerScope scope;
@@ -182,7 +179,6 @@ TEST_F(TestNavigator, test_navigator_redirect)
     Navigator navigator;
     allow_local_targets(navigator);
 
-    // GET → 302 → GET
     auto resp = navigator.get(shard_url("localhost:3001/api/hop1"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
@@ -191,7 +187,6 @@ TEST_F(TestNavigator, test_navigator_redirect)
     EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/dest"));
     EXPECT_FALSE(resp->was_method_downgraded());
 
-    // POST → 302 → GET (method downgrade)
     resp = navigator.post(shard_url("localhost:3001/api/post_hop"), "body");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
@@ -199,7 +194,6 @@ TEST_F(TestNavigator, test_navigator_redirect)
     EXPECT_TRUE(resp->was_method_downgraded());
 }
 
-// Retry on transient 503: server fails twice then succeeds
 TEST_F(TestNavigator, test_navigator_retry)
 {
     ServerScope scope;
@@ -221,7 +215,7 @@ TEST_F(TestNavigator, test_navigator_retry)
 
     Navigator navigator;
     allow_local_targets(navigator);
-    navigator.set_retry(3, 1); // up to 3 attempts, 1 ms initial backoff
+    navigator.set_retry(3, 1);
 
     auto resp = navigator.get(shard_url("localhost:3001/api/flaky"));
     ASSERT_TRUE(resp.has_value());
@@ -230,7 +224,6 @@ TEST_F(TestNavigator, test_navigator_retry)
     EXPECT_EQ(calls.load(), 3);
 }
 
-// Retry-After far beyond the configured max wait is capped
 TEST_F(TestNavigator, test_navigator_retry_after_capped_by_max_wait)
 {
     ServerScope scope;
@@ -265,7 +258,6 @@ TEST_F(TestNavigator, test_navigator_retry_after_capped_by_max_wait)
     EXPECT_LT(elapsed, Duration(time::sec(5)));
 }
 
-// Max response size cap
 TEST_F(TestNavigator, test_navigator_max_response_size)
 {
     ServerScope scope;
@@ -292,7 +284,6 @@ TEST_F(TestNavigator, test_navigator_max_response_size)
     EXPECT_FALSE(whole->truncated());
 }
 
-// CSRF token extraction from HTML without any network
 TEST_F(TestNavigator, test_csrf_extractor)
 {
     const std::string html = R"(
@@ -305,18 +296,17 @@ TEST_F(TestNavigator, test_csrf_extractor)
 </body></html>
 )";
 
-    CsrfResult r = csrf_extract_from_html(html);
-    EXPECT_EQ(r.field_name, "_csrf");
-    EXPECT_EQ(r.value, "tok3n-abc-XYZ");
+    CsrfResult detected = csrf_extract_from_html(html);
+    EXPECT_EQ(detected.field_name, "_csrf");
+    EXPECT_EQ(detected.value, "tok3n-abc-XYZ");
 
-    CsrfResult r2 = csrf_extract_from_html(html, std::string_view("_csrf"));
-    EXPECT_EQ(r2.value, "tok3n-abc-XYZ");
+    CsrfResult named = csrf_extract_from_html(html, std::string_view("_csrf"));
+    EXPECT_EQ(named.value, "tok3n-abc-XYZ");
 
-    CsrfResult r3 = csrf_extract_from_html(html, std::string_view("no_such_field"));
-    EXPECT_TRUE(r3.value.empty());
+    CsrfResult unknown = csrf_extract_from_html(html, std::string_view("no_such_field"));
+    EXPECT_TRUE(unknown.value.empty());
 }
 
-// robots.txt parsing (RFC 9309) without any network
 TEST_F(TestNavigator, test_robots_txt)
 {
     const std::string_view content = R"(
@@ -896,7 +886,6 @@ TEST_F(TestNavigator, test_navigator_error_message)
     auto resp = navigator.get(shard_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
 
-    // nothing listens on that port
     resp = navigator.get("localhost:19999/api/hello");
     ASSERT_FALSE(resp.has_value());
     EXPECT_FALSE(resp.error().message.empty());
@@ -959,7 +948,6 @@ TEST_F(TestNavigator, test_navigator_ws_proxy_auth)
         return std::make_pair(connected, reply);
     };
 
-    // correct credentials: proxy tunnels, echo works
     auto [ok_connected, ok_reply] = run_ws("testuser", "testpass");
     EXPECT_TRUE(ok_connected);
     ASSERT_TRUE(ok_reply.has_value());

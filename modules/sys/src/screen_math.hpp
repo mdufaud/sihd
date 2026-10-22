@@ -4,7 +4,6 @@
 namespace sihd::sys::screen::internal
 {
 
-// Pixels per inch from a pixel size and its physical size in millimeters.
 inline double dpi_from(int pixels, int mm)
 {
     if (pixels <= 0 || mm <= 0)

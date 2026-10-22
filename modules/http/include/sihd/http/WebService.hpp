@@ -28,8 +28,8 @@ class WebService: public sihd::util::Named
                              std::function<void(const HttpRequest &, HttpResponse &)> fun,
                              HttpRequest::RequestType type = HttpRequest::Get);
 
-        void set_authenticator(IHttpAuthenticator *authenticator) { _authenticator = authenticator; }
-        IHttpAuthenticator *authenticator() const { return _authenticator; }
+        void set_authenticator(IHttpAuthenticator *authenticator);
+        IHttpAuthenticator *authenticator() const;
 
         // without a stream the body is buffered in the request
         void set_body_stream(IBodyStream *stream);

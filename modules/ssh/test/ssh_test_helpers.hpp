@@ -20,44 +20,37 @@
 namespace test
 {
 
-using namespace sihd;
-using namespace sihd::ssh;
-
-// Path to test keys in resources/
 inline constexpr const char *HOST_KEY_PATH = "test/resources/test_host_key_pem";
 inline constexpr const char *CLIENT_KEY_PATH = "test/resources/test_client_key";
 inline constexpr const char *CLIENT_PUBKEY_PATH = "test/resources/test_client_key.pub";
 
-// RAII wrapper for a test SSH server
 struct SshServerHelper
 {
         // declared before the server so it is destroyed after it
-        BasicSshServerHandler handler;
-        SshServer server;
-        util::Worker worker;
+        sihd::ssh::BasicSshServerHandler handler;
+        sihd::ssh::SshServer server;
+        sihd::util::Worker worker;
         int port = 0;
 
         SshServerHelper(std::string_view name = "test-ssh-server"): server(std::string(name)) {}
 
         ~SshServerHelper() { stop(); }
 
-        // Non-copyable
         SshServerHelper(const SshServerHelper &) = delete;
         SshServerHelper & operator=(const SshServerHelper &) = delete;
 
-        // Enable SFTP support with a root directory
         void enable_sftp(std::string_view root_dir = "/")
         {
             std::string root(root_dir);
             handler.set_subsystem_handler_callback(
-                [root]([[maybe_unused]] SshSession *session,
-                       [[maybe_unused]] SshChannel *channel,
+                [root]([[maybe_unused]] sihd::ssh::SshSession *session,
+                       [[maybe_unused]] sihd::ssh::SshChannel *channel,
                        std::string_view subsystem,
                        [[maybe_unused]] bool has_pty,
-                       [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+                       [[maybe_unused]] const sihd::ssh::WinSize & winsize) -> sihd::ssh::ISshSubsystemHandler * {
                     if (subsystem == "sftp")
                     {
-                        auto *sftp_handler = new SshSubsystemSftp();
+                        auto *sftp_handler = new sihd::ssh::SshSubsystemSftp();
                         sftp_handler->set_root_path(root);
                         return sftp_handler;
                     }
@@ -69,18 +62,16 @@ struct SshServerHelper
         {
             handler.add_allowed_user(user, password);
 
-            // Set default exec handler that uses shell to run commands
-            handler.set_exec_handler_callback([]([[maybe_unused]] SshSession *session,
-                                                 [[maybe_unused]] SshChannel *channel,
-                                                 std::string_view command,
-                                                 [[maybe_unused]] bool has_pty,
-                                                 [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
-                auto *exec = new SshSubsystemExec(command);
-                // Default: use shell mode (ParseMode::Shell is default)
-                return exec;
-            });
+            handler.set_exec_handler_callback(
+                []([[maybe_unused]] sihd::ssh::SshSession *session,
+                   [[maybe_unused]] sihd::ssh::SshChannel *channel,
+                   std::string_view command,
+                   [[maybe_unused]] bool has_pty,
+                   [[maybe_unused]] const sihd::ssh::WinSize & winsize) -> sihd::ssh::ISshSubsystemHandler * {
+                    auto *exec = new sihd::ssh::SshSubsystemExec(command);
+                    return exec;
+                });
 
-            // Use port 0 for dynamic allocation
             if (!server.set_port(0).has_value())
                 return false;
             if (!server.set_rsa_key(HOST_KEY_PATH).has_value())
@@ -109,7 +100,6 @@ struct SshServerHelper
         }
 };
 
-// Start a test server with default configuration
 inline std::unique_ptr<SshServerHelper> make_test_server(std::string_view name = "test-ssh-server",
                                                          const char *user = "testuser",
                                                          const char *password = "testpass")
@@ -120,7 +110,6 @@ inline std::unique_ptr<SshServerHelper> make_test_server(std::string_view name =
     return server;
 }
 
-// Start a test server with SFTP support
 inline std::unique_ptr<SshServerHelper> make_test_server_with_sftp(std::string_view name = "test-ssh-server",
                                                                    std::string_view sftp_root = "/",
                                                                    const char *user = "testuser",
@@ -133,9 +122,8 @@ inline std::unique_ptr<SshServerHelper> make_test_server_with_sftp(std::string_v
     return server;
 }
 
-// Helper to create an authenticated client session
 bool connect_to_test_server(const SshServerHelper & server,
-                            SshSession & session,
+                            sihd::ssh::SshSession & session,
                             const char *user = "testuser",
                             const char *password = "testpass");
 

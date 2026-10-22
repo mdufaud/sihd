@@ -47,7 +47,6 @@ class LuaGilGuard
         LuaGil *_gil;
 };
 
-// RAII release of the universe GIL around a blocking C++ call so other threads can run Lua.
 class LuaGilRelease
 {
     public:

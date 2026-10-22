@@ -3,11 +3,6 @@
 
 #include <cstdint>
 
-#if defined(__SIHD_WINDOWS__)
-// missing BSD netinet ip/icmp structures on windows
-# include <sihd/net/utils.windows.hpp>
-#endif
-
 namespace sihd::net::utils
 {
 

@@ -31,6 +31,12 @@ assert(back[1][1] == "name")
 assert(back[2][1] == "dev")
 assert(back[2][2] == "8080")
 
+-- write: invalid delimiter -> false, existing file left intact
+assert(csv.write(path, {{"a"}}, "\1") == false)
+local intact = csv.read(path)
+assert(#intact == 2)
+assert(intact[2][2] == "8080")
+
 -- read: nonexistent file -> nil
 assert(csv.read("/nonexistent/path/file.csv") == nil)
 

@@ -65,19 +65,19 @@ class HttpRequest
         bool has_multipart() const;
         const Multipart *multipart() const;
 
-        const std::string & client_ip() const { return _ip; }
-        const sihd::util::ArrChar & content() const { return _array; }
-        const std::string & url() const { return _url; }
-        const std::vector<std::string> & uri_args() const { return _uri_args_lst; }
-        const std::unordered_map<std::string, std::string> & path_params() const { return _path_params; }
-        const std::unordered_map<std::string, std::string> & query_params() const { return _query_params; }
-        const std::unordered_map<std::string, std::string> & cookies() const { return _cookies; }
-        RequestType request_type() const { return _request_type; }
-        const std::string & auth_user() const { return _auth_user; }
-        const std::string & auth_token() const { return _auth_token; }
-        bool is_authenticated() const { return !_auth_user.empty() || !_auth_token.empty(); }
-        HttpHeader & http_header() { return _http_header; }
-        const HttpHeader & http_header() const { return _http_header; }
+        const std::string & client_ip() const;
+        const sihd::util::ArrChar & content() const;
+        const std::string & url() const;
+        const std::vector<std::string> & uri_args() const;
+        const std::unordered_map<std::string, std::string> & path_params() const;
+        const std::unordered_map<std::string, std::string> & query_params() const;
+        const std::unordered_map<std::string, std::string> & cookies() const;
+        RequestType request_type() const;
+        const std::string & auth_user() const;
+        const std::string & auth_token() const;
+        bool is_authenticated() const;
+        HttpHeader & http_header();
+        const HttpHeader & http_header() const;
 
     protected:
 

@@ -36,7 +36,7 @@ std::vector<std::string> list_entries(const std::string & archive_path)
     return ret;
 }
 
-sihd::util::Result<void> zip(const std::string & root_dir_path, const std::string & archive_path)
+Result<void> zip(const std::string & root_dir_path, const std::string & archive_path)
 {
     constexpr bool read_only = false;
     constexpr bool do_strict_checks = true;
@@ -51,7 +51,7 @@ sihd::util::Result<void> zip(const std::string & root_dir_path, const std::strin
     return zip.close();
 }
 
-sihd::util::Result<void> unzip(const std::string & archive_path, const std::string & unzip_file_path)
+Result<void> unzip(const std::string & archive_path, const std::string & unzip_file_path)
 {
     constexpr bool read_only = true;
     constexpr bool do_strict_checks = true;

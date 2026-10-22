@@ -1,10 +1,11 @@
-#include <cstdio>
 #include <limits>
 
 #include <gtest/gtest.h>
 
 #include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/PrivateKey.hpp>
+#include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include "crypto_test_helpers.hpp"
@@ -192,7 +193,8 @@ TEST_F(TestCertificate, pem_roundtrip)
 
 TEST_F(TestCertificate, pem_file_roundtrip)
 {
-    std::string path = "/tmp/sihd_test_cert.pem";
+    sihd::sys::TmpDir dir;
+    const std::string path = sihd::sys::fs::combine(dir.path(), "cert.pem");
 
     Certificate cert;
     EXPECT_TRUE(cert.generate_self_signed(_key, "test.local"));
@@ -201,8 +203,6 @@ TEST_F(TestCertificate, pem_file_roundtrip)
     Certificate cert2;
     EXPECT_TRUE(cert2.load_pem(path).has_value());
     EXPECT_EQ(cert2.to_pem_string(), cert.to_pem_string());
-
-    std::remove(path.c_str());
 }
 
 TEST_F(TestCertificate, verify_self_signed)

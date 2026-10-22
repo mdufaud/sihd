@@ -28,9 +28,6 @@
 #include "outputs.hpp"
 #include "protocols/wlr-screencopy-unstable-v1-client-protocol.h"
 
-// Native wlr-screencopy capture, grim / spectacle / gnome-screenshot as the tools fallback:
-// compositors without a capture protocol (KWin, Mutter) only serve screenshots through tools
-
 // linux/memfd.h is a kernel uapi header some libcs do not ship.
 #ifndef MFD_CLOEXEC
 # define MFD_CLOEXEC 0x0001U
@@ -44,16 +41,13 @@ namespace sihd::sys::screenshot::wayland
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::screenshot");
+SIHD_NEW_LOGGER("sihd::sys::screenshot::wayland");
 
 namespace
 {
 
 constexpr Duration capture_timeout = Duration(time::sec(2));
 
-// Connection and registry
-
-// RAII connection binding the screencopy manager, wl_shm and the outputs.
 class Connection: public internal::wayland::Connection
 {
     public:
@@ -64,7 +58,6 @@ class Connection: public internal::wayland::Connection
 
         internal::wayland::Outputs & outputs() { return _outputs; }
 
-        // The output whose announced name (v4) is `name`.
         wl_output *output(const std::string & name) const { return _outputs.find(name); }
 
     protected:
@@ -91,10 +84,6 @@ class Connection: public internal::wayland::Connection
         internal::wayland::Outputs _outputs;
 };
 
-// Capture
-
-// One capture_output round: the frame announces the shm parameters, the matching buffer is
-// created and copied into - `ready` means the pixels are in, `failed` gives up
 class Capture
 {
     public:
@@ -122,7 +111,6 @@ class Capture
         Capture(const Capture &) = delete;
         Capture & operator=(const Capture &) = delete;
 
-        // Dispatches until the copy landed, failed or the deadline expired.
         bool run(Timestamp deadline)
         {
             return _frame != nullptr && dispatch_until(_conn, deadline, [&] { return _done || _failed || _broken; })
@@ -147,8 +135,6 @@ class Capture
             this->create_shm_buffer();
         }
 
-        // memfd backed wl_shm pool sized by the announced stride, then the
-        // copy request.
         void create_shm_buffer()
         {
             const size_t map_size = static_cast<size_t>(stride) * height;
@@ -162,6 +148,7 @@ class Capture
             if (_fd < 0 || ftruncate(_fd, static_cast<off_t>(map_size)) != 0)
             {
                 _broken = true;
+
                 return;
             }
             _map = mmap(nullptr, map_size, PROT_READ | PROT_WRITE, MAP_SHARED, _fd, 0);
@@ -173,6 +160,7 @@ class Capture
             }
             _map_size = map_size;
             _pool = wl_shm_create_pool(_conn.shm, _fd, static_cast<int32_t>(map_size));
+
             if (_pool == nullptr)
             {
                 _broken = true;
@@ -190,8 +178,7 @@ class Capture
                 return;
             }
             zwlr_screencopy_frame_v1_copy(_frame, _buffer);
-            // The copy request was queued from within a listener: it only
-            // reaches the compositor on an explicit flush.
+            // the copy request was queued from within a listener: only an explicit flush reaches the compositor
             wl_display_flush(_conn.display());
         }
 
@@ -231,10 +218,6 @@ class Capture
         bool _broken = false;
 };
 
-// Pixel decoding
-
-// One wl_shm capture line into the Bitmap B,G,R,A memory order: channel
-// shifts per fourcc family, alpha forced on the X-variants.
 bool fill_bitmap(const Capture & capture, Bitmap & bm)
 {
     if (capture.pixels() == nullptr || capture.width == 0 || capture.height == 0)
@@ -287,40 +270,36 @@ bool fill_bitmap(const Capture & capture, Bitmap & bm)
             dst[col * 4 + 3] = static_cast<uint8_t>(has_alpha ? ((px >> a_shift) & 0xff) : 0xff);
         }
     }
+
     bm.create(capture.width, capture.height, 32);
     bm.set(bgra.data(), bgra.size());
     return true;
 }
 
-// Tools fallback
-
-// Reads the next ppm header token: whitespace separated, #-comments to eol.
 bool ppm_token(std::istream & in, std::string & out)
 {
     out.clear();
-    char c = 0;
-    while (in.get(c))
+    char chr = 0;
+    while (in.get(chr))
     {
-        if (c == '#')
+        if (chr == '#')
         {
-            while (in.get(c) && c != '\n')
+            while (in.get(chr) && chr != '\n')
             {
             }
             continue;
         }
-        if (std::isspace(static_cast<unsigned char>(c)))
+        if (std::isspace(static_cast<unsigned char>(chr)))
         {
             if (!out.empty())
                 return true;
             continue;
         }
-        out.push_back(c);
+        out.push_back(chr);
     }
     return !out.empty();
 }
 
-// grim -t ppm writes binary P6: "P6" magic, width, height, 255 maxval, then
-// RGB rows.
 bool read_ppm_into(const std::string & path, Bitmap & bm)
 {
     std::ifstream in(path, std::ios::binary);
@@ -397,6 +376,17 @@ bool run_tool(const ToolCall & tool, Bitmap & bm)
     return tool.ppm_output ? read_ppm_into(tool.path, bm) : bm.read_bmp(tool.path);
 }
 
+bool capture_output(Connection & conn, wl_output *output, Timestamp deadline, Bitmap & bm)
+{
+    Capture capture(conn, output);
+    if (!capture.run(deadline))
+    {
+        SIHD_LOG(error, "wayland: screencopy capture failed");
+        return false;
+    }
+    return fill_bitmap(capture, bm);
+}
+
 bool take_screen_native(Bitmap & bm, const std::string & output_name)
 {
     const Timestamp deadline = internal::deadline_from_now(capture_timeout);
@@ -407,16 +397,6 @@ bool take_screen_native(Bitmap & bm, const std::string & output_name)
     if (conn.manager == nullptr)
         return false;
 
-    const auto capture_into = [&](wl_output *output) {
-        Capture capture(conn, output);
-        if (!capture.run(deadline))
-        {
-            SIHD_LOG(error, "wayland: screencopy capture failed");
-            return false;
-        }
-        return fill_bitmap(capture, bm);
-    };
-
     if (!output_name.empty())
     {
         wl_output *output = conn.output(output_name);
@@ -425,10 +405,9 @@ bool take_screen_native(Bitmap & bm, const std::string & output_name)
             SIHD_LOG(debug, "wayland: no output named '{}'", output_name);
             return false;
         }
-        return capture_into(output);
+        return capture_output(conn, output, deadline, bm);
     }
-    // A multi-output full screen is left to the tools: grim stitches every
-    // output, the protocol captures one at a time.
+    // a multi-output full screen goes to the tools: grim stitches every output, the protocol captures one
     const std::vector<internal::wayland::OutputState> & outputs = conn.outputs().states();
     if (outputs.size() > 1)
     {
@@ -438,7 +417,7 @@ bool take_screen_native(Bitmap & bm, const std::string & output_name)
     if (outputs.empty())
         return false;
 
-    return capture_into(outputs.front().proxy);
+    return capture_output(conn, outputs.front().proxy, deadline, bm);
 }
 
 bool take_screen_binaries(Bitmap & bm, const std::string & output_name)
@@ -456,7 +435,6 @@ bool take_screen_binaries(Bitmap & bm, const std::string & output_name)
     const std::vector<ToolCall> tools = {
         // grim (wlroots compositors): ppm output avoids an image decoder
         {grim_args, tmp_dir + "/sihd_screenshot.ppm", true},
-        // spectacle (KDE Plasma), then gnome-screenshot (GNOME)
         {{"spectacle", "-b", "-n", "-f", "-o", tmp_dir + "/sihd_screenshot.bmp"},
          tmp_dir + "/sihd_screenshot.bmp",
          false},
@@ -482,8 +460,7 @@ bool take_screen(Bitmap & bm, const std::string & output_name)
 
 bool take_focused(Bitmap & bm)
 {
-    // spectacle -a and gnome-screenshot -w know the focused window: the
-    // capture protocols expose no window geometry.
+    // spectacle -a and gnome-screenshot -w know the focused window: the protocols expose no geometry
     const std::string bmp_path = fs::tmp_path() + "/sihd_screenshot.bmp";
     const std::vector<ToolCall> tools = {
         {{"spectacle", "-b", "-n", "-a", "-o", bmp_path}, bmp_path, false},

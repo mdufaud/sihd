@@ -1,6 +1,7 @@
 #include "mouse.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -15,8 +16,7 @@
 #include "outputs.hpp"
 #include "protocols/wlr-virtual-pointer-unstable-v1-client-protocol.h"
 
-// Native zwlr_virtual_pointer_v1 injection: wlroots-style compositors only,
-// the manager global is the capability gate
+// Native zwlr_virtual_pointer_v1 injection: wlroots-style compositors only, the manager global gates it
 
 using sihd::sys::internal::wayland::roundtrip_bounded;
 
@@ -27,7 +27,7 @@ namespace sihd::sys::mouse::wayland
 
 using namespace sihd::util;
 
-SIHD_NEW_LOGGER("sihd::sys::mouse");
+SIHD_NEW_LOGGER("sihd::sys::mouse::wayland");
 
 namespace
 {
@@ -38,10 +38,8 @@ constexpr Duration pointer_timeout = Duration(time::sec(2));
 constexpr double detent = 10.0;
 
 // evdev button codes indexed by MouseButton: left, middle, right, side, extra.
-constexpr uint32_t button_codes[] = {0x110, 0x112, 0x111, 0x113, 0x114};
+constexpr auto button_codes = std::to_array<uint32_t>({0x110, 0x112, 0x111, 0x113, 0x114});
 
-// The connection binding the seat, the virtual pointer manager and the outputs
-// (the logical layout the absolute motion maps into).
 class Connection: public internal::wayland::Connection
 {
     public:
@@ -109,8 +107,7 @@ class PointerSession
 
         void scroll(int x, int y)
         {
-            // The axis value is positive scrolling down and right; `y` counts
-            // detents up.
+            // axis value is positive scrolling down and right; `y` counts detents up
             if (y != 0)
             {
                 zwlr_virtual_pointer_v1_axis(_pointer,
@@ -154,7 +151,6 @@ class PointerSession
         zwlr_virtual_pointer_v1 *_pointer = nullptr;
 };
 
-// One pointer gesture: session start, the body, the bounded delivery.
 template <typename Body>
 Result<void> pointer_gesture(const Body & body)
 {

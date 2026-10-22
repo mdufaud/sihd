@@ -9,7 +9,6 @@
 namespace sihd::curl
 {
 
-// libcurl version string
 std::string version();
 
 sihd::util::Result<std::string> resolve_url(std::string_view base, std::string_view reference);

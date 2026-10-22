@@ -91,21 +91,21 @@ bool LineReader::set_line_buffsize(size_t buff)
     return true;
 }
 
-sihd::util::Result<void> LineReader::open(const std::string & path)
+Result<void> LineReader::open(const std::string & path)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open(path, "r");
 }
 
-sihd::util::Result<void> LineReader::open_fd(int fd)
+Result<void> LineReader::open_fd(int fd)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
     return _file.open_fd(fd, "r");
 }
 
-sihd::util::Result<void> LineReader::set_stream(FILE *stream, bool ownership)
+Result<void> LineReader::set_stream(FILE *stream, bool ownership)
 {
     if (this->_init() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffers"));
@@ -123,7 +123,7 @@ bool LineReader::close()
     return !SIHD_UNEXPECTED_LOG(_file.close());
 }
 
-sihd::util::Result<bool> LineReader::read_next()
+Result<bool> LineReader::read_next()
 {
     if (_line_buff.data() == nullptr || _read_buff.data() == nullptr)
         return std::unexpected(Error(not_initialized, "buffers not allocated"));
@@ -133,26 +133,22 @@ sihd::util::Result<bool> LineReader::read_next()
     {
         if (static_cast<ssize_t>(_last_read_index) < _read_size)
         {
-            // look for delimiter
             size_t copy_len = 0;
             const char *read_at = _read_buff.data() + _last_read_index;
             const char *match = static_cast<const char *>(memchr(read_at, _delimiter, _read_size - _last_read_index));
+
             if (match != nullptr)
                 copy_len = (match - read_at) + static_cast<size_t>(_put_delimiter_in_line);
             else
                 copy_len = _read_size - _last_read_index;
-            // if length to copy is too much for line buffer - reallocate
             if ((fill_idx + copy_len) >= _line_buff_size)
             {
                 if (this->_reallocate_line(fill_idx + copy_len) == false)
                     return std::unexpected(Error(out_of_memory, "could not reallocate line buffer"));
             }
-            // copy from into line either full read buffer or just matching part
             memcpy(_line_buff.data() + fill_idx, _read_buff.data() + _last_read_index, copy_len);
-            // prepare next loop/call
             _last_read_index += copy_len + static_cast<size_t>(!_put_delimiter_in_line);
             fill_idx += copy_len;
-            // return if delimiter found
             if (match != nullptr)
             {
                 _line_size = fill_idx;
@@ -160,17 +156,15 @@ sihd::util::Result<bool> LineReader::read_next()
                 return true;
             }
         }
-        // new read buffer
+
         auto read = _file.read(_read_buff.data(), _read_buff_size);
         SIHD_UNEXPECTED_RETURN(read);
         _read_size = (ssize_t)*read;
         _last_read_index = 0;
         _read_buff.data()[_read_size] = 0;
-        // end
         if (_read_size == 0)
         {
             _line_size = fill_idx;
-            // prepare next call
             // fill_idx == 0 means no more to read
             _line_buff.data()[fill_idx] = 0;
             _last_read_index = fill_idx;
@@ -212,7 +206,7 @@ bool LineReader::_allocate_read_buffer()
     return _read_buff.reserve(_read_buff_size + 1);
 }
 
-sihd::util::Result<std::string> LineReader::fast_read_line(FILE *stream, const LineReaderOptions & options)
+Result<std::string> LineReader::fast_read_line(FILE *stream, const LineReaderOptions & options)
 {
     LineReader reader(options);
 
@@ -227,7 +221,7 @@ sihd::util::Result<std::string> LineReader::fast_read_line(FILE *stream, const L
     return std::string(view.data(), view.size());
 }
 
-sihd::util::Result<std::string> LineReader::fast_read_stdin(LineReaderOptions options)
+Result<std::string> LineReader::fast_read_stdin(LineReaderOptions options)
 {
     options.read_buffsize = 1;
     return LineReader::fast_read_line(stdin, options);

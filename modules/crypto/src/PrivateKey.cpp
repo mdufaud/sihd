@@ -1,5 +1,7 @@
 #include <cstdio>
 
+#include <fmt/format.h>
+
 #include <sihd/crypto/PrivateKey.hpp>
 #include <sihd/crypto/error.hpp>
 #include <sihd/sys/File.hpp>
@@ -66,7 +68,6 @@ Result<void> PrivateKey::generate_ec(std::string_view curve_name)
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr));
     if (ctx == nullptr)
         return make_error("EVP_PKEY_CTX_new_from_name");
-    // valid char * modifiable
     std::string curve(curve_name);
     OSSL_PARAM params[] = {
         OSSL_PARAM_construct_utf8_string("group", curve.data(), 0),
@@ -77,7 +78,7 @@ Result<void> PrivateKey::generate_ec(std::string_view curve_name)
                     && EVP_PKEY_keygen(ctx.get(), &raw) > 0;
     std::unique_ptr<EVP_PKEY, PkeyFree> key(raw);
     if (!ok || key == nullptr)
-        return make_error("EC keygen for curve '{}'", curve_name);
+        return make_error(fmt::format("EC keygen for curve '{}'", curve_name));
     _handle = make_handle(key.release());
     return {};
 }
@@ -92,7 +93,7 @@ Result<void> PrivateKey::load_pem(std::string_view path)
     std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_PrivateKey(fp, nullptr, refuse_passphrase, nullptr));
     fclose(fp);
     if (key == nullptr)
-        return make_error("read PEM from '{}'", path);
+        return make_error(fmt::format("read PEM from '{}'", path));
     _handle = make_handle(key.release());
     return {};
 }
@@ -105,7 +106,7 @@ Result<void> PrivateKey::save_pem(std::string_view path) const
 
     const std::string pem = this->to_pem_string();
     if (pem.empty())
-        return make_error("write PEM to '{}'", path);
+        return make_error(fmt::format("write PEM to '{}'", path));
 
     // owner-only temp renamed over the target: links are replaced, never written through
     sihd::sys::File file;
@@ -168,6 +169,16 @@ std::string PrivateKey::to_pem_string() const
 void PrivateKey::clear()
 {
     _handle.reset();
+}
+
+PrivateKey::operator bool() const
+{
+    return _handle != nullptr;
+}
+
+void *PrivateKey::native() const
+{
+    return _handle.get();
 }
 
 } // namespace sihd::crypto

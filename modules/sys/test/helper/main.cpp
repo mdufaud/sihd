@@ -18,6 +18,8 @@
 #include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/SharedMemory.hpp>
 
+using namespace sihd::util;
+
 namespace
 {
 struct shmbuf
@@ -99,7 +101,7 @@ int do_mq_send(const char *name, const char *payload)
         return 0;
 
     int ret = 1 << 1;
-    auto sent = mq->send(sihd::util::ArrByteView(payload, strlen(payload)));
+    auto sent = mq->send(ArrByteView(payload, strlen(payload)));
     if (!sent)
     {
         fprintf(stderr, "mq send error: %s\n", sent.error().message.c_str());

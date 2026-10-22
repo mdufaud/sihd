@@ -13,19 +13,42 @@ using namespace sihd::util;
 class TestMessage: public ::testing::Test
 {
     protected:
-        TestMessage() { sihd::util::LoggerManager::stream(); }
+        TestMessage() { LoggerManager::stream(); }
 
-        virtual ~TestMessage() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestMessage() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
         virtual void TearDown() {}
 };
 
-TEST_F(TestMessage, test_message_errors)
+namespace
 {
-    // TODO
-}
+
+struct DynPacket
+{
+        bool active;
+        int size;
+} __attribute__((packed));
+
+struct WaterfallMsg1
+{
+        int magic;
+        char str[200];
+} __attribute__((packed));
+
+struct WaterfallMsg2
+{
+        bool b;
+        double d[2];
+        short s;
+        WaterfallMsg1 msg;
+        WaterfallMsg1 othermsg;
+} __attribute__((packed));
+
+} // namespace
+
+TEST_F(TestMessage, test_message_errors) {}
 
 TEST_F(TestMessage, test_message_clone_before_finish)
 {
@@ -50,12 +73,6 @@ TEST_F(TestMessage, test_message_removed_field_size)
 
 TEST_F(TestMessage, test_dynmessage)
 {
-    struct s_msg1
-    {
-            bool active;
-            int size;
-    } __attribute__((packed));
-
     DynMessage msg1("msg1");
 
     EXPECT_TRUE(msg1.add_field<bool>("active"));
@@ -76,7 +93,7 @@ TEST_F(TestMessage, test_dynmessage)
 
     SIHD_COUT("{}\n", msg1.tree_desc_str());
 
-    s_msg1 test;
+    DynPacket test;
     test.active = false;
     test.size = 0;
 
@@ -96,11 +113,11 @@ TEST_F(TestMessage, test_dynmessage)
     ASSERT_EQ(msg1.field_byte_size(), sizeof(bool) + sizeof(int));
 
     char hw[] = "hello world";
-    char buffer[sizeof(s_msg1) + sizeof(hw)];
-    s_msg1 *test2 = (s_msg1 *)&buffer[0];
+    char buffer[sizeof(DynPacket) + sizeof(hw)];
+    DynPacket *test2 = (DynPacket *)&buffer[0];
     test2->active = true;
     test2->size = sizeof(hw);
-    strcpy(buffer + sizeof(s_msg1), hw);
+    strcpy(buffer + sizeof(DynPacket), hw);
 
     EXPECT_TRUE(msg1.field_read_from(&buffer, sizeof(buffer)));
 
@@ -115,12 +132,6 @@ TEST_F(TestMessage, test_dynmessage)
 
 TEST_F(TestMessage, test_message_waterfall)
 {
-    struct s_msg1
-    {
-            int magic;
-            char str[200];
-    } __attribute__((packed));
-
     Message msg1("msg1");
 
     EXPECT_TRUE(msg1.add_field<int>("magic"));
@@ -130,16 +141,7 @@ TEST_F(TestMessage, test_message_waterfall)
     SIHD_COUT("{}\n", msg1.tree_desc_str());
 
     EXPECT_EQ(msg1.field_byte_size(), sizeof(int) + 200 * sizeof(char));
-    EXPECT_EQ(msg1.field_byte_size(), sizeof(s_msg1));
-
-    struct s_msg2
-    {
-            bool b;
-            double d[2];
-            short s;
-            struct s_msg1 msg;
-            struct s_msg1 othermsg;
-    } __attribute__((packed));
+    EXPECT_EQ(msg1.field_byte_size(), sizeof(WaterfallMsg1));
 
     Message msg2("msg2");
 
@@ -154,9 +156,9 @@ TEST_F(TestMessage, test_message_waterfall)
 
     EXPECT_EQ(msg2.field_byte_size(), msg1.field_byte_size() * 2 + sizeof(bool) + sizeof(double) * 2 + sizeof(short));
 
-    EXPECT_EQ(msg2.field_byte_size(), sizeof(s_msg2));
+    EXPECT_EQ(msg2.field_byte_size(), sizeof(WaterfallMsg2));
 
-    s_msg2 test;
+    WaterfallMsg2 test;
     test.b = true;
     test.d[0] = 1.0;
     test.d[1] = 2.0;
@@ -217,7 +219,6 @@ TEST_F(TestMessage, test_message_simple)
 
     EXPECT_EQ(msg.field_byte_size(), sizeof(bool) + sizeof(uint32_t) * 2 + sizeof(float) * 5);
 
-    // Making a fake buffer to fill the message
     ArrByte buf;
     ArrBool barr;
     ArrUInt iarr;
@@ -233,10 +234,8 @@ TEST_F(TestMessage, test_message_simple)
 
     EXPECT_EQ(buf.size(), msg.field_byte_size());
 
-    // Fill the message
     ASSERT_TRUE(msg.field_read_from(buf.buf(), buf.size()));
 
-    // Retrieve fields and check buffer positionning
     MessageField *bfield = msg.find<MessageField>("bool");
     MessageField *ifield = msg.find<MessageField>("uint");
     MessageField *ffield = msg.find<MessageField>("float");
@@ -247,7 +246,6 @@ TEST_F(TestMessage, test_message_simple)
     EXPECT_EQ(ifield->array()->buf(), msg.array()->buf() + 1);
     EXPECT_EQ(ffield->array()->buf(), msg.array()->buf() + 1 + (2 * sizeof(int)));
 
-    // Test if values are correct
     EXPECT_EQ(bfield->read_value<bool>(0), true);
     for (size_t i = 0; i < iarr.size(); ++i)
         EXPECT_EQ(ifield->read_value<uint32_t>(i), 10u * i);

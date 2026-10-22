@@ -13,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-LoggerFile::LoggerFile(const std::string & name, sihd::util::Node *parent): ALogger(name, parent)
+LoggerFile::LoggerFile(const std::string & name, Node *parent): ALogger(name, parent)
 {
     this->add_conf("path", &LoggerFile::set_path);
     this->add_conf("append", &LoggerFile::set_append);
@@ -57,7 +57,7 @@ bool LoggerFile::set_pattern(const std::string & pattern)
     return patterned.has_value();
 }
 
-sihd::util::Result<void> LoggerFile::_open_file()
+Result<void> LoggerFile::_open_file()
 {
     return _file.open(_path, _append ? "a" : "w");
 }

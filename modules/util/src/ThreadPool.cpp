@@ -13,11 +13,10 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
-ThreadPool::ThreadPool(std::string_view name, size_t number_of_threads): _name(name)
+ThreadPool::ThreadPool(std::string_view name, size_t thread_count): _name(name)
 {
-    // creating threads
-    _threads.reserve(number_of_threads);
-    for (size_t i = 0; i < number_of_threads; ++i)
+    _threads.reserve(thread_count);
+    for (size_t i = 0; i < thread_count; ++i)
     {
         _threads.emplace_back(std::make_unique<Thread>(fmt::format("{}[{}]", name, i + 1), _jobs));
     }
@@ -78,7 +77,7 @@ void ThreadPool::Thread::_loop()
 {
     while (!_stop)
     {
-        sihd::util::Result<Job> expected_job = _jobs.pop();
+        Result<Job> expected_job = _jobs.pop();
         if (expected_job.has_value() == false)
             break;
         Job job = std::move(*expected_job);
@@ -86,7 +85,7 @@ void ThreadPool::Thread::_loop()
         _stopwatch.reset();
         job();
         {
-            std::lock_guard l(_stat_mutex);
+            std::lock_guard lock(_stat_mutex);
             _jobs_stat.add_sample(_stopwatch.time());
         }
     }
@@ -103,7 +102,7 @@ void ThreadPool::Thread::stop()
 
 Stat<Duration> ThreadPool::Thread::stats() const
 {
-    std::lock_guard l(_stat_mutex);
+    std::lock_guard lock(_stat_mutex);
     return _jobs_stat;
 }
 

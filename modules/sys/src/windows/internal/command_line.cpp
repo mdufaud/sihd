@@ -15,6 +15,7 @@ std::string command_line(std::span<const std::string_view> args)
             line += arg;
             continue;
         }
+
         line += '"';
         size_t backslashes = 0;
         for (char c : arg)

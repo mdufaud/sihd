@@ -9,7 +9,6 @@
 namespace sihd::curl
 {
 
-// one multipart part as plain data, materialized by Request::set_mime
 struct MimePart
 {
         std::string name;
@@ -47,7 +46,7 @@ class Mime
 
         Part add_part();
 
-        const std::vector<MimePart> & parts() const { return _parts; }
+        const std::vector<MimePart> & parts() const;
 
     private:
         std::vector<MimePart> _parts;

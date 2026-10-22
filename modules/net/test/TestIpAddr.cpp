@@ -54,7 +54,6 @@ TEST_F(TestIpAddr, test_ipaddr_ip_name)
     (void)localhost.fetch_hostname();
     EXPECT_EQ(localhost.hostname(), "localhost");
 
-    // no valid ip inside
     EXPECT_FALSE(IpAddr("google.com").fetch_hostname().has_value());
 
     // requires internet
@@ -195,20 +194,26 @@ TEST_F(TestIpAddr, test_is_private_ipv4)
     // 0.0.0.0/8
     EXPECT_TRUE(ip::is_private_ipv4(0x00000000));
     EXPECT_TRUE(ip::is_private_ipv4(0x00FFFFFF));
+
     // 127.0.0.0/8 loopback
     EXPECT_TRUE(ip::is_private_ipv4(0x7F000001));
+
     // 10.0.0.0/8
     EXPECT_TRUE(ip::is_private_ipv4(0x0A000001));
     EXPECT_TRUE(ip::is_private_ipv4(0x0AFFFFFF));
+
     // 172.16.0.0/12
     EXPECT_TRUE(ip::is_private_ipv4(0xAC100001));
     EXPECT_TRUE(ip::is_private_ipv4(0xAC1FFFFF));
     EXPECT_FALSE(ip::is_private_ipv4(0xAC200001));
+
     // 192.168.0.0/16
     EXPECT_TRUE(ip::is_private_ipv4(0xC0A80001));
     EXPECT_TRUE(ip::is_private_ipv4(0xC0A8FFFF));
+
     // 169.254.0.0/16 link-local
     EXPECT_TRUE(ip::is_private_ipv4(0xA9FE0001));
+
     // public
     EXPECT_FALSE(ip::is_private_ipv4(0x08080808)); // 8.8.8.8
     EXPECT_FALSE(ip::is_private_ipv4(0xD83AD32E)); // 216.58.211.46
@@ -298,20 +303,19 @@ TEST_F(TestIpAddr, test_ipaddr_dns_lookup_async)
 
 TEST_F(TestIpAddr, test_ipaddr_operators)
 {
-    IpAddr a("127.0.0.1", 80);
-    IpAddr b("127.0.0.1", 80);
-    IpAddr c("127.0.0.1", 81);
-    IpAddr d("192.168.0.1", 80);
-    IpAddr e("::1", 80);
+    IpAddr first("127.0.0.1", 80);
+    IpAddr same("127.0.0.1", 80);
+    IpAddr other_port("127.0.0.1", 81);
+    IpAddr other_ip("192.168.0.1", 80);
+    IpAddr ipv6("::1", 80);
 
-    EXPECT_EQ(a, b);
-    EXPECT_FALSE(a == c);
-    EXPECT_FALSE(a == d);
-    EXPECT_FALSE(a == e);
+    EXPECT_EQ(first, same);
+    EXPECT_FALSE(first == other_port);
+    EXPECT_FALSE(first == other_ip);
+    EXPECT_FALSE(first == ipv6);
 
-    // move
-    IpAddr moved(std::move(a));
-    EXPECT_EQ(moved, b);
+    IpAddr moved(std::move(first));
+    EXPECT_EQ(moved, same);
 }
 
 TEST_F(TestIpAddr, test_ipaddr_invalid_mask)
@@ -344,10 +348,10 @@ TEST_F(TestIpAddr, test_ipaddr_invalid_mask)
     EXPECT_FALSE(empty.set_subnet_mask(24));
     EXPECT_FALSE(empty.has_subnet());
 
-    IpAddr a("10.0.0.1/24");
-    EXPECT_EQ(a.subnet_value(), 24u);
-    IpAddr b("::1");
-    EXPECT_FALSE(a.is_same_subnet(b.addr6()));
+    IpAddr ipv4_addr("10.0.0.1/24");
+    EXPECT_EQ(ipv4_addr.subnet_value(), 24u);
+    IpAddr ipv6_addr("::1");
+    EXPECT_FALSE(ipv4_addr.is_same_subnet(ipv6_addr.addr6()));
 }
 
 TEST_F(TestIpAddr, test_ipaddr_assign_empty)

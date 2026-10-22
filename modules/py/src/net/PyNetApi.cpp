@@ -17,10 +17,9 @@
 namespace sihd::py
 {
 
+using namespace sihd::util;
 using namespace sihd::net;
 using sihd::core::Device;
-using sihd::util::Node;
-using sihd::util::SmartNodePtr;
 
 SIHD_LOGGER;
 
@@ -47,8 +46,7 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
         .def("fetch_hostname", &IpAddr::fetch_hostname)
         .def("hostname", &IpAddr::hostname)
         .def("str", &IpAddr::str)
-        .def("set_subnet_mask",
-             static_cast<sihd::util::Result<void> (IpAddr::*)(const std::string &)>(&IpAddr::set_subnet_mask))
+        .def("set_subnet_mask", static_cast<Result<void> (IpAddr::*)(const std::string &)>(&IpAddr::set_subnet_mask))
         .def("has_subnet", &IpAddr::has_subnet)
         .def("subnet_value", &IpAddr::subnet_value)
         .def("dump_subnet", &IpAddr::dump_subnet)
@@ -95,9 +93,14 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
         .def("set_poll_timeout", &DeviceUdpReceiver::set_poll_timeout);
 }
 
-static void __attribute__((constructor)) premain()
+namespace
+{
+
+void __attribute__((constructor)) premain()
 {
     PyApi::add_api("sihd_net", &PyNetApi::add_net_api);
 }
+
+} // namespace
 
 } // namespace sihd::py

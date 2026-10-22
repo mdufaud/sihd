@@ -3,6 +3,8 @@
 #include <sihd/sys/services.hpp>
 #include <sihd/util/Logger.hpp>
 
+using namespace sihd::util;
+
 namespace test
 {
 SIHD_LOGGER;
@@ -10,9 +12,9 @@ using namespace sihd::sys;
 class TestServices: public ::testing::Test
 {
     protected:
-        TestServices() { sihd::util::LoggerManager::stream(); }
+        TestServices() { LoggerManager::stream(); }
 
-        virtual ~TestServices() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestServices() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

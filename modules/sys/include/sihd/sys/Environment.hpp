@@ -15,7 +15,6 @@ namespace sihd::sys
 class Environment
 {
     public:
-        // snapshot of the current process environment
         static Environment from_current();
 
         // loads "KEY=VALUE" entries; entries without '=' are ignored
@@ -33,8 +32,7 @@ class Environment
         size_t size() const;
         const std::map<std::string, std::string> & entries() const;
 
-        // replaces $VAR and ${VAR} with this environment's values;
-        // unknown or malformed references are left as-is
+        // replaces $VAR and ${VAR} with this environment's values; unknown or malformed references are left as-is
         std::string expand(std::string_view str) const;
 
     private:

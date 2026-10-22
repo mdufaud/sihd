@@ -14,10 +14,9 @@
 # include <iomanip>
 #endif
 
-using enum sihd::util::ErrorCode;
-
 namespace sihd::util
 {
+using enum ErrorCode;
 
 namespace
 {
@@ -187,13 +186,12 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-sihd::util::Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format)
+Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format)
 {
     return Timestamp::from_str(date_str, format, std::locale::classic());
 }
 
-sihd::util::Result<Timestamp>
-    Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
+Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
     std::chrono::sys_seconds seconds;
@@ -251,8 +249,8 @@ std::string Calendar::str() const
 
 bool Timestamp::is_leap_year() const
 {
-    Calendar c = this->local_calendar();
-    return time::is_leap_year(c.year);
+    Calendar calendar = this->local_calendar();
+    return time::is_leap_year(calendar.year);
 }
 
 struct timeval Timestamp::tv() const

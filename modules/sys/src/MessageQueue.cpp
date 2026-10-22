@@ -3,8 +3,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
-// create()/open()/clear()/unlink(name) and the send/receive family live in src/linux|windows/MessageQueue.cpp
-
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
@@ -40,6 +38,7 @@ MessageQueue & MessageQueue::operator=(MessageQueue && other)
         _created = other._created;
         _connected = other._connected;
         _nonblocking = other._nonblocking;
+
         _msg_size = other._msg_size;
         _name = std::move(other._name);
         other._mq = -1;
@@ -57,7 +56,7 @@ MessageQueue::~MessageQueue()
     (void)this->clear();
 }
 
-sihd::util::Result<void> MessageQueue::unlink()
+Result<void> MessageQueue::unlink()
 {
     if (_name.empty())
         return std::unexpected(Error(not_initialized, "message queue is not open"));

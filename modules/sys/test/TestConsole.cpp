@@ -45,9 +45,9 @@ void close_pipe(int fds[2])
 class TestConsole: public ::testing::Test
 {
     protected:
-        TestConsole() { sihd::util::LoggerManager::stream(); }
+        TestConsole() { LoggerManager::stream(); }
 
-        virtual ~TestConsole() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestConsole() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

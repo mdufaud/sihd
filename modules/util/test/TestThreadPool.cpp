@@ -16,9 +16,9 @@ using namespace sihd::util;
 class TestThreadPool: public ::testing::Test
 {
     protected:
-        TestThreadPool() { sihd::util::LoggerManager::stream(); }
+        TestThreadPool() { LoggerManager::stream(); }
 
-        virtual ~TestThreadPool() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestThreadPool() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

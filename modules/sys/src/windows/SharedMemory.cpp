@@ -13,7 +13,7 @@ namespace sihd::sys
 
 SIHD_LOGGER;
 
-sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::create(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode; // Windows uses security descriptors, not POSIX mode
 
@@ -22,7 +22,7 @@ sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t siz
         return cleared;
 
     HANDLE handle = CreateFileMappingA(INVALID_HANDLE_VALUE, // use paging file
-                                       nullptr,              // default security
+                                       nullptr,
                                        PAGE_READWRITE,
                                        static_cast<DWORD>(size >> 32),
                                        static_cast<DWORD>(size & 0xFFFFFFFF),
@@ -38,7 +38,7 @@ sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t siz
         return std::unexpected(std::move(error));
     }
 
-    // Store handle as fd (cast to int for compatibility with class interface)
+    // HANDLE stored in the int fd field to fit the class interface
     _fd = reinterpret_cast<intptr_t>(handle);
     _addr = addr;
     _created = true;
@@ -48,7 +48,7 @@ sihd::util::Result<void> SharedMemory::create(const std::string & id, size_t siz
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::attach(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -77,7 +77,7 @@ sihd::util::Result<void> SharedMemory::attach(const std::string & id, size_t siz
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
+Result<void> SharedMemory::attach_read_only(const std::string & id, size_t size, mode_t mode)
 {
     (void)mode;
 
@@ -105,7 +105,7 @@ sihd::util::Result<void> SharedMemory::attach_read_only(const std::string & id, 
     return {};
 }
 
-sihd::util::Result<void> SharedMemory::clear()
+Result<void> SharedMemory::clear()
 {
     bool ret = true;
 

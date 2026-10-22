@@ -31,7 +31,7 @@ HttpServer::Impl::Impl(HttpServer *server):
 HttpServer::Impl::~Impl()
 {
     {
-        std::lock_guard l(mutex);
+        std::lock_guard lock(mutex);
         if (lws_protocols_ptr != nullptr)
         {
             free(lws_protocols_ptr);

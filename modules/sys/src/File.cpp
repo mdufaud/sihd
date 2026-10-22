@@ -59,14 +59,16 @@ ssize_t win_getdelim(char **line, size_t *size, int delim, FILE *stream)
     if (*line == nullptr || *size == 0)
     {
         char *allocated = (char *)realloc(*line, 128);
+
         if (allocated == nullptr)
             return -1;
         *line = allocated;
         *size = 128;
     }
     size_t pos = 0;
-    int c;
-    while ((c = fgetc(stream)) != EOF)
+    int chr;
+
+    while ((chr = fgetc(stream)) != EOF)
     {
         if (pos + 1 >= *size)
         {
@@ -77,11 +79,11 @@ ssize_t win_getdelim(char **line, size_t *size, int delim, FILE *stream)
             *line = new_line;
             *size = new_size;
         }
-        (*line)[pos++] = (char)c;
-        if (c == delim)
+        (*line)[pos++] = (char)chr;
+        if (chr == delim)
             break;
     }
-    if (pos == 0 && c == EOF)
+    if (pos == 0 && chr == EOF)
         return -1;
     (*line)[pos] = '\0';
     return (ssize_t)pos;
@@ -96,7 +98,6 @@ File::File()
     _file_ptr = nullptr;
     _buf_ptr = nullptr;
     _buf_size = 0;
-    // default is new line buffering
     _buf_mode = _IOLBF;
     _stream_ownership = true;
 }
@@ -146,7 +147,7 @@ File & File::operator=(File && other)
     return *this;
 }
 
-sihd::util::Result<void> File::set_buffer_size(size_t size)
+Result<void> File::set_buffer_size(size_t size)
 {
     if (_buf_size == size)
         return {};
@@ -188,7 +189,7 @@ bool File::_allocate_buffer_if_not_exists()
     return _buf_size == 0 || _buf_ptr != nullptr;
 }
 
-sihd::util::Result<void> File::buff_stream()
+Result<void> File::buff_stream()
 {
     if (!this->_allocate_buffer_if_not_exists())
         return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
@@ -211,7 +212,7 @@ void File::_delete_buffer()
     }
 }
 
-sihd::util::Result<void> File::open_fd(int fd, const std::string & mode)
+Result<void> File::open_fd(int fd, const std::string & mode)
 {
     auto closed = this->close();
     if (!closed)
@@ -223,7 +224,7 @@ sihd::util::Result<void> File::open_fd(int fd, const std::string & mode)
     return {};
 }
 
-sihd::util::Result<void> File::set_stream(FILE *stream, bool ownership)
+Result<void> File::set_stream(FILE *stream, bool ownership)
 {
     auto closed = this->close();
     if (!closed)
@@ -233,7 +234,7 @@ sihd::util::Result<void> File::set_stream(FILE *stream, bool ownership)
     return {};
 }
 
-sihd::util::Result<void> File::open_tmpfile()
+Result<void> File::open_tmpfile()
 {
     auto closed = this->close();
     if (!closed)
@@ -245,7 +246,7 @@ sihd::util::Result<void> File::open_tmpfile()
     return {};
 }
 
-sihd::util::Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix)
+Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix)
 {
     auto closed = this->close();
     if (!closed)
@@ -294,7 +295,7 @@ sihd::util::Result<void> File::open_tmp(const std::string & prefix, bool write_b
 #endif
 }
 
-sihd::util::Result<void> File::open(const std::string & path, const std::string & mode)
+Result<void> File::open(const std::string & path, const std::string & mode)
 {
     auto closed = this->close();
     if (!closed)
@@ -347,7 +348,7 @@ void File::clear_errors()
     clearerr(_file_ptr);
 }
 
-sihd::util::Result<void> File::flush()
+Result<void> File::flush()
 {
     if (_file_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "no file open"));
@@ -356,7 +357,7 @@ sihd::util::Result<void> File::flush()
     return {};
 }
 
-sihd::util::Result<void> File::flush_unlocked()
+Result<void> File::flush_unlocked()
 {
     if (_file_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "no file open"));
@@ -365,7 +366,7 @@ sihd::util::Result<void> File::flush_unlocked()
     return {};
 }
 
-sihd::util::Result<void> File::close()
+Result<void> File::close()
 {
     if (_file_ptr != nullptr)
     {
@@ -381,7 +382,7 @@ sihd::util::Result<void> File::close()
     return {};
 }
 
-sihd::util::Result<long> File::file_size()
+Result<long> File::file_size()
 {
     auto current_offset = this->tell();
     SIHD_UNEXPECTED_RETURN(current_offset);
@@ -421,7 +422,7 @@ void File::unlock()
 #endif
 }
 
-sihd::util::Result<void> File::open_mem(const std::string & mode, std::string_view put_in_buffer)
+Result<void> File::open_mem(const std::string & mode, std::string_view put_in_buffer)
 {
     if (this->_allocate_buffer_if_not_exists() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
@@ -490,7 +491,7 @@ sihd::util::Result<void> File::open_mem(const std::string & mode, std::string_vi
     return this->set_stream(stream, true);
 }
 
-sihd::util::Result<long> File::tell()
+Result<long> File::tell()
 {
     long ret = ftell(_file_ptr);
     if (ret < 0)
@@ -498,22 +499,22 @@ sihd::util::Result<long> File::tell()
     return ret;
 }
 
-sihd::util::Result<void> File::seek(long offset)
+Result<void> File::seek(long offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-sihd::util::Result<void> File::seek_begin(long offset)
+Result<void> File::seek_begin(long offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-sihd::util::Result<void> File::seek_end(long offset)
+Result<void> File::seek_end(long offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-sihd::util::Result<void> File::_seek(long offset, int origin)
+Result<void> File::_seek(long offset, int origin)
 {
     int ret = fseek(_file_ptr, offset, origin);
     if (ret < 0)
@@ -521,7 +522,7 @@ sihd::util::Result<void> File::_seek(long offset, int origin)
     return {};
 }
 
-sihd::util::Result<size_t> File::read(void *buf, size_t size)
+Result<size_t> File::read(void *buf, size_t size)
 {
     if (this->eof())
         return 0;
@@ -531,7 +532,7 @@ sihd::util::Result<size_t> File::read(void *buf, size_t size)
     return ret;
 }
 
-sihd::util::Result<size_t> File::read(std::string & str, size_t size)
+Result<size_t> File::read(std::string & str, size_t size)
 {
     str.resize(size);
     auto read = this->read(reinterpret_cast<char *>(str.data()), size);
@@ -544,7 +545,7 @@ sihd::util::Result<size_t> File::read(std::string & str, size_t size)
     return read;
 }
 
-sihd::util::Result<size_t> File::read(IArray & array)
+Result<size_t> File::read(IArray & array)
 {
     auto read = this->read(reinterpret_cast<char *>(array.buf()), array.byte_capacity());
     if (!read)
@@ -557,7 +558,7 @@ sihd::util::Result<size_t> File::read(IArray & array)
     return read;
 }
 
-sihd::util::Result<size_t> File::write(const void *data, size_t size)
+Result<size_t> File::write(const void *data, size_t size)
 {
     size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
@@ -565,19 +566,19 @@ sihd::util::Result<size_t> File::write(const void *data, size_t size)
     return ret;
 }
 
-sihd::util::Result<size_t> File::write(ArrCharView view)
+Result<size_t> File::write(ArrCharView view)
 {
     return this->write(view.data(), view.size());
 }
 
-sihd::util::Result<void> File::write_char(int c)
+Result<void> File::write_char(int c)
 {
     if (fputc(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
-sihd::util::Result<size_t> File::write_unlocked(const void *data, size_t size)
+Result<size_t> File::write_unlocked(const void *data, size_t size)
 {
     size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
@@ -585,24 +586,24 @@ sihd::util::Result<size_t> File::write_unlocked(const void *data, size_t size)
     return ret;
 }
 
-sihd::util::Result<size_t> File::write_unlocked(ArrCharView view)
+Result<size_t> File::write_unlocked(ArrCharView view)
 {
     return this->write_unlocked(view.data(), view.size());
 }
 
-sihd::util::Result<void> File::write_char_unlocked(int c)
+Result<void> File::write_char_unlocked(int c)
 {
     if (fputc_unlocked(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
 }
 
-sihd::util::Result<size_t> File::read_line(char **line, size_t *size)
+Result<size_t> File::read_line(char **line, size_t *size)
 {
     return this->read_line_delim(line, size, '\n');
 }
 
-sihd::util::Result<size_t> File::read_line_delim(char **line, size_t *size, int delim)
+Result<size_t> File::read_line_delim(char **line, size_t *size, int delim)
 {
 #if defined(__SIHD_WINDOWS__)
     ssize_t ret = win_getdelim(line, size, delim, _file_ptr);

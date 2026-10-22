@@ -63,6 +63,7 @@ class LoggerManager: public ALogFilterer
         static void log(const std::string & src, LogLevel level, std::string_view msg);
         static void log(const LogInfo & info, std::string_view msg);
 
+        // global level gate, kept on purpose (owner decision 22/10)
         static void set_level(LogLevel level);
         static bool should_log_level(LogLevel level);
         static bool should_log(const std::string & src, LogLevel level);

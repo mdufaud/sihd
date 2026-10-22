@@ -4,7 +4,7 @@
 # include <utmpx.h>
 #endif
 
-#include <cstring> // strnlen
+#include <cstring>
 
 #include <sihd/sys/session.hpp>
 #include <sihd/util/time.hpp>
@@ -40,6 +40,7 @@ std::vector<Session> sessions()
         if (entry->ut_type != USER_PROCESS)
             continue;
         Session session;
+
         session.username = fixed_string(entry->ut_user, sizeof(entry->ut_user));
         session.device = fixed_string(entry->ut_line, sizeof(entry->ut_line));
         session.hostname = fixed_string(entry->ut_host, sizeof(entry->ut_host));

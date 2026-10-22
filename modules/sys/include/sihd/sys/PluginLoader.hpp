@@ -25,7 +25,6 @@ class PluginLoader
                                                                           const std::string & name,
                                                                           sihd::util::Node *parent = nullptr);
 
-        // unload a previously loaded library by name - returns false if not found
         static bool unload(const std::string & libname);
 };
 

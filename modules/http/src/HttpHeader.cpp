@@ -37,10 +37,10 @@ size_t param_end(std::string_view value, size_t start)
     bool quoted = false;
     for (size_t i = start; i < value.size(); ++i)
     {
-        const char c = value[i];
-        if (c == '"')
+        const char chr = value[i];
+        if (chr == '"')
             quoted = !quoted;
-        else if (c == ';' && quoted == false)
+        else if (chr == ';' && quoted == false)
             return i;
     }
     return value.size();
@@ -134,17 +134,16 @@ HttpHeader & HttpHeader::set_header(const std::string & header_name, std::string
     return *this;
 }
 
-sihd::util::Result<void> HttpHeader::add_header_from_str(std::string_view header)
+Result<void> HttpHeader::add_header_from_str(std::string_view header)
 {
     if (util::str::ends_with(header, "\n"))
         header.remove_suffix(1);
     const size_t colon = header.find(':');
     if (colon == std::string_view::npos)
-        return std::unexpected(
-            sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "no ':' separator in '{}'", header));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "no ':' separator in '{}'", header));
     const std::string_view value = util::str::trim(header.substr(colon + 1));
     if (value.empty())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument, "no value in '{}'", header));
+        return std::unexpected(Error(ErrorCode::invalid_argument, "no value in '{}'", header));
     this->set_header(std::string(util::str::trim(header.substr(0, colon))), value);
     return {};
 }
@@ -189,6 +188,11 @@ std::string_view HttpHeader::find(const std::string & header_name) const
     if (it != _headers.end())
         return it->second;
     return {};
+}
+
+const HttpHeader::HeaderMap & HttpHeader::headers() const
+{
+    return _headers;
 }
 
 } // namespace sihd::http

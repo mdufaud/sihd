@@ -9,25 +9,25 @@
 #include <sihd/util/Result.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
-# include <netdb.h>      // getnameinfo
-# include <netinet/in.h> // sockaddr
-# include <sys/socket.h> // getnameinfo
+# include <netdb.h>
+# include <netinet/in.h>
+# include <sys/socket.h>
 #else
 # include <winsock2.h>
 
-# include <ws2tcpip.h> // addrinfo
+# include <ws2tcpip.h>
 #endif
 
 namespace sihd::net::dns
 {
 
 using namespace sihd::util;
-using enum sihd::util::ErrorCode;
+using enum ErrorCode;
 
 namespace
 {
 
-sihd::util::Result<bool> ask_dns(const std::string & host, std::function<bool(const IpAddr &, int, int)> && callback)
+Result<bool> ask_dns(const std::string & host, std::function<bool(const IpAddr &, int, int)> && callback)
 {
     int ret;
     struct addrinfo hints;
@@ -44,7 +44,7 @@ sihd::util::Result<bool> ask_dns(const std::string & host, std::function<bool(co
         return std::unexpected(Error(not_found, "'{}': {}", host, gai_strerror(ret)));
 
     first_result = results;
-    Defer d([&first_result] { freeaddrinfo(first_result); });
+    Defer cleanup([&first_result] { freeaddrinfo(first_result); });
 
     std::string hostname;
     bool found = false;
@@ -76,7 +76,7 @@ sihd::util::Result<bool> ask_dns(const std::string & host, std::function<bool(co
 
 } // namespace
 
-sihd::util::Result<IpAddr> find(const std::string & host, bool ipv6, int socktype, int protocol)
+Result<IpAddr> find(const std::string & host, bool ipv6, int socktype, int protocol)
 {
     if (host.empty())
         return std::unexpected(Error(invalid_argument, "dns::find: empty host"));
@@ -122,7 +122,6 @@ Result<DnsLookup> lookup(const std::string & host)
         entry.socktype = addr_socktype;
         entry.protocol = addr_protocol;
         ret.results.emplace_back(std::move(entry));
-        // get all results by sending false
         return false;
     });
     SIHD_UNEXPECTED_RETURN(asked);

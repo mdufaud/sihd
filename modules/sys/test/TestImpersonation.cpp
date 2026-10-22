@@ -14,12 +14,24 @@ SIHD_LOGGER;
 using namespace sihd::util;
 using namespace sihd::sys;
 
+namespace
+{
+
+enum class State
+{
+    pending,
+    switched,
+    failed,
+};
+
+} // namespace
+
 class TestImpersonation: public ::testing::Test
 {
     protected:
-        TestImpersonation() { sihd::util::LoggerManager::stream(); }
+        TestImpersonation() { LoggerManager::stream(); }
 
-        virtual ~TestImpersonation() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestImpersonation() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -39,13 +51,11 @@ TEST_F(TestImpersonation, test_impersonation_credentials)
     }
     else
     {
-        // impersonating an account that cannot be logged on must leave the thread untouched; asserts the
-        // outcome, not which call rejects it: wine's LogonUser is a stub, ImpersonateLoggedOnUser fails
+        // asserts the outcome, not which call rejects it: wine's LogonUser is a stub
         EXPECT_FALSE(impersonation.impersonate_with_credentials("sihd_no_such_user", "sihd_no_such_password"));
         EXPECT_FALSE(impersonation.impersonating());
     }
 
-    // reverting when not impersonating reports that nothing was undone
     EXPECT_FALSE(impersonation.revert());
     EXPECT_TRUE(user::effective_user().valid());
 }
@@ -93,7 +103,6 @@ TEST_F(TestImpersonation, test_impersonation_self_roundtrip)
         const user::GroupId before_group = user::effective_group();
         const user::UserId real_before = user::real_user();
 
-        // switching to the identity the thread already holds needs no privilege
         Impersonation impersonation;
         ASSERT_TRUE(impersonation.impersonate_as(before, before_group));
         EXPECT_TRUE(impersonation.impersonating());
@@ -103,7 +112,6 @@ TEST_F(TestImpersonation, test_impersonation_self_roundtrip)
         EXPECT_FALSE(impersonation.impersonating());
         EXPECT_EQ(user::effective_user(), before);
         EXPECT_EQ(user::effective_group(), before_group);
-        // an impersonation never touches the real identity of the process
         EXPECT_EQ(user::real_user(), real_before);
     }
 }
@@ -120,8 +128,7 @@ TEST_F(TestImpersonation, test_impersonation_other_identity_as_root)
         const user::GroupId before_group = user::effective_group();
         const user::UserId real_before = user::real_user();
 
-        // 'nobody' exists on every usual installation and is mapped in a user namespace only when
-        // the namespace has a uid range - fall back to the next uid, which needs real root
+        // 'nobody' is mapped in a userns only with a uid range - else use the next uid (needs real root)
         const auto nobody = user::user_id_of("nobody");
         const user::UserId target = nobody.value_or(user::UserId::from_native(before.native() + 1));
         const auto nobody_group = user::primary_group_of(target);
@@ -132,7 +139,6 @@ TEST_F(TestImpersonation, test_impersonation_other_identity_as_root)
 
         if (!switched)
         {
-            // unprivileged: the attempt must leave the thread exactly as it was
             EXPECT_FALSE(impersonation.impersonating());
             EXPECT_EQ(user::effective_user(), before);
             EXPECT_EQ(user::effective_group(), before_group);
@@ -141,11 +147,9 @@ TEST_F(TestImpersonation, test_impersonation_other_identity_as_root)
                             "namespace created with a uid range)";
         }
 
-        // privileged: the thread really became someone else, and comes back
         EXPECT_TRUE(impersonation.impersonating());
         EXPECT_EQ(user::effective_user(), target);
         EXPECT_EQ(user::effective_group(), target_group);
-        // only the calling thread switched: the process identity is untouched
         EXPECT_EQ(user::real_user(), real_before);
 
         ASSERT_TRUE(impersonation.revert());
@@ -166,20 +170,13 @@ TEST_F(TestImpersonation, test_impersonation_is_per_thread_as_root)
         const user::UserId before = user::effective_user();
         const user::GroupId before_group = user::effective_group();
 
-        // 'nobody' exists on every usual installation and is mapped in a user namespace only when
-        // the namespace has a uid range - fall back to the next uid, which needs real root
+        // 'nobody' is mapped in a userns only with a uid range - else use the next uid (needs real root)
         const auto nobody = user::user_id_of("nobody");
         const user::UserId target = nobody.value_or(user::UserId::from_native(before.native() + 1));
         const auto nobody_group = user::primary_group_of(target);
         const user::GroupId target_group = nobody_group.value_or(user::GroupId::from_native(before_group.native() + 1));
 
         // the switch must stay confined to the worker thread - the libc wrappers would broadcast it
-        enum class State
-        {
-            pending,
-            switched,
-            failed,
-        };
         State state = State::pending;
         Waitable waitable;
         bool main_checked = false;
@@ -188,14 +185,14 @@ TEST_F(TestImpersonation, test_impersonation_is_per_thread_as_root)
             Impersonation impersonation;
             if (!impersonation.impersonate_as(target, target_group))
             {
-                auto l = waitable.guard();
+                auto guard = waitable.guard();
                 state = State::failed;
                 waitable.notify_all();
                 return;
             }
             EXPECT_EQ(user::effective_user(), target);
             {
-                auto l = waitable.guard();
+                auto guard = waitable.guard();
                 state = State::switched;
             }
             waitable.notify_all();
@@ -205,11 +202,10 @@ TEST_F(TestImpersonation, test_impersonation_is_per_thread_as_root)
             EXPECT_EQ(user::effective_user(), before);
         });
 
-        auto l = waitable.wait_guard([&] { return state != State::pending; });
-        // sampled while the worker thread is switched
+        auto guard = waitable.wait_guard([&] { return state != State::pending; });
         const bool identity_intact = user::effective_user() == before;
         main_checked = true;
-        l.unlock();
+        guard.unlock();
         waitable.notify_all();
         worker.join();
 
@@ -237,7 +233,6 @@ TEST_F(TestImpersonation, test_impersonation_destructor_reverts)
             ASSERT_TRUE(impersonation.impersonate_as(before, user::effective_group()));
             EXPECT_TRUE(impersonation.impersonating());
         }
-        // leaving the scope restores the identity without an explicit revert
         EXPECT_EQ(user::effective_user(), before);
     }
 }

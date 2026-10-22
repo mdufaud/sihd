@@ -7,7 +7,9 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
-using enum sihd::util::ErrorCode;
+using namespace sihd::util;
+
+using enum ErrorCode;
 
 namespace test
 {
@@ -17,9 +19,9 @@ TEST(TestLoggerOff, test_logging_off)
 {
     SIHD_NEW_LOGGER("test::off");
 
-    sihd::util::Result<int> ok = 42;
+    Result<int> ok = 42;
     ASSERT_FALSE(SIHD_UNEXPECTED_LOG(ok));
-    sihd::util::Result<int> err = std::unexpected(sihd::util::Error(invalid_argument, "off"));
+    Result<int> err = std::unexpected(Error(invalid_argument, "off"));
     ASSERT_TRUE(SIHD_UNEXPECTED_LOG(err));
 
     SIHD_LOG(info, "invisible {}", 42);

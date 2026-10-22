@@ -52,7 +52,7 @@ const char *sftp_error_description(int code)
 namespace sihd::util
 {
 
-sihd::util::ErrorCode ErrorResolver<ssh_session_struct *>::code(ssh_session_struct *session)
+ErrorCode ErrorResolver<ssh_session_struct *>::code(ssh_session_struct *session)
 {
     if (session == nullptr)
         return ErrorCode::not_initialized;
@@ -73,7 +73,7 @@ sihd::util::ErrorCode ErrorResolver<ssh_session_struct *>::code(ssh_session_stru
     }
 }
 
-sihd::util::ErrorCode ErrorResolver<sftp_session_struct *>::code(sftp_session_struct *sftp)
+ErrorCode ErrorResolver<sftp_session_struct *>::code(sftp_session_struct *sftp)
 {
     if (sftp == nullptr)
         return ErrorCode::not_initialized;

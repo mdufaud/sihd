@@ -3,6 +3,8 @@
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -10,7 +12,7 @@ SIHD_REGISTER_FACTORY(UdpReceiver)
 
 SIHD_LOGGER;
 
-UdpReceiver::UdpReceiver(const std::string & name, sihd::util::Node *parent): sihd::util::Named(name, parent)
+UdpReceiver::UdpReceiver(const std::string & name, Node *parent): Named(name, parent)
 {
     _poll.set_timeout(1);
     _poll.set_limit(1);
@@ -40,34 +42,39 @@ bool UdpReceiver::set_poll_timeout(int milliseconds)
     return _poll.set_timeout(milliseconds);
 }
 
-sihd::util::Result<void> UdpReceiver::open_socket_unix()
+Result<void> UdpReceiver::open_socket_unix()
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     return _socket.open(AF_UNIX, SOCK_DGRAM, 0);
 }
 
-sihd::util::Result<void> UdpReceiver::open_socket(bool ipv6)
+Result<void> UdpReceiver::open_socket(bool ipv6)
 {
     if (_socket.is_open())
-        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::already_exists, "socket already open"));
+        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
     auto res = _socket.open(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (res && _reuseaddr)
         SIHD_UNEXPECTED_LOG(_socket.set_reuseaddr(true));
     return res;
 }
 
-sihd::util::Result<void> UdpReceiver::bind(const IpAddr & addr)
+bool UdpReceiver::socket_opened()
+{
+    return _socket.is_open();
+}
+
+Result<void> UdpReceiver::bind(const IpAddr & addr)
 {
     return _socket.bind(addr);
 }
 
-sihd::util::Result<void> UdpReceiver::bind_unix(std::string_view path)
+Result<void> UdpReceiver::bind_unix(std::string_view path)
 {
     return _socket.bind_unix(path);
 }
 
-sihd::util::Result<void> UdpReceiver::open_and_bind(const IpAddr & ip)
+Result<void> UdpReceiver::open_and_bind(const IpAddr & ip)
 {
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
@@ -75,7 +82,7 @@ sihd::util::Result<void> UdpReceiver::open_and_bind(const IpAddr & ip)
     return this->bind(ip);
 }
 
-sihd::util::Result<void> UdpReceiver::open_and_bind(std::string_view ip, int port)
+Result<void> UdpReceiver::open_and_bind(std::string_view ip, int port)
 {
     IpAddr addr(ip, port);
     auto opened = this->open_socket(addr.is_ipv6());
@@ -84,7 +91,7 @@ sihd::util::Result<void> UdpReceiver::open_and_bind(std::string_view ip, int por
     return this->bind(addr);
 }
 
-sihd::util::Result<void> UdpReceiver::open_unix_and_bind(std::string_view path)
+Result<void> UdpReceiver::open_unix_and_bind(std::string_view path)
 {
     auto opened = this->open_socket_unix();
     if (!opened)
@@ -92,7 +99,7 @@ sihd::util::Result<void> UdpReceiver::open_unix_and_bind(std::string_view path)
     return this->bind_unix(path);
 }
 
-sihd::util::Result<void> UdpReceiver::close()
+Result<void> UdpReceiver::close()
 {
     (void)_socket.shutdown();
     return _socket.close();
@@ -131,6 +138,11 @@ bool UdpReceiver::poll()
     return _poll.poll(_poll.timeout()) > 0;
 }
 
+const Socket & UdpReceiver::socket() const
+{
+    return _socket;
+}
+
 void UdpReceiver::handle(sihd::sys::Poll *poll)
 {
     auto events = poll->events();
@@ -152,22 +164,22 @@ void UdpReceiver::handle(sihd::sys::Poll *poll)
     }
 }
 
-sihd::util::Result<size_t> UdpReceiver::receive(void *buf, size_t len)
+Result<size_t> UdpReceiver::receive(void *buf, size_t len)
 {
     return _socket.receive(buf, len);
 }
 
-sihd::util::Result<size_t> UdpReceiver::receive(sihd::util::IArray & arr)
+Result<size_t> UdpReceiver::receive(IArray & arr)
 {
     return _socket.receive(arr);
 }
 
-sihd::util::Result<size_t> UdpReceiver::receive(IpAddr & addr, void *buf, size_t len)
+Result<size_t> UdpReceiver::receive(IpAddr & addr, void *buf, size_t len)
 {
     return _socket.receive_from(addr, buf, len);
 }
 
-sihd::util::Result<size_t> UdpReceiver::receive(IpAddr & addr, sihd::util::IArray & arr)
+Result<size_t> UdpReceiver::receive(IpAddr & addr, IArray & arr)
 {
     return _socket.receive_from(addr, arr);
 }

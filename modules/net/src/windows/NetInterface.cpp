@@ -13,8 +13,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
-using enum sihd::util::ErrorCode;
 using namespace sihd::util;
+using enum ErrorCode;
 
 namespace sihd::net
 {
@@ -34,60 +34,71 @@ bool NetInterface::up() const
 {
     return _flags & WIFF_UP;
 }
+
 bool NetInterface::broadcast() const
 {
     return _flags & WIFF_BROADCAST;
 }
+
 bool NetInterface::loopback() const
 {
     return _flags & WIFF_LOOPBACK;
 }
+
 bool NetInterface::point2point() const
 {
     return _flags & WIFF_POINTOPOINT;
 }
+
 bool NetInterface::running() const
 {
     return _flags & WIFF_RUNNING;
 }
+
 bool NetInterface::noarp() const
 {
     return _flags & WIFF_NOARP;
 }
+
 bool NetInterface::promisc() const
 {
     return false;
 }
+
 bool NetInterface::notrailers() const
 {
     return false;
 }
+
 bool NetInterface::master() const
 {
     return false;
 }
+
 bool NetInterface::slave() const
 {
     return false;
 }
+
 bool NetInterface::all_multicast() const
 {
     return false;
 }
+
 bool NetInterface::supports_multicast() const
 {
     return _flags & WIFF_MULTICAST;
 }
 
-sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
+Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 
     ULONG buf_size = 15000;
     PIP_ADAPTER_ADDRESSES addresses = nullptr;
-    ULONG result;
+    ULONG result = ERROR_BUFFER_OVERFLOW;
 
-    do
+    while (result == ERROR_BUFFER_OVERFLOW)
     {
         addresses = (PIP_ADAPTER_ADDRESSES)malloc(buf_size);
         if (addresses == nullptr)
@@ -99,7 +110,6 @@ sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_in
             addresses = nullptr;
         }
     }
-    while (result == ERROR_BUFFER_OVERFLOW);
 
     if (result != NO_ERROR)
     {
@@ -108,7 +118,7 @@ sihd::util::Result<std::map<std::string, NetInterface>> NetInterface::get_all_in
         return std::unexpected(Error(io_error, "could not list adapters: {}", sihd::sys::os::error_str((int)result)));
     }
 
-    Defer d([&addresses] { free(addresses); });
+    Defer cleanup([&addresses] { free(addresses); });
 
     for (PIP_ADAPTER_ADDRESSES adapter = addresses; adapter != nullptr; adapter = adapter->Next)
     {

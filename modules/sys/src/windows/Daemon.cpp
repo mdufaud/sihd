@@ -37,21 +37,16 @@ bool Daemon::set_group(const user::GroupId &)
 
 bool Daemon::run()
 {
-    // Windows has no fork/setsid: a true daemon is a Windows Service (SC API); this is a simple
-    // detached-console mode
+    // Windows has no fork/setsid: a true daemon is a Service (SC API); this is a detached-console mode
 
-    // Lock file
     if (_lock_pid_file() == false)
         return false;
 
-    // Install signal handlers
     if (this->_handle_signals() == false)
         SIHD_LOG(error, "Daemon: could not install signal handlers");
 
-    // Detach from console
     if (!FreeConsole())
     {
-        // Not an error if there's no console attached
         DWORD err = GetLastError();
         if (err != ERROR_INVALID_PARAMETER) // ERROR_INVALID_PARAMETER = no console
         {
@@ -59,18 +54,15 @@ bool Daemon::run()
         }
     }
 
-    // Change directory
     if (!SetCurrentDirectoryA(_working_dir_path.c_str()))
     {
         SIHD_LOG(error, "Daemon: SetCurrentDirectory failed: {}", os::last_error_str());
         return false;
     }
 
-    // Write pid file
     if (_write_pid_file() == false)
         SIHD_LOG(error, "Daemon: could not write pid file");
 
-    // Redirect standard handles to NUL
     HANDLE nul_handle = CreateFileA("NUL",
                                     GENERIC_READ | GENERIC_WRITE,
                                     FILE_SHARE_READ | FILE_SHARE_WRITE,

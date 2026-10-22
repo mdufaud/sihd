@@ -34,9 +34,9 @@ TEST_F(TestTmpDir, test_tmpdir_operators)
     TmpDir tmp;
     EXPECT_TRUE(tmp);
 
-    std::string s = tmp;
-    EXPECT_FALSE(s.empty());
-    EXPECT_EQ(s, tmp.path());
+    std::string str_copy = tmp;
+    EXPECT_FALSE(str_copy.empty());
+    EXPECT_EQ(str_copy, tmp.path());
 
     std::string_view sv = tmp;
     EXPECT_EQ(sv, tmp.path());

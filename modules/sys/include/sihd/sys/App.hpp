@@ -24,7 +24,6 @@ class App: public sihd::util::CliApp
 
         const Daemon & daemon() const { return _daemon; }
 
-        // callback invoked for signals configured as "callback" in the conf
         void on_signal(std::function<void(int)> fn);
 
     protected:
@@ -56,6 +55,7 @@ class App: public sihd::util::CliApp
         void _set_default_signal_actions();
         bool _set_signal_action(int64_t sig, SigAction action);
         bool _signal_actions_from_json(const sihd::json::Json & json, SigAction action);
+        bool _signal_action_from_entry(const sihd::json::Json & entry, SigAction action);
         void _install_signals();
         std::string _read_conf();
 

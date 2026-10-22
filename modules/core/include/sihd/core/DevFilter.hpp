@@ -27,31 +27,15 @@ class DevFilter: public sihd::core::Device
                 Rule & in(std::string_view channel_name);
                 Rule & out(std::string_view channel_name);
                 Rule & match(bool active);
-                // write trigger value at channel's output idx
                 Rule & write_same(size_t idx);
                 // must be called after setting trigger index with 'trigger' method
                 Rule & write_same();
-                // delay write by X nanoseconds
                 Rule & delay(sihd::util::Duration nano_delay);
                 // delay write by seconds.milliseconds
                 Rule & delay(double delay);
 
-                template <typename T>
-                Rule & trigger(size_t idx, T val)
-                {
-                    this->channel_match.idx = idx;
-                    this->channel_match.value = val;
-                    return *this;
-                }
-
-                template <typename T>
-                Rule & write(size_t idx, T val)
-                {
-                    this->write_idx = idx;
-                    this->write_same_value = false;
-                    this->write_value = val;
-                    return *this;
-                }
+                Rule & trigger(size_t idx, sihd::util::Value val);
+                Rule & write(size_t idx, sihd::util::Value val);
 
                 ChannelMatch channel_match;
                 std::string channel_in;

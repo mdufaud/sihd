@@ -1,7 +1,7 @@
-#include <fcntl.h>    // O_*
-#include <sys/mman.h> // mmap, munmap, msync
+#include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
-#include <unistd.h> // close, ftruncate
+#include <unistd.h>
 
 #include <sihd/sys/MappedFile.hpp>
 #include <sihd/sys/os.hpp>
@@ -28,7 +28,7 @@ struct Mapping
         size_t size = 0;
 };
 
-sihd::util::Result<Mapping> map_fd(int fd, size_t size, int prot, std::string_view path)
+Result<Mapping> map_fd(int fd, size_t size, int prot, std::string_view path)
 {
     void *addr = mmap(nullptr, size, prot, MAP_SHARED, fd, 0);
     if (addr == MAP_FAILED)
@@ -36,7 +36,7 @@ sihd::util::Result<Mapping> map_fd(int fd, size_t size, int prot, std::string_vi
     return Mapping {fd, addr, size};
 }
 
-sihd::util::Result<Mapping> open_map(const std::string & path, int open_flags, int prot)
+Result<Mapping> open_map(const std::string & path, int open_flags, int prot)
 {
     int fd = ::open(path.c_str(), open_flags);
     if (fd < 0)
@@ -58,7 +58,7 @@ sihd::util::Result<Mapping> open_map(const std::string & path, int open_flags, i
 
 } // namespace
 
-sihd::util::Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
+Result<void> MappedFile::create(const std::string & path, size_t size, mode_t mode)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -71,6 +71,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
     if (ftruncate(fd, size) == -1)
     {
         auto error = Error::from_errno("could not truncate '{}'", path);
+
         ::close(fd);
         return std::unexpected(std::move(error));
     }
@@ -88,7 +89,7 @@ sihd::util::Result<void> MappedFile::create(const std::string & path, size_t siz
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
+Result<void> MappedFile::open_read_only(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -103,7 +104,7 @@ sihd::util::Result<void> MappedFile::open_read_only(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
+Result<void> MappedFile::open_read_write(const std::string & path)
 {
     auto cleared = this->clear();
     if (!cleared)
@@ -118,7 +119,7 @@ sihd::util::Result<void> MappedFile::open_read_write(const std::string & path)
     return {};
 }
 
-sihd::util::Result<void> MappedFile::clear()
+Result<void> MappedFile::clear()
 {
     bool ret = true;
     if (_addr != nullptr && _addr != MAP_FAILED)
@@ -138,7 +139,7 @@ sihd::util::Result<void> MappedFile::clear()
     return {};
 }
 
-sihd::util::Result<void> MappedFile::sync(bool async)
+Result<void> MappedFile::sync(bool async)
 {
     if (_addr == nullptr)
         return std::unexpected(Error(not_initialized, "no mapping"));
@@ -151,27 +152,27 @@ sihd::util::Result<void> MappedFile::sync(bool async)
 
 // no POSIX shared mapping (android bionic, emscripten)
 
-sihd::util::Result<void> MappedFile::create(const std::string &, size_t, mode_t)
+Result<void> MappedFile::create(const std::string &, size_t, mode_t)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MappedFile::open_read_only(const std::string &)
+Result<void> MappedFile::open_read_only(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MappedFile::open_read_write(const std::string &)
+Result<void> MappedFile::open_read_write(const std::string &)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-sihd::util::Result<void> MappedFile::clear()
+Result<void> MappedFile::clear()
 {
     return {};
 }
 
-sihd::util::Result<void> MappedFile::sync(bool)
+Result<void> MappedFile::sync(bool)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

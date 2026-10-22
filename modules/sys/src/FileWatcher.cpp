@@ -2,8 +2,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 
-// FileWatcher::Impl and the methods touching it live in src/linux|windows/FileWatcher.cpp:
-// backends share no common shape (inotify + Poll vs ReadDirectoryChangesW + OVERLAPPED)
+// Impl and its methods live in src/linux|windows/FileWatcher.cpp: backends share no common shape
 
 namespace sihd::sys
 {

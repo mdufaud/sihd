@@ -90,8 +90,7 @@ void ImguiRendererDirectX::render(ImDrawData *draw_data)
     _dx_device_context_ptr->OMSetRenderTargets(1, &_dx_main_render_target_view_ptr, nullptr);
     _dx_device_context_ptr->ClearRenderTargetView(_dx_main_render_target_view_ptr, clear_color_with_alpha);
     ImGui_ImplDX11_RenderDrawData(draw_data);
-    _dx_swap_chain_ptr->Present(1, 0); // Present with vsync
-    //_dx_swap_chain_ptr->Present(0, 0); // Present without vsync
+    _dx_swap_chain_ptr->Present(1, 0);
 }
 
 void ImguiRendererDirectX::shutdown()
@@ -106,7 +105,6 @@ void ImguiRendererDirectX::shutdown()
 
 bool ImguiRendererDirectX::_create_dx_device(HWND window)
 {
-    // Setup swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
     sd.BufferCount = 2;
@@ -117,6 +115,7 @@ bool ImguiRendererDirectX::_create_dx_device(HWND window)
     sd.BufferDesc.RefreshRate.Denominator = 1;
     sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
     sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
     sd.OutputWindow = window;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
@@ -124,7 +123,6 @@ bool ImguiRendererDirectX::_create_dx_device(HWND window)
     sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
 
     UINT createDeviceFlags = 0;
-    // createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = {
         D3D_FEATURE_LEVEL_11_0,

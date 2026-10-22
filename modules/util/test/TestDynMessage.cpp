@@ -12,8 +12,8 @@ using namespace sihd::util;
 class TestDynMessage: public ::testing::Test
 {
     protected:
-        TestDynMessage() { sihd::util::LoggerManager::stream(); }
-        virtual ~TestDynMessage() { sihd::util::LoggerManager::clear_loggers(); }
+        TestDynMessage() { LoggerManager::stream(); }
+        virtual ~TestDynMessage() { LoggerManager::clear_loggers(); }
         virtual void SetUp() {}
         virtual void TearDown() {}
 };

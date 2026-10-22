@@ -66,9 +66,9 @@ class TestObservable: public ::testing::Test,
                       public IHandler<SomeObservable *>
 {
     protected:
-        TestObservable() { sihd::util::LoggerManager::stream(); }
+        TestObservable() { LoggerManager::stream(); }
 
-        virtual ~TestObservable() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestObservable() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -154,7 +154,6 @@ TEST_F(TestObservable, test_obs_inheritance)
     SomeObservable observable;
     observable.val = 1337;
     observable.add_observer(this);
-    // should be ignored
     observable.add_observer(this);
     observable.add_observer(this);
     observable.add_observer(this);
@@ -290,6 +289,7 @@ TEST_F(TestObservable, test_obs_watcher_replaced_and_destroyed)
         switched = true;
         observable.set_watcher(&watcher2);
         watcher1_calls = watcher1->calls;
+
         // the replaced watcher is destroyed right away: it must not be
         // called again for the rest of the notification
         delete watcher1;
@@ -380,6 +380,7 @@ TEST_F(TestObservable, test_obs_recursive_removal)
     observable.add_observer(&recursor);
     observable.add_observer(&other);
     observable.notify();
+
     EXPECT_EQ(calls, 2);
     EXPECT_FALSE(observable.is_observer(&recursor));
     observable.notify();

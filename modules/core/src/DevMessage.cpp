@@ -17,7 +17,7 @@ SIHD_LOGGER;
 
 using namespace sihd::util;
 
-DevMessage::DevMessage(const std::string & name, sihd::util::Node *parent):
+DevMessage::DevMessage(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _running(false),
     _trigger_mode(false)
@@ -87,6 +87,7 @@ void DevMessage::handle(sihd::core::Channel *channel)
             SIHD_LOG(error, "DevMessage: cannot fill message from channel {}", _channel_msg_in->name());
             return;
         }
+
         if (_trigger_mode == false)
         {
             this->_fill_channels_out();
@@ -94,6 +95,7 @@ void DevMessage::handle(sihd::core::Channel *channel)
         }
         return;
     }
+
     const auto it = _channels_in_to_field.find(channel);
     if (it != _channels_in_to_field.end())
     {
@@ -103,6 +105,7 @@ void DevMessage::handle(sihd::core::Channel *channel)
             SIHD_LOG(error, "DevMessage: cannot fill field from channel {}", channel->name());
             return;
         }
+
         if (_trigger_mode == false)
         {
             Channel *ch_out = _fields_to_channel_out.at(field);
@@ -135,6 +138,7 @@ bool DevMessage::on_init()
         SIHD_LOG(error, "DevMessage: message is not finished '{}'", _msg_path);
         return false;
     }
+
     Node *msg_node = dynamic_cast<Node *>(_msg_ptr);
     if (msg_node != nullptr)
     {
@@ -157,7 +161,7 @@ bool DevMessage::on_init()
 
 bool DevMessage::on_start()
 {
-    Channel *c;
+    Channel *channel;
     bool ret = true;
 
     for (const auto & [name, field] : _msg_fields)
@@ -167,9 +171,9 @@ bool DevMessage::on_start()
         auto found_in = this->find_channel(suffix_name);
         if (found_in)
         {
-            c = *found_in;
-            _channels_in_to_field[c] = field;
-            this->observe_channel(c);
+            channel = *found_in;
+            _channels_in_to_field[channel] = field;
+            this->observe_channel(channel);
         }
         else
         {
@@ -192,9 +196,9 @@ bool DevMessage::on_start()
     auto found_msg_in = this->find_channel(CHANNEL_MSG_IN);
     if (found_msg_in)
     {
-        c = *found_msg_in;
-        _channel_msg_in = c;
-        this->observe_channel(c);
+        channel = *found_msg_in;
+        _channel_msg_in = channel;
+        this->observe_channel(channel);
     }
     else
     {
@@ -214,9 +218,9 @@ bool DevMessage::on_start()
     auto found_trigger = this->find_channel(CHANNEL_TRIGGER);
     if (found_trigger)
     {
-        c = *found_trigger;
-        _channel_trigger = c;
-        this->observe_channel(c);
+        channel = *found_trigger;
+        _channel_trigger = channel;
+        this->observe_channel(channel);
     }
     else
     {

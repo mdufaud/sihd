@@ -58,7 +58,7 @@ DWORD class_from_nice(int nice_value)
     return IDLE_PRIORITY_CLASS;
 }
 
-sihd::util::Result<HANDLE> open_process(pid_t pid, DWORD access)
+Result<HANDLE> open_process(pid_t pid, DWORD access)
 {
     HANDLE handle = OpenProcess(access, FALSE, static_cast<DWORD>(pid));
     if (handle == nullptr)
@@ -68,7 +68,7 @@ sihd::util::Result<HANDLE> open_process(pid_t pid, DWORD access)
 
 } // namespace
 
-sihd::util::Result<int> nice(pid_t pid)
+Result<int> nice(pid_t pid)
 {
     auto handle = open_process(pid, PROCESS_QUERY_LIMITED_INFORMATION);
     SIHD_UNEXPECTED_RETURN(handle);
@@ -79,7 +79,7 @@ sihd::util::Result<int> nice(pid_t pid)
     return nice_from_class(priority_class);
 }
 
-sihd::util::Result<void> set_nice(pid_t pid, int nice_value)
+Result<void> set_nice(pid_t pid, int nice_value)
 {
     auto handle = open_process(pid, PROCESS_SET_INFORMATION);
     SIHD_UNEXPECTED_RETURN(handle);
@@ -90,23 +90,23 @@ sihd::util::Result<void> set_nice(pid_t pid, int nice_value)
     return {};
 }
 
-sihd::util::Result<Policy> scheduler([[maybe_unused]] pid_t pid)
+Result<Policy> scheduler([[maybe_unused]] pid_t pid)
 {
     return std::unexpected(Error(not_supported, "scheduler policies are not available on windows"));
 }
 
-sihd::util::Result<Priority> scheduler_priority([[maybe_unused]] pid_t pid)
+Result<Priority> scheduler_priority([[maybe_unused]] pid_t pid)
 {
     return std::unexpected(Error(not_supported, "scheduler policies are not available on windows"));
 }
 
-sihd::util::Result<void>
+Result<void>
     set_scheduler([[maybe_unused]] pid_t pid, [[maybe_unused]] Policy policy, [[maybe_unused]] Priority priority)
 {
     return std::unexpected(Error(not_supported, "scheduler policies are not available on windows"));
 }
 
-sihd::util::Result<std::vector<bool>> affinity(pid_t pid)
+Result<std::vector<bool>> affinity(pid_t pid)
 {
     auto handle = open_process(pid, PROCESS_QUERY_LIMITED_INFORMATION);
     SIHD_UNEXPECTED_RETURN(handle);
@@ -128,7 +128,7 @@ sihd::util::Result<std::vector<bool>> affinity(pid_t pid)
     return cpu_mask;
 }
 
-sihd::util::Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
+Result<void> set_affinity(pid_t pid, const std::vector<bool> & cpu_mask)
 {
     if (cpu_mask.size() > max_cpus)
         return std::unexpected(Error(invalid_argument, "cpu mask limited to 64 cpus on windows"));

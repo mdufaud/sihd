@@ -127,10 +127,10 @@ struct PSquareEstimator
 
             for (int i = 1; i <= 3; ++i)
             {
-                const double d = nd[i] - static_cast<double>(n[i]);
-                if ((d >= 1.0 && n[i + 1] - n[i] > 1) || (d <= -1.0 && n[i - 1] - n[i] < -1))
+                const double delta = nd[i] - static_cast<double>(n[i]);
+                if ((delta >= 1.0 && n[i + 1] - n[i] > 1) || (delta <= -1.0 && n[i - 1] - n[i] < -1))
                 {
-                    const int sign = (d > 0) ? 1 : -1;
+                    const int sign = (delta > 0) ? 1 : -1;
                     const double qi = q[i];
                     const double qip1 = q[i + 1]; // always i+1, not i+sign
                     const double qim1 = q[i - 1]; // always i-1, not i-sign
@@ -138,7 +138,6 @@ struct PSquareEstimator
                     const int nip1 = n[i + 1];
                     const int nim1 = n[i - 1];
 
-                    // parabolic interpolation (standard P-Square formula)
                     const double qnew = qi
                                         + static_cast<double>(sign) / static_cast<double>(nip1 - nim1)
                                               * (static_cast<double>(ni - nim1 + sign) * (qip1 - qi)

@@ -18,7 +18,7 @@ bool do_flush(FILE *file_ptr)
     return fflush(file_ptr) == 0;
 }
 
-bool do_return_begin_of_line(FILE *file_ptr)
+bool return_to_line_begin(FILE *file_ptr)
 {
     return do_print(file_ptr, "\r");
 }
@@ -41,7 +41,7 @@ void LoadingBar::add_progress(size_t progress)
 
 bool LoadingBar::print(std::string_view to_print_before, std::string_view to_print_after) const
 {
-    return do_return_begin_of_line(_config.output) && this->print_bar(to_print_before, to_print_after)
+    return return_to_line_begin(_config.output) && this->print_bar(to_print_before, to_print_after)
            && do_flush(_config.output);
 }
 bool LoadingBar::print_bar(std::string_view to_print_before, std::string_view to_print_after) const

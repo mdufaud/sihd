@@ -72,13 +72,11 @@ TEST_F(TestHttpServer, test_httpserver_auto)
 
     RequestOptions options;
     options.proxy = "";
-    // launch all requests async
     auto get_future = sihd::http::async_get(shard_url("localhost:3000/web/some_get"), options);
     auto post_future = sihd::http::async_post(shard_url("localhost:3000/web/some_post"), "hello world", options);
     auto put_future = sihd::http::async_put(shard_url("localhost:3000/web/some_put"), tmpfile_path, options);
     auto del_future = sihd::http::async_del(shard_url("localhost:3000/web/some_delete"), options);
 
-    // wait all
     auto get_resp = get_future.get();
     auto post_resp = post_future.get();
     auto put_resp = put_future.get();
@@ -87,25 +85,21 @@ TEST_F(TestHttpServer, test_httpserver_auto)
     server.set_service_wait_stop(true);
     server.stop();
 
-    // verify GET
     ASSERT_TRUE(get_resp.has_value());
     EXPECT_EQ(get_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(get_resp->content().cpp_str(), "hello get world");
     EXPECT_EQ(server._nget, 1);
 
-    // verify POST
     ASSERT_TRUE(post_resp.has_value());
     EXPECT_EQ(post_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(server._npost, 1);
     EXPECT_EQ(server._post_content, "hello world");
 
-    // verify PUT
     ASSERT_TRUE(put_resp.has_value());
     EXPECT_EQ(put_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(server._nput, 1);
     EXPECT_EQ(server._put_content, "hello put world");
 
-    // verify DELETE
     ASSERT_TRUE(del_resp.has_value());
     EXPECT_EQ(del_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(server._ndelete, 1);
@@ -189,14 +183,12 @@ TEST_F(TestHttpServer, test_routing_params)
 
     scope.start();
 
-    // single param
     auto resp = sihd::http::get(shard_url("localhost:3001/api/users/42"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "user:42");
     EXPECT_EQ(captured_id, "42");
 
-    // multi params — more specific route matches
     resp = sihd::http::get(shard_url("localhost:3001/api/users/7/edit"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "7:edit");
@@ -239,14 +231,12 @@ TEST_F(TestHttpServer, test_http_filter)
 
     scope.start();
 
-    // allowed request
     auto resp = sihd::http::get(shard_url("localhost:3001/api/public"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "ok");
     EXPECT_GE(filter.filter_calls, 1);
 
-    // blocked request → 403
     resp = sihd::http::get(shard_url("localhost:3001/api/secret"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Forbidden);
@@ -271,7 +261,6 @@ TEST_F(TestHttpServer, test_basic_auth)
 
     scope.start();
 
-    // no credentials → 401 for GET, POST and DELETE
     auto no_auth_get = sihd::http::async_get(shard_url("localhost:3001/api/protected"));
     auto no_auth_post = sihd::http::async_post(shard_url("localhost:3001/api/protected_post"), "data");
     auto no_auth_del = sihd::http::async_del(shard_url("localhost:3001/api/protected"));
@@ -287,7 +276,6 @@ TEST_F(TestHttpServer, test_basic_auth)
     ASSERT_TRUE(resp_del.has_value());
     EXPECT_EQ(resp_del->status(), HttpStatus::Unauthorized);
 
-    // wrong credentials → 401
     RequestOptions bad_creds;
     bad_creds.username = "admin";
     bad_creds.password = "wrong";
@@ -295,7 +283,6 @@ TEST_F(TestHttpServer, test_basic_auth)
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
-    // wrong user → 401
     RequestOptions bad_user;
     bad_user.username = "nobody";
     bad_user.password = "secret";
@@ -303,7 +290,6 @@ TEST_F(TestHttpServer, test_basic_auth)
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
-    // correct credentials → 200
     RequestOptions good_creds;
     good_creds.username = "admin";
     good_creds.password = "secret";
@@ -341,19 +327,16 @@ TEST_F(TestHttpServer, test_token_auth)
 
     scope.start();
 
-    // no token → 401
     auto resp = sihd::http::get(shard_url("localhost:3001/api/secure"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
-    // wrong token → 401
     RequestOptions bad_token;
     bad_token.token = "invalid-token";
     resp = sihd::http::get(shard_url("localhost:3001/api/secure"), bad_token);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
-    // correct token → 200
     RequestOptions good_token;
     good_token.token = "my-secret-token-123";
     resp = sihd::http::get(shard_url("localhost:3001/api/secure"), good_token);
@@ -361,13 +344,11 @@ TEST_F(TestHttpServer, test_token_auth)
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "token-ok");
 
-    // token works for POST too
     auto post_resp = sihd::http::post(shard_url("localhost:3001/api/secure_post"), "data", good_token);
     ASSERT_TRUE(post_resp.has_value());
     EXPECT_EQ(post_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(post_resp->content().cpp_str(), "posted:data");
 
-    // basic auth credentials should also still work
     RequestOptions basic_creds;
     basic_creds.username = "admin";
     basic_creds.password = "secret";
@@ -388,7 +369,7 @@ TEST_F(TestHttpServer, test_streaming)
             chunk.resize(data.size());
             chunk.copy_from_bytes(data.data(), data.size());
             ++chunk_num;
-            return chunk_num < 3; // 3 chunks: chunk0, chunk1, chunk2
+            return chunk_num < 3;
         });
         resp.set_status(HttpStatus::Ok);
         resp.set_content_type("text/plain");
@@ -399,7 +380,6 @@ TEST_F(TestHttpServer, test_streaming)
     auto resp = sihd::http::get(shard_url("localhost:3001/api/stream"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
-    // chunked transfer: all chunks concatenated
     std::string body = resp->content().cpp_str();
     EXPECT_TRUE(body.find("chunk0") != std::string::npos);
     EXPECT_TRUE(body.find("chunk1") != std::string::npos);
@@ -962,7 +942,6 @@ TEST_F(TestHttpServer, test_cors_preflight)
 
     scope.start();
 
-    // OPTIONS preflight
     RequestOptions opts;
     opts.headers["Origin"] = "https://example.com";
     opts.headers["Access-Control-Request-Method"] = "POST";
@@ -970,7 +949,6 @@ TEST_F(TestHttpServer, test_cors_preflight)
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::NoContent);
 
-    // a normal request answers with the CORS header too
     resp = sihd::http::get(shard_url("localhost:3001/api/data"), opts);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
@@ -980,12 +958,10 @@ TEST_F(TestHttpServer, test_cors_preflight)
 TEST_F(TestHttpServer, test_per_webservice_auth)
 {
     FeatureHttpServer server;
-    // add a second webservice (public, no auth)
     auto *public_ws = server.add_child<WebService>("public");
     public_ws->set_entry_point("hello",
                                [](const HttpRequest &, HttpResponse & resp) { resp.set_plain_content("public-ok"); });
 
-    // the "api" webservice gets its own authenticator
     TestAuth auth;
     server._webservice->set_authenticator(&auth);
     server._webservice->set_entry_point("secure", [](const HttpRequest &, HttpResponse & resp) {
@@ -1003,18 +979,15 @@ TEST_F(TestHttpServer, test_per_webservice_auth)
     RequestOptions no_proxy;
     no_proxy.proxy = "";
 
-    // public webservice accessible without credentials
     auto pub_resp = sihd::http::get(shard_url("localhost:3001/public/hello"), no_proxy);
     ASSERT_TRUE(pub_resp.has_value());
     EXPECT_EQ(pub_resp->status(), HttpStatus::Ok);
     EXPECT_EQ(pub_resp->content().cpp_str(), "public-ok");
 
-    // protected webservice rejects without credentials
     auto priv_resp = sihd::http::get(shard_url("localhost:3001/api/secure"), no_proxy);
     ASSERT_TRUE(priv_resp.has_value());
     EXPECT_EQ(priv_resp->status(), HttpStatus::Unauthorized);
 
-    // protected webservice accepts with correct token
     RequestOptions good_token;
     good_token.proxy = "";
     good_token.token = "my-secret-token-123";
@@ -1045,7 +1018,6 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
 
     scope.start();
 
-    // basic auth → auth_user populated
     RequestOptions basic_creds;
     basic_creds.username = "admin";
     basic_creds.password = "secret";
@@ -1056,7 +1028,6 @@ TEST_F(TestHttpServer, test_auth_context_propagation)
     EXPECT_EQ(captured_user, "admin");
     EXPECT_TRUE(captured_token.empty());
 
-    // token auth → auth_token populated
     captured_user.clear();
     captured_token.clear();
     RequestOptions token_opts;
@@ -1112,7 +1083,6 @@ TEST_F(TestHttpServer, test_concurrent_service)
         return time::to_milli(stopwatch.time());
     };
 
-    // --- Baseline: single service thread ---
     if constexpr (run_monothreaded)
     {
         ServerScope scope;
@@ -1127,7 +1097,6 @@ TEST_F(TestHttpServer, test_concurrent_service)
         SIHD_LOG(warning, "BENCHMARK single-thread: {} requests in {}ms", num_requests, no_pool_ms);
     }
 
-    // --- Multiple lws service threads ---
     if constexpr (run_multithreaded)
     {
         ServerScope scope;

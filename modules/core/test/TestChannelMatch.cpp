@@ -12,9 +12,9 @@ using namespace sihd::util;
 class TestChannelMatch: public ::testing::Test
 {
     protected:
-        TestChannelMatch() { sihd::util::LoggerManager::stream(); }
+        TestChannelMatch() { LoggerManager::stream(); }
 
-        virtual ~TestChannelMatch() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestChannelMatch() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

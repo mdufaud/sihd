@@ -1,3 +1,5 @@
+#include <array>
+
 #include <libssh/libssh.h>
 
 #include <sihd/ssh/SshShell.hpp>
@@ -13,6 +15,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/fmt.hpp>
 
 #include "ssh_error.hpp"
@@ -47,11 +50,11 @@ SshChannel & SshShell::channel()
     return _impl_ptr->channel;
 }
 
-sihd::util::Result<void> SshShell::open(bool x11)
+Result<void> SshShell::open(bool x11)
 {
     ssh_channel channel_ptr = ssh_channel_new(_impl_ptr->ssh_session_ptr);
     if (channel_ptr == nullptr)
-        return std::unexpected(Error(sihd::util::ErrorCode::not_initialized,
+        return std::unexpected(Error(ErrorCode::not_initialized,
                                      "could not create a ssh channel: {}",
                                      ssh_error_str(_impl_ptr->ssh_session_ptr)));
     _impl_ptr->channel.set_channel(channel_ptr);
@@ -69,7 +72,7 @@ sihd::util::Result<void> SshShell::open(bool x11)
             rows = *val;
     }
 
-    sihd::util::Result<void> res = _impl_ptr->channel.open_session();
+    Result<void> res = _impl_ptr->channel.open_session();
     if (res)
         res = _impl_ptr->channel.request_pty();
     if (res)
@@ -92,8 +95,8 @@ bool SshShell::read_loop()
     int nwritten;
     bool ret = true;
 
-    sihd::util::ArrCharView view;
-    sihd::util::ArrChar buf;
+    ArrCharView view;
+    ArrChar buf;
     if (!buf.reserve(4096))
         return false;
 
@@ -106,8 +109,8 @@ bool SshShell::read_loop()
     while (_impl_ptr->channel.is_open() && _impl_ptr->channel.is_eof() == false)
     {
         struct timeval timeout;
-        ssh_channel in_channels[2];
-        ssh_channel out_channels[2];
+        std::array<ssh_channel, 2> in_channels {};
+        std::array<ssh_channel, 2> out_channels {};
         fd_set fds;
         int maxfd;
 
@@ -116,16 +119,12 @@ bool SshShell::read_loop()
         in_channels[0] = static_cast<ssh_channel>(_impl_ptr->channel.channel());
         in_channels[1] = nullptr;
         FD_ZERO(&fds);
-#if !defined(__SIHD_WINDOWS__)
-        FD_SET(0, &fds);
+        if constexpr (!build::is_windows)
+            FD_SET(0, &fds);
         FD_SET(ssh_get_fd(_impl_ptr->ssh_session_ptr), &fds);
         maxfd = ssh_get_fd(_impl_ptr->ssh_session_ptr) + 1;
-#else
-        FD_SET(ssh_get_fd(_impl_ptr->ssh_session_ptr), &fds);
-        maxfd = ssh_get_fd(_impl_ptr->ssh_session_ptr) + 1;
-#endif
 
-        ssh_select(in_channels, out_channels, maxfd, &fds, &timeout);
+        ssh_select(in_channels.data(), out_channels.data(), maxfd, &fds, &timeout);
 
         if (out_channels[0] != nullptr)
         {
@@ -143,6 +142,7 @@ bool SshShell::read_loop()
                     fflush(stdout);
                 }
             }
+
             if (_impl_ptr->channel.poll_stderr())
             {
                 nbytes = _impl_ptr->channel.read_stderr(buf);
@@ -158,7 +158,7 @@ bool SshShell::read_loop()
                 }
             }
         }
-        // Check for stdin input
+
 #if !defined(__SIHD_WINDOWS__)
         bool stdin_ready = FD_ISSET(0, &fds);
 #else
@@ -167,6 +167,7 @@ bool SshShell::read_loop()
         if (stdin_ready)
         {
             auto line = reader.read_next();
+
             if (line && *line)
             {
                 reader.get_read_data(view);
@@ -190,9 +191,11 @@ bool SshShell::read_loop()
             }
         }
     }
+
     if (!ret)
         SIHD_UNEXPECTED_LOG(_impl_ptr->channel.send_eof());
     _impl_ptr->channel.clear_channel();
+
     return ret;
 }
 

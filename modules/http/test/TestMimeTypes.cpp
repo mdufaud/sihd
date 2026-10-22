@@ -5,13 +5,14 @@
 
 namespace test
 {
+using namespace sihd::util;
 using namespace sihd::http;
 class TestMimeTypes: public ::testing::Test
 {
     protected:
-        TestMimeTypes() { sihd::util::LoggerManager::stream(); }
+        TestMimeTypes() { LoggerManager::stream(); }
 
-        virtual ~TestMimeTypes() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestMimeTypes() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 

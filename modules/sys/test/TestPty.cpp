@@ -20,9 +20,9 @@ using namespace sihd::sys;
 class TestPty: public ::testing::Test
 {
     protected:
-        TestPty() { sihd::util::LoggerManager::stream(); }
+        TestPty() { LoggerManager::stream(); }
 
-        virtual ~TestPty() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPty() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -46,9 +46,9 @@ TEST_F(TestPty, test_pty_spawn_echo_and_exit)
     while (out.find("sihd_pty_ok") == std::string::npos && std::chrono::steady_clock::now() < deadline)
     {
         char buf[256];
-        const ssize_t n = pty->read(buf, sizeof(buf));
-        if (n > 0)
-            out.append(buf, (size_t)n);
+        const ssize_t bytes = pty->read(buf, sizeof(buf));
+        if (bytes > 0)
+            out.append(buf, (size_t)bytes);
         else
             time::msleep(10);
     }

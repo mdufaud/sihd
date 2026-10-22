@@ -19,7 +19,7 @@ TEST_F(TestScopedModifier, test_scoped_modifier_restores)
 {
     int val = 10;
     {
-        ScopedModifier m(val, 42);
+        ScopedModifier modifier(val, 42);
         EXPECT_EQ(val, 42);
     }
     EXPECT_EQ(val, 10);
@@ -29,7 +29,7 @@ TEST_F(TestScopedModifier, test_scoped_modifier_bool)
 {
     bool flag = false;
     {
-        ScopedModifier m(flag, true);
+        ScopedModifier modifier(flag, true);
         EXPECT_TRUE(flag);
     }
     EXPECT_FALSE(flag);

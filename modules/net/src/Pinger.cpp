@@ -35,11 +35,9 @@ namespace
 
 void set_internal_data_size(IcmpSender & sender, std::unique_ptr<ArrByte> & data_ptr, size_t len)
 {
-    // Initialize data buffer now that socket type is known
     sender.set_data_size(len);
     data_ptr = std::make_unique<ArrByte>();
     data_ptr->resize(len);
-    // set gibberish values like ping in packet
     char values = 10;
     for (size_t j = sizeof(Timestamp); j < len; ++j)
     {
@@ -94,6 +92,16 @@ Result<void> Pinger::open(bool ipv6)
     return _sender.open_socket(ipv6);
 }
 
+const PingEvent & Pinger::event() const
+{
+    return _event;
+}
+
+const PingResult & Pinger::result() const
+{
+    return _result;
+}
+
 bool Pinger::set_ping_count(size_t n)
 {
     _ping_count = n;
@@ -129,7 +137,7 @@ bool Pinger::set_interval(time::UnixTime milliseconds_interval)
 
 bool Pinger::on_stop()
 {
-    auto l = _waitable.guard();
+    auto lock = _waitable.guard();
     _stop = true;
     _waitable.notify();
     return true;
@@ -145,7 +153,6 @@ bool Pinger::on_start()
 
     this->service_set_ready();
 
-    // setup ping
     this->_clear_event();
     _result.clear();
 
@@ -164,14 +171,12 @@ bool Pinger::on_start()
         if (i > 0)
         {
             const Duration time_spent_sending_last_ping = Timestamp(_clock_ptr->now()) - _result.last_time_sent;
-            // wait between pings
             _waitable.wait_for(Duration(time::milliseconds(_ping_ms_interval)) - time_spent_sending_last_ping,
                                [this] { return _stop.load(); });
             if (_stop)
                 break;
         }
 
-        // set sequence number and packet timestamp
         _current_seq = i + 1;
         _sender.set_seq(_current_seq);
         _result.last_time_sent = _clock_ptr->now();
@@ -179,7 +184,6 @@ bool Pinger::on_start()
         _nonce = num::rand();
         _data_ptr->copy_from_bytes(&_nonce, sizeof(_nonce), {(ssize_t)sizeof(_result.last_time_sent)});
         _sender.set_data(*_data_ptr);
-        // send icmp echo
         auto sent = _sender.send_to(_client);
         if (!sent)
         {
@@ -187,11 +191,11 @@ bool Pinger::on_start()
             ret = false;
             break;
         }
+
         _result.transmitted += 1;
         this->_notify_send();
         SIHD_LOG(debug, "Pinger: sent ICMP echo request seq={} to {}", _current_seq, _client.str());
 
-        // wait until seq number is received by polling
         _received_icmp_response = false;
         while (_stop == false && _received_icmp_response == false && _sender.poll())
             ;

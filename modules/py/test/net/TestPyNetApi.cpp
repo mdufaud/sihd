@@ -11,13 +11,14 @@
 namespace test
 {
 SIHD_LOGGER;
+using namespace sihd::util;
 using namespace sihd::py;
 class TestPyNetApi: public ::testing::Test
 {
     protected:
-        TestPyNetApi() { sihd::util::LoggerManager::stream(); }
+        TestPyNetApi() { LoggerManager::stream(); }
 
-        virtual ~TestPyNetApi() { sihd::util::LoggerManager::clear_loggers(); }
+        virtual ~TestPyNetApi() { LoggerManager::clear_loggers(); }
 
         virtual void SetUp() {}
 
@@ -26,8 +27,8 @@ class TestPyNetApi: public ::testing::Test
 
 TEST_F(TestPyNetApi, test_pynet_base)
 {
-    DirectorySwitcher d(lib_path());
-    py_interpreter();
-    EXPECT_NO_THROW(pybind11::eval_file(d.old_cwd() + "/test/net/py/test_net.py"));
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/net/py/test_net.py"));
 }
 } // namespace test
