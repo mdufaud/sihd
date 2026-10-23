@@ -1,0 +1,25 @@
+772e4d4d ┌─▼──Example: Property editor────────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+fdcde845 │┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+365e7f77 ││  Use Clipper (20 root nodes)                                                                                        │
+a117a0de ││ incl -excl                                                                                                          │
+ba2a87f8 ││ ▶ Apple 0                                                                                                           │
+e956a59f ││ ▶ Apple 1                                                                                                           │
+fbc71fea ││ ▶ Banana 0                                                                                                          │
+034dce4e ││ ▶ Banana 1                                                                                                          │
+fbc71fea ││ ▶ Cherry 0                                                                                                          │
+034dce4e ││ ▶ Cherry 1                                                                                                          │
+24cdbe9a ││ ▶ Kiwi 0                                                                                                            │
+c6f64dae ││ ▶ Kiwi 1                                                                                                            │
+b70598c3 ││ ▶ Mango 0                                                                                                           │
+e956a59f ││ ▶ Mango 1                                                                                                           │
+fbc71fea ││ ▶ Orange 0                                                                                                          │
+034dce4e ││ ▶ Orange 1                                                                                                          │
+24cdbe9a ││ ▶ Pear 0                                                                                                            │
+c6f64dae ││ ▶ Pear 1                                                                                                            │
+043cf3c3 ││ ▶ Pineapple 0                                                                                                       │
+9c1ddbdf ││ ▶ Pineapple 1                                                                                                       │
+83e78b8a ││ ▶ Strawberry 0                                                                                                      │
+b57bca4e ││ ▶ Strawberry 1                                                                                                      │
+83e78b8a ││ ▶ Watermelon 0                                                                                                      │
+b57bca4e ││ ▶ Watermelon 1                                                                                                      │

@@ -1,0 +1,49 @@
+9203083f ┌─▼──Dear ImGui Style Editor─────────────────────────────────────────────────────────────────────────────────────────×─┐
+e3adb91b │                                                                                                                     █│
+c2dabc92 │ General ────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+6d911564 │                                                           ▼ Colors                                                  █│
+bce78d89 │                                                           ▼ Fonts (?)                                               █│
+6f31582b │                             1                               FontSizeBase (out 1.00)                                 █│
+a558a87b │                           1.000                             FontScaleMain                                           █│
+fcf969b2 │                           1.000                             FontScaleDpi                                            █│
+7a05531b │                             0                               FrameRounding                                           █│
+d5e50ca7 │✓ WindowBorder   FrameBorder ✓ PopupBorder                                                                           █│
+a42adfff │ Save Ref   Revert Ref  (?)                                                                                          █│
+c2dabc92 │ Details ────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+5c48d73e │ Sizes    Colors    Fonts    Rendering                                                                               █│
+89085750 │ Main ───────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+a4e11d16 │              1                             1                WindowPadding                                           █│
+ae517953 │              1                             0                FramePadding                                            █│
+1c013f4a │              1                             0                ItemSpacing                                             █│
+d92419d3 │              1                             0                ItemInnerSpacing                                        █│
+9af0508e │              0                             0                TouchExtraPadding                                       █│
+1f91f0db │                             2                               IndentSpacing                                           █│
+df2c768b │                             1                               GrabMinSize                                             █│
+c2dabc92 │ Borders ────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+681d9f6a │                             1                               WindowBorderSize                                        █│
+dededf53 │                             1                               ChildBorderSize                                         █│
+dededf53 │                             1                               PopupBorderSize                                         █│
+044de52b │                             0                               FrameBorderSize                                         █│
+2bcb8d70 │ Rounding ───────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+828448f2 │                             0                               WindowRounding                                          █│
+7a05531b │                             0                               ChildRounding                                           █│
+7a05531b │                             0                               FrameRounding                                           █│
+7a05531b │                             0                               PopupRounding                                           █│
+27b8c660 │                             0                               GrabRounding                                            ░│
+c9e13120 │                             0                               MenuItemRounding                                        ░│
+2e527a08 │ Scrollbar ──────────────────────────────────────────────────────────────────────────────────────────────────────────░│
+389def2d │                             1                               ScrollbarSize                                           ░│
+518dadcd │                             0                               ScrollbarRounding                                       ░│
+c9e13120 │                             0                               ScrollbarPadding                                        ░│
+370ed8b2 │ Tabs ───────────────────────────────────────────────────────────────────────────────────────────────────────────────░│
+389def2d │                             0                               TabBorderSize                                           ░│
+c9e13120 │                             0                               TabBarBorderSize                                        ░│
+4198f090 │                             1                               TabBarOverlineSize (?)                                  ░│
+2d363a5d │                             1                               TabMinWidthBase                                         ░│
+7ca29ef0 │                             80                              TabMinWidthShrink                                       ░│
+123cd83d │                        -1 (Always)                          TabCloseButtonMinWidthSelected                          ░│
+9773d360 │                             0                               TabCloseButtonMinWidthUnselected                        ░│
+81aa11fd │                             0                               TabRounding                                             ░│
+0ce20d82 │ Tables ─────────────────────────────────────────────────────────────────────────────────────────────────────────────░│
+fa3deb68 │              1                             0                CellPadding                                             ░│
+4519b715 │                           35 deg                            TableAngledHeadersAngle                                 ◢│

@@ -1,0 +1,784 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+f7cc16cc │Menu  Examples  Tools                                                                                                 │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8dde6e20 │ ▶  Help                                                                                                              │
+0d61ad35 │ ▶  Configuration                                                                                                     │
+77858afd │ ▶  Window options                                                                                                    │
+cf980c9d │ ▶  Widgets                                                                                                           │
+6de19f38 │ ▶  Layout & Scrolling                                                                                                │
+32be4a7d │ ▶  Popups & Modal windows                                                                                            │
+cdeba3f0 │ ▼  Tables & Columns                                                                                                  │
+46b74f75 │ Expand all   Collapse all    Disable tree indentation (?)                                                            │
+fdcde845 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+af52a4a5 │ ▼ Basic                                                                                                              │
+7ab2399d │  (?)                                                                                                                 │
+8cfc98e8 │  Row 0 Column 0                         Row 0 Column 1                         Row 0 Column 2                        │
+8cfc98e8 │  Row 1 Column 0                         Row 1 Column 1                         Row 1 Column 2                        │
+8cfc98e8 │  Row 2 Column 0                         Row 2 Column 1                         Row 2 Column 2                        │
+8cfc98e8 │  Row 3 Column 0                         Row 3 Column 1                         Row 3 Column 2                        │
+7ab2399d │  (?)                                                                                                                 │
+266979f8 │  Row 0                                  Some contents                          123.456                               │
+266979f8 │  Row 1                                  Some contents                          123.456                               │
+266979f8 │  Row 2                                  Some contents                          123.456                               │
+266979f8 │  Row 3                                  Some contents                          123.456                               │
+7ab2399d │  (?)                                                                                                                 │
+9fd0cdd8 │  Item 0                                 Item 1                                 Item 2                                │
+9fd0cdd8 │  Item 3                                 Item 4                                 Item 5                                │
+9fd0cdd8 │  Item 6                                 Item 7                                 Item 8                                │
+0f64bfa8 │  Item 9                                 Item 10                                Item 11                               │
+b4d856e5 │  Item 12                                Item 13                                                                      │
+780c6878 │ ▼ Borders, background                                                                                                │
+6e226a1a │  ✓ ImGuiTableFlags_RowBg                                                                                             │
+9e3510fa │  ✓ ImGuiTableFlags_Borders (?)                                                                                       │
+242f3a33 │    ✓ ImGuiTableFlags_BordersH                                                                                        │
+b51708ba │      ✓ ImGuiTableFlags_BordersOuterH                                                                                 │
+b51708ba │      ✓ ImGuiTableFlags_BordersInnerH                                                                                 │
+242f3a33 │    ✓ ImGuiTableFlags_BordersV                                                                                        │
+b51708ba │      ✓ ImGuiTableFlags_BordersOuterV                                                                                 │
+b51708ba │      ✓ ImGuiTableFlags_BordersInnerV                                                                                 │
+6f14b7b3 │    ✓ ImGuiTableFlags_BordersOuter                                                                                    │
+6f14b7b3 │    ✓ ImGuiTableFlags_BordersInner                                                                                    │
+29f54ba8 │  Cell contents:   Text   FillButton                                                                                  │
+c3b98591 │    Display headers                                                                                                   │
+15696264 │    ImGuiTableFlags_NoBordersInBody (?)                                                                               │
+2459fa29 │  │ Hello 0,0                           │ Hello 1,0                           │ Hello 2,0                            ││
+49d3ed99 │  │ Hello 0,1                           │ Hello 1,1                           │ Hello 2,1                            ││
+2459fa29 │  │ Hello 0,2                           │ Hello 1,2                           │ Hello 2,2                            ││
+49d3ed99 │  │ Hello 0,3                           │ Hello 1,3                           │ Hello 2,3                            ││
+2459fa29 │  │ Hello 0,4                           │ Hello 1,4                           │ Hello 2,4                            ││
+a6803955 │ ▼ Resizable, stretch                                                                                                 │
+fd90e33a │  ✓ ImGuiTableFlags_Resizable                                                                                         │
+5584b83b │  ✓ ImGuiTableFlags_BordersV (?)                                                                                      │
+2459fa29 │  │ Hello 0,0                           │ Hello 1,0                           │ Hello 2,0                            ││
+2459fa29 │  │ Hello 0,1                           │ Hello 1,1                           │ Hello 2,1                            ││
+2459fa29 │  │ Hello 0,2                           │ Hello 1,2                           │ Hello 2,2                            ││
+2459fa29 │  │ Hello 0,3                           │ Hello 1,3                           │ Hello 2,3                            ││
+2459fa29 │  │ Hello 0,4                           │ Hello 1,4                           │ Hello 2,4                            ││
+0b2c54b5 │ ▼ Resizable, fixed                                                                                                   │
+7ab2399d │  (?)                                                                                                                 │
+1340e1dc │    ImGuiTableFlags_NoHostExtendX                                                                                     │
+70aab6ba │  │ Hello 0,0 │ Hello 1,0 │ Hello 2,0 │                                                                              ││
+70aab6ba │  │ Hello 0,1 │ Hello 1,1 │ Hello 2,1 │                                                                              ││
+70aab6ba │  │ Hello 0,2 │ Hello 1,2 │ Hello 2,2 │                                                                              ││
+70aab6ba │  │ Hello 0,3 │ Hello 1,3 │ Hello 2,3 │                                                                              ││
+70aab6ba │  │ Hello 0,4 │ Hello 1,4 │ Hello 2,4 │                                                                              ││
+0b2c54b5 │ ▼ Resizable, mixed                                                                                                   │
+7ab2399d │  (?)                                                                                                                 │
+52bc224c │  │ AAA       │ BBB       │ CCC                                                                                      ││
+03cf0e79 │  │ Fixed 0,0 │ Fixed 1,0 │ Stretch 2,0                                                                              ││
+4d1c0b29 │  │ Fixed 0,1 │ Fixed 1,1 │ Stretch 2,1                                                                              ││
+03cf0e79 │  │ Fixed 0,2 │ Fixed 1,2 │ Stretch 2,2                                                                              ││
+4d1c0b29 │  │ Fixed 0,3 │ Fixed 1,3 │ Stretch 2,3                                                                              ││
+03cf0e79 │  │ Fixed 0,4 │ Fixed 1,4 │ Stretch 2,4                                                                              ││
+11469b1e │  │ AAA       │ BBB       │ DDD                                        │ EEE                                         ││
+d97ace1e │  │ Fixed 0,0 │ Fixed 1,0 │ Stretch 3,0                                │ Stretch 4,0                                 ││
+e623118e │  │ Fixed 0,1 │ Fixed 1,1 │ Stretch 3,1                                │ Stretch 4,1                                 ││
+d97ace1e │  │ Fixed 0,2 │ Fixed 1,2 │ Stretch 3,2                                │ Stretch 4,2                                 ││
+e623118e │  │ Fixed 0,3 │ Fixed 1,3 │ Stretch 3,3                                │ Stretch 4,3                                 ││
+d97ace1e │  │ Fixed 0,4 │ Fixed 1,4 │ Stretch 3,4                                │ Stretch 4,4                                 ││
+0aeccbd8 │ ▼ Reorderable, hideable, with headers                                                                                │
+7ab2399d │  (?)                                                                                                                 │
+fd90e33a │  ✓ ImGuiTableFlags_Resizable                                                                                         │
+1374d1ca │  ✓ ImGuiTableFlags_Reorderable                                                                                       │
+bb3ba973 │  ✓ ImGuiTableFlags_Hideable                                                                                          │
+bcac725c │    ImGuiTableFlags_NoBordersInBody                                                                                   │
+c4231741 │    ImGuiTableFlags_NoBordersInBodyUntilResize (?)                                                                    │
+ced883e1 │    ImGuiTableFlags_HighlightHoveredColumn                                                                            │
+e1ca0f0c │  │ One                                 │ Two                                 │ Three                                ││
+2459fa29 │  │ Hello 0,0                           │ Hello 1,0                           │ Hello 2,0                            ││
+2459fa29 │  │ Hello 0,1                           │ Hello 1,1                           │ Hello 2,1                            ││
+2459fa29 │  │ Hello 0,2                           │ Hello 1,2                           │ Hello 2,2                            ││
+2459fa29 │  │ Hello 0,3                           │ Hello 1,3                           │ Hello 2,3                            ││
+2459fa29 │  │ Hello 0,4                           │ Hello 1,4                           │ Hello 2,4                            ││
+2459fa29 │  │ Hello 0,5                           │ Hello 1,5                           │ Hello 2,5                            ││
+0350ce3b │  │ One       │ Two       │ Three     │                                                                              ││
+70aab6ba │  │ Fixed 0,0 │ Fixed 1,0 │ Fixed 2,0 │                                                                              ││
+70aab6ba │  │ Fixed 0,1 │ Fixed 1,1 │ Fixed 2,1 │                                                                              ││
+70aab6ba │  │ Fixed 0,2 │ Fixed 1,2 │ Fixed 2,2 │                                                                              ││
+70aab6ba │  │ Fixed 0,3 │ Fixed 1,3 │ Fixed 2,3 │                                                                              ││
+70aab6ba │  │ Fixed 0,4 │ Fixed 1,4 │ Fixed 2,4 │                                                                              ││
+70aab6ba │  │ Fixed 0,5 │ Fixed 1,5 │ Fixed 2,5 │                                                                              ││
+52358775 │ ▼ Padding                                                                                                            │
+7ab2399d │  (?)                                                                                                                 │
+50e05a84 │    ImGuiTableFlags_PadOuterX (?)                                                                                     │
+c88ed864 │    ImGuiTableFlags_NoPadOuterX (?)                                                                                   │
+c88ed864 │    ImGuiTableFlags_NoPadInnerX (?)                                                                                   │
+a87cc15a │  ✓ ImGuiTableFlags_BordersOuterV                                                                                     │
+a87cc15a │  ✓ ImGuiTableFlags_BordersInnerV                                                                                     │
+664381f1 │    show_headers                                                                                                      │
+97146d09 │  │ Avail 35.00                         │ Avail 35.00                         │ Avail 36.00                          ││
+af3f5595 │  │              Hello 0,1              │              Hello 1,1              │              Hello 2,1               ││
+af3f5595 │  │              Hello 0,2              │              Hello 1,2              │              Hello 2,2               ││
+af3f5595 │  │              Hello 0,3              │              Hello 1,3              │              Hello 2,3               ││
+af3f5595 │  │              Hello 0,4              │              Hello 1,4              │              Hello 2,4               ││
+7ab2399d │  (?)                                                                                                                 │
+6e9eba2a │  ✓ ImGuiTableFlags_Borders                                                                                           │
+bb3ba973 │  ✓ ImGuiTableFlags_BordersH                                                                                          │
+bb3ba973 │  ✓ ImGuiTableFlags_BordersV                                                                                          │
+da5d7c73 │  ✓ ImGuiTableFlags_BordersInner                                                                                      │
+da5d7c73 │  ✓ ImGuiTableFlags_BordersOuter                                                                                      │
+6e226a1a │  ✓ ImGuiTableFlags_RowBg                                                                                             │
+b53c7b9c │    ImGuiTableFlags_Resizable                                                                                         │
+c5bd98f3 │  ✓ show_widget_frame_bg                                                                                              │
+baf3d39c │                           0                                                   0                           CellPadding│
+49e06e01 │  │ edit me                             │ edit me                             │ edit me                              ││
+5a657289 │  │ edit me                             │ edit me                             │ edit me                              ││
+49e06e01 │  │ edit me                             │ edit me                             │ edit me                              ││
+5a657289 │  │ edit me                             │ edit me                             │ edit me                              ││
+49e06e01 │  │ edit me                             │ edit me                             │ edit me                              ││
+720db808 │ ▼ Sizing policies                                                                                                    │
+b53c7b9c │    ImGuiTableFlags_Resizable                                                                                         │
+1340e1dc │    ImGuiTableFlags_NoHostExtendX                                                                                     │
+45ee9603 │   _SizingFixedFit             ▼ Sizing Policy (?)                                                                    │
+0c2a23a9 │  │ Oh dear │ Oh dear │ Oh dear                                                                                      ││
+136e0f59 │  │ Oh dear │ Oh dear │ Oh dear                                                                                      ││
+0c2a23a9 │  │ Oh dear │ Oh dear │ Oh dear                                                                                      ││
+1d7d4bd5 │  │ AAAA │ BBBBBBBB │ CCCCCCCCCCCC                                                                                   ││
+30259715 │  │ AAAA │ BBBBBBBB │ CCCCCCCCCCCC                                                                                   ││
+1d7d4bd5 │  │ AAAA │ BBBBBBBB │ CCCCCCCCCCCC                                                                                   ││
+c2bce386 │   _SizingFixedSame            ▼ Sizing Policy (?)                                                                    │
+b23f139a │  │ Oh dear │ Oh dear │ Oh dear │                                                                                    ││
+5603531a │  │ Oh dear │ Oh dear │ Oh dear │                                                                                    ││
+b23f139a │  │ Oh dear │ Oh dear │ Oh dear │                                                                                    ││
+4bf9be22 │  │ AAAA         │ BBBBBBBB     │ CCCCCCCCCCCC │                                                                     ││
+b5e6cd62 │  │ AAAA         │ BBBBBBBB     │ CCCCCCCCCCCC │                                                                     ││
+4bf9be22 │  │ AAAA         │ BBBBBBBB     │ CCCCCCCCCCCC │                                                                     ││
+5badcd26 │   _SizingStretchProp          ▼ Sizing Policy (?)                                                                    │
+e4e879c9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+9cc94cd9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+e4e879c9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+b32af089 │  │ AAAA              │ BBBBBBBB                            │ CCCCCCCCCCCC                                           ││
+9ed3d319 │  │ AAAA              │ BBBBBBBB                            │ CCCCCCCCCCCC                                           ││
+b32af089 │  │ AAAA              │ BBBBBBBB                            │ CCCCCCCCCCCC                                           ││
+5badcd26 │   _SizingStretchSame          ▼ Sizing Policy (?)                                                                    │
+e4e879c9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+9cc94cd9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+e4e879c9 │  │ Oh dear                             │ Oh dear                             │ Oh dear                              ││
+d12490d9 │  │ AAAA                                │ BBBBBBBB                            │ CCCCCCCCCCCC                         ││
+4f2acf79 │  │ AAAA                                │ BBBBBBBB                            │ CCCCCCCCCCCC                         ││
+d12490d9 │  │ AAAA                                │ BBBBBBBB                            │ CCCCCCCCCCCC                         ││
+ecf2f34d │  Advanced (?)                                                                                                        │
+b6bc9303 │   Default                     ▼ Sizing Policy (?)                                                                    │
+625773cb │   Show width                  ▼ Contents                                                                             │
+4b8a34ed │                3                Columns                                                                              │
+fd90e33a │  ✓ ImGuiTableFlags_Resizable                                                                                         │
+dd792b04 │    ImGuiTableFlags_PreciseWidths (?)                                                                                 │
+d43fd25c │    ImGuiTableFlags_ScrollX                                                                                           │
+6e9eba2a │  ✓ ImGuiTableFlags_ScrollY                                                                                           │
+20ee3361 │    ImGuiTableFlags_NoClip                                                                                            │
+e2eab194 │  │                                     │                                     │                                      █│
+d10a418c │  │ W: 35.0                             │ W: 35.0                             │ W: 35.0                              █│
+165f79e4 │  │ W: 35.0                             │ W: 35.0                             │ W: 35.0                              █│
+d10a418c │  │ W: 35.0                             │ W: 35.0                             │ W: 35.0                              █│
+c4620976 │  │ W: 35.0                             │ W: 35.0                             │ W: 35.0                              ░│
+3f22d40e │  │ W: 35.0                             │ W: 35.0                             │ W: 35.0                              ░│
+9cabdb46 │  │                                     │                                     │                                      ░│
+a62dc378 │ ▼ Vertical scrolling, with clipping                                                                                  │
+7ab2399d │  (?)                                                                                                                 │
+6e9eba2a │  ✓ ImGuiTableFlags_ScrollY                                                                                           │
+e2eab194 │  │                                     │                                     │                                      █│
+cde8cfd6 │  │ Hello 0,0                           │ Hello 1,0                           │ Hello 2,0                            ░│
+adde458e │  │ Hello 0,1                           │ Hello 1,1                           │ Hello 2,1                            ░│
+cde8cfd6 │  │ Hello 0,2                           │ Hello 1,2                           │ Hello 2,2                            ░│
+adde458e │  │ Hello 0,3                           │ Hello 1,3                           │ Hello 2,3                            ░│
+cde8cfd6 │  │ Hello 0,4                           │ Hello 1,4                           │ Hello 2,4                            ░│
+adde458e │  │ Hello 0,5                           │ Hello 1,5                           │ Hello 2,5                            ░│
+9cabdb46 │  │                                     │                                     │                                      ░│
+ca1ef775 │ ▼ Horizontal scrolling                                                                                               │
+7ab2399d │  (?)                                                                                                                 │
+fd90e33a │  ✓ ImGuiTableFlags_Resizable                                                                                         │
+6e9eba2a │  ✓ ImGuiTableFlags_ScrollX                                                                                           │
+6e9eba2a │  ✓ ImGuiTableFlags_ScrollY                                                                                           │
+b193db81 │  1 freeze_cols                                                                                                       │
+b193db81 │  1 freeze_rows                                                                                                       │
+a86444c0 │  │         │                  │                  │                  │                  │                  │         █│
+484fb765 │  │ Line 0  │ Hello world 1,0  │ Hello world 2,0  │ Hello world 3,0  │ Hello world 4,0  │ Hello world 5,0  │ Hello wo█│
+dee7508b │  │ Line 1  │ Hello world 1,1  │ Hello world 2,1  │ Hello world 3,1  │ Hello world 4,1  │ Hello world 5,1  │ Hello wo░│
+4e8d4853 │  │ Line 2  │ Hello world 1,2  │ Hello world 2,2  │ Hello world 3,2  │ Hello world 4,2  │ Hello world 5,2  │ Hello wo░│
+dee7508b │  │ Line 3  │ Hello world 1,3  │ Hello world 2,3  │ Hello world 3,3  │ Hello world 4,3  │ Hello world 5,3  │ Hello wo░│
+4e8d4853 │  │ Line 4  │ Hello world 1,4  │ Hello world 2,4  │ Hello world 3,4  │ Hello world 4,4  │ Hello world 5,4  │ Hello wo░│
+dee7508b │  │ Line 5  │ Hello world 1,5  │ Hello world 2,5  │ Hello world 3,5  │ Hello world 4,5  │ Hello world 5,5  │ Hello wo░│
+8fc63626 │  ██████████████████████████████████████████████████████████████████████████████████████████████████████████░░░░░░░░░││
+32ca2688 │  Stretch + ScrollX (?)                                                                                               │
+6e9eba2a │  ✓ ImGuiTableFlags_ScrollX                                                                                           │
+8fa68f80 │              1000.0             inner_width                                                                          │
+38a3c038 │  │                                                                                                                  █│
+60949e8d │  │ Hello world 0,1                                                                                                  █│
+6091bfa3 │  │ Hello world 0,2                                                                                                  ░│
+59c1442b │  │ Hello world 0,3                                                                                                  ░│
+6091bfa3 │  │ Hello world 0,4                                                                                                  ░│
+59c1442b │  │ Hello world 0,5                                                                                                  ░│
+6091bfa3 │  │ Hello world 0,6                                                                                                  ░│
+bdf40838 │  █████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░││
+66286658 │ ▼ Columns flags                                                                                                      │
+a0991838 │  'One'                                  'Two'                                  'Three'                               │
+a1f023d8 │  Input flags:                           Input flags:                           Input flags:                          │
+5d2d0ecc │    _Disabled (?)                          _Disabled (?)                          _Disabled (?)                       │
+000aa93b │    _DefaultHide                           _DefaultHide                         ✓ _DefaultHide                        │
+cdfcddeb │  ✓ _DefaultSort                           _DefaultSort                           _DefaultSort                        │
+97a4ed84 │    _WidthStretch                          _WidthStretch                          _WidthStretch                       │
+4a490df4 │    _WidthFixed                            _WidthFixed                            _WidthFixed                         │
+2a578424 │    _NoResize                              _NoResize                              _NoResize                           │
+76e5e749 │    _NoReorder                             _NoReorder                             _NoReorder                          │
+90852b14 │    _NoHide                                _NoHide                                _NoHide                             │
+90852b14 │    _NoClip                                _NoClip                                _NoClip                             │
+90852b14 │    _NoSort                                _NoSort                                _NoSort                             │
+42b7ae49 │    _NoSortAscending                       _NoSortAscending                       _NoSortAscending                    │
+35b792e4 │    _NoSortDescending                      _NoSortDescending                      _NoSortDescending                   │
+2b2a8d09 │    _NoHeaderLabel                         _NoHeaderLabel                         _NoHeaderLabel                      │
+2b2a8d09 │    _NoHeaderWidth                         _NoHeaderWidth                         _NoHeaderWidth                      │
+9cfd4e89 │    _PreferSortAscending                   _PreferSortAscending                   _PreferSortAscending                │
+b5b6f544 │    _PreferSortDescending                  _PreferSortDescending                  _PreferSortDescending               │
+c34c512c │    _IndentEnable (?)                      _IndentEnable (?)                      _IndentEnable (?)                   │
+29fd5e01 │    _IndentDisable (?)                     _IndentDisable (?)                     _IndentDisable (?)                  │
+97a4ed84 │    _AngledHeader                          _AngledHeader                          _AngledHeader                       │
+189acb05 │  Output flags:                          Output flags:                          Output flags:                         │
+1266c3ce │  ✓ _IsEnabled                           ✓ _IsEnabled                             _IsEnabled                          │
+1266c3ce │  ✓ _IsVisible                           ✓ _IsVisible                             _IsVisible                          │
+6da606b5 │  ✓ _IsSorted                              _IsSorted                              _IsSorted                           │
+d71bb1a2 │    _IsHovered                             _IsHovered                             _IsHovered                          │
+6003bac9 │  │                              │           │                                                                       ││
+8d69c61c │  │   Indented One               │ Hello Two │                                                                       ││
+b3e72d3c │  │     Indented One             │ Hello Two │                                                                       ││
+69fb623c │  │       Indented One           │ Hello Two │                                                                       ││
+b70884fc │  │         Indented One         │ Hello Two │                                                                       ││
+8e597c5c │  │           Indented One       │ Hello Two │                                                                       ││
+607d57bc │  │             Indented One     │ Hello Two │                                                                       ││
+6473b07c │  │               Indented One   │ Hello Two │                                                                       ││
+6003bac9 │  │                              │           │                                                                       ││
+f7e01c55 │ ▼ Columns widths                                                                                                     │
+7ab2399d │  (?)                                                                                                                 │
+b53c7b9c │    ImGuiTableFlags_Resizable                                                                                         │
+9cc717d3 │  ✓ ImGuiTableFlags_NoBordersInBodyUntilResize                                                                        │
+791950d8 │  │ one                                                                                                    two      …││
+7c10672b │  │ (w: 100.0)                                                                                             (w:   6  (w│
+d3fb2e32 │  │ Hello 0,1                                                                                              Hello 1  He│
+d3fb2e32 │  │ Hello 0,2                                                                                              Hello 1  He│
+d3fb2e32 │  │ Hello 0,3                                                                                              Hello 1  He│
+7ab2399d │  (?)                                                                                                                 │
+f25cd531 │    ImGuiTableFlags_NoKeepColumnsVisible                                                                              │
+1340e1dc │    ImGuiTableFlags_BordersInnerV                                                                                     │
+1340e1dc │    ImGuiTableFlags_BordersOuterV                                                                                     │
+84f20565 │  (w: 100.0)                                                                                            (w:   8.0 (w (│
+abee7cd8 │  Hello 0,1                                                                                             Hello 1,1 He H│
+abee7cd8 │  Hello 0,2                                                                                             Hello 1,2 He H│
+abee7cd8 │  Hello 0,3                                                                                             Hello 1,3 He H│
+abee7cd8 │  Hello 0,4                                                                                             Hello 1,4 He H│
+b0d6b4b8 │ ▼ Nested tables                                                                                                      │
+7ab2399d │  (?)                                                                                                                 │
+ff1963b2 │  │ A0                                                     │ A1                                                      ││
+f6c79a12 │  │ A0 Row 0                                               │ A1 Row 0                                                ││
+4691f815 │  │ │ B0                      │ B1                       │ │                                                         ││
+fb2edc3d │  │ │ B0 Row 0                │ B1 Row 0                 │ │                                                         ││
+b36eabfd │  │ │                         │                          │ │                                                         ││
+fb2edc3d │  │ │ B0 Row 1                │ B1 Row 1                 │ │                                                         ││
+b36eabfd │  │ │                         │                          │ │                                                         ││
+f6c79a12 │  │ A0 Row 1                                               │ A1 Row 1                                                ││
+dbbf23f5 │ ▼ Row height                                                                                                         │
+7ab2399d │  (?)                                                                                                                 │
+959862d8 │  │ min_row_height = 0.00                                                                                            ││
+959862d8 │  │ min_row_height = 0.00                                                                                            ││
+959862d8 │  │ min_row_height = 0.00                                                                                            ││
+959862d8 │  │ min_row_height = 0.00                                                                                            ││
+959862d8 │  │ min_row_height = 1.00                                                                                            ││
+959862d8 │  │ min_row_height = 1.00                                                                                            ││
+959862d8 │  │ min_row_height = 1.00                                                                                            ││
+959862d8 │  │ min_row_height = 2.00                                                                                            ││
+f3bdd465 │  │                                                                                                                  ││
+7ab2399d │  (?)                                                                                                                 │
+3dcc62e3 │  │                                                        │ Line 1                                                  ││
+2adf96b7 │  │                                                        │ Line 2                                                  ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+71f04c32 │  │                                                        │                                                         ││
+07d39993 │  │                                                        │ Line 1, with SameLine(0,0)                              ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+da48a25e │  │                                                        │                                                         ││
+71f04c32 │  │                                                        │                                                         ││
+47b88c43 │  │                                                        │ Line 2                                                  ││
+7ab2399d │  (?)                                                                                                                 │
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+99587018 │  │ CellPadding.y = 20.00                                                                                            ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+99587018 │  │ CellPadding.y = 20.00                                                                                            ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+765b5635 │  │ CellPadding.y = 0.00                                                                                             ││
+3633c565 │ ▼ Outer size                                                                                                         │
+267dab28 │  Using NoHostExtendX and NoHostExtendY:                                                                              │
+ed07e30a │  ✓ ImGuiTableFlags_NoHostExtendX (?)                                                                                 │
+dd792b04 │    ImGuiTableFlags_NoHostExtendY (?)                                                                                 │
+0d78bc67 │  │ Cell 0,0 │ Cell 1,0 │ Cell 2,0││Hello!                                                                            │
+542a00f3 │  │ Cell 0,1 │ Cell 1,1 │ Cell 2,1││                                                                                  │
+fdcbeb27 │  │ Cell 0,2 │ Cell 1,2 │ Cell 2,2││                                                                                  │
+542a00f3 │  │ Cell 0,3 │ Cell 1,3 │ Cell 2,3││                                                                                  │
+fdcbeb27 │  │ Cell 0,4 │ Cell 1,4 │ Cell 2,4││                                                                                  │
+542a00f3 │  │ Cell 0,5 │ Cell 1,5 │ Cell 2,5││                                                                                  │
+fdcbeb27 │  │ Cell 0,6 │ Cell 1,6 │ Cell 2,6││                                                                                  │
+542a00f3 │  │ Cell 0,7 │ Cell 1,7 │ Cell 2,7││                                                                                  │
+fdcbeb27 │  │ Cell 0,8 │ Cell 1,8 │ Cell 2,8││                                                                                  │
+542a00f3 │  │ Cell 0,9 │ Cell 1,9 │ Cell 2,9││                                                                                  │
+880d0255 │  Using explicit size:                                                                                                │
+6dc6c4e5 │  │ Cell 0,│ Cell 1,0│ Cell 2,0│ │ Cell 0,│ Cell 1,0│ Cell 2,0│                                                       │
+85a94abd │  │ Cell 0,│ Cell 1,1│ Cell 2,1│ │ Cell 0,│ Cell 1,1│ Cell 2,1│                                                       │
+cbc24b2d │  │ Cell 0,│ Cell 1,2│ Cell 2,2│ │        │         │         │                                                       │
+74163635 │  │ Cell 0,│ Cell 1,3│ Cell 2,3│ │ Cell 0,│ Cell 1,2│ Cell 2,2│                                                       │
+eb7a5ef5 │  │ Cell 0,│ Cell 1,4│ Cell 2,4│ │        │         │         │                                                       │
+0b2c54b5 │ ▼ Background color                                                                                                   │
+d43fd25c │    ImGuiTableFlags_Borders                                                                                           │
+2d38beca │  ✓ ImGuiTableFlags_RowBg (?)                                                                                         │
+e9c3e47a │   Red                                                                                                   ▼ row bg type│
+ad876097 │   RowBg1                                                                                                ▼ row bg targ│
+96089227 │   Blue                                                                                                  ▼ cell bg typ│
+c28297c9 │  A0                     A1                     A2                      A3                      A4                    │
+c5254dbf │  B0                     B1                     B2                      B3                      B4                    │
+55f7e03c │  C0                     C1                     C2                      C3                      C4                    │
+9e4818f1 │  D0                     D1                     D2                      D3                      D4                    │
+c28297c9 │  E0                     E1                     E2                      E3                      E4                    │
+9e4818f1 │  F0                     F1                     F2                      F3                      F4                    │
+cef0be88 │ ▼ Tree view                                                                                                          │
+dad7b2d1 │    ImGuiTreeNodeFlags_SpanFullWidth                                                                                  │
+0026d99c │    ImGuiTreeNodeFlags_SpanLabelWidth                                                                                 │
+e1bb637a │  ✓ ImGuiTreeNodeFlags_SpanAllColumns                                                                                 │
+020368e1 │    ImGuiTreeNodeFlags_LabelSpanAllColumns (?)                                                                        │
+7ab2399d │  (?)                                                                                                                 │
+ed6cb5e5 │  │ Name                                                                           Size           Type               ││
+adbb0e28 │  │  ▼ Root with Long Name                                                         --             Folder             ││
+bc14df0d │  │  │─▼ Music                                                                     --             Folder             ││
+3cedbfdc │  │  │ │─• File1_a.wav                                                             123000         Audio file         ││
+15eb6d02 │  │  │ │─• File1_b.wav                                                             456000         Audio file         ││
+7f2daa00 │  │  │─▼ Textures                                                                  --             Folder             ││
+892173e3 │  │  │ │─• Image001.png                                                            203128         Image file         ││
+86c44721 │  │  │ │─• Copy of Image001.png                                                    203256         Image file         ││
+86349443 │  │  │ │─• Copy of Image001 (Final2).png                                           203512         Image file         ││
+5ffafed9 │  │  │─• desktop.ini                                                               1024           System file        ││
+f825d405 │ ▼ Item width                                                                                                         │
+7ab2399d │  (?)                                                                                                                 │
+f062fb11 │  │ small                               │ half                                │ right-align                          ││
+807ff190 │  │ 0.0 float0                          │       0.000       float1            │                0.000                 ││
+807ff190 │  │ 0.0 float0                          │       0.000       float1            │                0.000                 ││
+807ff190 │  │ 0.0 float0                          │       0.000       float1            │                0.000                 ││
+fd7432f5 │ ▼ Custom headers                                                                                                     │
+4a846da2 │  │   Apricot                           │   Banana                            │   Cherry                             ││
+99f76b9c │  │ Cell 0,0                            │ Cell 1,0                            │ Cell 2,0                             ││
+99f76b9c │  │ Cell 0,1                            │ Cell 1,1                            │ Cell 2,1                             ││
+99f76b9c │  │ Cell 0,2                            │ Cell 1,2                            │ Cell 2,2                             ││
+99f76b9c │  │ Cell 0,3                            │ Cell 1,3                            │ Cell 2,3                             ││
+99f76b9c │  │ Cell 0,4                            │ Cell 1,4                            │ Cell 2,4                             ││
+fd7432f5 │ ▼ Angled headers                                                                                                     │
+56e66873 │  ✓ _ScrollX                                                                                                          │
+56e66873 │  ✓ _ScrollY                                                                                                          │
+ec7f63d3 │  ✓ _Resizable                                                                                                        │
+6f02959c │    _Sortable                                                                                                         │
+d39fcc51 │    _NoBordersInBody                                                                                                  │
+6e9eba2a │  ✓ _HighlightHoveredColumn                                                                                           │
+a7e175a1 │     1     Frozen columns                                                                                             │
+641eda84 │     2     Frozen rows                                                                                                │
+2bd285a1 │    Disable header contributing to column width                                                                       │
+296c07ad │   ▼ Style settings (?)                                                                                               │
+eaebe099 │     35 deg  style.TableAngledHeadersAngle                                                                            │
+3fa24279 │    0.5 0.00 style.TableAngledHeadersTextAlign                                                                        │
+38a3c038 │  │                                                                                                                  █│
+7b34f03b │  │               │    │    │    │    │    │    │    │    │    │    │    │    │    │                                 █│
+7becc413 │  │               a   │    │    i   id   ow   -o   -c   -s   -c   │    │    │    │                                 █│
+f0a9abb9 │  │               s    │    h    h    m    l    t    t    e    e    │    │    │    │                                 █│
+b0a37fc7 │  │              a   e   s   -   -   -   a   a   r   r   p    │   k    │                                 █│
+dfe714e2 │  │              b│   d│   a│   m│   m│   m│   h│   h│   a│   a│   a│   m│   c│    │                                 █│
+fca6f977 │  │            ca │ ri │ sm │ to │ to │ to │ hi │ hi │ sn │ sn │ cl │ ri │ ki │    │                                 █│
+da3212d3 │  │ Track    │    │    │    │    │    │    │    │    │    │    │    │    │    │                                      ░│
+9e783d86 │  │ Track 0  │    │    │    │    │    │    │    │    │    │    │    │    │    │                                      ░│
+9e783d86 │  │ Track 1  │    │    │    │    │    │    │    │    │    │    │    │    │    │                                      ░│
+9e783d86 │  │ Track 2  │    │    │    │    │    │    │    │    │    │    │    │    │    │                                      ░│
+e040d89a │  │          │    │    │    │    │    │    │    │    │    │    │    │    │    │                                      ░│
+66286658 │ ▼ Context menus                                                                                                      │
+7ab2399d │  (?)                                                                                                                 │
+e1bb637a │  ✓ ImGuiTableFlags_ContextMenuInBody                                                                                 │
+e1ca0f0c │  │ One                                 │ Two                                 │ Three                                ││
+99f76b9c │  │ Cell 0,0                            │ Cell 1,0                            │ Cell 2,0                             ││
+99f76b9c │  │ Cell 0,1                            │ Cell 1,1                            │ Cell 2,1                             ││
+99f76b9c │  │ Cell 0,2                            │ Cell 1,2                            │ Cell 2,2                             ││
+99f76b9c │  │ Cell 0,3                            │ Cell 1,3                            │ Cell 2,3                             ││
+7ab2399d │  (?)                                                                                                                 │
+f6138c5b │  │ One           │ Two           │ Three         │                                                                  ││
+4d5c519f │  │ Cell 0,0  ..  │ Cell 1,0  ..  │ Cell 2,0  ..  │                                                                  ││
+4d5c519f │  │ Cell 0,1  ..  │ Cell 1,1  ..  │ Cell 2,1  ..  │                                                                  ││
+4d5c519f │  │ Cell 0,2  ..  │ Cell 1,2  ..  │ Cell 2,2  ..  │                                                                  ││
+4d5c519f │  │ Cell 0,3  ..  │ Cell 1,3  ..  │ Cell 2,3  ..  │                                                                  ││
+d61168e5 │  Hovered column: -1                                                                                                  │
+f22c3d95 │ ▼ Synced instances                                                                                                   │
+7ab2399d │  (?)                                                                                                                 │
+fd90e33a │  ✓ ImGuiTableFlags_Resizable                                                                                         │
+d43fd25c │    ImGuiTableFlags_ScrollY                                                                                           │
+f543aed3 │  ✓ ImGuiTableFlags_SizingFixedFit                                                                                    │
+ced883e1 │    ImGuiTableFlags_HighlightHoveredColumn                                                                            │
+c382d3a0 │   ▼  Synced Table 0                                                                                                  │
+22509eb3 │  │ One          │ Two          │ Three        │                                                                     ││
+29426903 │  │ this cell 0  │ this cell 1  │ this cell 2  │                                                                     ││
+29426903 │  │ this cell 3  │ this cell 4  │ this cell 5  │                                                                     ││
+29426903 │  │ this cell 6  │ this cell 7  │ this cell 8  │                                                                     ││
+0b8482a2 │  │              │              │              │                                                                     ││
+c382d3a0 │   ▼  Synced Table 1                                                                                                  │
+22509eb3 │  │ One          │ Two          │ Three        │                                                                     ││
+29426903 │  │ this cell 0  │ this cell 1  │ this cell 2  │                                                                     ││
+29426903 │  │ this cell 3  │ this cell 4  │ this cell 5  │                                                                     ││
+29426903 │  │ this cell 6  │ this cell 7  │ this cell 8  │                                                                     ││
+ad5d2993 │  │ this cell 9  │ this cell 10 │ this cell 11 │                                                                     ││
+018a9e82 │  │ this cell 12 │ this cell 13 │ this cell 14 │                                                                     ││
+018a9e82 │  │ this cell 15 │ this cell 16 │ this cell 17 │                                                                     ││
+018a9e82 │  │ this cell 18 │ this cell 19 │ this cell 20 │                                                                     ││
+018a9e82 │  │ this cell 21 │ this cell 22 │ this cell 23 │                                                                     ││
+018a9e82 │  │ this cell 24 │ this cell 25 │ this cell 26 │                                                                     ││
+c382d3a0 │   ▼  Synced Table 2                                                                                                  │
+22509eb3 │  │ One          │ Two          │ Three        │                                                                     ││
+29426903 │  │ this cell 0  │ this cell 1  │ this cell 2  │                                                                     ││
+29426903 │  │ this cell 3  │ this cell 4  │ this cell 5  │                                                                     ││
+29426903 │  │ this cell 6  │ this cell 7  │ this cell 8  │                                                                     ││
+0b8482a2 │  │              │              │              │                                                                     ││
+52358775 │ ▼ Sorting                                                                                                            │
+a6c873ea │  ✓ ImGuiTableFlags_SortMulti (?)                                                                                     │
+5843ee91 │    ImGuiTableFlags_SortTristate (?)                                                                                  │
+38a3c038 │  │                                                                                                                  █│
+b672ced5 │  │ 0000   Banana        None    0                                                                                   █│
+623dd980 │  │ 0001   Apple         None    0                                                                                   █│
+b672ced5 │  │ 0002   Cherry        None    2                                                                                   █│
+a216d4c3 │  │ 0003   Watermelon    None    6                                                                                   ░│
+467d193a │  │ 0004   Grapefruit    None    12                                                                                  ░│
+a216d4c3 │  │ 0005   Strawberry    None    0                                                                                   ░│
+de07b41b │  │ 0006   Mango         None    10                                                                                  ░│
+1c4de5c3 │  │ 0007   Kiwi          None    2                                                                                   ░│
+f9ca525a │  │ 0008   Orange        None    16                                                                                  ░│
+e0a689fb │  │ 0009   Pineapple     None    12                                                                                  ░│
+c721b4db │  │ 0010   Blueberry     None    10                                                                                  ░│
+ec0e4fba │  │ 0011   Plum          None    10                                                                                  ░│
+71edb33b │  │ 0012   Coconut       None    12                                                                                  ░│
+e775e2ca │  │                                                                                                                  ░│
+5a8e5ae8 │ ▼ Advanced                                                                                                           │
+b6535775 │   ▼ Options                                                                                                          │
+fa658285 │     ▼ Features:                                                                                                      │
+4d09dd9a │      ✓ ImGuiTableFlags_Resizable                                                                                     │
+a9a94caa │      ✓ ImGuiTableFlags_Reorderable                                                                                   │
+03d74b33 │      ✓ ImGuiTableFlags_Hideable                                                                                      │
+03d74b33 │      ✓ ImGuiTableFlags_Sortable                                                                                      │
+8dbf7d5c │        ImGuiTableFlags_NoSavedSettings                                                                               │
+45e0b91c │        ImGuiTableFlags_ContextMenuInBody                                                                             │
+d3954748 │     ▼ Decorations:                                                                                                   │
+59a51f7a │      ✓ ImGuiTableFlags_RowBg                                                                                         │
+03d74b33 │      ✓ ImGuiTableFlags_BordersV                                                                                      │
+b51708ba │      ✓ ImGuiTableFlags_BordersOuterV                                                                                 │
+b51708ba │      ✓ ImGuiTableFlags_BordersInnerV                                                                                 │
+03d74b33 │      ✓ ImGuiTableFlags_BordersH                                                                                      │
+b51708ba │      ✓ ImGuiTableFlags_BordersOuterH                                                                                 │
+b51708ba │      ✓ ImGuiTableFlags_BordersInnerH                                                                                 │
+7c2d249a │      ✓ ImGuiTableFlags_NoBordersInBody (?)                                                                           │
+52473e61 │        ImGuiTableFlags_NoBordersInBodyUntilResize (?)                                                                │
+dbd102f5 │     ▼ Sizing:                                                                                                        │
+4dfb9443 │       _SizingFixedFit           ▼ Sizing Policy (?) (?)                                                              │
+20bd52c4 │        ImGuiTableFlags_NoHostExtendX (?)                                                                             │
+20bd52c4 │        ImGuiTableFlags_NoHostExtendY (?)                                                                             │
+01c452f1 │        ImGuiTableFlags_NoKeepColumnsVisible (?)                                                                      │
+20bd52c4 │        ImGuiTableFlags_PreciseWidths (?)                                                                             │
+21b46181 │        ImGuiTableFlags_NoClip (?)                                                                                    │
+e32a7608 │     ▼ Padding:                                                                                                       │
+99c69d1c │        ImGuiTableFlags_PadOuterX                                                                                     │
+ad8dbf9c │        ImGuiTableFlags_NoPadOuterX                                                                                   │
+ad8dbf9c │        ImGuiTableFlags_NoPadInnerX                                                                                   │
+e5450428 │     ▼ Scrolling:                                                                                                     │
+97b4e74e │      ✓ ImGuiTableFlags_ScrollX 1 freeze_cols                                                                         │
+97b4e74e │      ✓ ImGuiTableFlags_ScrollY 1 freeze_rows                                                                         │
+e32a7608 │     ▼ Sorting:                                                                                                       │
+5e65924a │      ✓ ImGuiTableFlags_SortMulti (?)                                                                                 │
+fdec1731 │        ImGuiTableFlags_SortTristate (?)                                                                              │
+e32a7608 │     ▼ Headers:                                                                                                       │
+1b94dab3 │      ✓ show_headers                                                                                                  │
+aa565101 │        ImGuiTableFlags_HighlightHoveredColumn                                                                        │
+26d7dea1 │        ImGuiTableColumnFlags_AngledHeader (?)                                                                        │
+6e3a54e8 │     ▼ Other:                                                                                                         │
+3f74451c │        show_wrapped_text                                                                                             │
+0505aace │          0.000         12.000     ✓ outer_size (?)                                                                   │
+88abdd08 │                 0.000             inner_width (when ScrollX active)                                                  │
+95d44b48 │                 0.000             row_min_height (?)                                                                 │
+5476e1f8 │                   30              items_count                                                                        │
+5922049a │       Selectable (span row)     ▼ items_type (first column)                                                          │
+38a3c038 │  │                                                                                                                  █│
+88896fc6 │  │ 0000   Banana        Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│
+f30574cf │  │ 0001   Apple         Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│
+88896fc6 │  │ 0002   Cherry        Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│
+ae5a552d │  │ 0003   Watermelon    Chop   Eat    10          Lorem ipsum dolor sit amet                                        ░│
+33e32a89 │  │ 0004   Grapefruit    Chop   Eat    20          Lorem ipsum dolor sit amet                                        ░│
+cbd54fd0 │  │ 0005   Strawberry    Chop   Eat    0           Lorem ipsum dolor sit amet                                        ░│
+86238d85 │  │ 0006   Mango         Chop   Eat    0           Lorem ipsum dolor sit amet                                        ░│
+460c60d0 │  │ 0007   Kiwi          Chop   Eat    0           Lorem ipsum dolor sit amet                                        ░│
+12cc8784 │  │ 0008   Orange        Chop   Eat    0           Lorem ipsum dolor sit amet                                        ░│
+c2468f41 │  │ 0009   Pineapple     Chop   Eat    0           Lorem ipsum dolor sit amet                                        ░│
+e775e2ca │  │                                                                                                                  ░│
+fc74c0e1 │    Debug details                                                                                                     │
+6f9172b8 │ ▼ Legacy Columns API (?)                                                                                             │
+b8e84565 │   ▼ Basic                                                                                                            │
+f41d9055 │    Without border:                                                                                                   │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+058dd198 │    Item 0                                Item 1                                 Item 2                               │
+058dd198 │    Item 3                                Item 4                                 Item 5                               │
+058dd198 │    Item 6                                Item 7                                 Item 8                               │
+93a32d18 │    Item 9                                Item 10                                Item 11                              │
+6be1b615 │    Item 12                               Item 13                                                                     │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+f3134db8 │    With border:                                                                                                      │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+55462163 │    ID                          │Name                        │Path                        │Hovered                    │
+d13d1a65 │    ────────────────────────────┼────────────────────────────┼────────────────────────────┼───────────────────────────│
+e8100493 │    0000                        │One                         │/path/one                   │0                          │
+e8100493 │    0001                        │Two                         │/path/two                   │0                          │
+d42e6e13 │    0002                        │Three                       │/path/three                 │0                          │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+b6535775 │   ▼ Borders                                                                                                          │
+1e9f6268 │    4 column ✓ horizontal ✓ vertical                                                                                  │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+91433a6a │    aaa                         │bbb                         │ccc                         │ddd                        │
+f1441e6a │    Width 29.00                 │Width 29.00                 │Width 29.00                 │Width 29.00                │
+f1441e6a │    Avail 27.00                 │Avail 27.00                 │Avail 27.00                 │Avail 27.00                │
+7fe2a933 │    Offset 4.00                 │Offset 33.00                │Offset 62.00                │Offset 91.00               │
+f2a7616a │    Long text that is likely to │Long text that is likely to │Long text that is likely to │Long text that is likely to│
+233ed25a │              Button            │          Button            │          Button            │          Button           │
+d13d1a65 │    ────────────────────────────┼────────────────────────────┼────────────────────────────┼───────────────────────────│
+91433a6a │    eee                         │fff                         │ggg                         │hhh                        │
+f1441e6a │    Width 29.00                 │Width 29.00                 │Width 29.00                 │Width 29.00                │
+f1441e6a │    Avail 27.00                 │Avail 27.00                 │Avail 27.00                 │Avail 27.00                │
+7fe2a933 │    Offset 4.00                 │Offset 33.00                │Offset 62.00                │Offset 91.00               │
+f2a7616a │    Long text that is likely to │Long text that is likely to │Long text that is likely to │Long text that is likely to│
+233ed25a │              Button            │          Button            │          Button            │          Button           │
+d13d1a65 │    ────────────────────────────┼────────────────────────────┼────────────────────────────┼───────────────────────────│
+91433a6a │    iii                         │jjj                         │kkk                         │lll                        │
+f1441e6a │    Width 29.00                 │Width 29.00                 │Width 29.00                 │Width 29.00                │
+f1441e6a │    Avail 27.00                 │Avail 27.00                 │Avail 27.00                 │Avail 27.00                │
+7fe2a933 │    Offset 4.00                 │Offset 33.00                │Offset 62.00                │Offset 91.00               │
+f2a7616a │    Long text that is likely to │Long text that is likely to │Long text that is likely to │Long text that is likely to│
+233ed25a │              Button            │          Button            │          Button            │          Button           │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+ea8daf68 │   ▼ Mixed items                                                                                                      │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+37413cfd │    Hello                                │ImGui                                 │Sailor                               │
+657e4959 │     Banana                              │ Apple                                │ Corniflower                         │
+84a72698 │                                         │ 1.000                - + red         │ 1.000                - + blue       │
+34ad90fd │                                         │An extra line here.                   │                                     │
+5e13b05a │     ▶  Category A                       │ ▶  Category B                        │ ▶  Category C                       │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+f04112a5 │   ▼ Word-wrapping                                                                                                    │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+10a7339e │    The quick brown fox jumps over the lazy dog.             │The quick brown fox jumps over the lazy dog.            │
+4c57301f │    Hello Left                                               │Hello Right                                             │
+d13d1a65 │    ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+75714975 │   ▼ Horizontal Scrolling                                                                                             │
+f60e6362 │     Line 0 Column 0...                                                                                              █│
+6801a850 │     Line 1 Column 0...                                                                                              ░│
+6801a850 │     Line 2 Column 0...                                                                                              ░│
+6801a850 │     Line 3 Column 0...                                                                                              ░│
+6801a850 │     Line 4 Column 0...                                                                                              ░│
+6801a850 │     Line 5 Column 0...                                                                                              ░│
+6801a850 │     Line 6 Column 0...                                                                                              ░│
+6801a850 │     Line 7 Column 0...                                                                                              ░│
+6801a850 │     Line 8 Column 0...                                                                                              ░│
+6801a850 │     Line 9 Column 0...                                                                                              ░│
+d0129d9d │     Line 10 Column 0...                                                                                             ░│
+d0129d9d │     Line 11 Column 0...                                                                                             ░│
+d0129d9d │     Line 12 Column 0...                                                                                             ░│
+d0129d9d │     Line 13 Column 0...                                                                                             ░│
+d0129d9d │     Line 14 Column 0...                                                                                             ░│
+d0129d9d │     Line 15 Column 0...                                                                                             ░│
+d0129d9d │     Line 16 Column 0...                                                                                             ░│
+d0129d9d │     Line 17 Column 0...                                                                                             ░│
+d0129d9d │     Line 18 Column 0...                                                                                             ░│
+2a97f14d │    ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+ea994858 │   ▼ Tree                                                                                                             │
+f982f605 │     ▼ Node0                                                  Node contents                                           │
+bcd9719e │       ▼ Node0.0                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node0.1                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node0.2                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+d9a65dee │     ▼ Node1                                                 │Node contents                                           │
+bcd9719e │       ▼ Node1.0                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node1.1                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node1.2                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+d9a65dee │     ▼ Node2                                                 │Node contents                                           │
+bcd9719e │       ▼ Node2.0                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node2.1                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+bcd9719e │       ▼ Node2.2                                             │Node contents                                           │
+10a7a95e │                                                             │Even more contents                                      │
+86ba1d1f │                                                             │ ▼ Tree in column                                       │
+5accaf6f │                                                             │  The quick brown fox jumps over the lazy dog           │
+98e653e8 │ ▶  Inputs & Focus                                                                                                    │

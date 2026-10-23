@@ -1,0 +1,8 @@
+fdcde845 ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+79f0c66b │✓ Use work area instead of main area (?)                                                                              │
+fe8cee5c │  ImGuiWindowFlags_NoBackground                                                                                       │
+efeb72aa │✓ ImGuiWindowFlags_NoDecoration                                                                                       │
+1374d1ca │  ✓ ImGuiWindowFlags_NoTitleBar                                                                                       │
+1374d1ca │  ✓ ImGuiWindowFlags_NoCollapse                                                                                       │
+da5d7c73 │  ✓ ImGuiWindowFlags_NoScrollbar                                                                                      │
+427b5982 │ Close this window                                                                                                    │

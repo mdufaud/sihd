@@ -1,0 +1,5 @@
+0116da41 ┌─▼──Dear ImGui ID Stack Tool────────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+-------- <row showing a pointer>
+fddae387 │✓ Hex-encode non-ASCII   Ctrl+C: copy path                                                                            │
+f9ab7418 │- Path ""                                                                                                             │

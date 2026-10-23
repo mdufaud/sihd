@@ -1,0 +1,50 @@
+6a0173e2 ┌─▼──About Dear ImGui─────────────────────────────────────────────────────────×─┐
+e82686f3 │                                                                               │
+8152b273 │Dear ImGui 1.93.0 (19300)                                                      │
+4151da73 │Homepage FAQ Wiki Extensions Releases Funding                                  │
+8ddb7da8 │───────────────────────────────────────────────────────────────────────────────│
+7ec66db3 │(c) 2014-2026 Omar Cornut                                                      │
+79f84bda │Developed by Omar Cornut and all Dear ImGui contributors.                      │
+5c91876a │Dear ImGui is licensed under the MIT License, see LICENSE for more information.│
+5b4fc213 │If your company uses this, please consider funding the project.                │
+f175ca46 │  Config/Build Information                                                     │
+8ddb7da8 └───────────────────────────────────────────────────────────────────────────────┘
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+e86b7ea5 ──▶──Dear ImGui Demo────────────────────────────────────────────────────────────────────────────────────────────────────

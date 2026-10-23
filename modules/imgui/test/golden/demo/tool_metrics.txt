@@ -1,0 +1,22 @@
+cce0dffa ┌─▼──Dear ImGui Metrics/Debugger─────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+19b04e15 │Dear ImGui 1.93.0 (19300)                                                                                             │
+21fe6408 │Application average 16.667 ms/frame (60.0 FPS)                                                                        │
+596b6905 │1474 vertices, 2202 indices (734 triangles)                                                                           │
+09b61cc5 │2 visible windows, 80 current allocations                                                                             │
+fdcde845 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+af52a4a5 │ ▶ Tools                                                                                                              │
+868058c8 │ ▶ Windows (4)                                                                                                        │
+047b7068 │ ▶ DrawLists (2)                                                                                                      │
+047b7068 │ ▶ Viewports (1)                                                                                                      │
+0ab0e7f8 │ ▶ Fonts (1), Textures (1)                                                                                            │
+ee2663b5 │ ▶ Popups (0)                                                                                                         │
+47ad1258 │ ▶ Tab Bars (0)                                                                                                       │
+ee2663b5 │ ▶ Tables (0)                                                                                                         │
+ad8e4385 │ ▶ InputText                                                                                                          │
+027dd625 │ ▶ TypingSelect (0)                                                                                                   │
+f0997308 │ ▶ MultiSelect (0)                                                                                                    │
+5a8e5ae8 │ ▶ Settings                                                                                                           │
+3afb6935 │ ▶ Memory allocations                                                                                                 │
+8d7ddec8 │ ▶ Inputs                                                                                                             │
+236ad365 │ ▶ Internal state                                                                                                     │

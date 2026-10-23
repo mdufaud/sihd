@@ -85,6 +85,14 @@ Adapted from `modules/imgui/test/TestOpenGL3_SDL.cpp`.
 
 Headless screen tests (`TestNcursesScene`, `TestNcursesWidgets`, `TestNcursesLayout`, `TestNcursesDraw`, `TestNcursesOverlays`, `TestNcursesShapes`, `TestNcursesText`, on the `test/helper/NcursesScene` base) run real imgui frames through the production font and style and compare the cell grid with screen literals; they are part of `make itest m=imgui`.
 
+`TestNcursesDemo` guards the whole official demo against regressions. Headless at 120 columns, it renders each of the 8 demo sections with every tree node open, and each window of the demo's Examples and Tools menus opened through those menus, then compares the screen with `modules/imgui/test/golden/demo/<case>.txt`: one line per screen row, its text after an 8-digit hash of the row's colours and attributes, so a colour or underline change shows on the row it hits. Rows that print a pointer are replaced by a marker. On a difference the test reports the first differing row and writes the whole screen to `<temp dir>/sihd_imgui_golden/<case>.txt`. After an intended rendering change, regenerate from the repository root and review the diff:
+
+```bash
+SIHD_IMGUI_GOLDEN_UPDATE=1 build/last/test/bin/sihd_imgui --gtest_filter='DemoWindows/*'
+```
+
+The comparison is skipped under `--gtest_repeat` (`make itest repeat=N`): the demo animates from statics that outlive the ImGui context, so only a first run starts fresh. It is skipped too on a libc other than glibc: the golden files hold glibc's character widths, and musl gives some of them another width.
+
 Terminal tests drive `sihd_imgui_ncurses_scenes` (built with `test=1`) in a pty and read the screen through the pyte VT emulator, so they cover the ncurses input decoding, the idle frame rate and the output, on `xterm-256color` (with and without `COLORTERM`), `screen-256color`, `linux`, `xterm-direct` and `vt100` and in an ASCII locale. `COLORTERM` from the calling shell is not passed to the scene. They need the `pytest` and `pyte` Python packages; `scripts/test.sh` runs them after the native clang build when `python3` has both, and skips them otherwise:
 
 ```bash
