@@ -55,6 +55,7 @@ else:
     test_sources += Glob('test/linux/*.cpp')
 
 test = env.build_test(test_sources, libs = [sihd_sys_libname])
+env.build_bench(Glob('bench/*.cpp'), libs = [sihd_sys_libname])
 
 if builder.build_tests:
     env.build_bin("test/helper/main.cpp", name = "sihd_sys_test_helper", libs = [sihd_sys_libname])

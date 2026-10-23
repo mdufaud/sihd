@@ -1,16 +1,16 @@
-#include <chrono>
+#include <atomic>
+#include <cstdint>
 #include <cstdio>
-#include <thread>
-#include <vector>
-
-#include <fmt/core.h>
+#include <string>
 
 #include <sihd/util/ALogger.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerAsync.hpp>
 #include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
-#include <sihd/util/thread.hpp>
+
+#include <benchmark/benchmark.h>
 
 using namespace sihd::util;
 
@@ -18,33 +18,33 @@ SIHD_NEW_LOGGER("bench");
 
 namespace
 {
-class NullSink: public ALogger
+
+class CountSink: public ALogger
 {
     public:
-        NullSink(): ALogger("null") {}
+        CountSink(std::atomic<int64_t> & count): ALogger("count"), _count(count) {}
 
-        void log(const LogInfo & info, std::string_view msg) override
+        void log([[maybe_unused]] const LogInfo & info, [[maybe_unused]] std::string_view msg) override
         {
-            (void)info;
-            (void)msg;
+            _count.fetch_add(1, std::memory_order_relaxed);
         }
+
+    private:
+        std::atomic<int64_t> & _count;
 };
 
-class SlowSink: public ALogger
+enum class Sink
 {
-    public:
-        SlowSink(): ALogger("slow") {}
-
-        void log(const LogInfo & info, std::string_view msg) override
-        {
-            (void)info;
-            (void)msg;
-            const auto end = std::chrono::steady_clock::now() + std::chrono::microseconds(10);
-            while (std::chrono::steady_clock::now() < end)
-            {
-            }
-        }
+    count,
+    level_filtered,
+    regex_filtered,
+    stream,
+    async,
 };
+
+// past any run: a full queue drops, and a drop costs less than a log
+constexpr size_t async_queue_size = 1 << 22;
+constexpr int64_t async_iterations = 200000;
 
 void reset_loggers()
 {
@@ -53,76 +53,67 @@ void reset_loggers()
     LoggerManager::clear_filters();
 }
 
-// async rows include the queue flush
-double emit_messages_per_second(int threads, int msgs_per_thread)
+void install(Sink sink, std::atomic<int64_t> & delivered, std::FILE *dev_null)
 {
-    const auto start = std::chrono::steady_clock::now();
-    std::vector<std::thread> pool;
-    for (int t = 0; t < threads; ++t)
+    switch (sink)
     {
-        pool.emplace_back([msgs_per_thread] {
-            for (int i = 0; i < msgs_per_thread; ++i)
-            {
-                SIHD_LOG(debug, "bench {} payload {}", i, "0123456789");
-            }
-        });
+        case Sink::count:
+            LoggerManager::add(new CountSink(delivered));
+            break;
+        case Sink::level_filtered:
+            LoggerManager::add(new CountSink(delivered));
+            LoggerManager::set_level(LogLevel::notice);
+            break;
+        case Sink::regex_filtered:
+            LoggerManager::add(new CountSink(delivered));
+            LoggerManager::filter(new LoggerFilter({.source_regex = "^bench$"}));
+            break;
+        case Sink::stream:
+            LoggerManager::add(new LoggerStream(dev_null));
+            break;
+        case Sink::async:
+            LoggerManager::add(new LoggerAsync(new CountSink(delivered), async_queue_size));
+            break;
     }
-    for (std::thread & t : pool)
-        t.join();
-    LoggerManager::clear_loggers();
-    const std::chrono::duration<double> secs = std::chrono::steady_clock::now() - start;
-    return (threads * msgs_per_thread) / secs.count();
 }
+
+// sinks are global: thread 0 installs and checks them, the loop barriers hold the other threads
+void BM_log(benchmark::State & state, Sink sink, int64_t delivered_per_log)
+{
+    std::atomic<int64_t> delivered {0};
+    std::FILE *dev_null = nullptr;
+    if (state.thread_index() == 0)
+    {
+        dev_null = std::fopen("/dev/null", "w");
+        reset_loggers();
+        install(sink, delivered, dev_null);
+    }
+
+    for (auto _ : state)
+        SIHD_LOG(debug, "bench {} payload {}", 42, "0123456789");
+
+    if (state.thread_index() == 0)
+    {
+        // drains the async queue
+        reset_loggers();
+        std::fclose(dev_null);
+        const int64_t expected = state.iterations() * state.threads() * delivered_per_log;
+        if (sink != Sink::stream && delivered.load() != expected)
+            state.SkipWithError("sink got " + std::to_string(delivered.load()) + " logs, expected "
+                                + std::to_string(expected));
+    }
+    state.SetItemsProcessed(state.iterations());
+}
+
+BENCHMARK_CAPTURE(BM_log, count_sink, Sink::count, 1)->Threads(1)->Threads(4)->UseRealTime();
+BENCHMARK_CAPTURE(BM_log, level_filtered, Sink::level_filtered, 0)->Threads(1)->Threads(4)->UseRealTime();
+BENCHMARK_CAPTURE(BM_log, regex_filtered, Sink::regex_filtered, 0)->Threads(1)->Threads(4)->UseRealTime();
+BENCHMARK_CAPTURE(BM_log, stream_sink, Sink::stream, 1)->Threads(1)->Threads(4)->UseRealTime();
+// fixed iterations: the queue never fills, the drain runs alongside
+BENCHMARK_CAPTURE(BM_log, async_sink, Sink::async, 1)
+    ->Iterations(async_iterations)
+    ->Threads(1)
+    ->Threads(4)
+    ->UseRealTime();
 
 } // namespace
-
-int main()
-{
-    (void)thread::set_name("bench");
-    for (int threads : {1, 4})
-    {
-        reset_loggers();
-        LoggerManager::add(new NullSink());
-        fmt::print("{:>2} threads {:>12.0f} msgs/s written\n", threads, emit_messages_per_second(threads, 100000));
-
-        reset_loggers();
-        LoggerManager::add(new NullSink());
-        LoggerManager::set_level(LogLevel::notice);
-        fmt::print("{:>2} threads {:>12.0f} msgs/s filtered out (level)\n",
-                   threads,
-                   emit_messages_per_second(threads, 100000));
-
-        reset_loggers();
-        LoggerManager::add(new NullSink());
-        LoggerManager::filter(new LoggerFilter({.source_regex = "^bench$"}));
-        fmt::print("{:>2} threads {:>12.0f} msgs/s filtered out (regex)\n",
-                   threads,
-                   emit_messages_per_second(threads, 100000));
-
-        std::FILE *out = std::fopen("/dev/null", "w");
-        reset_loggers();
-        LoggerManager::add(new LoggerStream(out));
-        fmt::print("{:>2} threads {:>12.0f} msgs/s file sink\n", threads, emit_messages_per_second(threads, 100000));
-        std::fclose(out);
-
-        out = std::fopen("/dev/null", "w");
-        reset_loggers();
-        LoggerManager::async(new LoggerStream(out));
-        fmt::print("{:>2} threads {:>12.0f} msgs/s file sink, async\n",
-                   threads,
-                   emit_messages_per_second(threads, 100000));
-        std::fclose(out);
-
-        reset_loggers();
-        LoggerManager::add(new SlowSink());
-        fmt::print("{:>2} threads {:>12.0f} msgs/s slow sink\n", threads, emit_messages_per_second(threads, 20000));
-
-        reset_loggers();
-        LoggerManager::async(new SlowSink());
-        fmt::print("{:>2} threads {:>12.0f} msgs/s slow sink, async\n",
-                   threads,
-                   emit_messages_per_second(threads, 20000));
-    }
-    reset_loggers();
-    return 0;
-}

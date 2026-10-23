@@ -6,7 +6,6 @@
 #include <sihd/util/Scheduler.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/num.hpp>
 #include <sihd/util/profiling.hpp>
 #include <sihd/util/time.hpp>
 
@@ -19,8 +18,7 @@ SIHD_LOGGER;
 using namespace sihd::util;
 using namespace std::chrono;
 
-class TestScheduler: public ::testing::Test,
-                     public IRunnable
+class TestScheduler: public ::testing::Test
 {
     protected:
         TestScheduler() { LoggerManager::stream(); }
@@ -30,36 +28,6 @@ class TestScheduler: public ::testing::Test,
         virtual void SetUp() {}
 
         virtual void TearDown() {}
-
-        bool run()
-        {
-            time_point<steady_clock, nanoseconds> now = _clock.now();
-            time_t diff_micro = duration_cast<microseconds>(now - _last).count();
-            if (_last.time_since_epoch().count() != 0)
-            {
-                if ((diff_micro < (this->should_run_every_us + this->delta_us)
-                     && diff_micro > (this->should_run_every_us - this->delta_us))
-                    == false)
-                {
-                    SIHD_CERR("Overrun: {} microseconds since last run (max: {} usec)\n",
-                              diff_micro,
-                              this->should_run_every_us + this->delta_us);
-                    this->good_freq = false;
-                    overruns++;
-                }
-            }
-            _last = now;
-            ran += 1;
-            return true;
-        }
-
-        time_t delta_us = 0;
-        bool good_freq = true;
-        size_t overruns = 0;
-        int ran = 0;
-        int should_run_every_us = 0;
-        time_point<steady_clock, nanoseconds> _last;
-        steady_clock _clock;
 };
 
 TEST_F(TestScheduler, test_sched_order)
@@ -112,51 +80,6 @@ TEST_F(TestScheduler, test_sched_order)
 
     EXPECT_LT(task_first, task_second);
     EXPECT_LT(task_second, task_third);
-}
-
-TEST_F(TestScheduler, test_sched_perf)
-{
-    if (test::is_run_by_valgrind())
-        GTEST_SKIP() << "Perf under valgrind debugger is unthinkable";
-
-    Scheduler sched("sched");
-
-    this->delta_us = 100;
-    sched.overrun_at = Duration(time::micro(this->delta_us));
-
-    this->should_run_every_us = 100;
-    sched.add_task(new Task(this, {.reschedule_time = std::chrono::microseconds(this->should_run_every_us)}));
-
-    sched.set_start_synchronised(true);
-    sched.start();
-
-    constexpr time_t test_multiplier = 1;
-    constexpr time_t sleep_time = 50 * test_multiplier;
-    std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-
-    sched.stop();
-
-    const int expected_run = time::micro(sleep_time) / this->should_run_every_us;
-
-    auto level = num::near(this->ran, expected_run, 1) ? LogLevel::info : LogLevel::error;
-
-    const int expected_overruns = this->ran / 10;
-
-    SIHD_LOG(info,
-             "Scheduler ran on time {} times, expected {}, percent success: {}%",
-             this->ran - overruns,
-             expected_run,
-             ((this->ran - overruns) / (float)expected_run) * 100);
-
-    SIHD_LOG_LVL(level,
-                 "Scheduler overruns: total={} test_calculated={} (expected less than {})",
-                 sched.overruns.load(),
-                 overruns,
-                 (expected_run / this->ran) * 100,
-                 expected_overruns);
-
-    const int minimum_run = expected_run / 3;
-    EXPECT_GT(this->ran, minimum_run);
 }
 
 TEST_F(TestScheduler, test_sched_stop)

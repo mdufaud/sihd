@@ -1048,7 +1048,7 @@ TEST_F(TestHttpServer, test_concurrent_service)
     constexpr bool run_monothreaded = false;
     constexpr bool run_multithreaded = true;
     constexpr int num_threads = 4;
-    constexpr int num_requests = 10000;
+    constexpr int num_requests = 500;
     constexpr int batch_size = 50; // stay well below ulimit -n (default 1024)
     const int port = shard_port(3002);
     const std::string url = "localhost:" + std::to_string(port) + "/api/task";

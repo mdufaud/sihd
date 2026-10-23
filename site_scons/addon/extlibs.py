@@ -5,6 +5,8 @@
 extlibs = {
     # unit test
     "gtest": "1.17.0#2",
+    # benchmarks
+    "benchmark": "1.9.5",
     # json parsing
     "simdjson": "4.6.4",
     # util

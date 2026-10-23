@@ -207,6 +207,11 @@ windows_defines = [
 test_extlibs = ['gtest']
 test_libs = ['gtest']
 
+## bench specifics
+
+bench_extlibs = ['benchmark']
+bench_libs = ['benchmark_main', 'benchmark']
+
 # emscripten test binaries run under node: propagate the gtest exit code and
 # give the real filesystem so file-based tests work. Exception catching is
 # re-enabled globally for em (see em_flags).

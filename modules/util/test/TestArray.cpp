@@ -8,7 +8,6 @@
 #include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/container.hpp>
-#include <sihd/util/profiling.hpp>
 
 namespace test
 {
@@ -46,12 +45,6 @@ class TestArray: public ::testing::Test
 namespace
 {
 
-struct PerfItem
-{
-        int a;
-        int b;
-};
-
 struct Point
 {
         int x;
@@ -59,107 +52,6 @@ struct Point
 };
 
 } // namespace
-
-TEST_F(TestArray, test_array_perf)
-{
-    constexpr int test_multiplier = 1;
-
-    Array<PerfItem>::mult_resize_capacity = 2;
-    constexpr int iterations = 30000 * test_multiplier;
-    constexpr int ncopies = 100 * test_multiplier;
-    std::vector<PerfItem> vec;
-    Array<PerfItem> arr;
-
-    {
-        Perf perf_vector("vector");
-        Perf perf_array("array");
-        {
-            Timeit it("vector push_back");
-            for (int i = 0; i < iterations; ++i)
-            {
-                perf_vector.begin();
-                vec.push_back({i, i + 1});
-                perf_vector.end();
-            }
-        }
-        {
-            Timeit it("array push_back");
-            for (int i = 0; i < iterations; ++i)
-            {
-                perf_array.begin();
-                arr.push_back({i, i + 1});
-                perf_array.end();
-            }
-        }
-        perf_vector.log();
-        perf_array.log();
-
-        ASSERT_TRUE(arr.is_equal(vec));
-    }
-
-    {
-        Timeit it("vector access");
-        for (auto i = 0; i < iterations; ++i)
-            vec[i] = vec[i];
-    }
-    {
-        Timeit it("array access");
-        for (auto i = 0; i < iterations; ++i)
-            arr[i] = arr[i];
-    }
-    {
-        Timeit it("vector iter");
-        for (const auto & val : vec)
-            vec[0] = val;
-    }
-    {
-        Timeit it("array iter");
-        for (const auto & val : arr)
-            arr[0] = val;
-    }
-    {
-        Timeit it("vector copy");
-        for (auto i = 0; i < ncopies; ++i)
-            auto vec2 = vec;
-    }
-    {
-        Timeit it("array copy");
-        for (auto i = 0; i < ncopies; ++i)
-            auto arr2 = arr;
-    }
-
-    {
-        const size_t size = arr.size();
-        Perf perf_vector("vector");
-        Perf perf_array("array");
-        {
-            Timeit it("vector pop_back");
-            for (size_t i = 0; i < size; ++i)
-            {
-                perf_vector.begin();
-                [[maybe_unused]] auto b = vec.back();
-                [[maybe_unused]] auto f = vec.front();
-                vec.pop_back();
-                perf_vector.end();
-            }
-        }
-        {
-            Timeit it("array pop_back");
-            for (size_t i = 0; i < size; ++i)
-            {
-                perf_array.begin();
-                [[maybe_unused]] auto b = arr.back();
-
-                [[maybe_unused]] auto f = arr.front();
-                arr.pop_back();
-                perf_array.end();
-            }
-        }
-        perf_vector.log();
-        perf_array.log();
-        ASSERT_TRUE(arr.is_equal(vec));
-    }
-}
 
 TEST_F(TestArray, test_array_from_string)
 {

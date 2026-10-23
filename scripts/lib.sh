@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Shared base for compile.sh / dependencies.sh / test.sh / compile_android.sh.
+# Shared base for compile.sh / dependencies.sh / test.sh / bench.sh / compile_android.sh.
 #
 # A consumer sets:
 #   ACTION         (array)  make invocation, e.g. ACTION=(make) / (make dep) / (make itest)

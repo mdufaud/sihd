@@ -8,5 +8,6 @@ for src in Glob('demo/*.cpp'):
     demo = env.build_demo(src, name = name, libs = [env.module_format_name()])
 
 test = env.build_test(Glob('test/*.cpp'), libs = [env.module_format_name()])
+env.build_bench(Glob('bench/*.cpp'), libs = [env.module_format_name()])
 
 Return('lib')
