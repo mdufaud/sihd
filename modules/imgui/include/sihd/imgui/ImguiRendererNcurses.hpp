@@ -72,6 +72,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
             reverse,
             dim,
             underline,
+            link_underline,
             grab,
             tab,
             scrollbar,
@@ -109,6 +110,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         // call once after StyleColorsDark()
         void _apply_terminal_style();
         void _tag_style_colors();
+        void _tag_link_underlines();
         Role _role_of(ImU32 col) const;
 
         void _ack_textures(ImDrawData *draw_data) const;

@@ -59,6 +59,13 @@ constexpr uint32_t full_block_char = 0x2588;
 // arrows, checks, bullets and close crosses span about one cell: larger white shapes are user geometry
 constexpr float mark_max_cells = 2.5f;
 
+// role tag of the TextLink underline shades, past every ImGuiCol
+constexpr int link_underline_tag = ImGuiCol_COUNT;
+// TextLink brightens its colour when hovered and more when held, then draws its underline 0.2 darker
+constexpr std::array<float, 3> link_brightening = {0.0f, 0.3f, 0.4f};
+constexpr float link_underline_darkening = 0.2f;
+constexpr float link_hover_hue_shift = 0.02f;
+
 constexpr std::array<uint32_t, 16> box_chars = {
     blank_char,
     0x2502,
@@ -583,6 +590,25 @@ void ImguiRendererNcurses::_tag_style_colors()
         style.Colors[idx] = ImGui::ColorConvertU32ToFloat4(rgb | (packed & IM_COL32_A_MASK));
         _tagged_colors[(size_t)idx] = style.Colors[idx];
     }
+    this->_tag_link_underlines();
+}
+
+// TextLink derives its underline colour from ImGuiCol_TextLink in HSV: tag each shade it can take
+void ImguiRendererNcurses::_tag_link_underlines()
+{
+    const ImVec4 link = ImGui::GetStyle().Colors[ImGuiCol_TextLink];
+    float hue = 0.0f;
+    float saturation = 0.0f;
+    float value = 0.0f;
+    ImGui::ColorConvertRGBtoHSV(link.x, link.y, link.z, hue, saturation, value);
+    for (const float brightening : link_brightening)
+    {
+        const float shade_hue = brightening > 0.0f ? ImFmod(hue + link_hover_hue_shift, 1.0f) : hue;
+        const float shade_value = ImSaturate(ImSaturate(value + brightening) - link_underline_darkening);
+        ImVec4 shade = link;
+        ImGui::ColorConvertHSVtoRGB(shade_hue, saturation, shade_value, shade.x, shade.y, shade.z);
+        _rgb_roles.try_emplace(rgb_of(ImGui::ColorConvertFloat4ToU32(shade)), link_underline_tag);
+    }
 }
 
 ImguiRendererNcurses::Role ImguiRendererNcurses::_role_of(ImU32 col) const
@@ -592,6 +618,8 @@ ImguiRendererNcurses::Role ImguiRendererNcurses::_role_of(ImU32 col) const
         return Role::fill;
     switch (it->second)
     {
+        case link_underline_tag:
+            return Role::link_underline;
         case ImGuiCol_Separator:
             return Role::separator;
         case ImGuiCol_Border:
@@ -915,6 +943,7 @@ void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl, const ImDrawCmd 
                 break;
             case Role::dim:
             case Role::underline:
+            case Role::link_underline:
             case Role::reverse:
                 this->_set_attribute(prim, role, clip);
                 break;
@@ -1406,11 +1435,14 @@ void ImguiRendererNcurses::_set_attribute(const Primitive & prim, Role role, con
     int x1 = round_cell(max.x);
     int y0 = round_cell(min.y);
     int y1 = round_cell(max.y);
-    if (role == Role::underline)
+    if (role == Role::underline || role == Role::link_underline)
     {
         x0 = floor_cell(min.x + vertex_epsilon);
         x1 = floor_cell(max.x + vertex_epsilon);
         y0 = floor_cell(min.y + vertex_epsilon);
+        // a link underline lies right below its text: at one cell per text row it marks that row
+        if (role == Role::link_underline)
+            --y0;
         y1 = y0 + 1;
     }
 
