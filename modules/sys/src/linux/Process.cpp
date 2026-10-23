@@ -293,6 +293,7 @@ struct ProcessWatcher
         pid_t pid;
         int status;
         int code;
+        bool reaped_elsewhere;
 
         void reset();
         bool has_terminated();
@@ -303,6 +304,9 @@ struct ProcessWatcher
 bool ProcessWatcher::check_status(int options)
 {
     std::lock_guard lock(this->mutex);
+    // race: a concurrent waiter already reaped it, waitid(P_PID, -1) is EINVAL
+    if (this->pid <= 0)
+        return true;
     siginfo_t info;
     int ret = waitid(P_PID, this->pid, &info, options);
     if (ret >= 0)
@@ -313,13 +317,15 @@ bool ProcessWatcher::check_status(int options)
 
         this->code = info.si_code;
         this->status = info.si_status;
-        if (this->code == CLD_EXITED || this->code == CLD_KILLED)
+        if (this->code == CLD_EXITED || this->code == CLD_KILLED || this->code == CLD_DUMPED)
             this->pid = -1;
         return true;
     }
     if (errno == ECHILD)
     {
+        // SIGCHLD ignored or a foreign waitpid: the child is gone, its status is lost
         this->pid = -1;
+        this->reaped_elsewhere = true;
         return true;
     }
     return false;
@@ -328,7 +334,7 @@ bool ProcessWatcher::check_status(int options)
 bool ProcessWatcher::has_terminated()
 {
     std::lock_guard lock(this->mutex);
-    return this->code == CLD_EXITED || this->code == CLD_KILLED;
+    return this->reaped_elsewhere || this->code == CLD_EXITED || this->code == CLD_KILLED || this->code == CLD_DUMPED;
 }
 
 void ProcessWatcher::reset()
@@ -336,6 +342,7 @@ void ProcessWatcher::reset()
     this->pid = -1;
     this->status = -1;
     this->code = -1;
+    this->reaped_elsewhere = false;
 }
 
 Process::ReturnCodeType ProcessWatcher::return_code()
@@ -581,8 +588,17 @@ Result<void> Process::_do_fork(const std::vector<const char *> & argv)
         int status = 0;
         if (_fun_to_execute)
         {
-            SIHD_UNEXPECTED_LOG(internal::apply(_env));
-            status = _fun_to_execute();
+            // never let an exception unwind here: the child would run the parent's code as a second copy
+            try
+            {
+                SIHD_UNEXPECTED_LOG(internal::apply(_env));
+                status = _fun_to_execute();
+            }
+            catch (...)
+            {
+                SIHD_LOG(error, "Process: child function threw an exception");
+                status = failure_return_code;
+            }
         }
         else
             status = execvpe(argv[0],
@@ -781,11 +797,13 @@ bool Process::terminate()
 
 Result<void> Process::kill(int sig)
 {
-    if (this->is_process_running() == false)
+    // read once: a concurrent reap sets it to -1, and pid <= 0 signals a group or every user process
+    const pid_t pid = this->pid();
+    if (this->is_process_running() == false || pid <= 0)
         return std::unexpected(Error(ErrorCode::not_initialized, "process is not running"));
     if (sig < 0)
         sig = SIGTERM;
-    return signal::kill(this->pid(), sig);
+    return signal::kill(pid, sig);
 }
 
 void Process::handle(Poll *poll)

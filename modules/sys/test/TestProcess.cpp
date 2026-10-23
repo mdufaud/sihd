@@ -16,6 +16,10 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/wait.h>
+#endif
+
 #include "test_helper.hpp"
 
 namespace test
@@ -578,6 +582,62 @@ TEST_F(TestProcess, test_process_fun)
 
     EXPECT_EQ(out, "hello world titi");
     EXPECT_EQ(err, "nope");
+}
+
+TEST_F(TestProcess, test_process_fun_throw_stays_in_child)
+{
+    Process proc([]() -> int { throw std::runtime_error("child failure"); });
+
+    EXPECT_TRUE(proc.execute());
+    EXPECT_TRUE(proc.wait_exit().value_or(false));
+
+    EXPECT_TRUE(proc.has_exited());
+    EXPECT_EQ(proc.return_code(), Process::failure_return_code);
+}
+
+TEST_F(TestProcess, test_process_core_dump_terminates)
+{
+    Process proc {"sh", "-c", "ulimit -c unlimited 2>/dev/null; kill -ABRT $$"};
+
+    EXPECT_TRUE(proc.execute());
+    (void)proc.wait_exit();
+    if (proc.has_core_dumped() == false)
+        GTEST_SKIP() << "core dumps disabled";
+
+    EXPECT_TRUE(proc.has_terminated());
+    EXPECT_FALSE(proc.is_process_running());
+    EXPECT_FALSE(proc.kill(SIGKILL).has_value());
+    EXPECT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_reaped_elsewhere_terminates)
+{
+    Process proc {"true"};
+
+    EXPECT_TRUE(proc.execute());
+    siginfo_t info {};
+    EXPECT_EQ(waitid(P_PID, static_cast<id_t>(proc.pid()), &info, WEXITED), 0);
+
+    EXPECT_TRUE(proc.wait_no_hang().value_or(false));
+    EXPECT_TRUE(proc.has_terminated());
+    EXPECT_FALSE(proc.is_process_running());
+    EXPECT_EQ(proc.pid(), -1);
+    EXPECT_FALSE(proc.kill(SIGKILL).has_value());
+    EXPECT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_terminate_stopped_child)
+{
+    Process proc {cmd_sleep()};
+
+    EXPECT_TRUE(proc.execute());
+    EXPECT_TRUE(proc.kill(SIGSTOP).has_value());
+    siginfo_t info {};
+    EXPECT_EQ(waitid(P_PID, static_cast<id_t>(proc.pid()), &info, WSTOPPED | WNOWAIT), 0);
+
+    EXPECT_TRUE(proc.terminate());
+    EXPECT_TRUE(proc.has_exited_by_signal());
+    EXPECT_EQ(proc.signal_exit_number(), SIGKILL);
 }
 #endif
 
