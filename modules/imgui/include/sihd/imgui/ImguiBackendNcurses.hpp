@@ -22,6 +22,8 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         virtual ~ImguiBackendNcurses();
 
         bool init();
+        // frame rate once the screen stayed still and no input came for a second: input wakes it at once
+        bool set_idle_frequency(double hz);
 
         void new_frame() override;
         bool should_close() override;
@@ -38,6 +40,7 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         bool _process_key_event(int key, bool function_key, ImGuiIO & io);
         void _press_key(ImGuiIO & io, ImGuiKey key);
         bool _must_wait(ImGuiKey key) const;
+        int _idle_timeout_ms() const;
 
         bool _is_init;
         bool _should_close;
@@ -54,8 +57,10 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         float _grip_dx, _grip_dy;
         int _ime_x, _ime_y;
         unsigned long _mstate;
+        double _idle_frequency;
         std::chrono::steady_clock::time_point _last_time;
         std::chrono::steady_clock::time_point _frame_start;
+        std::chrono::steady_clock::time_point _last_activity;
 };
 
 } // namespace sihd::imgui

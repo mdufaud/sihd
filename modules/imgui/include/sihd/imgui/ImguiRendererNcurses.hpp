@@ -191,6 +191,8 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         int _screen_w;
         int _screen_h;
         std::vector<TCell> _screen;
+        // last grid written to stdscr: an identical frame leaves stdscr untouched, which the backend reads as idle
+        std::vector<TCell> _flushed;
         std::vector<uint8_t> _line_arms;
         std::vector<uint8_t> _braille;
         std::vector<wchar_t> _row_buf;

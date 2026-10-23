@@ -1,3 +1,4 @@
+import time
 from collections.abc import Iterator
 
 import pytest
@@ -37,6 +38,29 @@ def click_label(term: TuiTerminal, label: str, button: int = 0) -> None:
     position = wait_find(term, label)
     assert position is not None, "\n".join(term.lines())
     term.click(*position, button=button)
+
+
+def settle(term: TuiTerminal, seconds: float) -> None:
+    deadline = time.monotonic() + seconds
+    while (remaining := deadline - time.monotonic()) > 0:
+        term.pump(remaining)
+
+
+def counter(term: TuiTerminal, name: str) -> int:
+    return int(term.line_starting_with(f"{name}=").removeprefix(f"{name}="))
+
+
+def frames_between_two_downs(term: TuiTerminal, seconds: float) -> int:
+    # a frame can reach the screen in several reads: down_frame only changes on a press, wait for its row
+    term.send(KEY_DOWN)
+    term.wait_for_line("down=1 backspace=0 tab=0 backtab=0")
+    settle(term, 0.2)
+    first = counter(term, "down_frame")
+    settle(term, seconds)
+    term.send(KEY_DOWN)
+    term.wait_for_line("down=2 backspace=0 tab=0 backtab=0")
+    settle(term, 0.2)
+    return counter(term, "down_frame") - first
 
 
 def test_arrow_down_is_pressed(term: TuiTerminal) -> None:
@@ -219,6 +243,27 @@ def test_direct_colour_terminal_gets_24_bit_colours() -> None:
 
 def test_any_motion_mouse_mode_is_enabled(term: TuiTerminal) -> None:
     assert b"\x1b[?1003h" in term.raw
+
+
+def test_still_screen_drops_to_the_idle_frame_rate(term: TuiTerminal) -> None:
+    settle(term, 1.5)
+
+    assert frames_between_two_downs(term, 4.0) <= 130
+
+
+def test_input_brings_back_the_full_frame_rate(term: TuiTerminal) -> None:
+    settle(term, 1.5)
+
+    assert frames_between_two_downs(term, 0.5) >= 15
+
+
+def test_animation_keeps_the_full_frame_rate(term: TuiTerminal) -> None:
+    click_label(term, "Animate")
+    settle(term, 3.0)
+    click_label(term, "Animate")
+    settle(term, 0.3)
+
+    assert counter(term, "tick") >= 130
 
 
 def test_ctrl_c_exits_and_restores_terminal(term: TuiTerminal) -> None:

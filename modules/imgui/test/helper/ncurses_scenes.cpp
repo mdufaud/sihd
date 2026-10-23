@@ -16,6 +16,8 @@ namespace
 struct InputScene
 {
         int down = 0;
+        int down_frame = 0;
+        int tick = 0;
         int backspace = 0;
         int tab = 0;
         int shift_tab = 0;
@@ -23,6 +25,7 @@ struct InputScene
         int ctrl_presses = 0;
         int far_presses = 0;
         bool checked = false;
+        bool animate = false;
         bool focus_text = true;
         bool ready = false;
         bool grip_open = true;
@@ -33,7 +36,10 @@ struct InputScene
 void count_keys(InputScene & scene)
 {
     if (ImGui::IsKeyPressed(ImGuiKey_DownArrow, false))
+    {
         ++scene.down;
+        scene.down_frame = ImGui::GetFrameCount();
+    }
     if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false))
         ++scene.backspace;
     if (ImGui::IsKeyPressed(ImGuiKey_Tab, false))
@@ -84,6 +90,11 @@ void build_input_scene(InputScene & scene)
                 scene.grip_open,
                 io.MouseDown[0]);
     ImGui::Text("ready=%d", scene.ready);
+    ImGui::Text("down_frame=%d", scene.down_frame);
+    ImGui::Checkbox("Animate", &scene.animate);
+    if (scene.animate)
+        ++scene.tick;
+    ImGui::Text("tick=%d", scene.tick);
     ImGui::End();
 }
 

@@ -450,6 +450,7 @@ void ImguiRendererNcurses::_resize_grid(int w, int h)
     _screen_h = h;
     const size_t cell_count = (size_t)(w * h);
     _screen.assign(cell_count, TCell {});
+    _flushed.clear();
     _line_arms.assign(cell_count, 0);
     _braille.assign(cell_count, 0);
     _row_buf.resize((size_t)w);
@@ -1572,8 +1573,11 @@ void ImguiRendererNcurses::_flush_row(int y)
 
 void ImguiRendererNcurses::_flush_to_ncurses()
 {
+    if (_screen == _flushed)
+        return;
     for (int y = 0; y < _screen_h; ++y)
         this->_flush_row(y);
+    _flushed = _screen;
 }
 
 void ImguiRendererNcurses::shutdown()
@@ -1581,6 +1585,7 @@ void ImguiRendererNcurses::shutdown()
     _is_init = false;
     _rgb_roles.clear();
     _screen.clear();
+    _flushed.clear();
     _line_arms.clear();
     _braille.clear();
 }
@@ -1596,6 +1601,7 @@ bool ImguiRendererNcurses::init_headless(int w, int h)
 void ImguiRendererNcurses::set_unicode(bool unicode)
 {
     _unicode = unicode;
+    _flushed.clear();
 }
 
 const TCell & ImguiRendererNcurses::get_cell(int x, int y) const

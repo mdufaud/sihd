@@ -125,6 +125,9 @@ constexpr int ime_caret_offset = 1;
 // ncurses merges a press and a release read together into a click, even with mouseinterval(0)
 constexpr mmask_t button1_clicks = BUTTON1_CLICKED | BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED;
 constexpr mmask_t button3_clicks = BUTTON3_CLICKED | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED;
+// imgui's tooltip and double-click delays and app animations run on frames: full rate this long after an input or a change
+constexpr std::chrono::seconds active_after_activity(1);
+constexpr double default_idle_frequency = 10.0;
 
 // at a 1-cell font imgui hit-tests the resize grip only outside the window corner: move a press on the drawn grip there
 ImVec2 _resize_grip_offset(int x, int y)
@@ -162,7 +165,8 @@ ImguiBackendNcurses::ImguiBackendNcurses():
     _grip_dy(0.0f),
     _ime_x(0),
     _ime_y(0),
-    _mstate(0)
+    _mstate(0),
+    _idle_frequency(default_idle_frequency)
 {
 }
 
@@ -236,8 +240,28 @@ bool ImguiBackendNcurses::init()
 
     _last_time = std::chrono::steady_clock::now();
     _frame_start = _last_time;
+    _last_activity = _last_time;
     _is_init = true;
     return true;
+}
+
+bool ImguiBackendNcurses::set_idle_frequency(double hz)
+{
+    if (hz <= 0.0)
+        return false;
+    _idle_frequency = hz;
+    return true;
+}
+
+int ImguiBackendNcurses::_idle_timeout_ms() const
+{
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    if (now - _last_activity < active_after_activity)
+        return 0;
+    const std::chrono::duration<double> idle_period(1.0 / _idle_frequency);
+    const auto next_frame = _frame_start + std::chrono::duration_cast<std::chrono::steady_clock::duration>(idle_period);
+    const auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(next_frame - now);
+    return (int)std::max<std::chrono::milliseconds::rep>(timeout.count(), 0);
 }
 
 bool ImguiBackendNcurses::should_close()
@@ -398,12 +422,16 @@ void ImguiBackendNcurses::poll()
 
     bool pressed_l = false, pressed_r = false;
 
+    // idle: the first read sleeps until an input or the next idle frame
+    wtimeout(stdscr, this->_idle_timeout_ms());
     while (true)
     {
         wint_t wch = 0;
         const int status = wget_wch(stdscr, &wch);
+        wtimeout(stdscr, 0);
         if (status == ERR)
             break;
+        _last_activity = std::chrono::steady_clock::now();
 
         const int key = (int)wch;
         const bool function_key = status == KEY_CODE_YES;
@@ -450,6 +478,9 @@ void ImguiBackendNcurses::pre_render() {}
 
 void ImguiBackendNcurses::post_render()
 {
+    // the ncurses renderer leaves stdscr untouched when the frame shows nothing new
+    if (is_wintouched(stdscr))
+        _last_activity = std::chrono::steady_clock::now();
     if (_ime_visible)
         move(_ime_y, _ime_x + ime_caret_offset);
     curs_set(_ime_visible ? 1 : 0);
