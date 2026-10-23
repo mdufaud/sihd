@@ -424,6 +424,11 @@ HANDLE handle_for_content(const RawContentView & content, UINT & out_format)
 
 } // namespace
 
+bool supported()
+{
+    return true;
+}
+
 std::vector<RawContent> get_raw()
 {
     return get_raw({});

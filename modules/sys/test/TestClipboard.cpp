@@ -7,6 +7,7 @@
 
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/clipboard.hpp>
+#include <sihd/util/build.hpp>
 
 #include "test_helper.hpp"
 
@@ -31,7 +32,7 @@ class TestClipboardBackend: public ::testing::Test
         virtual ~TestClipboardBackend() = default;
         virtual void SetUp()
         {
-            if constexpr (!clipboard::supported)
+            if (!clipboard::supported())
             {
                 GTEST_SKIP() << "no clipboard backend compiled in";
             }

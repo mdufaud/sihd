@@ -17,31 +17,9 @@ namespace sihd::sys::clipboard::wayland
 
 inline constexpr sihd::util::Duration get_timeout(sihd::util::time::sec(1));
 
-#if defined(SIHD_COMPILE_WITH_WAYLAND)
-
 std::vector<RawContent> get_raw();
 std::vector<RawContent> get_raw(const std::vector<std::string_view> & wanted_mimes);
 bool set_raw(const std::vector<RawContentView> & contents, sihd::util::Timestamp deadline);
-
-#else
-
-inline std::vector<RawContent> get_raw()
-{
-    return {};
-}
-
-inline std::vector<RawContent> get_raw([[maybe_unused]] const std::vector<std::string_view> & wanted_mimes)
-{
-    return {};
-}
-
-inline bool set_raw([[maybe_unused]] const std::vector<RawContentView> & contents,
-                    [[maybe_unused]] sihd::util::Timestamp deadline)
-{
-    return false;
-}
-
-#endif
 
 } // namespace sihd::sys::clipboard::wayland
 

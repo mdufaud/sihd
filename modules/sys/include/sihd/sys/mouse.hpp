@@ -3,17 +3,12 @@
 
 #include <cstdint>
 
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
 
 namespace sihd::sys::mouse
 {
 
-#if defined(SIHD_COMPILE_WITH_X11) || defined(SIHD_COMPILE_WITH_WAYLAND) || defined(__SIHD_WINDOWS__)
-constexpr bool supported = true;
-#else
-constexpr bool supported = false;
-#endif
+bool supported();
 
 enum class MouseButton : uint8_t
 {

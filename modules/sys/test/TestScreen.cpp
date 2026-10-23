@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/screen.hpp>
+#include <sihd/util/build.hpp>
 
 #include "../src/screen_math.hpp"
 
@@ -31,15 +32,13 @@ TEST(TestScreenMath, test_dpi_from)
 
 TEST(TestScreen, test_containing_and_primary)
 {
-    if constexpr (screen::supported)
+    if (screen::supported())
     {
         auto res = screen::monitors();
 #if !defined(__SIHD_WINDOWS__)
         if (!internal::wayland_session())
         {
-# if defined(SIHD_COMPILE_WITH_X11)
-            if (getenv("DISPLAY") == nullptr)
-# endif
+            if (!internal::x11_compiled() || getenv("DISPLAY") == nullptr)
             {
                 ASSERT_FALSE(res.has_value());
                 EXPECT_EQ(res.error().code, ErrorCode::not_supported);

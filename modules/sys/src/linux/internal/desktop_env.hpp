@@ -6,6 +6,9 @@ namespace sihd::sys::internal
 
 bool wayland_session();
 
+bool x11_compiled();
+bool wayland_compiled();
+
 } // namespace sihd::sys::internal
 
 #endif

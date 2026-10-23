@@ -16,6 +16,11 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::screen");
 
+bool supported()
+{
+    return internal::x11_compiled() || internal::wayland_compiled();
+}
+
 Result<std::vector<Monitor>> monitors()
 {
     return try_first(internal::wayland_session(), wayland::monitors, x11::monitors);

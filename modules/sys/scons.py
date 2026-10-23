@@ -7,11 +7,9 @@ compile_wayland = env.is_opt("wayland")
 
 if compile_x11:
     env.Append(LIBS = ["X11", "Xtst", "Xrandr"])
-    env.Append(CPPDEFINES = ["SIHD_COMPILE_WITH_X11"])
 
 if compile_wayland:
     env.Append(LIBS = ["wayland-client"])
-    env.Append(CPPDEFINES = ["SIHD_COMPILE_WITH_WAYLAND"])
 
 sihd_sys_libname = env.module_format_name()
 
@@ -25,13 +23,17 @@ else:
     sources += Glob('src/linux/*.cpp')
     # shared plumbing for the clipboard / screenshot backends
     sources += Glob('src/linux/internal/*.cpp')
-    # x11 / wayland backends only compile when their opt is enabled
+    # x11 / wayland backends compile when their opt is enabled, their stub otherwise: no define, the pch stays shared
     if compile_x11:
         sources += Glob('src/linux/x11/*.cpp')
+    else:
+        sources += ['src/linux/stub/x11.cpp']
     if compile_wayland:
         sources += Glob('src/linux/wayland/*.cpp')
         # vendored wayland protocol definitions (wayland-scanner private-code)
         sources += Glob('src/linux/wayland/protocols/*.c')
+    else:
+        sources += ['src/linux/stub/wayland.cpp']
 
 lib = env.build_lib(sources)
 

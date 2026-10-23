@@ -25,6 +25,11 @@ constexpr Duration serve_timeout(time::sec(10));
 
 } // namespace
 
+bool supported()
+{
+    return internal::x11_compiled() || internal::wayland_compiled();
+}
+
 std::vector<RawContent> get_raw()
 {
     return get_raw({});

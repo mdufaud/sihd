@@ -17,6 +17,11 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::keyboard");
 
+bool supported()
+{
+    return internal::x11_compiled() || internal::wayland_compiled();
+}
+
 Result<void> type_text(std::string_view utf8_text)
 {
     return try_first(internal::wayland_session(), wayland::type_text, x11::type_text, utf8_text);

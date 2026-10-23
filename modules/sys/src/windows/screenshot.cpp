@@ -101,6 +101,11 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
 
 } // namespace
 
+bool supported()
+{
+    return true;
+}
+
 bool take_window_name(Bitmap & bm, std::string_view name)
 {
     bm.clear();

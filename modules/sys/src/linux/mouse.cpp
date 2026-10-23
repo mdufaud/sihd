@@ -16,6 +16,11 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::mouse");
 
+bool supported()
+{
+    return internal::x11_compiled() || internal::wayland_compiled();
+}
+
 Result<void> mouse_move(int x, int y)
 {
     return try_first(internal::wayland_session(), wayland::mouse_move, x11::mouse_move, x, y);

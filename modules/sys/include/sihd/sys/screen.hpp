@@ -4,17 +4,12 @@
 #include <string>
 #include <vector>
 
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
 
 namespace sihd::sys::screen
 {
 
-#if defined(SIHD_COMPILE_WITH_X11) || defined(SIHD_COMPILE_WITH_WAYLAND) || defined(__SIHD_WINDOWS__)
-constexpr bool supported = true;
-#else
-constexpr bool supported = false;
-#endif
+bool supported();
 
 // One physical display; x, y, width and height are logical desktop units (raw pixels on X11)
 struct Monitor

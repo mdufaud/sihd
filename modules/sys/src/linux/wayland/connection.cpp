@@ -3,6 +3,17 @@
 #include <sihd/sys/Poll.hpp>
 
 #include "../internal/deadline.hpp"
+#include "../internal/desktop_env.hpp"
+
+namespace sihd::sys::internal
+{
+
+bool wayland_compiled()
+{
+    return true;
+}
+
+} // namespace sihd::sys::internal
 
 namespace sihd::sys::internal::wayland
 {

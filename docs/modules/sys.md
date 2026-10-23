@@ -69,7 +69,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Desktop integration
 
-Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build option is set. Windows backends are always built. Check each `supported` constant.
+Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build option is set. Windows backends are always built. Check each namespace's `supported()` function: it is a runtime call because the backends are a build option, so no define leaks into the public headers.
 
 - `clipboard`: `get_raw` (all or selected MIME types), `to_text`, `to_image`, `set` (text, `Bitmap` or raw MIME data), `set_raw`.
 - `screenshot`: `take_screen`, `take_under_cursor`, `take_focused`, `take_window_name`, each filling a `Bitmap`.

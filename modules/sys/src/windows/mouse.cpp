@@ -48,6 +48,11 @@ Result<void> send(std::vector<INPUT> inputs)
 
 } // namespace
 
+bool supported()
+{
+    return true;
+}
+
 Result<void> mouse_move(int x, int y)
 {
     const LONG left = GetSystemMetrics(SM_XVIRTUALSCREEN);

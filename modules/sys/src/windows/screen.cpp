@@ -78,6 +78,11 @@ Monitor assemble(HMONITOR monitor_handle, const MONITORINFOEXW & info)
 
 } // namespace
 
+bool supported()
+{
+    return true;
+}
+
 Result<std::vector<Monitor>> monitors()
 {
     std::vector<Monitor> monitors;

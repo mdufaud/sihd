@@ -13,6 +13,11 @@ using namespace sihd::util;
 
 SIHD_NEW_LOGGER("sihd::sys::screenshot");
 
+bool supported()
+{
+    return internal::x11_compiled() || internal::wayland_compiled();
+}
+
 bool take_screen(Bitmap & bm)
 {
     bm.clear();

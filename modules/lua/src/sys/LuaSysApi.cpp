@@ -247,9 +247,7 @@ void LuaSysApi::load_base(Vm & vm)
             +[](sihd::sys::Bitmap *self) -> int { return static_cast<int>(self->byte_per_pixel()); })
         .endClass()
         .beginNamespace("screenshot")
-        .addFunction(
-            "supported",
-            +[]() -> bool { return sihd::sys::screenshot::supported; })
+        .addFunction("supported", &sihd::sys::screenshot::supported)
         .addFunction("take_screen", &sihd::sys::screenshot::take_screen)
         .addFunction("take_under_cursor", &sihd::sys::screenshot::take_under_cursor)
         .addFunction("take_focused", &sihd::sys::screenshot::take_focused)

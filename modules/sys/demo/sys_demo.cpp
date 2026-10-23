@@ -449,20 +449,20 @@ int main(int argc, char **argv)
 #if defined(__SIHD_EMSCRIPTEN__)
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });
 #else
-    if constexpr (clipboard::supported)
+    if (clipboard::supported())
     {
         app.root().add_command("clipboard", "clipboard content").on_run([] { demo::clipboard(); });
     }
-    if constexpr (screenshot::supported)
+    if (screenshot::supported())
     {
         app.root().add_command("screenshot", "take screenshots").on_run([] { demo::screenshot(); });
     }
-    if constexpr (screen::supported)
+    if (screen::supported())
     {
         app.root().add_command("screen", "list the monitors").on_run([] { demo::screen(); });
     }
 
-    if constexpr (keyboard::supported)
+    if (keyboard::supported())
     {
         app.root().add_command("keyboard", "type into the focused window - 3 seconds to focus").on_run([&app] {
             fmt::print("Focus the window that must receive the input - Ctrl + C to abort\n");
@@ -470,7 +470,7 @@ int main(int argc, char **argv)
             demo::keyboard_input();
         });
     }
-    if constexpr (mouse::supported)
+    if (mouse::supported())
     {
         app.root().add_command("mouse", "move, scroll and click the cursor").on_run([] { demo::mouse_input(); });
     }
@@ -495,11 +495,11 @@ int main(int argc, char **argv)
 #if defined(__SIHD_EMSCRIPTEN__)
         demo::read_line();
 #else
-        if constexpr (clipboard::supported)
+        if (clipboard::supported())
             demo::clipboard();
-        if constexpr (screenshot::supported)
+        if (screenshot::supported())
             demo::screenshot();
-        if constexpr (screen::supported)
+        if (screen::supported())
             demo::screen();
         demo::process();
         demo::read_line();

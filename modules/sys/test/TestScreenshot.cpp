@@ -14,7 +14,7 @@ class TestScreenshotBackend: public ::testing::Test
         virtual ~TestScreenshotBackend() = default;
         virtual void SetUp()
         {
-            if constexpr (!screenshot::supported)
+            if (!screenshot::supported())
             {
                 GTEST_SKIP() << "no screenshot backend compiled in";
             }

@@ -64,6 +64,11 @@ Result<void> send(std::vector<INPUT> inputs)
 
 } // namespace
 
+bool supported()
+{
+    return true;
+}
+
 Result<void> type_text(std::string_view utf8_text)
 {
     if (utf8_text.empty())

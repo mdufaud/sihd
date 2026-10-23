@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/sys/keyboard.hpp>
+#include <sihd/util/build.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
 # include "../src/linux/internal/desktop_env.hpp"
@@ -25,14 +26,12 @@ TEST(TestKeyboard, test_modifier_combination)
 
 TEST(TestKeyboard, test_no_session_is_an_error)
 {
-    if constexpr (keyboard::supported)
+    if (keyboard::supported())
     {
         if (internal::wayland_session())
             GTEST_SKIP() << "a wayland session runs the injection";
-# if defined(SIHD_COMPILE_WITH_X11)
-        if (getenv("DISPLAY") != nullptr)
+        if (internal::x11_compiled() && getenv("DISPLAY") != nullptr)
             GTEST_SKIP() << "an x11 session runs the injection";
-# endif
         auto res = keyboard::key_press(keyboard::Key::a);
         ASSERT_FALSE(res.has_value());
         EXPECT_EQ(res.error().code, ErrorCode::not_supported);

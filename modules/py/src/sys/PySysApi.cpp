@@ -210,7 +210,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("byte_per_pixel", &Bitmap::byte_per_pixel);
 
     pybind11::module m_screenshot = m_sys.def_submodule("screenshot", "sihd::sys::screenshot");
-    m_screenshot.attr("supported") = screenshot::supported;
+    m_screenshot.attr("supported") = screenshot::supported();
     m_screenshot.def("take_screen", &screenshot::take_screen);
     m_screenshot.def("take_under_cursor", &screenshot::take_under_cursor);
     m_screenshot.def("take_focused", &screenshot::take_focused);
