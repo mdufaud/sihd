@@ -396,10 +396,10 @@ TEST_F(TestHttpServer, test_streaming_file_response)
     std::string content(4 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(path, content, false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(path, content).has_value());
 
     const std::string empty_path = fs::combine(tmp_dir.path(), "empty.bin");
-    ASSERT_TRUE(fs::write(empty_path, "", false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(empty_path, "").has_value());
 
     scope.server._webservice->set_entry_point("file", [&path](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_file_content(path));
@@ -559,7 +559,7 @@ TEST_F(TestHttpServer, test_streaming_upload_multipart)
     std::string content(2 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 13 % 251);
-    ASSERT_TRUE(fs::write(file_path, content, false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(file_path, content).has_value());
 
     std::string seen_field;
     std::string seen_filename;
@@ -774,7 +774,7 @@ TEST_F(TestHttpServer, test_streaming_response_keeps_connection)
     std::string content(4 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(path, content, false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(path, content).has_value());
 
     scope.server._webservice->set_entry_point("file", [&path](const HttpRequest &, HttpResponse & resp) {
         ASSERT_TRUE(resp.set_file_content(path));
