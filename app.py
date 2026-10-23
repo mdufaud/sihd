@@ -71,6 +71,10 @@ modules = {
             'powrprof',
             'wtsapi32',
             'dbghelp',
+            # winrt activation for desktop notifications (RoGetActivationFactory, WindowsCreateStringReference)
+            'runtimeobject',
+            # UrlCreateFromPathW for toast images
+            'shlwapi',
             # ! never add libucrt with mingw
         ],
         "export-all-libs": True,

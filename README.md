@@ -12,7 +12,7 @@ It ships as independent libraries (`libsihd_<module>`): OS abstraction, networki
 | Module | Purpose |
 |--------|---------|
 | [`util`](docs/modules/util.md) | Logging, services, threads, scheduling, observers, CLI, time, containers |
-| [`sys`](docs/modules/sys.md) | Files, processes, IPC, signals, clipboard, screenshot, input injection, users |
+| [`sys`](docs/modules/sys.md) | Files, processes, IPC, signals, clipboard, screenshot, input injection, desktop notifications, users |
 | [`core`](docs/modules/core.md) | Devices, Channels, recording/playback, sampling |
 | [`json`](docs/modules/json.md) · [`csv`](docs/modules/csv.md) · [`zip`](docs/modules/zip.md) | Data formats and archives |
 | [`crypto`](docs/modules/crypto.md) | Keys, certificates, TLS context, ciphers, digests |

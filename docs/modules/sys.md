@@ -5,7 +5,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 | | |
 |---|---|
 | Depends on | `util` |
-| External libraries | Linux: libuuid, libcap, libdbus-1. Windows: system libraries (advapi32, ole32, psapi, ws2_32, and others). Optional desktop backends: X11, Xtst, Xrandr, wayland-client |
+| External libraries | Linux: libuuid, libcap, libdbus-1. Windows: system libraries (advapi32, ole32, psapi, ws2_32, runtimeobject, and others). Optional desktop backends: X11, Xtst, Xrandr, wayland-client |
 | Platforms | Linux, Windows. Android and Emscripten are partial: check the `supported` constant of platform-dependent APIs |
 | Build | `make m=sys` |
 | Header | `#include <sihd/sys/Process.hpp>` (one header per class or namespace) |
@@ -77,6 +77,7 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 - `keyboard`: `type_text` (UTF-8), `key_press` with `Modifiers`, `key_down`, `key_up`.
 - `mouse`: `mouse_move`, `mouse_move_by`, `mouse_button`, `mouse_click`, `mouse_scroll`.
 - `Bitmap`: in-memory pixel buffer: `create`, `fill`, `get`, `set`, `save_bmp`, `read_bmp`, `to_bmp_data`, `read_bmp_data`.
+- `DesktopNotifier`: desktop notifications: `notify` a `Notification` (summary, body, icon, `Urgency`, optional timeout) and get its id, `close(id)`. A negative timeout is rejected (`invalid_argument`). Linux sends them to the `org.freedesktop.Notifications` service of the session bus (D-Bus): the icon is an icon name or a path, the urgency maps to the `urgency` hint, the timeout to the expiration (server default when unset); the server capabilities are asked once per connection so that the body is escaped when the server reads markup; `set_app_name` and `set_app_id` (the `desktop-entry` hint) are optional; ids come from the server, so any notifier can `close` them. Windows shows WinRT toasts and requires `set_app_id` (AppUserModelID): the first `notify` registers it under `HKCU\Software\Classes\AppUserModelId\<id>` (per user, no admin rights, how unpackaged apps get a notification identity) with `set_app_name` as display name; the icon is an image path, `low` shows a silent toast, `critical` a long one (`duration="long"`), `normal` a short one with sound; the timeout is ignored (the system sets the display time); ids are per notifier and `close` only reaches the toasts of its own notifier. Other platforms return `not_supported`.
 
 ### Users, privileges and sessions
 
@@ -104,7 +105,7 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 
 Every header in `sihd/sys/linux/` raises a compile error on other platforms.
 
-- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus: `open`, `is_open`, `add_match`, `remove_match`, `interrupt`. `Message` builds method calls and signals (`method_call`, `signal`, `add`, `call`, `send`, `receive`). Not available on Android or Emscripten.
+- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus, or to a bus address: `open`, `is_open`, `add_match`, `remove_match`, `request_name`, `interrupt`. `Message` builds method calls, signals and replies (`method_call`, `signal`, `method_return`, `error_return`, `add`, `call`, `send`, `receive`). `Appender` writes values and containers (`open_array`, `open_variant`, `open_struct`, `open_dict_entry`, `close`) checked against their signature and their nesting order, so libdbus never aborts; `Iter` reads them back. Not available on Android or Emscripten.
 - `linux_::prctl`: process control flags: `set_pdeathsig`, `set_dumpable`, `set_no_new_privs`, `set_child_subreaper`, with matching getters.
 - `linux_::cgroup`: cgroup v2 state and limits: `is_container`, `current_group`, `memory_max`, `memory_current`, `cpu_max`, `write_memory_max`, `write_cpu_max`.
 - `linux_::ns`: Linux namespaces: `unshare`, `setns`, `id`, `to_str`.

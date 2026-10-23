@@ -30,6 +30,9 @@ concept BasicType = std::same_as<T, bool> || std::same_as<T, uint8_t> || std::sa
                     || std::same_as<T, uint16_t> || std::same_as<T, int32_t> || std::same_as<T, uint32_t>
                     || std::same_as<T, std::string>;
 
+template <typename T>
+concept FixedType = BasicType<T> && !std::same_as<T, std::string>;
+
 class Connection
 {
     public:
@@ -68,6 +71,37 @@ class Connection
                         std::unique_ptr<Impl> _impl;
                 };
 
+                // valid while its message lives, no Message::add meanwhile
+                class Appender
+                {
+                    public:
+                        explicit Appender(Message & message);
+                        Appender(Appender && other);
+                        Appender & operator=(Appender && other);
+                        ~Appender();
+
+                        Appender(const Appender &) = delete;
+                        Appender & operator=(const Appender &) = delete;
+
+                        template <FixedType T>
+                        sihd::util::Result<void> add(const T & value);
+                        sihd::util::Result<void> add(const std::string & value);
+
+                        sihd::util::Result<Appender> open_array(const std::string & element_signature);
+                        sihd::util::Result<Appender> open_variant(const std::string & value_signature);
+                        sihd::util::Result<Appender> open_struct();
+                        sihd::util::Result<Appender> open_dict_entry();
+                        // a container dropped without close() is abandoned and so is its message
+                        sihd::util::Result<void> close(Appender && container);
+
+                    private:
+                        struct Impl;
+
+                        explicit Appender(std::unique_ptr<Impl> impl);
+
+                        std::unique_ptr<Impl> _impl;
+                };
+
                 Message(Message && other);
                 Message & operator=(Message && other);
                 ~Message();
@@ -81,6 +115,8 @@ class Connection
                                                                const std::string & member);
                 static sihd::util::Result<Message>
                     signal(const std::string & path, const std::string & interface, const std::string & member);
+                sihd::util::Result<Message> method_return() const;
+                sihd::util::Result<Message> error_return(const std::string & name, const std::string & text) const;
 
                 // empty when the message has none
                 std::string path() const;
@@ -88,9 +124,9 @@ class Connection
                 std::string member() const;
                 std::string sender() const;
 
-                template <BasicType T>
+                template <FixedType T>
                 sihd::util::Result<void> add(const T & value);
-                sihd::util::Result<void> add(const char *value);
+                sihd::util::Result<void> add(const std::string & value);
 
                 // sends and waits for the reply, a dbus error reply becomes an io_error "<error name>: <message>"
                 sihd::util::Result<Message> call(Connection & connection, sihd::util::Duration timeout) const;
@@ -118,12 +154,15 @@ class Connection
         Connection & operator=(const Connection &) = delete;
 
         sihd::util::Result<void> open(Bus bus);
+        sihd::util::Result<void> open(const std::string & address);
         bool is_open() const;
         void close();
 
         // dbus match rule, e.g. "type='signal',sender='org.bluez',member='InterfacesAdded'"
         sihd::util::Result<void> add_match(const std::string & rule);
         sihd::util::Result<void> remove_match(const std::string & rule);
+        // owns a well-known bus name, already_exists when another connection holds it
+        sihd::util::Result<void> request_name(const std::string & name);
         // wakes a Message::receive() blocked in another thread
         sihd::util::Result<void> interrupt();
 
@@ -135,6 +174,7 @@ class Connection
 
 using Message = Connection::Message;
 using Iter = Connection::Message::Iter;
+using Appender = Connection::Message::Appender;
 
 } // namespace sihd::sys::linux_::dbus
 

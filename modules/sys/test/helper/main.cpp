@@ -2,6 +2,7 @@
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <map>
 #include <optional>
 #include <string>
 #include <thread>
@@ -14,9 +15,11 @@
 
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/Daemon.hpp>
+#include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/MessageQueue.hpp>
 #include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/SharedMemory.hpp>
+#include <sihd/util/time.hpp>
 
 using namespace sihd::util;
 
@@ -151,6 +154,62 @@ int do_daemonize(const char *pid_file, const char *working_dir, const char *seco
     }
 }
 
+std::map<std::string, std::string> named_args(int argc, char **argv)
+{
+    std::map<std::string, std::string> args;
+    for (int i = 0; i < argc; ++i)
+    {
+        const std::string arg = argv[i];
+        const size_t equal = arg.find('=');
+        if (equal != std::string::npos)
+            args[arg.substr(0, equal)] = arg.substr(equal + 1);
+    }
+    return args;
+}
+
+// prints one line per attempt: the id or "error: <message>", exits 0 when the last attempt succeeded
+int do_notify(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    sihd::sys::DesktopNotifier notifier;
+    notifier.set_app_name(args["app_name"]);
+    notifier.set_app_id(args["app_id"]);
+    sihd::sys::DesktopNotifier::Notification notification;
+    notification.summary = args["summary"];
+    notification.body = args["body"];
+    notification.icon = args["icon"];
+    if (!args["urgency"].empty())
+        notification.urgency = static_cast<sihd::sys::DesktopNotifier::Urgency>(std::stoi(args["urgency"]));
+    if (!args["timeout_ms"].empty())
+        notification.timeout = Duration(time::milli(std::stoll(args["timeout_ms"])));
+    const int attempts = args["attempts"].empty() ? 1 : std::stoi(args["attempts"]);
+
+    bool last_succeeded = false;
+    for (int attempt = 0; attempt < attempts; ++attempt)
+    {
+        auto id = notifier.notify(notification);
+        last_succeeded = id.has_value();
+        if (last_succeeded)
+            printf("%u\n", *id);
+        else
+            printf("error: %s\n", id.error().message.c_str());
+    }
+    return last_succeeded ? 0 : 1;
+}
+
+int do_notify_close(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    sihd::sys::DesktopNotifier notifier;
+    auto closed = notifier.close(static_cast<uint32_t>(std::stoul(args["id"])));
+    if (!closed)
+    {
+        printf("error: %s\n", closed.error().message.c_str());
+        return 1;
+    }
+    return 0;
+}
+
 int do_crash(const char *dump_path)
 {
     sihd::sys::CrashHandler::Options options;
@@ -189,6 +248,10 @@ int main(int argc, char **argv)
         return do_mq_receive(argv[2], argv[3]);
     if (argc >= 3 && strcmp(argv[1], "crash") == 0)
         return do_crash(argv[2]);
+    if (argc >= 2 && strcmp(argv[1], "notify") == 0)
+        return do_notify(argc - 2, argv + 2);
+    if (argc >= 2 && strcmp(argv[1], "notify-close") == 0)
+        return do_notify_close(argc - 2, argv + 2);
     if (argc >= 5 && strcmp(argv[1], "daemonize") == 0)
         return do_daemonize(argv[2], argv[3], argv[4]);
     return 255;

@@ -1,8 +1,11 @@
+#include <iostream>
+
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/Bitmap.hpp>
+#include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/LineReader.hpp>
@@ -286,6 +289,33 @@ void screen()
     fmt::print("\n");
 }
 
+void desktop_notifier()
+{
+    DesktopNotifier notifier;
+    notifier.set_app_name("SIHD");
+    notifier.set_app_id("sihd.sys_demo");
+
+    DesktopNotifier::Notification notification;
+    notification.summary = "sys_demo";
+    notification.body = "Hello from the desktop notifier";
+    notification.urgency = DesktopNotifier::Urgency::normal;
+    notification.timeout = Duration(time::seconds(10));
+
+    SIHD_LOG(info, "Sending a notification");
+    auto id = notifier.notify(notification);
+    if (!id.has_value())
+    {
+        SIHD_LOG(error, "Could not notify: {}", id.error().message);
+        return;
+    }
+
+    SIHD_LOG(info, "Notification {} sent, closing it in 3 seconds", *id);
+    time::sleep(3);
+    if (auto closed = notifier.close(*id); !closed.has_value())
+        SIHD_LOG(error, "Could not close: {}", closed.error().message);
+    fmt::print("\n");
+}
+
 void keyboard_input()
 {
     SIHD_LOG(info, "Typing 'sihd rules ' into the focused window");
@@ -460,6 +490,10 @@ int main(int argc, char **argv)
     if (screen::supported())
     {
         app.root().add_command("screen", "list the monitors").on_run([] { demo::screen(); });
+    }
+    if (DesktopNotifier::supported)
+    {
+        app.root().add_command("notifier", "send a desktop notification").on_run([] { demo::desktop_notifier(); });
     }
 
     if (keyboard::supported())

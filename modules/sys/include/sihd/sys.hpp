@@ -5,6 +5,7 @@
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/Daemon.hpp>
+#include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/FileCache.hpp>

@@ -11,6 +11,7 @@ enum class Cap;
 class CapabilitySet;
 class CrashHandler;
 class Daemon;
+class DesktopNotifier;
 class DynLib;
 class File;
 class FileCache;

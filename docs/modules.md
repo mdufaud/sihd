@@ -6,7 +6,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 |--------|-------------|--------------|
 | [`json`](modules/json.md) | JSON parsing/serialization | simdjson |
 | [`util`](modules/util.md) | Base: logging, services, threads, scheduling, observers, CLI, time, containers, named nodes | json, fmt, cli11, pcre2 |
-| [`sys`](modules/sys.md) | OS abstraction: files, processes, IPC, signals, dynamic loading, clipboard, screenshot, input injection, users, Linux/Windows-only APIs | util |
+| [`sys`](modules/sys.md) | OS abstraction: files, processes, IPC, signals, dynamic loading, clipboard, screenshot, input injection, desktop notifications, users, Linux/Windows-only APIs | util |
 | [`core`](modules/core.md) | Devices, Channels, recording/playback, sampling, profiling | util, sys |
 | [`crypto`](modules/crypto.md) | Keys, certificates, TLS context, ciphers, digests, signatures | util, sys, openssl |
 | [`curl`](modules/curl.md) | libcurl transfer wrapper | util, curl |
