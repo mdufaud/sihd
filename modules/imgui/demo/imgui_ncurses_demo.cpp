@@ -38,8 +38,33 @@ int main(int argc, char **argv)
         if (!ncurses_renderer.init())
             app.exit(EXIT_FAILURE);
 
+        constexpr int image_size = 48;
+        ImTextureData image;
+        image.Create(ImTextureFormat_RGBA32, image_size, image_size);
+        for (int y = 0; y < image_size; ++y)
+        {
+            for (int x = 0; x < image_size; ++x)
+            {
+                float red = 0.0f;
+                float green = 0.0f;
+                float blue = 0.0f;
+                ImGui::ColorConvertHSVtoRGB((float)x / image_size,
+                                            1.0f,
+                                            1.0f - (float)y / image_size,
+                                            red,
+                                            green,
+                                            blue);
+                unsigned char *texel = image.Pixels + (y * image_size + x) * 4;
+                texel[0] = (unsigned char)(red * 255.0f);
+                texel[1] = (unsigned char)(green * 255.0f);
+                texel[2] = (unsigned char)(blue * 255.0f);
+                texel[3] = 255;
+            }
+        }
+
         bool show_demo_window = true;
         bool show_another_window = false;
+        bool show_image_window = false;
         bool demo_window_placed = false;
         float slider_value = 0.0f;
         int click_count = 0;
@@ -67,6 +92,7 @@ int main(int argc, char **argv)
                 ImGui::Text("This is some useful text.");
                 ImGui::Checkbox("Demo Window", &show_demo_window);
                 ImGui::Checkbox("Another Window", &show_another_window);
+                ImGui::Checkbox("Image Window", &show_image_window);
 
                 ImGui::SliderFloat("float", &slider_value, 0.0f, 1.0f);
                 ImGui::ColorEdit3("clear color", (float *)&clear_color);
@@ -89,6 +115,15 @@ int main(int argc, char **argv)
                 ImGui::Text("Hello from another window!");
                 if (ImGui::Button("Close Me"))
                     show_another_window = false;
+                ImGui::End();
+            }
+
+            if (show_image_window)
+            {
+                ImGui::SetNextWindowPos(ImVec2(1.0f, 12.0f), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Image Window", &show_image_window, ImGuiWindowFlags_AlwaysAutoResize);
+                // a cell shows two pixels stacked: half as many rows as columns keeps the image square
+                ImGui::Image(image.GetTexRef(), ImVec2(image_size, image_size / 2));
                 ImGui::End();
             }
             return true;

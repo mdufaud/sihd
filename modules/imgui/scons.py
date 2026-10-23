@@ -64,6 +64,7 @@ else:
             "test/TestNcursesShapes.cpp",
             "test/TestNcursesText.cpp",
             "test/TestNcursesDemo.cpp",
+            "test/TestNcursesImage.cpp",
             "test/helper/NcursesScene.cpp",
         ])
 

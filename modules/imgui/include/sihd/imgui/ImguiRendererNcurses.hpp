@@ -90,6 +90,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
                 unsigned int first_vertex = 0;
                 unsigned int vertex_count = 0;
                 bool gradient = false;
+                bool rect = false;
         };
 
         struct TableBorderRow
@@ -122,6 +123,11 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
             _sample_primitive(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, int x, int y) const;
 
         void _draw_image(const Primitive & prim, const ImVec4 & clip);
+        void _draw_pixels(const ImDrawList *dl,
+                          const ImDrawCmd & cmd,
+                          const Primitive & prim,
+                          const ImTextureData & texture,
+                          const ImVec4 & clip);
         void _draw_glyph(const ImDrawVert & top_left, const ImDrawVert & top_right, const ImVec4 & clip);
         void _draw_fill(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
         void _draw_shaded_fill(const ImDrawList *dl,
@@ -131,6 +137,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
                                ImU32 ch_col,
                                const ImVec4 & clip);
         void _paint_cell(int x, int y, ImU32 col, const ImVec4 & clip);
+        void _cover_cell(size_t index, ImU32 col);
         void _draw_grab(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
         void _draw_tab(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
         void _draw_histogram(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
@@ -185,6 +192,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         bool _unicode;
         int _max_colors;
         ImVec4 *_clear_color_ptr;
+        uint32_t _clear_rgb;
         ImVec2 _white_uv;
 
         std::unordered_map<uint32_t, int> _rgb_roles;

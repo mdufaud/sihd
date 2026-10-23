@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cwchar>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -28,6 +29,7 @@ namespace
 {
 
 constexpr float vertex_epsilon = 0.01f;
+constexpr float edge_epsilon = 1e-4f;
 constexpr uint8_t min_visible_alpha = 8;
 constexpr uint8_t opaque_alpha = 128;
 // legacy stroke mode (kept for slider grabs and tab backgrounds) shifts every AddLine by half a unit
@@ -53,6 +55,7 @@ constexpr uint32_t arrow_down_char = 0x25BC;
 constexpr uint32_t arrow_up_char = 0x25B2;
 
 constexpr uint32_t image_char = 0x2592;
+constexpr uint32_t upper_half_char = 0x2580;
 constexpr uint32_t shade_char = 0x2591;
 constexpr uint32_t full_block_char = 0x2588;
 
@@ -197,13 +200,59 @@ const ImDrawVert & vertex_at(const ImDrawList *dl, const ImDrawCmd & cmd, unsign
     return dl->VtxBuffer[(int)(cmd.VtxOffset + dl->IdxBuffer[(int)(cmd.IdxOffset + elem)])];
 }
 
+// imgui's PrimRect: four corners clockwise from the first, as triangles (0, 1, 2) and (0, 2, 3)
+bool is_rect_quad(const ImDrawList *dl, const ImDrawCmd & cmd, unsigned int first)
+{
+    const std::span<const ImDrawIdx> indices(dl->IdxBuffer.Data + cmd.IdxOffset + first, 6);
+    if (indices[3] != indices[0] || indices[4] != indices[2])
+        return false;
+    const ImVec2 corner = vertex_at(dl, cmd, first).pos;
+    const ImVec2 next = vertex_at(dl, cmd, first + 1).pos;
+    const ImVec2 opposite = vertex_at(dl, cmd, first + 2).pos;
+    const ImVec2 last = vertex_at(dl, cmd, first + 5).pos;
+    return next.x == opposite.x && next.y == corner.y && last.x == corner.x && last.y == opposite.y;
+}
+
+// the edge tests of point_in_triangle on two opposite rect sides, `across` long
+bool between_rect_sides(float centre, float min, float max, float across)
+{
+    return (centre - min) * across >= -edge_epsilon && (max - centre) * across >= -edge_epsilon;
+}
+
+struct RectAxis
+{
+        float min;
+        float max;
+        float across;
+        float clip_min;
+        float clip_max;
+        int screen;
+};
+
+bool covers_cell(const RectAxis & axis, int cell)
+{
+    const float centre = (float)cell + 0.5f;
+    return between_rect_sides(centre, axis.min, axis.max, axis.across) && centre >= axis.clip_min
+           && centre < axis.clip_max && cell >= 0 && cell < axis.screen;
+}
+
+// the covered cells of [first, end) form one interval
+std::pair<int, int> covered_cells(const RectAxis & axis, int first, int end)
+{
+    while (first < end && !covers_cell(axis, first))
+        ++first;
+    while (end > first && !covers_cell(axis, end - 1))
+        --end;
+    return {first, end};
+}
+
 bool point_in_triangle(ImVec2 p, ImVec2 a, ImVec2 b, ImVec2 c)
 {
     const float d1 = (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
     const float d2 = (p.x - c.x) * (b.y - c.y) - (b.x - c.x) * (p.y - c.y);
     const float d3 = (p.x - a.x) * (c.y - a.y) - (c.x - a.x) * (p.y - a.y);
-    const bool has_neg = d1 < -1e-4f || d2 < -1e-4f || d3 < -1e-4f;
-    const bool has_pos = d1 > 1e-4f || d2 > 1e-4f || d3 > 1e-4f;
+    const bool has_neg = d1 < -edge_epsilon || d2 < -edge_epsilon || d3 < -edge_epsilon;
+    const bool has_pos = d1 > edge_epsilon || d2 > edge_epsilon || d3 > edge_epsilon;
     return !(has_neg && has_pos);
 }
 
@@ -249,6 +298,98 @@ ImU32 interpolate_color(ImVec2 point, const ImDrawVert & v0, const ImDrawVert & 
     return out;
 }
 
+// imgui spreads the UVs of an image linearly over its bounds (PrimRectUV, ShadeVertsLinearUV)
+struct UvMap
+{
+        ImVec2 origin;
+        ImVec2 per_unit;
+};
+
+UvMap image_uv_map(const ImDrawList *dl, const ImDrawCmd & cmd, unsigned int first, unsigned int end)
+{
+    const ImDrawVert *left = &vertex_at(dl, cmd, first);
+    const ImDrawVert *right = left;
+    const ImDrawVert *top = left;
+    const ImDrawVert *bottom = left;
+    for (unsigned int elem = first + 1; elem < end; ++elem)
+    {
+        const ImDrawVert & vertex = vertex_at(dl, cmd, elem);
+        if (vertex.pos.x < left->pos.x)
+            left = &vertex;
+        if (vertex.pos.x > right->pos.x)
+            right = &vertex;
+        if (vertex.pos.y < top->pos.y)
+            top = &vertex;
+        if (vertex.pos.y > bottom->pos.y)
+            bottom = &vertex;
+    }
+    const float width = right->pos.x - left->pos.x;
+    const float height = bottom->pos.y - top->pos.y;
+    return {.origin = ImVec2(left->uv.x, top->uv.y),
+            .per_unit = ImVec2(width > 0.0f ? (right->uv.x - left->uv.x) / width : 0.0f,
+                               height > 0.0f ? (bottom->uv.y - top->uv.y) / height : 0.0f)};
+}
+
+// the texels [first, end) a UV span covers, the nearest one when the span is narrower than a texel
+std::pair<int, int> texel_span(float from, float to, int size)
+{
+    const float low = std::min(from, to) * (float)size;
+    const float high = std::max(from, to) * (float)size;
+    const int first = std::clamp((int)std::lround(low), 0, size);
+    const int end = std::clamp((int)std::lround(high), 0, size);
+    if (end > first)
+        return {first, end};
+    const int nearest = std::clamp(floor_cell((low + high) * 0.5f), 0, size - 1);
+    return {nearest, nearest + 1};
+}
+
+// alpha-weighted mean of the texels under a UV rect: an Alpha8 texel is white coverage
+ImU32 average_texels(const ImTextureData & texture, ImVec2 uv_from, ImVec2 uv_to)
+{
+    const std::span<const unsigned char> pixels(texture.Pixels, (size_t)texture.GetSizeInBytes());
+    const auto [x0, x1] = texel_span(uv_from.x, uv_to.x, texture.Width);
+    const auto [y0, y1] = texel_span(uv_from.y, uv_to.y, texture.Height);
+    const bool alpha_only = texture.Format == ImTextureFormat_Alpha8;
+
+    std::array<uint64_t, 3> weighted {};
+    uint64_t alpha = 0;
+    for (int y = y0; y < y1; ++y)
+    {
+        for (int x = x0; x < x1; ++x)
+        {
+            const size_t at = ((size_t)y * (size_t)texture.Width + (size_t)x) * (size_t)texture.BytesPerPixel;
+            const uint64_t texel_alpha = alpha_only ? pixels[at] : pixels[at + 3];
+            for (size_t c = 0; c < weighted.size(); ++c)
+                weighted[c] += (alpha_only ? 255u : pixels[at + c]) * texel_alpha;
+            alpha += texel_alpha;
+        }
+    }
+
+    if (alpha == 0)
+        return 0;
+    const uint64_t count = (uint64_t)(x1 - x0) * (uint64_t)(y1 - y0);
+    ImU32 out = (ImU32)((alpha + count / 2) / count) << IM_COL32_A_SHIFT;
+    for (size_t c = 0; c < weighted.size(); ++c)
+        out |= (ImU32)((weighted[c] + alpha / 2) / alpha) << (c * 8);
+    return out;
+}
+
+ImU32 tinted(ImU32 texel, ImU32 tint)
+{
+    ImU32 out = 0;
+    for (int shift = 0; shift <= IM_COL32_A_SHIFT; shift += 8)
+        out |= (ImU32)((channel(texel, shift) * channel(tint, shift) + 127) / 255) << shift;
+    return out;
+}
+
+uint32_t mix(uint32_t a, uint32_t b)
+{
+    uint32_t out = 0;
+    for (int shift = 0; shift < IM_COL32_A_SHIFT; shift += 8)
+        out |= (uint32_t)((channel(a, shift) + channel(b, shift) + 1) / 2) << shift;
+    return out;
+}
+
 uint8_t span_arms(int at, int first, int last, uint8_t before, uint8_t after)
 {
     if (first == last)
@@ -283,6 +424,7 @@ ImguiRendererNcurses::ImguiRendererNcurses():
     _unicode(true),
     _max_colors(256),
     _clear_color_ptr(nullptr),
+    _clear_rgb(0),
     _white_uv(0.0f, 0.0f),
     _tagged_colors {},
     _screen_w(0),
@@ -745,6 +887,7 @@ void ImguiRendererNcurses::_rasterize(ImDrawData *draw_data)
         return;
 
     _white_uv = ImGui::GetIO().Fonts->TexUvWhitePixel;
+    _clear_rgb = _clear_color_ptr != nullptr ? rgb_of(ImGui::ColorConvertFloat4ToU32(*_clear_color_ptr)) : 0;
     std::ranges::fill(_screen, TCell {});
     std::ranges::fill(_line_arms, 0);
     std::ranges::fill(_braille, 0);
@@ -821,6 +964,7 @@ ImguiRendererNcurses::Primitive
     prim.end = elem;
     prim.first_vertex = min_index;
     prim.vertex_count = max_index - min_index + 1;
+    prim.rect = !prim.gradient && prim.end - prim.first == 6 && is_rect_quad(dl, cmd, prim.first);
     return prim;
 }
 
@@ -831,6 +975,13 @@ std::optional<ImU32> ImguiRendererNcurses::_sample_primitive(const ImDrawList *d
                                                              int y) const
 {
     const ImVec2 center((float)x + 0.5f, (float)y + 0.5f);
+    if (prim.rect)
+    {
+        // the diagonal both triangles share needs no test
+        const bool inside = between_rect_sides(center.x, prim.min.x, prim.max.x, prim.max.y - prim.min.y)
+                            && between_rect_sides(center.y, prim.min.y, prim.max.y, prim.max.x - prim.min.x);
+        return inside ? std::optional<ImU32>(prim.col) : std::nullopt;
+    }
     for (unsigned int elem = prim.first; elem < prim.end; elem += 3)
     {
         const ImDrawVert & v0 = vertex_at(dl, cmd, elem);
@@ -853,10 +1004,50 @@ void ImguiRendererNcurses::_draw_image(const Primitive & prim, const ImVec4 & cl
     }
 }
 
+void ImguiRendererNcurses::_draw_pixels(const ImDrawList *dl,
+                                        const ImDrawCmd & cmd,
+                                        const Primitive & prim,
+                                        const ImTextureData & texture,
+                                        const ImVec4 & clip)
+{
+    const UvMap uv = image_uv_map(dl, cmd, prim.first, prim.end);
+    const ImVec2 min = clamp_to_clip(prim.min, clip);
+    const ImVec2 max = clamp_to_clip(prim.max, clip);
+    for (int y = round_cell(min.y); y < round_cell(max.y); ++y)
+    {
+        const float v_top = uv.origin.y + ((float)y - prim.min.y) * uv.per_unit.y;
+        const float v_middle = v_top + uv.per_unit.y * 0.5f;
+        const float v_bottom = v_top + uv.per_unit.y;
+        for (int x = round_cell(min.x); x < round_cell(max.x); ++x)
+        {
+            if (!this->_in_clip(x, y, clip))
+                continue;
+            const float u_left = uv.origin.x + ((float)x - prim.min.x) * uv.per_unit.x;
+            const float u_right = u_left + uv.per_unit.x;
+            const ImU32 top = average_texels(texture, ImVec2(u_left, v_top), ImVec2(u_right, v_middle));
+            const ImU32 bottom = average_texels(texture, ImVec2(u_left, v_middle), ImVec2(u_right, v_bottom));
+
+            const size_t index = this->_index(x, y);
+            const uint32_t under = this->_cell_bg(_screen[index]);
+            const uint32_t top_rgb = this->_blend(under, tinted(top, prim.col));
+            const uint32_t bottom_rgb = this->_blend(under, tinted(bottom, prim.col));
+            if (_unicode)
+                _screen[index] = TCell {.ch = upper_half_char, .fg = top_rgb, .bg = bottom_rgb, .has_bg = true};
+            else
+                _screen[index] = TCell {.ch = blank_char, .bg = mix(top_rgb, bottom_rgb), .has_bg = true};
+            _line_arms[index] = 0;
+            _braille[index] = 0;
+        }
+    }
+}
+
 void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl, const ImDrawCmd & cmd, const ImVec4 & clip)
 {
-    // the font atlas is referenced through its texture data, a user image through a raw texture id
-    const bool user_texture = cmd.TexRef._TexData == nullptr;
+    // the font atlas holds the glyph codepoints in its UVs: any other texture is an image, pixels or a raw texture id
+    ImTextureData *texture = cmd.TexRef._TexData;
+    const bool user_texture = texture == nullptr || !ImGui::GetIO().Fonts->TexList.contains(texture);
+    const bool has_pixels = user_texture && texture != nullptr && texture->Pixels != nullptr && texture->Width > 0
+                            && texture->Height > 0 && _max_colors > 0;
     unsigned int elem = 0;
     while (elem + 2 < cmd.ElemCount)
     {
@@ -871,6 +1062,11 @@ void ImguiRendererNcurses::_rasterize_cmd(const ImDrawList *dl, const ImDrawCmd 
         const Primitive prim = this->_collect_primitive(dl, cmd, elem);
         elem = prim.end;
         // textured but no glyph: an image, the font atlas shown as one included
+        if (has_pixels)
+        {
+            this->_draw_pixels(dl, cmd, prim, *texture, clip);
+            continue;
+        }
         if (user_texture || !this->_is_untextured(v0))
         {
             this->_draw_image(prim, clip);
@@ -1000,6 +1196,29 @@ void ImguiRendererNcurses::_draw_fill(const ImDrawList *dl,
 {
     const ImVec2 min = clamp_to_clip(prim.min, clip);
     const ImVec2 max = clamp_to_clip(prim.max, clip);
+    if (prim.rect)
+    {
+        const RectAxis columns {.min = prim.min.x,
+                                .max = prim.max.x,
+                                .across = prim.max.y - prim.min.y,
+                                .clip_min = clip.x,
+                                .clip_max = clip.z,
+                                .screen = _screen_w};
+        const RectAxis rows {.min = prim.min.y,
+                             .max = prim.max.y,
+                             .across = prim.max.x - prim.min.x,
+                             .clip_min = clip.y,
+                             .clip_max = clip.w,
+                             .screen = _screen_h};
+        const auto [x0, x1] = covered_cells(columns, floor_cell(min.x), (int)std::ceil(max.x));
+        const auto [y0, y1] = covered_cells(rows, floor_cell(min.y), (int)std::ceil(max.y));
+        for (int y = y0; y < y1; ++y)
+        {
+            for (int x = x0; x < x1; ++x)
+                this->_cover_cell(this->_index(x, y), prim.col);
+        }
+        return;
+    }
     for (int y = floor_cell(min.y); y < (int)std::ceil(max.y); ++y)
     {
         for (int x = floor_cell(min.x); x < (int)std::ceil(max.x); ++x)
@@ -1036,14 +1255,17 @@ void ImguiRendererNcurses::_draw_shaded_fill(const ImDrawList *dl,
 
 void ImguiRendererNcurses::_paint_cell(int x, int y, ImU32 col, const ImVec4 & clip)
 {
-    if (!this->_in_clip(x, y, clip))
-        return;
-    TCell & cell = this->_cell(x, y);
+    if (this->_in_clip(x, y, clip))
+        this->_cover_cell(this->_index(x, y), col);
+}
+
+void ImguiRendererNcurses::_cover_cell(size_t index, ImU32 col)
+{
+    TCell & cell = _screen[index];
     cell.bg = this->_blend(this->_cell_bg(cell), col);
     cell.has_bg = true;
     if ((col >> IM_COL32_A_SHIFT) >= opaque_alpha)
     {
-        const size_t index = this->_index(x, y);
         cell = TCell {.ch = blank_char, .fg = cell.fg, .bg = cell.bg, .has_bg = true};
         _line_arms[index] = 0;
         _braille[index] = 0;
@@ -1511,6 +1733,8 @@ TCell & ImguiRendererNcurses::_cell(int x, int y)
 uint32_t ImguiRendererNcurses::_blend(uint32_t under, ImU32 col) const
 {
     const int alpha = (int)(col >> IM_COL32_A_SHIFT);
+    if (alpha == 255)
+        return rgb_of(col);
     uint32_t out = 0;
     for (int shift = 0; shift < IM_COL32_A_SHIFT; shift += 8)
     {
@@ -1523,9 +1747,7 @@ uint32_t ImguiRendererNcurses::_blend(uint32_t under, ImU32 col) const
 
 uint32_t ImguiRendererNcurses::_cell_bg(const TCell & cell) const
 {
-    if (cell.has_bg)
-        return cell.bg;
-    return _clear_color_ptr != nullptr ? rgb_of(ImGui::ColorConvertFloat4ToU32(*_clear_color_ptr)) : 0;
+    return cell.has_bg ? cell.bg : _clear_rgb;
 }
 
 uint32_t ImguiRendererNcurses::_box_char(uint8_t arms) const
