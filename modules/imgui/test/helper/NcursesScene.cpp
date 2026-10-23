@@ -15,6 +15,35 @@ namespace test
 using namespace sihd::imgui;
 using namespace sihd::util;
 
+namespace
+{
+
+// the texture requests the renderer answers on each rasterize, for a frame left unrasterized
+void ack_textures(const ImDrawData & draw_data)
+{
+    if (draw_data.Textures == nullptr)
+        return;
+    for (ImTextureData *tex : *draw_data.Textures)
+    {
+        if (tex->Status == ImTextureStatus_WantCreate)
+        {
+            tex->SetTexID((ImTextureID)1);
+            tex->SetStatus(ImTextureStatus_OK);
+        }
+        else if (tex->Status == ImTextureStatus_WantUpdates)
+        {
+            tex->SetStatus(ImTextureStatus_OK);
+        }
+        else if (tex->Status == ImTextureStatus_WantDestroy)
+        {
+            tex->SetTexID(ImTextureID_Invalid);
+            tex->SetStatus(ImTextureStatus_Destroyed);
+        }
+    }
+}
+
+} // namespace
+
 NcursesScene::NcursesScene(int width, int height, ImVec2 cell_size):
     width(width),
     height(height),
@@ -50,7 +79,11 @@ void NcursesScene::render_frames(int count, const std::function<void()> & build)
         ImGui::NewFrame();
         build();
         ImGui::Render();
-        renderer.rasterize_headless(ImGui::GetDrawData());
+        // only the last frame is ever read: rasterizing the others costs a full grid each
+        if (frame == count - 1)
+            renderer.rasterize_headless(ImGui::GetDrawData());
+        else
+            ack_textures(*ImGui::GetDrawData());
     }
 }
 

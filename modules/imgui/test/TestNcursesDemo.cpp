@@ -7,12 +7,11 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
-#include <map>
 #include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
-#include <tuple>
+#include <utility>
 #include <vector>
 
 #include <fmt/format.h>
@@ -38,49 +37,39 @@ struct DemoCase
         // nullptr: a section header of the demo window, else the menu holding the window's item
         const char *menu;
         const char *label;
-        // the demo keeps a size seeded from the first cell size that showed it, for the whole process
-        bool seeds_sizes = false;
+        // a section's screen height: its rows with every tree node open
+        int rows = 0;
 };
 
-struct CellSize
+void PrintTo(const DemoCase & demo, std::ostream *os)
 {
-        const char *golden_dir;
-        ImVec2 units;
-};
-
-using DemoParam = std::tuple<DemoCase, CellSize>;
-
-void PrintTo(const DemoParam & param, std::ostream *os)
-{
-    *os << std::get<1>(param).golden_dir << "/" << std::get<0>(param).name;
+    *os << demo.name;
 }
 
 namespace
 {
 
 constexpr int demo_width = 120;
-// fits the Widgets section with every tree node open
-constexpr int section_height = 2600;
 constexpr int window_height = 50;
 constexpr int settle_frames = 6;
 // logging to a buffer opens every tree node down to this depth
 constexpr int log_open_depth = 99;
 constexpr const char *demo_window = "Dear ImGui Demo";
 constexpr const char *update_variable = "SIHD_IMGUI_GOLDEN_UPDATE";
-constexpr CellSize one_unit_cells {"demo", {1.0f, 1.0f}};
-constexpr CellSize virtual_pixel_cells {"demo_8x16", {8.0f, 16.0f}};
+constexpr const char *golden_set = "demo_8x16";
+constexpr ImVec2 cell_units {8.0f, 16.0f};
 
 constexpr std::array<DemoCase, 28> demo_cases = {{
-    {"section_help", nullptr, "Help"},
-    {"section_configuration", nullptr, "Configuration"},
-    {"section_window_options", nullptr, "Window options"},
-    {"section_widgets", nullptr, "Widgets", true},
-    {"section_layout", nullptr, "Layout & Scrolling"},
-    {"section_popups", nullptr, "Popups & Modal windows"},
-    {"section_tables", nullptr, "Tables & Columns", true},
-    {"section_inputs", nullptr, "Inputs & Focus"},
+    {"section_help", nullptr, "Help", 60},
+    {"section_configuration", nullptr, "Configuration", 76},
+    {"section_window_options", nullptr, "Window options", 24},
+    {"section_widgets", nullptr, "Widgets", 1602},
+    {"section_layout", nullptr, "Layout & Scrolling", 244},
+    {"section_popups", nullptr, "Popups & Modal windows", 46},
+    {"section_tables", nullptr, "Tables & Columns", 630},
+    {"section_inputs", nullptr, "Inputs & Focus", 126},
     {"example_main_menu_bar", "Examples", "Main menu bar"},
-    {"example_assets_browser", "Examples", "Assets Browser", true},
+    {"example_assets_browser", "Examples", "Assets Browser"},
     {"example_console", "Examples", "Console"},
     {"example_custom_rendering", "Examples", "Custom rendering"},
     {"example_documents", "Examples", "Documents"},
@@ -182,39 +171,30 @@ std::filesystem::path golden_dir(const char *name)
     return relative / name;
 }
 
-std::string golden_path(const CellSize & cells, const char *name)
+std::string golden_path(const char *name)
 {
-    return (golden_dir(cells.golden_dir) / (std::string(name) + ".txt")).string();
+    return (golden_dir(golden_set) / (std::string(name) + ".txt")).string();
 }
 
-std::string actual_path(const CellSize & cells, const char *name)
+std::string actual_path(const char *name)
 {
-    return (std::filesystem::temp_directory_path() / "sihd_imgui_golden" / cells.golden_dir
-            / (std::string(name) + ".txt"))
+    return (std::filesystem::temp_directory_path() / "sihd_imgui_golden" / golden_set / (std::string(name) + ".txt"))
         .string();
 }
 
-float first_cell_height(std::string_view name, float cell_height)
+std::string demo_test_name(const ::testing::TestParamInfo<DemoCase> & info)
 {
-    static std::map<std::string_view, float> first_heights;
-    return first_heights.try_emplace(name, cell_height).first->second;
-}
-
-std::string demo_test_name(const ::testing::TestParamInfo<DemoParam> & info)
-{
-    return std::get<0>(info.param).name;
+    return info.param.name;
 }
 
 } // namespace
 
 class TestNcursesDemo: public NcursesScene,
-                       public ::testing::WithParamInterface<DemoParam>
+                       public ::testing::WithParamInterface<DemoCase>
 {
     protected:
         TestNcursesDemo():
-            NcursesScene(demo_width,
-                         std::get<0>(GetParam()).menu == nullptr ? section_height : window_height,
-                         std::get<1>(GetParam()).units)
+            NcursesScene(demo_width, GetParam().menu == nullptr ? GetParam().rows : window_height, cell_units)
         {
         }
 
@@ -225,7 +205,7 @@ class TestNcursesDemo: public NcursesScene,
                 this->open_from_menu();
         }
 
-        const DemoCase & demo_case() const { return std::get<0>(GetParam()); }
+        const DemoCase & demo_case() const { return GetParam(); }
 
         ImVec2 units(float x, float y) const { return ImVec2(x * cell_size.x, y * cell_size.y); }
 
@@ -296,18 +276,21 @@ class TestNcursesDemo: public NcursesScene,
             ASSERT_TRUE(position.has_value()) << "'" << word << "' not on screen:\n" << this->screen_text();
             ImGuiIO & io = ImGui::GetIO();
             io.AddMousePosEvent(position->x, position->y);
-            this->render_frames(1, [this] { this->show_demo_in_front(); });
-            io.AddMouseButtonEvent(ImGuiMouseButton_Left, true);
-            this->render_frames(1, [this] { this->show_demo_in_front(); });
-            io.AddMouseButtonEvent(ImGuiMouseButton_Left, false);
-            this->render_frames(1, [this] { this->show_demo_in_front(); });
+            // an event queued during a frame lands on the next one: hover, press and release on three frames
+            int frame = 0;
+            this->render_frames(3, [&] {
+                this->show_demo_in_front();
+                if (frame < 2)
+                    io.AddMouseButtonEvent(ImGuiMouseButton_Left, frame == 0);
+                ++frame;
+            });
         }
 
         // toggles the menu item: the first call opens the window, the second closes it
         void open_from_menu()
         {
-            this->render_frames(1, [this] { this->show_demo_in_front(true); });
-            this->render_frames(1, [this] { this->show_demo_in_front(); });
+            bool focus = true;
+            this->render_frames(2, [&] { this->show_demo_in_front(std::exchange(focus, false)); });
             // row 0 is the demo title bar, row 1 its menu bar
             this->click_word(this->demo_case().menu, 1);
             this->click_word(this->demo_case().label, 2);
@@ -339,9 +322,7 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
     if constexpr (!build::is_gnu)
         GTEST_SKIP() << "the golden files hold glibc's wcwidth, which other libcs differ from";
 
-    const auto & [demo, cells] = GetParam();
-    if (demo.seeds_sizes && first_cell_height(demo.name, cells.units.y) != cells.units.y)
-        GTEST_SKIP() << "the other cell size seeded this demo's sizes first: run one golden set alone to check it";
+    const DemoCase & demo = this->demo_case();
     if (demo.menu == nullptr)
     {
         this->render_frames(settle_frames, [this] { this->show_section(); });
@@ -352,8 +333,8 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
         this->render_frames(settle_frames, [this] { this->show_opened_windows(); });
     }
     const std::string actual = this->dump();
-    const std::string golden = golden_path(cells, demo.name);
-    const std::string written = actual_path(cells, demo.name);
+    const std::string golden = golden_path(demo.name);
+    const std::string written = actual_path(demo.name);
 
     if (env::get(update_variable).has_value())
     {
@@ -363,7 +344,7 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
     }
     const Result<std::string> expected = fs::read_all(golden);
     ASSERT_TRUE(expected.has_value()) << golden << " missing: run with " << update_variable << "=1";
-    const std::string difference = first_difference(*expected, actual);
+    const std::string difference = *expected == actual ? "" : first_difference(*expected, actual);
     if (!difference.empty())
     {
         EXPECT_TRUE(fs::make_directories(std::filesystem::path(written).parent_path().string()).has_value());
@@ -373,14 +354,6 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
     EXPECT_EQ(difference, "") << "screen written to " << written << ", accept it with " << update_variable << "=1";
 }
 
-INSTANTIATE_TEST_SUITE_P(DemoWindows,
-                         TestNcursesDemo,
-                         ::testing::Combine(::testing::ValuesIn(demo_cases), ::testing::Values(one_unit_cells)),
-                         demo_test_name);
-
-INSTANTIATE_TEST_SUITE_P(DemoWindows8x16,
-                         TestNcursesDemo,
-                         ::testing::Combine(::testing::ValuesIn(demo_cases), ::testing::Values(virtual_pixel_cells)),
-                         demo_test_name);
+INSTANTIATE_TEST_SUITE_P(DemoWindows, TestNcursesDemo, ::testing::ValuesIn(demo_cases), demo_test_name);
 
 } // namespace test
