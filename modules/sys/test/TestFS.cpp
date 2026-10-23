@@ -240,7 +240,7 @@ TEST_F(TestFS, test_fs_fast_io)
     EXPECT_STREQ(data, "hello");
 
     std::string content_z = "bin\032ary";
-    EXPECT_TRUE(fs::write(path, content_z, false, true).has_value());
+    EXPECT_TRUE(fs::write_binary(path, content_z).has_value());
     EXPECT_EQ(fs::read_all(path, true).value_or(""), content_z);
 #if defined(__SIHD_WINDOWS__)
     // the default text mode stops at ^Z
@@ -426,7 +426,7 @@ TEST_F(TestFS, test_fs_copy_file)
     std::string content(5 * 1024 * 1024, '\0');
     for (size_t i = 0; i < content.size(); ++i)
         content[i] = (char)(i * 31 % 251);
-    ASSERT_TRUE(fs::write(src, content, false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(src, content).has_value());
 
     // Wine lacks the CopyFile2 progress callback (kernelbase/file.c): progress and cancellation cannot be verified
     size_t transferred = 0;
@@ -451,7 +451,7 @@ TEST_F(TestFS, test_fs_copy_file)
     EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
 
-    ASSERT_TRUE(fs::write(dst, std::string(content.size(), 'z'), false, true).has_value());
+    ASSERT_TRUE(fs::write_binary(dst, std::string(content.size(), 'z')).has_value());
     EXPECT_FALSE(fs::are_equals(src, dst));
     EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));

@@ -151,8 +151,8 @@ sihd::util::Result<std::vector<std::string>> read_lines(const std::string & path
 sihd::util::Result<std::string> read_all(const std::string & path, bool binary = false);
 
 // fast write into file; text mode translates LF to CRLF on windows
-sihd::util::Result<void>
-    write(const std::string & path, std::string_view view, bool append = false, bool binary = false);
+sihd::util::Result<void> write(const std::string & path, std::string_view view, bool append = false);
+sihd::util::Result<void> write_binary(const std::string & path, std::string_view view, bool append = false);
 
 sihd::util::Result<void> chdir(const std::string & path);
 

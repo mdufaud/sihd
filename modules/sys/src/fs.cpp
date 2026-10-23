@@ -82,6 +82,20 @@ std::string combine_lst_impl(const T & list)
     return ret;
 }
 
+Result<void> write_with_mode(const std::string & path, std::string_view view, const char *mode)
+{
+    File file;
+    auto opened = file.open(path, mode);
+    if (!opened)
+        return opened;
+    auto wrote = file.write(view);
+    if (!wrote)
+        SIHD_UNEXPECTED_RETURN(wrote);
+    if (*wrote != view.size())
+        return std::unexpected(Error(io_error, "short write to '{}'", path));
+    return {};
+}
+
 } // namespace
 
 void set_sep(char c)
@@ -518,19 +532,14 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     return candidate;
 }
 
-Result<void> write(const std::string & path, std::string_view view, bool append, bool binary)
+Result<void> write(const std::string & path, std::string_view view, bool append)
 {
-    const char *mode = binary ? (append ? "ab" : "wb") : (append ? "a" : "w");
-    File file;
-    auto opened = file.open(path, mode);
-    if (!opened)
-        return opened;
-    auto wrote = file.write(view);
-    if (!wrote)
-        SIHD_UNEXPECTED_RETURN(wrote);
-    if (*wrote != view.size())
-        return std::unexpected(Error(io_error, "short write to '{}'", path));
-    return {};
+    return write_with_mode(path, view, append ? "a" : "w");
+}
+
+Result<void> write_binary(const std::string & path, std::string_view view, bool append)
+{
+    return write_with_mode(path, view, append ? "ab" : "wb");
 }
 
 Result<std::string> read(const std::string & path, Slice slice, bool binary)
