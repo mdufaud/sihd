@@ -1,3 +1,4 @@
+import re
 import time
 from collections.abc import Iterator
 
@@ -11,12 +12,19 @@ KEY_BACKSPACE = b"\x7f"
 KEY_CTRL_A = b"\x01"
 KEY_CTRL_C = b"\x03"
 KEY_CTRL_H = b"\x08"
+KEY_CTRL_LEFT = b"\x1b[1;5D"
+KEY_CTRL_V = b"\x16"
+KEY_CTRL_X = b"\x18"
 KEY_SHIFT_TAB = b"\x1b[Z"
+MOUSE_MIDDLE = 1
+MOUSE_RIGHT = 2
 MOUSE_CTRL = 16
 
 
-def open_scene(cols: int = 100, rows: int = 30, term: str = "xterm-256color", locale: str = "C.UTF-8") -> TuiTerminal:
-    terminal = TuiTerminal(cols=cols, rows=rows, term=term, locale=locale)
+def open_scene(
+    cols: int = 100, rows: int = 30, term: str = "xterm-256color", locale: str = "C.UTF-8", colorterm: str | None = None
+) -> TuiTerminal:
+    terminal = TuiTerminal(cols=cols, rows=rows, term=term, locale=locale, colorterm=colorterm)
     if terminal.wait_for_line("ready=1") != "ready=1":
         terminal.close()
         pytest.fail("scene did not render:\n" + "\n".join(terminal.lines()))
@@ -114,6 +122,54 @@ def test_typed_utf8_reaches_input(term: TuiTerminal) -> None:
     assert term.wait_for_line("text=[é]") == "text=[é]"
 
 
+def test_ctrl_left_moves_the_caret_one_word_back(term: TuiTerminal) -> None:
+    term.send(b"ab cd")
+    term.wait_for_line("text=[ab cd]")
+
+    term.send(KEY_CTRL_LEFT + b"X")
+
+    assert term.wait_for_line("text=[ab Xcd]") == "text=[ab Xcd]"
+
+
+def test_alt_letter_is_a_shortcut_not_a_character(term: TuiTerminal) -> None:
+    term.send(b"\x1bx")
+
+    assert term.wait_for_line("alt_x=1") == "alt_x=1"
+    assert term.line_starting_with("text=") == "text=[]"
+
+
+def test_pasted_text_is_typed_without_its_newline_pressing_enter(term: TuiTerminal) -> None:
+    assert b"\x1b[?2004h" in term.raw
+
+    term.send(b"\x1b[200~hello\rworld\x1b[201~")
+    term.wait_for_line("text=[helloworld]")
+    term.send(b"!")
+
+    assert term.wait_for_line("text=[helloworld!]") == "text=[helloworld!]"
+
+
+def test_cut_text_goes_to_the_terminal_clipboard_and_pastes_back(term: TuiTerminal) -> None:
+    term.send(b"ab")
+    term.wait_for_line("text=[ab]")
+    term.send(KEY_CTRL_A)
+    settle(term, 0.1)
+
+    term.send(KEY_CTRL_X)
+    term.wait_for_line("text=[]")
+    term.send(KEY_CTRL_V)
+    term.wait_for_line("text=[ab]")
+    term.send(KEY_CTRL_V)
+
+    assert term.wait_for_line("text=[abab]") == "text=[abab]"
+    assert b"\x1b]52;c;YWI=\x07" in term.raw
+
+
+def test_unknown_escape_sequence_types_nothing(term: TuiTerminal) -> None:
+    term.send(b"\x1b[99~a")
+
+    assert term.wait_for_line("text=[a]") == "text=[a]"
+
+
 def test_shift_tab_is_pressed(term: TuiTerminal) -> None:
     term.send(KEY_SHIFT_TAB)
 
@@ -136,6 +192,18 @@ def test_ctrl_click_holds_ctrl(term: TuiTerminal) -> None:
     click_label(term, "Press", button=MOUSE_CTRL)
 
     assert term.wait_for_line("checked=0 presses=1 far=0 ctrl=1") == "checked=0 presses=1 far=0 ctrl=1"
+
+
+def test_middle_click_reaches_imgui(term: TuiTerminal) -> None:
+    term.click(10, 20, button=MOUSE_MIDDLE)
+
+    assert term.wait_for_line("clicks middle=1 right=0") == "clicks middle=1 right=0"
+
+
+def test_right_click_reaches_imgui(term: TuiTerminal) -> None:
+    term.click(10, 20, button=MOUSE_RIGHT)
+
+    assert term.wait_for_line("clicks middle=0 right=1") == "clicks middle=0 right=1"
 
 
 def test_click_beyond_column_223_presses_button() -> None:
@@ -241,6 +309,30 @@ def test_direct_colour_terminal_gets_24_bit_colours() -> None:
         assert term.screen.buffer[y][x].bg == "30527a"
 
 
+@pytest.mark.parametrize("colorterm", ["truecolor", "24bit"])
+def test_colorterm_upgrades_a_256_colour_terminal_to_24_bit(colorterm: str) -> None:
+    with open_scene(colorterm=colorterm) as term:
+        position = term.find("Press")
+        assert position is not None
+        x, y = position
+
+        assert b"\x1b[48:2::48:82:122m" in term.raw
+        assert term.screen.buffer[y][x].bg == "30527a"
+
+
+def test_colorterm_without_a_direct_terminfo_keeps_256_colours() -> None:
+    with open_scene(term="screen-256color", colorterm="truecolor") as term:
+        assert term.line_starting_with("down=") == "down=0 backspace=0 tab=0 backtab=0"
+        assert b"\x1b[48:2:" not in term.raw
+
+
+def test_frames_are_drawn_as_synchronized_updates(term: TuiTerminal) -> None:
+    markers = re.findall(rb"\x1b\[\?2026([hl])", bytes(term.raw))
+
+    assert len(markers) > 0
+    assert markers == [b"h", b"l"] * (len(markers) // 2)
+
+
 def test_any_motion_mouse_mode_is_enabled(term: TuiTerminal) -> None:
     assert b"\x1b[?1003h" in term.raw
 
@@ -271,4 +363,5 @@ def test_ctrl_c_exits_and_restores_terminal(term: TuiTerminal) -> None:
 
     assert term.wait_exit(3.0)
     assert b"\x1b[?1003l" in term.raw
+    assert b"\x1b[?2004l" in term.raw
     assert b"\x1b[?1049l" in term.raw

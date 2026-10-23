@@ -1,7 +1,10 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 
+#include <array>
 #include <chrono>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 #include <sihd/imgui/IImguiBackend.hpp>
@@ -11,6 +14,7 @@ struct ImGuiIO;
 struct ImGuiPlatformImeData;
 struct ImGuiViewport;
 enum ImGuiKey : int;
+using ImGuiKeyChord = int;
 
 namespace sihd::imgui
 {
@@ -34,10 +38,26 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         void terminate() override;
 
     private:
-        static void _set_ime_data(ImGuiContext *ctx, ImGuiViewport *viewport, ImGuiPlatformImeData *data);
+        struct MouseButton
+        {
+                bool down = false;
+                bool pressed_this_poll = false;
+                // a same-poll press+release is held one poll so imgui sees the button down for a full frame
+                bool pending_release = false;
+        };
 
-        void _process_mouse_event(ImGuiIO & io, bool & pressed_l, bool & pressed_r);
-        bool _process_key_event(int key, bool function_key, ImGuiIO & io);
+        static void _set_ime_data(ImGuiContext *ctx, ImGuiViewport *viewport, ImGuiPlatformImeData *data);
+        static const char *_get_clipboard_text(ImGuiContext *ctx);
+        static void _set_clipboard_text(ImGuiContext *ctx, const char *text);
+
+        void _load_terminal_keys();
+        bool _process_input(int key, bool function_key, ImGuiIO & io);
+        void _process_mouse_event(ImGuiIO & io);
+        void _release_button(ImGuiIO & io, int button);
+        bool _read_alt_key(int & key, bool & function_key);
+        bool _process_key_event(int key, bool function_key, ImGuiIO & io, bool alt);
+        ImGuiKeyChord _key_chord(int key, bool function_key) const;
+        void _press_chord(ImGuiIO & io, ImGuiKeyChord chord);
         void _press_key(ImGuiIO & io, ImGuiKey key);
         bool _must_wait(ImGuiKey key) const;
         int _idle_timeout_ms() const;
@@ -46,13 +66,15 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         bool _should_close;
         bool _mouse_seen; // avoids hover at 0,0 before the first real mouse event
         bool _ctrl_from_mouse;
-        // a same-poll press+release is held one poll so imgui sees the button down for a full frame
-        bool _pending_lrelease, _pending_rrelease;
         bool _ime_visible;
+        bool _in_paste;
+        std::unordered_map<int, ImGuiKeyChord> _modified_keys;
+        std::string _clipboard;
         std::vector<ImGuiKey> _pending_key_releases;
         std::vector<ImGuiKey> _released_keys;
+        // in imgui's order: left, right, middle
+        std::array<MouseButton, 3> _buttons;
         int _mx, _my;
-        int _lbut, _rbut;
         // a drag started on the drawn resize grip is reported shifted onto imgui's grip hit zone
         float _grip_dx, _grip_dy;
         int _ime_x, _ime_y;

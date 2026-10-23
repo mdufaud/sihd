@@ -18,6 +18,9 @@ struct InputScene
         int down = 0;
         int down_frame = 0;
         int tick = 0;
+        int alt_x = 0;
+        int middle_clicks = 0;
+        int right_clicks = 0;
         int backspace = 0;
         int tab = 0;
         int shift_tab = 0;
@@ -44,6 +47,8 @@ void count_keys(InputScene & scene)
         ++scene.backspace;
     if (ImGui::IsKeyPressed(ImGuiKey_Tab, false))
         ++(ImGui::GetIO().KeyShift ? scene.shift_tab : scene.tab);
+    if (ImGui::IsKeyChordPressed(ImGuiMod_Alt | ImGuiKey_X))
+        ++scene.alt_x;
 }
 
 void build_input_scene(InputScene & scene)
@@ -95,6 +100,10 @@ void build_input_scene(InputScene & scene)
     if (scene.animate)
         ++scene.tick;
     ImGui::Text("tick=%d", scene.tick);
+    scene.middle_clicks += ImGui::IsMouseClicked(ImGuiMouseButton_Middle) ? 1 : 0;
+    scene.right_clicks += ImGui::IsMouseClicked(ImGuiMouseButton_Right) ? 1 : 0;
+    ImGui::Text("clicks middle=%d right=%d", scene.middle_clicks, scene.right_clicks);
+    ImGui::Text("alt_x=%d", scene.alt_x);
     ImGui::End();
 }
 

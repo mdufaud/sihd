@@ -9,15 +9,24 @@
 #include <sys/stat.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include <sihd/imgui/ImguiBackendNcurses.hpp>
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
+
+using namespace sihd::util;
 
 namespace sihd::imgui
 {
@@ -108,6 +117,14 @@ ImGuiKey _ncurses_shifted_key_to_imgui(int key)
             return ImGuiKey_Home;
         case KEY_SEND:
             return ImGuiKey_End;
+        case KEY_SPREVIOUS:
+            return ImGuiKey_PageUp;
+        case KEY_SNEXT:
+            return ImGuiKey_PageDown;
+        case KEY_SIC:
+            return ImGuiKey_Insert;
+        case KEY_SDC:
+            return ImGuiKey_Delete;
         case KEY_BTAB:
             return ImGuiKey_Tab;
         default:
@@ -120,11 +137,89 @@ ImGuiKey _ctrl_letter_to_imgui(int key)
     return (key >= 1 && key <= 26) ? (ImGuiKey)(ImGuiKey_A + key - 1) : ImGuiKey_None;
 }
 
+constexpr int escape_key = 27;
+// define_key codes past every terminfo key: ncurses numbers extended keys from KEY_MAX upwards
+constexpr int paste_start_key = KEY_MAX + 0x1000;
+constexpr int paste_end_key = KEY_MAX + 0x1001;
+
+struct ModifiableKey
+{
+        const char *capability;
+        ImGuiKey key;
+};
+
+// terminfo names a modified key after its xterm parameter: kLFT5 is "\E[1;5D", Ctrl+Left
+constexpr std::array<ModifiableKey, 10> modifiable_keys = {{
+    {"kUP", ImGuiKey_UpArrow},
+    {"kDN", ImGuiKey_DownArrow},
+    {"kLFT", ImGuiKey_LeftArrow},
+    {"kRIT", ImGuiKey_RightArrow},
+    {"kHOM", ImGuiKey_Home},
+    {"kEND", ImGuiKey_End},
+    {"kPRV", ImGuiKey_PageUp},
+    {"kNXT", ImGuiKey_PageDown},
+    {"kIC", ImGuiKey_Insert},
+    {"kDC", ImGuiKey_Delete},
+}};
+
+// xterm modifier parameter = 1 + (shift | alt << 1 | ctrl << 2)
+ImGuiKeyChord xterm_modifiers(int parameter)
+{
+    const int bits = parameter - 1;
+    return ((bits & 1) != 0 ? ImGuiMod_Shift : 0) | ((bits & 2) != 0 ? ImGuiMod_Alt : 0)
+           | ((bits & 4) != 0 ? ImGuiMod_Ctrl : 0);
+}
+
+// Alt+letter and Alt+digit are shortcuts: the character itself is not typed
+ImGuiKeyChord alt_character_chord(int key)
+{
+    if (key >= 'a' && key <= 'z')
+        return ImGuiMod_Alt | (ImGuiKey_A + key - 'a');
+    if (key >= 'A' && key <= 'Z')
+        return ImGuiMod_Alt | ImGuiMod_Shift | (ImGuiKey_A + key - 'A');
+    if (key >= '0' && key <= '9')
+        return ImGuiMod_Alt | (ImGuiKey_0 + key - '0');
+    return ImGuiKey_None;
+}
+
+// COLORTERM announces a 24-bit terminal whose TERM still names the 256-colour terminfo
+bool open_screen()
+{
+    constexpr std::string_view palette_suffix = "-256color";
+    const std::optional<std::string> colorterm = sihd::sys::env::get("COLORTERM");
+    const std::optional<std::string> term = sihd::sys::env::get("TERM");
+    if ((colorterm == "truecolor" || colorterm == "24bit") && term.has_value() && term->ends_with(palette_suffix))
+    {
+        const std::string direct = term->substr(0, term->size() - palette_suffix.size()) + "-direct";
+        if (newterm(direct.c_str(), stdout, stdin) != nullptr)
+            return true;
+    }
+    return initscr() != nullptr;
+}
+
+// tigetstr answers (char *)-1 for a name this terminfo does not hold as a string
+const char *terminfo_string(const char *name)
+{
+    const char *value = tigetstr(name);
+    return (value == nullptr || value == (const char *)-1) ? nullptr : value;
+}
+
 // imgui places the IME window one unit left of the text input caret
 constexpr int ime_caret_offset = 1;
-// ncurses merges a press and a release read together into a click, even with mouseinterval(0)
-constexpr mmask_t button1_clicks = BUTTON1_CLICKED | BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED;
-constexpr mmask_t button3_clicks = BUTTON3_CLICKED | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED;
+struct NcursesButton
+{
+        mmask_t press;
+        mmask_t release;
+        // ncurses merges a press and a release read together into a click, even with mouseinterval(0)
+        mmask_t clicks;
+};
+
+// in imgui's order: left, right, middle
+constexpr std::array<NcursesButton, 3> ncurses_buttons = {{
+    {BUTTON1_PRESSED, BUTTON1_RELEASED, BUTTON1_CLICKED | BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED},
+    {BUTTON3_PRESSED, BUTTON3_RELEASED, BUTTON3_CLICKED | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED},
+    {BUTTON2_PRESSED, BUTTON2_RELEASED, BUTTON2_CLICKED | BUTTON2_DOUBLE_CLICKED | BUTTON2_TRIPLE_CLICKED},
+}};
 // imgui's tooltip and double-click delays and app animations run on frames: full rate this long after an input or a change
 constexpr std::chrono::seconds active_after_activity(1);
 constexpr double default_idle_frequency = 10.0;
@@ -154,13 +249,10 @@ ImguiBackendNcurses::ImguiBackendNcurses():
     _should_close(false),
     _mouse_seen(false),
     _ctrl_from_mouse(false),
-    _pending_lrelease(false),
-    _pending_rrelease(false),
     _ime_visible(false),
+    _in_paste(false),
     _mx(0),
     _my(0),
-    _lbut(0),
-    _rbut(0),
     _grip_dx(0.0f),
     _grip_dy(0.0f),
     _ime_x(0),
@@ -206,9 +298,9 @@ bool ImguiBackendNcurses::init()
             SIHD_UNEXPECTED_LOG(sihd::sys::env::set("TERMINFO_DIRS", dirs));
     }
 
-    if (initscr() == nullptr)
+    if (!open_screen())
     {
-        SIHD_LOG(error, "ImguiBackendNcurses: initscr() failed");
+        SIHD_LOG(error, "ImguiBackendNcurses: cannot open the terminal");
         return false;
     }
     cbreak(); // cooked mode: signals (Ctrl+C) still work, unlike raw()
@@ -222,6 +314,7 @@ bool ImguiBackendNcurses::init()
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr);
     // xterm mode 1003: report every cell movement, needed for window drag
     putp("\033[?1003h");
+    this->_load_terminal_keys();
     fflush(stdout);
 
     ImGuiIO & io = ImGui::GetIO();
@@ -237,12 +330,42 @@ bool ImguiBackendNcurses::init()
     ImGuiPlatformIO & platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_ImeUserData = this;
     platform_io.Platform_SetImeDataFn = &ImguiBackendNcurses::_set_ime_data;
+    platform_io.Platform_ClipboardUserData = this;
+    platform_io.Platform_GetClipboardTextFn = &ImguiBackendNcurses::_get_clipboard_text;
+    platform_io.Platform_SetClipboardTextFn = &ImguiBackendNcurses::_set_clipboard_text;
 
     _last_time = std::chrono::steady_clock::now();
     _frame_start = _last_time;
     _last_activity = _last_time;
     _is_init = true;
     return true;
+}
+
+void ImguiBackendNcurses::_load_terminal_keys()
+{
+    _modified_keys.clear();
+    for (const ModifiableKey & modifiable : modifiable_keys)
+    {
+        for (int parameter = 2; parameter <= 8; ++parameter)
+        {
+            const std::string capability = modifiable.capability + std::to_string(parameter);
+            const char *sequence = terminfo_string(capability.c_str());
+            const int code = sequence != nullptr ? key_defined(sequence) : 0;
+            if (code > 0)
+                _modified_keys[code] = modifiable.key | xterm_modifiers(parameter);
+        }
+    }
+
+    // bracketed paste: the terminal frames pasted text with PS and PE, read back as two key codes
+    const char *paste_enable = terminfo_string("BE");
+    const char *paste_start = terminfo_string("PS");
+    const char *paste_end = terminfo_string("PE");
+    if (paste_enable != nullptr && paste_start != nullptr && paste_end != nullptr)
+    {
+        define_key(paste_start, paste_start_key);
+        define_key(paste_end, paste_end_key);
+        putp(paste_enable);
+    }
 }
 
 bool ImguiBackendNcurses::set_idle_frequency(double hz)
@@ -269,7 +392,18 @@ bool ImguiBackendNcurses::should_close()
     return _should_close;
 }
 
-void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, bool & pressed_r)
+void ImguiBackendNcurses::_release_button(ImGuiIO & io, int button)
+{
+    _buttons[(size_t)button].down = false;
+    if (button == ImGuiMouseButton_Left)
+    {
+        _grip_dx = 0.0f;
+        _grip_dy = 0.0f;
+    }
+    io.AddMouseButtonEvent(button, false);
+}
+
+void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io)
 {
     MEVENT ev;
     if (getmouse(&ev) != OK)
@@ -281,50 +415,31 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     _mouse_seen = true;
 
     // a release after a same-poll press is deferred one poll so imgui registers the click
-    if (_mstate & (BUTTON1_PRESSED | button1_clicks))
+    for (int i = 0; i < (int)ncurses_buttons.size(); ++i)
     {
-        pressed_l = true;
-        if (!_lbut)
+        const NcursesButton & ncurses_button = ncurses_buttons[(size_t)i];
+        MouseButton & button = _buttons[(size_t)i];
+        if (_mstate & (ncurses_button.press | ncurses_button.clicks))
         {
-            _lbut = 1;
-            const ImVec2 grip_offset = _resize_grip_offset(_mx, _my);
-            _grip_dx = grip_offset.x;
-            _grip_dy = grip_offset.y;
-            io.AddMouseButtonEvent(0, true);
+            button.pressed_this_poll = true;
+            if (!button.down)
+            {
+                button.down = true;
+                if (i == ImGuiMouseButton_Left)
+                {
+                    const ImVec2 grip_offset = _resize_grip_offset(_mx, _my);
+                    _grip_dx = grip_offset.x;
+                    _grip_dy = grip_offset.y;
+                }
+                io.AddMouseButtonEvent(i, true);
+            }
         }
-    }
-
-    if (_mstate & (BUTTON1_RELEASED | button1_clicks))
-    {
-        if (pressed_l)
-            _pending_lrelease = true;
-        else if (_lbut)
+        if (_mstate & (ncurses_button.release | ncurses_button.clicks))
         {
-            _lbut = 0;
-            _grip_dx = 0.0f;
-            _grip_dy = 0.0f;
-            io.AddMouseButtonEvent(0, false);
-        }
-    }
-
-    if (_mstate & (BUTTON3_PRESSED | button3_clicks))
-    {
-        pressed_r = true;
-        if (!_rbut)
-        {
-            _rbut = 1;
-            io.AddMouseButtonEvent(1, true);
-        }
-    }
-
-    if (_mstate & (BUTTON3_RELEASED | button3_clicks))
-    {
-        if (pressed_r)
-            _pending_rrelease = true;
-        else if (_rbut)
-        {
-            _rbut = 0;
-            io.AddMouseButtonEvent(1, false);
+            if (button.pressed_this_poll)
+                button.pending_release = true;
+            else if (button.down)
+                this->_release_button(io, i);
         }
     }
 
@@ -355,41 +470,125 @@ bool ImguiBackendNcurses::_must_wait(ImGuiKey key) const
     return std::ranges::contains(_pending_key_releases, key) || std::ranges::contains(_released_keys, key);
 }
 
-bool ImguiBackendNcurses::_process_key_event(int key, bool function_key, ImGuiIO & io)
+void ImguiBackendNcurses::_press_chord(ImGuiIO & io, ImGuiKeyChord chord)
+{
+    if ((chord & ImGuiMod_Shift) != 0)
+    {
+        this->_press_key(io, ImGuiMod_Shift);
+        this->_press_key(io, ImGuiKey_LeftShift);
+    }
+    if ((chord & ImGuiMod_Ctrl) != 0)
+    {
+        this->_press_key(io, ImGuiMod_Ctrl);
+        this->_press_key(io, ImGuiKey_LeftCtrl);
+    }
+    // no LeftAlt: imgui toggles the menu layer when LeftAlt goes up after a press of its own
+    if ((chord & ImGuiMod_Alt) != 0)
+        this->_press_key(io, ImGuiMod_Alt);
+    const ImGuiKey key = (ImGuiKey)(chord & ~ImGuiMod_Mask_);
+    if (key != ImGuiKey_None)
+        this->_press_key(io, key);
+}
+
+ImGuiKeyChord ImguiBackendNcurses::_key_chord(int key, bool function_key) const
+{
+    if (function_key)
+    {
+        if (const auto it = _modified_keys.find(key); it != _modified_keys.end())
+            return it->second;
+    }
+    if (const ImGuiKey shifted = _ncurses_shifted_key_to_imgui(key); shifted != ImGuiKey_None)
+        return ImGuiMod_Shift | shifted;
+    if (const ImGuiKey plain = _ncurses_key_to_imgui(key); plain != ImGuiKey_None)
+        return plain;
+    if (const ImGuiKey ctrl_letter = _ctrl_letter_to_imgui(key); ctrl_letter != ImGuiKey_None)
+        return ImGuiMod_Ctrl | ctrl_letter;
+    return ImGuiKey_None;
+}
+
+bool ImguiBackendNcurses::_process_key_event(int key, bool function_key, ImGuiIO & io, bool alt)
 {
     const bool printable = !function_key && (key >= 0x80 || (key >= 0x20 && key < 0x7F));
+    const bool typed = printable && !alt;
     // imgui drops typed characters while Ctrl is down
-    if (printable && this->_must_wait(ImGuiMod_Ctrl))
+    if (typed && this->_must_wait(ImGuiMod_Ctrl))
         return false;
     // a character past ASCII would collide with the KEY_* function key codes
-    if (!function_key && key >= 0x80)
+    if (typed && key >= 0x80)
     {
         io.AddInputCharacter((unsigned int)key);
         return true;
     }
 
-    const ImGuiKey shifted = _ncurses_shifted_key_to_imgui(key);
-    const ImGuiKey plain = _ncurses_key_to_imgui(key);
-    const ImGuiKey ctrl_letter = _ctrl_letter_to_imgui(key);
-    const ImGuiKey pressed = shifted != ImGuiKey_None ? shifted : plain != ImGuiKey_None ? plain : ctrl_letter;
+    const ImGuiKeyChord chord = (printable && alt) ? alt_character_chord(key)
+                                                   : this->_key_chord(key, function_key) | (alt ? ImGuiMod_Alt : 0);
+    const ImGuiKey pressed = (ImGuiKey)(chord & ~ImGuiMod_Mask_);
     if (pressed != ImGuiKey_None && this->_must_wait(pressed))
         return false;
 
-    if (shifted != ImGuiKey_None)
-    {
-        this->_press_key(io, ImGuiMod_Shift);
-        this->_press_key(io, ImGuiKey_LeftShift);
-    }
-    else if (plain == ImGuiKey_None && ctrl_letter != ImGuiKey_None)
-    {
-        this->_press_key(io, ImGuiMod_Ctrl);
-        this->_press_key(io, ImGuiKey_LeftCtrl);
-    }
-    if (pressed != ImGuiKey_None)
-        this->_press_key(io, pressed);
-    if (printable)
+    this->_press_chord(io, chord);
+    if (typed)
         io.AddInputCharacter((unsigned int)key);
     return true;
+}
+
+// a terminal sends Alt+key as Escape then the key; Escape then [ is a sequence ncurses did not know
+bool ImguiBackendNcurses::_read_alt_key(int & key, bool & function_key)
+{
+    wint_t next = 0;
+    const int status = wget_wch(stdscr, &next);
+    if (status == ERR)
+        return false;
+    if (status == KEY_CODE_YES && (next == KEY_MOUSE || next == KEY_RESIZE || next == paste_start_key))
+    {
+        ungetch((int)next);
+        return false;
+    }
+    if (status != KEY_CODE_YES && next == '[')
+    {
+        wint_t final_byte = 0;
+        while (wget_wch(stdscr, &final_byte) == OK && (final_byte < 0x40 || final_byte > 0x7E))
+            continue;
+        key = ERR;
+        return true;
+    }
+    key = (int)next;
+    function_key = status == KEY_CODE_YES;
+    return true;
+}
+
+bool ImguiBackendNcurses::_process_input(int key, bool function_key, ImGuiIO & io)
+{
+    if (function_key && key == KEY_RESIZE)
+        return true;
+    if (function_key && key == KEY_MOUSE)
+    {
+        this->_process_mouse_event(io);
+        return true;
+    }
+    if (function_key && (key == paste_start_key || key == paste_end_key))
+    {
+        _in_paste = key == paste_start_key;
+        return true;
+    }
+    // pasted text goes in as characters: a pasted newline must not validate a field
+    if (_in_paste)
+    {
+        if (!function_key)
+            io.AddInputCharacter(key == '\r' ? '\n' : (unsigned int)key);
+        return true;
+    }
+
+    const bool alt = !function_key && key == escape_key && this->_read_alt_key(key, function_key);
+    if (key == ERR || this->_process_key_event(key, function_key, io, alt))
+        return true;
+    if (function_key)
+        ungetch(key);
+    else
+        unget_wch((wchar_t)key);
+    if (alt)
+        unget_wch((wchar_t)escape_key);
+    return false;
 }
 
 void ImguiBackendNcurses::poll()
@@ -401,26 +600,17 @@ void ImguiBackendNcurses::poll()
         _should_close = true;
 
     // releases deferred from the previous poll: the button was down for a full frame
-    if (_pending_lrelease)
+    for (int i = 0; i < (int)_buttons.size(); ++i)
     {
-        _pending_lrelease = false;
-        _lbut = 0;
-        _grip_dx = 0.0f;
-        _grip_dy = 0.0f;
-        io.AddMouseButtonEvent(0, false);
-    }
-    if (_pending_rrelease)
-    {
-        _pending_rrelease = false;
-        _rbut = 0;
-        io.AddMouseButtonEvent(1, false);
+        MouseButton & button = _buttons[(size_t)i];
+        button.pressed_this_poll = false;
+        if (std::exchange(button.pending_release, false))
+            this->_release_button(io, i);
     }
     for (auto it = _pending_key_releases.rbegin(); it != _pending_key_releases.rend(); ++it)
         io.AddKeyEvent(*it, false);
     _released_keys = std::move(_pending_key_releases);
     _pending_key_releases.clear();
-
-    bool pressed_l = false, pressed_r = false;
 
     // idle: the first read sleeps until an input or the next idle frame
     wtimeout(stdscr, this->_idle_timeout_ms());
@@ -432,24 +622,8 @@ void ImguiBackendNcurses::poll()
         if (status == ERR)
             break;
         _last_activity = std::chrono::steady_clock::now();
-
-        const int key = (int)wch;
-        const bool function_key = status == KEY_CODE_YES;
-        if (function_key && key == KEY_RESIZE)
-            continue;
-        if (function_key && key == KEY_MOUSE)
-        {
-            _process_mouse_event(io, pressed_l, pressed_r);
-            continue;
-        }
-        if (!this->_process_key_event(key, function_key, io))
-        {
-            if (function_key)
-                ungetch(key);
-            else
-                unget_wch((wchar_t)wch);
+        if (!this->_process_input((int)wch, status == KEY_CODE_YES, io))
             break;
-        }
     }
 
     // mode-1003 emits dozens of motions per poll and only the last matters
@@ -479,12 +653,24 @@ void ImguiBackendNcurses::pre_render() {}
 void ImguiBackendNcurses::post_render()
 {
     // the ncurses renderer leaves stdscr untouched when the frame shows nothing new
-    if (is_wintouched(stdscr))
+    const bool changed = is_wintouched(stdscr);
+    if (changed)
         _last_activity = std::chrono::steady_clock::now();
     if (_ime_visible)
         move(_ime_y, _ime_x + ime_caret_offset);
     curs_set(_ime_visible ? 1 : 0);
+    // synchronized output (DEC 2026) shows a frame whole; a terminal without it ignores the mode
+    if (changed)
+    {
+        std::fputs("\033[?2026h", stdout);
+        std::fflush(stdout);
+    }
     wrefresh(stdscr);
+    if (changed)
+    {
+        std::fputs("\033[?2026l", stdout);
+        std::fflush(stdout);
+    }
     static constexpr long long target_us = 1000000LL / 60;
     const auto remaining = _frame_start + std::chrono::microseconds(target_us) - std::chrono::steady_clock::now();
     if (remaining > std::chrono::steady_clock::duration::zero())
@@ -499,6 +685,25 @@ void ImguiBackendNcurses::_set_ime_data(ImGuiContext *, ImGuiViewport *, ImGuiPl
     backend->_ime_y = (int)std::lround(data->InputPos.y);
 }
 
+const char *ImguiBackendNcurses::_get_clipboard_text(ImGuiContext *)
+{
+    const auto *backend = static_cast<const ImguiBackendNcurses *>(ImGui::GetPlatformIO().Platform_ClipboardUserData);
+    return backend->_clipboard.c_str();
+}
+
+// sys::clipboard serves a copy for seconds before returning: the terminal keeps it instead, over ssh too
+void ImguiBackendNcurses::_set_clipboard_text(ImGuiContext *, const char *text)
+{
+    auto *backend = static_cast<ImguiBackendNcurses *>(ImGui::GetPlatformIO().Platform_ClipboardUserData);
+    backend->_clipboard = text;
+    if (const char *set_selection = terminfo_string("Ms"))
+    {
+        const std::string encoded = str::to_base64(backend->_clipboard);
+        std::fputs(tiparm(set_selection, "c", encoded.c_str()), stdout);
+        std::fflush(stdout);
+    }
+}
+
 void ImguiBackendNcurses::shutdown()
 {
     if (_is_init)
@@ -508,7 +713,12 @@ void ImguiBackendNcurses::shutdown()
             ImGuiPlatformIO & platform_io = ImGui::GetPlatformIO();
             platform_io.Platform_SetImeDataFn = nullptr;
             platform_io.Platform_ImeUserData = nullptr;
+            platform_io.Platform_GetClipboardTextFn = nullptr;
+            platform_io.Platform_SetClipboardTextFn = nullptr;
+            platform_io.Platform_ClipboardUserData = nullptr;
         }
+        if (const char *paste_disable = terminfo_string("BD"))
+            putp(paste_disable);
         putp("\033[?1003l");
         fflush(stdout);
         endwin();

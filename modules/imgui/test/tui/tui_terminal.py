@@ -67,11 +67,21 @@ class RepeatingStream(pyte.ByteStream):
 
 
 class TuiTerminal:
-    def __init__(self, cols: int = 100, rows: int = 30, term: str = "xterm-256color", locale: str = "C.UTF-8") -> None:
+    def __init__(
+        self,
+        cols: int = 100,
+        rows: int = 30,
+        term: str = "xterm-256color",
+        locale: str = "C.UTF-8",
+        colorterm: str | None = None,
+    ) -> None:
         binary = Path(os.environ.get("SIHD_IMGUI_SCENES_BIN", DEFAULT_SCENES_BIN))
         if not binary.is_file():
             raise FileNotFoundError(f"{binary} missing: build with 'make m=imgui test=1' or set SIHD_IMGUI_SCENES_BIN")
         env = dict(os.environ, TERM=term, LC_ALL=locale)
+        env.pop("COLORTERM", None)
+        if colorterm is not None:
+            env["COLORTERM"] = colorterm
         self.screen = RepeatingScreen(cols, rows)
         self._stream = RepeatingStream(self.screen)
         self.raw = bytearray()
