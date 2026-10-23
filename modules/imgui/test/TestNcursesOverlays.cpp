@@ -23,14 +23,18 @@ class TestNcursesOverlays: public NcursesScene
         void box_select_scene()
         {
             this->scene_window([this] {
-                ImGuiMultiSelectIO *requests
-                    = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_BoxSelect2d, selection.Size, 3);
+                ImGuiMultiSelectIO *requests = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_BoxSelect2d,
+                                                                       selection.Size,
+                                                                       3);
                 selection.ApplyRequests(requests);
                 for (const char *label : {"a", "b", "c"})
                 {
                     const int index = label[0] - 'a';
                     ImGui::SetNextItemSelectionUserData(index);
-                    ImGui::Selectable(label, selection.Contains((ImGuiID)index), ImGuiSelectableFlags_None, ImVec2(3, 1));
+                    ImGui::Selectable(label,
+                                      selection.Contains((ImGuiID)index),
+                                      ImGuiSelectableFlags_None,
+                                      ImVec2(3, 1));
                 }
                 selection.ApplyRequests(ImGui::EndMultiSelect());
             });

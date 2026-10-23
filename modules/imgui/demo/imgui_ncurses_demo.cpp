@@ -83,7 +83,8 @@ int main(int argc, char **argv)
             if (show_demo_window)
                 ImGui::ShowDemoWindow(&show_demo_window);
 
-            // windows place themselves in pixels (demo at 650,20 sized 550x680, others at 60,60): one unit is a cell here
+            // windows place themselves in pixels (demo at 650,20 sized 550x680, others at 60,60): one unit is a cell
+            // here
             if (!demo_window_placed)
             {
                 const ImVec2 display = io.DisplaySize;

@@ -1602,7 +1602,8 @@ void ImguiRendererNcurses::_draw_line(const ImDrawList *dl,
 std::optional<bool>
     ImguiRendererNcurses::_stroke_is_vertical(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim) const
 {
-    // an AddLine quad straddles each end with a vertex pair (0-1, 2-3): a line shorter than its thickness keeps its direction
+    // an AddLine quad straddles each end with a vertex pair (0-1, 2-3): a line shorter than its thickness keeps its
+    // direction
     if (prim.vertex_count != 4)
         return std::nullopt;
     const ImVec2 & v0 = dl->VtxBuffer[(int)(cmd.VtxOffset + prim.first_vertex)].pos;

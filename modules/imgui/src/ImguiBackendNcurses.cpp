@@ -220,7 +220,8 @@ constexpr std::array<NcursesButton, 3> ncurses_buttons = {{
     {BUTTON3_PRESSED, BUTTON3_RELEASED, BUTTON3_CLICKED | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED},
     {BUTTON2_PRESSED, BUTTON2_RELEASED, BUTTON2_CLICKED | BUTTON2_DOUBLE_CLICKED | BUTTON2_TRIPLE_CLICKED},
 }};
-// imgui's tooltip and double-click delays and app animations run on frames: full rate this long after an input or a change
+// imgui's tooltip and double-click delays and app animations run on frames: full rate this long after an input or a
+// change
 constexpr std::chrono::seconds active_after_activity(1);
 constexpr double default_idle_frequency = 10.0;
 
