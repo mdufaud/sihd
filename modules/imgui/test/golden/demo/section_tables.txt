@@ -177,7 +177,7 @@ c4620976 │  │ W: 35.0                             │ W: 35.0               
 a62dc378 │ ▼ Vertical scrolling, with clipping                                                                                  │
 7ab2399d │  (?)                                                                                                                 │
 6e9eba2a │  ✓ ImGuiTableFlags_ScrollY                                                                                           │
-e2eab194 │  │                                     │                                     │                                      █│
+46f02c61 │  │ One                                 │ Two                                 │ Three                                █│
 cde8cfd6 │  │ Hello 0,0                           │ Hello 1,0                           │ Hello 2,0                            ░│
 adde458e │  │ Hello 0,1                           │ Hello 1,1                           │ Hello 2,1                            ░│
 cde8cfd6 │  │ Hello 0,2                           │ Hello 1,2                           │ Hello 2,2                            ░│
@@ -192,7 +192,7 @@ fd90e33a │  ✓ ImGuiTableFlags_Resizable                                     
 6e9eba2a │  ✓ ImGuiTableFlags_ScrollY                                                                                           │
 b193db81 │  1 freeze_cols                                                                                                       │
 b193db81 │  1 freeze_rows                                                                                                       │
-a86444c0 │  │         │                  │                  │                  │                  │                  │         █│
+02639895 │  │ Line #  │ One              │ Two              │ Three            │ Four             │ Five             │ Six     █│
 484fb765 │  │ Line 0  │ Hello world 1,0  │ Hello world 2,0  │ Hello world 3,0  │ Hello world 4,0  │ Hello world 5,0  │ Hello wo█│
 dee7508b │  │ Line 1  │ Hello world 1,1  │ Hello world 2,1  │ Hello world 3,1  │ Hello world 4,1  │ Hello world 5,1  │ Hello wo░│
 4e8d4853 │  │ Line 2  │ Hello world 1,2  │ Hello world 2,2  │ Hello world 3,2  │ Hello world 4,2  │ Hello world 5,2  │ Hello wo░│
@@ -238,7 +238,7 @@ c34c512c │    _IndentEnable (?)                      _IndentEnable (?)        
 1266c3ce │  ✓ _IsVisible                           ✓ _IsVisible                             _IsVisible                          │
 6da606b5 │  ✓ _IsSorted                              _IsSorted                              _IsSorted                           │
 d71bb1a2 │    _IsHovered                             _IsHovered                             _IsHovered                          │
-6003bac9 │  │                              │           │                                                                       ││
+64e19a19 │  │ One                          │ Two       │                                                                       ││
 8d69c61c │  │   Indented One               │ Hello Two │                                                                       ││
 b3e72d3c │  │     Indented One             │ Hello Two │                                                                       ││
 69fb623c │  │       Indented One           │ Hello Two │                                                                       ││
@@ -531,7 +531,7 @@ a7e175a1 │     1     Frozen columns                                           
 296c07ad │   ▼ Style settings (?)                                                                                               │
 eaebe099 │     35 deg  style.TableAngledHeadersAngle                                                                            │
 3fa24279 │    0.5 0.00 style.TableAngledHeadersTextAlign                                                                        │
-38a3c038 │  │                                                                                                                  █│
+1891bcf5 │  │ Track                                                                                                            █│
 7b34f03b │  │               │    │    │    │    │    │    │    │    │    │    │    │    │    │                                 █│
 7becc413 │  │               a   │    │    i   id   ow   -o   -c   -s   -c   │    │    │    │                                 █│
 f0a9abb9 │  │               s    │    h    h    m    l    t    t    e    e    │    │    │    │                                 █│
@@ -590,7 +590,7 @@ c382d3a0 │   ▼  Synced Table 2                                              
 52358775 │ ▼ Sorting                                                                                                            │
 a6c873ea │  ✓ ImGuiTableFlags_SortMulti (?)                                                                                     │
 5843ee91 │    ImGuiTableFlags_SortTristate (?)                                                                                  │
-38a3c038 │  │                                                                                                                  █│
+c83c5db8 │  │ ID     Name         Action   Quantity                                                                            █│
 b672ced5 │  │ 0000   Banana        None    0                                                                                   █│
 623dd980 │  │ 0001   Apple         None    0                                                                                   █│
 b672ced5 │  │ 0002   Cherry        None    2                                                                                   █│
@@ -652,7 +652,7 @@ aa565101 │        ImGuiTableFlags_HighlightHoveredColumn                      
 95d44b48 │                 0.000             row_min_height (?)                                                                 │
 5476e1f8 │                   30              items_count                                                                        │
 5922049a │       Selectable (span row)     ▼ items_type (first column)                                                          │
-38a3c038 │  │                                                                                                                  █│
+fa0b3c75 │  │ ID     Name         Action         Quantity    Description                                                       █│
 88896fc6 │  │ 0000   Banana        Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│
 f30574cf │  │ 0001   Apple         Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│
 88896fc6 │  │ 0002   Cherry        Chop   Eat    0           Lorem ipsum dolor sit amet                                        █│

@@ -10,6 +10,8 @@
 
 #include <sihd/imgui/IImguiRenderer.hpp>
 
+struct ImGuiTable;
+
 namespace sihd::imgui
 {
 
@@ -117,6 +119,9 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         void _ack_textures(ImDrawData *draw_data) const;
         void _rasterize(ImDrawData *draw_data);
         void _rasterize_list(const ImDrawList *dl, const ImDrawData & draw_data, const ImVec2 & fb_size);
+        void _draw_clipped_table_headers(const ImDrawList *dl, const ImVec2 & fb_size);
+        void _draw_table_header(const ImGuiTable & table, const ImVec2 & fb_size);
+        void _draw_label(float x, float y, const char *text, const char *text_end, ImU32 col, const ImVec4 & clip);
         void _rasterize_cmd(const ImDrawList *dl, const ImDrawCmd & cmd, const ImVec4 & clip);
         Primitive _collect_primitive(const ImDrawList *dl, const ImDrawCmd & cmd, unsigned int first) const;
         std::optional<ImU32>

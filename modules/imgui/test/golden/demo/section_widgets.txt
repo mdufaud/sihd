@@ -1945,7 +1945,7 @@ b7c9679a │     Brussels Sprouts                                    █        
 8117365a │     Cassava                                             ░                                                            │
 f0e2e988 │   ▼ Multi-Select (in a table)                                                                                        │
 e367e918 │    Selection: 0/10000                                                                                                │
-80314a68 │    │                                                                                                                █│
+bd3fa088 │    │ Object                                                 Action                                                  █│
 27820d44 │    │ Object 00000: Artichoke                                 hello                                                  ░│
 05eef438 │    │ Object 00001: Arugula                                   hello                                                  ░│
 27820d44 │    │ Object 00002: Asparagus                                 hello                                                  ░│

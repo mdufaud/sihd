@@ -919,6 +919,7 @@ void ImguiRendererNcurses::_rasterize_list(const ImDrawList *dl, const ImDrawDat
             continue;
         this->_rasterize_cmd(dl, cmd, clip);
     }
+    this->_draw_clipped_table_headers(dl, fb_size);
     // a nav cursor is drawn before the frame of its item: apply it once the whole window is drawn
     for (const auto & [prim, clip] : _deferred_nav)
         this->_set_attribute(prim, Role::nav, clip);
@@ -991,6 +992,82 @@ std::optional<ImU32> ImguiRendererNcurses::_sample_primitive(const ImDrawList *d
             return prim.gradient ? interpolate_color(center, v0, v1, v2) : prim.col;
     }
     return std::nullopt;
+}
+
+// a scrolling table with outer horizontal borders clips one border unit, a whole row, off its top: its header is culled
+void ImguiRendererNcurses::_draw_clipped_table_headers(const ImDrawList *dl, const ImVec2 & fb_size)
+{
+    ImGuiContext & context = *ImGui::GetCurrentContext();
+    for (int index = 0; index < context.Tables.GetMapSize(); ++index)
+    {
+        const ImGuiTable *table = context.Tables.TryGetMapData(index);
+        const bool culled_header = table != nullptr && table->LastFrameActive == context.FrameCount
+                                   && table->InnerWindow != table->OuterWindow && table->InnerWindow->DrawList == dl
+                                   && table->IsUsingHeaders && (table->Flags & ImGuiTableFlags_BordersOuterH) != 0;
+        if (culled_header)
+            this->_draw_table_header(*table, fb_size);
+    }
+}
+
+void ImguiRendererNcurses::_draw_table_header(const ImGuiTable & table, const ImVec2 & fb_size)
+{
+    const float y = table.OuterRect.Min.y;
+    const ImVec4 row_clip(std::max(table.BgClipRect.Min.x, 0.0f),
+                          std::max(y, 0.0f),
+                          std::min(table.BgClipRect.Max.x, fb_size.x),
+                          std::min({y + 1.0f, table.InnerWindow->ClipRect.Max.y, fb_size.y}));
+    // background only: the column borders crossing the row stay
+    const ImU32 header_bg = ImGui::GetColorU32(ImGuiCol_TableHeaderBg);
+    const int row = floor_cell(y);
+    for (int x = floor_cell(row_clip.x); x < (int)std::ceil(row_clip.z); ++x)
+    {
+        if (!this->_in_clip(x, row, row_clip))
+            continue;
+        TCell & cell = this->_cell(x, row);
+        cell.bg = this->_blend(this->_cell_bg(cell), header_bg);
+        cell.has_bg = true;
+    }
+
+    const ImU32 text_col = ImGui::GetColorU32(ImGuiCol_Text);
+    for (int order = 0; order < table.ColumnsCount; ++order)
+    {
+        const int column_n = table.DisplayOrderToIndex[order];
+        const ImGuiTableColumn & column = table.Columns[column_n];
+        if (!column.IsVisibleX || (column.Flags & ImGuiTableColumnFlags_NoHeaderLabel) != 0)
+            continue;
+        const ImVec4 cell_clip(std::max(row_clip.x, column.ClipRect.Min.x),
+                               row_clip.y,
+                               std::min(row_clip.z, column.ClipRect.Max.x),
+                               row_clip.w);
+        const char *name = ImGui::TableGetColumnName(&table, column_n);
+        this->_draw_label(column.WorkMinX, y, name, ImGui::FindRenderedTextEnd(name), text_col, cell_clip);
+    }
+}
+
+void ImguiRendererNcurses::_draw_label(float x,
+                                       float y,
+                                       const char *text,
+                                       const char *text_end,
+                                       ImU32 col,
+                                       const ImVec4 & clip)
+{
+    ImDrawVert left {};
+    left.pos = ImVec2(x, y);
+    left.col = col;
+    while (text < text_end)
+    {
+        unsigned int codepoint = 0;
+        text += ImTextCharFromUtf8(&codepoint, text, text_end);
+        const int width = wcwidth((wchar_t)codepoint);
+        if (width <= 0)
+            continue;
+        ImDrawVert right = left;
+        right.pos.x += (float)width;
+        left.uv.x = (float)codepoint;
+        if (codepoint != blank_char)
+            this->_draw_glyph(left, right, clip);
+        left.pos.x = right.pos.x;
+    }
 }
 
 void ImguiRendererNcurses::_draw_image(const Primitive & prim, const ImVec4 & clip)
