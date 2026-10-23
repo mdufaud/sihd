@@ -1,12 +1,14 @@
 #ifndef __SIHD_JSON_JSON_HPP__
 #define __SIHD_JSON_JSON_HPP__
 
-#include <simdjson.h>
-
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <expected>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -15,6 +17,17 @@
 
 namespace sihd::json
 {
+
+namespace detail
+{
+
+// holds a simdjson dom::element or dom iterator: std::bit_cast in Json.cpp fails to build if sizes drift
+struct alignas(void *) DomSlot
+{
+        std::array<std::byte, sizeof(void *) + sizeof(size_t)> bytes {};
+};
+
+} // namespace detail
 
 class Json
 {
@@ -110,11 +123,8 @@ class Json
         iterator end() const;
 
     private:
-        struct DomHolder
-        {
-                simdjson::dom::parser parser;
-                simdjson::padded_string source;
-        };
+        struct DomHolder;
+        struct Dumper;
 
         struct DiscardedTag
         {
@@ -124,14 +134,7 @@ class Json
         Value _value;
         bool _discarded;
         std::shared_ptr<DomHolder> _dom_holder;
-        simdjson::dom::element _dom_element {};
-
-        void _dump_to_builder(simdjson::builder::string_builder & sb, int indent, int depth) const;
-        static void _dump_dom_to_builder(simdjson::builder::string_builder & sb,
-                                         simdjson::dom::element elem,
-                                         int indent,
-                                         int depth);
-        static void _write_indent(simdjson::builder::string_builder & sb, int indent, int depth);
+        detail::DomSlot _dom_element {};
 };
 
 // Json must be complete: the iterator holds one inline
@@ -171,27 +174,19 @@ class Json::iterator
 
         iterator(IterType type, size_t index, const void *container);
 
-        iterator(simdjson::dom::array::iterator arr_it,
-                 simdjson::dom::array::iterator arr_end,
-                 const std::shared_ptr<DomHolder> & holder);
-
-        iterator(simdjson::dom::object::iterator obj_it,
-                 simdjson::dom::object::iterator obj_end,
-                 const std::shared_ptr<DomHolder> & holder);
+        iterator(IterType type, detail::DomSlot dom_it, const std::shared_ptr<DomHolder> & holder);
 
         struct EndTag
         {
         };
-        iterator(EndTag, IterType type, simdjson::dom::array::iterator arr_end);
-        iterator(EndTag, IterType type, simdjson::dom::object::iterator obj_end);
+        iterator(EndTag, IterType type, detail::DomSlot dom_it);
 
         IterType _iter_type = IterType::Array;
         size_t _index = 0;
         const void *_container = nullptr;
 
         bool _dom_mode = false;
-        simdjson::dom::array::iterator _arr_it {};
-        simdjson::dom::object::iterator _obj_it {};
+        detail::DomSlot _dom_it {};
         mutable Json _current;
         mutable std::string _current_key;
 };
