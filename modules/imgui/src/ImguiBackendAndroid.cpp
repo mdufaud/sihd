@@ -178,7 +178,7 @@ bool ImguiBackendAndroid::init_backend()
             scale = 1.5f;
     }
     style.ScaleAllSizes(scale);
-    io.FontGlobalScale = scale;
+    style.FontScaleMain = scale;
 
     SIHD_LOG(info, "ImguiBackendAndroid: backend initialized (scale: {})", scale);
     return true;

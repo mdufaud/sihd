@@ -1,15 +1,22 @@
 #include <imgui.h>
+#include <imgui_internal.h>
 
+// wide-char api: glibc g++ gets it from _GNU_SOURCE, musl needs it asked for
+#define NCURSES_WIDECHAR 1
 #include <ncursesw/ncurses.h>
 // ncurses may define `bool` as a macro (musl cross): undef it before std/imgui headers
 #undef bool
 #include <sys/stat.h>
 
+#include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <thread>
+#include <vector>
 
 #include <sihd/imgui/ImguiBackendNcurses.hpp>
 #include <sihd/sys/env.hpp>
+#include <sihd/sys/signal.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace sihd::imgui
@@ -45,6 +52,7 @@ ImGuiKey _ncurses_key_to_imgui(int key)
         case KEY_DC:
             return ImGuiKey_Delete;
         case KEY_BACKSPACE:
+        case 8:
         case 127:
             return ImGuiKey_Backspace;
         case KEY_ENTER:
@@ -84,12 +92,56 @@ ImGuiKey _ncurses_key_to_imgui(int key)
     }
 }
 
-void _emit_shift_arrow(ImGuiIO & io, ImGuiKey arrow_key)
+ImGuiKey _ncurses_shifted_key_to_imgui(int key)
 {
-    io.AddKeyEvent(ImGuiKey_LeftShift, true);
-    io.AddKeyEvent(arrow_key, true);
-    io.AddKeyEvent(arrow_key, false);
-    io.AddKeyEvent(ImGuiKey_LeftShift, false);
+    switch (key)
+    {
+        case KEY_SLEFT:
+            return ImGuiKey_LeftArrow;
+        case KEY_SRIGHT:
+            return ImGuiKey_RightArrow;
+        case KEY_SR:
+            return ImGuiKey_UpArrow;
+        case KEY_SF:
+            return ImGuiKey_DownArrow;
+        case KEY_SHOME:
+            return ImGuiKey_Home;
+        case KEY_SEND:
+            return ImGuiKey_End;
+        case KEY_BTAB:
+            return ImGuiKey_Tab;
+        default:
+            return ImGuiKey_None;
+    }
+}
+
+ImGuiKey _ctrl_letter_to_imgui(int key)
+{
+    return (key >= 1 && key <= 26) ? (ImGuiKey)(ImGuiKey_A + key - 1) : ImGuiKey_None;
+}
+
+// imgui places the IME window one unit left of the text input caret
+constexpr int ime_caret_offset = 1;
+// ncurses merges a press and a release read together into a click, even with mouseinterval(0)
+constexpr mmask_t button1_clicks = BUTTON1_CLICKED | BUTTON1_DOUBLE_CLICKED | BUTTON1_TRIPLE_CLICKED;
+constexpr mmask_t button3_clicks = BUTTON3_CLICKED | BUTTON3_DOUBLE_CLICKED | BUTTON3_TRIPLE_CLICKED;
+
+// at a 1-cell font imgui hit-tests the resize grip only outside the window corner: move a press on the drawn grip there
+ImVec2 _resize_grip_offset(int x, int y)
+{
+    ImGuiWindow *hovered = nullptr;
+    ImGui::FindHoveredWindowEx(ImVec2((float)x, (float)y), true, &hovered, nullptr);
+    if (hovered == nullptr)
+        return ImVec2(0.0f, 0.0f);
+    const ImGuiWindow *window = hovered->RootWindow;
+    if (window->Collapsed || (window->Flags & (ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize)))
+        return ImVec2(0.0f, 0.0f);
+    const float dx = window->Pos.x + window->Size.x - (float)x;
+    const float dy = window->Pos.y + window->Size.y - (float)y;
+    // the grip cell and the border cells beside it
+    if (dx < 1.0f || dx > 2.0f || dy < 1.0f || dy > 2.0f)
+        return ImVec2(0.0f, 0.0f);
+    return ImVec2(dx, dy);
 }
 
 } // namespace
@@ -101,10 +153,15 @@ ImguiBackendNcurses::ImguiBackendNcurses():
     _ctrl_from_mouse(false),
     _pending_lrelease(false),
     _pending_rrelease(false),
+    _ime_visible(false),
     _mx(0),
     _my(0),
     _lbut(0),
     _rbut(0),
+    _grip_dx(0.0f),
+    _grip_dy(0.0f),
+    _ime_x(0),
+    _ime_y(0),
     _mstate(0)
 {
 }
@@ -160,7 +217,7 @@ bool ImguiBackendNcurses::init()
     mouseinterval(0); // disable click-detection delay: critical for drag
     mousemask(ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr);
     // xterm mode 1003: report every cell movement, needed for window drag
-    printf("\033[?1003h\n");
+    putp("\033[?1003h");
     fflush(stdout);
 
     ImGuiIO & io = ImGui::GetIO();
@@ -172,6 +229,10 @@ bool ImguiBackendNcurses::init()
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
     io.DisplaySize = {(float)sx, (float)sy};
+
+    ImGuiPlatformIO & platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_ImeUserData = this;
+    platform_io.Platform_SetImeDataFn = &ImguiBackendNcurses::_set_ime_data;
 
     _last_time = std::chrono::steady_clock::now();
     _frame_start = _last_time;
@@ -196,28 +257,33 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     _mouse_seen = true;
 
     // a release after a same-poll press is deferred one poll so imgui registers the click
-    if (_mstate & BUTTON1_PRESSED)
+    if (_mstate & (BUTTON1_PRESSED | button1_clicks))
     {
         pressed_l = true;
         if (!_lbut)
         {
             _lbut = 1;
+            const ImVec2 grip_offset = _resize_grip_offset(_mx, _my);
+            _grip_dx = grip_offset.x;
+            _grip_dy = grip_offset.y;
             io.AddMouseButtonEvent(0, true);
         }
     }
 
-    if (_mstate & BUTTON1_RELEASED)
+    if (_mstate & (BUTTON1_RELEASED | button1_clicks))
     {
         if (pressed_l)
             _pending_lrelease = true;
         else if (_lbut)
         {
             _lbut = 0;
+            _grip_dx = 0.0f;
+            _grip_dy = 0.0f;
             io.AddMouseButtonEvent(0, false);
         }
     }
 
-    if (_mstate & BUTTON3_PRESSED)
+    if (_mstate & (BUTTON3_PRESSED | button3_clicks))
     {
         pressed_r = true;
         if (!_rbut)
@@ -227,7 +293,7 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
         }
     }
 
-    if (_mstate & BUTTON3_RELEASED)
+    if (_mstate & (BUTTON3_RELEASED | button3_clicks))
     {
         if (pressed_r)
             _pending_rrelease = true;
@@ -247,82 +313,76 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io, bool & pressed_l, b
     if (new_ctrl != _ctrl_from_mouse)
     {
         _ctrl_from_mouse = new_ctrl;
+        io.AddKeyEvent(ImGuiMod_Ctrl, new_ctrl);
         io.AddKeyEvent(ImGuiKey_LeftCtrl, new_ctrl);
     }
 }
 
-bool ImguiBackendNcurses::_process_key_event(int key, ImGuiIO & io)
+// without the trickle queue a down+up in the same frame is never seen pressed: release next poll
+void ImguiBackendNcurses::_press_key(ImGuiIO & io, ImGuiKey key)
 {
-    if (key == 3)
-        return true;
+    io.AddKeyEvent(key, true);
+    _pending_key_releases.push_back(key);
+}
 
-    if (key == 27)
-    {
-        io.AddKeyEvent(ImGuiKey_Escape, true);
-        io.AddKeyEvent(ImGuiKey_Escape, false);
-        return false;
-    }
+// a key pressed or released in this poll is only seen pressed again after a frame in the other state
+bool ImguiBackendNcurses::_must_wait(ImGuiKey key) const
+{
+    return std::ranges::contains(_pending_key_releases, key) || std::ranges::contains(_released_keys, key);
+}
 
-    if (key == KEY_SLEFT)
-    {
-        _emit_shift_arrow(io, ImGuiKey_LeftArrow);
+bool ImguiBackendNcurses::_process_key_event(int key, bool function_key, ImGuiIO & io)
+{
+    const bool printable = !function_key && (key >= 0x80 || (key >= 0x20 && key < 0x7F));
+    // imgui drops typed characters while Ctrl is down
+    if (printable && this->_must_wait(ImGuiMod_Ctrl))
         return false;
-    }
-    if (key == KEY_SRIGHT)
+    // a character past ASCII would collide with the KEY_* function key codes
+    if (!function_key && key >= 0x80)
     {
-        _emit_shift_arrow(io, ImGuiKey_RightArrow);
-        return false;
-    }
-    if (key == KEY_SR)
-    {
-        _emit_shift_arrow(io, ImGuiKey_UpArrow);
-        return false;
-    }
-    if (key == KEY_SF)
-    {
-        _emit_shift_arrow(io, ImGuiKey_DownArrow);
-        return false;
-    }
-    if (key == KEY_SHOME)
-    {
-        _emit_shift_arrow(io, ImGuiKey_Home);
-        return false;
-    }
-    if (key == KEY_SEND)
-    {
-        _emit_shift_arrow(io, ImGuiKey_End);
-        return false;
-    }
-
-    ImGuiKey imgui_key = _ncurses_key_to_imgui(key);
-    if (imgui_key != ImGuiKey_None)
-    {
-        io.AddKeyEvent(imgui_key, true);
-        io.AddKeyEvent(imgui_key, false);
-    }
-
-    if (key >= 0x20 && key < 0x7F)
         io.AddInputCharacter((unsigned int)key);
-
-    if (key >= 1 && key <= 26 && key != 3 && imgui_key == ImGuiKey_None)
-    {
-        io.AddKeyEvent(ImGuiKey_LeftCtrl, true);
-        io.AddKeyEvent((ImGuiKey)(ImGuiKey_A + key - 1), true);
-        io.AddKeyEvent((ImGuiKey)(ImGuiKey_A + key - 1), false);
-        io.AddKeyEvent(ImGuiKey_LeftCtrl, false);
+        return true;
     }
-    return false;
+
+    const ImGuiKey shifted = _ncurses_shifted_key_to_imgui(key);
+    const ImGuiKey plain = _ncurses_key_to_imgui(key);
+    const ImGuiKey ctrl_letter = _ctrl_letter_to_imgui(key);
+    const ImGuiKey pressed = shifted != ImGuiKey_None ? shifted : plain != ImGuiKey_None ? plain : ctrl_letter;
+    if (pressed != ImGuiKey_None && this->_must_wait(pressed))
+        return false;
+
+    if (shifted != ImGuiKey_None)
+    {
+        this->_press_key(io, ImGuiMod_Shift);
+        this->_press_key(io, ImGuiKey_LeftShift);
+    }
+    else if (plain == ImGuiKey_None && ctrl_letter != ImGuiKey_None)
+    {
+        this->_press_key(io, ImGuiMod_Ctrl);
+        this->_press_key(io, ImGuiKey_LeftCtrl);
+    }
+    if (pressed != ImGuiKey_None)
+        this->_press_key(io, pressed);
+    if (printable)
+        io.AddInputCharacter((unsigned int)key);
+    return true;
 }
 
 void ImguiBackendNcurses::poll()
 {
     ImGuiIO & io = ImGui::GetIO();
 
+    // cbreak keeps ISIG: Ctrl+C arrives as SIGINT, recorded by whoever installed sihd handlers
+    if (sihd::sys::signal::should_stop())
+        _should_close = true;
+
     // releases deferred from the previous poll: the button was down for a full frame
     if (_pending_lrelease)
     {
         _pending_lrelease = false;
         _lbut = 0;
+        _grip_dx = 0.0f;
+        _grip_dy = 0.0f;
         io.AddMouseButtonEvent(0, false);
     }
     if (_pending_rrelease)
@@ -331,33 +391,42 @@ void ImguiBackendNcurses::poll()
         _rbut = 0;
         io.AddMouseButtonEvent(1, false);
     }
+    for (auto it = _pending_key_releases.rbegin(); it != _pending_key_releases.rend(); ++it)
+        io.AddKeyEvent(*it, false);
+    _released_keys = std::move(_pending_key_releases);
+    _pending_key_releases.clear();
 
     bool pressed_l = false, pressed_r = false;
 
     while (true)
     {
-        int key = wgetch(stdscr);
-
-        if (key == ERR)
+        wint_t wch = 0;
+        const int status = wget_wch(stdscr, &wch);
+        if (status == ERR)
             break;
 
-        if (key == KEY_RESIZE)
-        {
+        const int key = (int)wch;
+        const bool function_key = status == KEY_CODE_YES;
+        if (function_key && key == KEY_RESIZE)
             continue;
-        }
-        if (key == KEY_MOUSE)
+        if (function_key && key == KEY_MOUSE)
         {
             _process_mouse_event(io, pressed_l, pressed_r);
             continue;
         }
-
-        if (_process_key_event(key, io))
-            _should_close = true;
+        if (!this->_process_key_event(key, function_key, io))
+        {
+            if (function_key)
+                ungetch(key);
+            else
+                unget_wch((wchar_t)wch);
+            break;
+        }
     }
 
     // mode-1003 emits dozens of motions per poll and only the last matters
     if (_mouse_seen)
-        io.AddMousePosEvent((float)_mx, (float)_my);
+        io.AddMousePosEvent((float)_mx + _grip_dx, (float)_my + _grip_dy);
     else
         io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
 }
@@ -381,6 +450,9 @@ void ImguiBackendNcurses::pre_render() {}
 
 void ImguiBackendNcurses::post_render()
 {
+    if (_ime_visible)
+        move(_ime_y, _ime_x + ime_caret_offset);
+    curs_set(_ime_visible ? 1 : 0);
     wrefresh(stdscr);
     static constexpr long long target_us = 1000000LL / 60;
     const auto remaining = _frame_start + std::chrono::microseconds(target_us) - std::chrono::steady_clock::now();
@@ -388,11 +460,25 @@ void ImguiBackendNcurses::post_render()
         std::this_thread::sleep_for(remaining);
 }
 
+void ImguiBackendNcurses::_set_ime_data(ImGuiContext *, ImGuiViewport *, ImGuiPlatformImeData *data)
+{
+    auto *backend = static_cast<ImguiBackendNcurses *>(ImGui::GetPlatformIO().Platform_ImeUserData);
+    backend->_ime_visible = data->WantVisible;
+    backend->_ime_x = (int)std::lround(data->InputPos.x);
+    backend->_ime_y = (int)std::lround(data->InputPos.y);
+}
+
 void ImguiBackendNcurses::shutdown()
 {
     if (_is_init)
     {
-        printf("\033[?1003l\n");
+        if (ImGui::GetCurrentContext() != nullptr)
+        {
+            ImGuiPlatformIO & platform_io = ImGui::GetPlatformIO();
+            platform_io.Platform_SetImeDataFn = nullptr;
+            platform_io.Platform_ImeUserData = nullptr;
+        }
+        putp("\033[?1003l");
         fflush(stdout);
         endwin();
         _is_init = false;

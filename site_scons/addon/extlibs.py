@@ -27,7 +27,7 @@ extlibs = {
     # gui
     "opengl": "",  # provides GL/gl.h headers for cross-compilation (via opengl-registry)
     "ftxui": "6.1.9",
-    "imgui": "1.91.9",
+    "imgui": "1.93.0",
     "ncurses": "6.5#3", # ncursesw
     "libxcrypt": "4.5.2", # fixes a compilation issue with imgui
     # bindings

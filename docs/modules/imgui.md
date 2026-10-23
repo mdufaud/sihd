@@ -23,14 +23,15 @@ Dear ImGui application loop. `ImguiRunner` drives one platform backend (window a
 - `ImguiBackendSDL`: SDL3 window. `init_window(name, width, height)`, `decide_opengl_version`, `select_opengl2`, `select_opengl3`, `select_opengl32`, `init_backend_opengl`, `init_backend_dx` (Windows), `set_resize_renderer`, `window`, `context`.
 - `ImguiBackendWin32`: native Win32 window, meant to be paired with `ImguiRendererDirectX`. `init_window`, `init_backend`, `set_resize_renderer`, `handle_win32_msg_handler`, `window`.
 - `ImguiBackendAndroid`: NativeActivity with EGL. `set_app`, `init_egl`, `init_backend`, `window`.
-- `ImguiBackendNcurses`: terminal backend reading keyboard and mouse input through ncurses. `init`.
+- `ImguiBackendNcurses`: terminal backend reading keyboard and mouse input through ncurses. `init`. Wide-character input (UTF-8 typing), Shift+Tab, Shift+arrows and Ctrl+letter with the matching imgui modifiers, SGR mouse with any-motion reporting. Non-character keys are released one poll after their press so imgui sees them pressed; a key repeated within one read (autorepeat, a burst over ssh) waits for the next poll, and so does text typed while Ctrl is held. A press and release read together, which ncurses reports as a click, still reach imgui as a press then a release. Ctrl+C ends the loop when the program records signals through `sihd::sys::signal` (as `sihd::sys::App` does). The text input caret is shown as the terminal cursor.
 
 ### Renderer interface
 
 - `IImguiRenderer`: common contract: `new_frame`, `render(ImDrawData *)`, `shutdown`, `resize`, `set_clear_color(ImVec4 *)` (stores the pointer), `get_clear_color`.
 - `ImguiRendererOpenGL`: OpenGL renderer (GLES3 on Android). `init(glsl_version = nullptr)`.
 - `ImguiRendererDirectX`: DirectX 11 renderer. `init(HWND)`, `resize()`, `resize(LPARAM)`.
-- `ImguiRendererNcurses`: draws ImGui geometry into a terminal cell grid and flushes it to ncurses with differential updates. `init`. Headless test helpers: `init_headless(w, h)`, `rasterize_headless(ImDrawData *)`, `get_cell(x, y)`, `clear_screen`. Static colour helpers: `rgb_to_ansi256`, `col_to_ansi256`.
+- `ImguiRendererNcurses`: draws ImGui geometry into a terminal cell grid and flushes it to ncurses with differential updates. `init`. Output is Unicode when the locale is multibyte (the program calls `setlocale(LC_ALL, "")` before `init`), ASCII otherwise; `set_unicode(bool)` forces either. It installs a font loader giving every character one cell (two for wide characters), so any Unicode text renders without a font file. Each style colour is nudged to a distinct RGB value so the renderer knows which style colour drew a shape: window, child and popup borders become box drawing (`┌─┐`), table borders vertical lines, check marks `✓`, arrows `▶▼`, bullets `•`, close buttons `×`, resize grips `◢`, plot lines braille dots, histograms and progress bars eighth blocks, scrollbars `░` with a `█` grab, slider grabs and tabs their background colour (the selected tab its own), the navigation cursor and selected text reverse video, modal backgrounds dim, `ImGui::Image` (the font atlas included) a `▒` block. `SeparatorText` puts its line on the label row, menu bars of windows without a title bar (`BeginMainMenuBar` included) keep their row, a mixed checkbox shows `-`, control characters take no cell (a tab advances four), and a glyph imgui clips down to nothing at a frame edge is dropped. Other shapes are filled, with the gradient of `AddRectFilledMultiColor` kept per cell. Translucent colours are blended over the cell below; colours are reduced to 256, 16 or 8 entries depending on the terminal, sent as 24-bit with a direct-colour terminfo (`TERM=xterm-direct`), or left out on a terminal without colours. `init` turns on `io.ConfigDebugDrawListDefaultsToStrokeLegacy`, the only stock way to get slider grabs and one-row tab backgrounds drawn: `AddLine` calls of the application are then offset by half a unit, as before imgui 1.93. The style keeps a window title row on screen (`DisplayWindowPadding` 4x1) and opens tooltips next to the mouse (`MouseCursorScale` 0.1). Only the cells inside the clip rect and the screen are visited, so huge or off-screen shapes cost nothing. Headless test helpers: `init_headless(w, h)` (needs a current ImGui context, applies the same font and style as `init`), `rasterize_headless(ImDrawData *)`, `get_cell(x, y)`, `clear_screen`. Static helpers: `rgb_to_ansi256`, `classify_arrow`, `is_cross_pattern`, `compute_clip_rect`.
+- Ncurses limitations (stock imgui at one cell per frame row): radio buttons draw nothing (only their label shows), font sizes other than the base size keep one cell per character but stretch the line height, table rows have no horizontal borders, a scrolling table with outer horizontal borders loses its first and last visible row (imgui insets its clip rect by one border unit), auto-resized windows (tooltips, popups) are at least 4 rows tall. Sizes and offsets the application gives in pixels are taken as cells: the official demo's `Button("Button 1", ImVec2(80, 80))` is 80 by 80 cells, its default window position (60, 60) is far down a terminal, and outlines drawn one pixel around an item land on the row next to it.
 
 ### Backend and renderer per platform
 
@@ -79,6 +80,22 @@ int main()
 ```
 
 Adapted from `modules/imgui/test/TestOpenGL3_SDL.cpp`.
+
+## Testing the ncurses backend
+
+Headless screen tests (`TestNcursesScene`, `TestNcursesWidgets`, `TestNcursesLayout`, `TestNcursesDraw`, `TestNcursesOverlays`, `TestNcursesShapes`, `TestNcursesText`, on the `test/helper/NcursesScene` base) run real imgui frames through the production font and style and compare the cell grid with screen literals; they are part of `make itest m=imgui`.
+
+Terminal tests drive `sihd_imgui_ncurses_scenes` (built with `test=1`) in a pty and read the screen through the pyte VT emulator, so they cover the ncurses input decoding and output, on `xterm-256color`, `linux`, `xterm-direct` and `vt100` and in an ASCII locale. They need the `pytest` and `pyte` Python packages; `scripts/test.sh` runs them after the native clang build when `python3` has both, and skips them otherwise:
+
+```bash
+python3 -m pytest -q -p no:cacheprovider modules/imgui/test/tui
+```
+
+`SIHD_IMGUI_SCENES_BIN` overrides the binary path (default `build/last/bin/sihd_imgui_ncurses_scenes`). To look at the scene as a terminal shows it:
+
+```bash
+python3 modules/imgui/test/tui/tui_snapshot.py --size 100x30 --term linux --ansi
+```
 
 ## Scripting
 

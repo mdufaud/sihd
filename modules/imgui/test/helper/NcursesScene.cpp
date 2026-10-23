@@ -1,0 +1,129 @@
+#include "NcursesScene.hpp"
+
+#include <imgui_internal.h>
+
+#include <algorithm>
+#include <array>
+#include <vector>
+
+#include <sihd/util/Logger.hpp>
+#include <sihd/util/str.hpp>
+
+namespace test
+{
+
+using namespace sihd::imgui;
+using namespace sihd::util;
+
+NcursesScene::NcursesScene(int width, int height): width(width), height(height), clear_color(0, 0, 0, 1)
+{
+    LoggerManager::stream();
+    ctx = ImGui::CreateContext();
+    ImGuiIO & io = ImGui::GetIO();
+    io.DisplaySize = ImVec2((float)width, (float)height);
+    io.DeltaTime = 1.0f / 60.0f;
+    io.IniFilename = nullptr;
+    io.ConfigInputTextCursorBlink = false;
+    io.ConfigInputTrickleEventQueue = false;
+    ImGui::StyleColorsDark();
+    renderer.set_clear_color(&clear_color);
+    renderer.init_headless(width, height);
+}
+
+NcursesScene::~NcursesScene()
+{
+    renderer.shutdown();
+    ImGui::DestroyContext(ctx);
+    LoggerManager::clear_loggers();
+}
+
+void NcursesScene::render_frames(int count, const std::function<void()> & build)
+{
+    for (int frame = 0; frame < count; ++frame)
+    {
+        renderer.new_frame();
+        ImGui::NewFrame();
+        build();
+        ImGui::Render();
+        renderer.rasterize_headless(ImGui::GetDrawData());
+    }
+}
+
+void NcursesScene::render_scene(const std::function<void()> & content)
+{
+    this->render_frames(2, [&] { this->scene_window(content); });
+}
+
+void NcursesScene::scene_window(const std::function<void()> & content) const
+{
+    ImGui::SetNextWindowPos(ImVec2(0, 0));
+    ImGui::SetNextWindowSize(ImVec2((float)width, (float)height));
+    ImGui::Begin("scene",
+                 nullptr,
+                 ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove
+                     | ImGuiWindowFlags_NoSavedSettings);
+    content();
+    ImGui::End();
+}
+
+const TCell & NcursesScene::cell(int x, int y) const
+{
+    return renderer.get_cell(x, y);
+}
+
+std::string NcursesScene::row_text(int y) const
+{
+    std::string row;
+    for (int x = 0; x < width; ++x)
+    {
+        const TCell & current = renderer.get_cell(x, y);
+        if (current.wide_tail)
+            continue;
+        std::array<char, 5> utf8 {};
+        const int length = ImTextCharToUtf8(utf8.data(), current.ch == 0 ? (unsigned int)' ' : current.ch);
+        row.append(utf8.data(), (size_t)length);
+    }
+    return std::string(str::rtrim(row));
+}
+
+std::string NcursesScene::screen_text() const
+{
+    std::string screen;
+    for (int y = 0; y < height; ++y)
+        screen += this->row_text(y) + "\n";
+    return std::string(str::rtrim(screen));
+}
+
+std::string NcursesScene::row_backgrounds(int y) const
+{
+    std::vector<uint32_t> legend;
+    std::string row;
+    for (int x = 0; x < width; ++x)
+    {
+        const TCell & current = renderer.get_cell(x, y);
+        if (!current.has_bg)
+        {
+            row += ' ';
+            continue;
+        }
+        if (std::ranges::find(legend, current.bg) == legend.end())
+            legend.push_back(current.bg);
+        row += (char)('a' + (std::ranges::find(legend, current.bg) - legend.begin()));
+    }
+    return row;
+}
+
+int NcursesScene::first_col_with_text(int y, const std::string & text) const
+{
+    for (int x = 0; x + (int)text.size() <= width; ++x)
+    {
+        bool match = true;
+        for (size_t k = 0; k < text.size() && match; ++k)
+            match = renderer.get_cell(x + (int)k, y).ch == (uint32_t)(unsigned char)text[k];
+        if (match)
+            return x;
+    }
+    return -1;
+}
+
+} // namespace test

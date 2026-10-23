@@ -54,7 +54,17 @@ else:
             "src/ImguiBackendNcurses.cpp",
             "src/ImguiRendererNcurses.cpp",
         ])
-        sihd_imgui_tests.append("test/TestNcursesRenderer.cpp")
+        sihd_imgui_tests.extend([
+            "test/TestNcursesRenderer.cpp",
+            "test/TestNcursesScene.cpp",
+            "test/TestNcursesWidgets.cpp",
+            "test/TestNcursesLayout.cpp",
+            "test/TestNcursesDraw.cpp",
+            "test/TestNcursesOverlays.cpp",
+            "test/TestNcursesShapes.cpp",
+            "test/TestNcursesText.cpp",
+            "test/helper/NcursesScene.cpp",
+        ])
 
 # Lib
 
@@ -86,5 +96,8 @@ else:
 # Tests
 
 test = env.build_test(sihd_imgui_tests, libs = [env.module_format_name()])
+
+if build_ncurses and builder.build_tests:
+    env.build_bin("test/helper/ncurses_scenes.cpp", name = "sihd_imgui_ncurses_scenes", libs = [env.module_format_name()])
 
 Return('lib')
