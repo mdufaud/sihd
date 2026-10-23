@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 
 namespace sihd::util
 {
@@ -47,7 +48,11 @@ struct Stat
             max = SampleType {};
         }
 
-        SampleType average() const { return samples == 0 ? SampleType {} : static_cast<SampleType>(sum / samples); }
+        // signed count: a negative signed sum divided by size_t wraps to unsigned
+        SampleType average() const
+        {
+            return samples == 0 ? SampleType {} : static_cast<SampleType>(sum / static_cast<int64_t>(samples));
+        }
 
         SampleType variance() const
         {

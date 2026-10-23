@@ -65,6 +65,23 @@ TEST_F(TestStat, test_stat_clear)
     EXPECT_EQ(stat.sum, 0);
 }
 
+TEST_F(TestStat, test_stat_average_negative_samples)
+{
+    Stat<long long> stat;
+    stat.add_sample(-10);
+    stat.add_sample(-20);
+    stat.add_sample(-30);
+
+    EXPECT_EQ(stat.sum, -60);
+    EXPECT_EQ(stat.average(), -20);
+
+    PSquareStat<long long> psquare;
+    psquare.add_sample(-4);
+    psquare.add_sample(2);
+
+    EXPECT_EQ(psquare.average(), -1);
+}
+
 TEST_F(TestStat, test_stat_single_sample)
 {
     Stat<double> stat;
