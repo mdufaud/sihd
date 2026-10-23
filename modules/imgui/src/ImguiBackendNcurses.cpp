@@ -257,7 +257,7 @@ ImguiBackendNcurses::ImguiBackendNcurses():
     _grip_dy(0.0f),
     _ime_x(0),
     _ime_y(0),
-    _cell_size(1.0f, 1.0f),
+    _cell_size(8.0f, 16.0f),
     _mstate(0),
     _idle_frequency(default_idle_frequency)
 {

@@ -30,7 +30,7 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         bool init();
         // frame rate once the screen stayed still and no input came for a second: input wakes it at once
         bool set_idle_frequency(double hz);
-        // imgui units per terminal cell, same as the renderer's
+        // imgui units per terminal cell, 8x16 by default, same as the renderer's
         void set_cell_size(ImVec2 cell_size);
 
         void new_frame() override;

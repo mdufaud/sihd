@@ -441,7 +441,7 @@ ImguiRendererNcurses::ImguiRendererNcurses():
     _clear_color_ptr(nullptr),
     _clear_rgb(0),
     _white_uv(0.0f, 0.0f),
-    _cell_size(1.0f, 1.0f),
+    _cell_size(8.0f, 16.0f),
     _tagged_colors {},
     _screen_w(0),
     _screen_h(0)

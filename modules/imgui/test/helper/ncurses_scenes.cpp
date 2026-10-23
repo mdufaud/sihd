@@ -135,10 +135,13 @@ int main(int argc, char **argv)
             app.exit(EXIT_FAILURE);
 
         ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        // the scenes are laid out in cells
         ImguiRendererNcurses renderer;
         renderer.set_clear_color(&clear_color);
+        renderer.set_cell_size(ImVec2(1.0f, 1.0f));
 
         ImguiBackendNcurses backend;
+        backend.set_cell_size(ImVec2(1.0f, 1.0f));
         if (!backend.init() || !renderer.init())
             app.exit(EXIT_FAILURE);
 

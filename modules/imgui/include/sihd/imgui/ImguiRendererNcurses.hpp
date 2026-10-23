@@ -54,7 +54,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         // needs a current ImGui context: applies the same font and style as init(), without ncurses
         bool init_headless(int w, int h);
         void set_unicode(bool unicode);
-        // imgui units per terminal cell, set before init (1x1: one unit is a cell)
+        // imgui units per terminal cell, 8x16 by default, set before init (1x1: one unit is a cell)
         void set_cell_size(ImVec2 cell_size);
         const TCell & get_cell(int x, int y) const;
         void clear_screen();

@@ -19,10 +19,11 @@ int main(int argc, char **argv)
         .description = "Imgui ncurses demo",
     });
 
-    bool virtual_pixels = false;
-    app.root().bind("virtual-pixels", virtual_pixels, "8x16 imgui units per terminal cell");
+    bool one_unit_per_cell = false;
+    app.root().bind("one-unit-per-cell", one_unit_per_cell, "one imgui unit per terminal cell instead of 8x16");
 
     app.root().on_run([&] {
+        const bool virtual_pixels = !one_unit_per_cell;
         const ImVec2 cell = virtual_pixels ? ImVec2(8.0f, 16.0f) : ImVec2(1.0f, 1.0f);
         ImguiRunner imgui("imgui-runner");
         if (!imgui.init_imgui())
