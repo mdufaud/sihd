@@ -1,0 +1,622 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8313aa48 │ ▶   Help                                                                                                             │
+5aece2bd │ ▶   Configuration                                                                                                    │
+5f28df35 │ ▶   Window options                                                                                                   │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+768e1070 │ ▶   Layout & Scrolling                                                                                               │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+fb88f9f0 │  ▼  Tables & Columns                                                                                                 │
+d56b7161 │ Expand all   Collapse all     Disable tree indentation (?)                                                           │
+4e144f49 │──▼─Basic─────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+7ab2399d │  (?)                                                                                                                 │
+02607488 │  Row 0 Column 0                         Row 0 Column 1                          Row 0 Column 2                       │
+02607488 │  Row 1 Column 0                         Row 1 Column 1                          Row 1 Column 2                       │
+02607488 │  Row 2 Column 0                         Row 2 Column 1                          Row 2 Column 2                       │
+02607488 │  Row 3 Column 0                         Row 3 Column 1                          Row 3 Column 2                       │
+7ab2399d │  (?)                                                                                                                 │
+87430fd8 │  Row 0                                  Some contents                           123.456                              │
+87430fd8 │  Row 1                                  Some contents                           123.456                              │
+87430fd8 │  Row 2                                  Some contents                           123.456                              │
+87430fd8 │  Row 3                                  Some contents                           123.456                              │
+7ab2399d │  (?)                                                                                                                 │
+93f22a18 │  Item 0                                 Item 1                                  Item 2                               │
+93f22a18 │  Item 3                                 Item 4                                  Item 5                               │
+93f22a18 │  Item 6                                 Item 7                                  Item 8                               │
+ac9c6d78 │  Item 9                                 Item 10                                 Item 11                              │
+b4d856e5 │  Item 12                                Item 13                                                                      │
+bded3c68 │  ▼ Borders, background                                                                                               │
+c60f8ada │   ✓ ImGuiTableFlags_RowBg                                                                                            │
+6b7e482a │   ✓ ImGuiTableFlags_Borders (?)                                                                                      │
+b10a1673 │     ✓ ImGuiTableFlags_BordersH                                                                                       │
+87606652 │      ✓  ImGuiTableFlags_BordersOuterH                                                                                │
+87606652 │      ✓  ImGuiTableFlags_BordersInnerH                                                                                │
+b10a1673 │     ✓ ImGuiTableFlags_BordersV                                                                                       │
+87606652 │      ✓  ImGuiTableFlags_BordersOuterV                                                                                │
+87606652 │      ✓  ImGuiTableFlags_BordersInnerV                                                                                │
+98ca9053 │     ✓ ImGuiTableFlags_BordersOuter                                                                                   │
+98ca9053 │     ✓ ImGuiTableFlags_BordersInner                                                                                   │
+69adaeea │  Cell contents:  ✓ Text    FillButton                                                                                │
+0112521d │     Display headers                                                                                                  │
+98b46b80 │     ImGuiTableFlags_NoBordersInBody (?)                                                                              │
+26e0853d │  │Hello 0,0                            │ Hello 1,0                            │Hello 2,0                            ││
+2a6016c5 │  │Hello 0,1                            │ Hello 1,1                            │Hello 2,1                            ││
+26e0853d │  │Hello 0,2                            │ Hello 1,2                            │Hello 2,2                            ││
+2a6016c5 │  │Hello 0,3                            │ Hello 1,3                            │Hello 2,3                            ││
+26e0853d │  │Hello 0,4                            │ Hello 1,4                            │Hello 2,4                            ││
+e3c07a25 │  ▼ Resizable, stretch                                                                                                │
+de87251a │   ✓ ImGuiTableFlags_Resizable                                                                                        │
+d843b46b │   ✓ ImGuiTableFlags_BordersV (?)                                                                                     │
+26e0853d │  │Hello 0,0                            │ Hello 1,0                            │Hello 2,0                            ││
+26e0853d │  │Hello 0,1                            │ Hello 1,1                            │Hello 2,1                            ││
+26e0853d │  │Hello 0,2                            │ Hello 1,2                            │Hello 2,2                            ││
+26e0853d │  │Hello 0,3                            │ Hello 1,3                            │Hello 2,3                            ││
+26e0853d │  │Hello 0,4                            │ Hello 1,4                            │Hello 2,4                            ││
+1f17f455 │  ▼ Resizable, fixed                                                                                                  │
+7ab2399d │  (?)                                                                                                                 │
+0ca622c0 │     ImGuiTableFlags_NoHostExtendX                                                                                    │
+ca9008f2 │  │Hello 0,0 │Hello 1,0 │Hello 2,0 │                                                                                 ││
+ca9008f2 │  │Hello 0,1 │Hello 1,1 │Hello 2,1 │                                                                                 ││
+ca9008f2 │  │Hello 0,2 │Hello 1,2 │Hello 2,2 │                                                                                 ││
+ca9008f2 │  │Hello 0,3 │Hello 1,3 │Hello 2,3 │                                                                                 ││
+ca9008f2 │  │Hello 0,4 │Hello 1,4 │Hello 2,4 │                                                                                 ││
+1f17f455 │  ▼ Resizable, mixed                                                                                                  │
+7ab2399d │  (?)                                                                                                                 │
+db2e3e58 │  │AAA       │BBB       │CCC                                                                                         ││
+fa0ab1f5 │  │Fixed 0,0 │Fixed 1,0 │Stretch 2,0                                                                                 ││
+967a40d5 │  │Fixed 0,1 │Fixed 1,1 │Stretch 2,1                                                                                 ││
+fa0ab1f5 │  │Fixed 0,2 │Fixed 1,2 │Stretch 2,2                                                                                 ││
+967a40d5 │  │Fixed 0,3 │Fixed 1,3 │Stretch 2,3                                                                                 ││
+ee0be0c2 │  │Fixed 0,4 │Fixed 1,4 │Stretch 2,4                                   │                                             ││
+04e719da │  │AAA       │BBB       │DDD                                           │EEE                                          ││
+e0962382 │  │Fixed 0,0 │Fixed 1,0 │Stretch 3,0                                   │Stretch 4,0                                  ││
+5807a002 │  │Fixed 0,1 │Fixed 1,1 │Stretch 3,1                                   │Stretch 4,1                                  ││
+e0962382 │  │Fixed 0,2 │Fixed 1,2 │Stretch 3,2                                   │Stretch 4,2                                  ││
+5807a002 │  │Fixed 0,3 │Fixed 1,3 │Stretch 3,3                                   │Stretch 4,3                                  ││
+e0962382 │  │Fixed 0,4 │Fixed 1,4 │Stretch 3,4                                   │Stretch 4,4                                  ││
+660aa338 │  ▼ Reorderable, hideable, with headers                                                                               │
+7ab2399d │  (?)                                                                                                                 │
+de87251a │   ✓ ImGuiTableFlags_Resizable                                                                                        │
+5cd538fa │   ✓ ImGuiTableFlags_Reorderable                                                                                      │
+1a806df3 │   ✓ ImGuiTableFlags_Hideable                                                                                         │
+fa0fd850 │     ImGuiTableFlags_NoBordersInBody                                                                                  │
+aba44965 │     ImGuiTableFlags_NoBordersInBodyUntilResize (?)                                                                   │
+6456c7bd │     ImGuiTableFlags_HighlightHoveredColumn                                                                           │
+f3f35320 │  │One                                  │ Two                                  │Three                                ││
+26e0853d │  │Hello 0,0                            │ Hello 1,0                            │Hello 2,0                            ││
+26e0853d │  │Hello 0,1                            │ Hello 1,1                            │Hello 2,1                            ││
+26e0853d │  │Hello 0,2                            │ Hello 1,2                            │Hello 2,2                            ││
+26e0853d │  │Hello 0,3                            │ Hello 1,3                            │Hello 2,3                            ││
+26e0853d │  │Hello 0,4                            │ Hello 1,4                            │Hello 2,4                            ││
+26e0853d │  │Hello 0,5                            │ Hello 1,5                            │Hello 2,5                            ││
+b07b7fc3 │  │One       │Two       │Three     │                                                                                 ││
+ca9008f2 │  │Fixed 0,0 │Fixed 1,0 │Fixed 2,0 │                                                                                 ││
+ca9008f2 │  │Fixed 0,1 │Fixed 1,1 │Fixed 2,1 │                                                                                 ││
+ca9008f2 │  │Fixed 0,2 │Fixed 1,2 │Fixed 2,2 │                                                                                 ││
+ca9008f2 │  │Fixed 0,3 │Fixed 1,3 │Fixed 2,3 │                                                                                 ││
+ca9008f2 │  │Fixed 0,4 │Fixed 1,4 │Fixed 2,4 │                                                                                 ││
+ca9008f2 │  │Fixed 0,5 │Fixed 1,5 │Fixed 2,5 │                                                                                 ││
+dbb5b0a5 │  ▼ Padding                                                                                                           │
+7ab2399d │  (?)                                                                                                                 │
+151ff730 │     ImGuiTableFlags_PadOuterX (?)                                                                                    │
+eaae4420 │     ImGuiTableFlags_NoPadOuterX (?)                                                                                  │
+eaae4420 │     ImGuiTableFlags_NoPadInnerX (?)                                                                                  │
+ad1d445a │   ✓ ImGuiTableFlags_BordersOuterV                                                                                    │
+ad1d445a │   ✓ ImGuiTableFlags_BordersInnerV                                                                                    │
+5672cadd │     show_headers                                                                                                     │
+356aaa48 │  │Avail 292.00                         │ Avail 292.00                         │Avail 292.00                         ││
+bdf8c101 │  │              Hello 0,1              │               Hello 1,1              │              Hello 2,1              ││
+bdf8c101 │  │              Hello 0,2              │               Hello 1,2              │              Hello 2,2              ││
+bdf8c101 │  │              Hello 0,3              │               Hello 1,3              │              Hello 2,3              ││
+bdf8c101 │  │              Hello 0,4              │               Hello 1,4              │              Hello 2,4              ││
+7ab2399d │  (?)                                                                                                                 │
+12f67eba │   ✓ ImGuiTableFlags_Borders                                                                                          │
+1a806df3 │   ✓ ImGuiTableFlags_BordersH                                                                                         │
+1a806df3 │   ✓ ImGuiTableFlags_BordersV                                                                                         │
+f9e431d3 │   ✓ ImGuiTableFlags_BordersInner                                                                                     │
+f9e431d3 │   ✓ ImGuiTableFlags_BordersOuter                                                                                     │
+c60f8ada │   ✓ ImGuiTableFlags_RowBg                                                                                            │
+bc8e22e0 │     ImGuiTableFlags_Resizable                                                                                        │
+43f8a793 │   ✓ show_widget_frame_bg                                                                                             │
+885ac144 │                        0                                              0                       CellPadding            │
+c4d95045 │   edit me                                edit me                               edit me                               │
+c4d95045 │   edit me                                edit me                               edit me                               │
+c4d95045 │   edit me                                edit me                               edit me                               │
+c4d95045 │   edit me                                edit me                               edit me                               │
+c4d95045 │   edit me                                edit me                               edit me                               │
+aa755c38 │  ▼ Sizing policies                                                                                                   │
+bc8e22e0 │     ImGuiTableFlags_Resizable                                                                                        │
+0ca622c0 │     ImGuiTableFlags_NoHostExtendX                                                                                    │
+597e65c5 │   _SizingFixedFit             ▼ Sizing Policy (?)                                                                    │
+72dac7e5 │  │Oh dear │Oh dear │Oh dear                                                                                         ││
+a1fb68f5 │  │Oh dear │Oh dear │Oh dear                                                                                         ││
+72dac7e5 │  │Oh dear │Oh dear │Oh dear                                                                                         ││
+a2385fd9 │  │AAAA │BBBBBBBB │CCCCCCCCCCCC                                                                                      ││
+c1781119 │  │AAAA │BBBBBBBB │CCCCCCCCCCCC                                                                                      ││
+a2385fd9 │  │AAAA │BBBBBBBB │CCCCCCCCCCCC                                                                                      ││
+bd154e18 │   _SizingFixedSame            ▼ Sizing Policy (?)                                                                    │
+5a99eb52 │  │Oh dear │Oh dear │Oh dear │                                                                                       ││
+3b663a82 │  │Oh dear │Oh dear │Oh dear │                                                                                       ││
+5a99eb52 │  │Oh dear │Oh dear │Oh dear │                                                                                       ││
+9f7bfcca │  │AAAA         │BBBBBBBB     │CCCCCCCCCCCC │                                                                        ││
+a7e4023a │  │AAAA         │BBBBBBBB     │CCCCCCCCCCCC │                                                                        ││
+9f7bfcca │  │AAAA         │BBBBBBBB     │CCCCCCCCCCCC │                                                                        ││
+e78ad538 │   _SizingStretchProp          ▼ Sizing Policy (?)                                                                    │
+9e92a1fd │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+9b9cf805 │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+9e92a1fd │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+6580319d │  │AAAA               │ BBBBBBBB                             │CCCCCCCCCCCC                                           ││
+215a60f5 │  │AAAA               │ BBBBBBBB                             │CCCCCCCCCCCC                                           ││
+6580319d │  │AAAA               │ BBBBBBBB                             │CCCCCCCCCCCC                                           ││
+e78ad538 │   _SizingStretchSame          ▼ Sizing Policy (?)                                                                    │
+9e92a1fd │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+9b9cf805 │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+9e92a1fd │  │Oh dear                              │ Oh dear                              │Oh dear                              ││
+d3782c5d │  │AAAA                                 │ BBBBBBBB                             │CCCCCCCCCCCC                         ││
+65ac6935 │  │AAAA                                 │ BBBBBBBB                             │CCCCCCCCCCCC                         ││
+d3782c5d │  │AAAA                                 │ BBBBBBBB                             │CCCCCCCCCCCC                         ││
+ecf2f34d │  Advanced (?)                                                                                                        │
+ca4c62c5 │   Default                     ▼ Sizing Policy (?)                                                                    │
+4409d27d │   Show width                  ▼ Contents                                                                             │
+337cc9ad │                 3               Columns                                                                              │
+242dba32 │  ✓  ImGuiTableFlags_Resizable                                                                                        │
+f216b210 │     ImGuiTableFlags_PreciseWidths (?)                                                                                │
+a96f5610 │     ImGuiTableFlags_ScrollX                                                                                          │
+515739d2 │  ✓  ImGuiTableFlags_ScrollY                                                                                          │
+8454febd │     ImGuiTableFlags_NoClip                                                                                           │
+e55df941 │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             █│
+96e39bed │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             █│
+e55df941 │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             █│
+96e39bed │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             █│
+e55df941 │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             █│
+4407cf0b │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             ░│
+18f1ef3f │  │W: 289.0                             │W: 289.0                             │ W: 290.0                             ░│
+52ddb0c8 │  ▼ Vertical scrolling, with clipping                                                                                 │
+7ab2399d │  (?)                                                                                                                 │
+515739d2 │  ✓  ImGuiTableFlags_ScrollY                                                                                          │
+b663bd53 │  │One                                  │Two                                  │ Three                                █│
+b808ebb6 │  │Hello 0,0                            │Hello 1,0                            │ Hello 2,0                            ░│
+8e772baa │  │Hello 0,1                            │Hello 1,1                            │ Hello 2,1                            ░│
+b808ebb6 │  │Hello 0,2                            │Hello 1,2                            │ Hello 2,2                            ░│
+8e772baa │  │Hello 0,3                            │Hello 1,3                            │ Hello 2,3                            ░│
+b808ebb6 │  │Hello 0,4                            │Hello 1,4                            │ Hello 2,4                            ░│
+8e772baa │  │Hello 0,5                            │Hello 1,5                            │ Hello 2,5                            ░│
+b808ebb6 │  │Hello 0,6                            │Hello 1,6                            │ Hello 2,6                            ░│
+0d73a635 │  ▼ Horizontal scrolling                                                                                              │
+7ab2399d │  (?)                                                                                                                 │
+242dba32 │  ✓  ImGuiTableFlags_Resizable                                                                                        │
+515739d2 │  ✓  ImGuiTableFlags_ScrollX                                                                                          │
+515739d2 │  ✓  ImGuiTableFlags_ScrollY                                                                                          │
+ee6d255d │   1 freeze_cols                                                                                                      │
+ee6d255d │   1 freeze_rows                                                                                                      │
+19640643 │  │Line #  │One              │Two              │ Three           │ Four            │ Five            │ Six           █│
+52f5c42c │  │Line 0  │Hello world 1,0  │Hello world 2,0  │ Hello world 3,0 │ Hello world 4,0 │ Hello world 5,0 │ Hello world 6,█│
+cc7eaef8 │  │Line 1  │Hello world 1,1  │Hello world 2,1  │ Hello world 3,1 │ Hello world 4,1 │ Hello world 5,1 │ Hello world 6,█│
+3f57dbae │  │Line 2  │Hello world 1,2  │Hello world 2,2  │ Hello world 3,2 │ Hello world 4,2 │ Hello world 5,2 │ Hello world 6,░│
+7640740a │  │Line 3  │Hello world 1,3  │Hello world 2,3  │ Hello world 3,3 │ Hello world 4,3 │ Hello world 5,3 │ Hello world 6,░│
+3f57dbae │  │Line 4  │Hello world 1,4  │Hello world 2,4  │ Hello world 3,4 │ Hello world 4,4 │ Hello world 5,4 │ Hello world 6,░│
+7640740a │  │Line 5  │Hello world 1,5  │Hello world 2,5  │ Hello world 3,5 │ Hello world 4,5 │ Hello world 5,5 │ Hello world 6,░│
+e775e2ca │  │                                                                                                                  ░│
+32ca2688 │  Stretch + ScrollX (?)                                                                                               │
+515739d2 │  ✓  ImGuiTableFlags_ScrollX                                                                                          │
+8fa68f80 │              1000.0             inner_width                                                                          │
+eacbcc08 │  │Hello world 0,0   Hello world 1,0   Hello world 2,0  Hello world 3,0   Hello world 4,0   Hello world 5,0   Hello w█│
+e546544c │  │Hello world 0,1   Hello world 1,1   Hello world 2,1  Hello world 3,1   Hello world 4,1   Hello world 5,1   Hello w█│
+eacbcc08 │  │Hello world 0,2   Hello world 1,2   Hello world 2,2  Hello world 3,2   Hello world 4,2   Hello world 5,2   Hello w█│
+2a07db4e │  │Hello world 0,3   Hello world 1,3   Hello world 2,3  Hello world 3,3   Hello world 4,3   Hello world 5,3   Hello w░│
+e0d0c73a │  │Hello world 0,4   Hello world 1,4   Hello world 2,4  Hello world 3,4   Hello world 4,4   Hello world 5,4   Hello w░│
+2a07db4e │  │Hello world 0,5   Hello world 1,5   Hello world 2,5  Hello world 3,5   Hello world 4,5   Hello world 5,5   Hello w░│
+e0d0c73a │  │Hello world 0,6   Hello world 1,6   Hello world 2,6  Hello world 3,6   Hello world 4,6   Hello world 5,6   Hello w░│
+cd679c6e │  │                                                                                                                  ░│
+2c949d28 │  ▼ Columns flags                                                                                                     │
+e05dfb18 │  'One'                                  'Two'                                   'Three'                              │
+383fef38 │  Input flags:                           Input flags:                            Input flags:                         │
+a629feb8 │     _Disabled (?)                          _Disabled (?)                           _Disabled (?)                     │
+13c874ab │     _DefaultHide                           _DefaultHide                         ✓  _DefaultHide                      │
+6e948d6b │  ✓  _DefaultSort                           _DefaultSort                            _DefaultSort                      │
+1cbc45a0 │     _WidthStretch                          _WidthStretch                           _WidthStretch                     │
+49805bd0 │     _WidthFixed                            _WidthFixed                             _WidthFixed                       │
+23702a40 │     _NoResize                              _NoResize                               _NoResize                         │
+0dd72a0d │     _NoReorder                             _NoReorder                              _NoReorder                        │
+bd282c70 │     _NoHide                                _NoHide                                 _NoHide                           │
+bd282c70 │     _NoClip                                _NoClip                                 _NoClip                           │
+bd282c70 │     _NoSort                                _NoSort                                 _NoSort                           │
+e197e8cd │     _NoSortAscending                       _NoSortAscending                        _NoSortAscending                  │
+94895e80 │     _NoSortDescending                      _NoSortDescending                       _NoSortDescending                 │
+e2f7810d │     _NoHeaderLabel                         _NoHeaderLabel                          _NoHeaderLabel                    │
+e2f7810d │     _NoHeaderWidth                         _NoHeaderWidth                          _NoHeaderWidth                    │
+0b6248cd │     _PreferSortAscending                   _PreferSortAscending                    _PreferSortAscending              │
+e78ec0e0 │     _PreferSortDescending                  _PreferSortDescending                   _PreferSortDescending             │
+8bf6c5d8 │     _IndentEnable (?)                      _IndentEnable (?)                       _IndentEnable (?)                 │
+4b930825 │     _IndentDisable (?)                     _IndentDisable (?)                      _IndentDisable (?)                │
+1cbc45a0 │     _AngledHeader                          _AngledHeader                           _AngledHeader                     │
+40fa4285 │  Output flags:                          Output flags:                           Output flags:                        │
+ba3fd305 │  ✓  _IsEnabled                           ✓ _IsEnabled                              _IsEnabled                        │
+ba3fd305 │  ✓  _IsVisible                           ✓ _IsVisible                              _IsVisible                        │
+65eacaa0 │  ✓  _IsSorted                              _IsSorted                               _IsSorted                         │
+9d2aded5 │     _IsHovered                             _IsHovered                              _IsHovered                        │
+13f63f30 │  │One            ▲ │Two       │                                                                                     ││
+d6d5b190 │  │ Indented One    │Hello Two │                                                                                     ││
+c6d091a8 │  │ Indented One    │Hello Two │                                                                                     ││
+7853fc10 │  │  Indented One   │Hello Two │                                                                                     ││
+04e35078 │  │  Indented One   │Hello Two │                                                                                     ││
+35a2d8a0 │  │   Indented One  │Hello Two │                                                                                     ││
+d66353d8 │  │   Indented One  │Hello Two │                                                                                     ││
+2f391120 │  │    Indented One │Hello Two │                                                                                     ││
+8d341e88 │  │    Indented One │Hello Two │                                                                                     ││
+1a1b4055 │  ▼ Columns widths                                                                                                    │
+7ab2399d │  (?)                                                                                                                 │
+bc8e22e0 │     ImGuiTableFlags_Resizable                                                                                        │
+ffe9e06b │  ✓  ImGuiTableFlags_NoBordersInBodyUntilResize                                                                       │
+7d1084c0 │  │one          │ two                      │ three                                                                   ││
+21861db5 │  │(w: 100.0)     (w: 200.0)                 (w:  80.0)                                                              ││
+5039f0c5 │  │Hello 0,1      Hello 1,1                  Hello 2,1                                                               ││
+5039f0c5 │  │Hello 0,2      Hello 1,2                  Hello 2,2                                                               ││
+5039f0c5 │  │Hello 0,3      Hello 1,3                  Hello 2,3                                                               ││
+7ab2399d │  (?)                                                                                                                 │
+7f3cc75d │     ImGuiTableFlags_NoKeepColumnsVisible                                                                             │
+0ca622c0 │     ImGuiTableFlags_BordersInnerV                                                                                    │
+0ca622c0 │     ImGuiTableFlags_BordersOuterV                                                                                    │
+f7a2a9d5 │  (w: 100.0)     (w: 120.0)       (w: 240.0)                      (w: 120.0)                                          │
+fa5a0de5 │  Hello 0,1      Hello 1,1        Hello 2,1                       Hello 3,1                                           │
+fa5a0de5 │  Hello 0,2      Hello 1,2        Hello 2,2                       Hello 3,2                                           │
+fa5a0de5 │  Hello 0,3      Hello 1,3        Hello 2,3                       Hello 3,3                                           │
+fa5a0de5 │  Hello 0,4      Hello 1,4        Hello 2,4                       Hello 3,4                                           │
+0ac97c98 │  ▼ Nested tables                                                                                                     │
+7ab2399d │  (?)                                                                                                                 │
+0687ed12 │  │A0                                                      │ A1                                                      ││
+a73a5b92 │  │A0 Row 0                                                │ A1 Row 0                                                ││
+6fa90289 │  ││B0                        │ B1                       │ │                                                         ││
+b8a01009 │  ││B0 Row 0                  │ B1 Row 0                 │ │                                                         ││
+86f63249 │  ││                          │                          │ │                                                         ││
+b8a01009 │  ││B0 Row 1                  │ B1 Row 1                 │ │                                                         ││
+86f63249 │  ││                          │                          │ │                                                         ││
+a73a5b92 │  │A0 Row 1                                                │ A1 Row 1                                                ││
+3ff13595 │  ▼ Row height                                                                                                        │
+7ab2399d │  (?)                                                                                                                 │
+88a2eae8 │  │min_row_height = 0.00                                                                                             ││
+88a2eae8 │  │min_row_height = 4.00                                                                                             ││
+88a2eae8 │  │min_row_height = 9.00                                                                                             ││
+02da3ba5 │  │min_row_height = 14.00                                                                                            ││
+02da3ba5 │  │min_row_height = 19.00                                                                                            ││
+02da3ba5 │  │min_row_height = 24.00                                                                                            ││
+f3bdd465 │  │                                                                                                                  ││
+02da3ba5 │  │min_row_height = 28.00                                                                                            ││
+f3bdd465 │  │                                                                                                                  ││
+02da3ba5 │  │min_row_height = 33.00                                                                                            ││
+93d0f895 │                                                                                                                      │
+15568a05 │  (?)                                                      │                                                         ││
+916a2258 │  │                                                        │ Line 1                                                  ││
+916a2258 │  │                                                        │ Line 2                                                  ││
+e10032b8 │  │                                                        │ Line 1, with SameLine(0,0)                              ││
+71c4ab65 │  │                                                        │                                                         ││
+71c4ab65 │  │                                                        │                                                         ││
+f3c8eb48 │                                                             Line 2                                                   │
+9c6a2b06 │  (?)                                                                                                                ││
+ff554cf5 │  │CellPadding.y = 0.00                                                                                              ││
+ff554cf5 │  │CellPadding.y = 0.00                                                                                              ││
+f3bdd465 │  │                                                                                                                  ││
+7b8fa7e8 │  │CellPadding.y = 20.00                                                                                             ││
+f3bdd465 │  │                                                                                                                  ││
+ff554cf5 │  │CellPadding.y = 0.00                                                                                              ││
+ff554cf5 │  │CellPadding.y = 0.00                                                                                              ││
+f3bdd465 │  │                                                                                                                  ││
+7b8fa7e8 │  │CellPadding.y = 20.00                                                                                             ││
+f3bdd465 │  │                                                                                                                  ││
+f3bdd465 │  │                                                                                                                  ││
+ff554cf5 │  │CellPadding.y = 0.00                                                                                              ││
+44cf86f8 │  ▼CellPadding.y = 0.00                                                                                               │
+5676b258 │    Outer size                                                                                                        │
+267dab28 │  Using NoHostExtendX and NoHostExtendY:                                                                              │
+ffff2e0a │   ✓ ImGuiTableFlags_NoHostExtendX (?)                                                                                │
+21c44373 │  │  ImGuiTableFlags_NoHostExtendY (?)                                                                                │
+f15adb73 │  │Cell 0,0 │Cell 1,0 │Cell 2,0││Hello!                                                                               │
+dd3cd4cb │  │Cell 0,1 │Cell 1,1 │Cell 2,1││                                                                                     │
+5f8a26c3 │  │Cell 0,2 │Cell 1,2 │Cell 2,2││                                                                                     │
+dd3cd4cb │  │Cell 0,3 │Cell 1,3 │Cell 2,3││                                                                                     │
+5f8a26c3 │  │Cell 0,4 │Cell 1,4 │Cell 2,4││                                                                                     │
+dd3cd4cb │  │Cell 0,5 │Cell 1,5 │Cell 2,5││                                                                                     │
+5f8a26c3 │  │Cell 0,6 │Cell 1,6 │Cell 2,6││                                                                                     │
+dd3cd4cb │  │Cell 0,7 │Cell 1,7 │Cell 2,7││                                                                                     │
+5f8a26c3 │  │Cell 0,8 │Cell 1,8 │Cell 2,8││                                                                                     │
+372d4170 │   Cell 0,9  Cell 1,9  Cell 2,9                                                                                       │
+26bf744a │  Using explicit size:         │ │        │         │         │                                                       │
+900a3885 │  │Cell 0,0│ Cell 1,0│ Cell 2,0│ │Cell 0,0│ Cell 1,0│ Cell 2,0│                                                       │
+a7cb962d │  │Cell 0,1│ Cell 1,1│ Cell 2,1│ │Cell 0,1│ Cell 1,1│ Cell 2,1│                                                       │
+6008cfa0 │  │Cell 0,2│ Cell 1,2│ Cell 2,2│ │        │         │         │                                                       │
+0da995c5 │  │Cell 0,3│ Cell 1,3│ Cell 2,3│ │Cell 0,2│ Cell 1,2│ Cell 2,2│                                                       │
+b6d913b5 │  ▼Cell 0,4  Cell 1,4  Cell 2,4                                                                                       │
+71469c48 │    Background color                                                                                                  │
+a96f5610 │     ImGuiTableFlags_Borders                                                                                          │
+d46731c3 │   ✓ ImGuiTableFlags_RowBg (?)                                                               ▼                        │
+534231c8 │   Red                                                                                       ▼ row bg type            │
+ebf44d55 │   RowBg1                                                                                    ▼ row bg target (?)      │
+75ef6705 │   Blue                                                                                        cell bg type (?)       │
+c6a36909 │  A0                      A1                     A2                      A3                     A4                    │
+4befc581 │  B0                      B1                     B2                      B3                     B4                    │
+b86135c1 │  C0                      C1                     C2                      C3                     C4                    │
+7ad570e9 │  D0                      D1                     D2                      D3                     D4                    │
+c6a36909 │  E0                      E1                     E2                      E3                     E4                    │
+7ad570e9 │  ▼0                      F1                     F2                      F3                     F4                    │
+3062fcb5 │    Tree view                                                                                                         │
+b4b3095d │     ImGuiTreeNodeFlags_SpanFullWidth                                                                                 │
+544dfc20 │     ImGuiTreeNodeFlags_SpanLabelWidth                                                                                │
+c01ed29a │   ✓ ImGuiTreeNodeFlags_SpanAllColumns                                                                                │
+83669aa5 │     ImGuiTreeNodeFlags_LabelSpanAllColumns (?)                                                                       │
+0b8a7e52 │  (?)                                                                              │             │                   ││
+f7c9df65 │  │Na▼e                                                                              Size          Type              ││
+e290908d │  │ ─│ ▼oot with Long Name                                                           --            Folder            ││
+c96fdc9e │  │  │─│ Music                                                                       --            Folder            ││
+9be4f368 │  │  │─│ • File1_a.wav                                                               123000        Audio file        ││
+695af3e5 │  │ ─│ ▼ • File1_b.wav                                                               456000        Audio file        ││
+adc235c5 │  │  │─│ Textures                                                                    --            Folder            ││
+ba79fadf │  │  │─│ • Image001.png                                                              203128        Image file        ││
+7d66f5b5 │  │  │─│ • Copy of Image001.png                                                      203256        Image file        ││
+47b61ec5 │  │ ─│   • Copy of Image001 (Final2).png                                             203512        Image file        ││
+01bdf348 │  ▼    • desktop.ini                                                                 1024          System file        │
+e6447028 │    Item width                                                                                                        │
+25169d46 │  (?)                                   │                                      │                                     ││
+72c9c325 │  │small                                │ half                                 │right-align                          ││
+7085a8a8 │  │0.0 float0                           │       0.000        float1            │                0.000                ││
+7085a8a8 │  │0.0 float0                           │       0.000        float1            │                0.000                ││
+0d2c76e5 │  ▼0.0 float0                                   0.000        float1                             0.000                 │
+5641aec0 │  │ Custom headers                      │                                      │                                     ││
+c7fe9258 │  │   Apricot                           │    Banana                            │   Cherry                            ││
+673e2dc8 │  │Cell 0,0                             │ Cell 1,0                             │Cell 2,0                             ││
+673e2dc8 │  │Cell 0,1                             │ Cell 1,1                             │Cell 2,1                             ││
+673e2dc8 │  │Cell 0,2                             │ Cell 1,2                             │Cell 2,2                             ││
+673e2dc8 │  │Cell 0,3                             │ Cell 1,3                             │Cell 2,3                             ││
+1ba9c415 │  ▼Cell 0,4                               Cell 1,4                              Cell 2,4                              │
+a8398458 │    Angled headers                                                                                                    │
+ff0b3073 │   ✓ _ScrollX                                                                                                         │
+ff0b3073 │   ✓ _ScrollY                                                                                                         │
+746d0103 │   ✓ _Resizable                                                                                                       │
+5b420160 │     _Sortable                                                                                                        │
+c2bbc05d │     _NoBordersInBody                                                                                                 │
+12f67eba │   ✓ _HighlightHoveredColumn                                                                                          │
+f8ef72d9 │          1        Frozen columns                                                                                     │
+60b5244c │          2        Frozen rows                                                                                        │
+7234fb40 │    ▼Disable header contributing to column width                                                                      │
+21af9c98 │      Style settings (?)                                                                                              │
+98bf8fd9 │         35 deg      style.TableAngledHeadersAngle                                                                    │
+518d7a40 │      0.50    0.00   style.TableAngledHeadersTextAlign                                                                │
+4cb6e576 │  │             │    │    │   │    │   ││   │    │   │    │    │   │    │    │                                       █│
+e743bb94 │  │             │a  │    │   │i  id │ow │o  -c │s  │c  │   │    │    │                                       █│
+73d5096d │  │             s  e   sh  h  -m  l   t  at  e  re  p   │   k    │                                       █│
+ad013640 │  │           cb  id sa│ tm  om tm│ ih hih sa  na ca│ rm  ic    │                                       █│
+a1922fb7 │  │Track    │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            █│
+3ad7b800 │  │Track 0  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            █│
+3ad7b800 │  │Track 1  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            █│
+3ad7b800 │  │Track 2  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            █│
+530566c2 │  │Track 3  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            ░│
+530566c2 │  │Track 4  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            ░│
+530566c2 │  │Track 5  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            ░│
+b73559f0 │  ▼Track 6  │   │    │    │   │    │   │    │    │   │    │    │   │    │                                            ░│
+d7b6abb5 │    Context menus                                                                                                     │
+7ab2399d │  (?)                                                                                                                 │
+e3f36c46 │  │✓ ImGuiTableFlags_ContextMenuInBody  │                                      │                                     ││
+f3f35320 │  │One                                  │ Two                                  │Three                                ││
+673e2dc8 │  │Cell 0,0                             │ Cell 1,0                             │Cell 2,0                             ││
+673e2dc8 │  │Cell 0,1                             │ Cell 1,1                             │Cell 2,1                             ││
+673e2dc8 │  │Cell 0,2                             │ Cell 1,2                             │Cell 2,2                             ││
+e6edb188 │   Cell 0,3                               Cell 1,3                              Cell 2,3                              │
+5a56628d │  (?)            │              │              │                                                                     ││
+597ff923 │  │One           │Two           │Three         │                                                                     ││
+a535c9e7 │  │Cell 0,0  ..  │Cell 1,0  ..  │Cell 2,0  ..  │                                                                     ││
+a535c9e7 │  │Cell 0,1  ..  │Cell 1,1  ..  │Cell 2,1  ..  │                                                                     ││
+a535c9e7 │  │Cell 0,2  ..  │Cell 1,2  ..  │Cell 2,2  ..  │                                                                     ││
+853ecd8c │   Cell 0,3  ..   Cell 1,3  ..   Cell 2,3  ..                                                                         │
+d61168e5 │  ▼overed column: -1                                                                                                  │
+c038b268 │    Synced instances                                                                                                  │
+7ab2399d │  (?)                                                                                                                 │
+de87251a │   ✓ ImGuiTableFlags_Resizable                                                                                        │
+a96f5610 │     ImGuiTableFlags_ScrollY                                                                                          │
+c016e363 │   ✓ ImGuiTableFlags_SizingFixedFit                                                                                   │
+cc9e2530 │    ▼ImGuiTableFlags_HighlightHoveredColumn                                                                           │
+2fe9e139 │  │    Synced Table 0         │             │                                                                        ││
+59d7968b │  │One          │Two          │Three        │                                                                        ││
+079f957b │  │this cell 0  │this cell 1  │this cell 2  │                                                                        ││
+079f957b │  │this cell 3  │this cell 4  │this cell 5  │                                                                        ││
+079f957b │  │this cell 6  │this cell 7  │this cell 8  │                                                                        ││
+6ef9aab8 │    ▼                                                                                                                 │
+2fe9e139 │  │    Synced Table 1         │             │                                                                        ││
+59d7968b │  │One          │Two          │Three        │                                                                        ││
+079f957b │  │this cell 0  │this cell 1  │this cell 2  │                                                                        ││
+079f957b │  │this cell 3  │this cell 4  │this cell 5  │                                                                        ││
+079f957b │  │this cell 6  │this cell 7  │this cell 8  │                                                                        ││
+5ae77dcb │  │this cell 9  │this cell 10 │this cell 11 │                                                                        ││
+f939668a │  │this cell 12 │this cell 13 │this cell 14 │                                                                        ││
+f939668a │  │this cell 15 │this cell 16 │this cell 17 │                                                                        ││
+f939668a │  │this cell 18 │this cell 19 │this cell 20 │                                                                        ││
+f939668a │  │this cell 21 │this cell 22 │this cell 23 │                                                                        ││
+52f9e855 │   t▼is cell 24  this cell 25  this cell 26                                                                           │
+2fe9e139 │  │    Synced Table 2         │             │                                                                        ││
+59d7968b │  │One          │Two          │Three        │                                                                        ││
+079f957b │  │this cell 0  │this cell 1  │this cell 2  │                                                                        ││
+079f957b │  │this cell 3  │this cell 4  │this cell 5  │                                                                        ││
+079f957b │  │this cell 6  │this cell 7  │this cell 8  │                                                                        ││
+535d0088 │  ▼                                                                                                                   │
+1719d718 │    Sorting                                                                                                           │
+c6e2b34a │   ✓ ImGuiTableFlags_SortMulti (?)                                                                                    │
+79dc26a5 │     ImGuiTableFlags_SortTristate (?)                                                                                 │
+df182800 │  │ID  ▲│ Name      │ Action│ Quantity                                                                               █│
+17996935 │  │0000   Banana       None   0                                                                                      █│
+ab87a3ac │  │0001   Apple        None   0                                                                                      █│
+17996935 │  │0002   Cherry       None   2                                                                                      █│
+ef9d68b7 │  │0003   Watermelon   None   6                                                                                      ░│
+0906ebba │  │0004   Grapefruit   None   12                                                                                     ░│
+ef9d68b7 │  │0005   Strawberry   None   0                                                                                      ░│
+7d91d7ab │  │0006   Mango        None   10                                                                                     ░│
+d5071687 │  │0007   Kiwi         None   2                                                                                      ░│
+7c59f37a │  │0008   Orange       None   16                                                                                     ░│
+981ae71f │  │0009   Pineapple    None   12                                                                                     ░│
+7e98a08b │  │0010   Blueberry    None   10                                                                                     ░│
+7ed176a6 │  │0011   Plum         None   10                                                                                     ░│
+a4dd3fdb │  │0012   Coconut      None   12                                                                                     ░│
+230e9c44 │  ▼0013   Pear         None   16                                                                                     ░│
+8fe738d5 │    ▼dvanced                                                                                                          │
+bb142a08 │      ▼ptions                                                                                                         │
+bdb193d8 │        Features:                                                                                                     │
+4ffe7512 │      ✓  ImGuiTableFlags_Resizable                                                                                    │
+53175972 │      ✓  ImGuiTableFlags_Reorderable                                                                                  │
+3256755b │      ✓  ImGuiTableFlags_Hideable                                                                                     │
+3256755b │      ✓  ImGuiTableFlags_Sortable                                                                                     │
+20a9a6f0 │         ImGuiTableFlags_NoSavedSettings                                                                              │
+f508284d │      ▼  ImGuiTableFlags_ContextMenuInBody                                                                            │
+1edc06b5 │        Decorations:                                                                                                  │
+de810ad2 │      ✓  ImGuiTableFlags_RowBg                                                                                        │
+3256755b │      ✓  ImGuiTableFlags_BordersV                                                                                     │
+87606652 │      ✓  ImGuiTableFlags_BordersOuterV                                                                                │
+87606652 │      ✓  ImGuiTableFlags_BordersInnerV                                                                                │
+3256755b │      ✓  ImGuiTableFlags_BordersH                                                                                     │
+87606652 │      ✓  ImGuiTableFlags_BordersOuterH                                                                                │
+87606652 │      ✓  ImGuiTableFlags_BordersInnerH                                                                                │
+dc61b822 │      ✓  ImGuiTableFlags_NoBordersInBody (?)                                                                          │
+40ad3da0 │      ▼  ImGuiTableFlags_NoBordersInBodyUntilResize (?)                                                               │
+c65eb145 │        Sizing:                  ▼                                                                                    │
+36cb6978 │       _SizingFixedFit             Sizing Policy (?) (?)                                                              │
+ea0d9ab0 │         ImGuiTableFlags_NoHostExtendX (?)                                                                            │
+ea0d9ab0 │         ImGuiTableFlags_NoHostExtendY (?)                                                                            │
+12b2d025 │         ImGuiTableFlags_NoKeepColumnsVisible (?)                                                                     │
+ea0d9ab0 │         ImGuiTableFlags_PreciseWidths (?)                                                                            │
+365050e0 │      ▼  ImGuiTableFlags_NoClip (?)                                                                                   │
+20ee6ed5 │        Padding:                                                                                                      │
+5cde0400 │         ImGuiTableFlags_PadOuterX                                                                                    │
+6922b290 │         ImGuiTableFlags_NoPadOuterX                                                                                  │
+cf1ca3dd │      ▼  ImGuiTableFlags_NoPadInnerX                                                                                  │
+0d4323a5 │        Scrolling:                                                                                                    │
+e2af4e1a │      ✓  ImGuiTableFlags_ScrollX  1 freeze_cols                                                                       │
+587351ed │      ▼  ImGuiTableFlags_ScrollY  1 freeze_rows                                                                       │
+20ee6ed5 │        Sorting:                                                                                                      │
+ac275f42 │      ✓  ImGuiTableFlags_SortMulti (?)                                                                                │
+c2885800 │      ▼  ImGuiTableFlags_SortTristate (?)                                                                             │
+20ee6ed5 │        Headers:                                                                                                      │
+6566d1fb │      ✓  show_headers                                                                                                 │
+495c437d │         ImGuiTableFlags_HighlightHoveredColumn                                                                       │
+3854ba20 │      ▼  ImGuiTableColumnFlags_AngledHeader (?)                                                                       │
+3694fb45 │        Other:                                                                                                        │
+517bc0c0 │         show_wrapped_text                                                                                            │
+d8a9912b │          0.000         192.000     ✓ outer_size (?)                                                                  │
+789d46e8 │                  0.000            inner_width (when ScrollX active)                                                  │
+ef09aea8 │                  0.000            row_min_height (?)                                                                 │
+05e8c705 │                   30            ▼ items_count                                                                        │
+5d40c6b5 │       Selectable (span row)       items_type (first column)                                                          │
+086ed402 │  │ID  ▲│ Name      │ Action      │ Quantity   │Description                                                          █│
+ff0c4f66 │  │0000   Banana       Chop   Eat   0           Lorem ipsum dolor sit amet                                           █│
+4e8e6563 │  │0001   Apple        Chop   Eat   0           Lorem ipsum dolor sit amet                                           █│
+ff0c4f66 │  │0002   Cherry       Chop   Eat   0           Lorem ipsum dolor sit amet                                           █│
+b4035511 │  │0003   Watermelon   Chop   Eat   10          Lorem ipsum dolor sit amet                                           ░│
+a5f849d9 │  │0004   Grapefruit   Chop   Eat   20          Lorem ipsum dolor sit amet                                           ░│
+f397cafc │  │0005   Strawberry   Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+3d191ec5 │  │0006   Mango        Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+22c0840c │  │0007   Kiwi         Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+32f1e624 │  │0008   Orange       Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+80de08e5 │  │0009   Pineapple    Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+0d8a55e5 │  │0010   Blueberry    Chop   Eat   0           Lorem ipsum dolor sit amet                                           ░│
+860c6b90 │  ▼  Debug details                                                                                                    │
+cd727e3d │    ▼egacy Columns API (?)                                                                                            │
+5db8b5e8 │      Basic                                                                                                           │
+5e436549 │    Without─border:───────────────────────────────────────────────────────────────────────────────────────────────────┤
+3d304058 │    Item 0                                 Item 1                                Item 2                               │
+3d304058 │    Item 3                                 Item 4                                Item 5                               │
+3d304058 │    Item 6                                 Item 7                                Item 8                               │
+f30642a8 │    Item 9                                 Item 10                               Item 11                              │
+6f07a9d5 │    Item─12────────────────────────────────Item─13────────────────────────────────────────────────────────────────────│
+428f3a9b │    With─border:───────────────┬────────────────────────────┬────────────────────────────┬────────────────────────────┤
+8708b843 │    ID─────────────────────────┼─Name───────────────────────┼─Path───────────────────────┼─Hovered────────────────────┤
+dda60da7 │    0000                       │ One                        │ /path/one                  │ 0                          │
+dda60da7 │    0001                       │ Two                        │ /path/two                  │ 0                          │
+f2e5d53b │    0002─────────────────────────Three────────────────────────/path/three──────────────────0──────────────────────────│
+3b6cf6e5 │    ▼ Borders                                                                                                         │
+e5731f8d │    ────4─columns─────✓─horizontal──✓─vertical──────────────┬────────────────────────────┬────────────────────────────┤
+a3bff9a6 │    aaa                        │ bbb                        │ ccc                        │ ddd                        │
+0126cea6 │    Width 231.00               │ Width 231.00               │ Width 231.00               │ Width 231.00               │
+0126cea6 │    Avail 215.00               │ Avail 215.00               │ Avail 215.00               │ Avail 215.00               │
+df91b7a7 │    Offset 32.00               │ Offset 263.00              │ Offset 494.00              │ Offset 725.00              │
+2de02fc6 │    Long text that is likely to│ Long text that is likely to│ Long text that is likely to│ Long text that is likely to│
+d3bab2c5 │    ──────────Button───────────┼───────────Button───────────┼───────────Button───────────┼───────────Button───────────┤
+a3bff9a6 │    eee                        │ fff                        │ ggg                        │ hhh                        │
+0126cea6 │    Width 231.00               │ Width 231.00               │ Width 231.00               │ Width 231.00               │
+0126cea6 │    Avail 215.00               │ Avail 215.00               │ Avail 215.00               │ Avail 215.00               │
+df91b7a7 │    Offset 32.00               │ Offset 263.00              │ Offset 494.00              │ Offset 725.00              │
+2de02fc6 │    Long text that is likely to│ Long text that is likely to│ Long text that is likely to│ Long text that is likely to│
+43128a26 │              Button           │           Button           │           Button           │           Button           │
+eb7ece15 │    iii────────────────────────┼─jjj────────────────────────┼─kkk────────────────────────┼─lll────────────────────────┤
+0126cea6 │    Width 231.00               │ Width 231.00               │ Width 231.00               │ Width 231.00               │
+0126cea6 │    Avail 215.00               │ Avail 215.00               │ Avail 215.00               │ Avail 215.00               │
+df91b7a7 │    Offset 32.00               │ Offset 263.00              │ Offset 494.00              │ Offset 725.00              │
+2de02fc6 │    Long text that is likely to│ Long text that is likely to│ Long text that is likely to│ Long text that is likely to│
+43128a26 │              Button           │           Button           │           Button           │           Button           │
+4b3ad784 │    ▼─Mixed items─────────────────────────────────────────────────────────────────────────────────────────────────────│
+41f5071d │    Hello────────────────────────────────┬─ImGui────────────────────────────────┬Sailor───────────────────────────────┤
+b073ae57 │     Banana                              │  Apple                               │ Corniflower                         │
+aad1f4e8 │                                         │  1.000              -  +  red        │ 1.000               -  + blue       │
+fb3e5f5d │                                         │ An extra line here.                  │                                     │
+2e4df57e │     ▶   Category A                      │  ▶   Category B                      │ ▶   Category C                      │
+b22898a9 │    ▼─Word-wrapping───────────────────────────────────────────────────────────────────────────────────────────────────│
+ed7e5225 │    The quick brown fox jumps over the lazy dog.────────────┬─The quick brown fox jumps over the lazy dog.────────────┤
+450cf093 │    Hello Left                                              │ Hello Right                                             │
+ead216be │    ▼─Horizontal Scrolling────────────────────────────────────────────────────────────────────────────────────────────│
+2c1fc192 │     Line 0 Column 0... Line 0 Column 1..│ Line 0 Column 2..│Line 0 Column 3...│Line 0 Column 4... Line 0 Column 5..│█│
+37471660 │     Line 1 Column 0... Line 1 Column 1..│ Line 1 Column 2..│Line 1 Column 3...│Line 1 Column 4... Line 1 Column 5..│░│
+37471660 │     Line 2 Column 0... Line 2 Column 1..│ Line 2 Column 2..│Line 2 Column 3...│Line 2 Column 4... Line 2 Column 5..│░│
+37471660 │     Line 3 Column 0... Line 3 Column 1..│ Line 3 Column 2..│Line 3 Column 3...│Line 3 Column 4... Line 3 Column 5..│░│
+37471660 │     Line 4 Column 0... Line 4 Column 1..│ Line 4 Column 2..│Line 4 Column 3...│Line 4 Column 4... Line 4 Column 5..│░│
+37471660 │     Line 5 Column 0... Line 5 Column 1..│ Line 5 Column 2..│Line 5 Column 3...│Line 5 Column 4... Line 5 Column 5..│░│
+37471660 │     Line 6 Column 0... Line 6 Column 1..│ Line 6 Column 2..│Line 6 Column 3...│Line 6 Column 4... Line 6 Column 5..│░│
+37471660 │     Line 7 Column 0... Line 7 Column 1..│ Line 7 Column 2..│Line 7 Column 3...│Line 7 Column 4... Line 7 Column 5..│░│
+37471660 │     Line 8 Column 0... Line 8 Column 1..│ Line 8 Column 2..│Line 8 Column 3...│Line 8 Column 4... Line 8 Column 5..│░│
+37471660 │     Line 9 Column 0... Line 9 Column 1..│ Line 9 Column 2..│Line 9 Column 3...│Line 9 Column 4... Line 9 Column 5..│░│
+35f4e9a0 │     Line 10 Column 0.. Line 10 Column 1.│ Line 10 Column 2.│Line 10 Column 3..│Line 10 Column 4.. Line 10 Column 5.│░│
+35f4e9a0 │     Line 11 Column 0.. Line 11 Column 1.│ Line 11 Column 2.│Line 11 Column 3..│Line 11 Column 4.. Line 11 Column 5.│░│
+35f4e9a0 │     Line 12 Column 0.. Line 12 Column 1.│ Line 12 Column 2.│Line 12 Column 3..│Line 12 Column 4.. Line 12 Column 5.│░│
+35f4e9a0 │     Line 13 Column 0.. Line 13 Column 1.│ Line 13 Column 2.│Line 13 Column 3..│Line 13 Column 4.. Line 13 Column 5.│░│
+35f4e9a0 │     Line 14 Column 0.. Line 14 Column 1.│ Line 14 Column 2.│Line 14 Column 3..│Line 14 Column 4.. Line 14 Column 5.│░│
+35f4e9a0 │     Line 15 Column 0.. Line 15 Column 1.│ Line 15 Column 2.│Line 15 Column 3..│Line 15 Column 4.. Line 15 Column 5.│░│
+35f4e9a0 │     Line 16 Column 0.. Line 16 Column 1.│ Line 16 Column 2.│Line 16 Column 3..│Line 16 Column 4.. Line 16 Column 5.│░│
+35f4e9a0 │     Line 17 Column 0.. Line 17 Column 1.│ Line 17 Column 2.│Line 17 Column 3..│Line 17 Column 4.. Line 17 Column 5.│░│
+35f4e9a0 │     Line 18 Column 0.. Line 18 Column 1.│ Line 18 Column 2.│Line 18 Column 3..│Line 18 Column 4.. Line 18 Column 5.│░│
+a246552d │                                                                                                                     ░│
+ac4aa698 │    ▼ Tree                                                                                                            │
+adde01da │      ▼ Node0                                               │ Node contents                                           │
+b1346cba │        ▼ Node0.0                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node0.1                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node0.2                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+adde01da │      ▼ Node1                                               │ Node contents                                           │
+b1346cba │        ▼ Node1.0                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node1.1                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node1.2                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+adde01da │      ▼ Node2                                               │ Node contents                                           │
+b1346cba │        ▼ Node2.0                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node2.1                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+b1346cba │        ▼ Node2.2                                           │ Node contents                                           │
+057016ea │                                                            │ Even more contents                                      │
+6d817e23 │                                                            │  ▼  Tree in column                                      │
+936008f3 │                                                            │   The quick brown fox jumps over the lazy dog           │
+d054e0c0 │ ▶   Inputs & Focus                                                                                                   │

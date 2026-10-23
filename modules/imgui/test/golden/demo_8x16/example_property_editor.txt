@@ -1,0 +1,25 @@
+772e4d4d ┌─▼──Example: Property editor────────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+90356d3a │┌───────────────────────────────────┐  Apple 0                                                                        │
+-------- <row showing a pointer>
+e74b85f6 ││ incl -excl                          ───┬────────────────────────────────────────────────────────────────────────────│
+23c6909f ││ ▶  Apple 0                        │    │                                                                            │
+8ca1894f ││ ▶  Apple 1                        │    │                                                                            │
+7b108a56 ││ ▶  Banana 0                       │    │                                                                            │
+8c6cb7d6 ││ ▶  Banana 1                       │    │                                                                            │
+7b108a56 ││ ▶  Cherry 0                       │    │                                                                            │
+8c6cb7d6 ││ ▶  Cherry 1                       │    │                                                                            │
+c890b836 ││ ▶  Kiwi 0                         │    │                                                                            │
+ad879d06 ││ ▶  Kiwi 1                         │    │                                                                            │
+1881df5f ││ ▶  Mango 0                        │    │                                                                            │
+8ca1894f ││ ▶  Mango 1                        │    │                                                                            │
+7b108a56 ││ ▶  Orange 0                       │    │                                                                            │
+8c6cb7d6 ││ ▶  Orange 1                       │    │                                                                            │
+c890b836 ││ ▶  Pear 0                         │    │                                                                            │
+ad879d06 ││ ▶  Pear 1                         │    │                                                                            │
+eb24bbbf ││ ▶  Pineapple 0                    │    │                                                                            │
+e30d7f4f ││ ▶  Pineapple 1                    │    │                                                                            │
+6caf1716 ││ ▶  Strawberry 0                   │    │                                                                            │
+987f5c96 ││ ▶  Strawberry 1                   │    │                                                                            │
+6caf1716 ││ ▶  Watermelon 0                   │    │                                                                            │
+987f5c96 ││ ▶  Watermelon 1                   │    │                                                                            │

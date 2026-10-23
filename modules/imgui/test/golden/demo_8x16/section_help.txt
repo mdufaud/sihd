@@ -1,0 +1,53 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+73b62fe0 │  ▼  Help                                                                                                             │
+fccab1a5 │ ABOUT THIS DEMO: ────────────────────────────────────────────────────────────────────────────────────────────────────│
+7b2c7705 │  • Sections below are demonstrating many aspects of the library.                                                     │
+746dc288 │  • The "Examples" menu above leads to more demo contents.                                                            │
+343ddab8 │  • The "Tools" menu above gives access to: About Box, Style Editor,                                                  │
+3a843255 │    and Metrics/Debugger (general purpose Dear ImGui debugging tool).                                                 │
+b8e54165 │  • Web demo (w/ source code browser): https://pthom.github.io/imgui_explorer                                         │
+75f23276 │ PROGRAMMER GUIDE: ───────────────────────────────────────────────────────────────────────────────────────────────────│
+33d674d8 │  • See the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!                                                 │
+c8d8b4d5 │  • See comments in imgui.cpp.                                                                                        │
+00c78535 │  • See example applications in the examples/ folder.                                                                 │
+30170f58 │  • Read the FAQ at https://www.dearimgui.com/faq/                                                                    │
+9e699fa8 │  • Set 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.                                                  │
+f98839c8 │  • Set 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.                                                    │
+b584d5ee │ USER GUIDE: ─────────────────────────────────────────────────────────────────────────────────────────────────────────│
+1b0fe375 │  • Double-click on title bar to collapse window.                                                                     │
+ef479468 │  • Click and drag on lower corner or border to resize window.                                                        │
+b6cb52c5 │    (double-click to auto fit window to its contents)                                                                 │
+584edd35 │  • Ctrl+Click on a slider or drag box to input value as text.                                                        │
+bf569b98 │  • Tab/Shift+Tab to cycle through keyboard editable fields.                                                          │
+b94db678 │  • Ctrl+Tab/Ctrl+Shift+Tab to focus windows.                                                                         │
+057daab5 │  • While inputting text:                                                                                             │
+1df18708 │    • Ctrl+Left/Right to word jump.                                                                                   │
+dfe100f8 │    • Ctrl+A or double-click to select all.                                                                           │
+f66991d5 │    • Ctrl+X/C/V to use clipboard cut/copy/paste.                                                                     │
+15bd3075 │    • Ctrl+Z to undo, Ctrl+Y/Ctrl+Shift+Z to redo.                                                                    │
+0c984345 │    • Escape to revert.                                                                                               │
+902a7928 │  • With Keyboard controls enabled:                                                                                   │
+9dfdce08 │    • Arrow keys or Home/End/PageUp/PageDown to navigate.                                                             │
+5bd8c6e5 │    • Space to activate a widget.                                                                                     │
+34c63595 │    • Return to input text into a widget.                                                                             │
+f6583525 │    • Escape to deactivate a widget, close popup,                                                                     │
+8cf4b035 │      exit a child window or the menu layer, clear focus.                                                             │
+d9d42b85 │    • Alt to jump to the menu layer of a window.                                                                      │
+b39d4b78 │    • Menu or Shift+F10 to open a context menu.                                                                       │
+38e5fc05 │  • With Gamepad controls enabled:                                                                                    │
+17aafc85 │    • D-Pad: Navigate / Tweak / Resize (in Windowing mode).                                                           │
+c34a91c8 │    • South Face button: Activate / Open / Toggle. Hold: activate with text input.                                    │
+fce84a05 │    • East Face button: Cancel / Close / Exit.                                                                        │
+b28af065 │    • West Face button: Toggle Menu. Hold for Windowing mode (Focus/Move/Resize windows).                             │
+f97c6528 │    • North Face button: Open Context Menu.                                                                           │
+4b63bff5 │    • L1/R1: Tweak Slower/Faster, Focus Previous/Next (in Windowing Mode).                                            │
+5aece2bd │ ▶   Configuration                                                                                                    │
+5f28df35 │ ▶   Window options                                                                                                   │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+768e1070 │ ▶   Layout & Scrolling                                                                                               │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+6b7287d8 │ ▶   Tables & Columns                                                                                                 │
+d054e0c0 │ ▶   Inputs & Focus                                                                                                   │

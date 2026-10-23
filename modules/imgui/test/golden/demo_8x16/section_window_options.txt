@@ -1,0 +1,16 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8313aa48 │ ▶   Help                                                                                                             │
+5aece2bd │ ▶   Configuration                                                                                                    │
+319d303d │  ▼  Window options                                                                                                   │
+0ac3ce60 │   No titlebar                             No scrollbar                            No menu                            │
+878873fd │   No move                                 No resize                               No collapse                        │
+01cd374d │   No close                                No nav                                  No background                      │
+482b1618 │   No bring to front                       Unsaved document                                                           │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+768e1070 │ ▶   Layout & Scrolling                                                                                               │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+6b7287d8 │ ▶   Tables & Columns                                                                                                 │
+d054e0c0 │ ▶   Inputs & Focus                                                                                                   │

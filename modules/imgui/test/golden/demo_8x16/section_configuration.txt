@@ -1,0 +1,69 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8313aa48 │ ▶   Help                                                                                                             │
+1cfc71a5 │  ▼  Configuration                                                                                                    │
+d4c7f685 │  ▼ Configuration                                                                                                     │
+f1601c37 │   General ───────────────────────────────────────────────────────────────────────────────────────────────────────────│
+8f88c905 │     io.ConfigFlags: NavEnableKeyboard (?)                                                                            │
+7003fc00 │     io.ConfigFlags: NavEnableGamepad (?)                                                                             │
+82c08735 │     io.ConfigFlags: NoMouse (?)                                                                                      │
+f493b3d5 │     io.ConfigFlags: NoMouseCursorChange (?)                                                                          │
+e3cbf4e0 │     io.ConfigFlags: NoKeyboard (?)                                                                                   │
+98b46b80 │     io.ConfigInputTrickleEventQueue (?)                                                                              │
+5e6c81e5 │     io.MouseDrawCursor (?)                                                                                           │
+e1470566 │   Keyboard/Gamepad Navigation ───────────────────────────────────────────────────────────────────────────────────────│
+d1e8383d │     io.ConfigNavSwapGamepadButtons                                                                                   │
+eaae4420 │     io.ConfigNavMoveSetMousePos (?)                                                                                  │
+5cd538fa │   ✓ io.ConfigNavCaptureKeyboard                                                                                      │
+7cd2f8ab │   ✓ io.ConfigNavEscapeClearFocusItem (?)                                                                             │
+05ba9fe5 │     io.ConfigNavEscapeClearFocusWindow (?)                                                                           │
+ffff2e0a │   ✓ io.ConfigNavCursorVisibleAuto (?)                                                                                │
+98b46b80 │     io.ConfigNavCursorVisibleAlways (?)                                                                              │
+f1601c37 │   Windows ───────────────────────────────────────────────────────────────────────────────────────────────────────────│
+98b46b80 │     io.ConfigWindowsResizeFromEdges (?)                                                                              │
+7f3cc75d │     io.ConfigWindowsMoveFromTitleBarOnly                                                                             │
+463ad450 │     io.ConfigWindowsCopyContentsWithCtrlC (?)                                                                        │
+46aaaf1b │   ✓ io.ConfigScrollbarScrollByPage (?)                                                                               │
+f1601c37 │   Widgets ───────────────────────────────────────────────────────────────────────────────────────────────────────────│
+f216b210 │     io.ConfigInputTextCursorBlink (?)                                                                                │
+787c3b70 │     io.ConfigInputTextEnterKeepActive (?)                                                                            │
+f216b210 │     io.ConfigDragClickToInputText (?)                                                                                │
+2a453b65 │     io.ConfigMacOSXBehaviors (?)                                                                                     │
+178691e8 │  Also see Style->Rendering for rendering options.                                                                    │
+af8976a5 │   Settings ──────────────────────────────────────────────────────────────────────────────────────────────────────────│
+b432fb13 │   ✓ io.ConfigIniSettingsSaveLastUsedDate                                                                             │
+b56b8178 │   Error Handling ────────────────────────────────────────────────────────────────────────────────────────────────────│
+e9e4e8db │   ✓ io.ConfigErrorRecovery (?)                                                                                       │
+5b245dc3 │   ✓ io.ConfigErrorRecoveryEnableAssert                                                                               │
+b432fb13 │   ✓ io.ConfigErrorRecoveryEnableDebugLog                                                                             │
+54f4887a │   ✓ io.ConfigErrorRecoveryEnableTooltip                                                                              │
+fb1c8a1f │   Debug ─────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+98b46b80 │     io.ConfigDebugIsDebuggerPresent (?)                                                                              │
+f5f9b73b │   ✓ io.ConfigDebugHighlightIdConflicts (?)                                                                           │
+d3057b7d │     io.ConfigDebugBeginReturnValueOnce (?)                                                                           │
+05ba9fe5 │     io.ConfigDebugBeginReturnValueLoop (?)                                                                           │
+f216b210 │     io.ConfigDebugIgnoreFocusLoss (?)                                                                                │
+1f685e0b │   ✓ io.ConfigDebugDrawListDefaultsToStrokeLegacy (?)                                                                 │
+151ff730 │     io.ConfigDebugIniSettings (?)                                                                                    │
+2c949d28 │  ▼ Backend Flags                                                                                                     │
+7ab2399d │  (?)                                                                                                                 │
+b5027e75 │     io.BackendFlags: HasGamepad                                                                                      │
+ad885181 │     io.BackendFlags: HasMouseCursors                                                                                 │
+214e0a75 │     io.BackendFlags: HasSetMousePos                                                                                  │
+89aceb80 │   ✓ io.BackendFlags: RendererHasVtxOffset                                                                            │
+45a626bc │   ✓ io.BackendFlags: RendererHasTextures                                                                             │
+55028b15 │  ▼ Style, Fonts                                                                                                      │
+a6c32830 │     Style Editor (?)                                                                                                 │
+9f91bc25 │  ▼ Capture/Logging                                                                                                   │
+7ab2399d │  (?)                                                                                                                 │
+291f6bcf │   Log To TTY   Log To File   Log To Clipboard   2  Default Depth                                                     │
+7ab2399d │  (?)                                                                                                                 │
+36bfca5a │   Copy "Hello, world!" to clipboard                                                                                  │
+5f28df35 │ ▶   Window options                                                                                                   │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+768e1070 │ ▶   Layout & Scrolling                                                                                               │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+6b7287d8 │ ▶   Tables & Columns                                                                                                 │
+d054e0c0 │ ▶   Inputs & Focus                                                                                                   │

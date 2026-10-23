@@ -1,0 +1,10 @@
+b8935880 ┌─▼──Example: Documents──────────────────────────────────────────────────────────────────────────────────────────────×─┐
+da84ffa5 │ File                                                                                                                 │
+93d0f895 │                                                                                                                      │
+75e91ae2 │ ✓ Lettuce  ✓ Eggplant  ✓ Carrot    Tomato    A Rather Long Title    Some Document                                    │
+0a124119 │ Lettuce ×  ─ Eggplant    ─ Carrot    ────────────────────────────────────────────────────────────────────────────────│
+1c1db328 │Document "Lettuce"                                                                                                    │
+95879055 │Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna   │
+14e75aad │aliqua.                                                                                                               │
+0ae1fb62 │ Rename..   Modify   Save   Close                                                                                     │
+a4472ef5 ││          102           │          204           │          102               color                                  │

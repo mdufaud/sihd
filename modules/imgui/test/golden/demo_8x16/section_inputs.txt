@@ -1,0 +1,118 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8313aa48 │ ▶   Help                                                                                                             │
+5aece2bd │ ▶   Configuration                                                                                                    │
+5f28df35 │ ▶   Window options                                                                                                   │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+768e1070 │ ▶   Layout & Scrolling                                                                                               │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+6b7287d8 │ ▶   Tables & Columns                                                                                                 │
+13225438 │  ▼  Inputs & Focus                                                                                                   │
+7cdd11c8 │  ▼ Inputs (?)                                                                                                        │
+cdf93ef5 │  Mouse pos: <INVALID>                                                                                                │
+adeed605 │  Mouse delta: (0, 0)                                                                                                 │
+de14c065 │  Mouse down:                                                                                                         │
+b20aa0e5 │  Mouse wheel: 0.0                                                                                                    │
+4e037a35 │  Mouse clicked count:                                                                                                │
+ba49d038 │  Keys down:                                                                                                          │
+ba49d038 │  Keys mods:                                                                                                          │
+6a009d78 │  Chars queue:                                                                                                        │
+6245c56d │  ▼ Outputs (?)                                                                                                       │
+a522b758 │  io.WantCaptureMouse: 0                                                                                              │
+9423aa58 │  io.WantCaptureMouseUnlessPopupClose: 0                                                                              │
+4237e0f5 │  io.WantCaptureKeyboard: 0                                                                                           │
+be99a2c5 │  io.WantTextInput: 0                                                                                                 │
+a3fd0b15 │  io.WantSetMousePos: 0                                                                                               │
+6f3c96a5 │  io.NavActive: 0, io.NavVisible: 0                                                                                   │
+bcc66be5 │    ▼ WantCapture override                                                                                            │
+1ff4013d │    (?)                                                                                                               │
+722976cc │                 None              SetNextFrameWantCaptureMouse() on hover                                            │
+c48453e1 │                 None              SetNextFrameWantCaptureKeyboard() on hover                                         │
+ff04adb5 │                                                                                                                      │
+ff04adb5 │                                                                                                                      │
+ff04adb5 │                                                                                                                      │
+ff04adb5 │                                                                                                                      │
+d3591cc5 │  ▼ Shortcuts                                                                                                         │
+a24eea23 │   ✓ ImGuiInputFlags_Repeat                                                                                           │
+2faba470 │     ImGuiInputFlags_RouteActive                                                                                      │
+30ea946a │   ✓ ImGuiInputFlags_RouteFocused (default)                                                                           │
+9cf149c0 │       ImGuiInputFlags_RouteOverActive                                                                                │
+2faba470 │     ImGuiInputFlags_RouteGlobal                                                                                      │
+51767e35 │       ImGuiInputFlags_RouteOverFocused                                                                               │
+72ad6b99 │       ImGuiInputFlags_RouteOverActive                                                                                │
+8c421035 │       ImGuiInputFlags_RouteUnlessBgFocused                                                                           │
+2faba470 │     ImGuiInputFlags_RouteAlways                                                                                      │
+a62bace6 │   Using SetNextItemShortcut() ───────────────────────────────────────────────────────────────────────────────────────│
+97887405 │  Ctrl+S                                                                                                              │
+f95dd1dd │   Save                                                                                                               │
+355ed9c8 │  Alt+F                                                                                                               │
+336e4df8 │                                              0.500                                            Factor                 │
+1da23c58 │   Using Shortcut() ──────────────────────────────────────────────────────────────────────────────────────────────────│
+97887405 │  Ctrl+A                                                                                                              │
+fa994ac5 │  IsWindowFocused: 1, Shortcut: ...                                                                                   │
+00d01913 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+b32db4ee │  │Press Ctrl+A and see who receives it!                                                                             █│
+e03720b5 │  │(in WindowA)───────────────────────────────────────────────────────────────────────────────────────────────────── █│
+07be9d47 │  │IsWindowFocused: 0, Shortcut: ...                                                                                 █│
+6d89fb8a │  │┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ █│
+19e36e53 │  ││(in ChildD: not using same Shortcut)                                                                           │ █│
+111a7a3b │  ││IsWindowFocused: 0                                                                                             │ █│
+6d89fb8a │  │└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ █│
+6d89fb8a │  │┌───────────────────────────────────────────────────────────────────────────────────────────────────────────────┐ █│
+30f40732 │  ││(in ChildE: using same Shortcut)                                                                               │ █│
+1a94d89a │  ││IsWindowFocused: 0, Shortcut: ...                                                                              │ █│
+6d89fb8a │  │└───────────────────────────────────────────────────────────────────────────────────────────────────────────────┘ █│
+6e16c012 │  │ Open Popup                                                                                                       █│
+00d01913 │  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+bb06ca38 │  ▼ Mouse Cursors                                                                                                     │
+f547ba45 │  Current mouse cursor = 0: Arrow                                                                                     │
+ad885181 │     io.BackendFlags: HasMouseCursors                                                                                 │
+91374d38 │  Hover to see mouse cursors: (?)                                                                                     │
+97aeca68 │    • Mouse cursor 0: Arrow                                                                                           │
+31eee3a8 │    • Mouse cursor 1: TextInput                                                                                       │
+31eee3a8 │    • Mouse cursor 2: ResizeAll                                                                                       │
+fa55d8d5 │    • Mouse cursor 3: ResizeNS                                                                                        │
+fa55d8d5 │    • Mouse cursor 4: ResizeEW                                                                                        │
+adbe37e5 │    • Mouse cursor 5: ResizeNESW                                                                                      │
+adbe37e5 │    • Mouse cursor 6: ResizeNWSE                                                                                      │
+0fd6d275 │    • Mouse cursor 7: Hand                                                                                            │
+0fd6d275 │    • Mouse cursor 8: Wait                                                                                            │
+fa55d8d5 │    • Mouse cursor 9: Progress                                                                                        │
+5b88aaa8 │    • Mouse cursor 10: NotAllowed                                                                                     │
+dbb5b0a5 │  ▼ Tabbing                                                                                                           │
+b3d5edf8 │  Use Tab/Shift+Tab to cycle through keyboard editable fields.                                                        │
+3908bdf5 │   hello                                                                                       1                      │
+3908bdf5 │   hello                                                                                       2                      │
+3908bdf5 │   hello                                                                                       3                      │
+a902af78 │   hello                                                                                       4 (tab skip) (?)       │
+3908bdf5 │   hello                                                                                       5                      │
+f865a1a5 │  ▼ Focus from code                                                                                                   │
+f8778e7d │   Focus on 1   Focus on 2   Focus on 3                                                                               │
+cfd076e8 │   click on a button to set focus                                                              1                      │
+cfd076e8 │   click on a button to set focus                                                              2                      │
+f990557d │   click on a button to set focus                                                              3 (tab skip) (?)       │
+6cc39845 │  Item with focus: <none>                                                                                             │
+f8778e7d │   Focus on X   Focus on Y   Focus on Z                                                                               │
+0578ab94 │               0.000                          0.000                          0.000             Float3                 │
+a9928505 │  NB: Cursor & selection are preserved when refocusing last used item in code.                                        │
+db1c30c8 │  ▼ Dragging                                                                                                          │
+af28e495 │  You can use ImGui::GetMouseDragDelta(0) to query for the dragged amount on any widget.                              │
+6d1f63a8 │  IsMouseDragging(0):                                                                                                 │
+2d456d48 │    w/ default threshold: 0,                                                                                          │
+ed2fa955 │    w/ zero threshold: 0,                                                                                             │
+23fd8438 │    w/ large threshold: 0,                                                                                            │
+6d1f63a8 │  IsMouseDragging(1):                                                                                                 │
+2d456d48 │    w/ default threshold: 0,                                                                                          │
+ed2fa955 │    w/ zero threshold: 0,                                                                                             │
+23fd8438 │    w/ large threshold: 0,                                                                                            │
+6d1f63a8 │  IsMouseDragging(2):                                                                                                 │
+2d456d48 │    w/ default threshold: 0,                                                                                          │
+ed2fa955 │    w/ zero threshold: 0,                                                                                             │
+23fd8438 │    w/ large threshold: 0,                                                                                            │
+4b142b47 │   Drag Me                                                                                                            │
+bf7d06c8 │  GetMouseDragDelta(0):                                                                                               │
+2c7f33c5 │    w/ default threshold: (0.0, 0.0)                                                                                  │
+44166db8 │    w/ zero threshold: (0.0, 0.0)                                                                                     │
+00d9f9d8 │  io.MouseDelta: (0.0, 0.0)                                                                                           │

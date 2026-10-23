@@ -15,18 +15,23 @@ namespace test
 using namespace sihd::imgui;
 using namespace sihd::util;
 
-NcursesScene::NcursesScene(int width, int height): width(width), height(height), clear_color(0, 0, 0, 1)
+NcursesScene::NcursesScene(int width, int height, ImVec2 cell_size):
+    width(width),
+    height(height),
+    cell_size(cell_size),
+    clear_color(0, 0, 0, 1)
 {
     LoggerManager::stream();
     ctx = ImGui::CreateContext();
     ImGuiIO & io = ImGui::GetIO();
-    io.DisplaySize = ImVec2((float)width, (float)height);
+    io.DisplaySize = ImVec2((float)width * cell_size.x, (float)height * cell_size.y);
     io.DeltaTime = 1.0f / 60.0f;
     io.IniFilename = nullptr;
     io.ConfigInputTextCursorBlink = false;
     io.ConfigInputTrickleEventQueue = false;
     ImGui::StyleColorsDark();
     renderer.set_clear_color(&clear_color);
+    renderer.set_cell_size(cell_size);
     renderer.init_headless(width, height);
 }
 

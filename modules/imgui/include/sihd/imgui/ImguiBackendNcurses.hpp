@@ -1,6 +1,8 @@
 #ifndef __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 #define __SIHD_IMGUI_IMGUIBACKENDNCURSES_HPP__
 
+#include <imgui.h>
+
 #include <array>
 #include <chrono>
 #include <string>
@@ -28,6 +30,8 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         bool init();
         // frame rate once the screen stayed still and no input came for a second: input wakes it at once
         bool set_idle_frequency(double hz);
+        // imgui units per terminal cell, same as the renderer's
+        void set_cell_size(ImVec2 cell_size);
 
         void new_frame() override;
         bool should_close() override;
@@ -60,6 +64,7 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         void _press_chord(ImGuiIO & io, ImGuiKeyChord chord);
         void _press_key(ImGuiIO & io, ImGuiKey key);
         bool _must_wait(ImGuiKey key) const;
+        bool _virtual_pixels() const;
         int _idle_timeout_ms() const;
 
         bool _is_init;
@@ -78,6 +83,7 @@ class ImguiBackendNcurses: public sihd::imgui::IImguiBackend
         // a drag started on the drawn resize grip is reported shifted onto imgui's grip hit zone
         float _grip_dx, _grip_dy;
         int _ime_x, _ime_y;
+        ImVec2 _cell_size;
         unsigned long _mstate;
         double _idle_frequency;
         std::chrono::steady_clock::time_point _last_time;

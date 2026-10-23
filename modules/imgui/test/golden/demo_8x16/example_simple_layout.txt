@@ -1,0 +1,49 @@
+c0048551 ┌─▼──Example: Simple layout──────────────────────────────────────────────────────────────────────────────────────────×─┐
+da84ffa5 │ File                                                                                                                 │
+93d0f895 │                                                                                                                      │
+d077fd1b │┌────────────────┐█ MyObject: 0                                                                                       │
+7e676396 ││MyObject 0      │█  Description ─ Details ───────────────────────────────────────────────────────────────────────────│
+75278e0b ││MyObject 1      │█ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut      │
+b27b9832 ││MyObject 2      │█ labore et dolore magna aliqua.                                                                    │
+824bf7b2 ││MyObject 3      │█                                                                                                   │
+824bf7b2 ││MyObject 4      │█                                                                                                   │
+824bf7b2 ││MyObject 5      │█                                                                                                   │
+824bf7b2 ││MyObject 6      │█                                                                                                   │
+824bf7b2 ││MyObject 7      │█                                                                                                   │
+824bf7b2 ││MyObject 8      │█                                                                                                   │
+824bf7b2 ││MyObject 9      │█                                                                                                   │
+a084ee0b ││MyObject 10     │█                                                                                                   │
+a084ee0b ││MyObject 11     │█                                                                                                   │
+a084ee0b ││MyObject 12     │█                                                                                                   │
+a084ee0b ││MyObject 13     │█                                                                                                   │
+a084ee0b ││MyObject 14     │█                                                                                                   │
+a084ee0b ││MyObject 15     │█                                                                                                   │
+a084ee0b ││MyObject 16     │█                                                                                                   │
+a084ee0b ││MyObject 17     │█                                                                                                   │
+a084ee0b ││MyObject 18     │█                                                                                                   │
+a084ee0b ││MyObject 19     │█                                                                                                   │
+33a698fd ││MyObject 20     │░                                                                                                   │
+33a698fd ││MyObject 21     │░                                                                                                   │
+33a698fd ││MyObject 22     │░                                                                                                   │
+33a698fd ││MyObject 23     │░                                                                                                   │
+33a698fd ││MyObject 24     │░                                                                                                   │
+33a698fd ││MyObject 25     │░                                                                                                   │
+33a698fd ││MyObject 26     │░                                                                                                   │
+33a698fd ││MyObject 27     │░                                                                                                   │
+33a698fd ││MyObject 28     │░                                                                                                   │
+33a698fd ││MyObject 29     │░                                                                                                   │
+33a698fd ││MyObject 30     │░                                                                                                   │
+33a698fd ││MyObject 31     │░                                                                                                   │
+33a698fd ││MyObject 32     │░                                                                                                   │
+33a698fd ││MyObject 33     │░                                                                                                   │
+33a698fd ││MyObject 34     │░                                                                                                   │
+33a698fd ││MyObject 35     │░                                                                                                   │
+33a698fd ││MyObject 36     │░                                                                                                   │
+33a698fd ││MyObject 37     │░                                                                                                   │
+33a698fd ││MyObject 38     │░                                                                                                   │
+33a698fd ││MyObject 39     │░                                                                                                   │
+33a698fd ││MyObject 40     │░                                                                                                   │
+33a698fd ││MyObject 41     │░                                                                                                   │
+33a698fd ││MyObject 42     │░                                                                                                   │
+33a698fd ││MyObject 43     │░                                                                                                   │
+cba370de │└MyObject 44─────┘░  Revert   Save                                                                                    │

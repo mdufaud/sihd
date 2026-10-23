@@ -3,7 +3,7 @@ cce0dffa ┌─▼──Dear ImGui Metrics/Debugger─────────�
 19b04e15 │Dear ImGui 1.93.0 (19300)                                                                                             │
 21fe6408 │Application average 16.667 ms/frame (60.0 FPS)                                                                        │
 596b6905 │1474 vertices, 2202 indices (734 triangles)                                                                           │
-09b61cc5 │2 visible windows, 80 current allocations                                                                             │
+09b61cc5 │2 visible windows, 81 current allocations                                                                             │
 fdcde845 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
 af52a4a5 │ ▶ Tools                                                                                                              │
 868058c8 │ ▶ Windows (4)                                                                                                        │

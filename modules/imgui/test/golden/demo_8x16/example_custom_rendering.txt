@@ -1,0 +1,35 @@
+57d5fe92 ┌─▼──Example: Custom rendering───────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+323afe01 │ Primitives   Canvas   BG/FG draw lists   Draw Channels                                                               │
+dae5b118 │Gradients                                                                                                             │
+844aa73d │                                                                                                                      │
+d16eedf5 │                                                                                                                      │
+fcaa8a48 │All primitives                                                                                                        │
+0edf7f15 │                                           42                                            Size                         │
+ca0525ad │                                           8.0                                           Rounding    Animate 8.00     │
+915a642d │                                          3.00                                           Thickness    Animate 3.00    │
+4c91fa38 │                                            6                                            N-gon sides                  │
+7ea404d5 │                                             12                                          Circle segments override     │
+c90d4298 │                                             8                                           Curves segments override     │
+24567944 ││        255         │         98          │         43         │        255             Stroke Color                 │
+71386bb9 ││        106         │         96          │        107         │        255             Fill Color                   │
+11034795 │ Per primitive flags (AddXXX functions) ──────────────────────────────────────────────────────────────────────────────│
+1dee29bb │ ✓ Default    Inside    Center    CenterBiased    Outside    Legacy                                                   │
+6cd946aa │   AAFill    AALines  ✓ AALineEnds    JoinMiter    CapSquare                                                          │
+cfa67a76 │ Current ImDrawList flags (e.g. PushDrawFlag function) ───────────────────────────────────────────────────────────────│
+920a6eb2 │   AAFill    AALines    AALineEnds  ✓ StrokeLegacy                                                                    │
+c9f4c5f7 │                                                             ───────│ │                                               │
+ba23024b │                                                             ───────│ │                                               │
+8dca9971 │                                                                    │ │                                               │
+f0a609af │                                                             ───────│ │                                               │
+054695fb │                                                             ───────│ │                                               │
+61c07d35 │                                                                    │ │                                               │
+05e01045 │                                                             ───────│                                                 │
+ea5cfb24 │                                                                    │                                                 │
+3b7bbf1e │                                                                    │                                                 │
+4be9ddbb │                                                             ───────│ │                                               │
+e4d5623c │                                                             ───────│ │                                               │
+a002b445 │                                                                    │ │                                               │
+cc578c85 │                                                                    │ │                                               │
+9e8477a8 │ImDrawList Vector Rendering Reference:                                                                                │
+c42f759a │https://github.com/ocornut/imgui/wiki/Draw-List                                                                       │

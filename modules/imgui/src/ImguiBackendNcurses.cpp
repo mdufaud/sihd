@@ -257,6 +257,7 @@ ImguiBackendNcurses::ImguiBackendNcurses():
     _grip_dy(0.0f),
     _ime_x(0),
     _ime_y(0),
+    _cell_size(1.0f, 1.0f),
     _mstate(0),
     _idle_frequency(default_idle_frequency)
 {
@@ -325,7 +326,7 @@ bool ImguiBackendNcurses::init()
     io.ConfigInputTrickleEventQueue = false;
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
-    io.DisplaySize = {(float)sx, (float)sy};
+    io.DisplaySize = {(float)sx * _cell_size.x, (float)sy * _cell_size.y};
 
     ImGuiPlatformIO & platform_io = ImGui::GetPlatformIO();
     platform_io.Platform_ImeUserData = this;
@@ -366,6 +367,16 @@ void ImguiBackendNcurses::_load_terminal_keys()
         define_key(paste_end, paste_end_key);
         putp(paste_enable);
     }
+}
+
+void ImguiBackendNcurses::set_cell_size(ImVec2 cell_size)
+{
+    _cell_size = cell_size;
+}
+
+bool ImguiBackendNcurses::_virtual_pixels() const
+{
+    return _cell_size.x != 1.0f || _cell_size.y != 1.0f;
 }
 
 bool ImguiBackendNcurses::set_idle_frequency(double hz)
@@ -425,7 +436,8 @@ void ImguiBackendNcurses::_process_mouse_event(ImGuiIO & io)
             if (!button.down)
             {
                 button.down = true;
-                if (i == ImGuiMouseButton_Left)
+                // with virtual pixels imgui's grip zone spans whole cells: no shift needed
+                if (i == ImGuiMouseButton_Left && !this->_virtual_pixels())
                 {
                     const ImVec2 grip_offset = _resize_grip_offset(_mx, _my);
                     _grip_dx = grip_offset.x;
@@ -627,7 +639,9 @@ void ImguiBackendNcurses::poll()
     }
 
     // mode-1003 emits dozens of motions per poll and only the last matters
-    if (_mouse_seen)
+    if (_mouse_seen && this->_virtual_pixels())
+        io.AddMousePosEvent(((float)_mx + 0.5f) * _cell_size.x, ((float)_my + 0.5f) * _cell_size.y);
+    else if (_mouse_seen)
         io.AddMousePosEvent((float)_mx + _grip_dx, (float)_my + _grip_dy);
     else
         io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
@@ -645,7 +659,7 @@ void ImguiBackendNcurses::new_frame()
     // do NOT clear() on KEY_RESIZE: it erases stdscr and blanks the screen
     int sx = 0, sy = 0;
     getmaxyx(stdscr, sy, sx);
-    io.DisplaySize = {(float)sx, (float)sy};
+    io.DisplaySize = {(float)sx * _cell_size.x, (float)sy * _cell_size.y};
 }
 
 void ImguiBackendNcurses::pre_render() {}
@@ -681,8 +695,8 @@ void ImguiBackendNcurses::_set_ime_data(ImGuiContext *, ImGuiViewport *, ImGuiPl
 {
     auto *backend = static_cast<ImguiBackendNcurses *>(ImGui::GetPlatformIO().Platform_ImeUserData);
     backend->_ime_visible = data->WantVisible;
-    backend->_ime_x = (int)std::lround(data->InputPos.x);
-    backend->_ime_y = (int)std::lround(data->InputPos.y);
+    backend->_ime_x = (int)std::lround(data->InputPos.x / backend->_cell_size.x);
+    backend->_ime_y = (int)std::lround(data->InputPos.y / backend->_cell_size.y);
 }
 
 const char *ImguiBackendNcurses::_get_clipboard_text(ImGuiContext *)

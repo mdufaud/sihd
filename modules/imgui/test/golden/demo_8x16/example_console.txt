@@ -1,0 +1,49 @@
+a3d70584 ┌─▼──Example: Console────────────────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+e742d935 │This example implements a console with basic coloring, completion (TAB key) and history (Up/Down keys). A more        │
+a7a249b5 │elaborate implementation may want to store entries along with extra data such as timestamp, emitter, etc.             │
+8ceda0b8 │Enter 'HELP' for help.                                                                                                │
+ac6e5761 │ Add Debug Text   Add Debug Error   Clear   Copy                                                                      │
+1bdfd4d1 │─Options── Filter (incl -excl)                                                                                        │
+d88c7338 │Welcome to Dear ImGui!────────────────────────────────────────────────────────────────────────────────────────────────│
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+fdcde845 │──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
+0cea1360 │                                                                               Input                                  │

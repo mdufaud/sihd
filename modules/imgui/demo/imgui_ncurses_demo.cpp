@@ -19,7 +19,11 @@ int main(int argc, char **argv)
         .description = "Imgui ncurses demo",
     });
 
+    bool virtual_pixels = false;
+    app.root().bind("virtual-pixels", virtual_pixels, "8x16 imgui units per terminal cell");
+
     app.root().on_run([&] {
+        const ImVec2 cell = virtual_pixels ? ImVec2(8.0f, 16.0f) : ImVec2(1.0f, 1.0f);
         ImguiRunner imgui("imgui-runner");
         if (!imgui.init_imgui())
             app.exit(EXIT_FAILURE);
@@ -30,8 +34,10 @@ int main(int argc, char **argv)
         ImguiRendererNcurses ncurses_renderer;
         ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
         ncurses_renderer.set_clear_color(&clear_color);
+        ncurses_renderer.set_cell_size(cell);
 
         ImguiBackendNcurses ncurses_backend;
+        ncurses_backend.set_cell_size(cell);
         if (!ncurses_backend.init())
             app.exit(EXIT_FAILURE);
 
@@ -86,7 +92,7 @@ int main(int argc, char **argv)
             }
 
             {
-                ImGui::SetNextWindowPos(ImVec2(1.0f, 1.0f), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(cell, ImGuiCond_FirstUseEver);
                 ImGui::Begin("Hello, world!");
 
                 ImGui::Text("This is some useful text.");
@@ -110,7 +116,7 @@ int main(int argc, char **argv)
 
             if (show_another_window)
             {
-                ImGui::SetNextWindowPos(ImVec2(1.0f, 12.0f), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(cell.x, 12.0f * cell.y), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Another Window", &show_another_window);
                 ImGui::Text("Hello from another window!");
                 if (ImGui::Button("Close Me"))
@@ -120,10 +126,12 @@ int main(int argc, char **argv)
 
             if (show_image_window)
             {
-                ImGui::SetNextWindowPos(ImVec2(1.0f, 12.0f), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(cell.x, 12.0f * cell.y), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Window", &show_image_window, ImGuiWindowFlags_AlwaysAutoResize);
                 // a cell shows two pixels stacked: half as many rows as columns keeps the image square
-                ImGui::Image(image.GetTexRef(), ImVec2(image_size, image_size / 2));
+                ImGui::Image(
+                    image.GetTexRef(),
+                    virtual_pixels ? ImVec2(image_size * 4.0f, image_size * 4.0f) : ImVec2(image_size, image_size / 2));
                 ImGui::End();
             }
             return true;

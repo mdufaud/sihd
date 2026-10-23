@@ -1,0 +1,237 @@
+a2ef681d ┌─▼──Dear ImGui Demo───────────────────────────────────────────────────────────────────────────────────────────────────┐
+57966784 │ Menu  Examples  Tools                                                                                                │
+93d0f895 │                                                                                                                      │
+81338a95 │dear imgui says hello! (1.93.0) (19300)                                                                               │
+8313aa48 │ ▶   Help                                                                                                             │
+5aece2bd │ ▶   Configuration                                                                                                    │
+5f28df35 │ ▶   Window options                                                                                                   │
+90d3b5d5 │ ▶   Widgets                                                                                                          │
+7771d268 │  ▼  Layout & Scrolling                                                                                               │
+bb06ca38 │  ▼ Child windows                                                                                                     │
+c8e07ace │   Child windows ─────────────────────────────────────────────────────────────────────────────────────────────────────│
+7ab2399d │  (?)                                                                                                                 │
+b475bbe0 │     Disable Mouse Wheel                                                                                              │
+198e16d0 │     Disable Menu                                                                                                     │
+4af37a0c │  0000: scrollable region                                  █ ┌─Menu──────────────────────────────────────────────────┐│
+16b50743 │  0001: scrollable region                                  █ │                                                       █│
+841f4810 │  0002: scrollable region                                  █ │           000            │             001            █│
+72a479fa │  0003: scrollable region                                  ░ │           002            │             003            █│
+72a479fa │  0004: scrollable region                                  ░ │           004            │             005            █│
+7cbb8238 │  0005: scrollable region                                  ░ │           006            │             007            ░│
+7cbb8238 │  0006: scrollable region                                  ░ │           008            │             009            ░│
+7cbb8238 │  0007: scrollable region                                  ░ │           010            │             011            ░│
+7cbb8238 │  0008: scrollable region                                  ░ │           012            │             013            ░│
+7cbb8238 │  0009: scrollable region                                  ░ │           014            │             015            ░│
+7cbb8238 │  0010: scrollable region                                  ░ │           016            │             017            ░│
+7cbb8238 │  0011: scrollable region                                  ░ │           018            │             019            ░│
+7cbb8238 │  0012: scrollable region                                  ░ │           020            │             021            ░│
+7cbb8238 │  0013: scrollable region                                  ░ │           022            │             023            ░│
+7cbb8238 │  0014: scrollable region                                  ░ │           024            │             025            ░│
+03e2b790 │  0015: scrollable region                                  ░ └───────────026────────────┼─────────────027────────────░│
+d460dfff │   Manual-resize ─────────────────────────────────────────────────────────────────────────────────────────────────────│
+7ab2399d │  (?)                                                                                                                 │
+d11ce102 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────█│
+80da8f9e │  │Line 0000                                                                                                         █│
+80da8f9e │  │Line 0001                                                                                                         █│
+80da8f9e │  │Line 0002                                                                                                         █│
+80da8f9e │  │Line 0003                                                                                                         █│
+80da8f9e │  │Line 0004                                                                                                         █│
+c8bf9ede │  │Line 0005                                                                                                         ░│
+79fa5e3f │  └Line 0006─────────────────────────────────────────────────────────────────────────────────────────────────────────░│
+38067135 │   Auto-resize with constraints ──────────────────────────────────────────────────────────────────────────────────────│
+c3a98118 │          3        Lines Count                                                                                        │
+2aabdba5 │         10        Max Height (in Lines)                                                                              │
+59521975 │  ┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐│
+dfc803f5 │  │Line 0000                                                                                                         ││
+dfc803f5 │  │Line 0001                                                                                                         ││
+dfc803f5 │  │Line 0002                                                                                                         ││
+59521975 │  └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘│
+d460dfff │   Misc/Advanced ─────────────────────────────────────────────────────────────────────────────────────────────────────│
+14c4a875 │          0        Offset X                                                                                           │
+0679e163 │   ✓ Override ChildBg color                                                                                           │
+12f67eba │   ✓ ImGuiChildFlags_Borders                                                                                          │
+6456c7bd │     ImGuiChildFlags_AlwaysUseWindowPadding                                                                           │
+12f67eba │   ✓ ImGuiChildFlags_ResizeX                                                                                          │
+12f67eba │   ✓ ImGuiChildFlags_ResizeY                                                                                          │
+da734365 │     ImGuiChildFlags_FrameStyle (?)                                                                                   │
+b19986eb │  ┌───────────────────────█                                                                                           │
+d6b84f6a │  │Some test 0            ░                                                                                           │
+d6b84f6a │  │Some test 1            ░                                                                                           │
+d6b84f6a │  │Some test 2            ░                                                                                           │
+d6b84f6a │  │Some test 3            ░                                                                                           │
+f2c26e02 │  └Some test 4────────────░                                                                                           │
+9b8a8228 │                                                                                                                      │
+00f0cf18 │  Hovered: 0                                                                                                          │
+d4d053f5 │  ▼ect of child window is: (24,900) (224,1000)                                                                        │
+456d11fd │    Widgets Width                                                                                                     │
+7df61f8a │   ✓ Show indented items                                                                                              │
+55772371 │               dth/PushItemWidth(100) (?)                                                                             │
+4bd5b309 │                 loat                                                                                                 │
+ad530631 │        0.000     float (indented)                                                                                    │
+23d7b6f5 │                                                                                                                      │
+61651bd8 │                                                                                                           float      │
+29778abe │                                                    0.000                                                  float (inden
+d89d9370 │                                                             0.5f) (?)                                                │
+2ce46cc5 │                                                              loat                                                    │
+55d6968d │                               0.000                           float (indented)                                       │
+5d079735 │                                                            * 0.5f) (?)                                               │
+e18ec5a0 │                                                             float                                                    │
+2b8288a5 │                              0.000                          float (indented)                                         │
+829a5865 │                                                                                                                      │
+aca21508 │                                                                                               float                  │
+0647448d │                                               0.000                                           float (indented)       │
+e6a18105 │                                                                                                                      │
+e6a18105 │                                                                                                                      │
+397b58ad │  ▼                                                        0.000                                                      │
+a181d328 │    Basic Horizontal Layout                                                                                           │
+490c51b8 │  (Use ImGui::SameLine() to keep adding items to the right of the preceding item)                                     │
+d83a0a45 │  Two items: Hello Sailor                                                                                             │
+9ffafc20 │  More spacing: Hello   Sailor                                                                                        │
+418081c0 │  Normal buttons  Banana   Apple   Corniflower                                                                        │
+340691eb │  Small buttons  Like this one  can fit within a text block.                                                          │
+1e4fef16 │  Aligned         x=150              x=300                                                                            │
+856ad5c4 │    igne            =150              x=300                                                                           │
+cd0a626e │        ▼  Tailo                                                                                                      │
+0ff4c374 │          Combo  1.000  X  2.000  Y  3.000  Z                                                                         │
+811df795 │                                                                                                                      │
+f2a44121 │   AAAA    AAAA    AAAA    AAAA                                                                                       │
+43cdb439 │   BBBB    BBBB    BBBB    BBBB                                                                                       │
+f5f7f4e1 │   CCCC    CCCC    CCCC    CCCC                                                                                       │
+6ecca239 │   DDDD    DDDD    DDDD    DDDD                                                                                       │
+fe93fc71 │    A           B                                                                                                     │
+6eb9277d │                                                                                                                      │
+f89caef8 │  Manual wrapping:                                                                                                    │
+28ff2d6e │   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box   Box    │
+eab80a3b │                                                                                                                      │
+eab80a3b │                                                                                                                      │
+666af532 │   Box                                                                                                                │
+a1d086c3 │                                                                                                                      │
+fc610db8 │  ▼ Groups                                                                                                            │
+7ab2399d │  (?)                                                                                                                 │
+8ccf6843 │   AAA   BBB   CCC   EEE          LEVERAGE         Selected               List                                        │
+e93a0d3d │               DDD                BUZZWORD         Not Selected                                                       │
+673090e1 │           ▃▃▃▃                                                                                                       │
+440de6c1 │   ▆▆▆▆▁▁▁▁         ▂▂▂▂                                                                                              │
+ff696029 │     ACTION     REACTION                                                                                              │
+a13504dd │                                                                                                                      │
+80061035 │  ▼ Text Baseline Alignment                                                                                           │
+24142b6d │    • Text baseline: (?)                                                                                              │
+d2f6bce1 │    KO Blahblah  Some framed item  (?)                                                                                │
+d2f6bce1 │    OK Blahblah  Some framed item  (?)                                                                                │
+8a2bb205 │     TEST  TEST  TEST                                                                                                 │
+8f0df3d8 │    Text aligned to framed item  Item  Item  Item   Item                                                              │
+7794a6d5 │    • Multi-line text:                                                                                                │
+f8f64af5 │    One   Hello Banana                                                                                                │
+fd29f345 │    Two   World                                                                                                       │
+c0cc0a78 │    Three                                                                                                             │
+e6d51005 │    Banana Hello One                                                                                                  │
+14bec1d5 │           World Two                                                                                                  │
+aa4b5dc8 │                 Three                                                                                                │
+e26af87b │     HOP  Banana Hello Banana                                                                                         │
+aa4b5dc8 │                 World                                                                                                │
+352c4ffb │     HOP  Hello Banana                                                                                                │
+0095b488 │          World                                                                                                       │
+5688b678 │    • Misc items:                                                                                                     │
+cf5dc61e │       80x80    50x50  Button()   SmallButton()                                                                       │
+56a6a335 │                                                                                                                      │
+56a6a335 │                                                                                                                      │
+729e5ae5 │                                                                                                                      │
+729e5ae5 │                                                                                                                      │
+10dccebc │     Button    ▼ Node                                                                                                 │
+074eeea5 │        • Item 0..                                                                                                    │
+074eeea5 │        • Item 1..                                                                                                    │
+074eeea5 │        • Item 2..                                                                                                    │
+074eeea5 │        • Item 3..                                                                                                    │
+074eeea5 │        • Item 4..                                                                                                    │
+074eeea5 │        • Item 5..                                                                                                    │
+36936dd5 │                                                                                                                      │
+10dccebc │     Button    ▼ Node                                                                                                 │
+36936dd5 │                                                                                                                      │
+36936dd5 │                                                                                                                      │
+d5034814 │      ▼ Node  Button                                                                                                  │
+074eeea5 │        • Item 0..                                                                                                    │
+074eeea5 │        • Item 1..                                                                                                    │
+074eeea5 │        • Item 2..                                                                                                    │
+074eeea5 │        • Item 3..                                                                                                    │
+074eeea5 │        • Item 4..                                                                                                    │
+074eeea5 │        • Item 5..                                                                                                    │
+2373835c │     Button    • Bullet text                                                                                          │
+d5034814 │      • Node  Button                                                                                                  │
+d3591cc5 │  ▼ Scrolling                                                                                                         │
+7ab2399d │  (?)                                                                                                                 │
+8cbc5cbd │     Decoration                                                                                                       │
+8db75b23 │        Item = 50       ✓ Track                                                                                       │
+c8e18613 │          +0 px         Scroll Offset                                                                                 │
+6d393d17 │      X/Y = 200 px      Scroll To Pos                                                                                 │
+c05397b0 │  Top──────────────────┐ 25%──────────────────┐ ┌Center───────────────┐ 75%──────────────────┐ ┌Bottom──────────────┐ │
+f3978c8e │  │Item 49             ░ │Item 47             │░│ Item 44             ░ │Item 42             ░ │ Item 39            │░│
+c412e02e │  │Item 50             ░ │Item 48             │░│ Item 45             ░ │Item 43             ░ │ Item 40            │░│
+f3978c8e │  │Item 51             ░ │Item 49             │░│ Item 46             ░ │Item 44             ░ │ Item 41            │░│
+262c8e8e │  │Item 52             ░ │Item 50             │░│ Item 47             ░ │Item 45             ░ │ Item 42            │░│
+f3978c8e │  │Item 53             ░ │Item 51             │░│ Item 48             ░ │Item 46             ░ │ Item 43            │░│
+1708207a │  │Item 54             ░ │Item 52             │█│ Item 49             █ │Item 47             █ │ Item 44            │█│
+b1bdd748 │  │Item 55             █ │Item 53             │█│ Item 50             █ │Item 48             ░ │ Item 45            │░│
+f3978c8e │  │Item 56             ░ │Item 54             │░│ Item 51             ░ │Item 49             ░ │ Item 46            │░│
+2de3e1ee │  │Item 57             ░ │Item 55             │░│ Item 52             ░ │Item 50             ░ │ Item 47            │░│
+f3978c8e │  │Item 58             ░ │Item 56             │░│ Item 53             ░ │Item 51             ░ │ Item 48            │░│
+f3978c8e │  │Item 59             ░ │Item 57             │░│ Item 54             ░ │Item 52             ░ │ Item 49            │░│
+421215b6 │  └Item 60─────────────░ └Item 58─────────────┘░└─Item 55─────────────░ └Item 53─────────────░ └─Item 50────────────┘░│
+b33e4555 │  800/1432               762/1432                724/1432               686/1432                648/1432              │
+7ab2399d │  (?)                                                                                                                 │
+1e77231a │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐  Left       │
+e2b9c0ea │  │Item 50 Item 51 Item 52 Item 53 Item 54 Item 55 Item 56 Item 57 Item 58 Item 59 Item 60 Item 61 Item 6  3120/5500  │
+f15734fa │  └─────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+9a4b2b1d │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░██████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░             │
+05682e94 │  │                                                                                                     │  25%        │
+b87c0d6a │  │Item 47 Item 48 Item 49 Item 50 Item 51 Item 52 Item 53 Item 54 Item 55 Item 56 Item 57 Item 58 Item 5  2931/5500  │
+f15734fa │  └─────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+eab8b2ea │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐  Center     │
+8f33b158 │  Item 44 Item 45 Item 46 Item 47 Item 48 Item 49 Item 50 Item 51 Item 52 Item 53 Item 54 Item 55 Item 56  2742/5500  │
+f15734fa │  └─────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+1a9d121b │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░             │
+05682e94 │  │                                                                                                     │  75%        │
+fee2bf58 │  Item 41 Item 42 Item 43 Item 44 Item 45 Item 46 Item 47 Item 48 Item 49 Item 50 Item 51 Item 52 Item 53  2553/5500  │
+f15734fa │  └─────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+a028fe63 │  ┌─────────────────────────────────────────────────────────────────────────────────────────────────────┐  Right      │
+89783758 │  Item 38 Item 39 Item 40 Item 41 Item 42 Item 43 Item 44 Item 45 Item 46 Item 47 Item 48 Item 49 Item 50  2364/5500  │
+f15734fa │  └─────────────────────────────────────────────────────────────────────────────────────────────────────┘             │
+64a5cd1b │  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░█████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░             │
+7ab2399d │  (?)                                                                                                                 │
+58226997 │  ┌─────────────────────────────────────────────7──────────────────────────────────────────────Lines─────────────────┐│
+b447d090 │  │                                                                                                                  █│
+cf70a0b7 │  │FizzBu     1        2      Fizz    4   Buz Fizz     7         8      Fizz                                         █│
+2ded6918 │  │FizzBuzz     1        2    Fizz 4   Buzz    Fizz       7        8    Fizz Buz  11    Fizz      13        14    Fiz█│
+bec10700 │  │FizzBuzz    1      2  Fiz   4     Buzz      Fizz      7      8   Fiz Buzz    11      Fizz      13      14   Fiz   █│
+de30bbb5 │  │FizzBu   1   2   Fizz     4       Buzz     Fizz    7    8  Fizz   Buzz      11       Fizz    13   14  Fizz   16   █│
+d2dfe0e3 │  │                                                                                                                  █│
+e5524131 │  │Fiz   1    2     Fizz       4       Buzz  Fizz   7   8     Fizz     Buzz      11     Fizz  13  14  FizzBu     16  █│
+acbf79ee │  │Fiz   1       2       Fizz      4     Buzz Fiz   7     8       Fizz     Buzz     11   Fiz  13    14   FizzBuzz    █│
+84aaeb3b │  └FizzB─    1   ─    2    ─  Fizz ─  4  ─Buz Fizz─   7   ─    8    ─  Fizz  ─ Buzz─ 11 ─Fizz   13  ─   14   ─ FizzBu░│
+2382f2fd │   <<  Scroll from code  >>  0/2187                                                                                   │
+981c4b7d │     Show Horizontal contents size demo window                                                                        │
+23c9d368 │  ▼ Text Clipping                                                                                                     │
+bab44105 │                       100                                            100                      size                   │
+3d9cfe75 │  (Click and drag to scroll)                                                                                          │
+7ab2399d │  (?)                                                                                                                 │
+7c23bb0d │                                                                                                                      │
+7c23bb0d │                                                                                                                      │
+e5be8209 │      Line 1 h     Line 1 he     Line 1 he                                                                            │
+e5be8209 │      Line 2 c     Line 2 cl     Line 2 cl                                                                            │
+7c23bb0d │                                                                                                                      │
+7c23bb0d │                                                                                                                      │
+7c23bb0d │                                                                                                                      │
+41b51b85 │  ▼ Overlap Mode                                                                                                      │
+7ab2399d │  (?)                                                                                                                 │
+3bcb0f8b │  ✓  Enable AllowOverlap                                                                                              │
+b2ece408 │   Button 1                                                                                                           │
+87086025 │                                                                                                                      │
+87086025 │                                                                                                                      │
+8c9f31a8 │         Button 2                                                                                                     │
+8ed98635 │                                                                                                                      │
+5a999fe5 │                                                                                                                      │
+5a999fe5 │                                                                                                                      │
+5a999fe5 │                                                                                                                      │
+023f9b29 │  Some Selectable  ++                                                                                                 │
+aedb89d5 │ ▶   Popups & Modal windows                                                                                           │
+6b7287d8 │ ▶   Tables & Columns                                                                                                 │
+d054e0c0 │ ▶   Inputs & Focus                                                                                                   │

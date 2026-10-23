@@ -7,10 +7,12 @@
 #include <cmath>
 #include <cstdint>
 #include <filesystem>
+#include <map>
 #include <optional>
 #include <ostream>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <vector>
 
 #include <fmt/format.h>
@@ -36,11 +38,21 @@ struct DemoCase
         // nullptr: a section header of the demo window, else the menu holding the window's item
         const char *menu;
         const char *label;
+        // the demo keeps a size seeded from the first cell size that showed it, for the whole process
+        bool seeds_sizes = false;
 };
 
-void PrintTo(const DemoCase & demo, std::ostream *os)
+struct CellSize
 {
-    *os << demo.name;
+        const char *golden_dir;
+        ImVec2 units;
+};
+
+using DemoParam = std::tuple<DemoCase, CellSize>;
+
+void PrintTo(const DemoParam & param, std::ostream *os)
+{
+    *os << std::get<1>(param).golden_dir << "/" << std::get<0>(param).name;
 }
 
 namespace
@@ -55,18 +67,20 @@ constexpr int settle_frames = 6;
 constexpr int log_open_depth = 99;
 constexpr const char *demo_window = "Dear ImGui Demo";
 constexpr const char *update_variable = "SIHD_IMGUI_GOLDEN_UPDATE";
+constexpr CellSize one_unit_cells {"demo", {1.0f, 1.0f}};
+constexpr CellSize virtual_pixel_cells {"demo_8x16", {8.0f, 16.0f}};
 
 constexpr std::array<DemoCase, 28> demo_cases = {{
     {"section_help", nullptr, "Help"},
     {"section_configuration", nullptr, "Configuration"},
     {"section_window_options", nullptr, "Window options"},
-    {"section_widgets", nullptr, "Widgets"},
+    {"section_widgets", nullptr, "Widgets", true},
     {"section_layout", nullptr, "Layout & Scrolling"},
     {"section_popups", nullptr, "Popups & Modal windows"},
-    {"section_tables", nullptr, "Tables & Columns"},
+    {"section_tables", nullptr, "Tables & Columns", true},
     {"section_inputs", nullptr, "Inputs & Focus"},
     {"example_main_menu_bar", "Examples", "Main menu bar"},
-    {"example_assets_browser", "Examples", "Assets Browser"},
+    {"example_assets_browser", "Examples", "Assets Browser", true},
     {"example_console", "Examples", "Console"},
     {"example_custom_rendering", "Examples", "Custom rendering"},
     {"example_documents", "Examples", "Documents"},
@@ -157,41 +171,63 @@ std::string first_difference(const std::string & expected, const std::string & a
 }
 
 // __FILE__ is relative to the repository root, the tests run from the build tree below it
-std::filesystem::path golden_dir()
+std::filesystem::path golden_dir(const char *name)
 {
-    const std::filesystem::path relative = std::filesystem::path(__FILE__).parent_path() / "golden" / "demo";
+    const std::filesystem::path relative = std::filesystem::path(__FILE__).parent_path() / "golden";
     for (std::filesystem::path dir = std::filesystem::current_path(); dir != dir.parent_path(); dir = dir.parent_path())
     {
         if (fs::is_dir((dir / relative).string()))
-            return dir / relative;
+            return dir / relative / name;
     }
-    return relative;
+    return relative / name;
 }
 
-std::string golden_path(const char *name)
+std::string golden_path(const CellSize & cells, const char *name)
 {
-    return (golden_dir() / (std::string(name) + ".txt")).string();
+    return (golden_dir(cells.golden_dir) / (std::string(name) + ".txt")).string();
 }
 
-std::string actual_path(const char *name)
+std::string actual_path(const CellSize & cells, const char *name)
 {
-    return (std::filesystem::temp_directory_path() / "sihd_imgui_golden" / (std::string(name) + ".txt")).string();
+    return (std::filesystem::temp_directory_path() / "sihd_imgui_golden" / cells.golden_dir
+            / (std::string(name) + ".txt"))
+        .string();
+}
+
+float first_cell_height(std::string_view name, float cell_height)
+{
+    static std::map<std::string_view, float> first_heights;
+    return first_heights.try_emplace(name, cell_height).first->second;
+}
+
+std::string demo_test_name(const ::testing::TestParamInfo<DemoParam> & info)
+{
+    return std::get<0>(info.param).name;
 }
 
 } // namespace
 
 class TestNcursesDemo: public NcursesScene,
-                       public ::testing::WithParamInterface<DemoCase>
+                       public ::testing::WithParamInterface<DemoParam>
 {
     protected:
-        TestNcursesDemo(): NcursesScene(demo_width, GetParam().menu == nullptr ? section_height : window_height) {}
+        TestNcursesDemo():
+            NcursesScene(demo_width,
+                         std::get<0>(GetParam()).menu == nullptr ? section_height : window_height,
+                         std::get<1>(GetParam()).units)
+        {
+        }
 
         // the demo keeps the open example and tool windows in statics that outlive the context: close it again
         void TearDown() override
         {
-            if (GetParam().menu != nullptr)
+            if (this->demo_case().menu != nullptr && !IsSkipped())
                 this->open_from_menu();
         }
+
+        const DemoCase & demo_case() const { return std::get<0>(GetParam()); }
+
+        ImVec2 units(float x, float y) const { return ImVec2(x * cell_size.x, y * cell_size.y); }
 
         void show_section() const
         {
@@ -199,9 +235,9 @@ class TestNcursesDemo: public NcursesScene,
             ImGui::ShowDemoWindow();
             ImGui::LogFinish();
             ImGuiWindow *demo = ImGui::FindWindowByName(demo_window);
-            demo->StateStorage.SetInt(ImHashStr(GetParam().label, 0, demo->ID), 1);
+            demo->StateStorage.SetInt(ImHashStr(this->demo_case().label, 0, demo->ID), 1);
             ImGui::SetWindowPos(demo_window, ImVec2(0, 0));
-            ImGui::SetWindowSize(demo_window, ImVec2((float)width, (float)height));
+            ImGui::SetWindowSize(demo_window, this->units((float)width, (float)height));
         }
 
         // focusing every frame would close the menu popups
@@ -212,7 +248,7 @@ class TestNcursesDemo: public NcursesScene,
             if (focus)
                 ImGui::SetWindowFocus(demo_window);
             ImGui::SetWindowPos(demo_window, ImVec2(0, 0));
-            ImGui::SetWindowSize(demo_window, ImVec2((float)width, (float)height));
+            ImGui::SetWindowSize(demo_window, this->units((float)width, (float)height));
         }
 
         // the opened windows share the screen in horizontal bands, the demo window collapsed under them
@@ -220,7 +256,7 @@ class TestNcursesDemo: public NcursesScene,
         {
             ImGui::ShowDemoWindow();
             ImGui::SetWindowCollapsed(demo_window, true);
-            ImGui::SetWindowPos(demo_window, ImVec2(0, (float)height - 1));
+            ImGui::SetWindowPos(demo_window, this->units(0, (float)height - 1));
             std::vector<ImGuiWindow *> opened;
             for (ImGuiWindow *window : GImGui->Windows)
             {
@@ -232,8 +268,8 @@ class TestNcursesDemo: public NcursesScene,
             const float band = std::floor((float)height / (float)std::max<size_t>(opened.size(), 1));
             for (size_t i = 0; i < opened.size(); ++i)
             {
-                ImGui::SetWindowPos(opened[i], ImVec2(0, band * (float)i));
-                ImGui::SetWindowSize(opened[i], ImVec2((float)width, band));
+                ImGui::SetWindowPos(opened[i], this->units(0, band * (float)i));
+                ImGui::SetWindowSize(opened[i], this->units((float)width, band));
             }
         }
 
@@ -248,7 +284,7 @@ class TestNcursesDemo: public NcursesScene,
                     for (size_t k = 0; k < word.size() && match; ++k)
                         match = cell(x + (int)k, y).ch == (uint32_t)(unsigned char)word[k];
                     if (match)
-                        return ImVec2((float)x + 0.5f, (float)y + 0.5f);
+                        return this->units((float)x + 0.5f, (float)y + 0.5f);
                 }
             }
             return std::nullopt;
@@ -273,8 +309,8 @@ class TestNcursesDemo: public NcursesScene,
             this->render_frames(1, [this] { this->show_demo_in_front(true); });
             this->render_frames(1, [this] { this->show_demo_in_front(); });
             // row 0 is the demo title bar, row 1 its menu bar
-            this->click_word(GetParam().menu, 1);
-            this->click_word(GetParam().label, 2);
+            this->click_word(this->demo_case().menu, 1);
+            this->click_word(this->demo_case().label, 2);
             ImGui::GetIO().AddMousePosEvent(-FLT_MAX, -FLT_MAX);
         }
 
@@ -303,7 +339,9 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
     if constexpr (!build::is_gnu)
         GTEST_SKIP() << "the golden files hold glibc's wcwidth, which other libcs differ from";
 
-    const DemoCase & demo = GetParam();
+    const auto & [demo, cells] = GetParam();
+    if (demo.seeds_sizes && first_cell_height(demo.name, cells.units.y) != cells.units.y)
+        GTEST_SKIP() << "the other cell size seeded this demo's sizes first: run one golden set alone to check it";
     if (demo.menu == nullptr)
     {
         this->render_frames(settle_frames, [this] { this->show_section(); });
@@ -314,28 +352,35 @@ TEST_P(TestNcursesDemo, screen_matches_its_golden_file)
         this->render_frames(settle_frames, [this] { this->show_opened_windows(); });
     }
     const std::string actual = this->dump();
+    const std::string golden = golden_path(cells, demo.name);
+    const std::string written = actual_path(cells, demo.name);
 
     if (env::get(update_variable).has_value())
     {
-        ASSERT_TRUE(fs::make_directories(std::filesystem::path(golden_path(demo.name)).parent_path().string()).has_value());
-        ASSERT_TRUE(fs::write(golden_path(demo.name), actual).has_value());
+        ASSERT_TRUE(fs::make_directories(std::filesystem::path(golden).parent_path().string()).has_value());
+        ASSERT_TRUE(fs::write(golden, actual).has_value());
         return;
     }
-    const Result<std::string> expected = fs::read_all(golden_path(demo.name));
-    ASSERT_TRUE(expected.has_value()) << golden_path(demo.name) << " missing: run with " << update_variable << "=1";
+    const Result<std::string> expected = fs::read_all(golden);
+    ASSERT_TRUE(expected.has_value()) << golden << " missing: run with " << update_variable << "=1";
     const std::string difference = first_difference(*expected, actual);
     if (!difference.empty())
     {
-        EXPECT_TRUE(fs::make_directories(std::filesystem::path(actual_path(demo.name)).parent_path().string()).has_value());
-        EXPECT_TRUE(fs::write(actual_path(demo.name), actual).has_value());
+        EXPECT_TRUE(fs::make_directories(std::filesystem::path(written).parent_path().string()).has_value());
+        EXPECT_TRUE(fs::write(written, actual).has_value());
     }
 
-    EXPECT_EQ(difference, "") << "screen written to " << actual_path(demo.name) << ", accept it with " << update_variable << "=1";
+    EXPECT_EQ(difference, "") << "screen written to " << written << ", accept it with " << update_variable << "=1";
 }
 
 INSTANTIATE_TEST_SUITE_P(DemoWindows,
                          TestNcursesDemo,
-                         ::testing::ValuesIn(demo_cases),
-                         [](const ::testing::TestParamInfo<DemoCase> & info) { return std::string(info.param.name); });
+                         ::testing::Combine(::testing::ValuesIn(demo_cases), ::testing::Values(one_unit_cells)),
+                         demo_test_name);
+
+INSTANTIATE_TEST_SUITE_P(DemoWindows8x16,
+                         TestNcursesDemo,
+                         ::testing::Combine(::testing::ValuesIn(demo_cases), ::testing::Values(virtual_pixel_cells)),
+                         demo_test_name);
 
 } // namespace test

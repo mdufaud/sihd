@@ -1,0 +1,6 @@
+816d14a4 ┌─▼──Example: Long text display──────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+ec9c29a5 │Printing unusually long amount of text.                                                                               │
+3535827d │ Single call to TextUnformatted()                                            ▼ Test type                              │
+fedb2585 │Buffer contents: 0 lines, 0 bytes                                                                                     │
+f568d5f6 │ Clear   Add 1000 lines                                                                                               │

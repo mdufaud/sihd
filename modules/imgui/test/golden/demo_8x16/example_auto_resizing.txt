@@ -1,0 +1,50 @@
+b6a72046 ┌─▼──Example: Auto-resizing window───────────────────────────×─┐
+d347da95 │                                                              │
+e11db988 │Window will resize every-frame to the size of its content.    │
+b02c6215 │Note that you probably don't want to query the window size to │
+47f213b8 │output your content because that would create a feedback loop.│
+8e212f94 │               10                Number of lines              │
+b22ea8a8 │This is line 0                                                │
+23547e48 │    This is line 1                                            │
+5ac79268 │        This is line 2                                        │
+65b53608 │            This is line 3                                    │
+a0a24528 │                This is line 4                                │
+6a5d12c8 │                    This is line 5                            │
+ebf9a8e8 │                        This is line 6                        │
+1909f288 │                            This is line 7                    │
+104b7ba8 │                                This is line 8                │
+67976148 │                                    This is line 9            │
+f233f885 └──────────────────────────────────────────────────────────────┘
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+dc90e695 ─▶───Dear ImGui Demo────────────────────────────────────────────────────────────────────────────────────────────────────

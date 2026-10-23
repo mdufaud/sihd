@@ -16,7 +16,8 @@ namespace test
 class NcursesScene: public ::testing::Test
 {
     protected:
-        NcursesScene(int width, int height);
+        // cell_size: imgui units per terminal cell, width and height stay in cells
+        NcursesScene(int width, int height, ImVec2 cell_size = ImVec2(1.0f, 1.0f));
         ~NcursesScene() override;
 
         void render_frames(int count, const std::function<void()> & build);
@@ -31,6 +32,7 @@ class NcursesScene: public ::testing::Test
 
         const int width;
         const int height;
+        const ImVec2 cell_size;
         ImVec4 clear_color;
         sihd::imgui::ImguiRendererNcurses renderer;
         ImGuiContext *ctx = nullptr;

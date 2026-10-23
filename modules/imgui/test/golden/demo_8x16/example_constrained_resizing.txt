@@ -1,0 +1,50 @@
+6949cbba ┌─▼──Example: Constrained Resize─────────────────────────────────────────────────────────────────────────────────────×─┐
+93d0f895 │                                                                                                                      │
+7a453835 │(Hold Shift to display a dummy viewport)                                                                              │
+d3515973 │ Set 200x200   Set 500x500   Set 800x200                                                                              │
+739fa750 │ Custom: Aspect Ratio 16:9             ▼ Constraint                                                                   │
+e2c0e408 │                   10                    Lines                                                                        │
+c9017d40 │   Auto-resize                                                                                                        │
+dba90a8a │ ✓ Window padding                                                                                                     │
+6c3fc858 │Hello, sailor! Making this line long enough for the example.                                                          │
+19ff57f8 │    Hello, sailor! Making this line long enough for the example.                                                      │
+272ddc18 │        Hello, sailor! Making this line long enough for the example.                                                  │
+9f07f0b8 │            Hello, sailor! Making this line long enough for the example.                                              │
+b72c7ed8 │                Hello, sailor! Making this line long enough for the example.                                          │
+b0c65278 │                    Hello, sailor! Making this line long enough for the example.                                      │
+577e0498 │                        Hello, sailor! Making this line long enough for the example.                                  │
+dbf57d38 │                            Hello, sailor! Making this line long enough for the example.                              │
+e407e758 │                                Hello, sailor! Making this line long enough for the example.                          │
+1c6ceef8 │                                    Hello, sailor! Making this line long enough for the example.                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+93d0f895 │                                                                                                                      │
+fdcde845 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+347eee9b                                                                                                                        ◢
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+dc90e695 ─▶───Dear ImGui Demo────────────────────────────────────────────────────────────────────────────────────────────────────

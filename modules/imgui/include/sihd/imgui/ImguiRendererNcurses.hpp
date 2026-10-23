@@ -54,6 +54,8 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         // needs a current ImGui context: applies the same font and style as init(), without ncurses
         bool init_headless(int w, int h);
         void set_unicode(bool unicode);
+        // imgui units per terminal cell, set before init (1x1: one unit is a cell)
+        void set_cell_size(ImVec2 cell_size);
         const TCell & get_cell(int x, int y) const;
         void clear_screen();
         void rasterize_headless(ImDrawData *draw_data);
@@ -180,6 +182,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         void _add_line_arms(int x, int y, uint8_t arms, ImU32 col, const ImVec4 & clip);
         void _add_braille_dot(float x, float y, ImU32 col, const ImVec4 & clip);
         bool _in_clip(int x, int y, const ImVec4 & clip) const;
+        bool _virtual_pixels() const;
         TCell & _cell(int x, int y);
         uint32_t _blend(uint32_t under, ImU32 col) const;
         uint32_t _cell_bg(const TCell & cell) const;
@@ -199,6 +202,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
         ImVec4 *_clear_color_ptr;
         uint32_t _clear_rgb;
         ImVec2 _white_uv;
+        ImVec2 _cell_size;
 
         std::unordered_map<uint32_t, int> _rgb_roles;
         std::array<ImVec4, ImGuiCol_COUNT> _tagged_colors;

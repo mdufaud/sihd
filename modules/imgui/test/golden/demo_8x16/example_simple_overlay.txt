@@ -1,0 +1,50 @@
+e3333069  ┌────────────────────────────────┐
+2e4460e5  │                                │
+84d15684  │Simple overlay                  │
+db089153  │(right-click─to─change─position)│
+7bf59aa0  └Mouse Position: <invalid>───────┘
+fa6f5445 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+2d2c0a85 
+dc90e695 ─▶───Dear ImGui Demo────────────────────────────────────────────────────────────────────────────────────────────────────

@@ -12,8 +12,10 @@
 #include <climits>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <cwchar>
 #include <span>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -155,8 +157,8 @@ bool font_baked_init(ImFontAtlas *, ImFontConfig *, ImFontBaked *baked, void *)
 
 // no bitmap: codepoint stored in the UVs (invalid PackId, imgui keeps them), advance = terminal column width
 bool font_baked_load_glyph(ImFontAtlas *,
-                           ImFontConfig *,
-                           ImFontBaked *,
+                           ImFontConfig *src,
+                           ImFontBaked *baked,
                            void *,
                            int glyph_index,
                            ImFontGlyph *out_glyph,
@@ -165,7 +167,10 @@ bool font_baked_load_glyph(ImFontAtlas *,
     int width = wcwidth((wchar_t)glyph_index);
     if (width < 0)
         width = 1;
-    const float advance = (float)width;
+    // the terminal font's data is the width of a cell in imgui units
+    float cell_width = 0.0f;
+    std::memcpy(&cell_width, src->FontData, sizeof(cell_width));
+    const float advance = (float)width * cell_width;
     if (out_advance_x != nullptr)
     {
         *out_advance_x = advance;
@@ -175,7 +180,7 @@ bool font_baked_load_glyph(ImFontAtlas *,
     out_glyph->X0 = 0.0f;
     out_glyph->Y0 = 0.0f;
     out_glyph->X1 = advance;
-    out_glyph->Y1 = 1.0f;
+    out_glyph->Y1 = baked->Size;
     out_glyph->U0 = (float)glyph_index;
     out_glyph->U1 = (float)glyph_index;
     out_glyph->V0 = 0.0f;
@@ -244,6 +249,15 @@ std::pair<int, int> covered_cells(const RectAxis & axis, int first, int end)
     while (end > first && !covers_cell(axis, end - 1))
         --end;
     return {first, end};
+}
+
+std::pair<int, int> centre_cell(const RectAxis & axis)
+{
+    const int cell = (int)std::floor((axis.min + axis.max) * 0.5f);
+    const float centre = (float)cell + 0.5f;
+    if (axis.max <= axis.min || centre < axis.clip_min || centre >= axis.clip_max || cell < 0 || cell >= axis.screen)
+        return {0, 0};
+    return {cell, cell + 1};
 }
 
 bool point_in_triangle(ImVec2 p, ImVec2 a, ImVec2 b, ImVec2 c)
@@ -398,12 +412,13 @@ uint8_t span_arms(int at, int first, int last, uint8_t before, uint8_t after)
 }
 
 // a compact nav cursor hugs its item, an expanded one surrounds it: the ring alone cannot tell, imgui's nav rect can
-ImRect nav_item_rect()
+ImRect nav_item_rect(ImVec2 cell_size)
 {
     const ImGuiContext & context = *ImGui::GetCurrentContext();
     if (context.NavWindow == nullptr)
         return {-FLT_MAX, -FLT_MAX, FLT_MAX, FLT_MAX};
-    return ImGui::WindowRectRelToAbs(context.NavWindow, context.NavWindow->NavRectRel[context.NavLayer]);
+    const ImRect rect = ImGui::WindowRectRelToAbs(context.NavWindow, context.NavWindow->NavRectRel[context.NavLayer]);
+    return {rect.Min.x / cell_size.x, rect.Min.y / cell_size.y, rect.Max.x / cell_size.x, rect.Max.y / cell_size.y};
 }
 
 std::pair<int, int> grab_span(float from, float to)
@@ -426,6 +441,7 @@ ImguiRendererNcurses::ImguiRendererNcurses():
     _clear_color_ptr(nullptr),
     _clear_rgb(0),
     _white_uv(0.0f, 0.0f),
+    _cell_size(1.0f, 1.0f),
     _tagged_colors {},
     _screen_w(0),
     _screen_h(0)
@@ -617,7 +633,11 @@ void ImguiRendererNcurses::_setup_imgui()
 
     ImFontConfig cfg;
     cfg.FontLoader = &terminal_font_loader();
-    cfg.SizePixels = 1.0f;
+    cfg.SizePixels = _cell_size.y;
+    // FontDataOwnedByAtlas: the atlas frees it with its font, as it does a TTF
+    cfg.FontData = IM_ALLOC(sizeof(_cell_size.x));
+    cfg.FontDataSize = (int)sizeof(_cell_size.x);
+    std::memcpy(cfg.FontData, &_cell_size.x, sizeof(_cell_size.x));
     io.Fonts->AddFont(&cfg);
 
     this->_apply_terminal_style();
@@ -628,7 +648,7 @@ void ImguiRendererNcurses::_apply_terminal_style()
     ImGuiIO & io = ImGui::GetIO();
     ImGuiStyle & style = ImGui::GetStyle();
 
-    style.FontSizeBase = 1.0f;
+    style.FontSizeBase = _cell_size.y;
     style.FontScaleMain = 1.0f;
     style.Alpha = 1.0f;
     // vertical padding keeps the first and last content rows clear of the window border
@@ -709,6 +729,30 @@ void ImguiRendererNcurses::_apply_terminal_style()
     style.SeparatorTextBorderSize = 1.0f;
     style.SeparatorTextPadding = ImVec2(1.0f, 0.0f);
     style.SeparatorTextAlign = ImVec2(0.0f, 0.5f);
+
+    // sizes above are in cells, borders stay one unit (a pixel)
+    if (this->_virtual_pixels())
+    {
+        for (ImVec2 *size : {&style.WindowPadding,
+                             &style.WindowMinSize,
+                             &style.FramePadding,
+                             &style.ItemSpacing,
+                             &style.ItemInnerSpacing,
+                             &style.DisplayWindowPadding,
+                             &style.CellPadding,
+                             &style.SeparatorTextPadding})
+            *size = ImVec2(size->x * _cell_size.x, size->y * _cell_size.y);
+        for (float *width : {&style.IndentSpacing,
+                             &style.ColumnsMinSpacing,
+                             &style.ScrollbarSize,
+                             &style.GrabMinSize,
+                             &style.WindowBorderHoverPadding,
+                             &io.MouseDragThreshold})
+            *width *= _cell_size.x;
+        // units are pixels again: imgui's tooltip offset and circle precision
+        style.MouseCursorScale = 1.0f;
+        style.CircleTessellationMaxError = 0.3f;
+    }
 
     this->_tag_style_colors();
 }
@@ -881,6 +925,33 @@ void ImguiRendererNcurses::_rasterize(ImDrawData *draw_data)
 {
     this->_ack_textures(draw_data);
 
+    if (this->_virtual_pixels())
+    {
+        draw_data->FramebufferScale = ImVec2(1.0f / _cell_size.x, 1.0f / _cell_size.y);
+        const ImGuiContext & context = *ImGui::GetCurrentContext();
+        for (ImDrawList *dl : draw_data->CmdLists)
+        {
+            // a window placed off the grid (imgui's default 60,60) would split its border and title across rows
+            ImVec2 offset(0.0f, 0.0f);
+            for (const ImGuiWindow *window : context.Windows)
+            {
+                if (window->DrawList == dl)
+                {
+                    offset = ImVec2(std::round(window->Pos.x / _cell_size.x) * _cell_size.x - window->Pos.x,
+                                    std::round(window->Pos.y / _cell_size.y) * _cell_size.y - window->Pos.y);
+                    break;
+                }
+            }
+            for (ImDrawVert & vertex : dl->VtxBuffer)
+                vertex.pos = ImVec2((vertex.pos.x + offset.x) / _cell_size.x, (vertex.pos.y + offset.y) / _cell_size.y);
+            for (ImDrawCmd & cmd : dl->CmdBuffer)
+                cmd.ClipRect = ImVec4(cmd.ClipRect.x + offset.x,
+                                      cmd.ClipRect.y + offset.y,
+                                      cmd.ClipRect.z + offset.x,
+                                      cmd.ClipRect.w + offset.y);
+        }
+    }
+
     const int fb_w = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     const int fb_h = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_w <= 0 || fb_h <= 0)
@@ -919,7 +990,9 @@ void ImguiRendererNcurses::_rasterize_list(const ImDrawList *dl, const ImDrawDat
             continue;
         this->_rasterize_cmd(dl, cmd, clip);
     }
-    this->_draw_clipped_table_headers(dl, fb_size);
+    // a one-unit border inset is a sixteenth of a row in virtual pixels
+    if (!this->_virtual_pixels())
+        this->_draw_clipped_table_headers(dl, fb_size);
     // a nav cursor is drawn before the frame of its item: apply it once the whole window is drawn
     for (const auto & [prim, clip] : _deferred_nav)
         this->_set_attribute(prim, Role::nav, clip);
@@ -1273,6 +1346,32 @@ void ImguiRendererNcurses::_draw_fill(const ImDrawList *dl,
 {
     const ImVec2 min = clamp_to_clip(prim.min, clip);
     const ImVec2 max = clamp_to_clip(prim.max, clip);
+    // a stroke thinner than half a cell is a line on the cells its middle crosses
+    if (this->_virtual_pixels() && !prim.gradient)
+    {
+        const float width = prim.max.x - prim.min.x;
+        const float height = prim.max.y - prim.min.y;
+        if (height < 0.5f && width >= 1.0f)
+        {
+            const int x0 = floor_cell(min.x + vertex_epsilon);
+            this->_add_horizontal_line(x0,
+                                       std::max(x0, (int)std::ceil(max.x - vertex_epsilon) - 1),
+                                       floor_cell((prim.min.y + prim.max.y) * 0.5f),
+                                       prim.col,
+                                       clip);
+            return;
+        }
+        if (width < 0.5f && height >= 1.0f)
+        {
+            const int y0 = floor_cell(min.y + vertex_epsilon);
+            this->_add_vertical_line(floor_cell((prim.min.x + prim.max.x) * 0.5f),
+                                     y0,
+                                     std::max(y0, (int)std::ceil(max.y - vertex_epsilon) - 1),
+                                     prim.col,
+                                     clip);
+            return;
+        }
+    }
     if (prim.rect)
     {
         const RectAxis columns {.min = prim.min.x,
@@ -1287,8 +1386,13 @@ void ImguiRendererNcurses::_draw_fill(const ImDrawList *dl,
                              .clip_min = clip.y,
                              .clip_max = clip.w,
                              .screen = _screen_h};
-        const auto [x0, x1] = covered_cells(columns, floor_cell(min.x), (int)std::ceil(max.x));
-        const auto [y0, y1] = covered_cells(rows, floor_cell(min.y), (int)std::ceil(max.y));
+        auto [x0, x1] = covered_cells(columns, floor_cell(min.x), (int)std::ceil(max.x));
+        auto [y0, y1] = covered_cells(rows, floor_cell(min.y), (int)std::ceil(max.y));
+        // a rect between two cell centres (a 4x4 type mark) keeps the cell holding its centre
+        if (this->_virtual_pixels() && x0 >= x1)
+            std::tie(x0, x1) = centre_cell(columns);
+        if (this->_virtual_pixels() && y0 >= y1)
+            std::tie(y0, y1) = centre_cell(rows);
         for (int y = y0; y < y1; ++y)
         {
             for (int x = x0; x < x1; ++x)
@@ -1544,9 +1648,11 @@ void ImguiRendererNcurses::_draw_separator(const ImDrawList *dl,
         this->_draw_line(dl, cmd, prim, false, clip);
         return;
     }
+    // at 16 units a row the stroke already sits on the label row
+    const float row_shift = this->_virtual_pixels() ? 0.0f : 1.0f;
     Primitive label_row = prim;
-    label_row.min.y -= 1.0f;
-    label_row.max.y -= 1.0f;
+    label_row.min.y -= row_shift;
+    label_row.max.y -= row_shift;
     this->_draw_line(dl, cmd, label_row, false, clip);
 }
 
@@ -1725,7 +1831,7 @@ void ImguiRendererNcurses::_set_attribute(const Primitive & prim, Role role, con
     ImVec2 max = prim.max;
     if (role == Role::nav)
     {
-        const ImRect item = nav_item_rect();
+        const ImRect item = nav_item_rect(_cell_size);
         min = ImMax(min, item.Min);
         max = ImMin(max, item.Max);
     }
@@ -1927,6 +2033,16 @@ bool ImguiRendererNcurses::init_headless(int w, int h)
     this->_resize_grid(w, h);
     _is_init = true;
     return true;
+}
+
+void ImguiRendererNcurses::set_cell_size(ImVec2 cell_size)
+{
+    _cell_size = cell_size;
+}
+
+bool ImguiRendererNcurses::_virtual_pixels() const
+{
+    return _cell_size.x != 1.0f || _cell_size.y != 1.0f;
 }
 
 void ImguiRendererNcurses::set_unicode(bool unicode)
