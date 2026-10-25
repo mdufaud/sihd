@@ -294,35 +294,39 @@ struct ProcessWatcher
 
 bool ProcessWatcher::check_status(int options)
 {
-    std::lock_guard lock(this->mutex);
-    const DWORD timeout_ms = options == 0 ? INFINITE : options;
-    const DWORD result = WaitForSingleObject(this->procinfo.hProcess, timeout_ms);
-    if (result == WAIT_OBJECT_0)
+    HANDLE process = nullptr;
     {
-        const BOOL got_code = GetExitCodeProcess(this->procinfo.hProcess, &this->code);
-        if (got_code)
-        {
-            this->exited = true;
-
-            if (this->procinfo.hProcess != nullptr)
-                CloseHandle(this->procinfo.hProcess);
-            this->procinfo.hProcess = nullptr;
-
-            if (this->procinfo.hThread != nullptr)
-                CloseHandle(this->procinfo.hThread);
-            this->procinfo.hThread = nullptr;
+        std::lock_guard lock(this->mutex);
+        if (this->exited)
             return true;
-        }
-        this->exited = false;
-        return false;
+        // waits on a private duplicate: holding the mutex while waiting starves concurrent waiters (stop vs on_start)
+        const HANDLE self = GetCurrentProcess();
+        if (DuplicateHandle(self, this->procinfo.hProcess, self, &process, SYNCHRONIZE, FALSE, 0) == 0)
+            return false;
     }
+    const DWORD timeout_ms = options == 0 ? INFINITE : options;
+    const DWORD result = WaitForSingleObject(process, timeout_ms);
+    CloseHandle(process);
     if (result == WAIT_TIMEOUT)
-    {
-        this->exited = false;
         return true;
-    }
-    this->exited = false;
-    return false;
+    if (result != WAIT_OBJECT_0)
+        return false;
+
+    std::lock_guard lock(this->mutex);
+    if (this->exited)
+        return true;
+    if (GetExitCodeProcess(this->procinfo.hProcess, &this->code) == 0)
+        return false;
+    this->exited = true;
+
+    if (this->procinfo.hProcess != nullptr)
+        CloseHandle(this->procinfo.hProcess);
+    this->procinfo.hProcess = nullptr;
+
+    if (this->procinfo.hThread != nullptr)
+        CloseHandle(this->procinfo.hThread);
+    this->procinfo.hThread = nullptr;
+    return true;
 }
 
 bool ProcessWatcher::has_terminated()

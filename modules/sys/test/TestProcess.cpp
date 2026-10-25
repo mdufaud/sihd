@@ -188,16 +188,17 @@ TEST_F(TestProcess, test_process_service_stop_kills_child)
 {
     Process proc({helper_path(), "sleep", "60"});
     bool started = false;
-    Stopwatch watch;
 
     std::jthread runner([&proc, &started] { started = proc.start(); });
     EXPECT_TRUE(proc.wait_ready(Duration(time::sec(5))));
+    Stopwatch watch;
     EXPECT_TRUE(proc.stop());
     runner.join();
+    const Duration stop_time = watch.time();
 
     EXPECT_TRUE(started);
     EXPECT_FALSE(proc.is_process_running());
-    EXPECT_LT(watch.time(), Duration(time::sec(30)));
+    EXPECT_LT(stop_time, Duration(time::sec(1)));
 }
 
 TEST_F(TestProcess, test_process_simple)
