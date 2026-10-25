@@ -146,21 +146,21 @@ Id id_from_sid(PSID sid)
 }
 
 template <typename Id>
-std::optional<Id> lookup_account(std::string_view account_name)
+std::optional<Id> lookup_account(ZStringView account_name)
 {
-    const std::string name_str(account_name);
     std::vector<BYTE> sid(SECURITY_MAX_SID_SIZE);
     DWORD sid_size = static_cast<DWORD>(sid.size());
     DWORD domain_size = 0;
     SID_NAME_USE use;
 
-    LookupAccountNameA(nullptr, name_str.c_str(), sid.data(), &sid_size, nullptr, &domain_size, &use);
+    LookupAccountNameA(nullptr, account_name.c_str(), sid.data(), &sid_size, nullptr, &domain_size, &use);
     if (domain_size == 0)
         return std::nullopt;
 
     std::vector<char> domain(domain_size);
     sid_size = static_cast<DWORD>(sid.size());
-    if (LookupAccountNameA(nullptr, name_str.c_str(), sid.data(), &sid_size, domain.data(), &domain_size, &use) == 0)
+    if (LookupAccountNameA(nullptr, account_name.c_str(), sid.data(), &sid_size, domain.data(), &domain_size, &use)
+        == 0)
         return std::nullopt;
 
     Id ret = Id::from_native(sid.data(), sid_size);
@@ -265,12 +265,12 @@ std::optional<std::string> name_of(const GroupId & id)
     return lookup_name(id);
 }
 
-std::optional<UserId> user_id_of(std::string_view user_name)
+std::optional<UserId> user_id_of(ZStringView user_name)
 {
     return lookup_account<UserId>(user_name);
 }
 
-std::optional<GroupId> group_id_of(std::string_view group_name)
+std::optional<GroupId> group_id_of(ZStringView group_name)
 {
     return lookup_account<GroupId>(group_name);
 }
@@ -283,7 +283,7 @@ std::optional<GroupId> primary_group_of(const UserId & id)
     return effective_group();
 }
 
-std::optional<GroupId> primary_group_of(std::string_view user_name)
+std::optional<GroupId> primary_group_of(ZStringView user_name)
 {
     const auto id = user_id_of(user_name);
     if (!id.has_value())

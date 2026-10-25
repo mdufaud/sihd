@@ -14,6 +14,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::http
 {
@@ -62,17 +63,17 @@ class Navigator
         Navigator(Navigator &&) = delete;
         Navigator & operator=(Navigator &&) = delete;
 
-        sihd::util::Result<NavigatorResponse> get(std::string_view url);
-        sihd::util::Result<NavigatorResponse> post(std::string_view url, sihd::util::ArrCharView data = {});
-        sihd::util::Result<NavigatorResponse> put(std::string_view url, sihd::util::ArrCharView data);
-        sihd::util::Result<NavigatorResponse> patch(std::string_view url, sihd::util::ArrCharView data);
-        sihd::util::Result<NavigatorResponse> del(std::string_view url);
-        sihd::util::Result<NavigatorResponse> head(std::string_view url);
-        sihd::util::Result<NavigatorResponse> options(std::string_view url);
-        sihd::util::Result<NavigatorResponse> post_multipart(std::string_view url, const Multipart & multipart);
-        sihd::util::Result<NavigatorResponse> download(std::string_view url, std::string_view path);
+        sihd::util::Result<NavigatorResponse> get(const std::string & url);
+        sihd::util::Result<NavigatorResponse> post(const std::string & url, sihd::util::ArrCharView data = {});
+        sihd::util::Result<NavigatorResponse> put(const std::string & url, sihd::util::ArrCharView data);
+        sihd::util::Result<NavigatorResponse> patch(const std::string & url, sihd::util::ArrCharView data);
+        sihd::util::Result<NavigatorResponse> del(const std::string & url);
+        sihd::util::Result<NavigatorResponse> head(const std::string & url);
+        sihd::util::Result<NavigatorResponse> options(const std::string & url);
+        sihd::util::Result<NavigatorResponse> post_multipart(const std::string & url, const Multipart & multipart);
+        sihd::util::Result<NavigatorResponse> download(const std::string & url, const std::string & path);
         // streams the file through the request instead of loading it in memory
-        sihd::util::Result<NavigatorResponse> put_file(std::string_view url, std::string_view path);
+        sihd::util::Result<NavigatorResponse> put_file(const std::string & url, const std::string & path);
 
         // connections opened by the last request; 0 means an existing one was reused
         long new_connection_count() const;
@@ -86,19 +87,19 @@ class Navigator
         void set_accept_encoding(bool enable);
         void set_http2(bool enable);
         void set_ssl_verify(bool verify_peer, bool verify_host);
-        void set_user_agent(std::string_view agent);
+        void set_user_agent(const std::string & agent);
         void set_max_response_size(size_t bytes);
         void set_ssrf_guard(bool enable);
 
-        void set_basic_auth(std::string_view user, std::string_view password);
-        void set_digest_auth(std::string_view user, std::string_view password);
-        void set_token_auth(std::string_view token);
+        void set_basic_auth(const std::string & user, const std::string & password);
+        void set_digest_auth(const std::string & user, const std::string & password);
+        void set_token_auth(const std::string & token);
         void clear_auth();
 
         sihd::util::Result<void> form_login(const FormLoginParams & params);
 
-        void set_header(std::string_view name, std::string_view value);
-        void remove_header(std::string_view name);
+        void set_header(const std::string & name, const std::string & value);
+        void remove_header(const std::string & name);
         void clear_headers();
         // names of the headers sent along a redirect to another origin, every other one is dropped
         void set_cross_origin_headers(std::vector<std::string> names);
@@ -107,13 +108,13 @@ class Navigator
         sihd::util::Result<void>
             set_cookie(std::string_view name, std::string_view value, std::string_view domain = "");
         sihd::util::Result<void> clear_cookies();
-        sihd::util::Result<void> save_cookies(std::string_view path);
-        sihd::util::Result<void> load_cookies(std::string_view path);
+        sihd::util::Result<void> save_cookies(const std::string & path);
+        sihd::util::Result<void> load_cookies(const std::string & path);
 
-        void set_proxy(std::string_view url, ProxyType type = ProxyType::Http);
-        void set_proxy_auth(std::string_view user, std::string_view password);
+        void set_proxy(const std::string & url, ProxyType type = ProxyType::Http);
+        void set_proxy_auth(const std::string & user, const std::string & password);
         void clear_proxy();
-        void add_proxy(std::string_view url, ProxyType type = ProxyType::Http);
+        void add_proxy(const std::string & url, ProxyType type = ProxyType::Http);
         void set_proxy_rotation(ProxyRotation rotation);
 
         // Retry (max_wait_ms caps each backoff and each Retry-After wait, 0 = no cap)
@@ -121,10 +122,10 @@ class Navigator
 
         void set_domain_delay_ms(long ms);
 
-        void add_user_agent(std::string_view ua);
+        void add_user_agent(const std::string & ua);
         void set_user_agent_rotation(bool enable);
 
-        sihd::util::Result<void> ws_connect(std::string_view url, std::string_view protocol = "");
+        sihd::util::Result<void> ws_connect(std::string_view url, sihd::util::ZStringView protocol = "");
         bool ws_send(std::string_view text);
         bool ws_send_binary(sihd::util::ArrByteView data);
         void ws_close();

@@ -36,7 +36,7 @@ void SshSubsystemPty::set_args(std::vector<std::string> args)
     _args = std::move(args);
 }
 
-void SshSubsystemPty::set_env(std::string_view name, std::string_view value)
+void SshSubsystemPty::set_env(const std::string & name, const std::string & value)
 {
     _env.emplace_back(name, value);
 }

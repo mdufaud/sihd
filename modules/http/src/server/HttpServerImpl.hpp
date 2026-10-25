@@ -115,14 +115,14 @@ struct HttpServer::Impl
         int _lws_http_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
         HttpRequest::RequestType get_request_type(struct lws *wsi);
         bool is_cors_preflight(struct lws *wsi);
-        int on_http_request(HttpSession *session, std::string_view path);
+        int on_http_request(HttpSession *session, const std::string & path);
         int on_http_body(HttpSession *session, const uint8_t *buf, size_t size);
         int on_http_body_end(HttpSession *session);
         // ends the lws transaction, or drops the connection when the body was refused
         int complete_transaction(HttpSession *session, int rc);
         bool check_stream_length(HttpSession *session);
         WebService *_get_webservice_from_path(std::string_view path, std::string *webservice_name = nullptr);
-        bool check_webservices(HttpSession *session, std::string_view path);
+        bool check_webservices(HttpSession *session, const std::string & path);
         // returns the announced body length, or nothing once the body was refused
         std::optional<size_t>
             resolve_body_length(HttpSession *session, HttpRequest & request, const std::string & webservice_name);
@@ -162,12 +162,12 @@ struct HttpServer::Impl
         std::vector<std::string> get_uri_args(struct lws *wsi);
         bool send_404(struct lws *wsi, std::string_view html_404);
         // header-only error response, allow is the method list of a 405
-        bool send_http_error(HttpSession *session, int code, std::string_view allow = {});
+        bool send_http_error(HttpSession *session, int code, const std::string & allow = {});
         // refuses the body: the response carries connection: close and the transaction
         // ends by dropping the connection instead of desyncing it
         bool reject_body(HttpSession *session, int code);
         bool reject_body(HttpSession *session, HttpResponse & response);
-        bool send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code = 301);
+        bool send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code = 301);
         bool send_http_headers(struct lws *wsi, HttpResponse & response);
 
         int _lws_websocket_callback(struct lws *wsi,

@@ -23,9 +23,9 @@ class Environment
         void load(std::span<const char *> entries);
         void load(std::initializer_list<std::string_view> entries);
 
-        void set(std::string_view key, std::string_view value);
-        std::optional<std::string> get(std::string_view key) const;
-        bool rm(std::string_view key);
+        void set(const std::string & key, const std::string & value);
+        std::optional<std::string> get(const std::string & key) const;
+        bool rm(const std::string & key);
         void clear();
 
         bool empty() const;

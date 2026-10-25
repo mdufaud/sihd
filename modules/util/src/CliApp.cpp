@@ -592,11 +592,11 @@ bool CliApp::_install_sinks()
 
         for (auto it = entry.begin(); it != entry.end(); ++it)
         {
-            const std::string_view sink_key = it.key();
+            const std::string & sink_key = it.key();
             if (std::find(std::begin(sink_entry_keys), std::end(sink_entry_keys), sink_key)
                 != std::end(sink_entry_keys))
                 continue;
-            Result<void> res = sink->set_conf(std::string(sink_key), it.value());
+            Result<void> res = sink->set_conf(sink_key, it.value());
             if (!res)
             {
                 SIHD_LOG(error, "CliApp: sink '{}': {}", name, res.error().message);

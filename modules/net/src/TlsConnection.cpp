@@ -154,23 +154,22 @@ Result<void> TlsConnection::init(sihd::crypto::TlsContext & ctx, Socket & socket
     return {};
 }
 
-Result<void> TlsConnection::set_server_name(std::string_view host)
+Result<void> TlsConnection::set_server_name(ZStringView host)
 {
     if (!_handle)
         return std::unexpected(Error(ErrorCode::not_initialized, "no TLS connection"));
-    if (host.empty() || host.find('\0') != std::string_view::npos)
+    if (host.empty() || host.view().find('\0') != std::string_view::npos)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid server name"));
     ERR_clear_error();
     SSL *ssl = as_ssl(_handle.get());
-    const std::string name(host);
-    if (sihd::net::ip::is_valid_ip(name))
+    if (sihd::net::ip::is_valid_ip(host))
     {
-        if (X509_VERIFY_PARAM_set1_ip_asc(SSL_get0_param(ssl), name.c_str()) != 1)
-            return std::unexpected(Error(ErrorCode::io_error, "could not set the peer ip to verify: {}", name));
+        if (X509_VERIFY_PARAM_set1_ip_asc(SSL_get0_param(ssl), host.c_str()) != 1)
+            return std::unexpected(Error(ErrorCode::io_error, "could not set the peer ip to verify: {}", host));
         return {};
     }
-    if (SSL_set_tlsext_host_name(ssl, name.c_str()) != 1 || SSL_set1_host(ssl, name.c_str()) != 1)
-        return std::unexpected(Error(ErrorCode::io_error, "could not set the server name: {}", name));
+    if (SSL_set_tlsext_host_name(ssl, host.c_str()) != 1 || SSL_set1_host(ssl, host.c_str()) != 1)
+        return std::unexpected(Error(ErrorCode::io_error, "could not set the server name: {}", host));
     return {};
 }
 

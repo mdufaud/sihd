@@ -8,6 +8,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::net
 {
@@ -19,11 +20,11 @@ class Socket
 
         Socket();
         Socket(int domain, int socket_type, int protocol);
-        Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol);
+        Socket(std::string_view domain, std::string_view socket_type, sihd::util::ZStringView protocol);
         // from existing socket - get_infos perform up to 3 getsockopt
         Socket(int socket, bool get_infos = true);
         Socket(int socket, int domain, int socket_type, int protocol);
-        Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol);
+        Socket(int socket, std::string_view domain, std::string_view socket_type, sihd::util::ZStringView protocol);
         Socket(Socket && other);
         virtual ~Socket();
 
@@ -96,7 +97,7 @@ class Socket
         sihd::util::Result<void> set_multicast_ttl(int ttl);
         sihd::util::Result<void> set_multicast_loop(bool active);
 
-        sihd::util::Result<void> open(std::string_view domain, std::string_view type, std::string_view protocol);
+        sihd::util::Result<void> open(std::string_view domain, std::string_view type, sihd::util::ZStringView protocol);
         sihd::util::Result<void> open(int domain, int socket_type, int protocol);
         virtual sihd::util::Result<void> close();
         virtual sihd::util::Result<void> shutdown() const;

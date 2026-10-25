@@ -35,11 +35,10 @@ struct MdCtxFree
 
 } // namespace
 
-Result<std::vector<uint8_t>> compute(std::string_view algorithm, const uint8_t *data, size_t len)
+Result<std::vector<uint8_t>> compute(ZStringView algorithm, const uint8_t *data, size_t len)
 {
     ERR_clear_error();
-    std::string algo(algorithm);
-    std::unique_ptr<const EVP_MD, MdFree> md(EVP_MD_fetch(nullptr, algo.c_str(), nullptr));
+    std::unique_ptr<const EVP_MD, MdFree> md(EVP_MD_fetch(nullptr, algorithm.c_str(), nullptr));
     if (md == nullptr)
         return unknown_algorithm(algorithm);
 
@@ -70,7 +69,7 @@ Result<std::vector<uint8_t>> compute(std::string_view algorithm, const uint8_t *
     return result;
 }
 
-Result<std::vector<uint8_t>> compute(std::string_view algorithm, ArrByteView data)
+Result<std::vector<uint8_t>> compute(ZStringView algorithm, ArrByteView data)
 {
     return compute(algorithm, reinterpret_cast<const uint8_t *>(data.data()), data.size());
 }

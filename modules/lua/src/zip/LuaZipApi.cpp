@@ -76,7 +76,7 @@ void LuaZipApi::load_base(Vm & vm)
                         return std::unexpected(Error(ErrorCode::invalid_argument, "zip: entry index is 1-based"));
                     return self->load_entry(static_cast<size_t>(index)).transform([](const ZipFile::ZipEntry &) {});
                 }
-                return self->load_entry(std::string(key.tostring())).transform([](const ZipFile::ZipEntry &) {});
+                return self->load_entry(key.tostring()).transform([](const ZipFile::ZipEntry &) {});
             }>)
         .addFunction("read_next_entry", checked<+[](ZipFile *self) {
                          return self->read_next_entry();

@@ -204,7 +204,7 @@ Socket::Socket(int domain, int socket_type, int protocol): Socket()
         throw std::runtime_error(opened.error().message);
 }
 
-Socket::Socket(std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
+Socket::Socket(std::string_view domain, std::string_view socket_type, ZStringView protocol): Socket()
 {
     auto opened = this->open(domain, socket_type, protocol);
     if (!opened)
@@ -233,11 +233,11 @@ Socket::Socket(int socket, int domain, int socket_type, int protocol): Socket()
     _protocol = protocol;
 }
 
-Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, std::string_view protocol): Socket()
+Socket::Socket(int socket, std::string_view domain, std::string_view socket_type, ZStringView protocol): Socket()
 {
     _domain = ip::domain(domain);
     _type = ip::socktype(socket_type);
-    _protocol = ip::protocol(std::string(protocol));
+    _protocol = ip::protocol(protocol);
 
     if (_domain == -1)
         throw std::invalid_argument(fmt::format("socket domain unknown: {}", domain));
@@ -592,11 +592,11 @@ Result<int> Socket::get_sndbuf() const
     return Socket::get_socket_sndbuf(_socket);
 }
 
-Result<void> Socket::open(std::string_view domain, std::string_view type, std::string_view protocol)
+Result<void> Socket::open(std::string_view domain, std::string_view type, ZStringView protocol)
 {
     int sockdomain = ip::domain(domain);
     int socktype = ip::socktype(type);
-    int sockprotocol = ip::protocol(std::string(protocol));
+    int sockprotocol = ip::protocol(protocol);
     if (sockdomain >= 0 && socktype >= 0 && sockprotocol >= 0)
         return this->open(sockdomain, socktype, sockprotocol);
     return std::unexpected(Error(ErrorCode::invalid_argument, "unknown domain, type or protocol"));

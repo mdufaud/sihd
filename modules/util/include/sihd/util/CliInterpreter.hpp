@@ -39,7 +39,9 @@ class CliInterpreter
                 int _status;
         };
 
-        CliInterpreter(std::string_view name, std::string_view description = "", std::string_view version = "");
+        CliInterpreter(const std::string & name,
+                       const std::string & description = "",
+                       const std::string & version = "");
         // defined in the source: CLI::App is incomplete here
         virtual ~CliInterpreter();
 

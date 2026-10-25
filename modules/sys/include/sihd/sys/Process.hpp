@@ -108,7 +108,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         bool stderr_to_file(const std::string & path, bool append = false);
 
         void clear_argv();
-        Process & add_argv(std::string_view arg);
+        Process & add_argv(const std::string & arg);
         Process & add_argv(const std::vector<std::string> & args);
         Process & set_function(std::nullptr_t);
         Process & set_function(std::function<int()> fun);
@@ -120,9 +120,9 @@ class Process: public sihd::util::IHandler<Poll *>,
         void env_load(std::span<const char *> to_load_environ);
         void env_load(std::initializer_list<std::string_view> to_load_environ);
 
-        void env_set(std::string_view key, std::string_view value);
-        bool env_rm(std::string_view key);
-        std::optional<std::string> env_get(std::string_view key) const;
+        void env_set(const std::string & key, const std::string & value);
+        bool env_rm(const std::string & key);
+        std::optional<std::string> env_get(const std::string & key) const;
 
         void set_chdir(std::string_view path);
 

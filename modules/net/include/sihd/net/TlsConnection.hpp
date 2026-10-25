@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::crypto
 {
@@ -38,7 +39,7 @@ class TlsConnection
 
         sihd::util::Result<void> init(sihd::crypto::TlsContext & ctx, Socket & socket);
         // between init and connect
-        sihd::util::Result<void> set_server_name(std::string_view host);
+        sihd::util::Result<void> set_server_name(sihd::util::ZStringView host);
         sihd::util::Result<void> connect(int timeout_ms);
         // null until the client has read the server's tickets; freeing the connection before shutdown() drops it
         std::shared_ptr<void> session() const;

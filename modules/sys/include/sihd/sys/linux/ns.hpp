@@ -7,6 +7,7 @@
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 #if !defined(__SIHD_LINUX__)
@@ -37,7 +38,7 @@ std::string_view to_str(Type type);
 // a new user namespace maps no id until uid_map and gid_map are written
 sihd::util::Result<void> unshare(Type type);
 sihd::util::Result<void> unshare(std::span<const Type> types);
-sihd::util::Result<void> setns(std::string_view path, Type type);
+sihd::util::Result<void> setns(sihd::util::ZStringView path, Type type);
 sihd::util::Result<void> setns(int fd, Type type);
 
 sihd::util::Result<uint64_t> id(Type type, pid_t pid);

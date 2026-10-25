@@ -79,7 +79,7 @@ class NetInterface
     protected:
         void set_name(std::string_view name);
         void set_flags(uint32_t flags);
-        void set_macaddr(std::string_view mac_addr);
+        void set_macaddr(const std::string & mac_addr);
         void set_index(uint32_t index);
         void set_kind(Kind kind);
         void set_hardware(bool hardware);

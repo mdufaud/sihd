@@ -14,6 +14,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::http
 {
@@ -43,12 +44,12 @@ class Client
                     const RequestOptions & options,
                     HttpResponse & response);
         Result send_file(std::string_view url,
-                         std::string_view path,
+                         const std::string & path,
                          HttpRequest::RequestType type,
                          const RequestOptions & options,
                          HttpResponse & response);
         Result receive_file(std::string_view url,
-                            std::string_view path,
+                            sihd::util::ZStringView path,
                             const RequestOptions & options,
                             HttpResponse & response);
 
@@ -58,11 +59,11 @@ class Client
         long new_connection_count() const;
 
         Result enable_cookie_engine();
-        Result add_cookie(std::string_view cookie_line);
+        Result add_cookie(const std::string & cookie_line);
         Result clear_cookies();
         std::vector<std::string> cookie_list() const;
-        Result save_cookies(std::string_view path);
-        Result load_cookies(std::string_view path);
+        Result save_cookies(const std::string & path);
+        Result load_cookies(const std::string & path);
 
     private:
         struct Streams

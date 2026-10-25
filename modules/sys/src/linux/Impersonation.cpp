@@ -150,9 +150,9 @@ bool Impersonation::impersonating() const
 
 #endif
 
-Result<void> Impersonation::impersonate_with_credentials([[maybe_unused]] std::string_view user_name,
+Result<void> Impersonation::impersonate_with_credentials([[maybe_unused]] ZStringView user_name,
                                                          [[maybe_unused]] std::string_view password,
-                                                         [[maybe_unused]] std::string_view domain)
+                                                         [[maybe_unused]] ZStringView domain)
 {
     // unix authenticates through PAM, not through the identity switch: see impersonate_as
     return std::unexpected(Error(not_supported, "not supported on this platform"));

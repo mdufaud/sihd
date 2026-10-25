@@ -44,7 +44,7 @@ pybind11::dict headers_to_dict(const HttpResponse & resp)
         std::string_view key = name;
         if (str::ends_with(key, ":"))
             key.remove_suffix(1);
-        headers[pybind11::str(std::string(key))] = value;
+        headers[pybind11::str(key.data(), key.size())] = value;
     }
     return headers;
 }
@@ -200,30 +200,30 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         // release the GIL: blocking I/O, and an in-process route handler needs it
         .def(
             "get",
-            [](Navigator & self, std::string_view url) { return self.get(url); },
+            [](Navigator & self, const std::string & url) { return self.get(url); },
             pybind11::arg("url"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "post",
-            [](Navigator & self, std::string_view url, std::string_view data) { return self.post(url, data); },
+            [](Navigator & self, const std::string & url, std::string_view data) { return self.post(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data") = std::string_view {},
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "put",
-            [](Navigator & self, std::string_view url, std::string_view data) { return self.put(url, data); },
+            [](Navigator & self, const std::string & url, std::string_view data) { return self.put(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "patch",
-            [](Navigator & self, std::string_view url, std::string_view data) { return self.patch(url, data); },
+            [](Navigator & self, const std::string & url, std::string_view data) { return self.patch(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "post_multipart",
-            [](Navigator & self, std::string_view url, const Multipart & multipart) {
+            [](Navigator & self, const std::string & url, const Multipart & multipart) {
                 return self.post_multipart(url, multipart);
             },
             pybind11::arg("url"),
@@ -231,28 +231,32 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "delete",
-            [](Navigator & self, std::string_view url) { return self.del(url); },
+            [](Navigator & self, const std::string & url) { return self.del(url); },
             pybind11::arg("url"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "head",
-            [](Navigator & self, std::string_view url) { return self.head(url); },
+            [](Navigator & self, const std::string & url) { return self.head(url); },
             pybind11::arg("url"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "options",
-            [](Navigator & self, std::string_view url) { return self.options(url); },
+            [](Navigator & self, const std::string & url) { return self.options(url); },
             pybind11::arg("url"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "download",
-            [](Navigator & self, std::string_view url, std::string_view path) { return self.download(url, path); },
+            [](Navigator & self, const std::string & url, const std::string & path) {
+                return self.download(url, path);
+            },
             pybind11::arg("url"),
             pybind11::arg("path"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "put_file",
-            [](Navigator & self, std::string_view url, std::string_view path) { return self.put_file(url, path); },
+            [](Navigator & self, const std::string & url, const std::string & path) {
+                return self.put_file(url, path);
+            },
             pybind11::arg("url"),
             pybind11::arg("path"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -303,7 +307,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "put",
-        [](std::string_view url, std::string_view file_path, const RequestOptions & opt) {
+        [](std::string_view url, const std::string & file_path, const RequestOptions & opt) {
             return put(url, file_path, opt);
         },
         pybind11::arg("url"),

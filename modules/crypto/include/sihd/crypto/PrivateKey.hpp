@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::crypto
 {
@@ -28,8 +29,8 @@ class PrivateKey
         sihd::util::Result<void> generate_rsa(int bits = 2048);
         sihd::util::Result<void> generate_ec(std::string_view curve_name = "prime256v1");
 
-        sihd::util::Result<void> load_pem(std::string_view path);
-        sihd::util::Result<void> save_pem(std::string_view path) const;
+        sihd::util::Result<void> load_pem(sihd::util::ZStringView path);
+        sihd::util::Result<void> save_pem(const std::string & path) const;
 
         sihd::util::Result<void> load_pem_string(std::string_view pem);
         std::string to_pem_string() const;

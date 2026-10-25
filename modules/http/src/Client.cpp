@@ -351,13 +351,13 @@ Client::Result Client::send(std::string_view url,
 }
 
 Client::Result Client::send_file(std::string_view url,
-                                 std::string_view path,
+                                 const std::string & path,
                                  HttpRequest::RequestType type,
                                  const RequestOptions & options,
                                  HttpResponse & response)
 {
     sihd::sys::File file;
-    auto opened = file.open(std::string(path), "rb");
+    auto opened = file.open(path, "rb");
     SIHD_UNEXPECTED_RETURN(opened);
 
     const auto size = file.file_size();
@@ -368,7 +368,7 @@ Client::Result Client::send_file(std::string_view url,
 }
 
 Client::Result Client::receive_file(std::string_view url,
-                                    std::string_view path,
+                                    ZStringView path,
                                     const RequestOptions & options,
                                     HttpResponse & response)
 {
@@ -385,7 +385,7 @@ Client::Result Client::receive_file(std::string_view url,
                           && response.status() >= 200 && response.status() < 300;
     if (complete)
     {
-        auto renamed = sihd::sys::fs::rename(temp_path, std::string(path));
+        auto renamed = sihd::sys::fs::rename(temp_path, path);
         if (renamed.has_value())
             return performed;
         (void)sihd::sys::fs::remove_file(temp_path);
@@ -417,7 +417,7 @@ Client::Result Client::enable_cookie_engine()
     return _impl->request.set_cookie_engine();
 }
 
-Client::Result Client::add_cookie(std::string_view cookie_line)
+Client::Result Client::add_cookie(const std::string & cookie_line)
 {
     return _impl->request.add_cookie(cookie_line);
 }
@@ -432,12 +432,12 @@ std::vector<std::string> Client::cookie_list() const
     return _impl->request.cookie_list();
 }
 
-Client::Result Client::save_cookies(std::string_view path)
+Client::Result Client::save_cookies(const std::string & path)
 {
     return _impl->request.save_cookies(path);
 }
 
-Client::Result Client::load_cookies(std::string_view path)
+Client::Result Client::load_cookies(const std::string & path)
 {
     return _impl->request.load_cookies(path);
 }

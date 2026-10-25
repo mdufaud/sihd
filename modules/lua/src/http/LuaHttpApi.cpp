@@ -50,7 +50,7 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
         std::string_view key = name;
         if (str::ends_with(key, ":"))
             key.remove_suffix(1);
-        headers[std::string(key)] = value;
+        headers[key] = value;
     }
     table["headers"] = headers;
 

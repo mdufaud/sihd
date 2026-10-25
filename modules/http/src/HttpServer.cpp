@@ -145,7 +145,7 @@ bool HttpServer::set_404_path(std::string_view path)
     return true;
 }
 
-bool HttpServer::set_server_name(std::string_view name)
+bool HttpServer::set_server_name(const std::string & name)
 {
     _impl->default_server_name = name;
     return true;

@@ -25,8 +25,8 @@ Daemon::Daemon(const std::string & name, Node *parent): Named(name, parent)
 #else
     _working_dir_path = fs::home_path();
 #endif
-    this->add_conf("user", static_cast<bool (Daemon::*)(std::string_view)>(&Daemon::set_user));
-    this->add_conf("group", static_cast<bool (Daemon::*)(std::string_view)>(&Daemon::set_group));
+    this->add_conf("user", static_cast<bool (Daemon::*)(const std::string &)>(&Daemon::set_user));
+    this->add_conf("group", static_cast<bool (Daemon::*)(const std::string &)>(&Daemon::set_group));
     this->add_conf("pid_file", &Daemon::set_pid_file_path);
     this->add_conf("working_dir", &Daemon::set_working_dir_path);
 }

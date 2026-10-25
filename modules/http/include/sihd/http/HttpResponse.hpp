@@ -36,9 +36,9 @@ class HttpResponse
         bool set_plain_content(std::string_view str);
         bool set_byte_content(sihd::util::ArrByteView data);
         bool set_json_content(const sihd::json::Json & data);
-        bool set_file_content(std::string_view path);
+        bool set_file_content(const std::string & path);
 
-        void set_content_type(std::string_view mime_type);
+        void set_content_type(const std::string & mime_type);
         void set_content_type_from_extension(const std::string & extension);
 
         void set_cookie(std::string_view name, std::string_view value, std::string_view options = {});

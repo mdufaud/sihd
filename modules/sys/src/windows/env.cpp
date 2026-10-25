@@ -13,15 +13,14 @@ using namespace sihd::util;
 namespace sihd::sys::env
 {
 
-std::optional<std::string> get(std::string_view key)
+std::optional<std::string> get(ZStringView key)
 {
-    const std::string key_str(key);
     // a 0 return means not found: windows cannot store empty values
-    const DWORD size = ::GetEnvironmentVariableA(key_str.c_str(), nullptr, 0);
+    const DWORD size = ::GetEnvironmentVariableA(key.c_str(), nullptr, 0);
     if (size == 0)
         return std::nullopt;
     std::string value(size, '\0');
-    const DWORD written = ::GetEnvironmentVariableA(key_str.c_str(), value.data(), size);
+    const DWORD written = ::GetEnvironmentVariableA(key.c_str(), value.data(), size);
     // a required-size return means the variable changed concurrently: content is undefined
     if (written == 0 || written >= size)
         return std::nullopt;
@@ -29,9 +28,9 @@ std::optional<std::string> get(std::string_view key)
     return value;
 }
 
-Result<void> set(std::string_view key, std::string_view value)
+Result<void> set(ZStringView key, ZStringView value)
 {
-    if (::SetEnvironmentVariableA(std::string(key).c_str(), std::string(value).c_str()) == 0)
+    if (::SetEnvironmentVariableA(key.c_str(), value.c_str()) == 0)
     {
         const DWORD err = ::GetLastError();
         const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory
@@ -42,9 +41,9 @@ Result<void> set(std::string_view key, std::string_view value)
     return {};
 }
 
-Result<void> unset(std::string_view key)
+Result<void> unset(ZStringView key)
 {
-    if (::SetEnvironmentVariableA(std::string(key).c_str(), nullptr) == 0)
+    if (::SetEnvironmentVariableA(key.c_str(), nullptr) == 0)
     {
         const DWORD err = ::GetLastError();
         const ErrorCode code = err == ERROR_NOT_ENOUGH_MEMORY   ? out_of_memory

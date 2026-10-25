@@ -108,11 +108,11 @@ class Connection
                         // one {sv} entry of an a{sv} array: fill writes the value, of that signature
                         sihd::util::Result<void>
                             add_entry(sihd::util::ZStringView key,
-                                      sihd::util::ZStringView signature,
+                                      const std::string & signature,
                                       const std::function<sihd::util::Result<void>(Appender &)> & fill);
 
-                        sihd::util::Result<Appender> open_array(sihd::util::ZStringView element_signature);
-                        sihd::util::Result<Appender> open_variant(sihd::util::ZStringView value_signature);
+                        sihd::util::Result<Appender> open_array(const std::string & element_signature);
+                        sihd::util::Result<Appender> open_variant(const std::string & value_signature);
                         sihd::util::Result<Appender> open_struct();
                         sihd::util::Result<Appender> open_dict_entry();
                         // a container dropped without close() is abandoned and so is its message

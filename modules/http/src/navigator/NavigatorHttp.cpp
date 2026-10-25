@@ -558,7 +558,7 @@ bool Navigator::Impl::follow_meta_refresh(Walk & walk, const SingleResponse & sr
 NavigatorResponse Navigator::Impl::make_response(Walk & walk, SingleResponse & sr)
 {
     NavigatorResponse nav_response(std::move(sr.response));
-    nav_response.set_final_url(std::string(walk.current_url));
+    nav_response.set_final_url(std::move(walk.current_url));
     nav_response.set_cookies(this->extract_cookies());
 
     if (walk.history.size() > 1)

@@ -23,15 +23,15 @@ class HttpHeader
         HttpHeader & operator=(HttpHeader &&) = default;
         virtual ~HttpHeader();
 
-        HttpHeader & set_server(std::string_view name);
-        HttpHeader & set_content_type(std::string_view type);
+        HttpHeader & set_server(const std::string & name);
+        HttpHeader & set_content_type(const std::string & type);
         HttpHeader & set_content_type(std::string_view type, std::string_view charset);
         HttpHeader & set_content_length(size_t len);
-        HttpHeader & set_accept_charset(std::string_view charset);
-        HttpHeader & set_accept(std::string_view mime_type);
+        HttpHeader & set_accept_charset(const std::string & charset);
+        HttpHeader & set_accept(const std::string & mime_type);
 
         HttpHeader & set_headers(HeaderMap && headers);
-        HttpHeader & set_header(const std::string & name, std::string_view value);
+        HttpHeader & set_header(const std::string & name, const std::string & value);
         sihd::util::Result<void> add_header_from_str(std::string_view header_str);
 
         HttpHeader & remove_header(const std::string & name);

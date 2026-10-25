@@ -11,7 +11,7 @@ std::optional<std::string> name()
     return name_of(effective_user());
 }
 
-Result<void> drop_privileges(std::string_view user_name)
+Result<void> drop_privileges(ZStringView user_name)
 {
     const auto user_id = user_id_of(user_name);
     const auto group_id = primary_group_of(user_name);

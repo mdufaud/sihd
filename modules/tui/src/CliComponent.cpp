@@ -53,12 +53,12 @@ class CliBase: public ComponentBase,
         ~CliBase() = default;
 
         // Thread-safe: may be called from any thread
-        void add_output(std::string_view line, OutputStyle style) override
+        void add_output(const std::string & line, OutputStyle style) override
         {
             std::lock_guard<std::mutex> lock(_lines_mutex);
             if (_pending_lines.size() >= _options.max_lines)
                 _pending_lines.pop_front();
-            _pending_lines.emplace_back(OutputLine {.text = std::string(line), .style = style});
+            _pending_lines.emplace_back(OutputLine {.text = line, .style = style});
         }
 
         // Thread-safe: may be called from any thread
@@ -417,7 +417,7 @@ class CliBase: public ComponentBase,
 
 } // namespace
 
-void Cli::add_output(std::string_view line)
+void Cli::add_output(const std::string & line)
 {
     this->add_output(line, OutputStyle::normal);
 }

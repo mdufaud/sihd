@@ -19,74 +19,74 @@ Navigator::Navigator(): _impl(std::make_unique<Impl>(this)) {}
 
 Navigator::~Navigator() = default;
 
-Result<NavigatorResponse> Navigator::get(std::string_view url)
+Result<NavigatorResponse> Navigator::get(const std::string & url)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url)});
+    return _impl->perform({.url = url});
 }
 
-Result<NavigatorResponse> Navigator::post(std::string_view url, ArrCharView data)
+Result<NavigatorResponse> Navigator::post(const std::string & url, ArrCharView data)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .body = data});
+    return _impl->perform({.url = url, .type = HttpRequest::Post, .body = data});
 }
 
-Result<NavigatorResponse> Navigator::patch(std::string_view url, ArrCharView data)
+Result<NavigatorResponse> Navigator::patch(const std::string & url, ArrCharView data)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Patch, .body = data});
+    return _impl->perform({.url = url, .type = HttpRequest::Patch, .body = data});
 }
 
-Result<NavigatorResponse> Navigator::head(std::string_view url)
+Result<NavigatorResponse> Navigator::head(const std::string & url)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Head});
+    return _impl->perform({.url = url, .type = HttpRequest::Head});
 }
 
-Result<NavigatorResponse> Navigator::put(std::string_view url, ArrCharView data)
+Result<NavigatorResponse> Navigator::put(const std::string & url, ArrCharView data)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .body = data});
+    return _impl->perform({.url = url, .type = HttpRequest::Put, .body = data});
 }
 
-Result<NavigatorResponse> Navigator::del(std::string_view url)
+Result<NavigatorResponse> Navigator::del(const std::string & url)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Delete});
+    return _impl->perform({.url = url, .type = HttpRequest::Delete});
 }
 
-Result<NavigatorResponse> Navigator::options(std::string_view url)
+Result<NavigatorResponse> Navigator::options(const std::string & url)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Options});
+    return _impl->perform({.url = url, .type = HttpRequest::Options});
 }
 
-Result<NavigatorResponse> Navigator::post_multipart(std::string_view url, const Multipart & multipart)
+Result<NavigatorResponse> Navigator::post_multipart(const std::string & url, const Multipart & multipart)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Post, .multipart = multipart});
+    return _impl->perform({.url = url, .type = HttpRequest::Post, .multipart = multipart});
 }
 
-Result<NavigatorResponse> Navigator::download(std::string_view url, std::string_view path)
+Result<NavigatorResponse> Navigator::download(const std::string & url, const std::string & path)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .download_path = std::string(path)});
+    return _impl->perform({.url = url, .download_path = path});
 }
 
-Result<NavigatorResponse> Navigator::put_file(std::string_view url, std::string_view path)
+Result<NavigatorResponse> Navigator::put_file(const std::string & url, const std::string & path)
 {
     auto reset = _impl->reset_for_request();
     SIHD_UNEXPECTED_RETURN(reset);
-    return _impl->perform({.url = std::string(url), .type = HttpRequest::Put, .upload_path = std::string(path)});
+    return _impl->perform({.url = url, .type = HttpRequest::Put, .upload_path = path});
 }
 
 long Navigator::new_connection_count() const
@@ -140,9 +140,9 @@ void Navigator::set_ssl_verify(bool verify_peer, bool verify_host)
     _impl->options.ssl_verify_host = verify_host;
 }
 
-void Navigator::set_user_agent(std::string_view agent)
+void Navigator::set_user_agent(const std::string & agent)
 {
-    _impl->options.user_agent = std::string(agent);
+    _impl->options.user_agent = agent;
 }
 
 void Navigator::set_max_response_size(size_t bytes)
@@ -155,25 +155,25 @@ void Navigator::set_ssrf_guard(bool enable)
     _impl->ssrf_guard = enable;
 }
 
-void Navigator::set_basic_auth(std::string_view user, std::string_view password)
+void Navigator::set_basic_auth(const std::string & user, const std::string & password)
 {
-    _impl->auth.username = std::string(user);
-    _impl->auth.password = std::string(password);
+    _impl->auth.username = user;
+    _impl->auth.password = password;
     _impl->auth.token.clear();
     _impl->auth.digest = false;
 }
 
-void Navigator::set_digest_auth(std::string_view user, std::string_view password)
+void Navigator::set_digest_auth(const std::string & user, const std::string & password)
 {
-    _impl->auth.username = std::string(user);
-    _impl->auth.password = std::string(password);
+    _impl->auth.username = user;
+    _impl->auth.password = password;
     _impl->auth.token.clear();
     _impl->auth.digest = true;
 }
 
-void Navigator::set_token_auth(std::string_view token)
+void Navigator::set_token_auth(const std::string & token)
 {
-    _impl->auth.token = std::string(token);
+    _impl->auth.token = token;
     _impl->auth.username.clear();
     _impl->auth.password.clear();
     _impl->auth.digest = false;
@@ -228,14 +228,14 @@ Result<void> Navigator::form_login(const FormLoginParams & params)
     return {};
 }
 
-void Navigator::set_header(std::string_view name, std::string_view value)
+void Navigator::set_header(const std::string & name, const std::string & value)
 {
-    _impl->headers[std::string(name)] = std::string(value);
+    _impl->headers[name] = value;
 }
 
-void Navigator::remove_header(std::string_view name)
+void Navigator::remove_header(const std::string & name)
 {
-    _impl->headers.erase(std::string(name));
+    _impl->headers.erase(name);
 }
 
 void Navigator::clear_headers()
@@ -255,7 +255,7 @@ std::map<std::string, std::string> Navigator::cookies() const
 
 Result<void> Navigator::set_cookie(std::string_view name, std::string_view value, std::string_view domain)
 {
-    std::string domain_str = domain.empty() ? "." : std::string(domain);
+    const std::string_view domain_str = domain.empty() ? std::string_view(".") : domain;
     std::string cookie_line = fmt::format("{}\tTRUE\t/\tFALSE\t0\t{}\t{}", domain_str, name, value);
     return _impl->client.add_cookie(cookie_line);
 }
@@ -265,27 +265,27 @@ Result<void> Navigator::clear_cookies()
     return _impl->client.clear_cookies();
 }
 
-Result<void> Navigator::save_cookies(std::string_view path)
+Result<void> Navigator::save_cookies(const std::string & path)
 {
     return _impl->client.save_cookies(path);
 }
 
-Result<void> Navigator::load_cookies(std::string_view path)
+Result<void> Navigator::load_cookies(const std::string & path)
 {
     return _impl->client.load_cookies(path);
 }
 
-void Navigator::set_proxy(std::string_view url, ProxyType type)
+void Navigator::set_proxy(const std::string & url, ProxyType type)
 {
-    _impl->proxy.url = std::string(url);
+    _impl->proxy.url = url;
     _impl->proxy.type = type;
     _impl->proxy.disabled = false;
 }
 
-void Navigator::set_proxy_auth(std::string_view user, std::string_view password)
+void Navigator::set_proxy_auth(const std::string & user, const std::string & password)
 {
-    _impl->proxy.user = std::string(user);
-    _impl->proxy.pass = std::string(password);
+    _impl->proxy.user = user;
+    _impl->proxy.pass = password;
 }
 
 void Navigator::clear_proxy()
@@ -297,9 +297,9 @@ void Navigator::clear_proxy()
     _impl->proxy.disabled = true;
 }
 
-void Navigator::add_proxy(std::string_view url, ProxyType type)
+void Navigator::add_proxy(const std::string & url, ProxyType type)
 {
-    _impl->proxy.pool.push_back({std::string(url), type});
+    _impl->proxy.pool.push_back({url, type});
     _impl->proxy.disabled = false;
 }
 
@@ -320,7 +320,7 @@ void Navigator::set_domain_delay_ms(long ms)
     _impl->rate.domain_delay_ms = ms;
 }
 
-void Navigator::add_user_agent(std::string_view ua)
+void Navigator::add_user_agent(const std::string & ua)
 {
     _impl->rate.user_agent_pool.emplace_back(ua);
 }
@@ -330,7 +330,7 @@ void Navigator::set_user_agent_rotation(bool enable)
     _impl->rate.ua_rotation = enable;
 }
 
-Result<void> Navigator::ws_connect(std::string_view url, std::string_view protocol)
+Result<void> Navigator::ws_connect(std::string_view url, ZStringView protocol)
 {
     return _impl->ws_do_connect(url, protocol);
 }

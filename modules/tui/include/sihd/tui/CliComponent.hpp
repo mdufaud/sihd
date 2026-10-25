@@ -34,8 +34,8 @@ class Cli
 {
     public:
         virtual ~Cli() = default;
-        virtual void add_output(std::string_view line, OutputStyle style) = 0;
-        void add_output(std::string_view line);
+        virtual void add_output(const std::string & line, OutputStyle style) = 0;
+        void add_output(const std::string & line);
         virtual void clear_output() = 0;
 };
 

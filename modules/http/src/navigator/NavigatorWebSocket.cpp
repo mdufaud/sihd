@@ -167,7 +167,7 @@ Result<std::string> Navigator::Impl::ws_proxy_address()
     return host;
 }
 
-Result<void> Navigator::Impl::ws_do_connect(std::string_view url, std::string_view protocol)
+Result<void> Navigator::Impl::ws_do_connect(std::string_view url, ZStringView protocol)
 {
     Url parsed(url);
     str::to_lower(parsed.scheme);
@@ -196,9 +196,8 @@ Result<void> Navigator::Impl::ws_do_connect(std::string_view url, std::string_vi
     if (const size_t query_start = without_fragment.find('?'); query_start != std::string_view::npos)
         request_path += without_fragment.substr(query_start);
 
-    std::string protocol_str(protocol);
     struct lws_protocols protocols[] = {
-        {protocol_str.c_str(), ws_lws_callback, 0, 4096, 0, this, 0},
+        {protocol.c_str(), ws_lws_callback, 0, 4096, 0, this, 0},
         LWS_PROTOCOL_LIST_TERM,
     };
 
@@ -232,7 +231,7 @@ Result<void> Navigator::Impl::ws_do_connect(std::string_view url, std::string_vi
     connect_info.path = request_path.c_str();
     connect_info.host = parsed.host.c_str();
     connect_info.origin = parsed.host.c_str();
-    connect_info.protocol = protocol_str.c_str();
+    connect_info.protocol = protocol.c_str();
     connect_info.userdata = this;
     connect_info.ietf_version_or_minus_one = -1;
 

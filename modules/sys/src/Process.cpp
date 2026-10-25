@@ -48,17 +48,17 @@ void Process::env_load(std::initializer_list<std::string_view> to_load_environ)
     _env.load(to_load_environ);
 }
 
-void Process::env_set(std::string_view key, std::string_view value)
+void Process::env_set(const std::string & key, const std::string & value)
 {
     _env.set(key, value);
 }
 
-std::optional<std::string> Process::env_get(std::string_view key) const
+std::optional<std::string> Process::env_get(const std::string & key) const
 {
     return _env.get(key);
 }
 
-bool Process::env_rm(std::string_view key)
+bool Process::env_rm(const std::string & key)
 {
     return _env.rm(key);
 }
@@ -124,7 +124,7 @@ void Process::clear_argv()
     _argv.clear();
 }
 
-Process & Process::add_argv(std::string_view arg)
+Process & Process::add_argv(const std::string & arg)
 {
     _argv.emplace_back(arg);
     return *this;

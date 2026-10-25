@@ -114,10 +114,10 @@ Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
 
 } // namespace
 
-Result<void> Certificate::generate_self_signed(const PrivateKey & key, std::string_view common_name, int days)
+Result<void> Certificate::generate_self_signed(const PrivateKey & key, const std::string & common_name, int days)
 {
     CertOptions opts;
-    opts.common_name = std::string(common_name);
+    opts.common_name = common_name;
     opts.days = days;
     return this->generate_self_signed(key, opts);
 }
@@ -218,11 +218,11 @@ Result<void> Certificate::generate_self_signed(const PrivateKey & key, const Cer
     return {};
 }
 
-Result<void> Certificate::load_pem(std::string_view path)
+Result<void> Certificate::load_pem(ZStringView path)
 {
     ERR_clear_error();
     this->clear();
-    FILE *fp = fopen(std::string(path).c_str(), "r");
+    FILE *fp = fopen(path.c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     std::unique_ptr<X509, X509Free> cert(PEM_read_X509(fp, nullptr, nullptr, nullptr));
@@ -233,7 +233,7 @@ Result<void> Certificate::load_pem(std::string_view path)
     return {};
 }
 
-Result<void> Certificate::save_pem(std::string_view path) const
+Result<void> Certificate::save_pem(const std::string & path) const
 {
     ERR_clear_error();
     if (!_handle)
@@ -241,7 +241,7 @@ Result<void> Certificate::save_pem(std::string_view path) const
     const std::string pem = this->to_pem_string();
     if (pem.empty())
         return make_error(fmt::format("write PEM to '{}'", path));
-    return sihd::sys::fs::write(std::string(path), pem);
+    return sihd::sys::fs::write(path, pem);
 }
 
 Result<void> Certificate::load_der(const uint8_t *data, size_t len)

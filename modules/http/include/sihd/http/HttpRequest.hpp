@@ -31,8 +31,8 @@ class HttpRequest
             Head = 6,
         };
 
-        HttpRequest(std::string_view url, RequestType request_type = Get);
-        HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
+        HttpRequest(const std::string & url, RequestType request_type = Get);
+        HttpRequest(const std::string & url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
         HttpRequest(HttpRequest &&) = default;
         HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();
@@ -53,7 +53,7 @@ class HttpRequest
         void set_query_params(std::unordered_map<std::string, std::string> && params);
         void set_auth_user(std::string_view user);
         void set_auth_token(std::string_view token);
-        void set_cookie(std::string_view name, std::string_view value);
+        void set_cookie(const std::string & name, const std::string & value);
         void set_multipart(Multipart && multipart);
 
         std::optional<sihd::json::Json> content_as_json() const;

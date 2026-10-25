@@ -24,7 +24,7 @@ struct RawContent
 
 struct RawContentView
 {
-        std::string_view mime;
+        sihd::util::ZStringView mime;
         sihd::util::ArrByteView data;
 };
 
@@ -37,7 +37,7 @@ std::optional<Bitmap> to_image(const RawContent & raw);
 // can SIGPIPE
 bool set(std::string_view text);
 bool set(const Bitmap & bitmap);
-bool set(std::string_view mime, sihd::util::ArrByteView data);
+bool set(sihd::util::ZStringView mime, sihd::util::ArrByteView data);
 bool set_raw(const std::vector<RawContentView> & contents);
 
 } // namespace sihd::sys::clipboard

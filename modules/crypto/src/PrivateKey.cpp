@@ -83,11 +83,11 @@ Result<void> PrivateKey::generate_ec(std::string_view curve_name)
     return {};
 }
 
-Result<void> PrivateKey::load_pem(std::string_view path)
+Result<void> PrivateKey::load_pem(ZStringView path)
 {
     ERR_clear_error();
     this->clear();
-    FILE *fp = fopen(std::string(path).c_str(), "r");
+    FILE *fp = fopen(path.c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     std::unique_ptr<EVP_PKEY, PkeyFree> key(PEM_read_PrivateKey(fp, nullptr, refuse_passphrase, nullptr));
@@ -98,7 +98,7 @@ Result<void> PrivateKey::load_pem(std::string_view path)
     return {};
 }
 
-Result<void> PrivateKey::save_pem(std::string_view path) const
+Result<void> PrivateKey::save_pem(const std::string & path) const
 {
     ERR_clear_error();
     if (!_handle)
@@ -110,7 +110,7 @@ Result<void> PrivateKey::save_pem(std::string_view path) const
 
     // owner-only temp renamed over the target: links are replaced, never written through
     sihd::sys::File file;
-    auto opened = file.open_tmp(std::string(path) + ".", true);
+    auto opened = file.open_tmp(path + ".", true);
     SIHD_UNEXPECTED_RETURN(opened);
     const std::string tmp_path = file.path();
     auto wrote = file.write(pem.data(), pem.size());
@@ -124,7 +124,7 @@ Result<void> PrivateKey::save_pem(std::string_view path) const
     else if (!closed)
         saved = std::unexpected(std::move(closed).error());
     else
-        saved = sihd::sys::fs::rename(tmp_path, std::string(path));
+        saved = sihd::sys::fs::rename(tmp_path, path);
 
     if (!saved)
         (void)sihd::sys::fs::remove_file(tmp_path);

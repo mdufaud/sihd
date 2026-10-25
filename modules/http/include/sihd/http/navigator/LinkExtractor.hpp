@@ -5,6 +5,8 @@
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::http
 {
 
@@ -16,7 +18,7 @@ struct ExtractedLink
         std::string rel;
 };
 
-std::vector<ExtractedLink> extract_links(std::string_view html, std::string_view base_url = "");
+std::vector<ExtractedLink> extract_links(std::string_view html, sihd::util::ZStringView base_url = "");
 
 } // namespace sihd::http
 

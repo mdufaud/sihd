@@ -7,7 +7,7 @@ namespace sihd::sys::env
 
 std::string expand(std::string_view str)
 {
-    return internal::expand_entries(str, [](std::string_view key) { return get(key); });
+    return internal::expand_entries(str, [](std::string_view key) { return get(std::string(key)); });
 }
 
 } // namespace sihd::sys::env

@@ -35,13 +35,12 @@ HeaderList & HeaderList::operator=(HeaderList && other)
     return *this;
 }
 
-Result<void> HeaderList::append(std::string_view line)
+Result<void> HeaderList::append(ZStringView line)
 {
     // curl sends the line as is: a line break would smuggle another header or request
-    if (line.find_first_of(std::string_view("\r\n\0", 3)) != std::string_view::npos)
+    if (line.view().find_first_of(std::string_view("\r\n\0", 3)) != std::string_view::npos)
         return std::unexpected(Error(invalid_argument, "header line holds a line break or NUL byte"));
-    std::string str(line);
-    curl_slist *list = curl_slist_append(_impl->list, str.c_str());
+    curl_slist *list = curl_slist_append(_impl->list, line.c_str());
     if (list == nullptr)
         return std::unexpected(Error(out_of_memory, "could not append header line"));
     _impl->list = list;

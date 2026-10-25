@@ -115,10 +115,9 @@ Result<void> unshare(std::span<const Type> types)
     return {};
 }
 
-Result<void> setns(std::string_view path, Type type)
+Result<void> setns(ZStringView path, Type type)
 {
-    const std::string ns_path(path);
-    const int fd = ::open(ns_path.c_str(), O_RDONLY | O_CLOEXEC);
+    const int fd = ::open(path.c_str(), O_RDONLY | O_CLOEXEC);
     if (fd == -1)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
     auto joined = setns(fd, type);

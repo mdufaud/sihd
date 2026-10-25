@@ -234,7 +234,7 @@ Result<void> Sftp::list_dir_filenames(ZStringView path, std::vector<std::string>
             list.push_back(std::move(name));
         }
         else
-            list.push_back(std::string(attr.name()));
+            list.push_back(attr.name());
     }
     return {};
 }

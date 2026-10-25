@@ -35,7 +35,7 @@ bool set(const Bitmap & bitmap)
     return set_raw({{mime::bmp_image, bmp_data}});
 }
 
-bool set(std::string_view mime, ArrByteView data)
+bool set(ZStringView mime, ArrByteView data)
 {
     return set_raw({{mime, data}});
 }

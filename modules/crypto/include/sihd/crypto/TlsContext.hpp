@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::crypto
 {
@@ -30,7 +31,7 @@ class TlsContext
 
         sihd::util::Result<void> set_certificate(const Certificate & cert);
         sihd::util::Result<void> set_private_key(const PrivateKey & key);
-        sihd::util::Result<void> load_ca_cert(std::string_view path);
+        sihd::util::Result<void> load_ca_cert(sihd::util::ZStringView path);
         // client: verify the server certificate (on by default) - server: require a client certificate
         sihd::util::Result<void> set_verify_peer(bool verify);
         // server: scope of resumable sessions (1 to 32 bytes); unset with set_verify_peer, a resuming client fails

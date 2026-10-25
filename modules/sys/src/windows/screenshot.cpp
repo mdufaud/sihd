@@ -106,12 +106,10 @@ bool supported()
     return true;
 }
 
-bool take_window_name(Bitmap & bm, std::string_view name)
+bool take_window_name(Bitmap & bm, ZStringView name)
 {
     bm.clear();
-    // FindWindowA needs a null-terminated string; string_view is not.
-    const std::string window_name(name);
-    HWND active_window = FindWindowA(nullptr, window_name.c_str());
+    HWND active_window = FindWindowA(nullptr, name.c_str());
     return take_screen_from_window(bm, active_window);
 }
 

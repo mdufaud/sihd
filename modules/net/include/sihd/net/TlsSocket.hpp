@@ -10,6 +10,7 @@
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TlsConnection.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::net
 {
@@ -45,7 +46,7 @@ class TlsSocket: public Socket
         sihd::util::Result<void> close() override;
 
     private:
-        sihd::util::Result<void> _handshake(bool is_accept, int timeout_ms, std::string_view server_name = {});
+        sihd::util::Result<void> _handshake(bool is_accept, int timeout_ms, sihd::util::ZStringView server_name = "");
 
         std::optional<sihd::crypto::TlsContext> _tls_ctx;
         std::string _tls_server_name;

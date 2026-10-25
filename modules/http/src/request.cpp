@@ -40,7 +40,7 @@ Result<HttpResponse> post(std::string_view url, ArrCharView data_view, const Req
         [&](HttpResponse & response) { return client.send(url, HttpRequest::Post, data_view, options, response); });
 }
 
-Result<HttpResponse> put(std::string_view url, std::string_view file_path, const RequestOptions & options)
+Result<HttpResponse> put(std::string_view url, const std::string & file_path, const RequestOptions & options)
 {
     Client client;
     return one_shot(
@@ -74,48 +74,44 @@ Result<HttpResponse> head(std::string_view url, const RequestOptions & options)
 
 // the url and the body are copied: the future may outlive a caller's temporary
 
-std::future<Result<HttpResponse>> async_get(std::string_view url, const RequestOptions & options)
+std::future<Result<HttpResponse>> async_get(const std::string & url, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), options] { return get(url, options); });
+    return std::async(std::launch::async, [url, options] { return get(url, options); });
 }
 
 std::future<Result<HttpResponse>>
-    async_post(std::string_view url, ArrCharView data_view, const RequestOptions & options)
+    async_post(const std::string & url, ArrCharView data_view, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), data = data_view.cpp_str(), options] {
-        return post(url, data, options);
-    });
+    return std::async(std::launch::async,
+                      [url, data = data_view.cpp_str(), options] { return post(url, data, options); });
 }
 
 std::future<Result<HttpResponse>>
-    async_put(std::string_view url, std::string_view file_path, const RequestOptions & options)
+    async_put(const std::string & url, const std::string & file_path, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), file_path = std::string(file_path), options] {
-        return put(url, file_path, options);
-    });
+    return std::async(std::launch::async, [url, file_path, options] { return put(url, file_path, options); });
 }
 
-std::future<Result<HttpResponse>> async_del(std::string_view url, const RequestOptions & options)
+std::future<Result<HttpResponse>> async_del(const std::string & url, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), options] { return del(url, options); });
+    return std::async(std::launch::async, [url, options] { return del(url, options); });
 }
 
-std::future<Result<HttpResponse>> async_options(std::string_view url, const RequestOptions & req_options)
+std::future<Result<HttpResponse>> async_options(const std::string & url, const RequestOptions & req_options)
 {
-    return std::async(std::launch::async, [url = std::string(url), req_options] { return options(url, req_options); });
+    return std::async(std::launch::async, [url, req_options] { return options(url, req_options); });
 }
 
 std::future<Result<HttpResponse>>
-    async_patch(std::string_view url, ArrCharView data_view, const RequestOptions & options)
+    async_patch(const std::string & url, ArrCharView data_view, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), data = data_view.cpp_str(), options] {
-        return patch(url, data, options);
-    });
+    return std::async(std::launch::async,
+                      [url, data = data_view.cpp_str(), options] { return patch(url, data, options); });
 }
 
-std::future<Result<HttpResponse>> async_head(std::string_view url, const RequestOptions & options)
+std::future<Result<HttpResponse>> async_head(const std::string & url, const RequestOptions & options)
 {
-    return std::async(std::launch::async, [url = std::string(url), options] { return head(url, options); });
+    return std::async(std::launch::async, [url, options] { return head(url, options); });
 }
 
 } // namespace sihd::http

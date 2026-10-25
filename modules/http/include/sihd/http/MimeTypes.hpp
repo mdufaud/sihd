@@ -17,7 +17,7 @@ class MimeTypes
         // extension without its dot, case-insensitive: an empty or unknown one
         // answers application/octet-stream
         std::string get(std::string_view ext) const;
-        void add(std::string_view ext, std::string_view content_type);
+        void add(const std::string & ext, const std::string & content_type);
 
         static constexpr const char *MIME_TEXT_PLAIN = "text/plain";
         static constexpr const char *MIME_TEXT_HTML = "text/html";

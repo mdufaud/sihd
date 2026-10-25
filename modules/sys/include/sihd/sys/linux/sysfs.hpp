@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 #if !defined(__SIHD_LINUX__)
@@ -15,12 +16,12 @@
 namespace sihd::sys::linux_::sysfs
 {
 
-sihd::util::Result<std::string> read(std::string_view path);
+sihd::util::Result<std::string> read(sihd::util::ZStringView path);
 
-sihd::util::Result<uint64_t> read_uint(std::string_view path);
+sihd::util::Result<uint64_t> read_uint(sihd::util::ZStringView path);
 
 // unbuffered and never creates: the kernel rejects a value at write(), stdio would lose it at fclose
-sihd::util::Result<void> write(std::string_view path, std::string_view value);
+sihd::util::Result<void> write(sihd::util::ZStringView path, std::string_view value);
 
 } // namespace sihd::sys::linux_::sysfs
 

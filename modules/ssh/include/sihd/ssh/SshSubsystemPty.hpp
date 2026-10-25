@@ -29,7 +29,7 @@ class SshSubsystemPty: public ISshSubsystemHandler
 
         void set_shell(std::string_view shell);
         void set_args(std::vector<std::string> args);
-        void set_env(std::string_view name, std::string_view value);
+        void set_env(const std::string & name, const std::string & value);
         void set_working_directory(std::string_view path);
 
         bool on_start(SshChannel *channel, bool has_pty, const WinSize & winsize) override;

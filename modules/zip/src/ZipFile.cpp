@@ -650,7 +650,7 @@ Result<void> ZipFile::add_dir_from_fs(const std::string & name, const std::strin
         if (!child_name.empty() && child_name.back() == fs::sep())
             child_name.pop_back();
         // archive entry names always use '/', regardless of the host fs separator
-        std::string entry_name = std::string(name) + "/" + child_name;
+        std::string entry_name = name + "/" + child_name;
         if (auto added = this->add_from_fs(entry_name, fs::combine(path, child_name)); !added)
             return added;
     }

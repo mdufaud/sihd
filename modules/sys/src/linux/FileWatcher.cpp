@@ -141,7 +141,7 @@ Result<void> FileWatcher::Impl::add_watch(const std::string & path)
     if (watch_fd < 0)
         return std::unexpected(Error::from_errno("could not watch '{}'", path));
     Watcher watcher;
-    watcher.path = std::string(path);
+    watcher.path = path;
     watcher.inotify_fd = _inotify_fd;
     watcher.watch_fd = watch_fd;
     _watchers.emplace_back(std::move(watcher));

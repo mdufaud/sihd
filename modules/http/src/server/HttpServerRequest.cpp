@@ -391,7 +391,7 @@ bool HttpServer::Impl::is_cors_preflight(struct lws *wsi)
     return requested.has_value() && requested->empty() == false;
 }
 
-int HttpServer::Impl::on_http_request(HttpSession *session, std::string_view path)
+int HttpServer::Impl::on_http_request(HttpSession *session, const std::string & path)
 {
     SIHD_LOG(debug, "HttpServer: {} request: {}", HttpRequest::type_str(session->request_type), path);
 
@@ -547,7 +547,7 @@ WebService *HttpServer::Impl::_get_webservice_from_path(std::string_view path, s
     return server->get_child<WebService>(name);
 }
 
-bool HttpServer::Impl::check_webservices(HttpSession *session, std::string_view path)
+bool HttpServer::Impl::check_webservices(HttpSession *session, const std::string & path)
 {
     std::string webservice_name;
     WebService *webservice = this->_get_webservice_from_path(path, &webservice_name);
@@ -933,7 +933,7 @@ bool HttpServer::Impl::serve_not_found(HttpSession *session, std::string_view pa
     return this->send_404(session->wsi, default_404);
 }
 
-bool HttpServer::Impl::send_http_error(HttpSession *session, int code, std::string_view allow)
+bool HttpServer::Impl::send_http_error(HttpSession *session, int code, const std::string & allow)
 {
     HttpResponse response;
     response.set_status(code);
@@ -961,7 +961,7 @@ bool HttpServer::Impl::reject_body(HttpSession *session, int code)
     return this->send_http_error(session, code);
 }
 
-bool HttpServer::Impl::send_http_redirect(struct lws *wsi, std::string_view redirect_path, int code)
+bool HttpServer::Impl::send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code)
 {
     HttpResponse response;
     response.set_status(code);

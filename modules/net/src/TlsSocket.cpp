@@ -68,7 +68,7 @@ Result<void> TlsSocket::tls_accept(int timeout_ms)
     return this->_handshake(true, timeout_ms);
 }
 
-Result<void> TlsSocket::_handshake(bool is_accept, int timeout_ms, std::string_view server_name)
+Result<void> TlsSocket::_handshake(bool is_accept, int timeout_ms, ZStringView server_name)
 {
     auto init = _tls_conn.init(*_tls_ctx, *this);
     if (!init)
@@ -101,7 +101,7 @@ Result<void> TlsSocket::connect(const sockaddr *addr, socklen_t addr_len, int ti
         auto handshake = this->_handshake(
             false,
             timeout_ms,
-            _tls_server_name.empty() ? ip::to_str(addr) : std::string_view(_tls_server_name));
+            _tls_server_name.empty() ? ZStringView(ip::to_str(addr)) : ZStringView(_tls_server_name));
         if (!handshake)
         {
             (void)Socket::close();

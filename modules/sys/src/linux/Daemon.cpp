@@ -16,7 +16,7 @@ SIHD_LOGGER;
 
 #if !defined(__SIHD_EMSCRIPTEN__)
 
-bool Daemon::set_user(std::string_view user_name)
+bool Daemon::set_user(const std::string & user_name)
 {
     const auto user_id = user::user_id_of(user_name);
     if (!user_id.has_value())
@@ -32,7 +32,7 @@ bool Daemon::set_user(const user::UserId & user_id)
     return this->_set_drop_target(user_id);
 }
 
-bool Daemon::set_group(std::string_view group_name)
+bool Daemon::set_group(const std::string & group_name)
 {
     const auto group_id = user::group_id_of(group_name);
     if (!group_id.has_value())
@@ -126,7 +126,7 @@ bool Daemon::run()
 
 #else
 
-bool Daemon::set_user(std::string_view)
+bool Daemon::set_user(const std::string &)
 {
     SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
     return false;
@@ -138,7 +138,7 @@ bool Daemon::set_user(const user::UserId &)
     return false;
 }
 
-bool Daemon::set_group(std::string_view)
+bool Daemon::set_group(const std::string &)
 {
     SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
     return false;

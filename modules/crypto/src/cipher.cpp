@@ -35,7 +35,7 @@ struct CtxFree
 };
 
 Result<std::vector<uint8_t>> do_cipher(bool encrypt,
-                                       std::string_view algorithm,
+                                       ZStringView algorithm,
                                        const uint8_t *key,
                                        size_t key_len,
                                        const uint8_t *iv,
@@ -44,8 +44,7 @@ Result<std::vector<uint8_t>> do_cipher(bool encrypt,
                                        size_t data_len)
 {
     ERR_clear_error();
-    std::string algo(algorithm);
-    std::unique_ptr<const EVP_CIPHER, CiphFree> ciph(EVP_CIPHER_fetch(nullptr, algo.c_str(), nullptr));
+    std::unique_ptr<const EVP_CIPHER, CiphFree> ciph(EVP_CIPHER_fetch(nullptr, algorithm.c_str(), nullptr));
     if (ciph == nullptr)
         return unknown_algorithm(algorithm);
 
@@ -109,7 +108,7 @@ Result<std::vector<uint8_t>> do_cipher(bool encrypt,
 
 } // namespace
 
-Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,
+Result<std::vector<uint8_t>> encrypt(ZStringView algorithm,
                                      const uint8_t *key,
                                      size_t key_len,
                                      const uint8_t *iv,
@@ -120,7 +119,7 @@ Result<std::vector<uint8_t>> encrypt(std::string_view algorithm,
     return do_cipher(true, algorithm, key, key_len, iv, iv_len, data, data_len);
 }
 
-Result<std::vector<uint8_t>> decrypt(std::string_view algorithm,
+Result<std::vector<uint8_t>> decrypt(ZStringView algorithm,
                                      const uint8_t *key,
                                      size_t key_len,
                                      const uint8_t *iv,
@@ -131,7 +130,7 @@ Result<std::vector<uint8_t>> decrypt(std::string_view algorithm,
     return do_cipher(false, algorithm, key, key_len, iv, iv_len, data, data_len);
 }
 
-Result<std::vector<uint8_t>> encrypt(std::string_view algorithm, ArrByteView key, ArrByteView iv, ArrByteView data)
+Result<std::vector<uint8_t>> encrypt(ZStringView algorithm, ArrByteView key, ArrByteView iv, ArrByteView data)
 {
     return encrypt(algorithm,
                    reinterpret_cast<const uint8_t *>(key.data()),
@@ -142,7 +141,7 @@ Result<std::vector<uint8_t>> encrypt(std::string_view algorithm, ArrByteView key
                    data.size());
 }
 
-Result<std::vector<uint8_t>> decrypt(std::string_view algorithm, ArrByteView key, ArrByteView iv, ArrByteView data)
+Result<std::vector<uint8_t>> decrypt(ZStringView algorithm, ArrByteView key, ArrByteView iv, ArrByteView data)
 {
     return decrypt(algorithm,
                    reinterpret_cast<const uint8_t *>(key.data()),

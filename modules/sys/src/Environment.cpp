@@ -54,22 +54,22 @@ void Environment::load(std::initializer_list<std::string_view> entries)
     load_entries(entries, _entries);
 }
 
-void Environment::set(std::string_view key, std::string_view value)
+void Environment::set(const std::string & key, const std::string & value)
 {
-    _entries.insert_or_assign(std::string(key), std::string(value));
+    _entries.insert_or_assign(key, value);
 }
 
-std::optional<std::string> Environment::get(std::string_view key) const
+std::optional<std::string> Environment::get(const std::string & key) const
 {
-    const auto it = _entries.find(std::string(key));
+    const auto it = _entries.find(key);
     if (it == _entries.end())
         return std::nullopt;
     return it->second;
 }
 
-bool Environment::rm(std::string_view key)
+bool Environment::rm(const std::string & key)
 {
-    return _entries.erase(std::string(key)) > 0;
+    return _entries.erase(key) > 0;
 }
 
 void Environment::clear()
@@ -94,7 +94,7 @@ const std::map<std::string, std::string> & Environment::entries() const
 
 std::string Environment::expand(std::string_view str) const
 {
-    return internal::expand_entries(str, [this](std::string_view key) { return this->get(key); });
+    return internal::expand_entries(str, [this](std::string_view key) { return this->get(std::string(key)); });
 }
 
 } // namespace sihd::sys

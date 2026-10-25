@@ -50,7 +50,7 @@ void SshSubsystemExec::set_parse_mode(ParseMode mode)
     _parse_mode = mode;
 }
 
-void SshSubsystemExec::set_env(std::string_view name, std::string_view value)
+void SshSubsystemExec::set_env(const std::string & name, const std::string & value)
 {
     _env.emplace_back(name, value);
 }

@@ -33,14 +33,14 @@ std::string version()
     return version_str != nullptr ? version_str : "";
 }
 
-Result<std::string> resolve_url(std::string_view base, std::string_view reference)
+Result<std::string> resolve_url(ZStringView base, ZStringView reference)
 {
     std::unique_ptr<CURLU, UrlFree> url(curl_url());
     if (url == nullptr)
         return std::unexpected(Error(ErrorCode::out_of_memory, "cannot allocate a curl url"));
-    if (curl_url_set(url.get(), CURLUPART_URL, std::string(base).c_str(), CURLU_GUESS_SCHEME) != CURLUE_OK)
+    if (curl_url_set(url.get(), CURLUPART_URL, base.c_str(), CURLU_GUESS_SCHEME) != CURLUE_OK)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid base url '{}'", base));
-    if (curl_url_set(url.get(), CURLUPART_URL, std::string(reference).c_str(), 0) != CURLUE_OK)
+    if (curl_url_set(url.get(), CURLUPART_URL, reference.c_str(), 0) != CURLUE_OK)
         return std::unexpected(Error(ErrorCode::invalid_argument, "invalid url reference '{}'", reference));
     char *resolved = nullptr;
     if (curl_url_get(url.get(), CURLUPART_URL, &resolved, 0) != CURLUE_OK)

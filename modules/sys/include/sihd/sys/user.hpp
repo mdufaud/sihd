@@ -11,6 +11,7 @@
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys::user
@@ -82,14 +83,14 @@ bool is_root();
 
 std::optional<std::string> name_of(const UserId & id);
 std::optional<std::string> name_of(const GroupId & id);
-std::optional<UserId> user_id_of(std::string_view user_name);
-std::optional<GroupId> group_id_of(std::string_view group_name);
-std::optional<GroupId> primary_group_of(std::string_view user_name);
+std::optional<UserId> user_id_of(sihd::util::ZStringView user_name);
+std::optional<GroupId> group_id_of(sihd::util::ZStringView group_name);
+std::optional<GroupId> primary_group_of(sihd::util::ZStringView user_name);
 std::optional<GroupId> primary_group_of(const UserId & id);
 
 // order matters: setgroups, setgid, setuid; verifies the drop is irreversible; failure may leave it half-switched
 sihd::util::Result<void> drop_privileges(const UserId & user_id, const GroupId & group_id);
-sihd::util::Result<void> drop_privileges(std::string_view user_name);
+sihd::util::Result<void> drop_privileges(sihd::util::ZStringView user_name);
 
 } // namespace sihd::sys::user
 

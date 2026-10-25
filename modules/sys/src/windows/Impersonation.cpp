@@ -72,20 +72,17 @@ Result<void> Impersonation::impersonate_as([[maybe_unused]] const user::UserId &
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-Result<void> Impersonation::impersonate_with_credentials(std::string_view user_name,
-                                                         std::string_view password,
-                                                         std::string_view domain)
+Result<void>
+    Impersonation::impersonate_with_credentials(ZStringView user_name, std::string_view password, ZStringView domain)
 {
     if (_impl->active)
         return std::unexpected(Error(not_initialized, "already impersonating"));
 
-    const std::string user_str(user_name);
     const ScrubbedString password_str(password);
-    const std::string domain_str(domain);
 
     _impl->close();
-    if (LogonUserA(user_str.c_str(),
-                   domain_str.empty() ? nullptr : domain_str.c_str(),
+    if (LogonUserA(user_name.c_str(),
+                   domain.empty() ? nullptr : domain.c_str(),
                    password_str.c_str(),
                    LOGON32_LOGON_INTERACTIVE,
                    LOGON32_PROVIDER_DEFAULT,
@@ -93,7 +90,8 @@ Result<void> Impersonation::impersonate_with_credentials(std::string_view user_n
         == 0)
     {
         _impl->token = nullptr;
-        return std::unexpected(Error(permission_denied, "could not log user '{}': {}", user_str, os::last_error_str()));
+        return std::unexpected(
+            Error(permission_denied, "could not log user '{}': {}", user_name, os::last_error_str()));
     }
 
     if (ImpersonateLoggedOnUser(_impl->token) == 0)

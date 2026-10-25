@@ -41,7 +41,7 @@ class Pty
 
         virtual void set_shell(std::string_view shell) = 0;
         virtual void set_args(std::vector<std::string> args) = 0;
-        virtual void set_env(std::string_view name, std::string_view value) = 0;
+        virtual void set_env(const std::string & name, const std::string & value) = 0;
         virtual void set_size(const PtySize & size) = 0;
         virtual void set_working_directory(std::string_view path) = 0;
 

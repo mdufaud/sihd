@@ -76,7 +76,7 @@ class TestDBusProperties: public ::testing::Test
             auto changed = body.open_array("{sv}");
             SIHD_UNEXPECTED_RETURN(changed);
             auto state_added = changed->add_entry("State", "s", [](Appender & value) {
-                return value.add(std::string("connected"));
+                return value.add("connected");
             });
             SIHD_UNEXPECTED_RETURN(state_added);
             auto changed_closed = body.close(std::move(*changed));
@@ -168,9 +168,7 @@ TEST_F(TestDBusProperties, test_get_all)
         this->reply(call, [](Appender & body) -> Result<void> {
             auto properties = body.open_array("{sv}");
             SIHD_UNEXPECTED_RETURN(properties);
-            auto name_added = properties->add_entry("Name", "s", [](Appender & value) {
-                return value.add(std::string("wlan0"));
-            });
+            auto name_added = properties->add_entry("Name", "s", [](Appender & value) { return value.add("wlan0"); });
             SIHD_UNEXPECTED_RETURN(name_added);
             auto managed_added = properties->add_entry("Managed", "b", [](Appender & value) {
                 return value.add(true);
@@ -269,7 +267,7 @@ TEST_F(TestDBusProperties, test_for_each_entry_needs_a_dict)
 {
     auto message = Message::method_call(service, path, interface, "Set");
     ASSERT_TRUE(message.has_value()) << message.error().message;
-    ASSERT_TRUE(message->add(std::string("text")).has_value());
+    ASSERT_TRUE(message->add("text").has_value());
     Appender body(*message);
     auto record = body.open_struct();
     ASSERT_TRUE(record.has_value()) << record.error().message;

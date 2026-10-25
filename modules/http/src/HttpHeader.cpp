@@ -55,12 +55,12 @@ HttpHeader::HttpHeader(HeaderMap && headers): _headers(headers) {}
 
 HttpHeader::~HttpHeader() = default;
 
-HttpHeader & HttpHeader::set_server(std::string_view name)
+HttpHeader & HttpHeader::set_server(const std::string & name)
 {
     return this->set_header("server:", name);
 }
 
-HttpHeader & HttpHeader::set_content_type(std::string_view type)
+HttpHeader & HttpHeader::set_content_type(const std::string & type)
 {
     return this->set_header("content-type:", type);
 }
@@ -71,7 +71,7 @@ HttpHeader & HttpHeader::set_content_type(std::string_view type, std::string_vie
     return this->set_content_type(content);
 }
 
-HttpHeader & HttpHeader::set_accept_charset(std::string_view charset)
+HttpHeader & HttpHeader::set_accept_charset(const std::string & charset)
 {
     return this->set_header("accept-charset:", charset);
 }
@@ -81,7 +81,7 @@ HttpHeader & HttpHeader::set_content_length(size_t len)
     return this->set_header("content-length:", std::to_string(len));
 }
 
-HttpHeader & HttpHeader::set_accept(std::string_view mime_type)
+HttpHeader & HttpHeader::set_accept(const std::string & mime_type)
 {
     return this->set_header("accept:", mime_type);
 }
@@ -127,10 +127,10 @@ HttpHeader & HttpHeader::remove_header(const std::string & name)
     return *this;
 }
 
-HttpHeader & HttpHeader::set_header(const std::string & header_name, std::string_view value)
+HttpHeader & HttpHeader::set_header(const std::string & header_name, const std::string & value)
 {
     std::string lower_name = format_hdr_name(header_name);
-    _headers.insert_or_assign(std::move(lower_name), std::string(value));
+    _headers.insert_or_assign(std::move(lower_name), value);
     return *this;
 }
 
@@ -144,7 +144,7 @@ Result<void> HttpHeader::add_header_from_str(std::string_view header)
     const std::string_view value = util::str::trim(header.substr(colon + 1));
     if (value.empty())
         return std::unexpected(Error(ErrorCode::invalid_argument, "no value in '{}'", header));
-    this->set_header(std::string(util::str::trim(header.substr(0, colon))), value);
+    this->set_header(std::string(util::str::trim(header.substr(0, colon))), std::string(value));
     return {};
 }
 

@@ -118,9 +118,9 @@ void NetInterface::set_flags(uint32_t flags)
     _flags = flags;
 }
 
-void NetInterface::set_macaddr(std::string_view mac_addr)
+void NetInterface::set_macaddr(const std::string & mac_addr)
 {
-    _mac_address = std::string(mac_addr);
+    _mac_address = mac_addr;
 }
 
 void NetInterface::set_index(uint32_t index)

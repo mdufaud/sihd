@@ -196,13 +196,13 @@ bool convert_selection(ClipboardSession & session, Atom target, ArrByte & out, T
     }
 }
 
-Atom target_atom(Display *display, std::string_view mime_str)
+Atom target_atom(Display *display, ZStringView mime_str)
 {
     if (mime_str == mime::utf8_text)
         return XInternAtom(display, "UTF8_STRING", False);
     if (mime_str == mime::plain_text)
         return XA_STRING;
-    return XInternAtom(display, std::string(mime_str).c_str(), False);
+    return XInternAtom(display, mime_str.c_str(), False);
 }
 
 std::optional<std::string> target_mime(Display *display, Atom target)

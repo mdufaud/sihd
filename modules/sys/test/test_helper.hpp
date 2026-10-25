@@ -44,7 +44,7 @@ inline std::string helper_path()
 
 struct ScopedEnv
 {
-        ScopedEnv(std::string_view name, std::optional<std::string_view> value): _name(name)
+        ScopedEnv(const std::string & name, const std::optional<std::string> & value): _name(name)
         {
             _previous = sihd::sys::env::get(name);
             if (value.has_value())

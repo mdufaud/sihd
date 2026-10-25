@@ -36,7 +36,7 @@ class SshSubsystemExec: public ISshSubsystemHandler
         void set_shell(std::string_view shell);
         void set_fork_mode(bool enable);
         void set_parse_mode(ParseMode mode);
-        void set_env(std::string_view name, std::string_view value);
+        void set_env(const std::string & name, const std::string & value);
         void set_working_directory(std::string_view path);
 
         const std::string & command() const;

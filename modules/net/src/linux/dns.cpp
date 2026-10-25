@@ -79,7 +79,7 @@ Result<std::vector<DnsServer>> resolved_servers(Duration timeout)
     SIHD_UNEXPECTED_RETURN(request);
     auto added_interface = request->add(resolved_manager_interface);
     SIHD_UNEXPECTED_RETURN(added_interface);
-    auto added_property = request->add(std::string("DNS"));
+    auto added_property = request->add("DNS");
     SIHD_UNEXPECTED_RETURN(added_property);
     auto reply = request->call(connection, timeout);
     SIHD_UNEXPECTED_RETURN(reply);

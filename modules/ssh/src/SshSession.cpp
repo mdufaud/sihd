@@ -101,9 +101,9 @@ Result<void> SshSession::fast_connect(const SshSession::ConnectOptions & options
         return res;
     if (auto res = this->set_verbosity(options.verbosity); !res)
         return res;
-    if (auto res = this->set_user(std::string(options.user)); !res)
+    if (auto res = this->set_user(options.user); !res)
         return res;
-    if (auto res = this->set_host(std::string(options.host)); !res)
+    if (auto res = this->set_host(options.host); !res)
         return res;
     if (auto res = this->set_port(options.port); !res)
         return res;

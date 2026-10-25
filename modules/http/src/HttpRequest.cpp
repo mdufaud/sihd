@@ -56,13 +56,13 @@ HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
     return None;
 }
 
-HttpRequest::HttpRequest(std::string_view url, RequestType request_type)
+HttpRequest::HttpRequest(const std::string & url, RequestType request_type)
 {
     _url = url;
     _request_type = request_type;
 }
 
-HttpRequest::HttpRequest(std::string_view url, const std::vector<std::string> & uri_args, RequestType request_type):
+HttpRequest::HttpRequest(const std::string & url, const std::vector<std::string> & uri_args, RequestType request_type):
     HttpRequest(url, request_type)
 {
     _uri_args_lst = uri_args;
@@ -129,9 +129,9 @@ std::optional<std::string_view> HttpRequest::cookie(const std::string & name) co
     return it->second;
 }
 
-void HttpRequest::set_cookie(std::string_view name, std::string_view value)
+void HttpRequest::set_cookie(const std::string & name, const std::string & value)
 {
-    _cookies.emplace(std::string(name), std::string(value));
+    _cookies.emplace(name, value);
 }
 
 void HttpRequest::set_multipart(Multipart && multipart)

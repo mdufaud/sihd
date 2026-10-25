@@ -9,14 +9,16 @@
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::util::mime
 {
 
-inline constexpr std::string_view utf8_text = "text/plain;charset=utf-8";
-inline constexpr std::string_view plain_text = "text/plain";
-inline constexpr std::string_view html = "text/html";
-inline constexpr std::string_view uri_list = "text/uri-list";
-inline constexpr std::string_view bmp_image = "image/bmp";
+inline constexpr ZStringView utf8_text = "text/plain;charset=utf-8";
+inline constexpr ZStringView plain_text = "text/plain";
+inline constexpr ZStringView html = "text/html";
+inline constexpr ZStringView uri_list = "text/uri-list";
+inline constexpr ZStringView bmp_image = "image/bmp";
 
 // type/subtype match, parameters ignored; empty is "any".
 bool compatible(std::string_view a, std::string_view b);

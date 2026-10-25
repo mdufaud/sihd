@@ -26,9 +26,9 @@ class Daemon: public sihd::util::Named,
         ~Daemon();
 
         // drop target after daemonize: the user's PRIMARY group unless set_group() overrides it
-        bool set_user(std::string_view user_name);
+        bool set_user(const std::string & user_name);
         bool set_user(const user::UserId & user_id);
-        bool set_group(std::string_view group_name);
+        bool set_group(const std::string & group_name);
         bool set_group(const user::GroupId & group_id);
         bool set_pid_file_path(std::string_view path);
         bool set_working_dir_path(std::string_view path);

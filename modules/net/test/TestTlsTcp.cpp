@@ -68,7 +68,7 @@ struct TlsPair
 HandshakeOutcome handshake_pair(TlsPair & pair,
                                 TlsContext & server_ctx,
                                 TlsContext & client_ctx,
-                                std::string_view server_name = {},
+                                ZStringView server_name = "",
                                 const std::shared_ptr<void> & resume = {})
 {
     EXPECT_NO_FATAL_FAILURE(make_listener(pair.listener, IpAddr::localhost(0)));
@@ -102,7 +102,7 @@ HandshakeOutcome handshake_pair(TlsPair & pair,
     return {client_ok, server_ok};
 }
 
-HandshakeOutcome run_handshake(TlsContext & server_ctx, TlsContext & client_ctx, std::string_view server_name = {})
+HandshakeOutcome run_handshake(TlsContext & server_ctx, TlsContext & client_ctx, ZStringView server_name = "")
 {
     TlsPair pair;
     return handshake_pair(pair, server_ctx, client_ctx, server_name);
@@ -759,7 +759,7 @@ TEST_F(TestTlsTcp, tls_session_resumes_when_server_verifies_client)
     ASSERT_TRUE(session != nullptr);
 
     TlsPair resumed;
-    const HandshakeOutcome outcome = handshake_pair(resumed, _server_ctx, _client_ctx, {}, session);
+    const HandshakeOutcome outcome = handshake_pair(resumed, _server_ctx, _client_ctx, "", session);
     EXPECT_TRUE(outcome.client_ok);
     EXPECT_TRUE(outcome.server_ok);
     EXPECT_TRUE(resumed.client_conn.session_reused());
@@ -779,7 +779,7 @@ TEST_F(TestTlsTcp, tls_resume_fails_when_server_verifies_without_session_id_cont
     ASSERT_TRUE(session != nullptr);
 
     TlsPair resumed;
-    const HandshakeOutcome outcome = handshake_pair(resumed, _server_ctx, _client_ctx, {}, session);
+    const HandshakeOutcome outcome = handshake_pair(resumed, _server_ctx, _client_ctx, "", session);
     EXPECT_FALSE(outcome.client_ok && outcome.server_ok);
 }
 

@@ -416,7 +416,7 @@ HANDLE handle_for_content(const RawContentView & content, UINT & out_format)
         return copy_to_hglobal(content.data);
     }
 
-    out_format = RegisterClipboardFormatA(std::string(content.mime).c_str());
+    out_format = RegisterClipboardFormatA(content.mime.c_str());
     if (out_format == 0)
         return nullptr;
     return copy_to_hglobal(content.data);

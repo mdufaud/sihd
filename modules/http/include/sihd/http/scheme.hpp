@@ -3,11 +3,13 @@
 
 #include <string_view>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::http
 {
 
 bool scheme_is_ssl(std::string_view scheme);
-int scheme_port(std::string_view scheme);
+int scheme_port(sihd::util::ZStringView scheme);
 
 } // namespace sihd::http
 

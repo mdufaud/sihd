@@ -42,7 +42,7 @@ bool take_under_cursor(Bitmap & bm)
     return x11::take_under_cursor(bm) || wayland::take_under_cursor(bm);
 }
 
-bool take_window_name(Bitmap & bm, std::string_view name)
+bool take_window_name(Bitmap & bm, ZStringView name)
 {
     bm.clear();
     if (internal::wayland_session())

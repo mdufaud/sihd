@@ -14,24 +14,24 @@ using namespace sihd::util;
 namespace sihd::sys::env
 {
 
-std::optional<std::string> get(std::string_view key)
+std::optional<std::string> get(ZStringView key)
 {
-    const char *value = ::getenv(std::string(key).c_str());
+    const char *value = ::getenv(key.c_str());
     if (value == nullptr)
         return std::nullopt;
     return std::string(value);
 }
 
-Result<void> set(std::string_view key, std::string_view value)
+Result<void> set(ZStringView key, ZStringView value)
 {
-    if (::setenv(std::string(key).c_str(), std::string(value).c_str(), 1) != 0)
+    if (::setenv(key.c_str(), value.c_str(), 1) != 0)
         return std::unexpected(Error::from_errno("could not set environment variable '{}'", key));
     return {};
 }
 
-Result<void> unset(std::string_view key)
+Result<void> unset(ZStringView key)
 {
-    if (::unsetenv(std::string(key).c_str()) != 0)
+    if (::unsetenv(key.c_str()) != 0)
         return std::unexpected(Error::from_errno("could not unset environment variable '{}'", key));
     return {};
 }

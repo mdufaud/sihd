@@ -391,7 +391,7 @@ MountType mount_type([[maybe_unused]] const std::string & path)
         return MountType::unknown;
 
     char root[MAX_PATH];
-    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
+    if (GetVolumePathNameA(path.c_str(), root, sizeof(root)) == 0)
         return MountType::unknown;
 
     return drive_type_to_mount(GetDriveTypeA(root));
@@ -405,7 +405,7 @@ StorageMedium storage_medium([[maybe_unused]] const std::string & path)
         return StorageMedium::unknown;
 
     char root[MAX_PATH];
-    if (GetVolumePathNameA(std::string(path).c_str(), root, sizeof(root)) == 0)
+    if (GetVolumePathNameA(path.c_str(), root, sizeof(root)) == 0)
         return StorageMedium::unknown;
 
     // \\.\X: addressing the volume by its drive letter
@@ -469,7 +469,7 @@ StorageMedium storage_medium([[maybe_unused]] const std::string & path)
 Result<uint64_t> free_space(const std::string & path)
 {
     ULARGE_INTEGER free_bytes;
-    if (!GetDiskFreeSpaceExA(std::string(path).c_str(), &free_bytes, nullptr, nullptr))
+    if (!GetDiskFreeSpaceExA(path.c_str(), &free_bytes, nullptr, nullptr))
         return std::unexpected(Error(io_error, "could not query free space of '{}': {}", path, os::last_error_str()));
     return free_bytes.QuadPart;
 }
@@ -477,7 +477,7 @@ Result<uint64_t> free_space(const std::string & path)
 Result<uint64_t> total_space(const std::string & path)
 {
     ULARGE_INTEGER total_bytes;
-    if (!GetDiskFreeSpaceExA(std::string(path).c_str(), nullptr, &total_bytes, nullptr))
+    if (!GetDiskFreeSpaceExA(path.c_str(), nullptr, &total_bytes, nullptr))
         return std::unexpected(Error(io_error, "could not query total space of '{}': {}", path, os::last_error_str()));
     return total_bytes.QuadPart;
 }

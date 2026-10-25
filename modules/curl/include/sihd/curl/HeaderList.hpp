@@ -3,10 +3,10 @@
 
 #include <cstddef>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::curl
 {
@@ -22,7 +22,7 @@ class HeaderList
         HeaderList(HeaderList &&);
         HeaderList & operator=(HeaderList &&);
 
-        sihd::util::Result<void> append(std::string_view line);
+        sihd::util::Result<void> append(sihd::util::ZStringView line);
         bool empty() const;
         size_t size() const;
         std::vector<std::string> lines() const;

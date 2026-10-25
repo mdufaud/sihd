@@ -24,14 +24,14 @@ BasicSshServerHandler::~BasicSshServerHandler()
     SIHD_UNEXPECTED_LOG(utils::finalize());
 }
 
-void BasicSshServerHandler::add_allowed_user(std::string_view user, std::string_view password)
+void BasicSshServerHandler::add_allowed_user(const std::string & user, const std::string & password)
 {
-    _allowed_users[std::string(user)] = std::string(password);
+    _allowed_users[user] = password;
 }
 
-void BasicSshServerHandler::remove_allowed_user(std::string_view user)
+void BasicSshServerHandler::remove_allowed_user(const std::string & user)
 {
-    _allowed_users.erase(std::string(user));
+    _allowed_users.erase(user);
 }
 
 void BasicSshServerHandler::clear_allowed_users()
@@ -39,9 +39,9 @@ void BasicSshServerHandler::clear_allowed_users()
     _allowed_users.clear();
 }
 
-void BasicSshServerHandler::add_allowed_pubkey(std::string_view user, std::string_view pubkey_base64)
+void BasicSshServerHandler::add_allowed_pubkey(const std::string & user, const std::string & pubkey_base64)
 {
-    _allowed_pubkeys[std::string(user)].emplace_back(pubkey_base64);
+    _allowed_pubkeys[user].emplace_back(pubkey_base64);
 }
 
 void BasicSshServerHandler::set_auth_password_callback(AuthPasswordCallback callback)

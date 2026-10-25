@@ -101,7 +101,7 @@ const Command *Command::path(std::string_view path) const
     const Command *cur = this;
     for (std::string_view piece : str::split(path, '.'))
     {
-        cur = cur->get_command(std::string(piece));
+        cur = cur->get_command(piece);
         if (cur == nullptr)
             return nullptr;
     }

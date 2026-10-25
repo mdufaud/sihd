@@ -11,7 +11,7 @@ using namespace sihd::util;
 
 SIHD_LOGGER;
 
-bool Daemon::set_user(std::string_view)
+bool Daemon::set_user(const std::string &)
 {
     SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
     return false;
@@ -23,7 +23,7 @@ bool Daemon::set_user(const user::UserId &)
     return false;
 }
 
-bool Daemon::set_group(std::string_view)
+bool Daemon::set_group(const std::string &)
 {
     SIHD_LOG(error, "Daemon: this platform cannot drop the process to another account");
     return false;

@@ -27,12 +27,12 @@ class Mime
                 Part() = default;
                 explicit Part(MimePart *part);
 
-                Part & name(std::string_view name);
+                Part & name(const std::string & name);
                 Part & data(std::string_view data);
                 Part & data(const std::vector<uint8_t> & data);
-                Part & file(std::string_view path);
-                Part & filename(std::string_view filename);
-                Part & content_type(std::string_view content_type);
+                Part & file(const std::string & path);
+                Part & filename(const std::string & filename);
+                Part & content_type(const std::string & content_type);
 
             private:
                 MimePart *_part = nullptr;

@@ -415,7 +415,7 @@ Result<void> Appender::add(const T & value)
         return _impl->append(dbus_type_of<T>(), &value);
 }
 
-Result<Appender> Appender::open_array(ZStringView element_signature)
+Result<Appender> Appender::open_array(const std::string & element_signature)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
@@ -428,12 +428,12 @@ Result<Appender> Appender::open_array(ZStringView element_signature)
     auto opened = _impl->open_child(DBUS_TYPE_ARRAY,
                                     element_signature.c_str(),
                                     *next,
-                                    Impl::constrained_to(std::string(element_signature.view()), true));
+                                    Impl::constrained_to(element_signature, true));
     SIHD_UNEXPECTED_RETURN(opened);
     return Appender(std::move(*opened));
 }
 
-Result<Appender> Appender::open_variant(ZStringView value_signature)
+Result<Appender> Appender::open_variant(const std::string & value_signature)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
@@ -445,7 +445,7 @@ Result<Appender> Appender::open_variant(ZStringView value_signature)
     auto opened = _impl->open_child(DBUS_TYPE_VARIANT,
                                     value_signature.c_str(),
                                     *next,
-                                    Impl::constrained_to(std::string(value_signature.view()), false));
+                                    Impl::constrained_to(value_signature, false));
     SIHD_UNEXPECTED_RETURN(opened);
     return Appender(std::move(*opened));
 }
@@ -971,12 +971,12 @@ Result<void> Appender::add_array(const std::vector<T> &)
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Appender> Appender::open_array(ZStringView)
+Result<Appender> Appender::open_array(const std::string &)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Appender> Appender::open_variant(ZStringView)
+Result<Appender> Appender::open_variant(const std::string &)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -1042,8 +1042,9 @@ Result<Message> property_reply(Connection & connection,
 
 } // namespace
 
-Result<void>
-    Appender::add_entry(ZStringView key, ZStringView signature, const std::function<Result<void>(Appender &)> & fill)
+Result<void> Appender::add_entry(ZStringView key,
+                                 const std::string & signature,
+                                 const std::function<Result<void>(Appender &)> & fill)
 {
     auto entry = this->open_dict_entry();
     SIHD_UNEXPECTED_RETURN(entry);

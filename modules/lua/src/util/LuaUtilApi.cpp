@@ -78,7 +78,7 @@ Result<Array<T>> array_lua_new(luabridge::LuaRef ref)
     {
         if (ref.isString())
         {
-            array.from(std::string(ref));
+            array.from(ref.unsafe_cast<std::string_view>());
             return array;
         }
     }
@@ -124,7 +124,7 @@ bool array_lua_push_back(Array<T> *self, luabridge::LuaRef ref)
     {
         if (ref.isString())
         {
-            self->push_back(std::string(ref));
+            self->push_back(ref.unsafe_cast<std::string_view>());
             return true;
         }
     }
@@ -147,7 +147,7 @@ bool array_lua_push_front(Array<T> *self, luabridge::LuaRef ref)
     {
         if (ref.isString())
         {
-            self->push_front(std::string(ref));
+            self->push_front(ref.unsafe_cast<std::string_view>());
             return true;
         }
     }
@@ -172,7 +172,7 @@ bool array_lua_copy_table(Array<T> *self, luabridge::LuaRef ref, luabridge::LuaR
     {
         if (ref.isString())
         {
-            self->copy_from(std::string(ref), from_idx);
+            self->copy_from(ref.unsafe_cast<std::string_view>(), from_idx);
             return true;
         }
     }
@@ -196,7 +196,7 @@ bool array_lua_from(Array<T> *self, luabridge::LuaRef ref)
     {
         if (ref.isString())
         {
-            self->from(std::string(ref));
+            self->from(ref.unsafe_cast<std::string_view>());
             return true;
         }
     }

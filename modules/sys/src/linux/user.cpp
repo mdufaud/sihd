@@ -149,14 +149,13 @@ std::optional<std::string> name_of(const GroupId & id)
     return ret;
 }
 
-std::optional<UserId> user_id_of(std::string_view user_name)
+std::optional<UserId> user_id_of(ZStringView user_name)
 {
-    const std::string name_str(user_name);
     std::optional<UserId> ret;
     retry_growing_buffer([&](char *buffer, size_t size) {
         struct passwd pwd;
         struct passwd *result = nullptr;
-        const int err = getpwnam_r(name_str.c_str(), &pwd, buffer, size, &result);
+        const int err = getpwnam_r(user_name.c_str(), &pwd, buffer, size, &result);
         if (err == 0 && result != nullptr)
             ret = UserId::from_native(result->pw_uid);
         return err;
@@ -164,14 +163,13 @@ std::optional<UserId> user_id_of(std::string_view user_name)
     return ret;
 }
 
-std::optional<GroupId> group_id_of(std::string_view group_name)
+std::optional<GroupId> group_id_of(ZStringView group_name)
 {
-    const std::string name_str(group_name);
     std::optional<GroupId> ret;
     retry_growing_buffer([&](char *buffer, size_t size) {
         struct group grp;
         struct group *result = nullptr;
-        const int err = getgrnam_r(name_str.c_str(), &grp, buffer, size, &result);
+        const int err = getgrnam_r(group_name.c_str(), &grp, buffer, size, &result);
         if (err == 0 && result != nullptr)
             ret = GroupId::from_native(result->gr_gid);
         return err;
@@ -179,14 +177,13 @@ std::optional<GroupId> group_id_of(std::string_view group_name)
     return ret;
 }
 
-std::optional<GroupId> primary_group_of(std::string_view user_name)
+std::optional<GroupId> primary_group_of(ZStringView user_name)
 {
-    const std::string name_str(user_name);
     std::optional<GroupId> ret;
     retry_growing_buffer([&](char *buffer, size_t size) {
         struct passwd pwd;
         struct passwd *result = nullptr;
-        const int err = getpwnam_r(name_str.c_str(), &pwd, buffer, size, &result);
+        const int err = getpwnam_r(user_name.c_str(), &pwd, buffer, size, &result);
         if (err == 0 && result != nullptr)
             ret = GroupId::from_native(result->pw_gid);
         return err;

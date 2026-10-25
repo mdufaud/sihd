@@ -272,9 +272,9 @@ Request & Request::operator=(Request && other)
     return *this;
 }
 
-Result<void> Request::set_url(std::string_view url)
+Result<void> Request::set_url(const std::string & url)
 {
-    _impl->url = std::string(url);
+    _impl->url = url;
     return set_opt(*_impl, CURLOPT_URL, _impl->url.c_str());
 }
 
@@ -326,12 +326,12 @@ Result<void> Request::set_connect_timeout(Duration duration)
     return set_opt(*_impl, CURLOPT_CONNECTTIMEOUT_MS, (long)duration.milliseconds());
 }
 
-Result<void> Request::set_user_agent(std::string_view user_agent)
+Result<void> Request::set_user_agent(const std::string & user_agent)
 {
     if (user_agent.empty())
         // an empty agent means no header: only a null value clears the option
         return set_opt(*_impl, CURLOPT_USERAGENT, (const char *)nullptr);
-    _impl->user_agent = std::string(user_agent);
+    _impl->user_agent = user_agent;
     return set_opt(*_impl, CURLOPT_USERAGENT, _impl->user_agent.c_str());
 }
 
@@ -342,10 +342,10 @@ Result<void> Request::set_ssl_verify(bool verify_peer, bool verify_host)
     return set_opt(*_impl, CURLOPT_SSL_VERIFYHOST, verify_host ? 2L : 0L);
 }
 
-Result<void> Request::set_userpass(std::string_view user, std::string_view password)
+Result<void> Request::set_userpass(const std::string & user, const std::string & password)
 {
-    _impl->user = std::string(user);
-    _impl->password = std::string(password);
+    _impl->user = user;
+    _impl->password = password;
     auto user_set = set_opt(*_impl, CURLOPT_USERNAME, _impl->user.c_str());
     SIHD_UNEXPECTED_RETURN(user_set);
     return set_opt(*_impl, CURLOPT_PASSWORD, _impl->password.c_str());
@@ -361,9 +361,9 @@ Result<void> Request::set_auth(Auth auth)
     return set_opt(*_impl, CURLOPT_HTTPAUTH, mask);
 }
 
-Result<void> Request::set_proxy(std::string_view url, Proxy type)
+Result<void> Request::set_proxy(const std::string & url, Proxy type)
 {
-    _impl->proxy_url = std::string(url);
+    _impl->proxy_url = url;
 
     long proxy_type = CURLPROXY_HTTP;
     if (type == Proxy::Socks4)
@@ -376,10 +376,10 @@ Result<void> Request::set_proxy(std::string_view url, Proxy type)
     return set_opt(*_impl, CURLOPT_PROXYTYPE, proxy_type);
 }
 
-Result<void> Request::set_proxy_auth(std::string_view user, std::string_view password)
+Result<void> Request::set_proxy_auth(const std::string & user, const std::string & password)
 {
-    _impl->proxy_user = std::string(user);
-    _impl->proxy_password = std::string(password);
+    _impl->proxy_user = user;
+    _impl->proxy_password = password;
     auto user_set = set_opt(*_impl, CURLOPT_PROXYUSERNAME, _impl->proxy_user.c_str());
     SIHD_UNEXPECTED_RETURN(user_set);
     return set_opt(*_impl, CURLOPT_PROXYPASSWORD, _impl->proxy_password.c_str());
@@ -476,15 +476,15 @@ Result<void> Request::set_nobody(bool on)
     return set_opt(*_impl, CURLOPT_NOBODY, (long)on);
 }
 
-Result<void> Request::set_custom_request(std::string_view method)
+Result<void> Request::set_custom_request(const std::string & method)
 {
-    _impl->custom_request = std::string(method);
+    _impl->custom_request = method;
     return set_opt(*_impl, CURLOPT_CUSTOMREQUEST, _impl->custom_request.c_str());
 }
 
-Result<void> Request::set_accept_encoding(std::string_view encoding)
+Result<void> Request::set_accept_encoding(const std::string & encoding)
 {
-    _impl->accept_encoding = std::string(encoding);
+    _impl->accept_encoding = encoding;
     return set_opt(*_impl, CURLOPT_ACCEPT_ENCODING, _impl->accept_encoding.c_str());
 }
 
@@ -507,23 +507,23 @@ Result<void> Request::set_cookie_engine()
     return set_opt(*_impl, CURLOPT_COOKIEFILE, _impl->cookies_file.c_str());
 }
 
-Result<void> Request::add_cookie(std::string_view cookie_line)
+Result<void> Request::add_cookie(const std::string & cookie_line)
 {
-    _impl->cookie_line = std::string(cookie_line);
+    _impl->cookie_line = cookie_line;
     return set_opt(*_impl, CURLOPT_COOKIELIST, _impl->cookie_line.c_str());
 }
 
-Result<void> Request::save_cookies(std::string_view path)
+Result<void> Request::save_cookies(const std::string & path)
 {
-    _impl->cookie_jar = std::string(path);
+    _impl->cookie_jar = path;
     auto jar_set = set_opt(*_impl, CURLOPT_COOKIEJAR, _impl->cookie_jar.c_str());
     SIHD_UNEXPECTED_RETURN(jar_set);
     return add_cookie("FLUSH");
 }
 
-Result<void> Request::load_cookies(std::string_view path)
+Result<void> Request::load_cookies(const std::string & path)
 {
-    _impl->cookies_file = std::string(path);
+    _impl->cookies_file = path;
     return set_opt(*_impl, CURLOPT_COOKIEFILE, _impl->cookies_file.c_str());
 }
 

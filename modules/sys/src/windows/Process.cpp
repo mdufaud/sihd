@@ -248,7 +248,7 @@ bool StdFdWrapper::redirect_to_file(const std::string & path, bool append, mode_
     sec_attr.nLength = sizeof(sec_attr);
     sec_attr.lpSecurityDescriptor = NULL;
     sec_attr.bInheritHandle = TRUE;
-    this->fd_write = CreateFile(std::string(path).c_str(),
+    this->fd_write = CreateFile(path.c_str(),
                                 GENERIC_WRITE,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                                 &sec_attr,
@@ -454,7 +454,7 @@ bool Process::stdin_from_file(const std::string & path)
     sec_attr.nLength = sizeof(sec_attr);
     sec_attr.lpSecurityDescriptor = NULL;
     sec_attr.bInheritHandle = TRUE;
-    _impl->pipe.std_in.fd_read = CreateFile(std::string(path).c_str(),
+    _impl->pipe.std_in.fd_read = CreateFile(path.c_str(),
                                             GENERIC_READ,
                                             FILE_SHARE_READ,
                                             &sec_attr,

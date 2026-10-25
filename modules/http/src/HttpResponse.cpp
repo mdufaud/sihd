@@ -28,7 +28,7 @@ HttpResponse::HttpResponse(MimeTypes *mimes): _status(HttpStatus::Ok), _mime_ptr
 
 HttpResponse::~HttpResponse() = default;
 
-void HttpResponse::set_content_type(std::string_view mime_type)
+void HttpResponse::set_content_type(const std::string & mime_type)
 {
     // a mime type already carrying its charset must not grow a second one
     if (mime_type.find("charset=") == std::string_view::npos)
@@ -50,10 +50,10 @@ bool HttpResponse::set_json_content(const sihd::json::Json & data)
     return !SIHD_UNEXPECTED_LOG(this->set_content({json_string.c_str(), json_string.size()}));
 }
 
-bool HttpResponse::set_file_content(std::string_view path)
+bool HttpResponse::set_file_content(const std::string & path)
 {
     sihd::sys::File file;
-    auto opened = file.open(std::string(path), "rb");
+    auto opened = file.open(path, "rb");
     if (SIHD_UNEXPECTED_LOG(opened))
         return false;
     const auto size = file.file_size();

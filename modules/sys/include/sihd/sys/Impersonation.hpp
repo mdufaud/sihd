@@ -6,6 +6,7 @@
 
 #include <sihd/sys/user.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys
@@ -27,9 +28,9 @@ class Impersonation
         Impersonation & operator=(Impersonation &&) = delete;
 
         // authenticates then impersonates; domain may be empty for a local account
-        sihd::util::Result<void> impersonate_with_credentials(std::string_view user_name,
+        sihd::util::Result<void> impersonate_with_credentials(sihd::util::ZStringView user_name,
                                                               std::string_view password,
-                                                              std::string_view domain = {});
+                                                              sihd::util::ZStringView domain = "");
 
         // switches the thread identity without authenticating: needs CAP_SETUID unless the target is already held
         sihd::util::Result<void> impersonate_as(const user::UserId & user_id, const user::GroupId & group_id);

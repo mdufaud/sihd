@@ -107,7 +107,7 @@ TEST_F(TestDBus, test_read_back_arguments)
 {
     auto message = this->new_bus_call("Ping");
     ASSERT_TRUE(message.has_value()) << message.error().message;
-    ASSERT_TRUE(message->add(std::string("text")).has_value());
+    ASSERT_TRUE(message->add("text").has_value());
     ASSERT_TRUE(message->add(true).has_value());
     ASSERT_TRUE(message->add(int32_t {-5}).has_value());
     ASSERT_TRUE(message->add(uint32_t {7}).has_value());

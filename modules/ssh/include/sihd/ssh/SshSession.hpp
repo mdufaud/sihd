@@ -47,8 +47,8 @@ class SshSession
 
         struct ConnectOptions
         {
-                std::string_view user;
-                std::string_view host;
+                std::string user;
+                std::string host;
                 int port = 22;
                 // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
                 int verbosity = 0;

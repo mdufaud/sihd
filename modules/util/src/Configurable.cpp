@@ -10,12 +10,6 @@ std::unexpected<Error> Configurable::_no_conf_key(const std::string & name)
     return std::unexpected(Error(ErrorCode::not_found, "no conf key '{}'", name));
 }
 
-Result<void> Configurable::set_conf_str(const std::string & name, const char *param)
-{
-    std::string_view str_view(param);
-    return this->set_conf_str(name, str_view);
-}
-
 Result<void> Configurable::set_conf(const sihd::json::Json & json)
 {
     if (json.is_null() || json.is_object() == false)
@@ -117,11 +111,6 @@ Result<void> Configurable::set_conf_str(const std::string & name, const std::str
     if (_callback_manager.check_call_type<bool, const char *>(name))
         return this->_call_conf<const char *>(name, param.c_str());
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
-}
-
-Result<void> Configurable::set_conf_str(const std::string & name, std::string_view param)
-{
-    return this->set_conf_str(name, std::string(param));
 }
 
 } // namespace sihd::util

@@ -7,6 +7,8 @@
 
 #include "HtmlScanner.hpp"
 
+using namespace sihd::util;
+
 namespace sihd::http
 {
 
@@ -28,7 +30,7 @@ std::string attribute_of(const htmlscan::Tag & tag, std::string_view name)
 
 } // namespace
 
-std::vector<ExtractedLink> extract_links(std::string_view html, std::string_view base_url)
+std::vector<ExtractedLink> extract_links(std::string_view html, ZStringView base_url)
 {
     std::array<std::vector<ExtractedLink>, link_tags.size()> found;
 

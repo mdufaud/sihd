@@ -47,10 +47,10 @@ class BasicSshServerHandler: public ISshServerHandler
         BasicSshServerHandler();
         ~BasicSshServerHandler() override;
 
-        void add_allowed_user(std::string_view user, std::string_view password);
-        void remove_allowed_user(std::string_view user);
+        void add_allowed_user(const std::string & user, const std::string & password);
+        void remove_allowed_user(const std::string & user);
         void clear_allowed_users();
-        void add_allowed_pubkey(std::string_view user, std::string_view pubkey_base64);
+        void add_allowed_pubkey(const std::string & user, const std::string & pubkey_base64);
         void set_auth_password_callback(AuthPasswordCallback callback);
         void set_auth_pubkey_callback(AuthPubkeyCallback callback);
 

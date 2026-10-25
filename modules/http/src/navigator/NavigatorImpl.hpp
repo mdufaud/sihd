@@ -162,7 +162,7 @@ struct Navigator::Impl
         // WebSocket methods (NavigatorWebSocket.cpp)
         static int ws_lws_callback(struct lws *wsi, enum lws_callback_reasons reason, void *user, void *in, size_t len);
         sihd::util::Result<std::string> ws_proxy_address();
-        sihd::util::Result<void> ws_do_connect(std::string_view url, std::string_view protocol);
+        sihd::util::Result<void> ws_do_connect(std::string_view url, sihd::util::ZStringView protocol);
         void ws_disconnect();
         bool ws_queue_message(const void *data, size_t len, bool binary);
 };

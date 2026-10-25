@@ -37,11 +37,11 @@ std::string MimeTypes::get(std::string_view ext) const
     return MIME_APPLICATION_OCTET;
 }
 
-void MimeTypes::add(std::string_view ext, std::string_view content_type)
+void MimeTypes::add(const std::string & ext, const std::string & content_type)
 {
     std::string lower_ext(ext);
     str::to_lower(lower_ext);
-    _types[std::move(lower_ext)] = std::string(content_type);
+    _types[std::move(lower_ext)] = content_type;
 }
 
 } // namespace sihd::http

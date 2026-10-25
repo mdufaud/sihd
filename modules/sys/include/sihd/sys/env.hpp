@@ -4,17 +4,17 @@
 #include <map>
 #include <optional>
 #include <string>
-#include <string_view>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::sys::env
 {
 
 // mutating the environment is not thread-safe (setenv/unsetenv are not, POSIX)
-std::optional<std::string> get(std::string_view key);
-sihd::util::Result<void> set(std::string_view key, std::string_view value);
-sihd::util::Result<void> unset(std::string_view key);
+std::optional<std::string> get(sihd::util::ZStringView key);
+sihd::util::Result<void> set(sihd::util::ZStringView key, sihd::util::ZStringView value);
+sihd::util::Result<void> unset(sihd::util::ZStringView key);
 std::map<std::string, std::string> list();
 
 // replaces $VAR and ${VAR} with their value; unknown or malformed references are left as-is

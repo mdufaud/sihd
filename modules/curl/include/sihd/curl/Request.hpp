@@ -63,7 +63,7 @@ class Request
         Request(Request &&);
         Request & operator=(Request &&);
 
-        sihd::util::Result<void> set_url(std::string_view url);
+        sihd::util::Result<void> set_url(const std::string & url);
         sihd::util::Result<void> set_verbose(bool on);
         sihd::util::Result<void> set_follow_location(bool on);
         // no addresses clears the entry
@@ -71,15 +71,15 @@ class Request
             set_resolve(std::string_view host, int port, const std::vector<std::string> & addresses);
         sihd::util::Result<void> set_timeout(sihd::util::Duration duration);
         sihd::util::Result<void> set_connect_timeout(sihd::util::Duration duration);
-        sihd::util::Result<void> set_user_agent(std::string_view user_agent);
+        sihd::util::Result<void> set_user_agent(const std::string & user_agent);
         sihd::util::Result<void> set_ssl_verify(bool verify_peer, bool verify_host);
-        sihd::util::Result<void> set_userpass(std::string_view user, std::string_view password);
+        sihd::util::Result<void> set_userpass(const std::string & user, const std::string & password);
         sihd::util::Result<void> set_auth(Auth auth);
         // empty url disables any proxy, including the environment's
-        sihd::util::Result<void> set_proxy(std::string_view url, Proxy type = Proxy::Http);
+        sihd::util::Result<void> set_proxy(const std::string & url, Proxy type = Proxy::Http);
         // unlike set_proxy(""), the proxy comes back from the environment
         sihd::util::Result<void> clear_proxy();
-        sihd::util::Result<void> set_proxy_auth(std::string_view user, std::string_view password);
+        sihd::util::Result<void> set_proxy_auth(const std::string & user, const std::string & password);
         sihd::util::Result<void> set_headers(const HeaderList & headers);
         // parts are copied into the transfer handle
         sihd::util::Result<void> set_mime(const Mime & mime);
@@ -91,16 +91,16 @@ class Request
         sihd::util::Result<void> set_http_get(bool on);
         sihd::util::Result<void> set_http_post(bool on);
         sihd::util::Result<void> set_nobody(bool on);
-        sihd::util::Result<void> set_custom_request(std::string_view method);
+        sihd::util::Result<void> set_custom_request(const std::string & method);
         // empty encoding enables every supported one
-        sihd::util::Result<void> set_accept_encoding(std::string_view encoding);
+        sihd::util::Result<void> set_accept_encoding(const std::string & encoding);
         sihd::util::Result<void> clear_accept_encoding();
         sihd::util::Result<void> set_http_2_tls(bool on);
 
         sihd::util::Result<void> set_cookie_engine();
-        sihd::util::Result<void> add_cookie(std::string_view cookie_line);
-        sihd::util::Result<void> save_cookies(std::string_view path);
-        sihd::util::Result<void> load_cookies(std::string_view path);
+        sihd::util::Result<void> add_cookie(const std::string & cookie_line);
+        sihd::util::Result<void> save_cookies(const std::string & path);
+        sihd::util::Result<void> load_cookies(const std::string & path);
         sihd::util::Result<void> clear_cookies();
 
         sihd::util::Result<void> set_write_callback(WriteFn callback);

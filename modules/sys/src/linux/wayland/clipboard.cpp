@@ -294,7 +294,7 @@ class DataControl
             for (const RawContentView & content : contents)
             {
                 // The offer request takes a C string: user-supplied mime views may not be null-terminated
-                Derived::offer_source(source, std::string(content.mime).c_str());
+                Derived::offer_source(source, content.mime.c_str());
             }
 
             auto *device = Derived::get_data_device(_conn);

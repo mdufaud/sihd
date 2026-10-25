@@ -74,7 +74,7 @@ class ConPty: public Pty
 
         void set_shell(std::string_view shell) override;
         void set_args(std::vector<std::string> args) override;
-        void set_env(std::string_view name, std::string_view value) override;
+        void set_env(const std::string & name, const std::string & value) override;
         void set_size(const PtySize & size) override;
         void set_working_directory(std::string_view path) override;
 
@@ -207,7 +207,7 @@ void ConPty::set_args(std::vector<std::string> args)
     _args = std::move(args);
 }
 
-void ConPty::set_env(std::string_view name, std::string_view value)
+void ConPty::set_env(const std::string & name, const std::string & value)
 {
     _env.set(name, value);
 }

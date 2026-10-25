@@ -151,7 +151,7 @@ Result<void> FileWatcher::Impl::add_watch(const std::string & path)
 
     // OVERLAPPED address must stay stable until completion: watcher is stored first (std::list nodes never move)
     Watcher & watcher = _watchers.emplace_back();
-    watcher.path = std::string(path);
+    watcher.path = path;
     watcher.filename_filter = std::move(filename_filter);
     watcher.handle = handle;
     watcher.overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);

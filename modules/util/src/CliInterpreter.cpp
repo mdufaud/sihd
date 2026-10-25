@@ -187,10 +187,10 @@ std::string render_loader_completion(std::string_view name, std::string_view fun
 
 } // namespace
 
-CliInterpreter::CliInterpreter(std::string_view name, std::string_view description, std::string_view version):
+CliInterpreter::CliInterpreter(const std::string & name, const std::string & description, const std::string & version):
     _name(name),
     _version(version),
-    _cli(std::make_unique<CLI::App>(std::string(description), _name)),
+    _cli(std::make_unique<CLI::App>(description, _name)),
     _root(new Command(_cli.get()))
 {
     // one subcommand per level

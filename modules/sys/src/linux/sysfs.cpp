@@ -13,14 +13,14 @@ using namespace sihd::util;
 namespace sihd::sys::linux_::sysfs
 {
 
-Result<std::string> read(std::string_view path)
+Result<std::string> read(ZStringView path)
 {
-    auto content = fs::read_all(std::string(path));
+    auto content = fs::read_all(path);
     SIHD_UNEXPECTED_RETURN(content);
     return std::string(str::trim(*content));
 }
 
-Result<uint64_t> read_uint(std::string_view path)
+Result<uint64_t> read_uint(ZStringView path)
 {
     auto content = read(path);
     SIHD_UNEXPECTED_RETURN(content);
@@ -29,10 +29,9 @@ Result<uint64_t> read_uint(std::string_view path)
     return parsed;
 }
 
-Result<void> write(std::string_view path, std::string_view value)
+Result<void> write(ZStringView path, std::string_view value)
 {
-    const std::string file_path(path);
-    const int fd = ::open(file_path.c_str(), O_WRONLY | O_TRUNC | O_CLOEXEC);
+    const int fd = ::open(path.c_str(), O_WRONLY | O_TRUNC | O_CLOEXEC);
     if (fd == -1)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
 

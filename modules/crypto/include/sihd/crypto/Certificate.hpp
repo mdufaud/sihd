@@ -10,6 +10,7 @@
 
 #include <sihd/util/Result.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::crypto
 {
@@ -47,11 +48,11 @@ class Certificate
         operator bool() const;
 
         sihd::util::Result<void>
-            generate_self_signed(const PrivateKey & key, std::string_view common_name, int days = 365);
+            generate_self_signed(const PrivateKey & key, const std::string & common_name, int days = 365);
         sihd::util::Result<void> generate_self_signed(const PrivateKey & key, const CertOptions & opts);
 
-        sihd::util::Result<void> load_pem(std::string_view path);
-        sihd::util::Result<void> save_pem(std::string_view path) const;
+        sihd::util::Result<void> load_pem(sihd::util::ZStringView path);
+        sihd::util::Result<void> save_pem(const std::string & path) const;
         sihd::util::Result<void> load_der(const uint8_t *data, size_t len);
 
         sihd::util::Result<void> load_pem_string(std::string_view pem);

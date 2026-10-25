@@ -16,10 +16,10 @@ Mime::Part Mime::add_part()
     return Part(&_parts.back());
 }
 
-Mime::Part & Mime::Part::name(std::string_view name)
+Mime::Part & Mime::Part::name(const std::string & name)
 {
     if (_part != nullptr)
-        _part->name = std::string(name);
+        _part->name = name;
     return *this;
 }
 
@@ -37,24 +37,24 @@ Mime::Part & Mime::Part::data(const std::vector<uint8_t> & data)
     return *this;
 }
 
-Mime::Part & Mime::Part::file(std::string_view path)
+Mime::Part & Mime::Part::file(const std::string & path)
 {
     if (_part != nullptr)
-        _part->path = std::string(path);
+        _part->path = path;
     return *this;
 }
 
-Mime::Part & Mime::Part::filename(std::string_view filename)
+Mime::Part & Mime::Part::filename(const std::string & filename)
 {
     if (_part != nullptr)
-        _part->filename = std::string(filename);
+        _part->filename = filename;
     return *this;
 }
 
-Mime::Part & Mime::Part::content_type(std::string_view content_type)
+Mime::Part & Mime::Part::content_type(const std::string & content_type)
 {
     if (_part != nullptr)
-        _part->content_type = std::string(content_type);
+        _part->content_type = content_type;
     return *this;
 }
 
