@@ -9,9 +9,9 @@
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevSampler.hpp>
 #include <sihd/core/Device.hpp>
+#include <sihd/lua/checked.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
-#include <sihd/lua/checked.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
@@ -59,10 +59,12 @@ void LuaCoreApi::load(Vm & vm)
         .beginNamespace("core")
         .deriveClass<Device, Node>("Device")
         .addFunction("set_conf", checked<&LuaUtilApi::configurable_set_conf<Device>>)
-        .addFunction("find_channel",
-                     checked<+[](Device *self, const std::string & name) { return self->find_channel(name); }>)
-        .addFunction("get_channel",
-                     checked<+[](Device *self, const std::string & name) { return self->get_channel(name); }>)
+        .addFunction("find_channel", checked<+[](Device *self, const std::string & name) {
+                         return self->find_channel(name);
+                     }>)
+        .addFunction("get_channel", checked<+[](Device *self, const std::string & name) {
+                         return self->get_channel(name);
+                     }>)
         .addFunction(
             "add_channel",
             static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel))
@@ -113,7 +115,8 @@ void LuaCoreApi::load(Vm & vm)
                     self->add_observer(handler);
                 }
                 else
-                    return std::unexpected(Error(ErrorCode::invalid_argument, "set_observer argument must be a function"));
+                    return std::unexpected(
+                        Error(ErrorCode::invalid_argument, "set_observer argument must be a function"));
                 return {};
             }>)
         .addFunction(

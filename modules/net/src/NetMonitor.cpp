@@ -1,5 +1,7 @@
 #include <sihd/net/NetMonitor.hpp>
 
+using namespace sihd::util;
+
 namespace sihd::net
 {
 
@@ -20,12 +22,12 @@ std::string NetMonitorEvent::type_str() const
     }
 }
 
-NetMonitor::NetMonitor(sihd::util::Duration run_timeout): NetMonitor()
+NetMonitor::NetMonitor(Duration run_timeout): NetMonitor()
 {
     this->set_run_timeout(run_timeout);
 }
 
-void NetMonitor::set_run_timeout(sihd::util::Duration timeout)
+void NetMonitor::set_run_timeout(Duration timeout)
 {
     _run_timeout = timeout;
 }

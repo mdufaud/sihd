@@ -3,8 +3,8 @@
 #include <regex>
 #include <vector>
 
-#include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/lua/checked.hpp>
+#include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/sys/console.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
@@ -26,7 +26,7 @@
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
     .deriveClass<ArrType, IArray>(#ArrType)                                                                            \
-        .addStaticFunction("new", checked<&array_lua_new<PrimitiveType>>)                                                       \
+        .addStaticFunction("new", checked<&array_lua_new<PrimitiveType>>)                                              \
         .addConstructor<void (*)()>()                                                                                  \
         .addFunction("clone", &ArrType::clone)                                                                         \
         .addFunction("push_back", &array_lua_push_back<PrimitiveType>)                                                 \
@@ -712,9 +712,9 @@ void LuaUtilApi::load_tools(Vm & vm)
         .beginNamespace("thread")
         .addFunction("id", &thread::id)
         .addFunction("id_str", thread::id_str)
-        .addFunction(
-            "set_name",
-            checked<+[](const std::string & name) { return thread::set_name(name); }>)
+        .addFunction("set_name", checked<+[](const std::string & name) {
+                         return thread::set_name(name);
+                     }>)
         .addFunction("name", &thread::name)
         .endNamespace()
         .beginNamespace("str")
@@ -866,21 +866,21 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction(
             "get_child",
             +[](Node *self, const std::string & name) -> Named * { return self->get_child(name); })
-        .addFunction(
-            "add_child",
-            checked<+[](Node *self, Named *child) { return self->add_child(child, false); }>)
-        .addFunction(
-            "add_child_name",
-            checked<+[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); }>)
+        .addFunction("add_child", checked<+[](Node *self, Named *child) {
+                         return self->add_child(child, false);
+                     }>)
+        .addFunction("add_child_name", checked<+[](Node *self, const std::string & name, Named *child) {
+                         return self->add_child(name, child, false);
+                     }>)
         .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .addFunction("is_link", &Node::is_link)
         .addFunction("add_link", &Node::add_link)
         .addFunction("remove_link", &Node::remove_link)
         .addFunction("resolve_link", &Node::resolve_link)
-        .addFunction(
-            "resolve_links",
-            checked<+[](Node *self) { return self->resolve_links(); }>)
+        .addFunction("resolve_links", checked<+[](Node *self) {
+                         return self->resolve_links();
+                     }>)
         .addFunction("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .addFunction("tree_desc_str", &Node::tree_desc_str)
         .addFunction("children", &Node::children)

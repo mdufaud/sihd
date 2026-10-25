@@ -165,7 +165,9 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
             flags |= WIFF_NOARP;
         netif.set_flags(flags);
 
-        netif.set_macaddr(ip::mac_str(std::span(adapter->PhysicalAddress).first(std::min<size_t>(adapter->PhysicalAddressLength, sizeof(adapter->PhysicalAddress)))));
+        netif.set_macaddr(ip::mac_str(
+            std::span(adapter->PhysicalAddress)
+                .first(std::min<size_t>(adapter->PhysicalAddressLength, sizeof(adapter->PhysicalAddress)))));
 
         for (PIP_ADAPTER_UNICAST_ADDRESS ua = adapter->FirstUnicastAddress; ua != nullptr; ua = ua->Next)
         {
@@ -188,7 +190,8 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
             }
             else if (sa->sa_family == AF_INET6)
             {
-                netif.add_address({.addr = IpAddr(*sa), .netmask = IpAddr(ipv6_netmask(ua->OnLinkPrefixLength)), .extra_addr = {}});
+                netif.add_address(
+                    {.addr = IpAddr(*sa), .netmask = IpAddr(ipv6_netmask(ua->OnLinkPrefixLength)), .extra_addr = {}});
             }
         }
     }

@@ -7,9 +7,8 @@
 #include <string>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <fmt/format.h>
+#include <gtest/gtest.h>
 
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/fs.hpp>

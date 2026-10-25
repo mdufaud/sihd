@@ -51,7 +51,6 @@ void LuaCsvApi::load_base(Vm & vm)
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("csv")
-        // read whole CSV file -> table of rows (each row a table of string cells)
         .addFunction("read",
                      checked<+[](const std::string & path,
                                  luabridge::LuaRef remove_header,
@@ -75,64 +74,62 @@ void LuaCsvApi::load_base(Vm & vm)
                                                              static_cast<char>(opt_char(comment, '#')));
                 return luabridge::LuaRef(state, data);
             })
-        .addFunction("write",
-                     checked<+[](const std::string & path,
-                                 const std::vector<std::vector<std::string>> & rows,
-                                 luabridge::LuaRef delimiter) -> Result<void> {
-                         CsvWriter writer;
-                         if (!delimiter.isNil())
-                         {
-                             auto delimited = writer.set_delimiter(opt_char(delimiter, ','));
-                             SIHD_UNEXPECTED_RETURN(delimited);
-                         }
-                         auto opened = writer.open(path);
-                         SIHD_UNEXPECTED_RETURN(opened);
-                         for (const auto & row : rows)
-                         {
-                             if (writer.write_row(row) < 0)
-                                 return std::unexpected(
-                                     Error(ErrorCode::io_error, "could not write csv row on '{}'", path));
-                         }
-                         return {};
-                     }>)
+        .addFunction(
+            "write",
+            checked<+[](const std::string & path,
+                        const std::vector<std::vector<std::string>> & rows,
+                        luabridge::LuaRef delimiter) -> Result<void> {
+                CsvWriter writer;
+                if (!delimiter.isNil())
+                {
+                    auto delimited = writer.set_delimiter(opt_char(delimiter, ','));
+                    SIHD_UNEXPECTED_RETURN(delimited);
+                }
+                auto opened = writer.open(path);
+                SIHD_UNEXPECTED_RETURN(opened);
+                for (const auto & row : rows)
+                {
+                    if (writer.write_row(row) < 0)
+                        return std::unexpected(Error(ErrorCode::io_error, "could not write csv row on '{}'", path));
+                }
+                return {};
+            }>)
         .addFunction(
             "escape_str",
             +[](const std::string & str) -> std::string { return utils::escape_str(str); })
         .beginClass<CsvReader>("CsvReader")
         .addConstructor<void (*)()>()
-        .addFunction(
-            "open",
-            checked<+[](CsvReader *self, const std::string & path) { return self->open(path); }>)
+        .addFunction("open", checked<+[](CsvReader *self, const std::string & path) {
+                         return self->open(path);
+                     }>)
         .addFunction("is_open", &CsvReader::is_open)
         .addFunction("close", &CsvReader::close)
-        .addFunction(
-            "set_delimiter",
-            checked<+[](CsvReader *self, luabridge::LuaRef c) { return self->set_delimiter(opt_char(c, ',')); }>)
-        .addFunction(
-            "set_commentary",
-            checked<+[](CsvReader *self, luabridge::LuaRef c) { return self->set_commentary(opt_char(c, '#')); }>)
+        .addFunction("set_delimiter", checked<+[](CsvReader *self, luabridge::LuaRef c) {
+                         return self->set_delimiter(opt_char(c, ','));
+                     }>)
+        .addFunction("set_commentary", checked<+[](CsvReader *self, luabridge::LuaRef c) {
+                         return self->set_commentary(opt_char(c, '#'));
+                     }>)
         .addFunction("set_timestamp_col", &CsvReader::set_timestamp_col)
         .addFunction("set_timestamp_format", &CsvReader::set_timestamp_format)
-        .addFunction(
-            "read_next",
-            checked<+[](CsvReader *self) { return self->read_next(); }>)
+        .addFunction("read_next", checked<+[](CsvReader *self) {
+                         return self->read_next();
+                     }>)
         .addFunction("columns", &CsvReader::columns)
         .endClass()
         .beginClass<CsvWriter>("CsvWriter")
         .addConstructor<void (*)()>()
-        .addFunction(
-            "open",
-            checked<+[](CsvWriter *self, const std::string & path, luabridge::LuaRef append) {
-                return self->open(path, opt_bool(append, false));
-            }>)
+        .addFunction("open", checked<+[](CsvWriter *self, const std::string & path, luabridge::LuaRef append) {
+                         return self->open(path, opt_bool(append, false));
+                     }>)
         .addFunction("is_open", &CsvWriter::is_open)
         .addFunction("close", &CsvWriter::close)
-        .addFunction(
-            "set_delimiter",
-            checked<+[](CsvWriter *self, luabridge::LuaRef c) { return self->set_delimiter(opt_char(c, ',')); }>)
-        .addFunction(
-            "set_commentary",
-            checked<+[](CsvWriter *self, luabridge::LuaRef c) { return self->set_commentary(opt_char(c, '#')); }>)
+        .addFunction("set_delimiter", checked<+[](CsvWriter *self, luabridge::LuaRef c) {
+                         return self->set_delimiter(opt_char(c, ','));
+                     }>)
+        .addFunction("set_commentary", checked<+[](CsvWriter *self, luabridge::LuaRef c) {
+                         return self->set_commentary(opt_char(c, '#'));
+                     }>)
         .addFunction(
             "write_row",
             +[](CsvWriter *self, const std::vector<std::string> & values) -> long {
@@ -143,9 +140,9 @@ void LuaCsvApi::load_base(Vm & vm)
             +[](CsvWriter *self, const std::string & commentary) -> long {
                 return static_cast<long>(self->write_commentary(commentary));
             })
-        .addFunction(
-            "new_row",
-            checked<+[](CsvWriter *self) { return self->new_row(); }>)
+        .addFunction("new_row", checked<+[](CsvWriter *self) {
+                         return self->new_row();
+                     }>)
         .addFunction("current_row", &CsvWriter::current_row)
         .addFunction("current_col", &CsvWriter::current_col)
         .addFunction("max_col", &CsvWriter::max_col)

@@ -107,8 +107,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         .def("is_streaming", &HttpResponse::is_streaming)
         .def("set_status", &HttpResponse::set_status)
         .def("set_plain_content", &HttpResponse::set_plain_content)
-        .def("set_content",
-             [](HttpResponse & self, std::string_view data) { return self.set_content(data); })
+        .def("set_content", [](HttpResponse & self, std::string_view data) { return self.set_content(data); })
         .def("set_byte_content",
              [](HttpResponse & self, pybind11::bytes data) {
                  std::string bytes = data;
@@ -206,25 +205,19 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "post",
-            [](Navigator & self, std::string_view url, std::string_view data) {
-                return self.post(url, data);
-            },
+            [](Navigator & self, std::string_view url, std::string_view data) { return self.post(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data") = std::string_view {},
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "put",
-            [](Navigator & self, std::string_view url, std::string_view data) {
-                return self.put(url, data);
-            },
+            [](Navigator & self, std::string_view url, std::string_view data) { return self.put(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "patch",
-            [](Navigator & self, std::string_view url, std::string_view data) {
-                return self.patch(url, data);
-            },
+            [](Navigator & self, std::string_view url, std::string_view data) { return self.patch(url, data); },
             pybind11::arg("url"),
             pybind11::arg("data"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -253,17 +246,13 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "download",
-            [](Navigator & self, std::string_view url, std::string_view path) {
-                return self.download(url, path);
-            },
+            [](Navigator & self, std::string_view url, std::string_view path) { return self.download(url, path); },
             pybind11::arg("url"),
             pybind11::arg("path"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
         .def(
             "put_file",
-            [](Navigator & self, std::string_view url, std::string_view path) {
-                return self.put_file(url, path);
-            },
+            [](Navigator & self, std::string_view url, std::string_view path) { return self.put_file(url, path); },
             pybind11::arg("url"),
             pybind11::arg("path"),
             pybind11::call_guard<pybind11::gil_scoped_release>())
@@ -307,9 +296,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "post",
-        [](std::string_view url, std::string_view data, const RequestOptions & opt) {
-            return post(url, data, opt);
-        },
+        [](std::string_view url, std::string_view data, const RequestOptions & opt) { return post(url, data, opt); },
         pybind11::arg("url"),
         pybind11::arg("data") = std::string_view {},
         pybind11::arg("options") = RequestOptions::none(),
@@ -331,9 +318,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
         pybind11::call_guard<pybind11::gil_scoped_release>());
     m_http.def(
         "patch",
-        [](std::string_view url, std::string_view data, const RequestOptions & opt) {
-            return patch(url, data, opt);
-        },
+        [](std::string_view url, std::string_view data, const RequestOptions & opt) { return patch(url, data, opt); },
         pybind11::arg("url"),
         pybind11::arg("data"),
         pybind11::arg("options") = RequestOptions::none(),

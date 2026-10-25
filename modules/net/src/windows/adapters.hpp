@@ -21,7 +21,6 @@ namespace sihd::net::adapters
 using AdapterList = std::vector<IP_ADAPTER_ADDRESSES>;
 
 sihd::util::Result<AdapterList> list(unsigned long flags);
-// a nameless adapter is skipped everywhere
 std::vector<const IP_ADAPTER_ADDRESSES *> named(const AdapterList & list);
 std::string friendly_name(const IP_ADAPTER_ADDRESSES & adapter);
 std::string alias_of(const NET_LUID & luid);

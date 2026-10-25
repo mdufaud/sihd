@@ -15,9 +15,8 @@
 #include <userns_child.hpp>
 #include <vector>
 
-#include <gtest/gtest.h>
-
 #include <fmt/format.h>
+#include <gtest/gtest.h>
 
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
@@ -253,15 +252,18 @@ int check_virtual_link_kinds()
     EXPECT_EQ(tun_link->kind(), NetInterface::Kind::tunnel);
     EXPECT_EQ(tap_link->kind(), NetInterface::Kind::tunnel);
     EXPECT_EQ(bridge_link->kind(), NetInterface::Kind::bridge);
+
     EXPECT_FALSE(tun_link->hardware());
     EXPECT_FALSE(tap_link->hardware());
     EXPECT_FALSE(bridge_link->hardware());
+
     EXPECT_EQ(tun_link->mtu(), 1500u);
     // the tun driver speed changed across kernel versions
     const auto speed_mbps = fs::read_all("/sys/class/net/sihdtun0/speed");
     EXPECT_TRUE(speed_mbps.has_value());
     EXPECT_EQ(tun_link->link_speed_bps(), std::stoull(speed_mbps.value_or("0")) * 1'000'000);
     EXPECT_GT(tun_link->link_speed_bps(), 0u);
+
     EXPECT_EQ(tap_link->mac_addr(), "02:00:00:00:00:01");
     EXPECT_GT(tun_link->index(), 0u);
     EXPECT_NE(tun_link->index(), tap_link->index());
@@ -402,7 +404,8 @@ int check_resolved_stub_without_resolved()
     return child_result();
 }
 
-Result<void> append_dns_entry(dbus::Appender & entries, int32_t index, int32_t family, const std::vector<uint8_t> & bytes)
+Result<void>
+    append_dns_entry(dbus::Appender & entries, int32_t index, int32_t family, const std::vector<uint8_t> & bytes)
 {
     auto entry = entries.open_struct();
     SIHD_UNEXPECTED_RETURN(entry);
@@ -531,7 +534,6 @@ int check_monitor_events()
     return child_result();
 }
 
-// more changes than the socket buffer holds before run() reads any of them
 int check_monitor_overflow()
 {
     auto tun = create_tun("sihdtun0", IFF_TUN);

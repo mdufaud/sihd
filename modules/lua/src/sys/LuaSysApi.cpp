@@ -291,18 +291,17 @@ void LuaSysApi::load_process(Vm & vm)
          */
         .beginClass<LuaProcess>("Process")
         .addConstructor<void (*)()>()
-        .addFunction(
-            "add_argv",
-            checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
-                if (ref.isString())
-                    self->add_argv(std::string(ref));
-                else if (ref.isTable())
-                    self->add_argv(std::vector<std::string>(ref));
-                else
-                    return std::unexpected(
-                        Error(ErrorCode::invalid_argument, "add_argv argument must be either a string or a string table"));
-                return {};
-            }>)
+        .addFunction("add_argv", checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
+                         if (ref.isString())
+                             self->add_argv(std::string(ref));
+                         else if (ref.isTable())
+                             self->add_argv(std::vector<std::string>(ref));
+                         else
+                             return std::unexpected(
+                                 Error(ErrorCode::invalid_argument,
+                                       "add_argv argument must be either a string or a string table"));
+                         return {};
+                     }>)
         .addFunction("clear_argv", &LuaProcess::clear_argv)
         .addFunction(
             "stdin_from",
@@ -314,14 +313,13 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction(
             "stdin_close",
             +[](LuaProcess *self) { self->stdin_close(); })
-        .addFunction(
-            "stdout_to",
-            checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
-                if (ref.isFunction() == false)
-                    return std::unexpected(Error(ErrorCode::invalid_argument, "stdout_to argument must be a function callback"));
-                self->set_stdout_callback(ref);
-                return {};
-            }>)
+        .addFunction("stdout_to", checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
+                         if (ref.isFunction() == false)
+                             return std::unexpected(
+                                 Error(ErrorCode::invalid_argument, "stdout_to argument must be a function callback"));
+                         self->set_stdout_callback(ref);
+                         return {};
+                     }>)
         .addFunction(
             "stdout_to_fd",
             +[](LuaProcess *self, int fd) { self->stdout_to(fd_to_filedesc(fd)); })
@@ -333,14 +331,13 @@ void LuaSysApi::load_process(Vm & vm)
             "stdout_close",
             +[](LuaProcess *self) { self->stdout_close(); })
         .addFunction("flush_stdout", &LuaProcess::flush_stdout)
-        .addFunction(
-            "stderr_to",
-            checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
-                if (ref.isFunction() == false)
-                    return std::unexpected(Error(ErrorCode::invalid_argument, "stderr_to argument must be a function callback"));
-                self->set_stderr_callback(ref);
-                return {};
-            }>)
+        .addFunction("stderr_to", checked<+[](LuaProcess *self, luabridge::LuaRef ref) -> Result<void> {
+                         if (ref.isFunction() == false)
+                             return std::unexpected(
+                                 Error(ErrorCode::invalid_argument, "stderr_to argument must be a function callback"));
+                         self->set_stderr_callback(ref);
+                         return {};
+                     }>)
         .addFunction(
             "stderr_to_fd",
             +[](LuaProcess *self, int fd) { self->stderr_to(fd_to_filedesc(fd)); })
@@ -353,9 +350,9 @@ void LuaSysApi::load_process(Vm & vm)
             +[](LuaProcess *self) { self->stderr_close(); })
         .addFunction("flush_stderr", &LuaProcess::flush_stderr)
         .addFunction("flush", &LuaProcess::flush_all)
-        .addFunction(
-            "execute",
-            checked<+[](LuaProcess *self) { return self->execute(); }>)
+        .addFunction("execute", checked<+[](LuaProcess *self) {
+                         return self->execute();
+                     }>)
         .addFunction(
             "clear",
             +[](LuaProcess *self) { self->clear(); })
@@ -365,43 +362,33 @@ void LuaSysApi::load_process(Vm & vm)
         .addFunction("start", &LuaProcess::start)
         .addFunction("stop", &LuaProcess::stop)
         .addFunction("is_running", &LuaProcess::is_running)
-        .addFunction(
-            "wait",
-            checked<+[](LuaProcess *self, int options, lua_State *state) {
-                sihd::lua::LuaGilRelease release(state);
-                return self->wait(options);
-            }>)
+        .addFunction("wait", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait(options);
+                     }>)
 #if !defined(__SIHD_WINDOWS__)
-        .addFunction(
-            "wait_exit",
-            checked<+[](LuaProcess *self, int options, lua_State *state) {
-                sihd::lua::LuaGilRelease release(state);
-                return self->wait_exit(options);
-            }>)
-        .addFunction(
-            "wait_stop",
-            checked<+[](LuaProcess *self, int options, lua_State *state) {
-                sihd::lua::LuaGilRelease release(state);
-                return self->wait_stop(options);
-            }>)
-        .addFunction(
-            "wait_continue",
-            checked<+[](LuaProcess *self, int options, lua_State *state) {
-                sihd::lua::LuaGilRelease release(state);
-                return self->wait_continue(options);
-            }>)
-        .addFunction(
-            "wait_any",
-            checked<+[](LuaProcess *self, int options, lua_State *state) {
-                sihd::lua::LuaGilRelease release(state);
-                return self->wait_any(options);
-            }>)
+        .addFunction("wait_exit", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait_exit(options);
+                     }>)
+        .addFunction("wait_stop", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait_stop(options);
+                     }>)
+        .addFunction("wait_continue", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait_continue(options);
+                     }>)
+        .addFunction("wait_any", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait_any(options);
+                     }>)
 #endif
         .addFunction("read_pipes", &LuaProcess::read_pipes)
         .addFunction("terminate", &LuaProcess::terminate)
-        .addFunction(
-            "kill",
-            checked<+[](LuaProcess *self, int sig) { return self->kill(sig); }>)
+        .addFunction("kill", checked<+[](LuaProcess *self, int sig) {
+                         return self->kill(sig);
+                     }>)
 #if !defined(__SIHD_WINDOWS__)
         .addFunction("has_exited", &LuaProcess::has_exited)
         .addFunction("has_core_dumped", &LuaProcess::has_core_dumped)
@@ -438,14 +425,13 @@ void LuaSysApi::load_process(Vm & vm)
          * proc - free-function process launcher returning a future
          */
         .beginNamespace("proc")
-        .addFunction(
-            "execute",
-            checked<+[](luabridge::LuaRef args) -> Result<LuaProcFuture> {
-                if (args.isTable() == false)
-                    return std::unexpected(Error(ErrorCode::invalid_argument, "proc.execute argument must be a string table"));
-                std::vector<std::string> argv(args);
-                return LuaProcFuture(proc::execute(std::span<const std::string>(argv)));
-            }>)
+        .addFunction("execute", checked<+[](luabridge::LuaRef args) -> Result<LuaProcFuture> {
+                         if (args.isTable() == false)
+                             return std::unexpected(
+                                 Error(ErrorCode::invalid_argument, "proc.execute argument must be a string table"));
+                         std::vector<std::string> argv(args);
+                         return LuaProcFuture(proc::execute(std::span<const std::string>(argv)));
+                     }>)
         .endNamespace()
         .endNamespace()
         .endNamespace();
@@ -469,18 +455,18 @@ void LuaSysApi::load_files(Vm & vm)
                 return ret;
             })
         // the lua bool boundary swallows the Error: log it once here
-        .addFunction(
-            "remove_directory",
-            checked<+[](const std::string & path) { return fs::remove_directory(path); }>)
-        .addFunction(
-            "remove_directories",
-            checked<+[](const std::string & path) { return fs::remove_directories(path); }>)
-        .addFunction(
-            "make_directory",
-            checked<+[](const std::string & path, unsigned int mode) { return fs::make_directory(path, mode); }>)
-        .addFunction(
-            "make_directories",
-            checked<+[](const std::string & path, unsigned int mode) { return fs::make_directories(path, mode); }>)
+        .addFunction("remove_directory", checked<+[](const std::string & path) {
+                         return fs::remove_directory(path);
+                     }>)
+        .addFunction("remove_directories", checked<+[](const std::string & path) {
+                         return fs::remove_directories(path);
+                     }>)
+        .addFunction("make_directory", checked<+[](const std::string & path, unsigned int mode) {
+                         return fs::make_directory(path, mode);
+                     }>)
+        .addFunction("make_directories", checked<+[](const std::string & path, unsigned int mode) {
+                         return fs::make_directories(path, mode);
+                     }>)
         .addFunction("children", &fs::children)
         .addFunction("recursive_children", &fs::recursive_children)
         .addFunction("is_absolute", &fs::is_absolute)
@@ -501,78 +487,74 @@ void LuaSysApi::load_files(Vm & vm)
                 }
                 return fs::combine(std::string(arg1), std::string(arg2));
             })
-        .addFunction(
-            "remove_file",
-            checked<+[](const std::string & path) { return fs::remove_file(path); }>)
+        .addFunction("remove_file", checked<+[](const std::string & path) {
+                         return fs::remove_file(path);
+                     }>)
         .addFunction("are_equals", &fs::are_equals)
         .addFunction("home_path", &fs::home_path)
         .addFunction("executable_path", &program::path)
         .addFunction("cwd", &fs::cwd)
         .addFunction("tmp_path", &fs::tmp_path)
-        .addFunction(
-            "make_tmp_directory",
-            checked<+[](const std::string & prefix) { return fs::make_tmp_directory(prefix); }>)
+        .addFunction("make_tmp_directory", checked<+[](const std::string & prefix) {
+                         return fs::make_tmp_directory(prefix);
+                     }>)
         .endNamespace()
         /**
          * File
          */
         .beginClass<File>("File")
         .addConstructor<void (*)()>()
-        .addFunction(
-            "set_buffer_size",
-            checked<+[](File *self, size_t size) { return self->set_buffer_size(size); }>)
+        .addFunction("set_buffer_size", checked<+[](File *self, size_t size) {
+                         return self->set_buffer_size(size);
+                     }>)
         .addFunction("set_no_buffering", &File::set_no_buffering)
         .addFunction("set_buffering_line", &File::set_buffering_line)
         .addFunction("set_buffering_full", &File::set_buffering_full)
-        .addFunction(
-            "buff_stream",
-            checked<+[](File *self) { return self->buff_stream(); }>)
-        .addFunction(
-            "open",
-            checked<+[](File *self, const std::string & path, const std::string & mode) { return self->open(path, mode); }>)
+        .addFunction("buff_stream", checked<+[](File *self) {
+                         return self->buff_stream();
+                     }>)
+        .addFunction("open", checked<+[](File *self, const std::string & path, const std::string & mode) {
+                         return self->open(path, mode);
+                     }>)
         .addFunction("is_open", &File::is_open)
-        .addFunction(
-            "close",
-            checked<+[](File *self) { return self->close(); }>)
-        .addFunction(
-            "read",
-            checked<+[](File *self, IArray *array_ptr) { return self->read(*array_ptr); }>)
-        .addFunction(
-            "read_line",
-            checked<+[](File *self, luabridge::LuaRef ref) -> Result<ArrChar> {
-                char *line = nullptr;
-                size_t size = 0;
-                auto ret = ref.isNil() == false ? self->read_line_delim(&line, &size, std::string(ref)[0])
-                                                : self->read_line(&line, &size);
-                ArrChar array;
-                if (ret.has_value())
-                    array.from(line);
-                free(line);
-                SIHD_UNEXPECTED_RETURN(ret);
-                return array;
-            }>)
-        .addFunction(
-            "write_array",
-            checked<+[](File *self, const IArray *array_ptr) { return self->write(array_ptr->buf(), array_ptr->size()); }>)
-        .addFunction(
-            "write",
-            checked<+[](File *self, const std::string & str, luabridge::LuaRef ref) {
-                std::string_view view(str);
-                if (ref.isNumber())
-                    view.remove_suffix(static_cast<size_t>(ref));
-                return self->write(view);
-            }>)
+        .addFunction("close", checked<+[](File *self) {
+                         return self->close();
+                     }>)
+        .addFunction("read", checked<+[](File *self, IArray *array_ptr) {
+                         return self->read(*array_ptr);
+                     }>)
+        .addFunction("read_line", checked<+[](File *self, luabridge::LuaRef ref) -> Result<ArrChar> {
+                         char *line = nullptr;
+                         size_t size = 0;
+                         auto ret = ref.isNil() == false ? self->read_line_delim(&line, &size, std::string(ref)[0])
+                                                         : self->read_line(&line, &size);
+                         ArrChar array;
+                         if (ret.has_value())
+                             array.from(line);
+                         free(line);
+                         SIHD_UNEXPECTED_RETURN(ret);
+                         return array;
+                     }>)
+        .addFunction("write_array", checked<+[](File *self, const IArray *array_ptr) {
+                         return self->write(array_ptr->buf(), array_ptr->size());
+                     }>)
+        .addFunction("write", checked<+[](File *self, const std::string & str, luabridge::LuaRef ref) {
+                         std::string_view view(str);
+                         if (ref.isNumber())
+                             view.remove_suffix(static_cast<size_t>(ref));
+                         return self->write(view);
+                     }>)
         .addFunction("eof", &File::eof)
         .addFunction("error", &File::error)
         .addFunction("clear_errors", &File::clear_errors)
-        .addFunction(
-            "flush",
-            checked<+[](File *self) { return self->flush(); }>)
+        .addFunction("flush", checked<+[](File *self) {
+                         return self->flush();
+                     }>)
         .addFunction("fd", &File::fd)
         .addFunction("path", &File::path)
-        .addFunction(
-            "filesize",
-            checked<+[](File *self) { return self->file_size(); }>)
+        .addFunction("filesize", checked<+[](File *self) {
+                         return self->file_size();
+                     }>)
         .addFunction("lock", &File::lock)
         .addFunction("trylock", &File::trylock)
         .addFunction("unlock", &File::unlock)
@@ -582,13 +564,13 @@ void LuaSysApi::load_files(Vm & vm)
          */
         .beginClass<LineReader>("LineReader")
         .addConstructor<void (*)()>()
-        .addFunction(
-            "read_next",
-            checked<+[](LineReader *self) { return self->read_next(); }>)
+        .addFunction("read_next", checked<+[](LineReader *self) {
+                         return self->read_next();
+                     }>)
         .addFunction("get_read_data", &LuaUtilApi::ireader_get_read_data<LineReader>)
-        .addFunction(
-            "open",
-            checked<+[](LineReader *self, const std::string & path) { return self->open(path); }>)
+        .addFunction("open", checked<+[](LineReader *self, const std::string & path) {
+                         return self->open(path);
+                     }>)
         .addFunction("is_open", &LineReader::is_open)
         .addFunction("close", &LineReader::close)
         .addFunction("buffsize", &LineReader::buffsize)
@@ -603,9 +585,9 @@ void LuaSysApi::load_tools(Vm & vm)
     luabridge::getGlobalNamespace(vm.lua_state())
         .beginNamespace("sihd")
         .beginNamespace("sys")
-        .addFunction(
-            "read_line",
-            checked<+[]() { return LineReader::fast_read_line(stdin); }>)
+        .addFunction("read_line", checked<+[]() {
+                         return LineReader::fast_read_line(stdin);
+                     }>)
         .beginNamespace("signal")
         .addFunction("kill", &signal::kill)
         .addFunction("name", &signal::name)

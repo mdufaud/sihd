@@ -1,11 +1,10 @@
-#include <sihd/sys/linux/sysfs.hpp>
-
 #include <fcntl.h>
 #include <unistd.h>
 
 #include <cerrno>
 
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/linux/sysfs.hpp>
 #include <sihd/util/str.hpp>
 
 using enum sihd::util::ErrorCode;

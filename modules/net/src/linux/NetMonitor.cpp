@@ -50,6 +50,7 @@ NetMonitorEvent address_event(const netlink::Message & message)
     event.type = NetMonitorEventType::address;
     event.removed = message.type == RTM_DELADDR;
     IpAddr peer;
+
     for (const netlink::Attribute & attribute : netlink::attributes(message, sizeof(ifaddrmsg)))
     {
         // IFA_LOCAL is the own address of a point-to-point link, whose IFA_ADDRESS is the peer
@@ -63,6 +64,7 @@ NetMonitorEvent address_event(const netlink::Message & message)
             event.interface_name = label.substr(0, label.find(':'));
         }
     }
+
     if (!event.address.has_ip())
         event.address = std::move(peer);
     if (event.interface_name.empty())

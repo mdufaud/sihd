@@ -88,8 +88,9 @@ void LuaNetApi::load_base(Vm & vm)
             "hostname",
             +[](IpAddr *self) -> std::string { return self->hostname(); })
         .addFunction("str", &IpAddr::str)
-        .addFunction("set_subnet_mask",
-                     checked<+[](IpAddr *self, const std::string & mask) { return self->set_subnet_mask(mask); }>)
+        .addFunction("set_subnet_mask", checked<+[](IpAddr *self, const std::string & mask) {
+                         return self->set_subnet_mask(mask);
+                     }>)
         .addFunction("has_subnet", &IpAddr::has_subnet)
         .addFunction("subnet_value", &IpAddr::subnet_value)
         .addFunction("dump_subnet", &IpAddr::dump_subnet)

@@ -47,7 +47,6 @@ class NetMonitor: public sihd::util::Observable<NetMonitor>,
         // a negative timeout waits for a change
         void set_run_timeout(sihd::util::Duration timeout);
 
-        // false when reading failed
         bool run() override;
 
         const std::vector<NetMonitorEvent> & events() const;

@@ -52,10 +52,8 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
                      ret = *size;
                  return ret;
              })
-        .def("remove_directory",
-             [](const std::string & path) { return fs::remove_directory(path); })
-        .def("remove_directories",
-             [](const std::string & path) { return fs::remove_directories(path); })
+        .def("remove_directory", [](const std::string & path) { return fs::remove_directory(path); })
+        .def("remove_directories", [](const std::string & path) { return fs::remove_directories(path); })
         .def(
             "make_directory",
             [](const std::string & path, unsigned int mode) { return fs::make_directory(path, mode); },
@@ -75,8 +73,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("filename", &fs::filename)
         .def("extension", &fs::extension)
         .def("combine", static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::combine))
-        .def("remove_file",
-             [](const std::string & path) { return fs::remove_file(path); })
+        .def("remove_file", [](const std::string & path) { return fs::remove_file(path); })
         .def("are_equals", &fs::are_equals)
         .def("home_path", &fs::home_path)
         .def("executable_path", &program::path)
