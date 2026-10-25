@@ -386,6 +386,8 @@ function reset_hunk() {
         hit("std::expected<T, Error> (sihd::util::Result<T>)")
     if (text ~ /std::condition_variable/)
         hit("std::condition_variable (sihd::util::Waitable)")
+    if (text ~ /[(,][[:space:]]*std::string\(("[^"]*"|[A-Za-z_][A-Za-z0-9_.>-]*\.view\(\))\)[[:space:]]*[,)]/)
+        hit("std::string(literal or .view()) argument (pass it as is: a needed copy means the parameter is const std::string &)")
     if (text ~ /SIHD_UNEXPECTED_RETURN(_CTX)?\([^,()]*\(/)
         hit("SIHD_UNEXPECTED_RETURN on a call (store the result in a named variable first)")
     if (text ~ /^[[:space:]]*throw[[:space:]]/ && prev ~ /SIHD_(LOG|UNEXPECTED_LOG)/)
