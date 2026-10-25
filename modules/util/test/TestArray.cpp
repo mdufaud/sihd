@@ -516,17 +516,17 @@ TEST_F(TestArray, test_array_move)
     ArrInt arr_moved;
     int *buffer_ptr;
 
-    arr.from({1, 2, 3});
+    arr.from({1, 2, 3, 4, 5});
     buffer_ptr = arr.data();
     arr_moved = std::move(arr);
     EXPECT_EQ(arr.data(), nullptr);
     EXPECT_EQ(arr_moved.data(), buffer_ptr);
-    EXPECT_EQ(arr_moved.size(), 3u);
+    EXPECT_EQ(arr_moved.size(), 5u);
 
     ArrInt arr_move_constructor(std::move(arr_moved));
     EXPECT_EQ(arr_moved.data(), nullptr);
     EXPECT_EQ(arr_move_constructor.data(), buffer_ptr);
-    EXPECT_EQ(arr_move_constructor.size(), 3u);
+    EXPECT_EQ(arr_move_constructor.size(), 5u);
 }
 
 TEST_F(TestArray, test_array_equal)
@@ -868,6 +868,23 @@ TEST_F(TestArray, test_array_mult_resize_capacity)
 
     arr.reserve(5);
     EXPECT_EQ(arr.capacity(), 16u);
+}
+
+TEST_F(TestArray, test_array_small_buffer)
+{
+    const std::less_equal<const void *> less_equal;
+    Array<char> small(std::string_view("hello"));
+    EXPECT_TRUE(less_equal(&small, small.data()) && less_equal(small.data() + small.size(), &small + 1));
+
+    small.set_buffer_ownership(true);
+    Array<char> moved(std::move(small));
+    EXPECT_EQ(moved.cpp_str(), "hello");
+    EXPECT_EQ(moved.capacity(), 5u);
+    EXPECT_EQ(small.data(), nullptr);
+
+    moved.push_back(std::string_view(" world, past inline"));
+    EXPECT_EQ(moved.cpp_str(), "hello world, past inline");
+    EXPECT_FALSE(less_equal(&moved, moved.data()) && less_equal(moved.data(), &moved + 1));
 }
 
 } // namespace test

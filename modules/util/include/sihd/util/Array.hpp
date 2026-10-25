@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_ARRAY_HPP__
 #define __SIHD_UTIL_ARRAY_HPP__
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <functional>
@@ -106,7 +107,13 @@ class Array: public IArray,
             if (&other != this)
             {
                 this->delete_buffer();
-                _buf_ptr = other._buf_ptr;
+                if (other._is_sso())
+                {
+                    memcpy(_sso_buf, other._sso_buf, other._capacity * sizeof(T));
+                    _buf_ptr = (T *)_sso_buf;
+                }
+                else
+                    _buf_ptr = other._buf_ptr;
                 _capacity = other._capacity;
                 _size = other._size;
                 _has_ownership = other._has_ownership;
@@ -414,7 +421,7 @@ class Array: public IArray,
             return self._buf_ptr;
         }
 
-        void set_buffer_ownership(bool active) { _has_ownership = active; }
+        void set_buffer_ownership(bool active) { _has_ownership = active && !this->_is_sso(); }
 
         /*********************************************************************/
         /* buffer methods */
@@ -477,7 +484,7 @@ class Array: public IArray,
 
         bool from(const T *arr, size_t size)
         {
-            if (!_has_ownership)
+            if (!_has_ownership && !this->_is_sso())
                 this->delete_buffer();
 
             if (!this->_internal_resize(size, false))
@@ -811,11 +818,17 @@ class Array: public IArray,
                 capacity = std::max(capacity, new_capacity);
             }
 
-            T *new_ptr = _has_ownership ? (T *)realloc(_buf_ptr, capacity * sizeof(T))
-                                        : (T *)malloc(capacity * sizeof(T));
+            const bool use_sso = !_has_ownership && capacity <= _sso_capacity;
+            T *new_ptr;
+            if (use_sso)
+                new_ptr = (T *)_sso_buf;
+            else if (_has_ownership)
+                new_ptr = (T *)realloc(_buf_ptr, capacity * sizeof(T));
+            else
+                new_ptr = (T *)malloc(capacity * sizeof(T));
             if (new_ptr == nullptr)
                 return false;
-            if (!_has_ownership && _buf_ptr != nullptr)
+            if (!_has_ownership && _buf_ptr != nullptr && _buf_ptr != new_ptr)
                 memcpy(new_ptr, _buf_ptr, std::min(_capacity, capacity) * sizeof(T));
             _buf_ptr = new_ptr;
 
@@ -824,9 +837,11 @@ class Array: public IArray,
 
             _size = std::min(_size, capacity);
             _capacity = capacity;
-            _has_ownership = true;
+            _has_ownership = !use_sso;
             return true;
         }
+
+        bool _is_sso() const { return _buf_ptr == (const T *)_sso_buf; }
 
         bool _internal_resize(size_t size, bool clear_mem = true)
         {
@@ -842,6 +857,12 @@ class Array: public IArray,
         size_t _capacity;
         // ownership of pointer
         bool _has_ownership;
+
+    private:
+        static constexpr size_t _sso_byte_size = 16;
+        static constexpr size_t _sso_capacity = _sso_byte_size / sizeof(T);
+
+        alignas(T) std::byte _sso_buf[_sso_byte_size];
 };
 
 /*********************************************************************/
