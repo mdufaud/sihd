@@ -1,11 +1,13 @@
 #ifndef __SIHD_SYS_FILEWATCHER_HPP__
 #define __SIHD_SYS_FILEWATCHER_HPP__
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Result.hpp>
@@ -48,10 +50,10 @@ class FileWatcher: public sihd::util::Observable<FileWatcher>,
 
         FileWatcher();
         FileWatcher(const std::string & path);
-        FileWatcher(const std::string & path, int run_timeout_milliseconds);
+        FileWatcher(const std::string & path, sihd::util::Duration run_timeout);
         virtual ~FileWatcher();
 
-        void set_run_timeout(int milliseconds);
+        void set_run_timeout(sihd::util::Duration timeout);
 
         sihd::util::Result<void> watch(const std::string & path);
         bool unwatch(const std::string & path);
@@ -67,7 +69,7 @@ class FileWatcher: public sihd::util::Observable<FileWatcher>,
     private:
         struct Impl;
         std::unique_ptr<Impl> _impl;
-        int _run_timeout_milliseconds;
+        sihd::util::Duration _run_timeout = std::chrono::milliseconds(100);
         std::vector<FileWatcherEvent> _events;
 };
 

@@ -1,3 +1,4 @@
+#include <chrono>
 #include <string>
 
 #include <fmt/format.h>
@@ -67,8 +68,7 @@ int main(int argc, char **argv)
             SIHD_LOG(error, "Failed to watch: {}", path);
             app.exit(EXIT_FAILURE);
         }
-        constexpr int timeout_milliseconds = 500;
-        fw.set_run_timeout(timeout_milliseconds);
+        fw.set_run_timeout(std::chrono::milliseconds(500));
         fw.add_observer(&handler);
 
         while (stop == false && app.should_stop() == false)

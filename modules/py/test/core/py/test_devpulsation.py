@@ -12,6 +12,12 @@ assert(core.start())
 
 ch_activate = dev.get_channel("activate")
 ch_beat = dev.get_channel("heartbeat")
+try:
+    core.find_channel("does_not_exist")
+    assert(False)
+except sihd.Error as missing:
+    assert(missing.code == sihd.ErrorCode.not_found)
+    assert(str(missing) == "no such channel 'does_not_exist' in 'core'")
 waiter = sihd.core.ChannelWaiter(ch_beat)
 
 i = 0

@@ -16,6 +16,7 @@ class INetServerHandler;
 class IcmpSender;
 class IpAddr;
 class NetInterface;
+class NetMonitor;
 class Pinger;
 class Socket;
 class TcpClient;

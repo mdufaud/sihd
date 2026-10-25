@@ -13,7 +13,7 @@ assert(sig.is_category_termination(py_signal.SIGTERM))
 assert(not sig.is_category_stop(py_signal.SIGTERM))
 
 # test handle/unhandle
-assert(sig.handle(py_signal.SIGUSR1))
+sig.handle(py_signal.SIGUSR1)
 
 # test last_received - should be 0 since no signal sent
 assert(isinstance(sig.last_received(), int))
@@ -28,6 +28,6 @@ assert(not sig.dump_received())
 sig.reset_all_received()
 
 # unhandle the signal we handled
-assert(sig.unhandle(py_signal.SIGUSR1))
+sig.unhandle(py_signal.SIGUSR1)
 
 print("signal tests passed")

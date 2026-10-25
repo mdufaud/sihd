@@ -1,5 +1,11 @@
 local csv = sihd.csv
 
+local function must_raise(fn, ...)
+    local ok, err = pcall(fn, ...)
+    assert(ok == false, "expected an error, got success")
+    return err
+end
+
 -- from_string: parse content into rows of string cells
 local rows = csv.from_string("a,b,c\n1,2,3\n4,5,6\n")
 assert(type(rows) == "table")
@@ -23,7 +29,7 @@ assert(csv.escape_str('hello "world"') == '"hello ""world"""')
 
 -- write then read: whole-file round-trip
 local path = os.tmpname()
-assert(csv.write(path, {{"name", "port"}, {"dev", "8080"}}))
+csv.write(path, {{"name", "port"}, {"dev", "8080"}})
 local back = csv.read(path)
 assert(type(back) == "table")
 assert(#back == 2)
@@ -31,19 +37,23 @@ assert(back[1][1] == "name")
 assert(back[2][1] == "dev")
 assert(back[2][2] == "8080")
 
--- write: invalid delimiter -> false, existing file left intact
-assert(csv.write(path, {{"a"}}, "\1") == false)
+-- write: invalid delimiter raises, existing file left intact
+local bad_delimiter = must_raise(csv.write, path, {{"a"}}, "\1")
+assert(bad_delimiter.code == sihd.ErrorCode.invalid_argument)
+assert(bad_delimiter.message == "delimiter is not a printable character")
 local intact = csv.read(path)
 assert(#intact == 2)
 assert(intact[2][2] == "8080")
 
--- read: nonexistent file -> nil
-assert(csv.read("/nonexistent/path/file.csv") == nil)
+-- read: nonexistent file raises
+local missing = must_raise(csv.read, "/nonexistent/path/file.csv")
+assert(missing.code == sihd.ErrorCode.not_found)
+assert(missing.message == "could not open '/nonexistent/path/file.csv': No such file or directory")
 
 -- CsvWriter streaming
 local writer = csv.CsvWriter()
 local wpath = os.tmpname()
-assert(writer:open(wpath))
+writer:open(wpath)
 assert(writer:is_open())
 writer:write_commentary("a comment")
 writer:write_row({"col1", "col2"})
@@ -53,7 +63,7 @@ writer:close()
 
 -- CsvReader streaming reads back the rows (comment skipped)
 local reader = csv.CsvReader()
-assert(reader:open(wpath))
+reader:open(wpath)
 assert(reader:is_open())
 assert(reader:read_next())
 local cols = reader:columns()

@@ -68,7 +68,10 @@ assert(dyn ~= nil)
 assert(dyn:name() == "dyn")
 assert(core:find_channel("dyn"):name() == "dyn")
 assert(core:get_channel("dyn"):name() == "dyn")
-assert(core:find_channel("does_not_exist") == nil)
+local found, missing = pcall(core.find_channel, core, "does_not_exist")
+assert(not found)
+assert(missing.code == sihd.ErrorCode.not_found)
+assert(missing.message == "no such channel 'does_not_exist' in 'core'")
 
 -- resize a channel's element count
 local rz = sihd.core.Channel("rz", "int", 2, nil)

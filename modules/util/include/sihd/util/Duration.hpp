@@ -17,6 +17,15 @@ class Duration: public TimeBase<Duration>
 
         // human readable interval, eg "1h2m3s"
         std::string str(bool total_parenthesis = false, bool nano_resolution = false) const;
+
+        // saturated to int, the system call timeout type: a negative duration stays negative
+        int nanoseconds_int() const;
+        int microseconds_int() const;
+        int milliseconds_int() const;
+        int seconds_int() const;
+        int minutes_int() const;
+        int hours_int() const;
+        int days_int() const;
 };
 
 } // namespace sihd::util

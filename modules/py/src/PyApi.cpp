@@ -32,7 +32,7 @@ void raise_error(const Error & error)
     // from the module, not a C++ static: libsihd_py.so and the sihd extension each have their own statics
     pybind11::object type = pybind11::module_::import("sihd").attr("Error");
     pybind11::object instance = type(error.message);
-    instance.attr("code") = static_cast<int>(error.code);
+    instance.attr("code") = pybind11::cast(error.code);
     PyErr_SetObject(type.ptr(), instance.ptr());
     throw pybind11::error_already_set();
 }
@@ -52,6 +52,23 @@ PYBIND11_MODULE(sihd, m_sihd)
 void PyApi::set_api_to_module(pybind11::module & m_sihd)
 {
     m_sihd.attr("Error") = error_type();
+
+    pybind11::enum_<ErrorCode>(m_sihd, "ErrorCode")
+        .value("none", ErrorCode::none)
+        .value("unknown", ErrorCode::unknown)
+        .value("invalid_argument", ErrorCode::invalid_argument)
+        .value("not_found", ErrorCode::not_found)
+        .value("permission_denied", ErrorCode::permission_denied)
+        .value("timeout", ErrorCode::timeout)
+        .value("would_block", ErrorCode::would_block)
+        .value("interrupted", ErrorCode::interrupted)
+        .value("out_of_memory", ErrorCode::out_of_memory)
+        .value("io_error", ErrorCode::io_error)
+        .value("not_supported", ErrorCode::not_supported)
+        .value("already_exists", ErrorCode::already_exists)
+        .value("not_initialized", ErrorCode::not_initialized)
+        .value("closed", ErrorCode::closed)
+        .value("overflow", ErrorCode::overflow);
 
     PyModule pymodule(&m_sihd);
 

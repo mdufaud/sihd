@@ -39,9 +39,9 @@ std::string FileWatcherEvent::type_str() const
     }
 }
 
-void FileWatcher::set_run_timeout(int milliseconds)
+void FileWatcher::set_run_timeout(Duration timeout)
 {
-    _run_timeout_milliseconds = milliseconds;
+    _run_timeout = timeout;
 }
 
 const std::vector<FileWatcherEvent> & FileWatcher::events() const

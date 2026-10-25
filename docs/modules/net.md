@@ -1,11 +1,11 @@
 # net
 
-Socket networking over IP and Unix domain sockets. It provides address handling, raw sockets, TCP, UDP, TLS over TCP, ICMP ping, DNS resolution and network interface enumeration. Most network classes are `Named` services that can be run through the service lifecycle and observed through `Handler` callbacks, and the `Device*` wrappers expose them as `core` devices.
+Socket networking over IP and Unix domain sockets. It provides address handling, raw sockets, TCP, UDP, TLS over TCP, ICMP ping, DNS resolution, network interface enumeration and connection detection: link kinds, routes, VPN tunnels, DNS servers, wifi links and change monitoring. Most network classes are `Named` services that can be run through the service lifecycle and observed through `Handler` callbacks, and the `Device*` wrappers expose them as `core` devices.
 
 | | |
 |---|---|
 | Depends on | `sys`, `core`, `crypto` |
-| External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows |
+| External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows, wlanapi loaded at runtime |
 | Platforms | all except web (Emscripten) |
 | Build | `make m=net` |
 | Header | `#include <sihd/net/TcpClient.hpp>` (one header per class, namespace `sihd::net`) |
@@ -14,9 +14,9 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 ### Addresses
 
-- `IpAddr`: IPv4/IPv6 endpoint (host, port, `sockaddr`). Built from `(host, port)`, from a `sockaddr*`, or with `IpAddr::localhost(port, ipv6)`. Key methods: `str`, `hostname`, `fetch_hostname`, `has_ip`, `empty`, `addr`, `addr_len`, `subnet`, `set_subnet_mask`, `is_same_subnet`.
+- `IpAddr`: IPv4/IPv6 endpoint (host, port, `sockaddr`). Built from `(host, port)`, from a `sockaddr*`, with `IpAddr::localhost(port, ipv6)`, or from raw `in_addr`/`in6_addr` bytes with `IpAddr::from_bytes(family, data, size)`. Key methods: `str`, `hostname`, `fetch_hostname`, `has_ip`, `empty`, `addr`, `addr_len`, `subnet`, `set_subnet_mask`, `is_same_subnet`.
 - `Subnet`: netmask, network, host range and broadcast of an `IpAddr`, as returned by `IpAddr::subnet()`.
-- `ip::` helpers: `is_valid_ip`, `is_private_host`, `public_addresses`, `to_str` (for `sockaddr` variants), `domain` / `socktype` / `protocol` name conversions and their `*_str` counterparts, `is_valid_netmask`.
+- `ip::` helpers: `is_valid_ip`, `is_private_host`, `public_addresses`, `to_str` (for `sockaddr` variants), `mac_str` (`AA:BB:CC:DD:EE:FF`), `domain` / `socktype` / `protocol` name conversions and their `*_str` counterparts, `is_valid_netmask`.
 
 ### Sockets
 
@@ -45,10 +45,59 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 - `dns::find`: resolve a host to an `IpAddr` (IPv4 by default, IPv6 with the flag).
 - `dns::lookup`: all `DnsEntry` results (address, socket type, protocol) and canonical hostname, as `DnsLookup`.
 - `dns::lookup_async`: same as `lookup`, returning a `std::future`.
+- `dns::servers(resolver_timeout)`: the name servers the system resolver queries, as `DnsServer` (`addr`, `interface_name`, empty for a server of every interface).
+  - Linux: `/etc/resolv.conf`. A `fe80::1%wlan0` entry carries its interface. When resolv.conf only lists the systemd-resolved stub (127.0.0.53/54), the real servers come from `org.freedesktop.resolve1` over dbus, per interface, within `resolver_timeout` (`dns::default_resolver_timeout`, 2 s).
+  - Windows: the DNS servers of every adapter that is up.
+  - Android: `not_supported` (netd resolves, there is no resolv.conf).
 
 ### Interfaces
 
-- `NetInterface`: one network interface. `NetInterface::get_all_interfaces()` returns them keyed by name. Accessors: `name`, `mac_addr`, `addr4`/`netmask4`/`addr6`/`netmask6`, `extra_addr4`/`extra_addr6` (point-to-point or broadcast), and flag queries such as `up`, `running`, `loopback`, `broadcast`, `point2point`, `promisc`, `supports_multicast`.
+- `NetInterface`: one network interface. `NetInterface::get_all_interfaces()` returns them keyed by name (the friendly name on Windows). Accessors:
+  - `name`, `mac_addr`, `index`, `mtu`, `link_speed_bps` (0 when unknown);
+  - `addresses()`: every address of the interface as `Address` (`addr`, `netmask`, `extra_addr`), secondary IPv4 addresses included: Linux reports those under an `eth0:1` label, which joins `eth0` instead of becoming an interface. `addr4`/`netmask4`/`addr6`/`netmask6` and `extra_addr4`/`extra_addr6` (point-to-point or broadcast) keep only the last primary address of each family;
+  - `kind()`: `NetInterface::Kind` among `loopback`, `ethernet`, `wifi`, `cellular`, `tunnel`, `ppp`, `bridge`, `unknown`, with `kind_str`;
+  - `hardware()`: true when a physical device backs the link, false for loopback, tunnels, bridges, veth, TAP;
+  - flag queries such as `up`, `running`, `loopback`, `broadcast`, `point2point`, `promisc`, `supports_multicast`.
+- How `kind` and `hardware` are detected:
+  - Linux: `/sys/class/net/<name>`. `tun_flags` means tunnel (tun and tap), then `DEVTYPE` in `uevent` (`wlan`, `wwan`, `bridge`, `wireguard`, `ovpn`, `ppp`), then the ARPHRD `type`. `hardware` is the `device` link. sysfs shows the network namespace it was mounted from: when its `ifindex` does not match the link, `kind` stays `unknown` (a loopback keeps `loopback`, from its flag), `hardware()` is false and `mtu`/`link_speed_bps` are 0.
+  - Windows: `IfType` (71 wifi, 6 ethernet, 243/244 cellular, 23 ppp, which also covers the built-in VPN, 131 and 53 tunnel, the latter declared by wintun, WireGuard-NT, TAP-Windows6 and ovpn-dco). `hardware` is `HardwareInterface` from `GetIfEntry2`. Not verified on a real Windows: Wine reports `HardwareInterface` for everything but loopback, and the IfType of Hyper-V vEthernet or AnyConnect adapters is unknown.
+  - Android apps cannot read sysfs (AOSP sepolicy, not verified on a device): every kind but loopback is `unknown`, `hardware()` is false, mtu and speed are 0.
+
+### Routes
+
+- `route::find(destination)`: the `Route` the system picks for a destination: `interface_name`, `gateway` (empty for an on-link route), `source` (the local address used) and `metric`. Policy routing applies, so a wg-quick tunnel (fwmark rules) or an OpenVPN `def1` tunnel (0/1 + 128/1 routes) shows up here. A link-local IPv6 destination with a scope id is looked up on that link. `not_found` when the destination is unreachable.
+- `route::defaults_ipv4()` / `route::defaults_ipv6()`: every default route of the family, every routing table included, lowest metric first.
+- `metric` is the effective one: the route metric plus the interface metric on Windows. Linux IPv4 lookups do not report it: `find` leaves it at 0 there.
+- Linux: rtnetlink, no bind, so an Android app can use it. Windows: `GetBestInterfaceEx` + `GetBestRoute2` and `GetIpForwardTable2`.
+
+### Wifi
+
+- `wifi::link(interface_name)`: the association of a wifi station as `wifi::Link`: `ssid`, `bssid`, `signal_dbm`, `frequency_mhz`, `tx_bitrate_bps` (0 when unknown). `not_found` when the interface does not exist or is not an associated wifi station.
+  - Linux: nl80211 (`not_supported` without cfg80211).
+  - Windows: wlanapi, loaded at runtime because Windows Server ships without it until its wireless feature is installed (`not_supported` then). Since Windows 11 24H2, the connection details need the location consent: `permission_denied` without it. The signal falls back to the link quality (0..100 mapped onto -100..-50 dBm) and the frequency stays 0 when the BSS list is not available.
+
+### Monitoring
+
+- `NetMonitor`: `Observable<NetMonitor>` and `IRunnable`, shaped like `sys::FileWatcher`. The constructor subscribes to the system notifications and throws when refused.
+- `run()` waits up to the run timeout (`set_run_timeout`, 100 ms by default), drains every pending change into `events()` and, only when something changed, notifies the observers once, on the calling thread. `events()` holds the changes of the last run only. It returns false only when reading the notifications failed. Run it in a loop or a `StepWorker`.
+- `NetMonitorEvent`: `type` (`link`, `address`, `route`, `overflow`), `removed`, `interface_name` and the `address` of an address event. An `overflow` event means notifications were dropped: re-read everything. A connection change sends a burst of events, so re-query `route::find` on them instead of tracking each one. `interface_name` is the name the system still knows (a removed link keeps it on Linux), empty when it can no longer be resolved, as for the routes and addresses of a link already gone.
+  - Linux: rtnetlink multicast groups (an Android app may not bind them: the constructor throws).
+  - Windows: `NotifyIpInterfaceChange`, `NotifyUnicastIpAddressChange` and `NotifyRouteChange2`. Wine accepts them but never notifies.
+
+### Recipes
+
+- Main connection: `route::find` towards any public address, then look its `interface_name` up in `get_all_interfaces()`. The library picks no address: the caller chooses one.
+- VPN:
+  - full tunnel: the main connection is a `tunnel` or `ppp` link;
+  - split tunnel: a running `tunnel` or `ppp` link exists while the main connection is another link;
+  - the uplink under a full tunnel is the first default route on a link that is neither;
+  - `hardware()` alone is no VPN sign: bridges, veth and container links have no hardware either.
+- DNS leak: `route::find(server.addr)` for each `dns::servers()` entry gives the link its queries take.
+- Limits:
+  - policy-based IPsec (strongSwan without an xfrm interface) creates no link and no route: it is invisible here;
+  - a VPN adapter reported with another IfType on Windows (Hyper-V-like virtual ethernet, AnyConnect) is not recognized;
+  - a captive portal or a dead internet access needs a real probe (an HTTP request, `Pinger`).
+- `net_interfaces_demo` prints all of it, and `net_interfaces_demo watch` prints the changes.
 
 ### Abstractions
 
@@ -90,6 +139,26 @@ void udp_send_and_receive()
 
 Adapted from `modules/net/test/TestUdp.cpp`.
 
+```cpp
+#include <sihd/net/IpAddr.hpp>
+#include <sihd/net/NetInterface.hpp>
+#include <sihd/net/route.hpp>
+
+using namespace sihd::net;
+
+bool goes_through_vpn(const IpAddr & destination)
+{
+    auto interfaces = NetInterface::get_all_interfaces();
+    auto found = route::find(destination);
+    if (!interfaces || !found || !interfaces->contains(found->interface_name))
+        return false;
+    const NetInterface & link = interfaces->at(found->interface_name);
+    return link.kind() == NetInterface::Kind::tunnel || link.kind() == NetInterface::Kind::ppp;
+}
+```
+
+Adapted from `modules/net/test/linux/TestNetNamespace.cpp` and `modules/net/demo/net_interfaces_demo.cpp`.
+
 ## Scripting
 
-Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`).
+Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers`, `wifi.link` and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures return `nil` without logging, the kind enums are `NetInterfaceKind` and `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which returns `nil` instead of throwing.

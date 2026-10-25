@@ -37,6 +37,25 @@ TEST_F(TestDuration, test_duration_class)
     EXPECT_EQ(full.str(), "+1h:2m:3s:0ms:0us");
 }
 
+TEST_F(TestDuration, test_duration_int_accessors)
+{
+    const Duration duration(time::hours(25) + time::seconds(1));
+
+    EXPECT_EQ(duration.days_int(), 1);
+    EXPECT_EQ(duration.hours_int(), 25);
+    EXPECT_EQ(duration.minutes_int(), 1500);
+    EXPECT_EQ(duration.seconds_int(), 90001);
+    EXPECT_EQ(duration.milliseconds_int(), 90001000);
+    EXPECT_EQ(duration.microseconds_int(), 2147483647);
+    EXPECT_EQ(duration.nanoseconds_int(), 2147483647);
+}
+
+TEST_F(TestDuration, test_duration_int_accessors_keep_the_sign)
+{
+    EXPECT_EQ(Duration(time::milliseconds(-1)).milliseconds_int(), -1);
+    EXPECT_EQ(Duration(-time::days(30)).milliseconds_int(), -2147483647 - 1);
+}
+
 TEST_F(TestDuration, test_duration_strict_algebra)
 {
     Timestamp t1(time::seconds(10));

@@ -1,20 +1,17 @@
 #include <winsock2.h>
 
-#include <iphlpapi.h>
-#include <ws2tcpip.h>
-
-#include <cstdio>
+#include <algorithm>
+#include <span>
 
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/ip.hpp>
-#include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
-#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
+#include "adapters.hpp"
+
 using namespace sihd::util;
-using enum ErrorCode;
 
 namespace sihd::net
 {
@@ -28,6 +25,44 @@ constexpr uint32_t WIFF_POINTOPOINT = 0x8;
 constexpr uint32_t WIFF_RUNNING = 0x10;
 constexpr uint32_t WIFF_MULTICAST = 0x20;
 constexpr uint32_t WIFF_NOARP = 0x40;
+
+constexpr ULONG64 unknown_link_speed = ~ULONG64 {0};
+
+using Kind = NetInterface::Kind;
+
+// 53 (prop virtual) is what wintun, wireguard-nt, tap-windows6 and ovpn-dco declare
+Kind kind_from_iftype(IFTYPE iftype)
+{
+    switch (iftype)
+    {
+        case IF_TYPE_SOFTWARE_LOOPBACK:
+            return Kind::loopback;
+        case IF_TYPE_ETHERNET_CSMACD:
+            return Kind::ethernet;
+        case IF_TYPE_IEEE80211:
+            return Kind::wifi;
+        case IF_TYPE_WWANPP:
+        case IF_TYPE_WWANPP2:
+            return Kind::cellular;
+        case IF_TYPE_PPP:
+            return Kind::ppp;
+        case IF_TYPE_TUNNEL:
+        case IF_TYPE_PROP_VIRTUAL:
+            return Kind::tunnel;
+        default:
+            return Kind::unknown;
+    }
+}
+
+sockaddr_in6 ipv6_netmask(uint8_t prefix_length)
+{
+    sockaddr_in6 mask {};
+    mask.sin6_family = AF_INET6;
+    for (uint8_t bit = 0; bit < prefix_length && bit < 128; ++bit)
+        mask.sin6_addr.s6_addr[bit / 8] |= static_cast<uint8_t>(0x80 >> (bit % 8));
+    return mask;
+}
+
 } // namespace
 
 bool NetInterface::up() const
@@ -94,47 +129,26 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
 {
     std::map<std::string, NetInterface> ret;
 
-    ULONG buf_size = 15000;
-    PIP_ADAPTER_ADDRESSES addresses = nullptr;
-    ULONG result = ERROR_BUFFER_OVERFLOW;
+    auto adapter_list = adapters::list(GAA_FLAG_INCLUDE_PREFIX);
+    SIHD_UNEXPECTED_RETURN(adapter_list);
 
-    while (result == ERROR_BUFFER_OVERFLOW)
+    for (const IP_ADAPTER_ADDRESSES *adapter : adapters::named(*adapter_list))
     {
-        addresses = (PIP_ADAPTER_ADDRESSES)malloc(buf_size);
-        if (addresses == nullptr)
-            return std::unexpected(Error(out_of_memory, "could not list adapters"));
-        result = GetAdaptersAddresses(AF_UNSPEC, GAA_FLAG_INCLUDE_PREFIX, nullptr, addresses, &buf_size);
-        if (result == ERROR_BUFFER_OVERFLOW)
-        {
-            free(addresses);
-            addresses = nullptr;
-        }
-    }
-
-    if (result != NO_ERROR)
-    {
-        if (addresses != nullptr)
-            free(addresses);
-        return std::unexpected(Error(io_error, "could not list adapters: {}", sihd::sys::os::error_str((int)result)));
-    }
-
-    Defer cleanup([&addresses] { free(addresses); });
-
-    for (PIP_ADAPTER_ADDRESSES adapter = addresses; adapter != nullptr; adapter = adapter->Next)
-    {
-        std::string iface_name = adapter->AdapterName;
-        if (!adapter->FriendlyName)
-            continue;
-
-        char friendly[256];
-        if (WideCharToMultiByte(CP_UTF8, 0, adapter->FriendlyName, -1, friendly, sizeof(friendly), nullptr, nullptr)
-            > 0)
-            iface_name = friendly;
-
+        const std::string iface_name = adapters::friendly_name(*adapter);
         NetInterface & netif = ret[iface_name];
 
         if (netif.name().empty())
             netif.set_name(iface_name);
+
+        netif.set_index(adapter->IfIndex != 0 ? adapter->IfIndex : adapter->Ipv6IfIndex);
+        netif.set_kind(kind_from_iftype(adapter->IfType));
+        netif.set_mtu(adapter->Mtu);
+        netif.set_link_speed_bps(adapter->TransmitLinkSpeed != unknown_link_speed ? adapter->TransmitLinkSpeed : 0);
+
+        MIB_IF_ROW2 row {};
+        row.InterfaceLuid = adapter->Luid;
+        if (GetIfEntry2(&row) == NO_ERROR)
+            netif.set_hardware(row.InterfaceAndOperStatusFlags.HardwareInterface);
 
         uint32_t flags = 0;
         if (adapter->OperStatus == IfOperStatusUp)
@@ -151,19 +165,7 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
             flags |= WIFF_NOARP;
         netif.set_flags(flags);
 
-        if (adapter->PhysicalAddressLength >= 6)
-        {
-            char macaddrstr[18] = {0};
-            sprintf(macaddrstr,
-                    "%02X:%02X:%02X:%02X:%02X:%02X",
-                    adapter->PhysicalAddress[0],
-                    adapter->PhysicalAddress[1],
-                    adapter->PhysicalAddress[2],
-                    adapter->PhysicalAddress[3],
-                    adapter->PhysicalAddress[4],
-                    adapter->PhysicalAddress[5]);
-            netif.set_macaddr(macaddrstr);
-        }
+        netif.set_macaddr(ip::mac_str(std::span(adapter->PhysicalAddress).first(std::min<size_t>(adapter->PhysicalAddressLength, sizeof(adapter->PhysicalAddress)))));
 
         for (PIP_ADAPTER_UNICAST_ADDRESS ua = adapter->FirstUnicastAddress; ua != nullptr; ua = ua->Next)
         {
@@ -172,7 +174,6 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
             {
                 IpAddr addr(*sa);
                 IpAddr netmask;
-                IpAddr extra_addr;
 
                 ULONG mask_val;
                 if (ConvertLengthToIpv4Mask(ua->OnLinkPrefixLength, &mask_val) == NO_ERROR)
@@ -183,14 +184,11 @@ Result<std::map<std::string, NetInterface>> NetInterface::get_all_interfaces()
                     netmask = IpAddr(mask_sa);
                 }
 
-                netif.set_ipv4(std::move(addr), std::move(netmask), std::move(extra_addr));
+                netif.add_address({.addr = std::move(addr), .netmask = std::move(netmask), .extra_addr = {}});
             }
             else if (sa->sa_family == AF_INET6)
             {
-                IpAddr addr(*sa);
-                IpAddr netmask;
-                IpAddr extra_addr;
-                netif.set_ipv6(std::move(addr), std::move(netmask), std::move(extra_addr));
+                netif.add_address({.addr = IpAddr(*sa), .netmask = IpAddr(ipv6_netmask(ua->OnLinkPrefixLength)), .extra_addr = {}});
             }
         }
     }

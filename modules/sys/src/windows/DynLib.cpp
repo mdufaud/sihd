@@ -2,12 +2,8 @@
 #include <libloaderapi.h>
 #include <windows.h>
 
-#include <array>
-#include <iterator>
-
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/os.hpp>
-#include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
 using enum sihd::util::ErrorCode;
@@ -16,19 +12,10 @@ using namespace sihd::util;
 namespace sihd::sys
 {
 
+static_assert(DynLib::supported);
+
 namespace
 {
-
-std::string get_error()
-{
-#if !defined(SIHD_STATIC)
-    return os::last_error_str();
-#else
-    return "";
-#endif
-}
-
-#if !defined(SIHD_STATIC)
 
 // GetLastError codes share mingw errno numbers (ERROR_MOD_NOT_FOUND == ECONNRESET): error_errno misclassifies
 bool is_not_found_error(int code)
@@ -43,63 +30,46 @@ std::unexpected<Error> lib_error()
     return std::unexpected(Error(is_not_found_error(code) ? not_found : io_error, os::error_str(code)));
 }
 
-bool try_load_lib(std::string && lib_name, void **handle, std::string & fill)
-{
-    *handle = LoadLibrary(lib_name.c_str());
-    if (*handle != nullptr)
-        fill = std::move(lib_name);
-    return *handle != nullptr;
-}
-
-#endif
-
 } // namespace
 
-SIHD_LOGGER;
-
-Result<void> DynLib::open([[maybe_unused]] const std::string & lib_name)
+Result<void> DynLib::open(const std::string & file)
 {
-#if !defined(SIHD_STATIC)
     this->close();
-    constexpr auto patterns = std::to_array<std::string_view>({"lib{}.dll", "{}.dll", "{}"});
-    for (const std::string_view pattern : patterns)
-    {
-        if (try_load_lib(fmt::format(fmt::runtime(pattern), lib_name), &_handle, _name))
-            return {};
-    }
-    return lib_error();
-#else
-    return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
-#endif
+    _handle = LoadLibraryEx(file.c_str(), nullptr, 0);
+    if (_handle == nullptr)
+        return lib_error();
+    return {};
 }
 
-Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name)
+Result<void> DynLib::open_system(const std::string & name)
 {
-#if !defined(SIHD_STATIC)
+    // a drive prefix (C:name.dll) is relative to that drive's current directory
+    if (name.find_first_of("/\\:") != std::string::npos)
+        return std::unexpected(Error(invalid_argument, "not a library name: '{}'", name));
+    this->close();
+    _handle = LoadLibraryEx(name.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (_handle == nullptr)
+        return lib_error();
+    return {};
+}
+
+Result<void *> DynLib::load_symbol(const std::string & symbol_name) const
+{
     if (this->is_open() == false)
         return std::unexpected(Error(not_initialized, "no library open"));
-    void *ret = (void *)GetProcAddress((HMODULE)_handle, symbol_name.c_str());
-    if (ret == nullptr)
+    void *symbol = (void *)GetProcAddress((HMODULE)_handle, symbol_name.c_str());
+    if (symbol == nullptr)
         return lib_error();
-    return ret;
-#else
-    return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
-#endif
+    return symbol;
 }
 
 bool DynLib::close()
 {
-    bool ret = true;
-
-    if (this->is_open())
-    {
-        ret = FreeLibrary((HMODULE)_handle);
-        if (ret == false)
-            SIHD_LOG(error, "DynLib: {}", get_error());
-        _handle = nullptr;
-        _name.clear();
-    }
-    return ret;
+    if (this->is_open() == false)
+        return true;
+    const bool closed = FreeLibrary((HMODULE)_handle) != 0;
+    _handle = nullptr;
+    return closed;
 }
 
 } // namespace sihd::sys

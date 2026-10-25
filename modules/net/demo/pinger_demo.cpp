@@ -49,7 +49,7 @@ int main(int argc, char **argv)
             SIHD_LOG(info,
                      "{} bytes from {}: icmp_seq={} ttl={} time={}",
                      icmp_response.size,
-                     icmp_response.client.hostname(),
+                     icmp_response.client.str(),
                      icmp_response.seq,
                      icmp_response.ttl,
                      event.trip_time.str());

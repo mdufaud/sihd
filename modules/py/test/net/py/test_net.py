@@ -47,3 +47,50 @@ assert(out.str() == payload)
 
 assert(core.stop())
 assert(not receiver.is_running())
+
+# connection detection
+NetInterface = sihd.net.NetInterface
+interfaces = NetInterface.get_all_interfaces()
+loopbacks = [netif for netif in interfaces.values() if netif.kind() == NetInterface.Kind.loopback]
+assert(len(loopbacks) == 1)
+loopback = loopbacks[0]
+assert(not loopback.hardware())
+assert(loopback.index() > 0)
+assert(loopback.mtu() > 0)
+assert(loopback.up())
+assert(loopback.loopback())
+assert(any(address.addr.str() == "127.0.0.1" for address in loopback.addresses()))
+assert(NetInterface.kind_str(NetInterface.Kind.wifi) == "wifi")
+
+loopback_route = sihd.net.route.find(sihd.net.IpAddr("127.0.0.1"))
+assert(loopback_route.interface_name == loopback.name())
+assert(loopback_route.source.str() == "127.0.0.1")
+for default_route in sihd.net.route.defaults_ipv4():
+    assert(default_route.interface_name != "")
+
+for server in sihd.net.dns.servers(sihd.util.time.ms(500)):
+    assert(server.addr.has_ip())
+    assert(isinstance(server.interface_name, str))
+
+# failures raise sihd.Error
+try:
+    sihd.net.wifi.link("sihd-no-such-interface")
+    assert(False)
+except sihd.Error as missing:
+    assert(missing.code == sihd.ErrorCode.not_found)
+    assert(str(missing) == "no interface named sihd-no-such-interface")
+try:
+    sihd.net.route.find(sihd.net.IpAddr())
+    assert(False)
+except sihd.Error as no_destination:
+    assert(no_destination.code == sihd.ErrorCode.invalid_argument)
+    assert(str(no_destination) == "route lookup needs a destination address")
+
+monitor = sihd.net.NetMonitor(sihd.util.time.ms(10))
+assert(monitor.run())
+event = sihd.net.NetMonitorEvent()
+assert(event.type == sihd.net.NetMonitorEventType.unknown)
+assert(not event.removed)
+assert(event.interface_name == "")
+assert(event.address.empty())
+assert(event.type_str() == "unknown")

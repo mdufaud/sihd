@@ -5,6 +5,7 @@
 
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/Bitmap.hpp>
+#include <sihd/sys/CrashHandler.hpp>
 #include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/DynLib.hpp>
 #include <sihd/sys/File.hpp>
@@ -95,9 +96,10 @@ void dynlib()
 {
     DynLib lib;
 
-    if (lib.open("sihd_util"))
+    const std::string sihd_lib = build::is_windows ? "sihd_util.dll" : "libsihd_util.so";
+    if (lib.open(sihd_lib))
     {
-        SIHD_LOG(info, "Opened DLL sihd_util");
+        SIHD_LOG(info, "Opened DLL {}", sihd_lib);
 
         auto handle = lib.load_symbol("sihd_factory_Node");
         if (handle.has_value())
@@ -105,7 +107,35 @@ void dynlib()
 
         lib.close();
     }
+
+    const std::string system_lib = build::is_windows ? "msvcrt.dll" : "libc.so.6";
+    if (auto opened = lib.open_system(system_lib); opened.has_value())
+    {
+        SIHD_LOG(info, "Opened system library {}, getenv found: {}", system_lib, lib.load_symbol("getenv").has_value());
+        lib.close();
+    }
+    else
+    {
+        SIHD_LOG(error, "Could not open system library {}: {}", system_lib, opened.error().message);
+    }
+
+    auto refused = lib.open_system("./" + system_lib);
+    SIHD_LOG(info, "open_system refuses a path: {}", refused.has_value() == false);
     fmt::print("\n");
+}
+
+void crash()
+{
+    const std::string dump_path = fs::combine(fs::tmp_path(), "sys_demo_crash.txt");
+    CrashHandler handler;
+    if (handler.install({.dump_path = dump_path, .rethrow = false}) == false)
+    {
+        SIHD_LOG(error, "Could not install the crash handler");
+        return;
+    }
+    SIHD_LOG(info, "Crashing with a null pointer write, the report goes to stderr and {}", dump_path);
+    int *volatile null_ptr = nullptr;
+    *null_ptr = 42;
 }
 
 void read_line()
@@ -475,6 +505,7 @@ int main(int argc, char **argv)
     });
     app.root().add_command("bitmap", "bitmap save and read").on_run([] { demo::bitmap(); });
     app.root().add_command("backtrace", "print a backtrace").on_run([] { demo::backtrace(); });
+    app.root().add_command("crash", "crash under a crash handler that writes a report").on_run([] { demo::crash(); });
 
 #if defined(__SIHD_EMSCRIPTEN__)
     app.root().add_command("readline", "read a line from stdin").on_run([] { demo::read_line(); });

@@ -2,11 +2,11 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/sys/Process.hpp>
-#include <sihd/sys/fs.hpp>
 #include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+
+#include "userns_child.hpp"
 
 namespace test
 {
@@ -98,20 +98,16 @@ TEST_F(TestNs, test_id)
 
 TEST_F(TestNs, test_unshare_and_setns)
 {
-    auto apparmor_restrict = fs::read_all("/proc/sys/kernel/apparmor_restrict_unprivileged_userns");
-    if (apparmor_restrict && apparmor_restrict->starts_with('1'))
-        GTEST_SKIP() << "user namespaces confined by apparmor";
+    auto user_before = ns::id(ns::Type::user);
+    auto uts_before = ns::id(ns::Type::uts);
+    ASSERT_TRUE(user_before.has_value());
+    ASSERT_TRUE(uts_before.has_value());
+    constexpr std::array<ns::Type, 1> types = {ns::Type::uts};
 
-    Process proc([]() -> int {
-        auto user_before = ns::id(ns::Type::user);
-        auto uts_before = ns::id(ns::Type::uts);
-        constexpr std::array<ns::Type, 2> types = {ns::Type::user, ns::Type::uts};
-        auto unshared = ns::unshare(types);
-        if (!unshared)
-            return child_code(unshared.error().code);
+    expect_in_userns(types, [&user_before, &uts_before]() -> int {
         auto user_after = ns::id(ns::Type::user);
         auto uts_after = ns::id(ns::Type::uts);
-        if (!user_before || !uts_before || !user_after || !uts_after)
+        if (!user_after || !uts_after)
             return child_id_failed;
         if (*user_before == *user_after || *uts_before == *uts_after)
             return child_ns_unchanged;
@@ -126,17 +122,6 @@ TEST_F(TestNs, test_unshare_and_setns)
             return child_wrong_joined_ns;
         return child_ok;
     });
-    proc.set_force_fork(true);
-
-    ASSERT_TRUE(proc.execute());
-    ASSERT_TRUE(proc.wait_exit().value_or(false));
-
-    const int code = static_cast<int>(proc.return_code());
-    if (code == child_code(ErrorCode::permission_denied))
-        GTEST_SKIP() << "user namespaces denied";
-    if (code == child_code(ErrorCode::invalid_argument))
-        GTEST_SKIP() << "process is not single-threaded (qemu-user)";
-    EXPECT_EQ(code, child_ok);
 }
 
 TEST_F(TestNs, test_setns_errors)

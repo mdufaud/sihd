@@ -10,7 +10,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`core`](modules/core.md) | Devices, Channels, recording/playback, sampling, profiling | util, sys |
 | [`crypto`](modules/crypto.md) | Keys, certificates, TLS context, ciphers, digests, signatures | util, sys, openssl |
 | [`curl`](modules/curl.md) | libcurl transfer wrapper | util, curl |
-| [`net`](modules/net.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, interfaces | sys, core, crypto |
+| [`net`](modules/net.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, interfaces, routes, VPN and wifi detection, network monitoring | sys, core, crypto |
 | [`http`](modules/http.md) | HTTP/WebSocket server, HTTP client | curl, net, libwebsockets, libuv, zlib, openssl |
 | [`pcap`](modules/pcap.md) | Packet capture, injection and capture files | net, libpcap |
 | [`csv`](modules/csv.md) | CSV reading/writing | util, sys |

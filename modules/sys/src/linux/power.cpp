@@ -3,9 +3,9 @@
 #include <utility>
 
 #include <sihd/sys/fs.hpp>
+#include <sihd/sys/linux/sysfs.hpp>
 #include <sihd/sys/power.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/str.hpp>
 
 using namespace sihd::util;
 
@@ -19,31 +19,12 @@ namespace
 
 constexpr const char *power_supply_dir = "/sys/class/power_supply";
 
-std::optional<std::string> read_str(const std::string & path)
-{
-    const auto content = fs::read_all(path);
-    if (!content)
-        return std::nullopt;
-    return std::string(str::trim(*content));
-}
-
-std::optional<uint64_t> read_uint(const std::string & path)
-{
-    const auto content = fs::read_all(path);
-    if (!content)
-        return std::nullopt;
-    const auto parsed = str::convert_from_string<uint64_t>(str::trim(*content));
-    if (!parsed)
-        return std::nullopt;
-    return *parsed;
-}
-
 std::optional<uint64_t> first_uint(std::initializer_list<std::string> paths)
 {
     for (const std::string & path : paths)
     {
-        if (const auto value = read_uint(path))
-            return value;
+        if (const auto value = linux_::sysfs::read_uint(path))
+            return *value;
     }
     return std::nullopt;
 }
@@ -79,7 +60,7 @@ std::vector<std::pair<std::string, std::string>> power_supplies(std::initializer
         if (!name.empty() && name.back() == '/')
             name.remove_suffix(1);
         const std::string dir = fs::combine(power_supply_dir, name);
-        const std::optional<std::string> type = read_str(fs::combine(dir, "type"));
+        const auto type = linux_::sysfs::read(fs::combine(dir, "type"));
         if (!type)
             continue;
         for (std::string_view wanted : types)
@@ -96,16 +77,16 @@ std::vector<std::pair<std::string, std::string>> power_supplies(std::initializer
 
 std::optional<Battery> read_battery(std::string_view dir, std::string_view name)
 {
-    if (read_uint(fs::combine(dir, "present")).value_or(1) == 0)
+    if (linux_::sysfs::read_uint(fs::combine(dir, "present")).value_or(1) == 0)
         return std::nullopt;
     Battery battery;
     battery.name = name;
-    const std::optional<std::string> status = read_str(fs::combine(dir, "status"));
+    const auto status = linux_::sysfs::read(fs::combine(dir, "status"));
     battery.state = status ? parse_state(*status) : BatteryState::unknown;
     const std::optional<uint64_t> now = first_uint({fs::combine(dir, "energy_now"), fs::combine(dir, "charge_now")});
     const std::optional<uint64_t> full = first_uint({fs::combine(dir, "energy_full"), fs::combine(dir, "charge_full")});
     const std::optional<uint64_t> rate = first_uint({fs::combine(dir, "power_now"), fs::combine(dir, "current_now")});
-    const std::optional<uint64_t> capacity = read_uint(fs::combine(dir, "capacity"));
+    const auto capacity = linux_::sysfs::read_uint(fs::combine(dir, "capacity"));
     if (capacity)
         battery.capacity_percent = (uint8_t)std::min<uint64_t>(100, *capacity);
     else if (now && full && *full > 0)
@@ -145,7 +126,7 @@ std::vector<AcLine> ac_lines()
     {
         AcLine line;
         line.name = name;
-        line.online = read_uint(fs::combine(dir, "online")).value_or(0) != 0;
+        line.online = linux_::sysfs::read_uint(fs::combine(dir, "online")).value_or(0) != 0;
         ret.push_back(std::move(line));
     }
     return ret;

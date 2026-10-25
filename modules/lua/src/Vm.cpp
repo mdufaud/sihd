@@ -1,6 +1,8 @@
 #include <fmt/core.h>
 
 #include <sihd/lua/Vm.hpp>
+#include <sihd/lua/checked.hpp>
+#include <sihd/util/Error.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 
@@ -50,8 +52,62 @@ void unregister_gil_universe(LuaGil *gil)
     std::erase_if(g_map_gil, [gil](const auto & pair) { return pair.second == gil; });
 }
 
+// luabridge throws on an unregistered class: its Stack must not be asked before the class exists
+bool error_class_registered(lua_State *state)
+{
+    lua_rawgetp(state, LUA_REGISTRYINDEX, luabridge::detail::getClassRegistryKey<Error>());
+    const bool registered = lua_istable(state, -1);
+    lua_pop(state, 1);
+    return registered;
+}
+
+void register_error_class(lua_State *state)
+{
+    luabridge::getGlobalNamespace(state)
+        .beginNamespace("sihd")
+        .beginClass<Error>("Error")
+        .addProperty(
+            "code",
+            +[](const Error *self) { return static_cast<int>(self->code); })
+        .addProperty(
+            "message",
+            +[](const Error *self) { return self->message; })
+        .addFunction("retryable", &Error::retryable)
+        .addFunction(
+            "__tostring",
+            +[](const Error *self) { return self->message; })
+        .endClass()
+        .beginNamespace("ErrorCode")
+        .addVariable("none", ErrorCode::none)
+        .addVariable("unknown", ErrorCode::unknown)
+        .addVariable("invalid_argument", ErrorCode::invalid_argument)
+        .addVariable("not_found", ErrorCode::not_found)
+        .addVariable("permission_denied", ErrorCode::permission_denied)
+        .addVariable("timeout", ErrorCode::timeout)
+        .addVariable("would_block", ErrorCode::would_block)
+        .addVariable("interrupted", ErrorCode::interrupted)
+        .addVariable("out_of_memory", ErrorCode::out_of_memory)
+        .addVariable("io_error", ErrorCode::io_error)
+        .addVariable("not_supported", ErrorCode::not_supported)
+        .addVariable("already_exists", ErrorCode::already_exists)
+        .addVariable("not_initialized", ErrorCode::not_initialized)
+        .addVariable("closed", ErrorCode::closed)
+        .addVariable("overflow", ErrorCode::overflow)
+        .endNamespace()
+        .endNamespace();
+}
+
 Error pop_lua_error(ErrorCode code, lua_State *state)
 {
+    if (error_class_registered(state))
+    {
+        if (auto raised = luabridge::Stack<Error>::get(state, -1))
+        {
+            Error error = *raised;
+            lua_pop(state, 1);
+            return error;
+        }
+    }
     const char *msg = lua_tostring(state, -1);
     lua_pop(state, 1);
     return Error(code, msg == nullptr ? "unknown lua error" : msg);
@@ -67,6 +123,15 @@ Result<void> do_chunk(lua_State *state, int load_status, ErrorCode load_code)
 }
 
 } // namespace
+
+int push_error(lua_State *state, const Error & error)
+{
+    if (!error_class_registered(state))
+        register_error_class(state);
+    if (!luabridge::Stack<Error>::push(state, error))
+        lua_pushlstring(state, error.message.data(), error.message.size());
+    return -1;
+}
 
 Vm::Vm(): _state_ownership(false), _state_ptr(nullptr)
 {

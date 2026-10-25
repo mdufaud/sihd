@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstring>
 
+#include <fmt/format.h>
+
 #include <sihd/net/ip.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/endian.hpp>
@@ -198,6 +200,19 @@ std::string to_str(const in6_addr *addr_in)
 {
     char buffer[INET6_ADDRSTRLEN] = {0};
     return inet_ntop(AF_INET6, (const void *)(addr_in), buffer, INET6_ADDRSTRLEN);
+}
+
+std::string mac_str(std::span<const uint8_t> bytes)
+{
+    if (bytes.size() < 6)
+        return "";
+    return fmt::format("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                       bytes[0],
+                       bytes[1],
+                       bytes[2],
+                       bytes[3],
+                       bytes[4],
+                       bytes[5]);
 }
 
 bool is_private_ipv4(uint32_t addr)

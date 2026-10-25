@@ -12,13 +12,13 @@ os.remove(archive) -- start from a fresh archive path
 
 -- write an archive with a directory and a file taken from the filesystem
 local writer = zip.ZipFile()
-assert(writer:open(archive))
+writer:open(archive)
 assert(writer:is_open())
-assert(writer:comment_archive("lua archive"))
-assert(writer:add_dir("data"))
-assert(writer:add_file_from_fs("data/hello.txt", src_path))
+writer:comment_archive("lua archive")
+writer:add_dir("data")
+writer:add_file_from_fs("data/hello.txt", src_path)
 assert(writer:count_entries() == 2)
-assert(writer:close())
+writer:close()
 
 -- namespace helper: list entries of the saved archive
 local entries = zip.list_entries(archive)
@@ -32,7 +32,7 @@ assert(names["data/hello.txt"] ~= nil)
 
 -- reopen read-only and read the file content back
 local reader = zip.ZipFile()
-assert(reader:open(archive, true))
+reader:open(archive, true)
 assert(reader:is_open())
 assert(reader:archive_comment() == "lua archive")
 
@@ -44,10 +44,14 @@ end
 assert(walked["data/"] ~= nil)
 assert(walked["data/hello.txt"] ~= nil)
 
-assert(reader:load_entry("data/"))
+reader:load_entry("data/")
 assert(reader:is_entry_directory())
+local ok, bad_index = pcall(reader.load_entry, reader, 0)
+assert(not ok)
+assert(bad_index.code == sihd.ErrorCode.invalid_argument)
+assert(bad_index.message == "zip: entry index is 1-based")
 
-assert(reader:load_entry("data/hello.txt"))
+reader:load_entry("data/hello.txt")
 assert(reader:is_entry_loaded())
 assert(not reader:is_entry_directory())
 assert(reader:entry_name() == "data/hello.txt")
@@ -59,7 +63,7 @@ reader:close()
 -- namespace unzip: extract archive to a directory
 local dest = os.tmpname()
 os.remove(dest)
-assert(zip.unzip(archive, dest))
+zip.unzip(archive, dest)
 local extracted = assert(io.open(dest .. "/data/hello.txt", "r"))
 assert(extracted:read("*a") == content)
 extracted:close()

@@ -1,3 +1,4 @@
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -51,7 +52,7 @@ TEST_F(TestFileWatcher, test_watch_renamed_file)
         ASSERT_TRUE(file);
         file << "data";
     }
-    FileWatcher watcher(path, 1000);
+    FileWatcher watcher(path, std::chrono::seconds(1));
     std::filesystem::rename(native_path, native_renamed);
     EXPECT_TRUE(watcher.run());
     EXPECT_FALSE(watcher.events().empty());
@@ -76,7 +77,7 @@ TEST_F(TestFileWatcher, test_watch_separate_buffers)
     ASSERT_TRUE(second);
     FileWatcher watcher;
 
-    watcher.set_run_timeout(1000);
+    watcher.set_run_timeout(std::chrono::seconds(1));
     ASSERT_TRUE(watcher.watch(first.path()));
     ASSERT_TRUE(watcher.watch(second.path()));
     ASSERT_TRUE(fs::write(fs::combine(first.path(), "first.txt"), "first"));

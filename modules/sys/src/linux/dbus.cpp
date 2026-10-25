@@ -2,8 +2,6 @@
 
 #if defined(__SIHD_LINUX__)
 
-# include <algorithm>
-# include <limits>
 # include <string>
 # include <type_traits>
 # include <utility>
@@ -62,11 +60,6 @@ bool is_container_type(int type)
 {
     return type == DBUS_TYPE_ARRAY || type == DBUS_TYPE_STRUCT || type == DBUS_TYPE_VARIANT
            || type == DBUS_TYPE_DICT_ENTRY;
-}
-
-int timeout_ms(Duration timeout)
-{
-    return static_cast<int>(std::min<time::UnixTime>(timeout.milliseconds(), std::numeric_limits<int>::max()));
 }
 
 Result<void> validate_names(const std::string & path, const std::string & interface, const std::string & member)
@@ -551,7 +544,7 @@ Result<Message> Message::call(Connection & connection, Duration timeout) const
     dbus_error_init(&dbus_error);
     ::DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection._impl->connection,
                                                                      _impl->message,
-                                                                     timeout_ms(timeout),
+                                                                     timeout.milliseconds_int(),
                                                                      &dbus_error);
     if (reply == nullptr)
         return std::unexpected(dbus_error_take(dbus_error));
@@ -595,7 +588,7 @@ Result<std::optional<Message>> Message::receive(Connection & connection, Duratio
         const Timestamp now = clock.now();
         if (now >= deadline)
             return std::nullopt;
-        if (impl->poll.poll(timeout_ms(Duration(deadline - now))) < 0)
+        if (impl->poll.poll(Duration(deadline - now).milliseconds_int()) < 0)
             return std::unexpected(Error(io_error, "could not poll the dbus connection"));
         auto woken = impl->wake.read();
         SIHD_UNEXPECTED_RETURN(woken);

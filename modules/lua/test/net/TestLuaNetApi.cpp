@@ -26,4 +26,17 @@ TEST_F(TestLuaNetApi, test_luanet_base)
     this->do_script("test/net/lua/test_net.lua");
 }
 
+TEST_F(TestLuaNetApi, test_luanet_uncaught_error_keeps_its_code)
+{
+    LuaUtilApi::load_base(_vm);
+    LuaCoreApi::load(_vm);
+    LuaNetApi::load_base(_vm);
+
+    auto ran = _vm.do_string("sihd.net.wifi.link('sihd-no-such-interface')");
+
+    ASSERT_FALSE(ran.has_value());
+    EXPECT_EQ(ran.error().code, ErrorCode::not_found);
+    EXPECT_EQ(ran.error().message, "no interface named sihd-no-such-interface");
+}
+
 } // namespace test

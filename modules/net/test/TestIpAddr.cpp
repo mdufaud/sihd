@@ -1,7 +1,11 @@
 #include <sys/types.h>
 
+#include <array>
 #include <bit>
+#include <cstdint>
 #include <cstring>
+#include <span>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -505,6 +509,43 @@ TEST_F(TestIpAddr, test_dns_lookup_error_and_dump)
     const std::string dump = dns_result->dump();
     EXPECT_NE(dump.find("host: localhost"), std::string::npos);
     EXPECT_NE(dump.find("ipv"), std::string::npos);
+}
+
+TEST_F(TestIpAddr, test_ipaddr_from_bytes_ipv4)
+{
+    const std::array<uint8_t, 4> bytes = {192, 0, 2, 7};
+
+    const IpAddr addr = IpAddr::from_bytes(AF_INET, bytes);
+
+    EXPECT_EQ(addr.str(), "192.0.2.7");
+    EXPECT_EQ(addr.bytes(), std::vector<uint8_t>({192, 0, 2, 7}));
+}
+
+TEST_F(TestIpAddr, test_ipaddr_from_bytes_ipv6)
+{
+    const std::array<uint8_t, 16> bytes = {0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01};
+
+    const IpAddr addr = IpAddr::from_bytes(AF_INET6, bytes);
+
+    EXPECT_EQ(addr.str(), "2001:db8::1");
+    EXPECT_EQ(addr.bytes(), std::vector<uint8_t>(bytes.begin(), bytes.end()));
+}
+
+TEST_F(TestIpAddr, test_ipaddr_from_bytes_refuses_mismatched_size)
+{
+    const std::array<uint8_t, 4> bytes = {192, 0, 2, 7};
+
+    EXPECT_TRUE(IpAddr::from_bytes(AF_INET6, bytes).empty());
+    EXPECT_TRUE(IpAddr::from_bytes(AF_INET, std::span(bytes).first(3)).empty());
+    EXPECT_TRUE(IpAddr().bytes().empty());
+}
+
+TEST_F(TestIpAddr, test_ip_mac_str)
+{
+    const std::array<uint8_t, 8> bytes = {0x02, 0x0a, 0xbc, 0x00, 0xff, 0x01, 0x99, 0x99};
+
+    EXPECT_EQ(ip::mac_str(bytes), "02:0A:BC:00:FF:01");
+    EXPECT_EQ(ip::mac_str(std::span(bytes).first(5)), "");
 }
 
 } // namespace test

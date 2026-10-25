@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -53,6 +54,8 @@ class IpAddr
         bool operator==(const IpAddr & other) const;
 
         static IpAddr localhost(int port, bool ipv6 = false);
+        // raw in_addr or in6_addr bytes of the family: empty when the size does not match it
+        static IpAddr from_bytes(int family, std::span<const uint8_t> bytes);
 
         void set_hostname(std::string_view hostname);
 
@@ -64,6 +67,7 @@ class IpAddr
         const struct sockaddr & addr() const;
         const struct sockaddr_in & addr4() const;
         const struct sockaddr_in6 & addr6() const;
+        std::vector<uint8_t> bytes() const;
         size_t addr_len() const;
         uint16_t port() const;
 

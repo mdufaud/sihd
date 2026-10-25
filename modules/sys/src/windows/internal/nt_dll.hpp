@@ -11,7 +11,9 @@ inline void *nt_dll_symbol(const char *dll, const char *symbol)
 {
     HMODULE mod = GetModuleHandleA(dll);
     if (mod == nullptr)
-        mod = LoadLibraryA(dll);
+        mod = LoadLibraryExA(dll, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
+    if (mod == nullptr)
+        return nullptr;
     return (void *)GetProcAddress(mod, symbol);
 }
 

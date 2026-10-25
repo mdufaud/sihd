@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/lua/checked.hpp>
 #include <sihd/sys/console.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/AService.hpp>
@@ -25,7 +26,7 @@
 
 #define DECLARE_ARRAY_USERTYPE(ArrType, PrimitiveType)                                                                 \
     .deriveClass<ArrType, IArray>(#ArrType)                                                                            \
-        .addStaticFunction("new", &array_lua_new<PrimitiveType>)                                                       \
+        .addStaticFunction("new", checked<&array_lua_new<PrimitiveType>>)                                                       \
         .addConstructor<void (*)()>()                                                                                  \
         .addFunction("clone", &ArrType::clone)                                                                         \
         .addFunction("push_back", &array_lua_push_back<PrimitiveType>)                                                 \
@@ -70,7 +71,7 @@ class LuaServiceObserver: public IHandler<ServiceController *>
 };
 
 template <typename T>
-Array<T> array_lua_new(luabridge::LuaRef ref, lua_State *state)
+Result<Array<T>> array_lua_new(luabridge::LuaRef ref)
 {
     Array<T> array;
     if constexpr (std::is_same_v<T, char>)
@@ -81,15 +82,38 @@ Array<T> array_lua_new(luabridge::LuaRef ref, lua_State *state)
             return array;
         }
     }
-    if (ref.isTable())
-    {
-        array.reserve(ref.length());
-        for (const auto & pair : luabridge::pairs(ref))
-            array.push_back(T(pair.second));
-    }
-    else
-        luaL_error(state, "Array new argument must be a table");
+    if (ref.isTable() == false)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "Array new argument must be a table"));
+    array.reserve(ref.length());
+    for (const auto & pair : luabridge::pairs(ref))
+        array.push_back(T(pair.second));
     return array;
+}
+
+// every C++ local dies in here: the factory raises from a frame that only holds the node pointer
+template <typename T>
+int new_node(lua_State *state, T *& node)
+{
+    auto name = luabridge::Stack<std::string>::get(state, 2);
+    if (!name)
+        return push_error(state, Error(ErrorCode::invalid_argument, "argument 1: {}", name.message()));
+    Node *parent = nullptr;
+    if (!lua_isnoneornil(state, 3))
+    {
+        auto parent_arg = luabridge::Stack<Node *>::get(state, 3);
+        if (!parent_arg)
+            return push_error(state, Error(ErrorCode::invalid_argument, "argument 2: {}", parent_arg.message()));
+        parent = *parent_arg;
+    }
+    auto created = std::make_unique<T>(*name);
+    if (parent != nullptr)
+    {
+        auto added = parent->add_child(created.get(), false);
+        if (!added)
+            return push_error(state, added.error());
+    }
+    node = created.release();
+    return 0;
 }
 
 template <typename T>
@@ -301,7 +325,7 @@ void LuaUtilApi::load_threading(Vm & vm)
          */
         .deriveClass<LuaScheduler, Named>("Scheduler")
         .addConstructorFrom<SmartNodePtr<LuaScheduler>, void(const std::string &, Node *)>()
-        .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<LuaScheduler>)
+        .addFunction("set_conf", checked<&LuaUtilApi::configurable_set_conf<LuaScheduler>>)
         .addFunction("is_running", static_cast<bool (LuaScheduler::*)() const>(&Scheduler::is_running))
         .addFunction("pause", static_cast<void (LuaScheduler::*)()>(&Scheduler::pause))
         .addFunction("resume", static_cast<void (LuaScheduler::*)()>(&Scheduler::resume))
@@ -343,13 +367,14 @@ void LuaUtilApi::load_threading(Vm & vm)
                      }))
         .addFunction(
             "add_task",
-            +[](LuaScheduler *self, luabridge::LuaRef tbl, lua_State *state) {
+            checked<+[](LuaScheduler *self, luabridge::LuaRef tbl) -> Result<void> {
                 if (tbl.isTable() == false)
-                    luaL_error(state, "add_task argument must be a table");
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "add_task argument must be a table"));
 
                 luabridge::LuaRef lua_fun = tbl["task"];
                 if (lua_fun.isFunction() == false)
-                    luaL_error(state, "add_task table at 'task' must contain a function");
+                    return std::unexpected(
+                        Error(ErrorCode::invalid_argument, "add_task table at 'task' must contain a function"));
 
                 Timestamp timestamp_to_run_at(0);
                 luabridge::LuaRef run_at = tbl["run_at"];
@@ -372,7 +397,8 @@ void LuaUtilApi::load_threading(Vm & vm)
                 {
                     luabridge::TypeResult<LatenessPolicy> policy_res = late_policy_ref.cast<LatenessPolicy>();
                     if (static_cast<bool>(policy_res) == false)
-                        luaL_error(state, "add_task table at 'late_policy' is not a valid LatenessPolicy");
+                        return std::unexpected(Error(ErrorCode::invalid_argument,
+                                                     "add_task table at 'late_policy' is not a valid LatenessPolicy"));
                     late_policy = policy_res.value();
                 }
 
@@ -385,7 +411,8 @@ void LuaUtilApi::load_threading(Vm & vm)
                 {
                     self->add_lua_task(task_ptr);
                 }
-            })
+                return {};
+            }>)
         .endClass()
         /**
          * Waitable
@@ -687,10 +714,7 @@ void LuaUtilApi::load_tools(Vm & vm)
         .addFunction("id_str", thread::id_str)
         .addFunction(
             "set_name",
-            +[](const std::string & name) {
-                auto res = thread::set_name(name);
-                return !SIHD_UNEXPECTED_LOG(res);
-            })
+            checked<+[](const std::string & name) { return thread::set_name(name); }>)
         .addFunction("name", &thread::name)
         .endNamespace()
         .beginNamespace("str")
@@ -797,20 +821,9 @@ void LuaUtilApi::load_base(Vm & vm)
         .beginClass<Named>("Named")
         .addFactory(
             +[](lua_State *L) -> Named * {
-                std::string name = *luabridge::Stack<std::string>::get(L, 2);
-                Node *parent = nullptr;
-                if (!lua_isnoneornil(L, 3))
-                    parent = *luabridge::Stack<Node *>::get(L, 3);
-                Named *node = new Named(name);
-                if (parent != nullptr)
-                {
-                    auto added = parent->add_child(node, false);
-                    if (SIHD_UNEXPECTED_LOG(added))
-                    {
-                        delete node;
-                        luaL_error(L, "could not add child '%s' to parent", name.c_str());
-                    }
-                }
+                Named *node = nullptr;
+                if (new_node(L, node) < 0)
+                    lua_error(L);
                 return node;
             },
             +[](Named *node) { delete node; })
@@ -844,20 +857,9 @@ void LuaUtilApi::load_base(Vm & vm)
         .deriveClass<Node, Named>("Node")
         .addFactory(
             +[](lua_State *L) -> Node * {
-                std::string name = *luabridge::Stack<std::string>::get(L, 2);
-                Node *parent = nullptr;
-                if (!lua_isnoneornil(L, 3))
-                    parent = *luabridge::Stack<Node *>::get(L, 3);
-                Node *node = new Node(name);
-                if (parent != nullptr)
-                {
-                    auto added = parent->add_child(node, false);
-                    if (SIHD_UNEXPECTED_LOG(added))
-                    {
-                        delete node;
-                        luaL_error(L, "could not add child '%s' to parent", name.c_str());
-                    }
-                }
+                Node *node = nullptr;
+                if (new_node(L, node) < 0)
+                    lua_error(L);
                 return node;
             },
             +[](Node *node) { delete node; })
@@ -866,12 +868,10 @@ void LuaUtilApi::load_base(Vm & vm)
             +[](Node *self, const std::string & name) -> Named * { return self->get_child(name); })
         .addFunction(
             "add_child",
-            +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })
+            checked<+[](Node *self, Named *child) { return self->add_child(child, false); }>)
         .addFunction(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) {
-                return !SIHD_UNEXPECTED_LOG(self->add_child(name, child, false));
-            })
+            checked<+[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); }>)
         .addFunction("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .addFunction("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .addFunction("is_link", &Node::is_link)
@@ -880,7 +880,7 @@ void LuaUtilApi::load_base(Vm & vm)
         .addFunction("resolve_link", &Node::resolve_link)
         .addFunction(
             "resolve_links",
-            +[](Node *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->resolve_links()); })
+            checked<+[](Node *self) { return self->resolve_links(); }>)
         .addFunction("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .addFunction("tree_desc_str", &Node::tree_desc_str)
         .addFunction("children", &Node::children)
@@ -946,12 +946,9 @@ void LuaUtilApi::load_base(Vm & vm)
             +[](ServiceController *self) -> std::string { return ServiceController::state_str(self->state()); })
         .addFunction(
             "add_observer",
-            +[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) {
+            checked<+[](ServiceController *self, luabridge::LuaRef fun, lua_State *state) -> Result<void> {
                 if (fun.isFunction() == false)
-                {
-                    luaL_error(state, "add_observer: expected a function");
-                    return;
-                }
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "add_observer: expected a function"));
                 auto obs = std::make_unique<LuaServiceObserver>(state, fun);
                 LuaServiceObserver *ptr = obs.get();
                 {
@@ -960,7 +957,8 @@ void LuaUtilApi::load_base(Vm & vm)
                 }
                 LuaGilRelease release(state);
                 self->add_observer(ptr);
-            })
+                return {};
+            }>)
         .addFunction(
             "remove_observers",
             +[](ServiceController *self, lua_State *state) {

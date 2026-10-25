@@ -3,13 +3,12 @@
 
 #include <array>
 #include <string>
+#include <userns_child.hpp>
 
 #include <gtest/gtest.h>
 
 #include <sihd/net/Socket.hpp>
 #include <sihd/pcap/Sniffer.hpp>
-#include <sihd/sys/Process.hpp>
-#include <sihd/sys/fs.hpp>
 #include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
@@ -35,12 +34,6 @@ constexpr int child_inject_failed = 4;
 constexpr int child_wrong_inject_size = 5;
 constexpr int child_no_packet = 6;
 constexpr int child_wrong_frame = 7;
-constexpr int child_error_base = 10;
-
-int child_code(ErrorCode code)
-{
-    return child_error_base + static_cast<int>(code);
-}
 
 Result<void> set_loopback_up()
 {
@@ -110,28 +103,9 @@ TEST_F(TestSnifferInject, test_inject_not_activated)
 
 TEST_F(TestSnifferInject, test_inject_loopback)
 {
-    auto apparmor_restrict = fs::read_all("/proc/sys/kernel/apparmor_restrict_unprivileged_userns");
-    if (apparmor_restrict && apparmor_restrict->starts_with('1'))
-        GTEST_SKIP() << "user namespaces confined by apparmor";
+    constexpr std::array<ns::Type, 1> types = {ns::Type::net};
 
-    Process proc([]() -> int {
-        constexpr std::array<ns::Type, 2> types = {ns::Type::user, ns::Type::net};
-        auto unshared = ns::unshare(types);
-        if (!unshared)
-            return child_code(unshared.error().code);
-        return inject_on_loopback();
-    });
-    proc.set_force_fork(true);
-
-    ASSERT_TRUE(proc.execute());
-    ASSERT_TRUE(proc.wait_exit().value_or(false));
-
-    const int code = static_cast<int>(proc.return_code());
-    if (code == child_code(ErrorCode::permission_denied))
-        GTEST_SKIP() << "user namespaces denied";
-    if (code == child_code(ErrorCode::invalid_argument))
-        GTEST_SKIP() << "process is not single-threaded (qemu-user)";
-    EXPECT_EQ(code, child_ok);
+    expect_in_userns(types, inject_on_loopback);
 }
 
 } // namespace test

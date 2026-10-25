@@ -13,6 +13,7 @@
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
+#include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/Pinger.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
@@ -23,6 +24,8 @@
 #include <sihd/net/UdpSender.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/net/ip.hpp>
+#include <sihd/net/route.hpp>
 #include <sihd/net/utils.hpp>
+#include <sihd/net/wifi.hpp>
 
 #endif

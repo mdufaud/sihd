@@ -207,6 +207,41 @@ IpAddr IpAddr::localhost(int port, bool ipv6)
     return {ipv6 ? "::1" : "127.0.0.1", port};
 }
 
+IpAddr IpAddr::from_bytes(int family, std::span<const uint8_t> bytes)
+{
+    if (family == AF_INET && bytes.size() == sizeof(in_addr))
+    {
+        sockaddr_in addr {};
+        addr.sin_family = AF_INET;
+        memcpy(&addr.sin_addr, bytes.data(), sizeof(in_addr));
+        return IpAddr(addr);
+    }
+    if (family == AF_INET6 && bytes.size() == sizeof(in6_addr))
+    {
+        sockaddr_in6 addr {};
+        addr.sin6_family = AF_INET6;
+        memcpy(&addr.sin6_addr, bytes.data(), sizeof(in6_addr));
+        return IpAddr(addr);
+    }
+    return {};
+}
+
+std::vector<uint8_t> IpAddr::bytes() const
+{
+    std::vector<uint8_t> bytes;
+    if (this->is_ipv4())
+    {
+        bytes.resize(sizeof(in_addr));
+        memcpy(bytes.data(), &_addr.sockaddr_in.sin_addr, sizeof(in_addr));
+    }
+    else if (this->is_ipv6())
+    {
+        bytes.resize(sizeof(in6_addr));
+        memcpy(bytes.data(), &_addr.sockaddr_in6.sin6_addr, sizeof(in6_addr));
+    }
+    return bytes;
+}
+
 Result<void> IpAddr::set_subnet_mask(const std::string & mask)
 {
     struct sockaddr_in sockaddr_mask;

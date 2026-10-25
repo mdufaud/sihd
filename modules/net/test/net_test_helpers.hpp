@@ -1,7 +1,28 @@
 #ifndef __SIHD_NET_TEST_HELPERS_HPP__
 #define __SIHD_NET_TEST_HELPERS_HPP__
 
+#include <optional>
+
+#include <sihd/net/NetInterface.hpp>
 #include <sihd/sys/platform.hpp>
+
+namespace test
+{
+
+inline std::optional<sihd::net::NetInterface> find_loopback()
+{
+    auto interfaces = sihd::net::NetInterface::get_all_interfaces();
+    if (!interfaces)
+        return std::nullopt;
+    for (const auto & [name, netif] : *interfaces)
+    {
+        if (netif.kind() == sihd::net::NetInterface::Kind::loopback)
+            return netif;
+    }
+    return std::nullopt;
+}
+
+} // namespace test
 
 #if !defined(__SIHD_WINDOWS__)
 

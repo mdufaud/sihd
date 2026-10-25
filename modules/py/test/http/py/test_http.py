@@ -130,9 +130,13 @@ assert(r3 is not None)
 assert(r3.text() == "hello reuse")
 assert(reuse.new_connection_count() == 0)
 
-# a failed request yields None; the error is logged once at the binding boundary
-failed = reuse.get("localhost:19999/api/hello")
-assert(failed is None)
+# a failed request raises sihd.Error, the curl reason varies across libcurl versions
+try:
+    reuse.get("localhost:19999/api/hello")
+    assert(False)
+except sihd.Error as failed:
+    assert(failed.code == sihd.ErrorCode.io_error)
+    assert(str(failed).startswith("perform 'localhost:19999/api/hello': "))
 
 recovered = reuse.get("localhost:3012/api/hello")
 assert(recovered is not None)

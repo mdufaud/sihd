@@ -7,6 +7,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/build.hpp>
 
 #define SIHD_FACTORY_PREFIX "sihd_factory_"
 
@@ -24,6 +25,14 @@ namespace
 
 std::mutex g_libs_mutex;
 std::unordered_map<std::string, DynLib> g_loaded_libs;
+
+// mingw builds drop the lib prefix of shared libraries
+std::string library_file(const std::string & libname)
+{
+    if constexpr (build::is_windows)
+        return libname + ".dll";
+    return "lib" + libname + ".so";
+}
 
 Result<Named *> create_from_factory(const std::string & factory_name,
                                     const std::string & origin,
@@ -52,7 +61,7 @@ Result<Named *> PluginLoader::create_from_library(const std::string & libname,
     DynLib & lib = g_loaded_libs[libname];
     if (lib.is_open() == false)
     {
-        if (auto opened = lib.open(libname); opened.has_value() == false)
+        if (auto opened = lib.open(library_file(libname)); opened.has_value() == false)
         {
             g_loaded_libs.erase(libname);
             SIHD_UNEXPECTED_RETURN(opened);

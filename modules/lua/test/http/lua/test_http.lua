@@ -75,7 +75,8 @@ assert(s2.content == "hello stateless")
 -- tables are rejected as request bodies instead of being stringified
 local ok, err = pcall(function() http.post("localhost:3011/api/echo", {}) end)
 assert(not ok)
-assert(tostring(err):find("body must be a string") ~= nil)
+assert(err.code == sihd.ErrorCode.invalid_argument)
+assert(err.message == "http: request body must be a string or nil")
 
 -- stateless helpers take per request options
 local opt = http.RequestOptions()
@@ -135,20 +136,25 @@ local nowhere = http.options("localhost:3011/api/nope", opt)
 assert(nowhere ~= nil)
 assert(nowhere.status == 404)
 
--- a failed request yields nil; the error is logged once at the binding boundary
-local failed = nav:get("localhost:19999/api/hello")
-assert(failed == nil)
+-- a failed request raises
+local failed_ok, failed = pcall(nav.get, nav, "localhost:19999/api/hello")
+assert(not failed_ok)
+-- the curl reason after the prefix varies across libcurl versions
+assert(failed.code == sihd.ErrorCode.io_error)
+assert(failed.message:sub(1, 37) == "perform 'localhost:19999/api/hello': ")
 
 local recovered = nav:get("localhost:3011/api/hello")
 assert(recovered ~= nil)
 assert(recovered.status == 200)
 
 -- an unknown proxy type is refused instead of silently defaulting
-local proxy_ok = pcall(function()
+local proxy_ok, proxy_err = pcall(function()
     local bad = http.RequestOptions()
     bad:set_proxy("localhost:1", "socks9")
 end)
 assert(not proxy_ok)
+assert(proxy_err.code == sihd.ErrorCode.invalid_argument)
+assert(proxy_err.message == "http: unknown proxy type 'socks9'")
 
 -- download writes the response body to disk, put_file streams a file as the body
 local download_path = "/tmp/sihd-lua-download.txt"

@@ -1,13 +1,12 @@
-#include <stdexcept>
 #include <string>
 
 // clang-format off
 #include <sihd/lua/zip/LuaZipApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
 #include <luabridge3/LuaBridge/Vector.h>
+#include <sihd/lua/checked.hpp>
 // clang-format on
 
-#include <sihd/util/Logger.hpp>
 #include <sihd/zip/ZipFile.hpp>
 #include <sihd/zip/zip.hpp>
 
@@ -15,7 +14,7 @@ namespace sihd::lua
 {
 
 using namespace sihd::zip;
-SIHD_LOGGER;
+using namespace sihd::util;
 
 void LuaZipApi::load_all(Vm & vm)
 {
@@ -32,34 +31,25 @@ void LuaZipApi::load_base(Vm & vm)
             +[](const std::string & archive) -> std::vector<std::string> { return sihd::zip::list_entries(archive); })
         .addFunction(
             "zip",
-            +[](const std::string & root_dir, const std::string & archive) -> bool {
-                return !SIHD_UNEXPECTED_LOG(sihd::zip::zip(root_dir, archive));
-            })
+            checked<+[](const std::string & root_dir, const std::string & archive) { return sihd::zip::zip(root_dir, archive); }>)
         .addFunction(
             "unzip",
-            +[](const std::string & archive, const std::string & dest) -> bool {
-                return !SIHD_UNEXPECTED_LOG(sihd::zip::unzip(archive, dest));
-            })
+            checked<+[](const std::string & archive, const std::string & dest) { return sihd::zip::unzip(archive, dest); }>)
         .beginClass<ZipFile>("ZipFile")
         .addConstructor<void (*)()>()
         .addFunction(
             "open",
-            +[](ZipFile *self, const std::string & path, luabridge::LuaRef read_only, luabridge::LuaRef strict)
-                -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->open(path,
+            checked<+[](ZipFile *self, const std::string & path, luabridge::LuaRef read_only, luabridge::LuaRef strict) { return self->open(path,
                                                        read_only.isNil() ? false : static_cast<bool>(read_only),
-                                                       strict.isNil() ? false : static_cast<bool>(strict)));
-            })
+                                                       strict.isNil() ? false : static_cast<bool>(strict)); }>)
         .addFunction("is_open", &ZipFile::is_open)
         .addFunction(
             "close",
-            +[](ZipFile *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->close()); })
+            checked<+[](ZipFile *self) { return self->close(); }>)
         .addFunction("discard", &ZipFile::discard)
         .addFunction(
             "set_password",
-            +[](ZipFile *self, const std::string & password) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->set_password(password));
-            })
+            checked<+[](ZipFile *self, const std::string & password) { return self->set_password(password); }>)
         .addFunction("no_encrypt", &ZipFile::no_encrypt)
         .addFunction("encrypt_in_aes_128", &ZipFile::encrypt_in_aes_128)
         .addFunction("encrypt_in_aes_192", &ZipFile::encrypt_in_aes_192)
@@ -69,32 +59,25 @@ void LuaZipApi::load_base(Vm & vm)
             +[](ZipFile *self) -> std::string { return std::string(self->archive_comment()); })
         .addFunction(
             "comment_archive",
-            +[](ZipFile *self, const std::string & comment) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->comment_archive(comment));
-            })
+            checked<+[](ZipFile *self, const std::string & comment) { return self->comment_archive(comment); }>)
         .addFunction("count_entries", &ZipFile::count_entries)
         .addFunction("count_original_entries", &ZipFile::count_original_entries)
         // load by index (1-based from Lua) or by name
         .addFunction(
             "load_entry",
-            +[](ZipFile *self, luabridge::LuaRef key) -> bool {
+            checked<+[](ZipFile *self, luabridge::LuaRef key) -> Result<void> {
                 if (key.isNumber())
                 {
                     const int index = static_cast<int>(key) - 1;
                     if (index < 0)
-                        throw std::invalid_argument("zip: entry index is 1-based");
-                    return !SIHD_UNEXPECTED_LOG(self->load_entry(static_cast<size_t>(index)));
+                        return std::unexpected(Error(ErrorCode::invalid_argument, "zip: entry index is 1-based"));
+                    return self->load_entry(static_cast<size_t>(index)).transform([](const ZipFile::ZipEntry &) {});
                 }
-                return !SIHD_UNEXPECTED_LOG(self->load_entry(std::string(key.tostring())));
-            })
+                return self->load_entry(std::string(key.tostring())).transform([](const ZipFile::ZipEntry &) {});
+            }>)
         .addFunction(
             "read_next_entry",
-            +[](ZipFile *self) -> bool {
-                auto next = self->read_next_entry();
-                if (SIHD_UNEXPECTED_LOG(next))
-                    return false;
-                return next.value();
-            })
+            checked<+[](ZipFile *self) { return self->read_next_entry(); }>)
         .addFunction("is_entry_loaded", &ZipFile::is_entry_loaded)
         .addFunction(
             "entry_name",
@@ -106,58 +89,38 @@ void LuaZipApi::load_base(Vm & vm)
         .addFunction("is_entry_directory", &ZipFile::is_entry_directory)
         .addFunction(
             "read_next",
-            +[](ZipFile *self) -> bool {
-                auto next = self->read_next();
-                if (SIHD_UNEXPECTED_LOG(next))
-                    return false;
-                return next.value();
-            })
+            checked<+[](ZipFile *self) { return self->read_next(); }>)
         .addFunction("get_read_data", &LuaUtilApi::ireader_get_read_data<ZipFile>)
         .addFunction(
             "read_entry",
-            +[](ZipFile *self, luabridge::LuaRef password) -> long {
-                auto read = self->read_entry(password.isNil() ? "" : password.tostring());
-                if (SIHD_UNEXPECTED_LOG(read))
-                    return -1;
-                return static_cast<long>(read.value());
-            })
+            checked<+[](ZipFile *self, luabridge::LuaRef password) {
+                return self->read_entry(password.isNil() ? "" : password.tostring());
+            }>)
         .addFunction(
             "dump_entry_to_fs",
-            +[](ZipFile *self, const std::string & path, luabridge::LuaRef password) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->dump_entry_to_fs(path, password.isNil() ? "" : password.tostring()));
-            })
+            checked<+[](ZipFile *self, const std::string & path, luabridge::LuaRef password) { return self->dump_entry_to_fs(path, password.isNil() ? "" : password.tostring()); }>)
         .addFunction(
             "remove_entry",
-            +[](ZipFile *self) -> bool { return !SIHD_UNEXPECTED_LOG(self->remove_entry()); })
+            checked<+[](ZipFile *self) { return self->remove_entry(); }>)
         .addFunction(
             "rename_entry",
-            +[](ZipFile *self, const std::string & name) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->rename_entry(name));
-            })
+            checked<+[](ZipFile *self, const std::string & name) { return self->rename_entry(name); }>)
         .addFunction(
             "comment_entry",
-            +[](ZipFile *self, const std::string & comment) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->comment_entry(comment));
-            })
+            checked<+[](ZipFile *self, const std::string & comment) { return self->comment_entry(comment); }>)
         // add content from filesystem (safe: no dangling buffer)
         .addFunction(
             "add_dir",
-            +[](ZipFile *self, const std::string & name) -> bool { return !SIHD_UNEXPECTED_LOG(self->add_dir(name)); })
+            checked<+[](ZipFile *self, const std::string & name) { return self->add_dir(name); }>)
         .addFunction(
             "add_from_fs",
-            +[](ZipFile *self, const std::string & name, const std::string & path) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->add_from_fs(name, path));
-            })
+            checked<+[](ZipFile *self, const std::string & name, const std::string & path) { return self->add_from_fs(name, path); }>)
         .addFunction(
             "add_dir_from_fs",
-            +[](ZipFile *self, const std::string & name, const std::string & path) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->add_dir_from_fs(name, path));
-            })
+            checked<+[](ZipFile *self, const std::string & name, const std::string & path) { return self->add_dir_from_fs(name, path); }>)
         .addFunction(
             "add_file_from_fs",
-            +[](ZipFile *self, const std::string & name, const std::string & path) -> bool {
-                return !SIHD_UNEXPECTED_LOG(self->add_file_from_fs(name, path));
-            })
+            checked<+[](ZipFile *self, const std::string & name, const std::string & path) { return self->add_file_from_fs(name, path); }>)
         .endClass()
         .endNamespace()
         .endNamespace();

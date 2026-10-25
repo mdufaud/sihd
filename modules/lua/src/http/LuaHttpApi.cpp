@@ -20,6 +20,7 @@
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/http/LuaHttpApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/lua/checked.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Result.hpp>
@@ -56,12 +57,10 @@ luabridge::LuaRef response_table_to_lua(lua_State *state, int status, std::strin
     return table;
 }
 
-// Marshals a NavigatorResponse to a Lua table so scripts never touch the move-only C++ type;
-// returns nil on failure, the error logged once here at the lua nil boundary
-luabridge::LuaRef response_to_lua(lua_State *state, Result<NavigatorResponse> && resp)
+// Marshals a NavigatorResponse to a Lua table so scripts never touch the move-only C++ type
+Result<luabridge::LuaRef> response_to_lua(lua_State *state, Result<NavigatorResponse> && resp)
 {
-    if (SIHD_UNEXPECTED_LOG(resp))
-        return luabridge::LuaRef(state, luabridge::LuaNil());
+    SIHD_UNEXPECTED_RETURN(resp);
 
     luabridge::LuaRef table = response_table_to_lua(state,
                                                     (int)resp->status(),
@@ -83,10 +82,9 @@ luabridge::LuaRef response_to_lua(lua_State *state, Result<NavigatorResponse> &&
     return table;
 }
 
-luabridge::LuaRef http_response_to_lua(lua_State *state, Result<HttpResponse> && resp)
+Result<luabridge::LuaRef> http_response_to_lua(lua_State *state, Result<HttpResponse> && resp)
 {
-    if (SIHD_UNEXPECTED_LOG(resp))
-        return luabridge::LuaRef(state, luabridge::LuaNil());
+    SIHD_UNEXPECTED_RETURN(resp);
 
     return response_table_to_lua(state, (int)resp->status(), resp->content().cpp_str(), resp->http_header());
 }
@@ -136,10 +134,11 @@ void set_options_parameter(RequestOptions & options, const std::string & name, c
     options.parameters[name] = value;
 }
 
-void set_options_proxy(RequestOptions & options, const std::string & url, luabridge::LuaRef type)
+Result<void> set_options_proxy(RequestOptions *options, const std::string & url, luabridge::LuaRef type)
 {
-    options.proxy = url;
-    options.proxy_type = to_proxy_type(type);
+    options->proxy = url;
+    options->proxy_type = to_proxy_type(type);
+    return {};
 }
 
 } // namespace
@@ -158,48 +157,34 @@ void LuaHttpApi::load_base(Vm & vm)
         .addConstructor<void (*)()>()
         .addFunction(
             "get",
-            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                return response_to_lua(state, self->get(url));
-            })
+            checked<+[](Navigator *self, const std::string & url, lua_State *state) { return response_to_lua(state, self->get(url)); }>)
         .addFunction(
             "post",
-            +[](Navigator *self, const std::string & url, luabridge::LuaRef data, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->post(url, to_body_string(data))); })
+            checked<+[](Navigator *self, const std::string & url, luabridge::LuaRef data, lua_State *state) { return response_to_lua(state, self->post(url, to_body_string(data))); }>)
         .addFunction(
             "put",
-            +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->put(url, data)); })
+            checked<+[](Navigator *self, const std::string & url, const std::string & data, lua_State *state) { return response_to_lua(state, self->put(url, data)); }>)
         .addFunction(
             "patch",
-            +[](Navigator *self, const std::string & url, const std::string & data, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->patch(url, data)); })
+            checked<+[](Navigator *self, const std::string & url, const std::string & data, lua_State *state) { return response_to_lua(state, self->patch(url, data)); }>)
         .addFunction(
             "del",
-            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                return response_to_lua(state, self->del(url));
-            })
+            checked<+[](Navigator *self, const std::string & url, lua_State *state) { return response_to_lua(state, self->del(url)); }>)
         .addFunction(
             "head",
-            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                return response_to_lua(state, self->head(url));
-            })
+            checked<+[](Navigator *self, const std::string & url, lua_State *state) { return response_to_lua(state, self->head(url)); }>)
         .addFunction(
             "options",
-            +[](Navigator *self, const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                return response_to_lua(state, self->options(url));
-            })
+            checked<+[](Navigator *self, const std::string & url, lua_State *state) { return response_to_lua(state, self->options(url)); }>)
         .addFunction(
             "post_multipart",
-            +[](Navigator *self, const std::string & url, const Multipart & multipart, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->post_multipart(url, multipart)); })
+            checked<+[](Navigator *self, const std::string & url, const Multipart & multipart, lua_State *state) { return response_to_lua(state, self->post_multipart(url, multipart)); }>)
         .addFunction(
             "download",
-            +[](Navigator *self, const std::string & url, const std::string & path, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->download(url, path)); })
+            checked<+[](Navigator *self, const std::string & url, const std::string & path, lua_State *state) { return response_to_lua(state, self->download(url, path)); }>)
         .addFunction(
             "put_file",
-            +[](Navigator *self, const std::string & url, const std::string & path, lua_State *state)
-                -> luabridge::LuaRef { return response_to_lua(state, self->put_file(url, path)); })
+            checked<+[](Navigator *self, const std::string & url, const std::string & path, lua_State *state) { return response_to_lua(state, self->put_file(url, path)); }>)
         .addFunction("new_connection_count", &Navigator::new_connection_count)
         .addFunction("set_verbose", &Navigator::set_verbose)
         .addFunction("set_follow_redirects", &Navigator::set_follow_redirects)
@@ -220,11 +205,12 @@ void LuaHttpApi::load_base(Vm & vm)
             +[](Navigator *self, const std::string & agent) { self->set_user_agent(agent); })
         .addFunction(
             "set_max_response_size",
-            +[](Navigator *self, int bytes) {
+            checked<+[](Navigator *self, int bytes) -> Result<void> {
                 if (bytes < 0)
-                    throw std::invalid_argument("http: max response size must be positive");
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "http: max response size must be positive"));
                 self->set_max_response_size(static_cast<size_t>(bytes));
-            })
+                return {};
+            }>)
         .addFunction("set_ssrf_guard", &Navigator::set_ssrf_guard)
         .addFunction(
             "set_basic_auth",
@@ -273,9 +259,10 @@ void LuaHttpApi::load_base(Vm & vm)
             +[](Navigator *self, const std::string & path) { return self->load_cookies(path).has_value(); })
         .addFunction(
             "set_proxy",
-            +[](Navigator *self, const std::string & url, luabridge::LuaRef type) {
+            checked<+[](Navigator *self, const std::string & url, luabridge::LuaRef type) -> Result<void> {
                 self->set_proxy(url, to_proxy_type(type));
-            })
+                return {};
+            }>)
         .addFunction(
             "set_proxy_auth",
             +[](Navigator *self, const std::string & user, const std::string & password) {
@@ -285,50 +272,28 @@ void LuaHttpApi::load_base(Vm & vm)
         .endClass()
         .addFunction(
             "get",
-            +[](const std::string & url, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, get(url));
-            },
-            +[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, get(url, to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, get(url, to_request_options(options_ref))); }>)
         .addFunction(
             "post",
-            +[](const std::string & url, luabridge::LuaRef data, luabridge::LuaRef options_ref, lua_State *state)
-                -> luabridge::LuaRef {
-                return http_response_to_lua(state, post(url, to_body_string(data), to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef data, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, post(url, to_body_string(data), to_request_options(options_ref))); }>)
         .addFunction(
             "put",
-            +[](const std::string & url, const std::string & path, luabridge::LuaRef options_ref, lua_State *state)
-                -> luabridge::LuaRef {
-                return http_response_to_lua(state, put(url, path, to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, const std::string & path, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, put(url, path, to_request_options(options_ref))); }>)
         .addFunction(
             "patch",
-            +[](const std::string & url, luabridge::LuaRef data, luabridge::LuaRef options_ref, lua_State *state)
-                -> luabridge::LuaRef {
-                return http_response_to_lua(state, patch(url, to_body_string(data), to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef data, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, patch(url, to_body_string(data), to_request_options(options_ref))); }>)
         .addFunction(
             "del",
-            +[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, del(url, to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, del(url, to_request_options(options_ref))); }>)
         .addFunction(
             "delete",
-            +[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, del(url, to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, del(url, to_request_options(options_ref))); }>)
         .addFunction(
             "head",
-            +[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, head(url, to_request_options(options_ref)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef options_ref, lua_State *state) { return http_response_to_lua(state, head(url, to_request_options(options_ref))); }>)
         .addFunction(
             "options",
-            +[](const std::string & url, luabridge::LuaRef req_options, lua_State *state) -> luabridge::LuaRef {
-                return http_response_to_lua(state, options(url, to_request_options(req_options)));
-            })
+            checked<+[](const std::string & url, luabridge::LuaRef req_options, lua_State *state) { return http_response_to_lua(state, options(url, to_request_options(req_options))); }>)
         .beginClass<Multipart>("Multipart")
         .addConstructor<void (*)()>()
         .addFunction(
@@ -374,7 +339,7 @@ void LuaHttpApi::load_base(Vm & vm)
             })
         .addFunction("set_header", &set_options_header)
         .addFunction("set_parameter", &set_options_parameter)
-        .addFunction("set_proxy", &set_options_proxy)
+        .addFunction("set_proxy", checked<&set_options_proxy>)
         .addFunction(
             "set_multipart",
             +[](RequestOptions *self, const Multipart & multipart) { self->multipart = multipart; })
@@ -463,16 +428,14 @@ void LuaHttpApi::load_base(Vm & vm)
             "set_entry_point",
             // The handler fires on a server worker thread: give it its own LuaThreadRunner (coroutine +
             // universe-GIL guard, like channel observers) in a shared_ptr, safe across route-table copies
-            +[](WebService *self,
-                const std::string & path,
-                luabridge::LuaRef fun,
-                luabridge::LuaRef method,
-                lua_State *state) {
+            checked<+[](WebService *self,
+                        const std::string & path,
+                        luabridge::LuaRef fun,
+                        luabridge::LuaRef method,
+                        lua_State *state) -> Result<void> {
                 if (fun.isFunction() == false)
-                {
-                    luaL_error(state, "set_entry_point: handler must be a function");
-                    return;
-                }
+                    return std::unexpected(
+                        Error(ErrorCode::invalid_argument, "set_entry_point: handler must be a function"));
                 HttpRequest::RequestType type = HttpRequest::Get;
                 if (method.isString())
                     type = HttpRequest::type_from_str(method.tostring());
@@ -490,7 +453,8 @@ void LuaHttpApi::load_base(Vm & vm)
                                                                                      &resp);
                     },
                     type);
-            })
+                return {};
+            }>)
         .endClass()
         .deriveClass<HttpServer, Node>("HttpServer")
         .addConstructorFrom<SmartNodePtr<HttpServer>, void(const std::string &, Node *)>()

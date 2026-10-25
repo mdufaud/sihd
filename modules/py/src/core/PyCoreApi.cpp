@@ -14,6 +14,8 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
 
+#include "../expected_caster.hpp"
+
 namespace sihd::py
 {
 
@@ -184,22 +186,12 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
     pybind11::class_<Device, Node, Configurable, SmartNodePtr<Device>>(m_core, "Device")
         .def(
             "find_channel",
-            +[](Device *self, const std::string & name) -> Channel * {
-                auto found = self->find_channel(name);
-                if (SIHD_UNEXPECTED_LOG(found))
-                    return nullptr;
-                return *found;
-            },
+            +[](Device *self, const std::string & name) { return self->find_channel(name); },
             pybind11::call_guard<pybind11::gil_scoped_release>(),
             pybind11::return_value_policy::reference_internal)
         .def(
             "get_channel",
-            +[](Device *self, const std::string & name) -> Channel * {
-                auto found = self->get_channel(name);
-                if (SIHD_UNEXPECTED_LOG(found))
-                    return nullptr;
-                return *found;
-            },
+            +[](Device *self, const std::string & name) { return self->get_channel(name); },
             pybind11::call_guard<pybind11::gil_scoped_release>(),
             pybind11::return_value_policy::reference_internal)
         .def("add_channel",

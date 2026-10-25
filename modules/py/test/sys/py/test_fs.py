@@ -47,18 +47,18 @@ assert(fs.normalize("/tmp/../tmp/test") == "/tmp/test")
 test_dir = fs.combine(cwd, "py_test_fs_dir")
 if fs.exists(test_dir):
     fs.remove_directory(test_dir)
-assert(fs.make_directory(test_dir))
+fs.make_directory(test_dir)
 assert(fs.is_dir(test_dir))
 assert(fs.exists(test_dir))
 assert(not fs.is_file(test_dir))
-assert(fs.remove_directory(test_dir))
+fs.remove_directory(test_dir)
 assert(not fs.exists(test_dir))
 
 # test make_directories
 nested = fs.combine(cwd, "py_test_fs_dir/nested/deep")
-assert(fs.make_directories(nested))
+fs.make_directories(nested)
 assert(fs.is_dir(nested))
-assert(fs.remove_directories(fs.combine(cwd, "py_test_fs_dir")))
+fs.remove_directories(fs.combine(cwd, "py_test_fs_dir"))
 
 # test children
 children = fs.children(cwd)
@@ -74,7 +74,7 @@ with tempfile.NamedTemporaryFile(delete=False) as f:
 assert(fs.exists(tmp_path))
 assert(fs.is_file(tmp_path))
 assert(fs.file_size(tmp_path) == 11)
-assert(fs.remove_file(tmp_path))
+fs.remove_file(tmp_path)
 assert(not fs.exists(tmp_path))
 
 print("fs tests passed")

@@ -1,3 +1,5 @@
+#include <chrono>
+
 #include <sihd/sys/FileCache.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
@@ -24,8 +26,7 @@ std::string read_file(const std::string & file_path)
 
 FileCache::FileCache()
 {
-    constexpr int run_timeout_milliseconds = 1;
-    _file_watcher.set_run_timeout(run_timeout_milliseconds); // no blocking, just check for events
+    _file_watcher.set_run_timeout(std::chrono::milliseconds(1)); // no blocking, just check for events
     _file_watcher.add_observer(this);
 }
 

@@ -25,11 +25,11 @@ int run_server(sihd::sys::App & app, TcpServer & server)
 
     Handler<BasicServerHandler *> echo_handler([](BasicServerHandler *srv) {
         for (auto & client : srv->new_clients())
-            SIHD_LOG(info, "client connected: {}", client->fd());
+            SIHD_LOG(info, "client connected: {}:{}", client->addr.str(), client->addr.port());
         for (auto & client : srv->read_activity())
         {
             if (client->disconnected || client->error)
-                SIHD_LOG(info, "client disconnected: {}", client->fd());
+                SIHD_LOG(info, "client disconnected: {}:{}", client->addr.str(), client->addr.port());
             else
                 srv->send_to_client(client, client->read_array);
         }

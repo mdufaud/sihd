@@ -11,6 +11,7 @@
 #include <sihd/core/Device.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/util/LuaUtilApi.hpp>
+#include <sihd/lua/checked.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
@@ -57,23 +58,11 @@ void LuaCoreApi::load(Vm & vm)
         .beginNamespace("sihd")
         .beginNamespace("core")
         .deriveClass<Device, Node>("Device")
-        .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<Device>)
-        .addFunction(
-            "find_channel",
-            +[](Device *self, const std::string & name) -> Channel * {
-                auto found = self->find_channel(name);
-                if (SIHD_UNEXPECTED_LOG(found))
-                    return nullptr;
-                return *found;
-            })
-        .addFunction(
-            "get_channel",
-            +[](Device *self, const std::string & name) -> Channel * {
-                auto found = self->get_channel(name);
-                if (SIHD_UNEXPECTED_LOG(found))
-                    return nullptr;
-                return *found;
-            })
+        .addFunction("set_conf", checked<&LuaUtilApi::configurable_set_conf<Device>>)
+        .addFunction("find_channel",
+                     checked<+[](Device *self, const std::string & name) { return self->find_channel(name); }>)
+        .addFunction("get_channel",
+                     checked<+[](Device *self, const std::string & name) { return self->get_channel(name); }>)
         .addFunction(
             "add_channel",
             static_cast<Channel *(Device::*)(const std::string &, std::string_view, size_t)>(&Device::add_channel))
@@ -107,13 +96,10 @@ void LuaCoreApi::load(Vm & vm)
         .addFunction("array", static_cast<const IArray *(Channel::*)() const>(&Channel::array))
         .addFunction(
             "set_observer",
-            +[](Channel *self, luabridge::LuaRef fun, lua_State *state) {
+            checked<+[](Channel *self, luabridge::LuaRef fun, lua_State *state) -> Result<void> {
                 LuaChannelHandler *handler = LuaCoreApi::get_handler(state);
                 if (handler == nullptr)
-                {
-                    luaL_error(state, "LuaCoreApi not loaded for this VM");
-                    return;
-                }
+                    return std::unexpected(Error(ErrorCode::not_initialized, "LuaCoreApi not loaded for this VM"));
                 if (fun.isNil())
                 {
                     handler->remove_channel_obs(self);
@@ -127,8 +113,9 @@ void LuaCoreApi::load(Vm & vm)
                     self->add_observer(handler);
                 }
                 else
-                    luaL_error(state, "set_observer argument must be a function");
-            })
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "set_observer argument must be a function"));
+                return {};
+            }>)
         .addFunction(
             "copy_to",
             +[](Channel *self, IArray *array_ptr) { return self->copy_to(*array_ptr); })
@@ -223,7 +210,7 @@ void LuaCoreApi::load(Vm & vm)
             })
         .endClass()
         .deriveClass<ACoreObject, Named>("ACoreObject")
-        .addFunction("set_conf", &LuaUtilApi::configurable_set_conf<ACoreObject>)
+        .addFunction("set_conf", checked<&LuaUtilApi::configurable_set_conf<ACoreObject>>)
         .addFunction("setup", static_cast<bool (ACoreObject::*)()>(&ACoreService::setup))
         .addFunction("init", static_cast<bool (ACoreObject::*)()>(&ACoreService::init))
         .addFunction("start", static_cast<bool (ACoreObject::*)()>(&ACoreService::start))

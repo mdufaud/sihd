@@ -2,7 +2,7 @@
 
 local line_reader = sihd.sys.LineReader()
 
-assert(line_reader:open("test/sys/lua/test_files.lua"))
+line_reader:open("test/sys/lua/test_files.lua")
 
 assert(line_reader:read_next())
 
@@ -19,7 +19,7 @@ line_reader = nil
 
 local file = sihd.sys.File()
 
-assert(file:open("test/sys/lua/test_files.lua", "r"))
+file:open("test/sys/lua/test_files.lua", "r")
 
 local array = sihd.util.ArrChar()
 array:reserve(4096)
@@ -63,34 +63,34 @@ assert(fs.is_dir(scratch) == true)
 
 -- directory create / children / remove roundtrip
 local subdir = fs.combine(scratch, "sub")
-assert(fs.make_directory(subdir, 493) == true)
+fs.make_directory(subdir, 493)
 assert(fs.is_dir(subdir) == true)
 local kids = fs.children(subdir)
 assert(type(kids) == "table")
 assert(#kids == 0)
-assert(fs.remove_directory(subdir) == true)
+fs.remove_directory(subdir)
 assert(fs.exists(subdir) == false)
 
 -- File write -> flush -> read roundtrip + lock
 local tmpfile = fs.combine(scratch, "lua_file_scratch.txt")
 local wf = sihd.sys.File()
-assert(wf:open(tmpfile, "w"))
+wf:open(tmpfile, "w")
 wf:lock()
 assert(wf:write("hello file") == 10)
-assert(wf:flush())
+wf:flush()
 wf:unlock()
 assert(type(wf:trylock()) == "boolean")
 wf:unlock()
 wf:close()
 
 local rf = sihd.sys.File()
-assert(rf:open(tmpfile, "r"))
+rf:open(tmpfile, "r")
 local buf = sihd.util.ArrChar()
 buf:reserve(64)
 assert(rf:read(buf))
 assert(buf:str() == "hello file")
 rf:close()
 
-assert(fs.remove_file(tmpfile) == true)
-assert(fs.remove_directory(scratch) == true)
+fs.remove_file(tmpfile)
+fs.remove_directory(scratch)
 assert(fs.exists(scratch) == false)

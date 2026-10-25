@@ -29,7 +29,7 @@ log.info("Executing a nonexistent binary fails cleanly")
 do
     local proc = sihd.sys.Process()
     proc:add_argv({ "no_such_binary_sihd_12345" })
-    assert(proc:execute() == false, "executing a nonexistent binary must return false")
+    must_raise(function() proc:execute() end, "execute(nonexistent binary)")
 end
 
 log.info("all process bad-path assertions passed")

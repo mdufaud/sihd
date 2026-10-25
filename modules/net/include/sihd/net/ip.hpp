@@ -2,6 +2,7 @@
 #define __SIHD_NET_IP_HPP__
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -50,6 +51,8 @@ std::string to_str(const sockaddr_in *addr_in);
 std::string to_str(const sockaddr_in6 *addr_in);
 std::string to_str(const in_addr *addr_in);
 std::string to_str(const in6_addr *addr_in);
+// "AA:BB:CC:DD:EE:FF" from the first 6 bytes, empty when there are fewer
+std::string mac_str(std::span<const uint8_t> bytes);
 
 // from netmask value number to network netmask
 uint32_t to_netmask(uint32_t value);

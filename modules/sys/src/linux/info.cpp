@@ -10,6 +10,7 @@
 
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/info.hpp>
+#include <sihd/sys/linux/sysfs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/str.hpp>
@@ -24,16 +25,6 @@ SIHD_NEW_LOGGER("sihd::sys::info");
 
 namespace
 {
-
-Result<uint64_t> read_uint(const std::string & path)
-{
-    auto content_opt = fs::read_all(path);
-    if (!content_opt)
-        return std::unexpected(Error(io_error, "could not read '{}'", path));
-    auto parsed = str::convert_from_string<uint64_t>(str::trim(*content_opt));
-    SIHD_UNEXPECTED_RETURN_CTX(parsed, "reading '{}'", path);
-    return parsed;
-}
 
 // /proc/meminfo values are kibibytes
 Result<uint64_t> read_meminfo_kib(std::string_view key)
@@ -105,7 +96,7 @@ std::optional<uint64_t> max_khz_over_cpus(std::string_view file)
     std::optional<uint64_t> hz;
     for (const std::string & dir : cpu_sysfs_dirs())
     {
-        const auto khz = read_uint(fs::combine(dir, file));
+        const auto khz = linux_::sysfs::read_uint(fs::combine(dir, file));
         if (khz && *khz > 0)
             hz = std::max(hz.value_or(0), *khz * 1000);
     }
@@ -131,8 +122,7 @@ std::optional<uint64_t> cpuinfo_mhz_to_hz()
 
 std::string dmi_string(std::string_view name)
 {
-    auto content_opt = fs::read_all(fs::combine("/sys/class/dmi/id", name));
-    return content_opt ? std::string(str::trim(*content_opt)) : std::string {};
+    return linux_::sysfs::read(fs::combine("/sys/class/dmi/id", name)).value_or("");
 }
 
 } // namespace
@@ -207,8 +197,8 @@ std::optional<uint32_t> physical_core_count()
 
     for (const std::string & dir : cpu_sysfs_dirs())
     {
-        const auto package = read_uint(fs::combine({dir, "topology", "physical_package_id"}));
-        const auto core = read_uint(fs::combine({dir, "topology", "core_id"}));
+        const auto package = linux_::sysfs::read_uint(fs::combine({dir, "topology", "physical_package_id"}));
+        const auto core = linux_::sysfs::read_uint(fs::combine({dir, "topology", "core_id"}));
         if (package && core)
             cores.emplace(*package, *core);
     }

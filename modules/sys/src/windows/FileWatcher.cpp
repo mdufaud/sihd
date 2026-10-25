@@ -267,7 +267,6 @@ FileWatcher::FileWatcher()
 {
     _impl = std::make_unique<FileWatcher::Impl>(_events);
     _impl->init();
-    _run_timeout_milliseconds = 100;
 };
 
 FileWatcher::FileWatcher(const std::string & path): FileWatcher()
@@ -277,9 +276,9 @@ FileWatcher::FileWatcher(const std::string & path): FileWatcher()
         throw std::runtime_error(watched.error().message);
 }
 
-FileWatcher::FileWatcher(const std::string & path, int run_timeout_milliseconds): FileWatcher(path)
+FileWatcher::FileWatcher(const std::string & path, Duration run_timeout): FileWatcher(path)
 {
-    this->set_run_timeout(run_timeout_milliseconds);
+    this->set_run_timeout(run_timeout);
 }
 
 FileWatcher::~FileWatcher() = default;
@@ -287,7 +286,7 @@ FileWatcher::~FileWatcher() = default;
 bool FileWatcher::run()
 {
     _events.clear();
-    const bool success = _impl->poll_new_events(_run_timeout_milliseconds);
+    const bool success = _impl->poll_new_events(_run_timeout.milliseconds_int());
     if (success)
         this->notify_observers(this);
     return success;

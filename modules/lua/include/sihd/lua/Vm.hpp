@@ -87,4 +87,24 @@ class Vm: public ILuaThreadStateHandler
 
 } // namespace sihd::lua
 
+template <>
+struct luabridge::Stack<sihd::util::ErrorCode>: luabridge::Enum<sihd::util::ErrorCode,
+                                                                sihd::util::ErrorCode::none,
+                                                                sihd::util::ErrorCode::unknown,
+                                                                sihd::util::ErrorCode::invalid_argument,
+                                                                sihd::util::ErrorCode::not_found,
+                                                                sihd::util::ErrorCode::permission_denied,
+                                                                sihd::util::ErrorCode::timeout,
+                                                                sihd::util::ErrorCode::would_block,
+                                                                sihd::util::ErrorCode::interrupted,
+                                                                sihd::util::ErrorCode::out_of_memory,
+                                                                sihd::util::ErrorCode::io_error,
+                                                                sihd::util::ErrorCode::not_supported,
+                                                                sihd::util::ErrorCode::already_exists,
+                                                                sihd::util::ErrorCode::not_initialized,
+                                                                sihd::util::ErrorCode::closed,
+                                                                sihd::util::ErrorCode::overflow>
+{
+};
+
 #endif

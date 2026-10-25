@@ -8,6 +8,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "../screen_math.hpp"
+#include "internal/nt_dll.hpp"
 
 using enum sihd::util::ErrorCode;
 
@@ -27,10 +28,7 @@ using GetDpiForMonitorFn = HRESULT(WINAPI *)(HMONITOR, int, UINT *, UINT *);
 
 GetDpiForMonitorFn get_dpi_for_monitor()
 {
-    const HMODULE shcore = LoadLibraryW(L"shcore.dll");
-    if (shcore == nullptr)
-        return nullptr;
-    return reinterpret_cast<GetDpiForMonitorFn>(reinterpret_cast<void *>(GetProcAddress(shcore, "GetDpiForMonitor")));
+    return reinterpret_cast<GetDpiForMonitorFn>(sys::internal::nt_dll_symbol("shcore", "GetDpiForMonitor"));
 }
 
 std::string narrow_string(const wchar_t *wide)

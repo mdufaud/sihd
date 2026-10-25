@@ -64,8 +64,8 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Dynamic loading
 
-- `DynLib`: shared library handle: `open`, `load_symbol`, `close`, `is_open`. Not available in statically linked builds or on Emscripten.
-- `PluginLoader`: creates `Named` objects from a library (`create_from_library`) or from a class linked in the binary (`create_from_linked`), and unloads libraries (`unload`).
+- `DynLib`: shared library handle: `open`, `open_system`, `load_symbol`, `load_function<F>`, `close`, `is_open`. `DynLib(file)` opens at construction and throws `std::runtime_error` on failure. `open` hands its file name or path to the loader untouched, no prefix or extension guessed. `open_system` refuses a path and loads a system library by name only: Windows searches System32 alone (`LOAD_LIBRARY_SEARCH_SYSTEM32`), so a planted DLL in the application directory, the current directory or the `PATH` is never picked; Linux goes through the dynamic loader search path, which never includes the current directory. `load_function<F>` returns the symbol as an `F *` function pointer. `DynLib::supported` is false where the libc has no usable loader: Emscripten and statically linked Linux builds (musl's static `dlopen` always fails, static glibc loads a second libc). Static Windows builds keep it: `LoadLibrary` lives in kernel32, always dynamic.
+- `PluginLoader`: creates `Named` objects from a library (`create_from_library`) or from a class linked in the binary (`create_from_linked`), and unloads libraries (`unload`). `create_from_library` takes the library name and loads `lib<name>.so` on Linux, `<name>.dll` on Windows.
 
 ### Desktop integration
 

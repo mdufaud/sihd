@@ -8,9 +8,8 @@
 
 # include <sihd/sys/fs.hpp>
 # include <sihd/sys/linux/cgroup.hpp>
+# include <sihd/sys/linux/sysfs.hpp>
 # include <sihd/util/str.hpp>
-
-# include "internal/sysfs.hpp"
 
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
@@ -96,7 +95,7 @@ Result<std::optional<uint64_t>> memory_max()
 {
     auto path = group_file("memory.max");
     SIHD_UNEXPECTED_RETURN(path);
-    auto value = internal::sysfs_read(*path);
+    auto value = sysfs::read(*path);
     SIHD_UNEXPECTED_RETURN(value);
     return parse_max(*value);
 }
@@ -105,18 +104,14 @@ Result<uint64_t> memory_current()
 {
     auto path = group_file("memory.current");
     SIHD_UNEXPECTED_RETURN(path);
-    auto value = internal::sysfs_read(*path);
-    SIHD_UNEXPECTED_RETURN(value);
-    auto parsed = str::to_unsigned(*value, 10);
-    SIHD_UNEXPECTED_RETURN(parsed);
-    return static_cast<uint64_t>(*parsed);
+    return sysfs::read_uint(*path);
 }
 
 Result<CpuLimit> cpu_max()
 {
     auto path = group_file("cpu.max");
     SIHD_UNEXPECTED_RETURN(path);
-    auto value = internal::sysfs_read(*path);
+    auto value = sysfs::read(*path);
     SIHD_UNEXPECTED_RETURN(value);
 
     const std::vector<std::string> fields = str::split(*value, ' ');
@@ -133,14 +128,14 @@ Result<void> write_memory_max(std::optional<uint64_t> bytes)
 {
     auto path = group_file("memory.max");
     SIHD_UNEXPECTED_RETURN(path);
-    return internal::sysfs_write(*path, max_str(bytes));
+    return sysfs::write(*path, max_str(bytes));
 }
 
 Result<void> write_cpu_max(std::optional<uint64_t> quota_us, uint64_t period_us)
 {
     auto path = group_file("cpu.max");
     SIHD_UNEXPECTED_RETURN(path);
-    return internal::sysfs_write(*path, max_str(quota_us) + " " + std::to_string(period_us));
+    return sysfs::write(*path, max_str(quota_us) + " " + std::to_string(period_us));
 }
 
 } // namespace sihd::sys::linux_::cgroup

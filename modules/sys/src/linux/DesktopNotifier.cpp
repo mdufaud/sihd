@@ -6,7 +6,6 @@
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <algorithm>
 # include <cstdint>
-# include <limits>
 # include <optional>
 
 # include <sihd/sys/linux/dbus.hpp>
@@ -51,7 +50,7 @@ int32_t expire_timeout(const std::optional<Duration> & timeout)
 {
     if (!timeout.has_value())
         return -1;
-    return static_cast<int32_t>(std::min<int64_t>(timeout->milliseconds(), std::numeric_limits<int32_t>::max()));
+    return timeout->milliseconds_int();
 }
 
 template <typename T>

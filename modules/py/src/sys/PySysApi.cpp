@@ -52,31 +52,18 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
                      ret = *size;
                  return ret;
              })
-        // the python bool boundary swallows the Error: log it once here
         .def("remove_directory",
-             [](const std::string & path) {
-                 auto res = fs::remove_directory(path);
-                 return !SIHD_UNEXPECTED_LOG(res);
-             })
+             [](const std::string & path) { return fs::remove_directory(path); })
         .def("remove_directories",
-             [](const std::string & path) {
-                 auto res = fs::remove_directories(path);
-                 return !SIHD_UNEXPECTED_LOG(res);
-             })
+             [](const std::string & path) { return fs::remove_directories(path); })
         .def(
             "make_directory",
-            [](const std::string & path, unsigned int mode) {
-                auto res = fs::make_directory(path, mode);
-                return !SIHD_UNEXPECTED_LOG(res);
-            },
+            [](const std::string & path, unsigned int mode) { return fs::make_directory(path, mode); },
             pybind11::arg("path"),
             pybind11::arg("mode") = 0750)
         .def(
             "make_directories",
-            [](const std::string & path, unsigned int mode) {
-                auto res = fs::make_directories(path, mode);
-                return !SIHD_UNEXPECTED_LOG(res);
-            },
+            [](const std::string & path, unsigned int mode) { return fs::make_directories(path, mode); },
             pybind11::arg("path"),
             pybind11::arg("mode") = 0750)
         .def("children", &fs::children)
@@ -89,10 +76,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("extension", &fs::extension)
         .def("combine", static_cast<std::string (*)(std::string_view, std::string_view)>(&fs::combine))
         .def("remove_file",
-             [](const std::string & path) {
-                 auto res = fs::remove_file(path);
-                 return !SIHD_UNEXPECTED_LOG(res);
-             })
+             [](const std::string & path) { return fs::remove_file(path); })
         .def("are_equals", &fs::are_equals)
         .def("home_path", &fs::home_path)
         .def("executable_path", &program::path)
@@ -116,13 +100,13 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
     auto m_signal = m_sys.def_submodule("signal", "sihd::sys::signal");
     m_signal.def(
                 "handle",
-                +[](int sig) -> bool { return !SIHD_UNEXPECTED_LOG(signal::handle(sig)); })
+                +[](int sig) { return signal::handle(sig); })
         .def(
             "unhandle",
-            +[](int sig) -> bool { return !SIHD_UNEXPECTED_LOG(signal::unhandle(sig)); })
+            +[](int sig) { return signal::unhandle(sig); })
         .def(
             "ignore",
-            +[](int sig) -> bool { return !SIHD_UNEXPECTED_LOG(signal::ignore(sig)); })
+            +[](int sig) { return signal::ignore(sig); })
         .def("is_category_stop", &signal::is_category_stop)
         .def("is_category_termination", &signal::is_category_termination)
         .def("is_category_dump", &signal::is_category_dump)

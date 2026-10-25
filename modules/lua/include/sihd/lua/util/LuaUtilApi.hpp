@@ -136,18 +136,20 @@ class LuaUtilApi
          */
 
         template <typename T>
-        static bool configurable_set_conf(T *self, luabridge::LuaRef tbl, lua_State *state)
+        static sihd::util::Result<bool> configurable_set_conf(T *self, luabridge::LuaRef tbl)
         {
             static_assert(std::is_base_of<sihd::util::Configurable, T>::value);
+            using sihd::util::Error;
+            using sihd::util::ErrorCode;
             if (tbl.isTable() == false)
-                luaL_error(state, "set_conf argument must be a table");
+                return std::unexpected(Error(ErrorCode::invalid_argument, "set_conf argument must be a table"));
             for (const auto & pair : luabridge::pairs(tbl))
             {
                 if (pair.first.isString() == false)
-                    luaL_error(state, "set_conf keys must be strings");
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "set_conf keys must be strings"));
                 std::string key = std::string(pair.first);
                 if (LuaUtilApi::_configurable_recursive_set(self, key, pair.second) == false)
-                    luaL_error(state, "set_conf refused the key '%s'", key.c_str());
+                    return std::unexpected(Error(ErrorCode::invalid_argument, "set_conf refused the key '{}'", key));
             }
             return true;
         }

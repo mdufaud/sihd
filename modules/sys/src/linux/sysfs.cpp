@@ -1,4 +1,4 @@
-#include "sysfs.hpp"
+#include <sihd/sys/linux/sysfs.hpp>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -11,17 +11,26 @@
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 
-namespace sihd::sys::internal
+namespace sihd::sys::linux_::sysfs
 {
 
-Result<std::string> sysfs_read(std::string_view path)
+Result<std::string> read(std::string_view path)
 {
     auto content = fs::read_all(std::string(path));
     SIHD_UNEXPECTED_RETURN(content);
     return std::string(str::trim(*content));
 }
 
-Result<void> sysfs_write(std::string_view path, std::string_view value)
+Result<uint64_t> read_uint(std::string_view path)
+{
+    auto content = read(path);
+    SIHD_UNEXPECTED_RETURN(content);
+    auto parsed = str::convert_from_string<uint64_t>(*content);
+    SIHD_UNEXPECTED_RETURN_CTX(parsed, "reading '{}'", path);
+    return parsed;
+}
+
+Result<void> write(std::string_view path, std::string_view value)
 {
     const std::string file_path(path);
     const int fd = ::open(file_path.c_str(), O_WRONLY | O_TRUNC | O_CLOEXEC);
@@ -44,4 +53,4 @@ Result<void> sysfs_write(std::string_view path, std::string_view value)
     return {};
 }
 
-} // namespace sihd::sys::internal
+} // namespace sihd::sys::linux_::sysfs

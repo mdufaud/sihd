@@ -238,10 +238,7 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("id_str", static_cast<std::string (*)(pthread_t)>(&thread::id_str))
         .def(
             "set_name",
-            +[](const std::string & name) {
-                auto res = thread::set_name(name);
-                return !SIHD_UNEXPECTED_LOG(res);
-            })
+            +[](const std::string & name) { return thread::set_name(name); })
         .def("name", &thread::name);
 
     m_util.def_submodule("time", "sihd::util::time")
@@ -290,10 +287,14 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
         .def(pybind11::init([](const std::string & name, Node *parent) {
-                 Named *node = new Named(name);
+                 auto node = std::make_unique<Named>(name);
                  if (parent != nullptr)
-                     SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
-                 return node;
+                 {
+                     auto added = parent->add_child(node.get(), false);
+                     if (!added)
+                         raise_error(added.error());
+                 }
+                 return node.release();
              }),
              pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
@@ -325,10 +326,14 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<Node, Named, SmartNodePtr<Node>>(m_util, "Node")
         .def(pybind11::init([](const std::string & name, Node *parent) {
-                 Node *node = new Node(name);
+                 auto node = std::make_unique<Node>(name);
                  if (parent != nullptr)
-                     SIHD_UNEXPECTED_LOG(parent->add_child(node, false));
-                 return node;
+                 {
+                     auto added = parent->add_child(node.get(), false);
+                     if (!added)
+                         raise_error(added.error());
+                 }
+                 return node.release();
              }),
              pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
@@ -338,19 +343,17 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
             pybind11::return_value_policy::reference_internal)
         .def(
             "add_child",
-            +[](Node *self, Named *child) { return !SIHD_UNEXPECTED_LOG(self->add_child(child, false)); })
+            +[](Node *self, Named *child) { return self->add_child(child, false); })
         .def(
             "add_child_name",
-            +[](Node *self, const std::string & name, Named *child) {
-                return !SIHD_UNEXPECTED_LOG(self->add_child(name, child, false));
-            })
+            +[](Node *self, const std::string & name, Named *child) { return self->add_child(name, child, false); })
         .def("remove_child", static_cast<bool (Node::*)(const Named *)>(&Node::remove_child))
         .def("remove_child_name", static_cast<bool (Node::*)(const std::string &)>(&Node::remove_child))
         .def("is_link", &Node::is_link)
         .def("add_link", &Node::add_link)
         .def("remove_link", &Node::remove_link)
         .def("resolve_link", &Node::resolve_link, pybind11::return_value_policy::reference_internal)
-        .def("resolve_links", [](Node *self) { return !SIHD_UNEXPECTED_LOG(self->resolve_links()); })
+        .def("resolve_links", [](Node *self) { return self->resolve_links(); })
         .def("tree_str", static_cast<std::string (Node::*)() const>(&Node::tree_str))
         .def("tree_desc_str", &Node::tree_desc_str)
         .def("children", &Node::children, pybind11::return_value_policy::reference_internal)
@@ -543,9 +546,9 @@ bool PyUtilApi::_configurable_set_conf(Configurable *self, const pybind11::kwarg
         {
             key = pybind11::str(item.first);
         }
-        catch (const pybind11::cast_error & e)
+        catch (const pybind11::cast_error &)
         {
-            throw std::runtime_error("configuration key is not a string");
+            raise_error(Error(ErrorCode::invalid_argument, "set_conf keys must be strings"));
         }
         PyObject *val = item.second.ptr();
         if (PyTuple_Check(val))
@@ -577,7 +580,7 @@ bool PyUtilApi::_configurable_set_single_conf(Configurable *self,
     try
     {
         auto res = self->set_conf_str(key, handle.cast<std::string>());
-        if (SIHD_UNEXPECTED_LOG(res))
+        if (!res)
             raise_error(res.error());
         return true;
     }
@@ -588,25 +591,25 @@ bool PyUtilApi::_configurable_set_single_conf(Configurable *self,
     if (PyBool_Check(val))
     {
         auto res = self->set_conf<bool>(key, handle.cast<bool>());
-        if (SIHD_UNEXPECTED_LOG(res))
+        if (!res)
             raise_error(res.error());
         return true;
     }
     if (PyLong_Check(val))
     {
         auto res = self->set_conf_int(key, handle.cast<int64_t>());
-        if (SIHD_UNEXPECTED_LOG(res))
+        if (!res)
             raise_error(res.error());
         return true;
     }
     if (PyFloat_Check(val))
     {
         auto res = self->set_conf_float(key, handle.cast<double>());
-        if (SIHD_UNEXPECTED_LOG(res))
+        if (!res)
             raise_error(res.error());
         return true;
     }
-    return false;
+    raise_error(Error(ErrorCode::invalid_argument, "set_conf refused the key '{}'", key));
 }
 
 PyUtilApi::PyTask::PyTask(const pybind11::function & task, const TaskOptions & options):
