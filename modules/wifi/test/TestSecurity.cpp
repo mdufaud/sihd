@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -22,6 +23,14 @@ class TestSecurity: public ::testing::Test
         static Security security(const std::array<uint8_t, N> & elements, bool privacy)
         {
             return security_of(ArrUByteView(elements.data(), elements.size()), privacy);
+        }
+
+        static Security security_with_akm(uint8_t akm_type)
+        {
+            const std::vector<uint8_t> elements = {0x30, 0x14, 0x01, 0x00,     0x00, 0x0f, 0xac, 0x04,
+                                                   0x01, 0x00, 0x00, 0x0f,     0xac, 0x04, 0x01, 0x00,
+                                                   0x00, 0x0f, 0xac, akm_type, 0x00, 0x00};
+            return security_of(ArrUByteView(elements), true);
         }
 };
 
@@ -88,6 +97,16 @@ TEST_F(TestSecurity, test_security_rsn_wins_over_wpa)
     EXPECT_EQ(security(wpa_eap_then_rsn_psk, true), Security::personal);
 }
 
+TEST_F(TestSecurity, test_security_last_rsn_element_wins)
+{
+    const std::array<uint8_t, 44> psk_then_8021x = {0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00,
+                                                    0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00,
+                                                    0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00,
+                                                    0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x01, 0x00, 0x00};
+
+    EXPECT_EQ(security(psk_then_8021x, true), Security::enterprise);
+}
+
 TEST_F(TestSecurity, test_security_truncated)
 {
     const std::array<uint8_t, 4> element_past_the_end = {0x30, 0x14, 0x01, 0x00};
@@ -97,6 +116,18 @@ TEST_F(TestSecurity, test_security_truncated)
     EXPECT_EQ(security(element_past_the_end, true), Security::unknown);
     EXPECT_EQ(security(rsn_without_akms, true), Security::unknown);
     EXPECT_EQ(security(lone_id, false), Security::unknown);
+}
+
+TEST_F(TestSecurity, test_security_every_akm_family)
+{
+    for (const uint8_t personal : {2, 4, 6, 8, 9, 19, 20, 24, 25})
+        EXPECT_EQ(security_with_akm(personal), Security::personal) << "akm " << int(personal);
+    for (const uint8_t enterprise : {1, 3, 5, 11, 12, 13, 14, 15, 16, 17, 22, 23})
+        EXPECT_EQ(security_with_akm(enterprise), Security::enterprise) << "akm " << int(enterprise);
+
+    EXPECT_EQ(security_with_akm(18), Security::owe);
+    EXPECT_EQ(security_with_akm(7), Security::unknown);
+    EXPECT_EQ(security_with_akm(21), Security::unknown);
 }
 
 } // namespace test

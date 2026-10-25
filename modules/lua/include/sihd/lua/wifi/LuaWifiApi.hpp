@@ -7,6 +7,7 @@
 
 #include <sihd/wifi/Monitor.hpp>
 #include <sihd/wifi/connection.hpp>
+#include <sihd/wifi/frame.hpp>
 #include <sihd/wifi/scan.hpp>
 
 template <>
@@ -43,6 +44,15 @@ struct luabridge::Stack<sihd::wifi::Monitor::Event::Type>
     : luabridge::Enum<sihd::wifi::Monitor::Event::Type,
                       sihd::wifi::Monitor::Event::Type::scan_done,
                       sihd::wifi::Monitor::Event::Type::state_changed>
+{
+};
+
+template <>
+struct luabridge::Stack<sihd::wifi::Frame::Type>: luabridge::Enum<sihd::wifi::Frame::Type,
+                                                                  sihd::wifi::Frame::Type::management,
+                                                                  sihd::wifi::Frame::Type::control,
+                                                                  sihd::wifi::Frame::Type::data,
+                                                                  sihd::wifi::Frame::Type::extension>
 {
 };
 

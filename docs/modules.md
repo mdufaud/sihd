@@ -19,7 +19,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`ssh`](modules/ssh.md) | SSH client and server, SFTP | util, sys, libssh |
 | [`usb`](modules/usb.md) | USB device enumeration, udev hardware names | util, sys, libusb |
 | [`bt`](modules/bt.md) | Bluetooth LE scanning | util, sys |
-| [`wifi`](modules/wifi.md) | Wifi link, access points, scans and connections through NetworkManager, iwd, wpa_supplicant or the Windows WLAN service | util, sys, net |
+| [`wifi`](modules/wifi.md) | Wifi link, access points, scans and connections through NetworkManager, iwd, wpa_supplicant or the Windows WLAN service; passive decoding of captured 802.11 frames | util, sys, net |
 | [`imgui`](modules/imgui.md) | Dear ImGui runner (GLFW, SDL3, Win32, Android, ncurses / OpenGL3, DirectX11, ncurses) | util, sys, imgui, opengl |
 | [`lua`](modules/lua.md) | Lua bindings (conditional: `lua=1`) | util, lua 5.3, luabridge3 |
 | [`luabin`](modules/luabin.md) | Standalone Lua interpreter binary (conditional: `lua=1`) | lua |

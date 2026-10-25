@@ -2,9 +2,9 @@
 
 #include <sihd/net/ip.hpp>
 #include <sihd/util/time.hpp>
+#include <sihd/wifi/ies.hpp>
 #include <sihd/wifi/scan.hpp>
 
-#include "../ies.hpp"
 #include "nl80211.hpp"
 #include <linux/genetlink.h>
 #include <linux/nl80211.h>
@@ -55,7 +55,8 @@ AccessPoint read_bss(const netlink::Attribute & bss)
                 break;
         }
     }
-    access_point.ssid = ies::ssid(information_elements);
+    if (const auto elements = ies::elements(information_elements); elements.has_value())
+        access_point.ssid = ies::ssid(*elements);
     access_point.security = security_of(information_elements, privacy);
     return access_point;
 }
