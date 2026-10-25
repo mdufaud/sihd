@@ -7,6 +7,7 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/IArray.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::ssh
 {
@@ -24,28 +25,30 @@ class SshChannel
 
         sihd::util::Result<void> open_session();
         sihd::util::Result<void> open_agent();
-        sihd::util::Result<void> open_x11(const std::string & addr, int port);
-        sihd::util::Result<void>
-            open_forward(const std::string & remotehost, int remoteport, const std::string & sourcehost, int localport);
+        sihd::util::Result<void> open_x11(sihd::util::ZStringView addr, int port);
+        sihd::util::Result<void> open_forward(sihd::util::ZStringView remotehost,
+                                              int remoteport,
+                                              sihd::util::ZStringView sourcehost,
+                                              int localport);
         sihd::util::Result<void>
             open_forward_unix(const std::string & remotepath, const std::string & sourcehost, int localport);
 
         bool is_open();
         sihd::util::Result<void> close();
 
-        sihd::util::Result<void> request_subsystem(const std::string & subsys);
+        sihd::util::Result<void> request_subsystem(sihd::util::ZStringView subsys);
         sihd::util::Result<void> request_sftp();
-        sihd::util::Result<void> request_x11(const std::string & protocol,
-                                             const std::string & cookie,
+        sihd::util::Result<void> request_x11(sihd::util::ZStringView protocol,
+                                             sihd::util::ZStringView cookie,
                                              int screen_number = 0,
                                              bool single_connection = false);
         sihd::util::Result<void> request_pty();
         sihd::util::Result<void> change_pty_size(int cols, int rows);
         sihd::util::Result<void> request_shell();
-        sihd::util::Result<void> request_exec(const std::string & cmd);
+        sihd::util::Result<void> request_exec(sihd::util::ZStringView cmd);
 
-        sihd::util::Result<void> cancel_forward(const std::string & addr, int port);
-        sihd::util::Result<void> set_env(const std::string & name, const std::string & value);
+        sihd::util::Result<void> cancel_forward(sihd::util::ZStringView addr, int port);
+        sihd::util::Result<void> set_env(sihd::util::ZStringView name, sihd::util::ZStringView value);
 
         int poll();
         int poll_stderr();
@@ -66,13 +69,13 @@ class SshChannel
         bool is_eof();
 
         sihd::util::Result<void> request_send_exit_status(int exit_status);
-        sihd::util::Result<void> request_send_exit_signal(const std::string & signum,
+        sihd::util::Result<void> request_send_exit_signal(sihd::util::ZStringView signum,
                                                           bool core_dumped,
-                                                          const std::string & errmsg,
-                                                          const std::string & lang);
+                                                          sihd::util::ZStringView errmsg,
+                                                          sihd::util::ZStringView lang);
 
         // ABRT - ALRM - FPE - HUP - ILL - INT - KILL - PIPE - QUIT - SEGV - TERM - USR1 - USR2
-        sihd::util::Result<void> send_signal(const std::string & sig);
+        sihd::util::Result<void> send_signal(sihd::util::ZStringView sig);
 
         int exit_status();
 

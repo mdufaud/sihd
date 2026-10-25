@@ -57,7 +57,7 @@ class ProcessInfo
         ProcessInfo(const ProcessInfo & process_info);
         ~ProcessInfo();
 
-        static std::vector<ProcessInfo> get_all_process_from_name(const std::string & regex);
+        static std::vector<ProcessInfo> get_all_process_from_name(std::string_view regex);
         static std::vector<int> pids();
 
         bool is_alive() const;

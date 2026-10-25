@@ -81,7 +81,7 @@ BEGIN {
     PUBLIC_IF = "#if in public header (same api everywhere, return ErrorCode::not_supported)"
     PLATFORM_IF = "platform #if in .cpp (if constexpr (build::is_windows) when both branches compile; #if only for symbols absent on the platform)"
     # owner-accepted statics (judge canon): the app-wide default channel clock, the retryable curl init flag
-    INTENDED_STATIC = "^(modules/core/(src/Channel\\.cpp|include/sihd/core/Channel\\.hpp):.*_default_channel_clock_ptr|modules/curl/src/Request\\.cpp:[[:space:]]*static bool initialized = false;)"
+    INTENDED_STATIC = "^(modules/core/(src/Channel\\.cpp|include/sihd/core/Channel\\.hpp):.*_default_channel_clock_ptr|modules/curl/src/Request\\.cpp:[[:space:]]*static bool initialized = false;|modules/wifi/test/linux/fake_daemon\\.hpp:[[:space:]]*static std::unique_ptr<PrivateDBus> bus;)"
 }
 function hit(rule) {
     printf "%s\t%s:%d: %s\n", rule, file, line, text

@@ -29,6 +29,9 @@
 #if SIHD_LUA_WITH_NET
 # include <sihd/lua/net/LuaNetApi.hpp>
 #endif
+#if SIHD_LUA_WITH_WIFI
+# include <sihd/lua/wifi/LuaWifiApi.hpp>
+#endif
 #if SIHD_LUA_WITH_HTTP
 # include <sihd/lua/http/LuaHttpApi.hpp>
 #endif

@@ -13,7 +13,9 @@
 namespace sihd::sys
 {
 
-std::optional<uint16_t> service_port(const std::string & name, const std::string & proto)
+using namespace sihd::util;
+
+std::optional<uint16_t> service_port(ZStringView name, ZStringView proto)
 {
     struct servent *se = getservbyname(name.c_str(), proto.c_str());
     if (se == nullptr)
@@ -21,7 +23,7 @@ std::optional<uint16_t> service_port(const std::string & name, const std::string
     return static_cast<uint16_t>(ntohs(static_cast<uint16_t>(se->s_port)));
 }
 
-std::optional<std::string> service_name(uint16_t port, const std::string & proto)
+std::optional<std::string> service_name(uint16_t port, ZStringView proto)
 {
     struct servent *se = getservbyport(htons(port), proto.c_str());
     if (se == nullptr)

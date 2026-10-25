@@ -48,13 +48,10 @@ for _, server in ipairs(servers) do
 end
 
 -- failures raise a sihd.Error
-local missing = must_raise(net.wifi.link, "sihd-no-such-interface")
-assert(missing.code == sihd.ErrorCode.not_found)
-assert(missing.message == "no interface named sihd-no-such-interface")
-assert(tostring(missing) == "no interface named sihd-no-such-interface")
 local no_destination = must_raise(net.route.find, net.IpAddr())
 assert(no_destination.code == sihd.ErrorCode.invalid_argument)
 assert(no_destination.message == "route lookup needs a destination address")
+assert(tostring(no_destination) == "route lookup needs a destination address")
 
 assert(net.NetMonitor.open(nil) ~= nil)
 local monitor = net.NetMonitor.open(util.Duration(util.time.ms(10)))

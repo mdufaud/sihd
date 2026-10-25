@@ -27,7 +27,7 @@ using enum ErrorCode;
 namespace
 {
 
-Result<bool> ask_dns(const std::string & host, std::function<bool(const IpAddr &, int, int)> && callback)
+Result<bool> ask_dns(ZStringView host, std::function<bool(const IpAddr &, int, int)> && callback)
 {
     int ret;
     struct addrinfo hints;
@@ -76,7 +76,7 @@ Result<bool> ask_dns(const std::string & host, std::function<bool(const IpAddr &
 
 } // namespace
 
-Result<IpAddr> find(const std::string & host, bool ipv6, int socktype, int protocol)
+Result<IpAddr> find(ZStringView host, bool ipv6, int socktype, int protocol)
 {
     if (host.empty())
         return std::unexpected(Error(invalid_argument, "dns::find: empty host"));

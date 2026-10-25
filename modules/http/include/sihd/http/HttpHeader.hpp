@@ -42,7 +42,7 @@ class HttpHeader
         std::optional<std::string_view> server() const;
 
         const HeaderMap & headers() const;
-        std::string_view find(const std::string & header_name) const;
+        std::string_view find(std::string_view header_name) const;
         const std::string & get(const std::string & header_name) const;
 
     protected:

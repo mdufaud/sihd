@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <functional>
 #include <map>
 #include <optional>
 
@@ -19,15 +18,16 @@ SIHD_LOGGER;
 namespace
 {
 
-const std::string bluez_service = "org.bluez";
-const std::string adapter_interface = "org.bluez.Adapter1";
-const std::string device_interface = "org.bluez.Device1";
+constexpr ZStringView bluez_service = "org.bluez";
+constexpr ZStringView adapter_interface = "org.bluez.Adapter1";
+constexpr ZStringView device_interface = "org.bluez.Device1";
 
-const std::string interfaces_added_rule = "type='signal',sender='org.bluez',"
-                                          "interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'";
-const std::string properties_changed_rule = "type='signal',sender='org.bluez',"
-                                            "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',"
-                                            "arg0='org.bluez.Device1'";
+constexpr ZStringView interfaces_added_rule = "type='signal',sender='org.bluez',"
+                                              "interface='org.freedesktop.DBus.ObjectManager',member='InterfacesAdded'";
+constexpr ZStringView
+    properties_changed_rule = "type='signal',sender='org.bluez',"
+                              "interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',"
+                              "arg0='org.bluez.Device1'";
 
 const Duration call_timeout(time::sec(5));
 // the loop wakes up on a signal, a stop or scan_for's deadline
@@ -54,36 +54,12 @@ struct ManagedObjects
         std::map<std::string, DeviceObject> devices;
 };
 
-template <BasicType Key>
-using EntryCallback = std::function<Result<void>(const Key & key, Iter & value)>;
-
-template <BasicType Key>
-Result<void> for_each_entry(const Iter & dict, const EntryCallback<Key> & callback)
-{
-    auto entries = dict.recurse();
-    SIHD_UNEXPECTED_RETURN(entries);
-    for (; entries->type() != '\0'; entries->next())
-    {
-        auto entry = entries->recurse();
-        SIHD_UNEXPECTED_RETURN(entry);
-        auto key = entry->get<Key>();
-        SIHD_UNEXPECTED_RETURN(key);
-        entry->next();
-
-        auto value = entry->type() == 'v' ? entry->recurse() : Result<Iter>(std::move(*entry));
-        SIHD_UNEXPECTED_RETURN(value);
-        auto done = callback(*key, *value);
-        SIHD_UNEXPECTED_RETURN(done);
-    }
-    return {};
-}
-
 // a{qv} manufacturer data or a{sv} service data, an ay in each variant
 template <BasicType Key>
 Result<std::map<Key, std::vector<uint8_t>>> read_byte_map(const Iter & dict)
 {
     std::map<Key, std::vector<uint8_t>> byte_map;
-    auto parsed = for_each_entry<Key>(dict, [&byte_map](const Key & key, Iter & value) -> Result<void> {
+    auto parsed = dict.for_each_entry<Key>([&byte_map](const Key & key, Iter & value) -> Result<void> {
         auto bytes = value.get_array<uint8_t>();
         SIHD_UNEXPECTED_RETURN(bytes);
         byte_map.insert_or_assign(key, std::move(*bytes));
@@ -174,23 +150,20 @@ Result<void> read_device_property(DeviceObject & device, const std::string & key
 
 Result<void> read_object(ManagedObjects & objects, const std::string & path, Iter & interfaces)
 {
-    return for_each_entry<std::string>(
-        interfaces,
+    return interfaces.for_each_entry<std::string>(
         [&](const std::string & interface, Iter & properties) -> Result<void> {
             if (interface == adapter_interface)
             {
                 AdapterObject & adapter = objects.adapters.emplace_back();
                 adapter.path = path;
-                return for_each_entry<std::string>(properties, [&](const std::string & key, Iter & value) {
-                    return read_adapter_property(adapter, key, value);
-                });
+                return properties.for_each_entry<std::string>(
+                    [&](const std::string & key, Iter & value) { return read_adapter_property(adapter, key, value); });
             }
             if (interface == device_interface)
             {
                 DeviceObject & device = objects.devices[path];
-                return for_each_entry<std::string>(properties, [&](const std::string & key, Iter & value) {
-                    return read_device_property(device, key, value);
-                });
+                return properties.for_each_entry<std::string>(
+                    [&](const std::string & key, Iter & value) { return read_device_property(device, key, value); });
             }
             return {};
         });
@@ -218,9 +191,8 @@ Result<std::optional<std::string>> apply_signal(ManagedObjects & objects, const 
 
     const std::string path = message.path();
     DeviceObject & device = objects.devices[path];
-    auto parsed = for_each_entry<std::string>(body, [&device](const std::string & key, Iter & value) {
-        return read_device_property(device, key, value);
-    });
+    auto parsed = body.for_each_entry<std::string>(
+        [&device](const std::string & key, Iter & value) { return read_device_property(device, key, value); });
     SIHD_UNEXPECTED_RETURN(parsed);
     return path;
 }
@@ -233,9 +205,8 @@ Result<ManagedObjects> get_managed_objects(Connection & connection)
     SIHD_UNEXPECTED_RETURN(reply);
 
     ManagedObjects objects;
-    auto parsed = for_each_entry<std::string>(Iter(*reply), [&objects](const std::string & path, Iter & interfaces) {
-        return read_object(objects, path, interfaces);
-    });
+    auto parsed = Iter(*reply).for_each_entry<std::string>(
+        [&objects](const std::string & path, Iter & interfaces) { return read_object(objects, path, interfaces); });
     SIHD_UNEXPECTED_RETURN(parsed);
     std::ranges::sort(objects.adapters, {}, &AdapterObject::path);
     return objects;

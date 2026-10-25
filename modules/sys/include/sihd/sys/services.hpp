@@ -5,11 +5,13 @@
 #include <optional>
 #include <string>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::sys
 {
 
-std::optional<uint16_t> service_port(const std::string & name, const std::string & proto = "tcp");
-std::optional<std::string> service_name(uint16_t port, const std::string & proto = "tcp");
+std::optional<uint16_t> service_port(sihd::util::ZStringView name, sihd::util::ZStringView proto = "tcp");
+std::optional<std::string> service_name(uint16_t port, sihd::util::ZStringView proto = "tcp");
 
 } // namespace sihd::sys
 

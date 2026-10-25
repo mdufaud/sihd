@@ -87,6 +87,7 @@
 #include <sihd/util/Value.hpp>
 #include <sihd/util/Waitable.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/ansi.hpp>
 #include <sihd/util/array_utils.hpp>
 #include <sihd/util/build.hpp>

@@ -3,6 +3,7 @@
 #if defined(__SIHD_LINUX__)
 
 # include <string>
+# include <string_view>
 # include <type_traits>
 # include <utility>
 
@@ -11,10 +12,12 @@
 
 #  include <sihd/sys/Poll.hpp>
 #  include <sihd/sys/linux/EventFd.hpp>
-#  include <sihd/util/Clocks.hpp>
 # endif
 
+# include <fmt/format.h>
+
 # include <sihd/sys/linux/dbus.hpp>
+# include <sihd/util/Clocks.hpp>
 
 namespace sihd::sys::linux_::dbus
 {
@@ -27,11 +30,35 @@ using namespace sihd::util;
 namespace
 {
 
+ErrorCode code_of(const ::DBusError & dbus_error)
+{
+    if (dbus_error_has_name(&dbus_error, DBUS_ERROR_ACCESS_DENIED))
+        return permission_denied;
+    if (dbus_error_has_name(&dbus_error, DBUS_ERROR_NO_REPLY))
+        return ErrorCode::timeout;
+    return io_error;
+}
+
 Error dbus_error_take(::DBusError & dbus_error)
 {
-    Error error(io_error, "{}: {}", dbus_error.name, dbus_error.message);
+    Error error(code_of(dbus_error), "{}: {}", dbus_error.name, dbus_error.message);
     dbus_error_free(&dbus_error);
     return error;
+}
+
+void release_pending(::DBusPendingCall *pending)
+{
+    dbus_pending_call_cancel(pending);
+    dbus_pending_call_unref(pending);
+}
+
+using PendingCall = std::unique_ptr<::DBusPendingCall, decltype(&release_pending)>;
+
+// a sent message is locked: libdbus refuses to change its flags
+void forbid_auto_start(::DBusMessage *message)
+{
+    if (dbus_message_get_serial(message) == 0 && dbus_message_get_auto_start(message))
+        dbus_message_set_auto_start(message, FALSE);
 }
 
 template <typename T>
@@ -62,7 +89,7 @@ bool is_container_type(int type)
            || type == DBUS_TYPE_DICT_ENTRY;
 }
 
-Result<void> validate_names(const std::string & path, const std::string & interface, const std::string & member)
+Result<void> validate_names(ZStringView path, ZStringView interface, ZStringView member)
 {
     if (!dbus_validate_path(path.c_str(), nullptr))
         return std::unexpected(Error(invalid_argument, "invalid dbus path: {}", path));
@@ -338,7 +365,7 @@ Appender::Appender(Message & message)
     }
 }
 
-Result<void> Appender::add(const std::string & value)
+Result<void> Appender::add(ZStringView value)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
@@ -346,6 +373,32 @@ Result<void> Appender::add(const std::string & value)
         return std::unexpected(Error(invalid_argument, "dbus string is not valid utf-8"));
     const char *str = value.c_str();
     return _impl->append(DBUS_TYPE_STRING, &str);
+}
+
+Result<void> Appender::add_object_path(ZStringView path)
+{
+    if (_impl == nullptr)
+        return std::unexpected(Error(not_initialized, "dbus message is empty"));
+    if (!dbus_validate_path(path.c_str(), nullptr))
+        return std::unexpected(Error(invalid_argument, "invalid dbus path: {}", path));
+    const char *str = path.c_str();
+    return _impl->append(DBUS_TYPE_OBJECT_PATH, &str);
+}
+
+template <BasicType T>
+Result<void> Appender::add_array(const std::vector<T> & values)
+{
+    char element = DBUS_TYPE_STRING;
+    if constexpr (!std::is_same_v<T, std::string>)
+        element = static_cast<char>(dbus_type_of<T>());
+    auto array = this->open_array(std::string(1, element));
+    SIHD_UNEXPECTED_RETURN(array);
+    for (const T & value : values)
+    {
+        auto added = array->add(value);
+        SIHD_UNEXPECTED_RETURN(added);
+    }
+    return this->close(std::move(*array));
 }
 
 template <FixedType T>
@@ -362,11 +415,11 @@ Result<void> Appender::add(const T & value)
         return _impl->append(dbus_type_of<T>(), &value);
 }
 
-Result<Appender> Appender::open_array(const std::string & element_signature)
+Result<Appender> Appender::open_array(ZStringView element_signature)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
-    const std::string type = "a" + element_signature;
+    const std::string type = fmt::format("a{}", element_signature);
     if (!dbus_signature_validate_single(type.c_str(), nullptr))
         return std::unexpected(Error(invalid_argument, "invalid dbus array element signature: {}", element_signature));
     auto next = _impl->expect(type);
@@ -375,12 +428,12 @@ Result<Appender> Appender::open_array(const std::string & element_signature)
     auto opened = _impl->open_child(DBUS_TYPE_ARRAY,
                                     element_signature.c_str(),
                                     *next,
-                                    Impl::constrained_to(element_signature, true));
+                                    Impl::constrained_to(std::string(element_signature.view()), true));
     SIHD_UNEXPECTED_RETURN(opened);
     return Appender(std::move(*opened));
 }
 
-Result<Appender> Appender::open_variant(const std::string & value_signature)
+Result<Appender> Appender::open_variant(ZStringView value_signature)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
@@ -392,7 +445,7 @@ Result<Appender> Appender::open_variant(const std::string & value_signature)
     auto opened = _impl->open_child(DBUS_TYPE_VARIANT,
                                     value_signature.c_str(),
                                     *next,
-                                    Impl::constrained_to(value_signature, false));
+                                    Impl::constrained_to(std::string(value_signature.view()), false));
     SIHD_UNEXPECTED_RETURN(opened);
     return Appender(std::move(*opened));
 }
@@ -447,10 +500,8 @@ Result<void> Appender::close(Appender && container)
     return {};
 }
 
-Result<Message> Message::method_call(const std::string & destination,
-                                     const std::string & path,
-                                     const std::string & interface,
-                                     const std::string & member)
+Result<Message>
+    Message::method_call(ZStringView destination, ZStringView path, ZStringView interface, ZStringView member)
 {
     if (!destination.empty() && !dbus_validate_bus_name(destination.c_str(), nullptr))
         return std::unexpected(Error(invalid_argument, "invalid dbus destination: {}", destination));
@@ -468,7 +519,7 @@ Result<Message> Message::method_call(const std::string & destination,
     return Message(std::move(impl));
 }
 
-Result<Message> Message::signal(const std::string & path, const std::string & interface, const std::string & member)
+Result<Message> Message::signal(ZStringView path, ZStringView interface, ZStringView member)
 {
     if (interface.empty())
         return std::unexpected(Error(invalid_argument, "a dbus signal needs an interface"));
@@ -496,7 +547,7 @@ Result<Message> Message::method_return() const
     return Message(std::move(impl));
 }
 
-Result<Message> Message::error_return(const std::string & name, const std::string & text) const
+Result<Message> Message::error_return(ZStringView name, ZStringView text) const
 {
     auto answerable = check_answerable(_impl != nullptr ? _impl->message : nullptr);
     SIHD_UNEXPECTED_RETURN(answerable);
@@ -533,6 +584,40 @@ std::string Message::sender() const
     return _impl != nullptr ? string_or_empty(dbus_message_get_sender(_impl->message)) : std::string();
 }
 
+std::string Message::error_name() const
+{
+    return _impl != nullptr ? string_or_empty(dbus_message_get_error_name(_impl->message)) : std::string();
+}
+
+Message::Type Message::type() const
+{
+    if (_impl == nullptr)
+        return Type::invalid;
+    switch (dbus_message_get_type(_impl->message))
+    {
+        case DBUS_MESSAGE_TYPE_METHOD_CALL:
+            return Type::method_call;
+        case DBUS_MESSAGE_TYPE_METHOD_RETURN:
+            return Type::method_return;
+        case DBUS_MESSAGE_TYPE_ERROR:
+            return Type::error;
+        case DBUS_MESSAGE_TYPE_SIGNAL:
+            return Type::signal;
+        default:
+            return Type::invalid;
+    }
+}
+
+Error Message::to_error() const
+{
+    if (this->type() != Type::error)
+        return Error(invalid_argument, "dbus message is no error reply");
+    ::DBusError dbus_error;
+    dbus_error_init(&dbus_error);
+    dbus_set_error_from_message(&dbus_error, _impl->message);
+    return dbus_error_take(dbus_error);
+}
+
 Result<Message> Message::call(Connection & connection, Duration timeout) const
 {
     if (connection._impl == nullptr)
@@ -540,6 +625,8 @@ Result<Message> Message::call(Connection & connection, Duration timeout) const
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
 
+    if (!connection._auto_start)
+        forbid_auto_start(_impl->message);
     ::DBusError dbus_error;
     dbus_error_init(&dbus_error);
     ::DBusMessage *reply = dbus_connection_send_with_reply_and_block(connection._impl->connection,
@@ -553,12 +640,57 @@ Result<Message> Message::call(Connection & connection, Duration timeout) const
     return Message(std::move(impl));
 }
 
+Result<std::vector<Message>>
+    Message::call_all(Connection & connection, const std::vector<Message> & requests, Duration timeout)
+{
+    if (connection._impl == nullptr)
+        return std::unexpected(Error(not_initialized, "dbus connection is not open"));
+
+    std::vector<PendingCall> pending_calls;
+    pending_calls.reserve(requests.size());
+    for (const Message & request : requests)
+    {
+        if (request._impl == nullptr)
+            return std::unexpected(Error(not_initialized, "dbus message is empty"));
+        if (!connection._auto_start)
+            forbid_auto_start(request._impl->message);
+        ::DBusPendingCall *pending = nullptr;
+        if (!dbus_connection_send_with_reply(connection._impl->connection,
+                                             request._impl->message,
+                                             &pending,
+                                             timeout.milliseconds_int()))
+            return std::unexpected(Error(out_of_memory, "could not send dbus message"));
+        if (pending == nullptr)
+            return std::unexpected(Error(closed, "dbus connection lost"));
+        pending_calls.emplace_back(pending, &release_pending);
+    }
+    dbus_connection_flush(connection._impl->connection);
+
+    std::vector<Message> replies;
+    replies.reserve(requests.size());
+    for (const PendingCall & pending : pending_calls)
+    {
+        dbus_pending_call_block(pending.get());
+        auto impl = std::make_unique<Impl>();
+        impl->message = dbus_pending_call_steal_reply(pending.get());
+        if (impl->message == nullptr)
+            return std::unexpected(Error(io_error, "dbus call completed without a reply"));
+        Message reply(std::move(impl));
+        if (reply.type() == Type::error)
+            return std::unexpected(reply.to_error());
+        replies.emplace_back(std::move(reply));
+    }
+    return replies;
+}
+
 Result<void> Message::send(Connection & connection) const
 {
     if (connection._impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus connection is not open"));
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus message is empty"));
+    if (!connection._auto_start)
+        forbid_auto_start(_impl->message);
     if (!dbus_connection_send(connection._impl->connection, _impl->message, nullptr))
         return std::unexpected(Error(out_of_memory, "could not send dbus message"));
     dbus_connection_flush(connection._impl->connection);
@@ -612,7 +744,7 @@ Result<void> Connection::open(Bus bus)
     return {};
 }
 
-Result<void> Connection::open(const std::string & address)
+Result<void> Connection::open(ZStringView address)
 {
     this->close();
     ::DBusError dbus_error;
@@ -628,7 +760,7 @@ Result<void> Connection::open(const std::string & address)
     return {};
 }
 
-Result<void> Connection::request_name(const std::string & name)
+Result<void> Connection::request_name(ZStringView name)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus connection is not open"));
@@ -644,7 +776,21 @@ Result<void> Connection::request_name(const std::string & name)
     return {};
 }
 
-Result<void> Connection::add_match(const std::string & rule)
+Result<bool> Connection::name_has_owner(ZStringView name)
+{
+    if (_impl == nullptr)
+        return std::unexpected(Error(not_initialized, "dbus connection is not open"));
+    if (!dbus_validate_bus_name(name.c_str(), nullptr))
+        return std::unexpected(Error(invalid_argument, "invalid dbus name: {}", name));
+    ::DBusError dbus_error;
+    dbus_error_init(&dbus_error);
+    const dbus_bool_t owned = dbus_bus_name_has_owner(_impl->connection, name.c_str(), &dbus_error);
+    if (dbus_error_is_set(&dbus_error))
+        return std::unexpected(dbus_error_take(dbus_error));
+    return owned != 0;
+}
+
+Result<void> Connection::add_match(ZStringView rule)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus connection is not open"));
@@ -656,7 +802,7 @@ Result<void> Connection::add_match(const std::string & rule)
     return {};
 }
 
-Result<void> Connection::remove_match(const std::string & rule)
+Result<void> Connection::remove_match(ZStringView rule)
 {
     if (_impl == nullptr)
         return std::unexpected(Error(not_initialized, "dbus connection is not open"));
@@ -712,7 +858,7 @@ Result<Iter> Iter::recurse() const
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Message> Message::method_call(const std::string &, const std::string &, const std::string &, const std::string &)
+Result<Message> Message::method_call(ZStringView, ZStringView, ZStringView, ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -727,7 +873,7 @@ Result<void> Connection::open(Bus)
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Message> Message::signal(const std::string &, const std::string &, const std::string &)
+Result<Message> Message::signal(ZStringView, ZStringView, ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -752,17 +898,37 @@ std::string Message::sender() const
     return {};
 }
 
+std::string Message::error_name() const
+{
+    return {};
+}
+
+Message::Type Message::type() const
+{
+    return Type::invalid;
+}
+
+Error Message::to_error() const
+{
+    return Error(not_supported, "dbus is not supported on this platform");
+}
+
+Result<std::vector<Message>> Message::call_all(Connection &, const std::vector<Message> &, Duration)
+{
+    return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
+}
+
 Result<void> Message::send(Connection &) const
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<void> Connection::add_match(const std::string &)
+Result<void> Connection::add_match(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<void> Connection::remove_match(const std::string &)
+Result<void> Connection::remove_match(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -783,7 +949,12 @@ struct Appender::Impl
 
 Appender::Appender(Message &) {}
 
-Result<void> Appender::add(const std::string &)
+Result<void> Appender::add(ZStringView)
+{
+    return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
+}
+
+Result<void> Appender::add_object_path(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -794,12 +965,18 @@ Result<void> Appender::add(const T &)
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Appender> Appender::open_array(const std::string &)
+template <BasicType T>
+Result<void> Appender::add_array(const std::vector<T> &)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Appender> Appender::open_variant(const std::string &)
+Result<Appender> Appender::open_array(ZStringView)
+{
+    return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
+}
+
+Result<Appender> Appender::open_variant(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
@@ -824,22 +1001,178 @@ Result<Message> Message::method_return() const
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<Message> Message::error_return(const std::string &, const std::string &) const
+Result<Message> Message::error_return(ZStringView, ZStringView) const
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<void> Connection::open(const std::string &)
+Result<void> Connection::open(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
-Result<void> Connection::request_name(const std::string &)
+Result<void> Connection::request_name(ZStringView)
+{
+    return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
+}
+
+Result<bool> Connection::name_has_owner(ZStringView)
 {
     return std::unexpected(Error(not_supported, "dbus is not supported on this platform"));
 }
 
 # endif
+
+namespace
+{
+
+constexpr ZStringView properties_interface = "org.freedesktop.DBus.Properties";
+
+Result<Message> property_reply(Connection & connection,
+                               ZStringView destination,
+                               ZStringView path,
+                               ZStringView interface,
+                               ZStringView name,
+                               Duration timeout)
+{
+    auto request = Message::properties_get(destination, path, interface, name);
+    SIHD_UNEXPECTED_RETURN(request);
+    return request->call(connection, timeout);
+}
+
+} // namespace
+
+Result<void>
+    Appender::add_entry(ZStringView key, ZStringView signature, const std::function<Result<void>(Appender &)> & fill)
+{
+    auto entry = this->open_dict_entry();
+    SIHD_UNEXPECTED_RETURN(entry);
+    auto key_added = entry->add(key);
+    SIHD_UNEXPECTED_RETURN(key_added);
+    auto variant = entry->open_variant(signature);
+    SIHD_UNEXPECTED_RETURN(variant);
+    auto filled = fill(*variant);
+    SIHD_UNEXPECTED_RETURN(filled);
+    auto variant_closed = entry->close(std::move(*variant));
+    SIHD_UNEXPECTED_RETURN(variant_closed);
+    return this->close(std::move(*entry));
+}
+
+Result<Message>
+    Message::properties_get(ZStringView destination, ZStringView path, ZStringView interface, ZStringView name)
+{
+    auto request = Message::method_call(destination, path, properties_interface, "Get");
+    SIHD_UNEXPECTED_RETURN(request);
+    auto interface_added = request->add(interface);
+    SIHD_UNEXPECTED_RETURN(interface_added);
+    auto name_added = request->add(name);
+    SIHD_UNEXPECTED_RETURN(name_added);
+    return request;
+}
+
+Result<Message> Message::properties_get_all(ZStringView destination, ZStringView path, ZStringView interface)
+{
+    auto request = Message::method_call(destination, path, properties_interface, "GetAll");
+    SIHD_UNEXPECTED_RETURN(request);
+    auto interface_added = request->add(interface);
+    SIHD_UNEXPECTED_RETURN(interface_added);
+    return request;
+}
+
+Result<std::optional<Iter>> Message::changed_property(std::string_view interface, std::string_view name) const
+{
+    if (this->type() != Type::signal || this->interface() != properties_interface
+        || this->member() != "PropertiesChanged")
+        return std::nullopt;
+    Iter body(*this);
+    auto changed_interface = body.get<std::string>();
+    SIHD_UNEXPECTED_RETURN(changed_interface);
+    if (*changed_interface != interface)
+        return std::nullopt;
+    body.next();
+
+    std::optional<Iter> changed;
+    auto walked = body.for_each_entry<std::string>(
+        [&changed, &name](const std::string & key, Iter & value) -> Result<void> {
+            if (key == name)
+                changed.emplace(std::move(value));
+            return {};
+        });
+    SIHD_UNEXPECTED_RETURN(walked);
+    return changed;
+}
+
+Result<Message> Message::receive_until(Connection & connection,
+                                       Duration timeout,
+                                       const std::function<Result<bool>(const Message &)> & accepted)
+{
+    SteadyClock clock;
+    const Timestamp deadline = clock.now() + timeout;
+    while (true)
+    {
+        const Timestamp now = clock.now();
+        if (now >= deadline)
+            return std::unexpected(Error(ErrorCode::timeout, "dbus receive timed out"));
+        auto received = Message::receive(connection, Duration(deadline - now));
+        SIHD_UNEXPECTED_RETURN(received);
+        if (!received->has_value())
+            continue;
+        auto taken = accepted(**received);
+        SIHD_UNEXPECTED_RETURN(taken);
+        if (*taken)
+            return std::move(**received);
+    }
+}
+
+template <BasicType T>
+Result<T> get_property(Connection & connection,
+                       ZStringView destination,
+                       ZStringView path,
+                       ZStringView interface,
+                       ZStringView name,
+                       Duration timeout)
+{
+    auto reply = property_reply(connection, destination, path, interface, name, timeout);
+    SIHD_UNEXPECTED_RETURN(reply);
+    auto value = Iter(*reply).recurse();
+    SIHD_UNEXPECTED_RETURN(value);
+    return value->get<T>();
+}
+
+template <BasicType T>
+Result<std::vector<T>> get_array_property(Connection & connection,
+                                          ZStringView destination,
+                                          ZStringView path,
+                                          ZStringView interface,
+                                          ZStringView name,
+                                          Duration timeout)
+{
+    auto reply = property_reply(connection, destination, path, interface, name, timeout);
+    SIHD_UNEXPECTED_RETURN(reply);
+    auto value = Iter(*reply).recurse();
+    SIHD_UNEXPECTED_RETURN(value);
+    return value->get_array<T>();
+}
+
+std::string
+    signal_rule(std::string_view sender, std::string_view path, std::string_view interface, std::string_view member)
+{
+    return fmt::format("type='signal',sender='{}',path='{}',interface='{}',member='{}'",
+                       sender,
+                       path,
+                       interface,
+                       member);
+}
+
+std::string properties_changed_rule(std::string_view sender, std::string_view path, std::string_view interface)
+{
+    return fmt::format("{},arg0='{}'", signal_rule(sender, path, properties_interface, "PropertiesChanged"), interface);
+}
+
+bool has_error_name(const Error & error, std::string_view name)
+{
+    return error.message.starts_with(name) && error.message.substr(name.size()).starts_with(':');
+}
 
 Appender::Appender(std::unique_ptr<Impl> impl): _impl(std::move(impl)) {}
 
@@ -849,9 +1182,14 @@ Appender & Appender::operator=(Appender && other) = default;
 
 Appender::~Appender() = default;
 
-Result<void> Message::add(const std::string & value)
+Result<void> Message::add(ZStringView value)
 {
     return Appender(*this).add(value);
+}
+
+Result<void> Message::add_object_path(ZStringView path)
+{
+    return Appender(*this).add_object_path(path);
 }
 
 template <FixedType T>
@@ -894,6 +1232,30 @@ Result<std::vector<T>> Iter::get_array() const
     return values;
 }
 
+template <BasicType Key>
+Result<void> Iter::for_each_entry(const std::function<Result<void>(const Key &, Iter &)> & callback) const
+{
+    if (this->type() != 'a')
+        return std::unexpected(Error(invalid_argument, "dbus type '{}' is not a dict", this->type()));
+    auto entries = this->recurse();
+    SIHD_UNEXPECTED_RETURN(entries);
+
+    for (; entries->type() != '\0'; entries->next())
+    {
+        auto entry = entries->recurse();
+        SIHD_UNEXPECTED_RETURN(entry);
+        auto key = entry->get<Key>();
+        SIHD_UNEXPECTED_RETURN(key);
+        entry->next();
+
+        auto value = entry->type() == 'v' ? entry->recurse() : Result<Iter>(std::move(*entry));
+        SIHD_UNEXPECTED_RETURN(value);
+        auto done = callback(*key, *value);
+        SIHD_UNEXPECTED_RETURN(done);
+    }
+    return {};
+}
+
 Connection::Connection() = default;
 
 Connection::Connection(Connection && other) = default;
@@ -912,6 +1274,11 @@ void Connection::close()
     _impl.reset();
 }
 
+void Connection::disable_auto_start()
+{
+    _auto_start = false;
+}
+
 template Result<bool> Iter::get<bool>() const;
 template Result<uint8_t> Iter::get<uint8_t>() const;
 template Result<int16_t> Iter::get<int16_t>() const;
@@ -928,6 +1295,17 @@ template Result<std::vector<int32_t>> Iter::get_array<int32_t>() const;
 template Result<std::vector<uint32_t>> Iter::get_array<uint32_t>() const;
 template Result<std::vector<std::string>> Iter::get_array<std::string>() const;
 
+template Result<void> Iter::for_each_entry<bool>(const std::function<Result<void>(const bool &, Iter &)> &) const;
+template Result<void> Iter::for_each_entry<uint8_t>(const std::function<Result<void>(const uint8_t &, Iter &)> &) const;
+template Result<void> Iter::for_each_entry<int16_t>(const std::function<Result<void>(const int16_t &, Iter &)> &) const;
+template Result<void>
+    Iter::for_each_entry<uint16_t>(const std::function<Result<void>(const uint16_t &, Iter &)> &) const;
+template Result<void> Iter::for_each_entry<int32_t>(const std::function<Result<void>(const int32_t &, Iter &)> &) const;
+template Result<void>
+    Iter::for_each_entry<uint32_t>(const std::function<Result<void>(const uint32_t &, Iter &)> &) const;
+template Result<void>
+    Iter::for_each_entry<std::string>(const std::function<Result<void>(const std::string &, Iter &)> &) const;
+
 template Result<void> Message::add<bool>(const bool &);
 template Result<void> Message::add<uint8_t>(const uint8_t &);
 template Result<void> Message::add<int16_t>(const int16_t &);
@@ -941,6 +1319,43 @@ template Result<void> Appender::add<int16_t>(const int16_t &);
 template Result<void> Appender::add<uint16_t>(const uint16_t &);
 template Result<void> Appender::add<int32_t>(const int32_t &);
 template Result<void> Appender::add<uint32_t>(const uint32_t &);
+
+template Result<void> Appender::add_array<bool>(const std::vector<bool> &);
+template Result<void> Appender::add_array<uint8_t>(const std::vector<uint8_t> &);
+template Result<void> Appender::add_array<int16_t>(const std::vector<int16_t> &);
+template Result<void> Appender::add_array<uint16_t>(const std::vector<uint16_t> &);
+template Result<void> Appender::add_array<int32_t>(const std::vector<int32_t> &);
+template Result<void> Appender::add_array<uint32_t>(const std::vector<uint32_t> &);
+template Result<void> Appender::add_array<std::string>(const std::vector<std::string> &);
+
+template Result<bool> get_property<bool>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<uint8_t>
+    get_property<uint8_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<int16_t>
+    get_property<int16_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<uint16_t>
+    get_property<uint16_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<int32_t>
+    get_property<int32_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<uint32_t>
+    get_property<uint32_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::string>
+    get_property<std::string>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+
+template Result<std::vector<bool>>
+    get_array_property<bool>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<uint8_t>>
+    get_array_property<uint8_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<int16_t>>
+    get_array_property<int16_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<uint16_t>>
+    get_array_property<uint16_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<int32_t>>
+    get_array_property<int32_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<uint32_t>>
+    get_array_property<uint32_t>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
+template Result<std::vector<std::string>>
+    get_array_property<std::string>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, Duration);
 
 } // namespace sihd::sys::linux_::dbus
 

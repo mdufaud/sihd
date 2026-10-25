@@ -181,7 +181,7 @@ const std::string & HttpHeader::get(const std::string & header_name) const
     return _headers.at(lower_name);
 }
 
-std::string_view HttpHeader::find(const std::string & header_name) const
+std::string_view HttpHeader::find(std::string_view header_name) const
 {
     std::string lower_name = format_hdr_name(header_name);
     const auto it = _headers.find(lower_name);

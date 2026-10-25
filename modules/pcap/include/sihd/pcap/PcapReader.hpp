@@ -7,6 +7,7 @@
 #include <sihd/util/IReader.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::pcap
 {
@@ -18,9 +19,9 @@ class PcapReader: public sihd::util::Named,
         PcapReader(const std::string & name, sihd::util::Node *parent = nullptr);
         ~PcapReader();
 
-        sihd::util::Result<void> open(const std::string & path);
-        sihd::util::Result<void> open_micro_precision(const std::string & path);
-        sihd::util::Result<void> open_nano_precision(const std::string & path);
+        sihd::util::Result<void> open(sihd::util::ZStringView path);
+        sihd::util::Result<void> open_micro_precision(sihd::util::ZStringView path);
+        sihd::util::Result<void> open_nano_precision(sihd::util::ZStringView path);
         sihd::util::Result<void> open(FILE *file);
         sihd::util::Result<void> open_micro_precision(FILE *file);
         sihd::util::Result<void> open_nano_precision(FILE *file);

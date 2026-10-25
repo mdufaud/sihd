@@ -9,14 +9,14 @@
 namespace test
 {
 
-inline std::optional<sihd::net::NetInterface> find_loopback()
+inline std::optional<sihd::net::NetInterface> find_interface(sihd::net::NetInterface::Kind kind, bool running)
 {
     auto interfaces = sihd::net::NetInterface::get_all_interfaces();
     if (!interfaces)
         return std::nullopt;
     for (const auto & [name, netif] : *interfaces)
     {
-        if (netif.kind() == sihd::net::NetInterface::Kind::loopback)
+        if (netif.kind() == kind && (!running || netif.running()))
             return netif;
     }
     return std::nullopt;

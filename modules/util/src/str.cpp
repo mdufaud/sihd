@@ -130,7 +130,7 @@ size_t levenshtein_distance(std::string_view source,
 }
 
 std::string format_time(Timestamp timestamp,
-                        const std::string & format,
+                        ZStringView format,
                         bool localtime,
                         [[maybe_unused]] const std::locale *loc = nullptr)
 {
@@ -691,7 +691,7 @@ std::span<const char *> table_span(const char **table)
     return std::span<const char *>(table, str::table_len(table));
 }
 
-Result<bool> regex_match(std::string_view str, const std::string & pattern, size_t max_size)
+Result<bool> regex_match(std::string_view str, std::string_view pattern, size_t max_size)
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
@@ -700,7 +700,7 @@ Result<bool> regex_match(std::string_view str, const std::string & pattern, size
     return regex_pattern->matches(str);
 }
 
-Result<std::vector<std::string>> regex_search(std::string_view str, const std::string & pattern, size_t max_size)
+Result<std::vector<std::string>> regex_search(std::string_view str, std::string_view pattern, size_t max_size)
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
@@ -985,6 +985,11 @@ bool iequals(std::string_view s1, std::string_view s2)
     return strncasecmp(s1.data(), s2.data(), s1.size()) == 0;
 }
 
+std::string escape_xml(std::string_view text)
+{
+    return replace(text, {{"&", "&amp;"}, {"<", "&lt;"}, {">", "&gt;"}, {"\"", "&quot;"}, {"'", "&apos;"}});
+}
+
 char num_to_char(size_t num)
 {
     if (num >= 36)
@@ -1050,6 +1055,24 @@ std::string hexdump(const void *mem, size_t size, char delim)
         ret += num_to_char(bytes[i] % 16);
     }
     return ret;
+}
+
+Result<std::vector<uint8_t>> from_hex(std::string_view hex)
+{
+    if (hex.size() % 2 != 0)
+        return std::unexpected(Error(invalid_argument, "hex holds an odd number of digits: {}", hex.size()));
+    std::vector<uint8_t> bytes;
+    bytes.reserve(hex.size() / 2);
+    for (size_t index = 0; index < hex.size(); index += 2)
+    {
+        const int high = hex_digit(hex[index]);
+        const int low = hex_digit(hex[index + 1]);
+        if (high < 0 || low < 0)
+            return std::unexpected(
+                Error(invalid_argument, "invalid hex digit at index {}", high < 0 ? index : index + 1));
+        bytes.push_back(static_cast<uint8_t>(high * 16 + low));
+    }
+    return bytes;
 }
 
 std::string hexdump(const IArray & arr, char delim)
@@ -1588,22 +1611,22 @@ std::string localtimeoffset_str(Timestamp timestamp, bool total_parenthesis, boo
     return timeoffset_to_string(timestamp, total_parenthesis, nano_resolution, true);
 }
 
-std::string format_time(Timestamp t, const std::string & format)
+std::string format_time(Timestamp t, ZStringView format)
 {
     return format_time(t, format, false, nullptr);
 }
 
-std::string format_localtime(Timestamp t, const std::string & format)
+std::string format_localtime(Timestamp t, ZStringView format)
 {
     return format_time(t, format, true, nullptr);
 }
 
-std::string format_time(Timestamp t, const std::string & format, const std::locale & loc)
+std::string format_time(Timestamp t, ZStringView format, const std::locale & loc)
 {
     return format_time(t, format, false, &loc);
 }
 
-std::string format_localtime(Timestamp t, const std::string & format, const std::locale & loc)
+std::string format_localtime(Timestamp t, ZStringView format, const std::locale & loc)
 {
     return format_time(t, format, true, &loc);
 }

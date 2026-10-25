@@ -23,7 +23,7 @@ class TestNetInterface: public ::testing::Test
 
 TEST_F(TestNetInterface, test_netinterface_loopback)
 {
-    const std::optional<NetInterface> loopback = find_loopback();
+    const std::optional<NetInterface> loopback = find_interface(NetInterface::Kind::loopback, false);
     ASSERT_TRUE(loopback.has_value());
 
     EXPECT_TRUE(loopback->loopback());

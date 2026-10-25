@@ -172,7 +172,7 @@ LoggerManager *LoggerManager::get()
     return &_g_singleton;
 }
 
-void LoggerManager::log(const std::string & src, LogLevel level, std::string_view msg)
+void LoggerManager::log(std::string_view src, LogLevel level, std::string_view msg)
 {
     LogInfo info(src, level);
     _g_singleton._filter_and_log(info, msg);
@@ -193,7 +193,7 @@ bool LoggerManager::should_log_level(LogLevel level)
     return _g_singleton._level.load(std::memory_order_relaxed) >= level;
 }
 
-bool LoggerManager::should_log(const std::string & src, LogLevel level)
+bool LoggerManager::should_log(std::string_view src, LogLevel level)
 {
     LogInfo info(src, level);
     return _g_singleton._filter_no_format(info);

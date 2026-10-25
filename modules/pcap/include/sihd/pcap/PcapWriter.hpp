@@ -8,6 +8,7 @@
 #include <sihd/util/IWriter.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::pcap
@@ -21,9 +22,9 @@ class PcapWriter: public sihd::util::Named,
         PcapWriter(const std::string & name, sihd::util::Node *parent = nullptr);
         ~PcapWriter();
 
-        sihd::util::Result<void> open(const std::string & path);
-        sihd::util::Result<void> open(const std::string & path, int datalink);
-        sihd::util::Result<void> open(const std::string & path, int datalink, int snaplen);
+        sihd::util::Result<void> open(sihd::util::ZStringView path);
+        sihd::util::Result<void> open(sihd::util::ZStringView path, int datalink);
+        sihd::util::Result<void> open(sihd::util::ZStringView path, int datalink, int snaplen);
         bool close();
         bool is_open() const;
 

@@ -123,7 +123,7 @@ default_matrix() {
     build_target "windows" platform=windows
 
     export lua=0
-    export m="util,sys,core,csv,zip,net"
+    export m="util,sys,core,csv,zip,net,wifi"
     build_target "arm32" machine=arm
     build_target "emscripten" platform=web
 

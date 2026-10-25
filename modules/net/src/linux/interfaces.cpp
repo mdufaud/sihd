@@ -7,6 +7,8 @@
 namespace sihd::net::interfaces
 {
 
+using namespace sihd::util;
+
 std::optional<std::string> name_of(uint32_t index)
 {
     std::array<char, IF_NAMESIZE> name {};
@@ -15,7 +17,7 @@ std::optional<std::string> name_of(uint32_t index)
     return name.data();
 }
 
-std::optional<uint32_t> index_of(const std::string & name)
+std::optional<uint32_t> index_of(ZStringView name)
 {
     const uint32_t index = if_nametoindex(name.c_str());
     if (index == 0)

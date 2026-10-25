@@ -9,6 +9,7 @@
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 #if defined(__SIHD_WINDOWS__)
 // shutdown function corresponding values unix -> windows
@@ -32,13 +33,13 @@ namespace sihd::net::ip
 const char *domain_str(int domain);
 const char *socktype_str(int socktype);
 const char *protocol_str(int protocol);
-int protocol(const std::string & name);
+int protocol(sihd::util::ZStringView name);
 int domain(std::string_view name);
 int socktype(std::string_view name);
 
-bool is_valid_ipv4(const std::string & ip);
-bool is_valid_ipv6(const std::string & ip);
-bool is_valid_ip(const std::string & ip);
+bool is_valid_ipv4(sihd::util::ZStringView ip);
+bool is_valid_ipv6(sihd::util::ZStringView ip);
+bool is_valid_ip(sihd::util::ZStringView ip);
 
 bool is_private_ipv4(uint32_t addr);
 // not_found when the host does not resolve

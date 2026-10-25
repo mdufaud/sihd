@@ -1425,4 +1425,31 @@ TEST_F(TestStr, test_str_convert_from_string_range)
     EXPECT_EQ(str::convert_from_string<uint8_t>("FF", 16).value_or(0), 255);
 }
 
+TEST_F(TestStr, test_str_escape_xml)
+{
+    EXPECT_EQ(str::escape_xml("plain text"), "plain text");
+    EXPECT_EQ(str::escape_xml("a < b && c > \"d\" 'e'"), "a &lt; b &amp;&amp; c &gt; &quot;d&quot; &apos;e&apos;");
+    EXPECT_EQ(str::escape_xml(""), "");
+}
+
+TEST_F(TestStr, test_str_from_hex)
+{
+    auto bytes = str::from_hex("68656C6c6f00ff");
+    auto empty = str::from_hex("");
+    auto odd = str::from_hex("abc");
+    auto not_hex = str::from_hex("6g");
+
+    ASSERT_TRUE(bytes.has_value()) << bytes.error().message;
+    EXPECT_EQ(*bytes, (std::vector<uint8_t> {'h', 'e', 'l', 'l', 'o', 0x00, 0xff}));
+    EXPECT_EQ(str::hexdump(bytes->data(), bytes->size(), '\0'), "68656c6c6f00ff");
+    ASSERT_TRUE(empty.has_value()) << empty.error().message;
+    EXPECT_TRUE(empty->empty());
+    ASSERT_FALSE(odd.has_value());
+    EXPECT_EQ(odd.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(odd.error().message, "hex holds an odd number of digits: 3");
+    ASSERT_FALSE(not_hex.has_value());
+    EXPECT_EQ(not_hex.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(not_hex.error().message, "invalid hex digit at index 1");
+}
+
 } // namespace test

@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::sys
 {
 
@@ -21,6 +23,7 @@ class TmpDir
         operator bool() const;
         operator std::string() const;
         operator std::string_view() const;
+        operator sihd::util::ZStringView() const;
 
         const std::string & path() const;
 

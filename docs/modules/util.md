@@ -115,10 +115,11 @@
 - `str.hpp` (namespace `sihd::util::str`):
   - Split and join: `split`, `split_pair`, `join`, `trim`, `ltrim`, `rtrim`, `starts_with`, `ends_with`, `replace`, `iequals`, `to_upper`, `to_lower`.
   - Regex and glob: `regex_match`, `regex_replace`, `regex_filter`, `glob_match`, `glob_filter`.
-  - Conversions: `to_bool`, `to_signed`, `to_unsigned`, `to_float`, `to_double`, `to_hex`, `to_dec`, `to_oct`, `to_base64`, `from_base64`, `convert_from_string<T>`, each returning `Result`.
+  - Conversions: `to_bool`, `to_signed`, `to_unsigned`, `to_float`, `to_double`, `to_hex`, `to_dec`, `to_oct`, `to_base64`, `from_base64`, `from_hex`, `convert_from_string<T>`, each returning `Result`.
   - Formatting: `format`, `format_time`, `format_localtime`, `bytes_str`, `hexdump`, `hexdump_fmt`, `word_wrap`, `wrap`, `demangle`, `demangle_type_name`.
-  - Escapes and enclosures: `unquote`, `remove_escape_char`, `remove_enclosing`, `find_char_not_escaped`.
+  - Escapes and enclosures: `unquote`, `remove_escape_char`, `remove_enclosing`, `find_char_not_escaped`, `escape_xml`.
   - Search and output: `search` (matches a selection string against a list), `print`, `println`, `generate_random`, `generate_random_printable`.
+- `ZStringView`: a `std::string_view` guaranteed NUL-terminated, built from a literal, a `std::string` or a `const char *`, never from a `std::string_view` (`c_str`, `view`). C api wrappers (`sys::linux_::dbus`, `fs::read_all`) take it, and their string constants are `constexpr ZStringView`.
 - `Url`: parsed URL components (`scheme`, `userinfo`, and others) with `decode`, `encode`, `str_encode`, `str_decode`.
 - `Regex`: compiled PCRE2 pattern (`compile` with `Mode`, `matches`, `find_all`, `replace_all`) returning `Result`.
 - `mime.hpp`: MIME type constants and matching (`compatible`, `match_offered`, `best_match`).

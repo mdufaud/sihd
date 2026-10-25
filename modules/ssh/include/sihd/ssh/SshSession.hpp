@@ -11,6 +11,7 @@
 #include <sihd/ssh/SshKey.hpp>
 #include <sihd/ssh/SshShell.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::ssh
 {
@@ -25,8 +26,8 @@ class SshSession
 
         sihd::util::Result<void> new_session();
 
-        sihd::util::Result<void> set_user(const std::string & user);
-        sihd::util::Result<void> set_host(const std::string & host);
+        sihd::util::Result<void> set_user(sihd::util::ZStringView user);
+        sihd::util::Result<void> set_host(sihd::util::ZStringView host);
         sihd::util::Result<void> set_port(int port);
         // 0=none, 1=warnings, 2=protocol, 3=packet, 4=functions
         sihd::util::Result<void> set_verbosity(int verbosity);
@@ -34,7 +35,7 @@ class SshSession
         // When disabled, libssh ignores ~/.ssh/config and system ssh_config
         // (ProxyCommand/ProxyJump, etc). libssh default is enabled.
         sihd::util::Result<void> set_process_config(bool enable);
-        sihd::util::Result<void> set_ssh_dir(const std::string & path);
+        sihd::util::Result<void> set_ssh_dir(sihd::util::ZStringView path);
         // Bound connect/handshake/blocking ops (seconds). Applied by default in
         // new_session(); pass <= 0 to disable (block indefinitely).
         sihd::util::Result<void> set_timeout(int seconds);
@@ -95,7 +96,7 @@ class SshSession
         AuthState auth_none();
         AuthState auth_agent();
         AuthState auth_gssapi();
-        AuthState auth_password(const std::string & password);
+        AuthState auth_password(sihd::util::ZStringView password);
         AuthState auth_key(const SshKey & private_key);
         AuthState auth_key_file(const std::string & private_key_path, const char *passphrase = nullptr);
         AuthState auth_key_try(const SshKey & public_key);

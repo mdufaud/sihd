@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_VALUE_HPP__
 #define __SIHD_UTIL_VALUE_HPP__
 
+#include <string_view>
 #include <type_traits>
 
 #include <sihd/util/str.hpp>
@@ -29,11 +30,11 @@ class Value
         Value(const uint8_t *buf, Type type);
         ~Value() = default;
 
-        static Value from_bool_string(const std::string & str);
-        static Value from_char_string(const std::string & str);
-        static Value from_int_string(const std::string & str);
-        static Value from_float_string(const std::string & str);
-        static Value from_any_string(const std::string & str);
+        static Value from_bool_string(std::string_view str);
+        static Value from_char_string(std::string_view str);
+        static Value from_int_string(std::string_view str);
+        static Value from_float_string(std::string_view str);
+        static Value from_any_string(std::string_view str);
 
         bool empty() const;
         void clear();

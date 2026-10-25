@@ -1,11 +1,11 @@
 # net
 
-Socket networking over IP and Unix domain sockets. It provides address handling, raw sockets, TCP, UDP, TLS over TCP, ICMP ping, DNS resolution, network interface enumeration and connection detection: link kinds, routes, VPN tunnels, DNS servers, wifi links and change monitoring. Most network classes are `Named` services that can be run through the service lifecycle and observed through `Handler` callbacks, and the `Device*` wrappers expose them as `core` devices.
+Socket networking over IP and Unix domain sockets. It provides address handling, raw sockets, TCP, UDP, TLS over TCP, ICMP ping, DNS resolution, network interface enumeration and connection detection: link kinds, routes, VPN tunnels, DNS servers and change monitoring. Most network classes are `Named` services that can be run through the service lifecycle and observed through `Handler` callbacks, and the `Device*` wrappers expose them as `core` devices.
 
 | | |
 |---|---|
 | Depends on | `sys`, `core`, `crypto` |
-| External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows, wlanapi loaded at runtime |
+| External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows |
 | Platforms | all except web (Emscripten) |
 | Build | `make m=net` |
 | Header | `#include <sihd/net/TcpClient.hpp>` (one header per class, namespace `sihd::net`) |
@@ -70,12 +70,6 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 - `metric` is the effective one: the route metric plus the interface metric on Windows. Linux IPv4 lookups do not report it: `find` leaves it at 0 there.
 - Linux: rtnetlink, no bind, so an Android app can use it. Windows: `GetBestInterfaceEx` + `GetBestRoute2` and `GetIpForwardTable2`.
 
-### Wifi
-
-- `wifi::link(interface_name)`: the association of a wifi station as `wifi::Link`: `ssid`, `bssid`, `signal_dbm`, `frequency_mhz`, `tx_bitrate_bps` (0 when unknown). `not_found` when the interface does not exist or is not an associated wifi station.
-  - Linux: nl80211 (`not_supported` without cfg80211).
-  - Windows: wlanapi, loaded at runtime because Windows Server ships without it until its wireless feature is installed (`not_supported` then). Since Windows 11 24H2, the connection details need the location consent: `permission_denied` without it. The signal falls back to the link quality (0..100 mapped onto -100..-50 dBm) and the frequency stays 0 when the BSS list is not available.
-
 ### Monitoring
 
 - `NetMonitor`: `Observable<NetMonitor>` and `IRunnable`, shaped like `sys::FileWatcher`. The constructor subscribes to the system notifications and throws when refused.
@@ -83,6 +77,10 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 - `NetMonitorEvent`: `type` (`link`, `address`, `route`, `overflow`), `removed`, `interface_name` and the `address` of an address event. An `overflow` event means notifications were dropped: re-read everything. A connection change sends a burst of events, so re-query `route::find` on them instead of tracking each one. `interface_name` is the name the system still knows (a removed link keeps it on Linux), empty when it can no longer be resolved, as for the routes and addresses of a link already gone.
   - Linux: rtnetlink multicast groups (an Android app may not bind them: the constructor throws).
   - Windows: `NotifyIpInterfaceChange`, `NotifyUnicastIpAddressChange` and `NotifyRouteChange2`. Wine accepts them but never notifies.
+
+### Netlink (Linux)
+
+- `sihd/net/linux/netlink.hpp`: the netlink socket behind routes and monitoring, public for other families (`wifi` drives nl80211 with it). `linux_::netlink::Netlink` (`open`, `subscribe`, `set_nonblocking`, `request`, `receive`), `Request` (`set_header`, `add_attribute`, `add_u32`, `add_string`), and `Message` / `Attribute` read through free decoders (`header`, `attributes`, `nested`, `u8`, `u16`, `u32`, `str`, `ip`).
 
 ### Recipes
 
@@ -161,4 +159,4 @@ Adapted from `modules/net/test/linux/TestNetNamespace.cpp` and `modules/net/demo
 
 ## Scripting
 
-Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers`, `wifi.link` and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures return `nil` without logging, the kind enums are `NetInterfaceKind` and `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which returns `nil` instead of throwing.
+Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers` and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures raise a bound `Error` (`message`, `code`) that `pcall` catches, the kinds are `NetInterface.Kind`, the event types `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which raises when refused.

@@ -20,7 +20,7 @@ if [[ "${BUILD_STATIC:-0}" != "1" ]]; then
 fi
 
 # native configs run every module's tests
-export m="json,util,sys,core,csv,zip,net,curl,http,usb${imgui}"
+export m="json,util,sys,core,csv,zip,net,wifi,curl,http,usb${imgui}"
 
 build_target "clang" compiler=clang
 # the terminal tests drive the scenes binary the clang build just made
@@ -35,7 +35,7 @@ build_target "gcc-musl" libc=musl mode=size
 
 # http tests deadlock under emulated runtimes (qemu-user, wine): run them on
 # native configs only. curl tests are file:// based and qemu-safe.
-export m="json,util,sys,core,csv,zip,net,curl,usb${imgui}"
+export m="json,util,sys,core,csv,zip,net,wifi,curl,usb${imgui}"
 
 build_target "aarch64" machine=aarch64
 build_target "riscv64" machine=riscv64
@@ -45,7 +45,7 @@ build_target "riscv64" machine=riscv64
 build_target "windows" platform=windows
 
 # arm32 has no curl extlib from vcpkg
-export m="json,util,sys,core,csv,zip,net"
+export m="json,util,sys,core,csv,zip,net,wifi"
 
 build_target "arm32" machine=arm32
 

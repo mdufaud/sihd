@@ -2,16 +2,12 @@
 #define __SIHD_SYS_INTERNAL_DESKTOP_NOTIFIER_HPP__
 
 #include <optional>
-#include <string>
-#include <string_view>
 
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
 
 namespace sihd::sys::internal
 {
-
-std::string escape_markup(std::string_view text);
 
 sihd::util::Result<void> check_timeout(const std::optional<sihd::util::Duration> & timeout);
 

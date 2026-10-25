@@ -5,9 +5,11 @@
 namespace sihd::sys
 {
 
+using namespace sihd::util;
+
 DynLib::DynLib(): _handle(nullptr) {}
 
-DynLib::DynLib(const std::string & file): DynLib()
+DynLib::DynLib(ZStringView file): DynLib()
 {
     auto opened = this->open(file);
     if (!opened)

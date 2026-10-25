@@ -30,7 +30,7 @@ std::unexpected<Error> lib_error()
 
 } // namespace
 
-Result<void> DynLib::open(const std::string & file)
+Result<void> DynLib::open(ZStringView file)
 {
     this->close();
     _handle = dlopen(file.c_str(), RTLD_NOW);
@@ -39,14 +39,14 @@ Result<void> DynLib::open(const std::string & file)
     return {};
 }
 
-Result<void> DynLib::open_system(const std::string & name)
+Result<void> DynLib::open_system(ZStringView name)
 {
-    if (name.find('/') != std::string::npos)
+    if (name.view().find('/') != std::string::npos)
         return std::unexpected(Error(invalid_argument, "not a library name: '{}'", name));
     return this->open(name);
 }
 
-Result<void *> DynLib::load_symbol(const std::string & symbol_name) const
+Result<void *> DynLib::load_symbol(ZStringView symbol_name) const
 {
     if (this->is_open() == false)
         return std::unexpected(Error(not_initialized, "no library open"));
@@ -73,17 +73,17 @@ bool DynLib::close()
 
 static_assert(!DynLib::supported);
 
-Result<void> DynLib::open([[maybe_unused]] const std::string & file)
+Result<void> DynLib::open([[maybe_unused]] ZStringView file)
 {
     return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
 }
 
-Result<void> DynLib::open_system([[maybe_unused]] const std::string & name)
+Result<void> DynLib::open_system([[maybe_unused]] ZStringView name)
 {
     return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
 }
 
-Result<void *> DynLib::load_symbol([[maybe_unused]] const std::string & symbol_name) const
+Result<void *> DynLib::load_symbol([[maybe_unused]] ZStringView symbol_name) const
 {
     return std::unexpected(Error(not_supported, "dynamic loading unavailable in this build"));
 }

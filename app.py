@@ -245,6 +245,11 @@ modules = {
         # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString)
         "windows-libs": ['runtimeobject'],
     },
+    "wifi": {
+        "allow-platforms": ["linux", "windows"],
+        # wlanapi is loaded at runtime, iphlpapi comes exported by net
+        "depends": ['util', 'sys', 'net', 'pch'],
+    },
     "csv": {
         "depends": ['util', 'sys', 'pch'],
     },
@@ -312,7 +317,7 @@ conditional_modules = {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util', 'pch'],
-        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'http'],
+        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'wifi', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
@@ -328,7 +333,7 @@ conditional_modules = {
         "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
         "depends": [],
-        "conditional-depends": ['util', 'sys', 'core', 'net', 'http'],
+        "conditional-depends": ['util', 'sys', 'core', 'net', 'wifi', 'http'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # pybind11 requires optimization: FORTIFY breaks -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],

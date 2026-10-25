@@ -122,38 +122,38 @@ std::string cwd()
     return "";
 }
 
-bool is_file(const std::string & path)
+bool is_file(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::regular);
 }
 
-bool is_dir(const std::string & path)
+bool is_dir(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::directory);
 }
 
-bool is_symlink(const std::string & path)
+bool is_symlink(std::string_view path)
 {
     std::error_code ec;
     return std::filesystem::symlink_status(path, ec).type() == std::filesystem::file_type::symlink;
 }
 
-bool is_socket(const std::string & path)
+bool is_socket(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::socket);
 }
 
-bool is_block(const std::string & path)
+bool is_block(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::block);
 }
 
-bool is_character(const std::string & path)
+bool is_character(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::character);
 }
 
-bool is_fifo(const std::string & path)
+bool is_fifo(std::string_view path)
 {
     return is_file_type(path, std::filesystem::file_type::fifo);
 }
@@ -227,7 +227,7 @@ unsigned int permission_get(const std::string & path)
     return ec ? 0 : static_cast<unsigned int>(perms);
 }
 
-Result<void> remove_directory(const std::string & path)
+Result<void> remove_directory(ZStringView path)
 {
     if (rmdir(path.c_str()) != 0)
     {
@@ -249,7 +249,7 @@ Result<void> remove_directories(const std::string & path)
     return res;
 }
 
-Result<void> make_directory(const std::string & path, unsigned int mode);
+Result<void> make_directory(ZStringView path, unsigned int mode);
 
 Result<void> make_directories(const std::string & path, unsigned int mode)
 {
@@ -495,7 +495,7 @@ bool are_equals(const std::string & path1, const std::string & path2)
     return true;
 }
 
-Result<void> remove_file(const std::string & path)
+Result<void> remove_file(ZStringView path)
 {
     if (remove(path.c_str()) != 0)
     {
@@ -569,7 +569,7 @@ Result<std::string> read(const std::string & path, Slice slice, bool binary)
     return str;
 }
 
-Result<std::string> read_line(const std::string & path, size_t line_number)
+Result<std::string> read_line(ZStringView path, size_t line_number)
 {
     std::ifstream file(path.c_str(), std::ifstream::in);
     if (!file.is_open())
@@ -590,7 +590,7 @@ Result<std::vector<std::string>> read_lines(const std::string & path)
     return read_all(path).transform([](const std::string & content) { return str::split(content, '\n'); });
 }
 
-Result<std::string> read_all(const std::string & path, bool binary)
+Result<std::string> read_all(ZStringView path, bool binary)
 {
     const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
     std::ifstream file(path.c_str(), mode);

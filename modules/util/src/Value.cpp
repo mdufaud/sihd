@@ -38,21 +38,21 @@ void Value::clear()
     this->data.n = 0;
 }
 
-Value Value::from_bool_string(const std::string & str)
+Value Value::from_bool_string(std::string_view str)
 {
     if (const auto val = str::convert_from_string<bool>(str))
         return Value(*val);
     return {};
 }
 
-Value Value::from_char_string(const std::string & str)
+Value Value::from_char_string(std::string_view str)
 {
     if (const auto val = str::convert_from_string<char>(str))
         return Value(*val);
     return {};
 }
 
-Value Value::from_int_string(const std::string & str)
+Value Value::from_int_string(std::string_view str)
 {
     constexpr uint16_t binary_base = 2;
     constexpr uint16_t decimal_base = 10;
@@ -80,21 +80,21 @@ Value Value::from_int_string(const std::string & str)
 
     if (is_signed)
     {
-        if (const auto val = str::convert_from_string<int64_t>(str.c_str() + prefix_size, base))
+        if (const auto val = str::convert_from_string<int64_t>(str.substr(prefix_size), base))
             return Value(*val);
     }
     else
     {
-        if (const auto val = str::convert_from_string<uint64_t>(str.c_str() + prefix_size, base))
+        if (const auto val = str::convert_from_string<uint64_t>(str.substr(prefix_size), base))
             return Value(*val);
     }
 
     return {};
 }
 
-Value Value::from_float_string(const std::string & str)
+Value Value::from_float_string(std::string_view str)
 {
-    if (str.find('.') == std::string::npos)
+    if (str.find('.') == std::string_view::npos)
         return {};
     if (str::ends_with(str, "f"))
     {
@@ -109,7 +109,7 @@ Value Value::from_float_string(const std::string & str)
     return {};
 }
 
-Value Value::from_any_string(const std::string & str)
+Value Value::from_any_string(std::string_view str)
 {
     Value ret;
 

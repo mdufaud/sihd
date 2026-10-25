@@ -25,11 +25,11 @@ namespace sihd::net::dns
 namespace
 {
 
-const std::string resolv_conf_path = "/etc/resolv.conf";
-const std::string resolved_service = "org.freedesktop.resolve1";
-const std::string resolved_path = "/org/freedesktop/resolve1";
-const std::string properties_interface = "org.freedesktop.DBus.Properties";
-const std::string resolved_manager_interface = "org.freedesktop.resolve1.Manager";
+constexpr ZStringView resolv_conf_path = "/etc/resolv.conf";
+constexpr ZStringView resolved_service = "org.freedesktop.resolve1";
+constexpr ZStringView resolved_path = "/org/freedesktop/resolve1";
+constexpr ZStringView properties_interface = "org.freedesktop.DBus.Properties";
+constexpr ZStringView resolved_manager_interface = "org.freedesktop.resolve1.Manager";
 
 std::optional<DnsServer> parse_nameserver(const std::string & value)
 {

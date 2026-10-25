@@ -52,7 +52,7 @@ bool init(int opts)
     return _is_init;
 }
 
-Result<void> lookupnet(const std::string & dev, uint32_t *ip, uint32_t *mask)
+Result<void> lookupnet(ZStringView dev, uint32_t *ip, uint32_t *mask)
 {
     static_assert(sizeof(bpf_u_int32) == sizeof(uint32_t));
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -80,7 +80,7 @@ std::string datalink_desc(int dtl)
     return pcap_datalink_val_to_description(dtl);
 }
 
-int datalink(const std::string & dtl)
+int datalink(ZStringView dtl)
 {
     return pcap_datalink_name_to_val(dtl.c_str());
 }
@@ -100,7 +100,7 @@ std::string timestamp_type_desc(int ts)
     return pcap_tstamp_type_val_to_description(ts);
 }
 
-int timestamp_type(const std::string & ts)
+int timestamp_type(ZStringView ts)
 {
     return pcap_tstamp_type_name_to_val(ts.c_str());
 }

@@ -16,7 +16,6 @@
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/net/route.hpp>
-#include <sihd/net/wifi.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
 #include <sihd/util/SmartNodePtr.hpp>
@@ -206,19 +205,6 @@ void LuaNetApi::load_base(Vm & vm)
                                                                            : to_duration(resolver_timeout);
                          LuaGilRelease release(state);
                          return dns::servers(timeout);
-                     }>)
-        .endNamespace()
-        .beginNamespace("wifi")
-        .beginClass<wifi::Link>("Link")
-        .addProperty("ssid", &wifi::Link::ssid, false)
-        .addProperty("bssid", &wifi::Link::bssid, false)
-        .addProperty("signal_dbm", &wifi::Link::signal_dbm, false)
-        .addProperty("frequency_mhz", &wifi::Link::frequency_mhz, false)
-        .addProperty("tx_bitrate_bps", &wifi::Link::tx_bitrate_bps, false)
-        .endClass()
-        .addFunction("link", checked<+[](lua_State *state, const std::string & interface_name) {
-                         LuaGilRelease release(state);
-                         return wifi::link(interface_name);
                      }>)
         .endNamespace()
         .beginNamespace("NetMonitorEventType")

@@ -40,7 +40,7 @@ namespace registry = sihd::sys::windows_::registry;
 namespace
 {
 
-const std::string app_ids_key = "Software\\Classes\\AppUserModelId\\";
+constexpr std::string_view app_ids_key = "Software\\Classes\\AppUserModelId\\";
 
 Error hresult_error(const std::string & what, HRESULT hr)
 {
@@ -74,13 +74,13 @@ Result<std::string> toast_xml(const DesktopNotifier::Notification & notification
     {
         auto url = file_url(notification.icon);
         SIHD_UNEXPECTED_RETURN(url);
-        image = fmt::format(R"(<image placement="appLogoOverride" src="{}"/>)", internal::escape_markup(*url));
+        image = fmt::format(R"(<image placement="appLogoOverride" src="{}"/>)", str::escape_xml(*url));
     }
     return fmt::format(R"(<toast duration="{}"><visual><binding template="ToastGeneric"><text>{}</text>)"
                        R"(<text>{}</text>{}</binding></visual>{}</toast>)",
                        notification.urgency == DesktopNotifier::Urgency::critical ? "long" : "short",
-                       internal::escape_markup(notification.summary),
-                       internal::escape_markup(notification.body),
+                       str::escape_xml(notification.summary),
+                       str::escape_xml(notification.body),
                        image,
                        notification.urgency == DesktopNotifier::Urgency::low ? R"(<audio silent="true"/>)" : "");
 }
@@ -173,7 +173,7 @@ struct DesktopNotifier::Impl
             if (registered)
                 return {};
             registry::Key key;
-            auto created = key.create(registry::Hive::current_user, app_ids_key + app_id);
+            auto created = key.create(registry::Hive::current_user, std::string(app_ids_key) + app_id);
             SIHD_UNEXPECTED_RETURN(created);
             if (!app_name.empty())
             {

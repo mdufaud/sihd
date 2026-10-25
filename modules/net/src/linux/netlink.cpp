@@ -7,14 +7,14 @@
 # include <cerrno>
 # include <system_error>
 
+# include <sihd/net/linux/netlink.hpp>
 # include <sihd/util/Error.hpp>
 
-# include "netlink.hpp"
 # include <linux/netlink.h>
 
 using namespace sihd::util;
 
-namespace sihd::net::netlink
+namespace sihd::net::linux_::netlink
 {
 
 namespace
@@ -132,7 +132,7 @@ void Request::add_u32(uint16_t type, uint32_t value)
     this->add_attribute(type, &value, sizeof(value));
 }
 
-void Request::add_string(uint16_t type, const std::string & value)
+void Request::add_string(uint16_t type, ZStringView value)
 {
     this->add_attribute(type, value.c_str(), value.size() + 1);
 }
@@ -239,6 +239,6 @@ Result<bool> Netlink::_read(std::vector<Message> & messages)
     return done;
 }
 
-} // namespace sihd::net::netlink
+} // namespace sihd::net::linux_::netlink
 
 #endif

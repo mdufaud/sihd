@@ -68,7 +68,7 @@ bool Command::_contains(const Command *node) const
     return false;
 }
 
-bool Command::remove_command(const std::string & name)
+bool Command::remove_command(std::string_view name)
 {
     auto it = _children.find(name);
     if (it == _children.end())
@@ -79,18 +79,18 @@ bool Command::remove_command(const std::string & name)
     return true;
 }
 
-bool Command::has_command(const std::string & name) const
+bool Command::has_command(std::string_view name) const
 {
     return _children.find(name) != _children.end();
 }
 
-const Command *Command::get_command(const std::string & name) const
+const Command *Command::get_command(std::string_view name) const
 {
     auto it = _children.find(name);
     return it == _children.end() ? nullptr : it->second.get();
 }
 
-Command *Command::get_command(const std::string & name)
+Command *Command::get_command(std::string_view name)
 {
     auto it = _children.find(name);
     return it == _children.end() ? nullptr : it->second.get();

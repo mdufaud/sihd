@@ -18,7 +18,7 @@ class CallbackManager
 
         ~CallbackManager() = default;
 
-        bool exists(const std::string & name) { return _callbacks.find(name) != _callbacks.end(); }
+        bool exists(std::string_view name) { return _callbacks.find(name) != _callbacks.end(); }
 
         void remove(const std::string & name) { _callbacks.erase(name); }
 
@@ -110,7 +110,7 @@ class CallbackManager
             return cb->call(args...);
         }
 
-        std::map<std::string, std::unique_ptr<CallbackBase>> _callbacks;
+        std::map<std::string, std::unique_ptr<CallbackBase>, std::less<>> _callbacks;
 };
 
 } // namespace sihd::util

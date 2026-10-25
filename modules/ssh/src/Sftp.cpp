@@ -199,7 +199,7 @@ Result<void> Sftp::get_file(const std::string & remote_path, const std::string &
     return {};
 }
 
-Result<void> Sftp::mkdir(const std::string & path, mode_t mode)
+Result<void> Sftp::mkdir(ZStringView path, mode_t mode)
 {
     if (sftp_mkdir(_impl_ptr->sftp_session_ptr, path.c_str(), mode) == SSH_FX_OK)
         return {};
@@ -209,7 +209,7 @@ Result<void> Sftp::mkdir(const std::string & path, mode_t mode)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::symlink(const std::string & from, const std::string & to)
+Result<void> Sftp::symlink(ZStringView from, ZStringView to)
 {
     if (sftp_symlink(_impl_ptr->sftp_session_ptr, from.c_str(), to.c_str()) == SSH_FX_OK)
         return {};
@@ -220,7 +220,7 @@ Result<void> Sftp::symlink(const std::string & from, const std::string & to)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::list_dir_filenames(const std::string & path, std::vector<std::string> & list)
+Result<void> Sftp::list_dir_filenames(ZStringView path, std::vector<std::string> & list)
 {
     std::vector<SftpAttribute> attrs;
     if (auto res = this->list_dir(path, attrs); !res)
@@ -239,7 +239,7 @@ Result<void> Sftp::list_dir_filenames(const std::string & path, std::vector<std:
     return {};
 }
 
-Result<void> Sftp::list_dir(const std::string & path, std::vector<SftpAttribute> & list)
+Result<void> Sftp::list_dir(ZStringView path, std::vector<SftpAttribute> & list)
 {
     SftpDirPtr dir(sftp_opendir(_impl_ptr->sftp_session_ptr, path.c_str()));
     if (dir.get() == nullptr)
@@ -268,7 +268,7 @@ Result<void> Sftp::list_dir(const std::string & path, std::vector<SftpAttribute>
     return {};
 }
 
-std::string Sftp::readlink(const std::string & path)
+std::string Sftp::readlink(ZStringView path)
 {
     char *ret = sftp_readlink(_impl_ptr->sftp_session_ptr, path.c_str());
     if (ret == nullptr)
@@ -276,7 +276,7 @@ std::string Sftp::readlink(const std::string & path)
     return std::string(ret);
 }
 
-Result<void> Sftp::rename(const std::string & from, const std::string & to)
+Result<void> Sftp::rename(ZStringView from, ZStringView to)
 {
     if (sftp_rename(_impl_ptr->sftp_session_ptr, from.c_str(), to.c_str()) == SSH_FX_OK)
         return {};
@@ -287,7 +287,7 @@ Result<void> Sftp::rename(const std::string & from, const std::string & to)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::rm(const std::string & path)
+Result<void> Sftp::rm(ZStringView path)
 {
     if (sftp_unlink(_impl_ptr->sftp_session_ptr, path.c_str()) == SSH_FX_OK)
         return {};
@@ -297,7 +297,7 @@ Result<void> Sftp::rm(const std::string & path)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::rmdir(const std::string & path)
+Result<void> Sftp::rmdir(ZStringView path)
 {
     if (sftp_rmdir(_impl_ptr->sftp_session_ptr, path.c_str()) == SSH_FX_OK)
         return {};
@@ -307,7 +307,7 @@ Result<void> Sftp::rmdir(const std::string & path)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::chmod(const std::string & path, mode_t mode)
+Result<void> Sftp::chmod(ZStringView path, mode_t mode)
 {
     if (sftp_chmod(_impl_ptr->sftp_session_ptr, path.c_str(), mode) == SSH_FX_OK)
         return {};
@@ -318,7 +318,7 @@ Result<void> Sftp::chmod(const std::string & path, mode_t mode)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::chown(const std::string & path, uid_t owner, gid_t group)
+Result<void> Sftp::chown(ZStringView path, uid_t owner, gid_t group)
 {
     if (sftp_chown(_impl_ptr->sftp_session_ptr, path.c_str(), owner, group) == SSH_FX_OK)
         return {};

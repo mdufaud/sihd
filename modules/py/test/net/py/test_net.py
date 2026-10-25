@@ -74,12 +74,6 @@ for server in sihd.net.dns.servers(sihd.util.time.ms(500)):
 
 # failures raise sihd.Error
 try:
-    sihd.net.wifi.link("sihd-no-such-interface")
-    assert(False)
-except sihd.Error as missing:
-    assert(missing.code == sihd.ErrorCode.not_found)
-    assert(str(missing) == "no interface named sihd-no-such-interface")
-try:
     sihd.net.route.find(sihd.net.IpAddr())
     assert(False)
 except sihd.Error as no_destination:

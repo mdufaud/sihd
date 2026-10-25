@@ -3,6 +3,7 @@
 
 #include <array>
 #include <exception>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -130,7 +131,7 @@ class Node: public Named
         const std::vector<std::string> & children_keys() const;
 
     protected:
-        static std::pair<std::string, std::string> parent_path(const std::string & path);
+        static std::pair<std::string, std::string> parent_path(std::string_view path);
 
         virtual bool on_check_link(const std::string & name, Named *child);
         virtual bool on_add_child(const std::string & name, Named *child);

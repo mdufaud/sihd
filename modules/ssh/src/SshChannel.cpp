@@ -110,7 +110,7 @@ Result<void> SshChannel::open_agent()
         "open agent channel");
 }
 
-Result<void> SshChannel::open_x11(const std::string & addr, int port)
+Result<void> SshChannel::open_x11(ZStringView addr, int port)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -118,10 +118,7 @@ Result<void> SshChannel::open_x11(const std::string & addr, int port)
         "open x11 channel");
 }
 
-Result<void> SshChannel::open_forward(const std::string & remotehost,
-                                      int remoteport,
-                                      const std::string & sourcehost,
-                                      int localport)
+Result<void> SshChannel::open_forward(ZStringView remotehost, int remoteport, ZStringView sourcehost, int localport)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -179,10 +176,8 @@ Result<void> SshChannel::request_sftp()
         "request sftp subsystem");
 }
 
-Result<void> SshChannel::request_x11(const std::string & protocol,
-                                     const std::string & cookie,
-                                     int screen_number,
-                                     bool single_connection)
+Result<void>
+    SshChannel::request_x11(ZStringView protocol, ZStringView cookie, int screen_number, bool single_connection)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -196,7 +191,7 @@ Result<void> SshChannel::request_x11(const std::string & protocol,
         "request x11");
 }
 
-Result<void> SshChannel::request_subsystem(const std::string & subsys)
+Result<void> SshChannel::request_subsystem(ZStringView subsys)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -231,7 +226,7 @@ Result<void> SshChannel::request_shell()
         "request shell");
 }
 
-Result<void> SshChannel::request_exec(const std::string & cmd)
+Result<void> SshChannel::request_exec(ZStringView cmd)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -240,7 +235,7 @@ Result<void> SshChannel::request_exec(const std::string & cmd)
         cmd);
 }
 
-Result<void> SshChannel::set_env(const std::string & name, const std::string & value)
+Result<void> SshChannel::set_env(ZStringView name, ZStringView value)
 {
     return ssh_call(
         _impl_ptr->ssh_channel_ptr,
@@ -284,7 +279,7 @@ void SshChannel::detach()
     _impl_ptr->ssh_channel_ptr = nullptr;
 }
 
-Result<void> SshChannel::cancel_forward(const std::string & addr, int port)
+Result<void> SshChannel::cancel_forward(ZStringView addr, int port)
 {
     if (_impl_ptr->ssh_channel_ptr == nullptr)
         return std::unexpected(Error(not_initialized, "could not cancel forward: no channel"));
@@ -317,7 +312,7 @@ int SshChannel::poll_timeout_stderr(int timeout_ms)
     return ssh_channel_poll_timeout(_impl_ptr->ssh_channel_ptr, timeout_ms, 1);
 }
 
-Result<void> SshChannel::send_signal(const std::string & sig)
+Result<void> SshChannel::send_signal(ZStringView sig)
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,
@@ -347,10 +342,8 @@ Result<void> SshChannel::request_send_exit_status(int exit_status)
         "send exit status");
 }
 
-Result<void> SshChannel::request_send_exit_signal(const std::string & signum,
-                                                  bool core_dumped,
-                                                  const std::string & errmsg,
-                                                  const std::string & lang)
+Result<void>
+    SshChannel::request_send_exit_signal(ZStringView signum, bool core_dumped, ZStringView errmsg, ZStringView lang)
 {
     return ssh_call_once(
         _impl_ptr->ssh_channel_ptr,

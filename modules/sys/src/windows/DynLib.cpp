@@ -32,7 +32,7 @@ std::unexpected<Error> lib_error()
 
 } // namespace
 
-Result<void> DynLib::open(const std::string & file)
+Result<void> DynLib::open(ZStringView file)
 {
     this->close();
     _handle = LoadLibraryEx(file.c_str(), nullptr, 0);
@@ -41,10 +41,10 @@ Result<void> DynLib::open(const std::string & file)
     return {};
 }
 
-Result<void> DynLib::open_system(const std::string & name)
+Result<void> DynLib::open_system(ZStringView name)
 {
     // a drive prefix (C:name.dll) is relative to that drive's current directory
-    if (name.find_first_of("/\\:") != std::string::npos)
+    if (name.view().find_first_of("/\\:") != std::string::npos)
         return std::unexpected(Error(invalid_argument, "not a library name: '{}'", name));
     this->close();
     _handle = LoadLibraryEx(name.c_str(), nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
@@ -53,7 +53,7 @@ Result<void> DynLib::open_system(const std::string & name)
     return {};
 }
 
-Result<void *> DynLib::load_symbol(const std::string & symbol_name) const
+Result<void *> DynLib::load_symbol(ZStringView symbol_name) const
 {
     if (this->is_open() == false)
         return std::unexpected(Error(not_initialized, "no library open"));

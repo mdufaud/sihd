@@ -36,7 +36,7 @@ PcapReader::~PcapReader()
     this->close();
 }
 
-Result<void> PcapReader::open(const std::string & path)
+Result<void> PcapReader::open(ZStringView path)
 {
     this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
@@ -47,12 +47,12 @@ Result<void> PcapReader::open(const std::string & path)
     return {};
 }
 
-Result<void> PcapReader::open_micro_precision(const std::string & path)
+Result<void> PcapReader::open_micro_precision(ZStringView path)
 {
     return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_MICRO);
 }
 
-Result<void> PcapReader::open_nano_precision(const std::string & path)
+Result<void> PcapReader::open_nano_precision(ZStringView path)
 {
     return this->_open_precision(path.c_str(), PCAP_TSTAMP_PRECISION_NANO);
 }

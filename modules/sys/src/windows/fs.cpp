@@ -152,27 +152,27 @@ std::string download_path()
     return path;
 }
 
-bool exists(const std::string & path)
+bool exists(ZStringView path)
 {
     return _access(path.c_str(), 0) == 0;
 }
 
-bool is_readable(const std::string & path)
+bool is_readable(ZStringView path)
 {
     return _access(path.c_str(), 04) == 0;
 }
 
-bool is_writable(const std::string & path)
+bool is_writable(ZStringView path)
 {
     return _access(path.c_str(), 02) == 0;
 }
 
-bool is_executable(const std::string & path)
+bool is_executable(ZStringView path)
 {
     return _access(path.c_str(), 04) == 0;
 }
 
-Result<FileTimes> times(const std::string & path)
+Result<FileTimes> times(ZStringView path)
 {
     HANDLE handle = CreateFileA(path.c_str(),
                                 // query access: metadata does not need read rights
@@ -197,12 +197,12 @@ Result<FileTimes> times(const std::string & path)
     return ret;
 }
 
-Timestamp last_write(const std::string & path)
+Timestamp last_write(ZStringView path)
 {
     return times(path).value_or(FileTimes()).write;
 }
 
-Result<size_t> file_size(const std::string & path)
+Result<size_t> file_size(ZStringView path)
 {
     struct stat s;
     if (!do_stat(path.c_str(), &s))
@@ -244,7 +244,7 @@ Result<std::string> make_tmp_directory(const std::string & prefix)
     return std::unexpected(std::move(made).error());
 }
 
-Result<void> make_directory(const std::string & path, unsigned int mode)
+Result<void> make_directory(ZStringView path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -301,7 +301,7 @@ std::vector<std::string> recursive_children(const std::string & path, uint32_t m
     return ret;
 }
 
-Result<void> truncate(const std::string & path, int64_t size)
+Result<void> truncate(ZStringView path, int64_t size)
 {
     int fd = _open(path.c_str(), _O_WRONLY);
     if (fd < 0)
@@ -353,14 +353,14 @@ Result<void>
 }
 
 // the C rename refuses an existing destination, posix replaces it
-Result<void> rename(const std::string & from, const std::string & to)
+Result<void> rename(ZStringView from, ZStringView to)
 {
     if (::MoveFileExA(from.c_str(), to.c_str(), MOVEFILE_REPLACE_EXISTING) == 0)
         return std::unexpected(Error(io_error, "could not rename '{}' to '{}': {}", from, to, os::last_error_str()));
     return {};
 }
 
-std::string realpath(const std::string & path)
+std::string realpath(ZStringView path)
 {
     // POSIX realpath requires every component to exist; _fullpath is lexical: guard to keep the contract
     if (!fs::exists(path))
@@ -371,7 +371,7 @@ std::string realpath(const std::string & path)
     return std::string(resolved);
 }
 
-Result<void> chdir(const std::string & path)
+Result<void> chdir(ZStringView path)
 {
     if (::_chdir(path.c_str()) != 0)
     {

@@ -14,6 +14,7 @@
 
 # include <sihd/sys/fs.hpp>
 # include <sihd/usb/linux/hwdb.hpp>
+# include <sihd/util/ZStringView.hpp>
 
 using namespace sihd::util;
 using namespace sihd::sys;
@@ -26,18 +27,18 @@ namespace
 {
 
 // search order of systemd's libudev
-const std::array<std::string, 4> database_paths = {
+constexpr std::array<ZStringView, 4> database_paths = {
     "/etc/systemd/hwdb/hwdb.bin",
     "/etc/udev/hwdb.bin",
     "/usr/lib/systemd/hwdb/hwdb.bin",
     "/usr/lib/udev/hwdb.bin",
 };
 
-const std::string vendor_key = "ID_VENDOR_FROM_DATABASE";
-const std::string model_key = "ID_MODEL_FROM_DATABASE";
-const std::string class_key = "ID_USB_CLASS_FROM_DATABASE";
-const std::string subclass_key = "ID_USB_SUBCLASS_FROM_DATABASE";
-const std::string protocol_key = "ID_USB_PROTOCOL_FROM_DATABASE";
+constexpr std::string_view vendor_key = "ID_VENDOR_FROM_DATABASE";
+constexpr std::string_view model_key = "ID_MODEL_FROM_DATABASE";
+constexpr std::string_view class_key = "ID_USB_CLASS_FROM_DATABASE";
+constexpr std::string_view subclass_key = "ID_USB_SUBCLASS_FROM_DATABASE";
+constexpr std::string_view protocol_key = "ID_USB_PROTOCOL_FROM_DATABASE";
 
 constexpr std::string_view signature = "KSLPHHRH";
 constexpr uint64_t header_size = 80;
@@ -89,7 +90,7 @@ class Trie
 
         bool corrupt() const { return _corrupt; }
 
-        std::string lookup(const std::string & modalias, const std::string & key)
+        std::string lookup(const std::string & modalias, std::string_view key)
         {
             _properties.clear();
             this->search(modalias);
@@ -266,12 +267,12 @@ class Trie
         uint64_t _value_entry_size = 0;
         uint64_t _root = 0;
         bool _corrupt = false;
-        std::map<std::string, Property> _properties;
+        std::map<std::string, Property, std::less<>> _properties;
 };
 
 Result<Trie> load_trie()
 {
-    for (const std::string & path : database_paths)
+    for (const ZStringView path : database_paths)
     {
         auto data = fs::read_all(path, true);
         if (!data.has_value() && data.error().code == not_found)

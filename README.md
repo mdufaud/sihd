@@ -16,10 +16,10 @@ It ships as independent libraries (`libsihd_<module>`): OS abstraction, networki
 | [`core`](docs/modules/core.md) | Devices, Channels, recording/playback, sampling |
 | [`json`](docs/modules/json.md) · [`csv`](docs/modules/csv.md) · [`zip`](docs/modules/zip.md) | Data formats and archives |
 | [`crypto`](docs/modules/crypto.md) | Keys, certificates, TLS context, ciphers, digests |
-| [`net`](docs/modules/net.md) · [`pcap`](docs/modules/pcap.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, connection detection (routes, VPN, wifi, monitoring), packet capture and injection |
+| [`net`](docs/modules/net.md) · [`pcap`](docs/modules/pcap.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, connection detection (routes, VPN, monitoring), packet capture and injection |
 | [`curl`](docs/modules/curl.md) · [`http`](docs/modules/http.md) | HTTP/WebSocket server, HTTP client |
 | [`ssh`](docs/modules/ssh.md) | SSH client and server, SFTP |
-| [`bt`](docs/modules/bt.md) · [`usb`](docs/modules/usb.md) | Bluetooth LE scanning, USB device enumeration |
+| [`bt`](docs/modules/bt.md) · [`usb`](docs/modules/usb.md) · [`wifi`](docs/modules/wifi.md) | Bluetooth LE scanning, USB device enumeration, wifi scans and connections |
 | [`tui`](docs/modules/tui.md) · [`imgui`](docs/modules/imgui.md) | Terminal and Dear ImGui front-ends |
 | [`lua`](docs/modules/lua.md) · [`luabin`](docs/modules/luabin.md) · [`py`](docs/modules/py.md) | Scripting bindings |
 

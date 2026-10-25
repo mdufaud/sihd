@@ -6,12 +6,13 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::net::dns
 {
 
-sihd::util::Result<IpAddr> find(const std::string & host, bool ipv6 = false, int socktype = -1, int protocol = -1);
+sihd::util::Result<IpAddr> find(sihd::util::ZStringView host, bool ipv6 = false, int socktype = -1, int protocol = -1);
 
 struct DnsEntry
 {

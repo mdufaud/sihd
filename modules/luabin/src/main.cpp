@@ -43,6 +43,9 @@ void load_available_apis(Vm & vm)
 #if SIHD_LUA_WITH_NET
     LuaNetApi::load_all(vm);
 #endif
+#if SIHD_LUA_WITH_WIFI
+    LuaWifiApi::load_all(vm);
+#endif
 #if SIHD_LUA_WITH_HTTP
     LuaHttpApi::load_all(vm);
 #endif

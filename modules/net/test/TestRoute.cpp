@@ -25,7 +25,7 @@ class TestRoute: public ::testing::Test
 
 TEST_F(TestRoute, test_route_find_loopback)
 {
-    const std::optional<NetInterface> loopback = find_loopback();
+    const std::optional<NetInterface> loopback = find_interface(NetInterface::Kind::loopback, false);
     ASSERT_TRUE(loopback.has_value());
 
     auto found = route::find(IpAddr("127.0.0.1"));

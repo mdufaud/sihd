@@ -20,6 +20,7 @@
 #include <sihd/util/Result.hpp>
 #include <sihd/util/Slice.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::util::str
@@ -39,9 +40,9 @@ std::span<const char *> table_span(const char **table);
 // pcre2 bounds backtracking with its match limits: the subject size only bounds the memory spent per call
 inline constexpr size_t default_regex_max_size = 1024 * 1024;
 
-Result<bool> regex_match(std::string_view str, const std::string & pattern, size_t max_size = default_regex_max_size);
+Result<bool> regex_match(std::string_view str, std::string_view pattern, size_t max_size = default_regex_max_size);
 Result<std::vector<std::string>>
-    regex_search(std::string_view str, const std::string & pattern, size_t max_size = default_regex_max_size);
+    regex_search(std::string_view str, std::string_view pattern, size_t max_size = default_regex_max_size);
 Result<std::string> regex_replace(const std::string & str,
                                   const std::string & pattern,
                                   const std::string & replace,
@@ -68,11 +69,11 @@ void append_sep(std::string & str, std::string_view append, std::string_view sep
 std::string timeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
 std::string localtimeoffset_str(Timestamp t, bool total_parenthesis = false, bool nano_resolution = false);
 // fmt strftime -> "%Y-%m-%d %H:%M:%S" - a std::string because strftime reads a C string
-std::string format_time(Timestamp t, const std::string & format);
-std::string format_localtime(Timestamp t, const std::string & format);
+std::string format_time(Timestamp t, ZStringView format);
+std::string format_localtime(Timestamp t, ZStringView format);
 // With explicit locale (default: C locale) - note: strftime uses C locale unless setlocale called
-std::string format_time(Timestamp t, const std::string & format, const std::locale & loc);
-std::string format_localtime(Timestamp t, const std::string & format, const std::locale & loc);
+std::string format_time(Timestamp t, ZStringView format, const std::locale & loc);
+std::string format_localtime(Timestamp t, ZStringView format, const std::locale & loc);
 
 std::string word_wrap(std::string_view s, size_t max_width, bool append_hyphen = true);
 std::string wrap(std::string_view s, size_t max_width, std::string_view end_with = "...");
@@ -130,6 +131,7 @@ std::string replace(std::string_view s, std::string_view from, std::string_view 
 // replaces every listed token in a single left-to-right pass, the first listed token winning at each position
 std::string replace(std::string_view s, std::initializer_list<std::pair<std::string_view, std::string_view>> pairs);
 bool iequals(std::string_view s1, std::string_view s2);
+std::string escape_xml(std::string_view text);
 
 std::string to_hex(uint64_t n);
 std::string to_dec(uint64_t n);
@@ -144,6 +146,8 @@ int hex_digit(int c);
 std::string hexdump(const IArray & arr, char delim);
 std::string hexdump(const IArrayView & arr, char delim);
 std::string hexdump(const void *mem, size_t size, char delim);
+// the bytes of an undelimited hexdump, either case
+sihd::util::Result<std::vector<uint8_t>> from_hex(std::string_view hex);
 
 std::vector<std::string> hexdump_fmt(const IArray & arr, size_t cols = 8);
 std::vector<std::string> hexdump_fmt(const IArrayView & arr, size_t cols = 8);

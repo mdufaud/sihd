@@ -62,21 +62,21 @@ bool PcapWriter::set_snaplen(int len)
     return true;
 }
 
-Result<void> PcapWriter::open(const std::string & path, int datalink, int snaplen)
+Result<void> PcapWriter::open(ZStringView path, int datalink, int snaplen)
 {
     if (this->set_datalink(datalink) == false || this->set_snaplen(snaplen) == false)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot set datalink or snaplen"));
     return this->open(path);
 }
 
-Result<void> PcapWriter::open(const std::string & path, int datalink)
+Result<void> PcapWriter::open(ZStringView path, int datalink)
 {
     if (this->set_datalink(datalink) == false)
         return std::unexpected(Error(ErrorCode::invalid_argument, "cannot set datalink"));
     return this->open(path);
 }
 
-Result<void> PcapWriter::open(const std::string & path)
+Result<void> PcapWriter::open(ZStringView path)
 {
     this->close();
     _impl_ptr->pcap_ptr = pcap_open_dead(_linktype, _snaplen);

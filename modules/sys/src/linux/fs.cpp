@@ -326,27 +326,27 @@ std::string download_path()
     return dir.empty() ? home_subpath("Downloads") : dir;
 }
 
-bool exists(const std::string & path)
+bool exists(ZStringView path)
 {
     return access(path.c_str(), F_OK) == 0;
 }
 
-bool is_readable(const std::string & path)
+bool is_readable(ZStringView path)
 {
     return access(path.c_str(), R_OK) == 0;
 }
 
-bool is_writable(const std::string & path)
+bool is_writable(ZStringView path)
 {
     return access(path.c_str(), W_OK) == 0;
 }
 
-bool is_executable(const std::string & path)
+bool is_executable(ZStringView path)
 {
     return access(path.c_str(), X_OK) == 0;
 }
 
-Result<FileTimes> times(const std::string & path)
+Result<FileTimes> times(ZStringView path)
 {
 #if defined(SIHD_FS_HAS_STATX)
     struct statx stx;
@@ -371,12 +371,12 @@ Result<FileTimes> times(const std::string & path)
 #endif
 }
 
-Timestamp last_write(const std::string & path)
+Timestamp last_write(ZStringView path)
 {
     return times(path).value_or(FileTimes()).write;
 }
 
-Result<size_t> file_size(const std::string & path)
+Result<size_t> file_size(ZStringView path)
 {
     struct stat s;
     if (!do_stat(path.c_str(), &s))
@@ -411,7 +411,7 @@ Result<std::string> make_tmp_directory(const std::string & prefix)
     return path;
 }
 
-Result<void> make_directory(const std::string & path, unsigned int mode)
+Result<void> make_directory(ZStringView path, unsigned int mode)
 {
     if (is_dir(path))
         return {};
@@ -453,7 +453,7 @@ std::vector<std::string> children(const std::string & path)
     return ret;
 }
 
-Result<void> truncate(const std::string & path, int64_t size)
+Result<void> truncate(ZStringView path, int64_t size)
 {
     if (::truncate(path.c_str(), static_cast<off_t>(size)) != 0)
     {
@@ -551,7 +551,7 @@ Result<void>
     return res;
 }
 
-std::string realpath(const std::string & path)
+std::string realpath(ZStringView path)
 {
     char *real = ::realpath(path.c_str(), nullptr);
     if (!real)
@@ -561,14 +561,14 @@ std::string realpath(const std::string & path)
     return result;
 }
 
-Result<void> rename(const std::string & from, const std::string & to)
+Result<void> rename(ZStringView from, ZStringView to)
 {
     if (::rename(from.c_str(), to.c_str()) != 0)
         return std::unexpected(Error::from_errno("could not rename '{}' to '{}'", from, to));
     return {};
 }
 
-Result<void> chdir(const std::string & path)
+Result<void> chdir(ZStringView path)
 {
     if (::chdir(path.c_str()) != 0)
     {

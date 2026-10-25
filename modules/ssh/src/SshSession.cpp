@@ -237,7 +237,7 @@ SshSession::AuthState SshSession::auth_gssapi()
     return AuthState(ssh_userauth_gssapi(_impl_ptr->ssh_session_ptr));
 }
 
-SshSession::AuthState SshSession::auth_password(const std::string & password)
+SshSession::AuthState SshSession::auth_password(ZStringView password)
 {
     return AuthState(ssh_userauth_password(_impl_ptr->ssh_session_ptr, nullptr, password.c_str()));
 }
@@ -337,12 +337,12 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
     return AuthState(status);
 }
 
-Result<void> SshSession::set_user(const std::string & user)
+Result<void> SshSession::set_user(ZStringView user)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "user", SSH_OPTIONS_USER, user.c_str());
 }
 
-Result<void> SshSession::set_host(const std::string & host)
+Result<void> SshSession::set_host(ZStringView host)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "host", SSH_OPTIONS_HOST, host.c_str());
 }
@@ -362,7 +362,7 @@ Result<void> SshSession::set_process_config(bool enable)
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "process_config", SSH_OPTIONS_PROCESS_CONFIG, &enable);
 }
 
-Result<void> SshSession::set_ssh_dir(const std::string & path)
+Result<void> SshSession::set_ssh_dir(ZStringView path)
 {
     return set_ssh_option(_impl_ptr->ssh_session_ptr, "ssh_dir", SSH_OPTIONS_SSH_DIR, path.c_str());
 }

@@ -118,7 +118,7 @@ const char *protocol_str(int protocol)
     return pe->p_name;
 }
 
-int protocol(const std::string & name)
+int protocol(ZStringView name)
 {
     struct protoent *pe = getprotobyname(name.c_str());
     if (pe == nullptr)
@@ -154,19 +154,19 @@ int socktype(std::string_view name)
     return -1;
 }
 
-bool is_valid_ipv4(const std::string & ip)
+bool is_valid_ipv4(ZStringView ip)
 {
     struct sockaddr_in sa;
     return inet_pton(AF_INET, ip.c_str(), &(sa.sin_addr)) == 1;
 }
 
-bool is_valid_ipv6(const std::string & ip)
+bool is_valid_ipv6(ZStringView ip)
 {
     struct sockaddr_in6 sa;
     return inet_pton(AF_INET6, ip.c_str(), &(sa.sin6_addr)) == 1;
 }
 
-bool is_valid_ip(const std::string & ip)
+bool is_valid_ip(ZStringView ip)
 {
     return is_valid_ipv4(ip) || is_valid_ipv6(ip);
 }

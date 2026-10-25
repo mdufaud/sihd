@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::sys
@@ -19,22 +20,22 @@ class DynLib
                                               || !sihd::util::build::is_statically_linked);
 
         DynLib();
-        explicit DynLib(const std::string & file);
+        explicit DynLib(sihd::util::ZStringView file);
         ~DynLib();
 
         DynLib(const DynLib &) = delete;
         DynLib & operator=(const DynLib &) = delete;
 
-        sihd::util::Result<void> open(const std::string & file);
+        sihd::util::Result<void> open(sihd::util::ZStringView file);
 
         // refuses paths: linux searches the loader path, windows System32 alone
-        sihd::util::Result<void> open_system(const std::string & name);
+        sihd::util::Result<void> open_system(sihd::util::ZStringView name);
 
-        sihd::util::Result<void *> load_symbol(const std::string & symbol_name) const;
+        sihd::util::Result<void *> load_symbol(sihd::util::ZStringView symbol_name) const;
 
         template <typename Function>
             requires std::is_function_v<Function>
-        sihd::util::Result<Function *> load_function(const std::string & name) const
+        sihd::util::Result<Function *> load_function(sihd::util::ZStringView name) const
         {
             return this->load_symbol(name).transform([](void *symbol) { return reinterpret_cast<Function *>(symbol); });
         }

@@ -28,7 +28,7 @@ enum class LogLevel
 
 struct LogInfo
 {
-        LogInfo(const std::string & source, LogLevel level);
+        LogInfo(std::string_view source, LogLevel level);
         ~LogInfo();
 
         std::string_view source;

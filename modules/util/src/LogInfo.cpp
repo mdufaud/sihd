@@ -6,7 +6,7 @@
 namespace sihd::util
 {
 
-LogInfo::LogInfo(const std::string & src, LogLevel lvl): source(src), level(lvl)
+LogInfo::LogInfo(std::string_view src, LogLevel lvl): source(src), level(lvl)
 {
     this->thread_id = thread::id();
     this->thread_id_str = thread::id_str(thread_id);

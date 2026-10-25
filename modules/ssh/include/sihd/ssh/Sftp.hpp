@@ -9,6 +9,7 @@
 
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::ssh
 {
@@ -51,27 +52,27 @@ class Sftp
         bool is_open() const;
         void close();
 
-        sihd::util::Result<void> mkdir(const std::string & path, mode_t mode = 0755);
-        sihd::util::Result<void> symlink(const std::string & from, const std::string & to);
+        sihd::util::Result<void> mkdir(sihd::util::ZStringView path, mode_t mode = 0755);
+        sihd::util::Result<void> symlink(sihd::util::ZStringView from, sihd::util::ZStringView to);
 
         // TODO replace std::string return with optional
-        std::string readlink(const std::string & path);
+        std::string readlink(sihd::util::ZStringView path);
 
         sihd::util::Result<void>
             send_file(const std::string & local_path, const std::string & remote_path, mode_t mode = 0644);
         sihd::util::Result<void> get_file(const std::string & remote_path, const std::string & local_path);
 
         // TODO replace out param return with optional
-        sihd::util::Result<void> list_dir(const std::string & path, std::vector<SftpAttribute> & list);
+        sihd::util::Result<void> list_dir(sihd::util::ZStringView path, std::vector<SftpAttribute> & list);
         // TODO replace out param return with optional
-        sihd::util::Result<void> list_dir_filenames(const std::string & path, std::vector<std::string> & list);
+        sihd::util::Result<void> list_dir_filenames(sihd::util::ZStringView path, std::vector<std::string> & list);
 
-        sihd::util::Result<void> rename(const std::string & from, const std::string & to);
-        sihd::util::Result<void> chmod(const std::string & path, mode_t mode);
-        sihd::util::Result<void> chown(const std::string & path, uid_t owner, gid_t group);
+        sihd::util::Result<void> rename(sihd::util::ZStringView from, sihd::util::ZStringView to);
+        sihd::util::Result<void> chmod(sihd::util::ZStringView path, mode_t mode);
+        sihd::util::Result<void> chown(sihd::util::ZStringView path, uid_t owner, gid_t group);
 
-        sihd::util::Result<void> rmdir(const std::string & path);
-        sihd::util::Result<void> rm(const std::string & path);
+        sihd::util::Result<void> rmdir(sihd::util::ZStringView path);
+        sihd::util::Result<void> rm(sihd::util::ZStringView path);
 
         std::vector<SftpExtension> extensions();
 

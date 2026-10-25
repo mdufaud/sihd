@@ -14,7 +14,6 @@
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/net/route.hpp>
-#include <sihd/net/wifi.hpp>
 #include <sihd/py/net/PyNetApi.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
@@ -148,15 +147,6 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
               &dns::servers,
               pybind11::arg("resolver_timeout") = dns::default_resolver_timeout,
               pybind11::call_guard<pybind11::gil_scoped_release>());
-
-    pybind11::module m_wifi = m_net.def_submodule("wifi", "sihd::net::wifi");
-    pybind11::class_<wifi::Link>(m_wifi, "Link")
-        .def_readonly("ssid", &wifi::Link::ssid)
-        .def_readonly("bssid", &wifi::Link::bssid)
-        .def_readonly("signal_dbm", &wifi::Link::signal_dbm)
-        .def_readonly("frequency_mhz", &wifi::Link::frequency_mhz)
-        .def_readonly("tx_bitrate_bps", &wifi::Link::tx_bitrate_bps);
-    m_wifi.def("link", &wifi::link, pybind11::call_guard<pybind11::gil_scoped_release>());
 
     pybind11::enum_<NetMonitorEventType>(m_net, "NetMonitorEventType")
         .value("unknown", NetMonitorEventType::unknown)

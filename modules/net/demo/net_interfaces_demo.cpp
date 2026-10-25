@@ -2,6 +2,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <fmt/ranges.h>
@@ -11,7 +12,6 @@
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/net/route.hpp>
-#include <sihd/net/wifi.hpp>
 #include <sihd/sys/App.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -24,8 +24,8 @@ namespace
 
 using Interfaces = std::map<std::string, NetInterface>;
 
-const std::string ipv4_probe = "1.1.1.1";
-const std::string ipv6_probe = "2606:4700:4700::1111";
+constexpr std::string_view ipv4_probe = "1.1.1.1";
+constexpr std::string_view ipv6_probe = "2606:4700:4700::1111";
 
 void print_flags(const NetInterface & netif)
 {
@@ -46,22 +46,6 @@ void print_flags(const NetInterface & netif)
         if (set)
             fmt::print(" {}", name);
     }
-}
-
-void print_wifi(const NetInterface & netif)
-{
-    auto link = wifi::link(netif.name());
-    if (!link)
-    {
-        fmt::print("  wifi: {}\n", link.error().message);
-        return;
-    }
-    fmt::print("  wifi: ssid '{}' bssid {} signal {} dBm {} MHz tx {} Mb/s\n",
-               link->ssid,
-               link->bssid,
-               link->signal_dbm,
-               link->frequency_mhz,
-               link->tx_bitrate_bps / 1'000'000);
 }
 
 void print_interface(const NetInterface & netif)
@@ -86,9 +70,6 @@ void print_interface(const NetInterface & netif)
             fmt::print(" {} {}", netif.point2point() ? "peer" : "broadcast", address.extra_addr.str());
         fmt::print("\n");
     }
-
-    if (netif.kind() == NetInterface::Kind::wifi)
-        print_wifi(netif);
 }
 
 void print_route(std::string_view label, const route::Route & found)
@@ -114,7 +95,7 @@ void print_routes(std::string_view label, const Result<std::vector<route::Route>
         print_route(label, found);
 }
 
-void print_route_to(const std::string & destination, const Result<route::Route> & found)
+void print_route_to(std::string_view destination, const Result<route::Route> & found)
 {
     if (found)
         print_route(fmt::format("route to {}", destination), *found);
@@ -237,7 +218,7 @@ int main(int argc, char **argv)
 {
     sihd::sys::App app({
         .name = "net_interfaces_demo",
-        .description = "Dump network interfaces, routes, vpn state, dns servers and wifi links",
+        .description = "Dump network interfaces, routes, vpn state and dns servers",
     });
 
     app.root().on_run([&app] {

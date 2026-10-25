@@ -5,11 +5,13 @@
 #include <optional>
 #include <string>
 
+#include <sihd/util/ZStringView.hpp>
+
 namespace sihd::net::interfaces
 {
 
 std::optional<std::string> name_of(uint32_t index);
-std::optional<uint32_t> index_of(const std::string & name);
+std::optional<uint32_t> index_of(sihd::util::ZStringView name);
 
 } // namespace sihd::net::interfaces
 

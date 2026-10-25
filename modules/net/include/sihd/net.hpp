@@ -26,6 +26,5 @@
 #include <sihd/net/ip.hpp>
 #include <sihd/net/route.hpp>
 #include <sihd/net/utils.hpp>
-#include <sihd/net/wifi.hpp>
 
 #endif

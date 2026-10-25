@@ -9,6 +9,7 @@
 # include <optional>
 
 # include <sihd/sys/linux/dbus.hpp>
+# include <sihd/util/str.hpp>
 # include <sihd/util/time.hpp>
 
 # include "../internal/desktop_notifier.hpp"
@@ -29,8 +30,8 @@ namespace dbus = sihd::sys::linux_::dbus;
 namespace
 {
 
-const std::string notifications_service = "org.freedesktop.Notifications";
-const std::string notifications_path = "/org/freedesktop/Notifications";
+constexpr ZStringView notifications_service = "org.freedesktop.Notifications";
+constexpr ZStringView notifications_path = "/org/freedesktop/Notifications";
 constexpr Duration call_timeout(time::sec(5));
 
 uint8_t urgency_level(DesktopNotifier::Urgency urgency)
@@ -53,32 +54,19 @@ int32_t expire_timeout(const std::optional<Duration> & timeout)
     return timeout->milliseconds_int();
 }
 
-template <typename T>
-Result<void>
-    append_hint(dbus::Appender & hints, const std::string & key, const std::string & signature, const T & value)
-{
-    auto entry = hints.open_dict_entry();
-    SIHD_UNEXPECTED_RETURN(entry);
-    auto key_added = entry->add(key);
-    SIHD_UNEXPECTED_RETURN(key_added);
-    auto variant = entry->open_variant(signature);
-    SIHD_UNEXPECTED_RETURN(variant);
-    auto value_added = variant->add(value);
-    SIHD_UNEXPECTED_RETURN(value_added);
-    auto variant_closed = entry->close(std::move(*variant));
-    SIHD_UNEXPECTED_RETURN(variant_closed);
-    return hints.close(std::move(*entry));
-}
-
 Result<void> append_hint_array(dbus::Appender & body, const std::string & app_id, DesktopNotifier::Urgency urgency)
 {
     auto hints = body.open_array("{sv}");
     SIHD_UNEXPECTED_RETURN(hints);
-    auto urgency_added = append_hint(*hints, "urgency", "y", urgency_level(urgency));
+    auto urgency_added = hints->add_entry("urgency", "y", [urgency](dbus::Appender & value) {
+        return value.add(urgency_level(urgency));
+    });
     SIHD_UNEXPECTED_RETURN(urgency_added);
     if (!app_id.empty())
     {
-        auto entry_added = append_hint(*hints, "desktop-entry", "s", app_id);
+        auto entry_added = hints->add_entry("desktop-entry", "s", [&app_id](dbus::Appender & value) {
+            return value.add(app_id);
+        });
         SIHD_UNEXPECTED_RETURN(entry_added);
     }
     return body.close(std::move(*hints));
@@ -99,7 +87,7 @@ Result<void> append_notification(dbus::Message & request,
     SIHD_UNEXPECTED_RETURN(added);
     added = body.add(notification.summary);
     SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(body_markup ? internal::escape_markup(notification.body) : notification.body);
+    added = body.add(body_markup ? str::escape_xml(notification.body) : notification.body);
     SIHD_UNEXPECTED_RETURN(added);
 
     auto actions = body.open_array("s");

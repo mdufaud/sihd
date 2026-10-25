@@ -62,7 +62,7 @@ Sniffer::~Sniffer()
     this->close();
 }
 
-Result<void> Sniffer::open(const std::string & source)
+Result<void> Sniffer::open(ZStringView source)
 {
     char errbuf[PCAP_ERRBUF_SIZE];
     _impl_ptr->pcap_ptr = pcap_create(source.c_str(), errbuf);
@@ -333,7 +333,7 @@ int Sniffer::datalink()
     return pcap_datalink(_impl_ptr->pcap_ptr);
 }
 
-bool Sniffer::set_filter(const std::string & filter)
+bool Sniffer::set_filter(ZStringView filter)
 {
     bpf_u_int32 netmask = PCAP_NETMASK_UNKNOWN;
     bool optimize = true;

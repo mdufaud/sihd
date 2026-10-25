@@ -11,8 +11,14 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
+#include <sihd/util/build.hpp>
 
-namespace sihd::net::netlink
+#if !defined(__SIHD_LINUX__)
+# error "sihd/net/linux headers are linux only"
+#endif
+
+namespace sihd::net::linux_::netlink
 {
 
 struct Attribute
@@ -57,7 +63,7 @@ class Request
 
         void add_attribute(uint16_t type, const void *data, size_t size);
         void add_u32(uint16_t type, uint32_t value);
-        void add_string(uint16_t type, const std::string & value);
+        void add_string(uint16_t type, sihd::util::ZStringView value);
 
         const std::vector<uint8_t> & finish(uint32_t sequence);
 
@@ -86,6 +92,6 @@ class Netlink
         std::vector<uint8_t> _buffer = std::vector<uint8_t>(65536);
 };
 
-} // namespace sihd::net::netlink
+} // namespace sihd::net::linux_::netlink
 
 #endif

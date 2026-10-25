@@ -9,6 +9,8 @@
 namespace sihd::sys
 {
 
+using namespace sihd::util;
+
 TmpDir::TmpDir()
 {
     auto path = fs::make_tmp_directory(fs::combine(fs::tmp_path(), "sihd_"));
@@ -32,6 +34,11 @@ TmpDir::operator bool() const
 }
 
 TmpDir::operator std::string() const
+{
+    return _path;
+}
+
+TmpDir::operator ZStringView() const
 {
     return _path;
 }

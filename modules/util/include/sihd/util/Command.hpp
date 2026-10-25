@@ -65,10 +65,10 @@ class Command
         // mounts a deep copy of another command (bindings, callback, whole subtree); copies keep writing
         // the bound variables and running the callbacks of the original - the original must outlive them
         Command & add_command(const Command & other, const std::string & name = "");
-        bool remove_command(const std::string & name);
-        bool has_command(const std::string & name) const;
-        const Command *get_command(const std::string & name) const;
-        Command *get_command(const std::string & name);
+        bool remove_command(std::string_view name);
+        bool has_command(std::string_view name) const;
+        const Command *get_command(std::string_view name) const;
+        Command *get_command(std::string_view name);
         // dotted path descent ("get.stat.service"), nullptr if unknown
         const Command *path(std::string_view path) const;
         Command *path(std::string_view path);
@@ -237,7 +237,7 @@ class Command
 
         CLI::App *_cli;
         std::function<void()> _on_run;
-        std::map<std::string, std::unique_ptr<Command>> _children;
+        std::map<std::string, std::unique_ptr<Command>, std::less<>> _children;
         std::list<Binding> _bindings;
 };
 

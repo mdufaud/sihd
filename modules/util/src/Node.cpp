@@ -227,7 +227,7 @@ void Node::remove_children()
     _children_keys.clear();
 }
 
-std::pair<std::string, std::string> Node::parent_path(const std::string & path)
+std::pair<std::string, std::string> Node::parent_path(std::string_view path)
 {
     std::pair<std::string, std::string> ret;
     size_t idx = path.find_last_of(Named::separator);

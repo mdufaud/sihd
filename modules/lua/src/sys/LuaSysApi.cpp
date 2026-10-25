@@ -443,7 +443,9 @@ void LuaSysApi::load_files(Vm & vm)
         .beginNamespace("sihd")
         .beginNamespace("sys")
         .beginNamespace("fs")
-        .addFunction("exists", &fs::exists)
+        .addFunction(
+            "exists",
+            +[](const char *path) { return fs::exists(path); })
         .addFunction("is_file", &fs::is_file)
         .addFunction("is_dir", &fs::is_dir)
         .addFunction(

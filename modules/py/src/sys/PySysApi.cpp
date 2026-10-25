@@ -42,7 +42,7 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
     pybind11::module m_sys = m_sihd.def_submodule("sys", "sihd::sys");
 
     m_sys.def_submodule("fs", "sihd::sys::fs")
-        .def("exists", &fs::exists)
+        .def("exists", [](const std::string & path) { return fs::exists(path); })
         .def("is_file", &fs::is_file)
         .def("is_dir", &fs::is_dir)
         .def("file_size",

@@ -6,14 +6,15 @@
 
 # include <algorithm>
 
+# include <sihd/net/linux/netlink.hpp>
 # include <sihd/net/route.hpp>
 # include <sihd/util/Error.hpp>
 
 # include "interfaces.hpp"
-# include "netlink.hpp"
 # include <linux/rtnetlink.h>
 
 using namespace sihd::util;
+using namespace sihd::net::linux_;
 
 namespace sihd::net::route
 {

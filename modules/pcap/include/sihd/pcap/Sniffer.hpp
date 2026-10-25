@@ -12,6 +12,7 @@
 #include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::pcap
 {
@@ -33,7 +34,7 @@ class Sniffer: public sihd::util::Named,
         Sniffer(const std::string & name, sihd::util::Node *parent = nullptr);
         ~Sniffer();
 
-        sihd::util::Result<void> open(const std::string & source);
+        sihd::util::Result<void> open(sihd::util::ZStringView source);
         bool close();
         bool is_open() const;
 
@@ -63,7 +64,7 @@ class Sniffer: public sihd::util::Named,
         // in / out / both
         bool set_direction(std::string_view direction);
 
-        bool set_filter(const std::string & filter);
+        bool set_filter(sihd::util::ZStringView filter);
 
         std::vector<int> datalinks();
         std::vector<int> timestamp_types();

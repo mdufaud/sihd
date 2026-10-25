@@ -171,7 +171,7 @@ bool ProcessInfo::Impl::write_into_stdin(ArrCharView view) const
     return fs::write(fmt::format("/proc/{}/fd/0", this->pid), view).has_value();
 }
 
-std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(const std::string & regex)
+std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(std::string_view regex)
 {
     std::vector<ProcessInfo> processes;
     list_processes([&regex, &processes](std::string_view process_name, int pid) {

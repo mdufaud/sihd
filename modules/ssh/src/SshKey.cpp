@@ -73,7 +73,7 @@ Result<void> SshKey::generate(KeyType type, int parameter)
     return {};
 }
 
-Result<void> SshKey::import_privkey_file(const std::string & path, const char *passphrase)
+Result<void> SshKey::import_privkey_file(ZStringView path, const char *passphrase)
 {
     this->clear_key();
     if (ssh_pki_import_privkey_file(path.c_str(), passphrase, nullptr, this, &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -89,7 +89,7 @@ Result<void> SshKey::import_privkey_mem(const char *base64_key, const char *pass
     return {};
 }
 
-Result<void> SshKey::import_pubkey_file(const std::string & path)
+Result<void> SshKey::import_pubkey_file(ZStringView path)
 {
     this->clear_key();
     if (ssh_pki_import_pubkey_file(path.c_str(), &_impl_ptr->ssh_key_ptr) != SSH_OK)
@@ -149,7 +149,7 @@ std::string SshKey::base64() const
     return result;
 }
 
-Result<void> SshKey::export_privkey_file(const std::string & path, const char *passphrase) const
+Result<void> SshKey::export_privkey_file(ZStringView path, const char *passphrase) const
 {
     if (_impl_ptr->ssh_key_ptr == nullptr || !this->is_private())
         return std::unexpected(Error(not_initialized, "cannot export - no private key available"));
@@ -159,7 +159,7 @@ Result<void> SshKey::export_privkey_file(const std::string & path, const char *p
     return {};
 }
 
-KeyType SshKey::type_from_name(const std::string & name)
+KeyType SshKey::type_from_name(ZStringView name)
 {
     return from_libssh(ssh_key_type_from_name(name.c_str()));
 }

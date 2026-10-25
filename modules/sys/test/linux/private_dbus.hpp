@@ -1,6 +1,7 @@
 #ifndef __SIHD_SYS_TEST_PRIVATE_DBUS_HPP__
 #define __SIHD_SYS_TEST_PRIVATE_DBUS_HPP__
 
+#include <functional>
 #include <optional>
 #include <string>
 #include <vector>
@@ -64,18 +65,35 @@ class PrivateDBus
 };
 
 // skips what the bus sends unasked (NameAcquired...): nullopt on timeout
+inline std::optional<sihd::sys::linux_::dbus::Message>
+    receive_accepted(sihd::sys::linux_::dbus::Connection & connection,
+                     const std::function<bool(const sihd::sys::linux_::dbus::Message &)> & accepted)
+{
+    auto received = sihd::sys::linux_::dbus::Message::receive_until(
+        connection,
+        sihd::util::Duration(sihd::util::time::sec(5)),
+        [&accepted](const sihd::sys::linux_::dbus::Message & message) -> sihd::util::Result<bool> {
+            return accepted(message);
+        });
+    if (!received.has_value())
+        return std::nullopt;
+    return std::move(*received);
+}
+
 inline std::optional<sihd::sys::linux_::dbus::Message> receive_member(sihd::sys::linux_::dbus::Connection & connection,
                                                                       const std::string & member)
 {
-    while (true)
-    {
-        auto received = sihd::sys::linux_::dbus::Message::receive(connection,
-                                                                  sihd::util::Duration(sihd::util::time::sec(5)));
-        if (!received.has_value() || !received->has_value())
-            return std::nullopt;
-        if ((*received)->member() == member)
-            return std::move(**received);
-    }
+    return receive_accepted(connection, [&member](const sihd::sys::linux_::dbus::Message & message) {
+        return message.member() == member;
+    });
+}
+
+inline std::optional<sihd::sys::linux_::dbus::Message> receive_reply(sihd::sys::linux_::dbus::Connection & connection)
+{
+    return receive_accepted(connection, [](const sihd::sys::linux_::dbus::Message & message) {
+        return message.type() == sihd::sys::linux_::dbus::Message::Type::method_return
+               || message.type() == sihd::sys::linux_::dbus::Message::Type::error;
+    });
 }
 
 } // namespace test
