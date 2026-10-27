@@ -188,6 +188,9 @@ bool SigWatcher::start()
 bool SigWatcher::stop()
 {
     _running.store(false, std::memory_order_relaxed);
+#if defined(SIHD_HAS_SIGNALFD)
+    _poll.request_stop();
+#endif
     bool ret = _worker.stop_worker();
 
 #if defined(SIHD_HAS_SIGNALFD)
@@ -225,12 +228,11 @@ void SigWatcher::_run_signalfd_loop()
 {
     SIHD_UNEXPECTED_LOG(thread::set_name("sigwatcher"));
 
-    _poll.set_limit(1);
     _poll.set_read_fd(_signalfd);
 
     while (_running.load(std::memory_order_relaxed))
     {
-        int ret = _poll.poll(time::to_ms(_polling_interval_ns.load()));
+        int ret = _poll.poll();
 
         if (ret < 0)
         {

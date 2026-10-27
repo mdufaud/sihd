@@ -5,7 +5,7 @@
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/Device.hpp>
-#include <sihd/sys/program.hpp>
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/build.hpp>
@@ -140,6 +140,7 @@ TEST_F(TestDevice, test_device_resizable_link_match)
     Channel *ext = new Channel("ext", "byte", 1, &root);
     ext->reserve(256);
     ext->set_resizable(true);
+    ASSERT_TRUE(ext->write(ArrByte {1, 2, 3}));
 
     ResizableDevice *dev = root.add_child<ResizableDevice>("device");
     dev->add_link("shared", "..ext");
@@ -153,12 +154,19 @@ TEST_F(TestDevice, test_device_resizable_link_mismatch)
 {
     Node root("root");
     new Channel("ext", "byte", 1, &root);
+    Channel *small = new Channel("small", "byte", 1, &root);
+    small->reserve(64);
+    small->set_resizable(true);
 
     ResizableDevice *dev = root.add_child<ResizableDevice>("device");
     dev->add_link("shared", "..ext");
+    ResizableDevice *small_dev = root.add_child<ResizableDevice>("small_device");
+    small_dev->add_link("shared", "..small");
 
     EXPECT_TRUE(dev->init());
     EXPECT_FALSE(dev->start());
+    EXPECT_TRUE(small_dev->init());
+    EXPECT_FALSE(small_dev->start());
 }
 
 class FailingInitDevice: public Device
@@ -282,36 +290,25 @@ TEST_F(TestDevice, test_device_link_type_mismatch_bypassed)
 
 TEST_F(TestDevice, test_factories_registered)
 {
-    for (const auto & [symbol_suffix, full_name] : {std::pair {"Core", "sihd::core::Core"},
-                                                    {"DevFilter", "sihd::core::DevFilter"},
-                                                    {"DevMessage", "sihd::core::DevMessage"},
-                                                    {"DevPlayer", "sihd::core::DevPlayer"},
-                                                    {"DevPulsation", "sihd::core::DevPulsation"},
-                                                    {"DevRecorder", "sihd::core::DevRecorder"},
-                                                    {"DevSampler", "sihd::core::DevSampler"},
-                                                    {"MemRecorder", "sihd::core::MemRecorder"}})
+    if constexpr (!SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "factories resolve by symbol through sys, covered by sys TestPluginLoader";
+
+    for (const auto & [class_name, full_name] : {std::pair {"Core", "sihd::core::Core"},
+                                                 {"DevBatcher", "sihd::core::DevBatcher"},
+                                                 {"DevFilter", "sihd::core::DevFilter"},
+                                                 {"DevMessage", "sihd::core::DevMessage"},
+                                                 {"DevPlayer", "sihd::core::DevPlayer"},
+                                                 {"DevPulsation", "sihd::core::DevPulsation"},
+                                                 {"DevRecorder", "sihd::core::DevRecorder"},
+                                                 {"DevSampler", "sihd::core::DevSampler"},
+                                                 {"DevStats", "sihd::core::DevStats"},
+                                                 {"DevWorker", "sihd::core::DevWorker"},
+                                                 {"DevWorkerPool", "sihd::core::DevWorkerPool"},
+                                                 {"MemRecorder", "sihd::core::MemRecorder"}})
     {
-        Named *named = nullptr;
-        if constexpr (SIHD_FACTORY_TABLE)
-        {
-            // dlsym is dead in static builds: the factory table carries the entries
-            named = create_from_factory_table(symbol_suffix, symbol_suffix, nullptr);
-            ASSERT_NE(named, nullptr) << symbol_suffix;
-        }
-        else
-        {
-            if constexpr (build::is_statically_linked)
-                GTEST_SKIP() << "no factory resolution in this build";
-
-            auto found = sihd::sys::program::find_symbol(std::string("sihd_factory_") + symbol_suffix);
-            ASSERT_TRUE(found.has_value()) << symbol_suffix;
-            using CreateFn = Named *(*)(const std::string &, Node *);
-            const auto create = reinterpret_cast<CreateFn>(*found);
-
-            named = create(symbol_suffix, nullptr);
-            ASSERT_NE(named, nullptr) << symbol_suffix;
-        }
-        EXPECT_EQ(named->class_name(), full_name) << symbol_suffix;
+        Named *named = create_from_factory_table(class_name, class_name, nullptr);
+        ASSERT_NE(named, nullptr) << class_name;
+        EXPECT_EQ(named->class_name(), full_name);
         delete named;
     }
 }

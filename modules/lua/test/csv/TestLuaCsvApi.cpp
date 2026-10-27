@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <sihd/lua/Vm.hpp>
+#include <sihd/lua/core/LuaCoreApi.hpp>
 #include <sihd/lua/csv/LuaCsvApi.hpp>
+#include <sihd/lua/util/LuaUtilApi.hpp>
 #include <sihd/util/Logger.hpp>
 
 #include "../lua_fixture.hpp"
@@ -17,6 +19,8 @@ class TestLuaCsvApi: public test::LuaFixture
 
 TEST_F(TestLuaCsvApi, test_luacsv_base)
 {
+    LuaUtilApi::load_base(_vm);
+    LuaCoreApi::load(_vm);
     LuaCsvApi::load_base(_vm);
     this->do_script("test/csv/lua/test_csv.lua");
 }

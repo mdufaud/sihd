@@ -1,3 +1,5 @@
+#include "../internal/ProcessMonitor.hpp"
+
 #include <processthreadsapi.h>
 #include <psapi.h>
 #include <tlhelp32.h>
@@ -8,7 +10,6 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
-#include "../internal/process_monitor.hpp"
 #include "internal/proc_metrics.hpp"
 
 namespace sihd::sys

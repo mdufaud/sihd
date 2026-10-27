@@ -3,8 +3,6 @@
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevSampler.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -15,7 +13,6 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::core;
 using namespace sihd::util;
-using namespace sihd::sys;
 class TestDevSampler: public ::testing::Test
 {
     protected:

@@ -2,12 +2,16 @@
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
+#include <sihd/core/DevBatcher.hpp>
 #include <sihd/core/DevFilter.hpp>
 #include <sihd/core/DevMessage.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevPulsation.hpp>
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevSampler.hpp>
+#include <sihd/core/DevStats.hpp>
+#include <sihd/core/DevWorker.hpp>
+#include <sihd/core/DevWorkerPool.hpp>
 #include <sihd/core/Device.hpp>
 #include <sihd/lua/checked.hpp>
 #include <sihd/lua/core/LuaCoreApi.hpp>
@@ -264,6 +268,18 @@ void LuaCoreApi::load(Vm & vm)
         .endClass()
         .deriveClass<DevSampler, Device>("DevSampler")
         .addConstructorFrom<SmartNodePtr<DevSampler>, void(const std::string &, Node *)>()
+        .endClass()
+        .deriveClass<DevWorker, Device>("DevWorker")
+        .addConstructorFrom<SmartNodePtr<DevWorker>, void(const std::string &, Node *)>()
+        .endClass()
+        .deriveClass<DevWorkerPool, DevWorker>("DevWorkerPool")
+        .addConstructorFrom<SmartNodePtr<DevWorkerPool>, void(const std::string &, Node *)>()
+        .endClass()
+        .deriveClass<DevBatcher, Device>("DevBatcher")
+        .addConstructorFrom<SmartNodePtr<DevBatcher>, void(const std::string &, Node *)>()
+        .endClass()
+        .deriveClass<DevStats, Device>("DevStats")
+        .addConstructorFrom<SmartNodePtr<DevStats>, void(const std::string &, Node *)>()
         .endClass()
         .deriveClass<DevPlayer, Device>("DevPlayer")
         .addConstructorFrom<SmartNodePtr<DevPlayer>, void(const std::string &, Node *)>()

@@ -149,7 +149,7 @@ Result<void> unshare(std::span<const Type>)
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-Result<void> setns(std::string_view, Type)
+Result<void> setns(ZStringView, Type)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

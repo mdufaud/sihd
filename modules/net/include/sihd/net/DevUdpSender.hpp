@@ -1,5 +1,5 @@
-#ifndef __SIHD_NET_DEVICEUDPSENDER_HPP__
-#define __SIHD_NET_DEVICEUDPSENDER_HPP__
+#ifndef __SIHD_NET_DEVUDPSENDER_HPP__
+#define __SIHD_NET_DEVUDPSENDER_HPP__
 
 #include <sihd/core/Device.hpp>
 #include <sihd/net/UdpSender.hpp>
@@ -7,11 +7,11 @@
 namespace sihd::net
 {
 
-class DeviceUdpSender: public sihd::core::Device
+class DevUdpSender: public sihd::core::Device
 {
     public:
-        DeviceUdpSender(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~DeviceUdpSender();
+        DevUdpSender(const std::string & name, sihd::util::Node *parent = nullptr);
+        virtual ~DevUdpSender();
 
         bool is_running() const override;
 

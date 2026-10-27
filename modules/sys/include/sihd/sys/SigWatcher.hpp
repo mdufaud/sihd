@@ -5,7 +5,7 @@
 #include <mutex>
 #include <span>
 
-#include <sihd/sys/Poll.hpp>
+#include <sihd/sys/EventPoll.hpp>
 #include <sihd/sys/SigHandler.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Configurable.hpp>
@@ -82,7 +82,7 @@ class SigWatcher: public sihd::util::Named,
 #if defined(SIHD_HAS_SIGNALFD)
         void _run_signalfd_loop();
         int _signalfd;
-        Poll _poll;
+        EventPoll _poll;
 #endif
 #if defined(SIHD_HAS_SIGWAIT)
         void _run_sigwait_loop();

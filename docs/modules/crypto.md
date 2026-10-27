@@ -4,7 +4,7 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, a TLS 
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | openssl |
 | Platforms | all |
 | Build | `make m=crypto` |

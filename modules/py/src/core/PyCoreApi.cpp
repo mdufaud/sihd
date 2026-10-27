@@ -3,12 +3,16 @@
 #include <sihd/core/ACoreObject.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
+#include <sihd/core/DevBatcher.hpp>
 #include <sihd/core/DevFilter.hpp>
 #include <sihd/core/DevMessage.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevPulsation.hpp>
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevSampler.hpp>
+#include <sihd/core/DevStats.hpp>
+#include <sihd/core/DevWorker.hpp>
+#include <sihd/core/DevWorkerPool.hpp>
 #include <sihd/core/Device.hpp>
 #include <sihd/py/core/PyCoreApi.hpp>
 #include <sihd/util/Logger.hpp>
@@ -270,6 +274,22 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &>());
 
     pybind11::class_<DevSampler, Device, SmartNodePtr<DevSampler>>(m_core, "DevSampler")
+        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init<const std::string &>());
+
+    pybind11::class_<DevWorker, Device, SmartNodePtr<DevWorker>>(m_core, "DevWorker")
+        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init<const std::string &>());
+
+    pybind11::class_<DevWorkerPool, DevWorker, SmartNodePtr<DevWorkerPool>>(m_core, "DevWorkerPool")
+        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init<const std::string &>());
+
+    pybind11::class_<DevBatcher, Device, SmartNodePtr<DevBatcher>>(m_core, "DevBatcher")
+        .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
+        .def(pybind11::init<const std::string &>());
+
+    pybind11::class_<DevStats, Device, SmartNodePtr<DevStats>>(m_core, "DevStats")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>());
 

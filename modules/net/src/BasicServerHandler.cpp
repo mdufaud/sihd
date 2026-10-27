@@ -33,7 +33,7 @@ int BasicServerHandler::Client::fd() const
     return socket.socket();
 }
 
-BasicServerHandler::BasicServerHandler()
+BasicServerHandler::BasicServerHandler(): _last_client_id(0)
 {
     _last_time = Timestamp(0);
     _poll_time = Duration(0);
@@ -131,6 +131,13 @@ BasicServerHandler::ClientPtr BasicServerHandler::client(int socket)
     return it != _client_map.end() ? it->second : nullptr;
 }
 
+BasicServerHandler::ClientPtr BasicServerHandler::client_by_id(uint64_t id) const
+{
+    std::lock_guard lock(_mutex);
+    const auto it = std::ranges::find_if(_client_map, [id](const auto & entry) { return entry.second->id == id; });
+    return it != _client_map.end() ? it->second : nullptr;
+}
+
 std::vector<BasicServerHandler::ClientPtr> BasicServerHandler::clients() const
 {
     std::lock_guard lock(_mutex);
@@ -163,7 +170,7 @@ Duration BasicServerHandler::poll_time() const
     return _poll_time;
 }
 
-bool BasicServerHandler::send_to_client(const ClientPtr & client, const IArray & arr)
+bool BasicServerHandler::send_to_client(const ClientPtr & client, ArrByteView data)
 {
     if (!client)
         return false;
@@ -176,9 +183,9 @@ bool BasicServerHandler::send_to_client(const ClientPtr & client, const IArray &
         // a pending partial write holds unsent bytes: refuse rather than drop
         if (client->write_offset < client->write_array.byte_size())
             return false;
-        if (!client->write_array.byte_resize(arr.byte_size()))
+        if (!client->write_array.byte_resize(data.byte_size()))
             return false;
-        if (!client->write_array.copy_from_bytes(arr))
+        if (!client->write_array.copy_from_bytes(data))
             return false;
         client->write_offset = 0;
     }
@@ -217,13 +224,13 @@ bool BasicServerHandler::remove_client(const ClientPtr & client)
     return true;
 }
 
-bool BasicServerHandler::send_to_client(int socket, const IArray & arr)
+bool BasicServerHandler::send_to_client(int socket, ArrByteView data)
 {
     std::lock_guard lock(_mutex);
     auto it = _client_map.find(socket);
     if (it == _client_map.end())
         return false;
-    return this->send_to_client(it->second, arr);
+    return this->send_to_client(it->second, data);
 }
 
 bool BasicServerHandler::remove_client(int socket)
@@ -269,6 +276,7 @@ void BasicServerHandler::handle_new_client(INetServer *server)
     }
 
     auto client = std::make_shared<Client>(socket);
+    client->id = ++_last_client_id;
     client->read_array.reserve(4096);
     client->write_array.reserve(4096);
     client->addr = addr;
@@ -372,8 +380,11 @@ BasicServerHandler::ClientMap::iterator BasicServerHandler::_drop_client(INetSer
     // callers hold _mutex
     server->remove_client_read(it->first);
     server->remove_client_write(it->first);
-    std::lock_guard lk(it->second->mutex);
-    (void)it->second->socket.close();
+    {
+        // erase may free the client: its mutex must be released first
+        std::lock_guard lk(it->second->mutex);
+        (void)it->second->socket.close();
+    }
     return _client_map.erase(it);
 }
 

@@ -4,7 +4,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | libssh |
 | Platforms | all except Android |
 | Build | `make m=ssh` |

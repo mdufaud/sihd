@@ -200,7 +200,7 @@ bool TcpServer::on_stop()
     return true;
 }
 
-void TcpServer::handle(sihd::sys::Poll *poll)
+void TcpServer::handle(sihd::sys::EventPoll *poll)
 {
     if (poll->polling_timeout())
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());

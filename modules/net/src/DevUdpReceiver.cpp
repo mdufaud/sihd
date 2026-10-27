@@ -1,4 +1,4 @@
-#include <sihd/net/DeviceUdpReceiver.hpp>
+#include <sihd/net/DevUdpReceiver.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
@@ -8,11 +8,11 @@ using namespace sihd::util;
 namespace sihd::net
 {
 
-SIHD_REGISTER_FACTORY(DeviceUdpReceiver)
+SIHD_REGISTER_FACTORY(DevUdpReceiver)
 
 SIHD_LOGGER;
 
-DeviceUdpReceiver::DeviceUdpReceiver(const std::string & name, Node *parent):
+DevUdpReceiver::DevUdpReceiver(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _udp_receiver("udp-receiver"),
     _start_sync(2),
@@ -23,53 +23,53 @@ DeviceUdpReceiver::DeviceUdpReceiver(const std::string & name, Node *parent):
     _channel_rx(nullptr)
 {
     _worker.set_runnable(this);
-    this->add_conf("host", &DeviceUdpReceiver::set_host);
-    this->add_conf("port", &DeviceUdpReceiver::set_port);
-    this->add_conf("buffer_capacity", &DeviceUdpReceiver::set_buffer_capacity);
-    this->add_conf("poll_timeout", &DeviceUdpReceiver::set_poll_timeout);
+    this->add_conf("host", &DevUdpReceiver::set_host);
+    this->add_conf("port", &DevUdpReceiver::set_port);
+    this->add_conf("buffer_capacity", &DevUdpReceiver::set_buffer_capacity);
+    this->add_conf("poll_timeout", &DevUdpReceiver::set_poll_timeout);
 }
 
-DeviceUdpReceiver::~DeviceUdpReceiver()
+DevUdpReceiver::~DevUdpReceiver()
 {
     if (this->is_running())
         this->stop();
 }
 
-bool DeviceUdpReceiver::is_running() const
+bool DevUdpReceiver::is_running() const
 {
     return _worker.is_worker_running();
 }
 
-bool DeviceUdpReceiver::set_host(std::string_view host)
+bool DevUdpReceiver::set_host(std::string_view host)
 {
     _host = host;
     return true;
 }
 
-bool DeviceUdpReceiver::set_port(int port)
+bool DevUdpReceiver::set_port(int port)
 {
     _port = port;
     return true;
 }
 
-bool DeviceUdpReceiver::set_buffer_capacity(size_t capacity)
+bool DevUdpReceiver::set_buffer_capacity(size_t capacity)
 {
     _buffer_capacity = capacity;
     return true;
 }
 
-bool DeviceUdpReceiver::set_poll_timeout(int milliseconds)
+bool DevUdpReceiver::set_poll_timeout(int milliseconds)
 {
     return _udp_receiver.set_poll_timeout(milliseconds);
 }
 
-bool DeviceUdpReceiver::on_init()
+bool DevUdpReceiver::on_init()
 {
     this->add_unlinked_channel_resizable("rx", Type::TYPE_BYTE, 1, _buffer_capacity);
     return true;
 }
 
-bool DeviceUdpReceiver::on_start()
+bool DevUdpReceiver::on_start()
 {
     auto rx = this->get_channel("rx");
     if (SIHD_UNEXPECTED_LOG(rx))
@@ -78,21 +78,21 @@ bool DeviceUdpReceiver::on_start()
 
     if (_port <= 0)
     {
-        SIHD_LOG(error, "DeviceUdpReceiver: port must be set");
+        SIHD_LOG(error, "DevUdpReceiver: port must be set");
         return false;
     }
 
     _stop_requested = false;
     _start_ok = false;
 
-    if (!_worker.start_worker("DeviceUdpReceiver"))
+    if (!_worker.start_worker("DevUdpReceiver"))
         return false;
 
     _start_sync.sync();
     return _start_ok;
 }
 
-bool DeviceUdpReceiver::on_stop()
+bool DevUdpReceiver::on_stop()
 {
     _stop_requested = true;
     _udp_receiver.stop();
@@ -102,13 +102,13 @@ bool DeviceUdpReceiver::on_stop()
     return true;
 }
 
-bool DeviceUdpReceiver::on_reset()
+bool DevUdpReceiver::on_reset()
 {
     _channel_rx = nullptr;
     return true;
 }
 
-bool DeviceUdpReceiver::run()
+bool DevUdpReceiver::run()
 {
     IpAddr addr(_host.empty() ? "0.0.0.0" : _host, _port);
     auto bound = _udp_receiver.open_and_bind(addr);
@@ -126,14 +126,14 @@ bool DeviceUdpReceiver::run()
     _start_sync.sync();
 
     if (_udp_receiver.start() == false)
-        SIHD_LOG(error, "DeviceUdpReceiver: could not start the receiver");
+        SIHD_LOG(error, "DevUdpReceiver: could not start the receiver");
 
     return true;
 }
 
-void DeviceUdpReceiver::handle([[maybe_unused]] sihd::core::Channel *c) {}
+void DevUdpReceiver::handle([[maybe_unused]] sihd::core::Channel *c) {}
 
-void DeviceUdpReceiver::handle(INetReceiver *receiver)
+void DevUdpReceiver::handle(INetReceiver *receiver)
 {
     ArrByte buf(_buffer_capacity);
     auto received = receiver->receive(buf);

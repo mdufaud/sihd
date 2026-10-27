@@ -9,12 +9,16 @@ class ACoreObject;
 class ACoreService;
 class Channel;
 class Core;
+class DevBatcher;
 class DevFilter;
 class DevMessage;
 class DevPlayer;
 class DevPulsation;
 class DevRecorder;
 class DevSampler;
+class DevStats;
+class DevWorker;
+class DevWorkerPool;
 class Device;
 class MemRecorder;
 

@@ -1,5 +1,5 @@
-#ifndef __SIHD_NET_DEVICETCPSERVER_HPP__
-#define __SIHD_NET_DEVICETCPSERVER_HPP__
+#ifndef __SIHD_NET_DEVTCPSERVER_HPP__
+#define __SIHD_NET_DEVTCPSERVER_HPP__
 
 #include <sihd/core/Device.hpp>
 #include <sihd/net/BasicServerHandler.hpp>
@@ -10,13 +10,14 @@
 namespace sihd::net
 {
 
-class DeviceTcpServer: public sihd::core::Device,
-                       public sihd::util::IHandler<BasicServerHandler *>,
-                       protected sihd::util::IRunnable
+// rx and tx carry raw payloads from and to every client, rx_from and tx_to carry encoded ClientFrame
+class DevTcpServer: public sihd::core::Device,
+                    public sihd::util::IHandler<BasicServerHandler *>,
+                    protected sihd::util::IRunnable
 {
     public:
-        DeviceTcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
-        virtual ~DeviceTcpServer();
+        DevTcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
+        virtual ~DevTcpServer();
 
         bool is_running() const override;
 
@@ -43,6 +44,8 @@ class DeviceTcpServer: public sihd::core::Device,
         bool run() override;
 
     private:
+        void _send_to_one(const sihd::core::Channel *c);
+
         TcpServer _tcp_server;
         BasicServerHandler _server_handler;
         sihd::util::Worker _worker;
@@ -55,6 +58,10 @@ class DeviceTcpServer: public sihd::core::Device,
         sihd::core::Channel *_channel_rx;
         sihd::core::Channel *_channel_tx;
         sihd::core::Channel *_channel_client_count;
+        sihd::core::Channel *_channel_rx_from;
+        sihd::core::Channel *_channel_tx_to;
+        sihd::core::Channel *_channel_connected;
+        sihd::core::Channel *_channel_disconnected;
 };
 
 } // namespace sihd::net

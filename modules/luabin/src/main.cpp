@@ -31,14 +31,14 @@ void load_available_apis(Vm & vm)
 #if SIHD_LUA_WITH_JSON
     LuaJsonApi::load_all(vm);
 #endif
+#if SIHD_LUA_WITH_CORE
+    LuaCoreApi::load(vm);
+#endif
 #if SIHD_LUA_WITH_CSV
     LuaCsvApi::load_all(vm);
 #endif
 #if SIHD_LUA_WITH_ZIP
     LuaZipApi::load_all(vm);
-#endif
-#if SIHD_LUA_WITH_CORE
-    LuaCoreApi::load(vm);
 #endif
 #if SIHD_LUA_WITH_NET
     LuaNetApi::load_all(vm);

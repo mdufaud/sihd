@@ -9,6 +9,18 @@ end
 
 check_device(sihd.core.DevFilter("filter", core))
 check_device(sihd.core.DevSampler("sampler", core))
+local worker = sihd.core.DevWorker("worker", core)
+check_device(worker)
+assert(worker:set_conf({queue_size = 8}))
+local worker_pool = sihd.core.DevWorkerPool("worker_pool", core)
+check_device(worker_pool)
+assert(worker_pool:set_conf({threads = 2, queue_size = 8}))
+local batcher = sihd.core.DevBatcher("batcher", core)
+check_device(batcher)
+assert(batcher:set_conf({samples = 4, period = 10}))
+local stats = sihd.core.DevStats("stats", core)
+check_device(stats)
+assert(stats:set_conf({period = 10}))
 check_device(sihd.core.DevPlayer("player", core))
 check_device(sihd.core.DevRecorder("recorder", core))
 

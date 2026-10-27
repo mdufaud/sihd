@@ -4,7 +4,7 @@
 #include <sihd/net/INetServer.hpp>
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/Socket.hpp>
-#include <sihd/sys/Poll.hpp>
+#include <sihd/sys/EventPoll.hpp>
 #include <sihd/util/ABlockingService.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -19,7 +19,7 @@ class TcpServer: public INetServer,
                  public sihd::util::ABlockingService,
                  public sihd::util::Named,
                  public sihd::util::Configurable,
-                 public sihd::util::IHandler<sihd::sys::Poll *>
+                 public sihd::util::IHandler<sihd::sys::EventPoll *>
 {
     public:
         TcpServer(const std::string & name, sihd::util::Node *parent = nullptr);
@@ -55,7 +55,7 @@ class TcpServer: public INetServer,
         size_t queue_size() const;
 
     protected:
-        void handle(sihd::sys::Poll *poll) override;
+        void handle(sihd::sys::EventPoll *poll) override;
         bool on_start() override;
         bool on_stop() override;
 
@@ -65,7 +65,7 @@ class TcpServer: public INetServer,
         Socket _socket;
         size_t _queue_size;
         std::mutex _poll_mutex;
-        sihd::sys::Poll _poll;
+        sihd::sys::EventPoll _poll;
         INetServerHandler *_server_handler_ptr;
 };
 

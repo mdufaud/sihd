@@ -4,7 +4,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 | | |
 |---|---|
-| Depends on | `sys`, `core`, `crypto` |
+| Depends on | `core`, `crypto` |
 | External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows |
 | Platforms | all except web (Emscripten) |
 | Build | `make m=net` |
@@ -28,7 +28,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 - `TcpClient`: `INetReceiver` and `INetSender`, `Observable<INetReceiver>`, runnable as a blocking service. `open_socket`, `connect`, `reconnect`, `open_and_connect` (IP or Unix path), `send`, `send_all`, `receive`, `poll`, `set_poll_timeout`, `set_tls_context`.
 - `TcpServer`: `INetServer` and blocking service. `open_and_bind` (IP or Unix path), `accept_client`, `set_server_handler`, `set_queue_size`, `set_poll_limit`, `add_client_read` / `add_client_write` and their `remove_*` counterparts.
-- `BasicServerHandler`: `INetServerHandler` that tracks clients (`Client`) and their read, write and new-connection activity. Configuration: `set_max_clients`, `set_idle_timeout`, `set_tls_accept_timeout`, `set_tls_context`. Operations: `send_to_client`, `remove_client`, `clients`, `client`, `client_count`.
+- `BasicServerHandler`: `INetServerHandler` that tracks clients (`Client`) and their read, write and new-connection activity. Configuration: `set_max_clients`, `set_idle_timeout`, `set_tls_accept_timeout`, `set_tls_context`. Operations: `send_to_client`, `remove_client`, `clients`, `client`, `client_by_id`, `client_count`. Each `Client` gets an `id` that the handler never gives again, unlike its fd that a new client may reuse.
 
 ### UDP
 
@@ -106,7 +106,9 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 ### Devices
 
-- `DeviceTcpClient`, `DeviceTcpServer`, `DeviceUdpSender`, `DeviceUdpReceiver`: `core::Device` wrappers. They are configured with `set_host`, `set_port`, `set_unix_path`, `set_buffer_capacity`, `set_poll_timeout`, and connect to channels (`handle(Channel *)`) or to a `INetReceiver`/`BasicServerHandler`.
+- `DevTcpClient`, `DevTcpServer`, `DevUdpSender`, `DevUdpReceiver`: `core::Device` wrappers. They are configured with `set_host`, `set_port`, `set_unix_path`, `set_buffer_capacity`, `set_poll_timeout`, and connect to channels (`handle(Channel *)`) or to a `INetReceiver`/`BasicServerHandler`.
+- `DevTcpServer` channels: `rx` (the raw payloads of every client) and `tx` (a raw payload sent to every client) keep the data pure, to plug in anything. `rx_from` and `tx_to` carry an encoded `ClientFrame`: the client id then the payload, `rx_from` for each payload a client sends and `tx_to` to send to one client. A `tx_to` frame for a client that left is dropped and logged, never sent to a later client. `connected` and `disconnected` (`ULONG`) give the id of each client that comes or leaves, `client_count` the clients served.
+- `ClientFrame(client_id, payload).encode()` builds a frame and `ClientFrame::decode(frame)` reads one (`header_size` bytes of id in host byte order, then the payload), with `client_id()` and `payload()`: an `ArrCharView` into the decoded frame, so a frame builds from a plain string and `payload().str()` gives the text back. `decode` is `invalid_argument` for a frame shorter than its header.
 
 ## Example
 
@@ -159,4 +161,4 @@ Adapted from `modules/net/test/linux/TestNetNamespace.cpp` and `modules/net/demo
 
 ## Scripting
 
-Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers` and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures raise a bound `Error` (`message`, `code`) that `pcall` catches, the kinds are `NetInterface.Kind`, the event types `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which raises when refused.
+Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers`, `ClientFrame` (`ClientFrame(client_id, array)` in Python, `ClientFrame.new(client_id, array)` in Lua, then `encode()`; static `decode(array)`; `payload()` gives a copy) and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures raise a bound `Error` (`message`, `code`) that `pcall` catches, the kinds are `NetInterface.Kind`, the event types `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which raises when refused.

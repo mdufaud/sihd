@@ -5,10 +5,11 @@
 
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
-#include <sihd/net/DeviceTcpClient.hpp>
-#include <sihd/net/DeviceTcpServer.hpp>
-#include <sihd/net/DeviceUdpReceiver.hpp>
-#include <sihd/net/DeviceUdpSender.hpp>
+#include <sihd/net/ClientFrame.hpp>
+#include <sihd/net/DevTcpClient.hpp>
+#include <sihd/net/DevTcpServer.hpp>
+#include <sihd/net/DevUdpReceiver.hpp>
+#include <sihd/net/DevUdpSender.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -31,14 +32,38 @@ class TestDevices: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+        int free_port()
+        {
+            Socket probe;
+            EXPECT_TRUE(probe.open(AF_INET, SOCK_STREAM, 0).has_value());
+            EXPECT_TRUE(probe.bind(IpAddr::localhost(0)).has_value());
+            return probe.local_port().value_or(-1);
+        }
+
+        Socket connect_client(int port)
+        {
+            Socket client;
+            EXPECT_TRUE(client.open(AF_INET, SOCK_STREAM, 0).has_value());
+            EXPECT_TRUE(client.connect(IpAddr::localhost(port)).has_value());
+            EXPECT_TRUE(client.set_recv_timeout(2000).has_value());
+            return client;
+        }
+
+        std::string receive_text(Socket & client)
+        {
+            std::array<char, 64> buf {};
+            const size_t received = client.receive(buf.data(), buf.size()).value_or(0);
+            return std::string(buf.data(), received);
+        }
 };
 
 TEST_F(TestDevices, test_udp_devices)
 {
     Core core;
 
-    auto *sender = core.add_child<DeviceUdpSender>("sender");
-    auto *receiver = core.add_child<DeviceUdpReceiver>("receiver");
+    auto *sender = core.add_child<DevUdpSender>("sender");
+    auto *receiver = core.add_child<DevUdpReceiver>("receiver");
 
     sender->set_host("127.0.0.1");
     sender->set_port(4300);
@@ -79,7 +104,7 @@ TEST_F(TestDevices, test_tcp_client_device)
 
     Core core;
 
-    auto *client = core.add_child<DeviceTcpClient>("client");
+    auto *client = core.add_child<DevTcpClient>("client");
     client->set_host("127.0.0.1");
     client->set_port(4301);
     client->set_poll_timeout(1);
@@ -133,7 +158,7 @@ TEST_F(TestDevices, test_tcp_server_device)
 {
     Core core;
 
-    auto *srv = core.add_child<DeviceTcpServer>("server");
+    auto *srv = core.add_child<DevTcpServer>("server");
     srv->set_host("127.0.0.1");
     srv->set_port(4302);
     srv->set_poll_timeout(1);
@@ -194,7 +219,7 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
 
     Core core;
 
-    auto *client = core.add_child<DeviceTcpClient>("client");
+    auto *client = core.add_child<DevTcpClient>("client");
     client->set_host("127.0.0.1");
     client->set_port(4303);
     client->set_poll_timeout(1);
@@ -258,6 +283,94 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     EXPECT_EQ(connected->read<bool>(0), false);
 
     (void)server2.close();
+}
+
+TEST_F(TestDevices, test_tcp_server_device_addresses_one_client)
+{
+    Core core;
+    auto *srv = core.add_child<DevTcpServer>("server");
+    srv->set_host("127.0.0.1");
+    const int port = this->free_port();
+    srv->set_port(port);
+    srv->set_poll_timeout(1);
+    srv->set_buffer_capacity(1024);
+    ASSERT_TRUE(core.init());
+
+    Channel *rx_from = srv->find_channel("rx_from").value_or(nullptr);
+    Channel *tx_to = srv->find_channel("tx_to").value_or(nullptr);
+    Channel *connected = srv->find_channel("connected").value_or(nullptr);
+    ASSERT_NE(rx_from, nullptr);
+    ASSERT_NE(tx_to, nullptr);
+    ASSERT_NE(connected, nullptr);
+    ASSERT_TRUE(core.start());
+
+    ChannelWaiter connected_waiter(connected);
+    Socket client_a = this->connect_client(port);
+    ASSERT_TRUE(connected_waiter.prev_wait_for(std::chrono::seconds(5)));
+    const uint64_t id_a = connected->read<uint64_t>(0);
+    Socket client_b = this->connect_client(port);
+    ASSERT_TRUE(connected_waiter.prev_wait_for(std::chrono::seconds(5)));
+    const uint64_t id_b = connected->read<uint64_t>(0);
+    EXPECT_NE(id_a, id_b);
+
+    ChannelWaiter rx_from_waiter(rx_from);
+    const char from_a[] = "from a";
+    EXPECT_EQ(client_a.send(from_a), (ssize_t)strlen(from_a));
+    ASSERT_TRUE(rx_from_waiter.prev_wait_for(std::chrono::seconds(5)));
+    auto frame = ClientFrame::decode(ArrByteView(*rx_from->array()));
+    ASSERT_TRUE(frame.has_value());
+    EXPECT_EQ(frame->client_id(), id_a);
+    EXPECT_EQ(frame->payload().str(), "from a");
+
+    ASSERT_TRUE(tx_to->write(ClientFrame(id_b, "to b").encode()));
+    EXPECT_EQ(this->receive_text(client_b), "to b");
+
+    ASSERT_TRUE(client_a.set_blocking(false).has_value());
+    std::array<char, 16> a_buf {};
+    EXPECT_FALSE(client_a.receive(a_buf.data(), a_buf.size()).has_value());
+
+    ASSERT_TRUE(core.stop());
+}
+
+TEST_F(TestDevices, test_tcp_server_device_drops_writes_for_gone_clients)
+{
+    Core core;
+    auto *srv = core.add_child<DevTcpServer>("server");
+    srv->set_host("127.0.0.1");
+    const int port = this->free_port();
+    srv->set_port(port);
+    srv->set_poll_timeout(1);
+    srv->set_buffer_capacity(1024);
+    ASSERT_TRUE(core.init());
+
+    Channel *tx_to = srv->find_channel("tx_to").value_or(nullptr);
+    Channel *connected = srv->find_channel("connected").value_or(nullptr);
+    Channel *disconnected = srv->find_channel("disconnected").value_or(nullptr);
+    ASSERT_NE(tx_to, nullptr);
+    ASSERT_NE(connected, nullptr);
+    ASSERT_NE(disconnected, nullptr);
+    ASSERT_TRUE(core.start());
+
+    ChannelWaiter connected_waiter(connected);
+    ChannelWaiter disconnected_waiter(disconnected);
+    Socket gone = this->connect_client(port);
+    ASSERT_TRUE(connected_waiter.prev_wait_for(std::chrono::seconds(5)));
+    const uint64_t gone_id = connected->read<uint64_t>(0);
+    (void)gone.close();
+    ASSERT_TRUE(disconnected_waiter.prev_wait_for(std::chrono::seconds(5)));
+    EXPECT_EQ(disconnected->read<uint64_t>(0), gone_id);
+
+    Socket next = this->connect_client(port);
+    ASSERT_TRUE(connected_waiter.prev_wait_for(std::chrono::seconds(5)));
+    const uint64_t next_id = connected->read<uint64_t>(0);
+    EXPECT_NE(next_id, gone_id);
+
+    ASSERT_TRUE(tx_to->write(ClientFrame(gone_id, "late").encode()));
+    ASSERT_TRUE(tx_to->write(ClientFrame(next_id, "fresh").encode()));
+    // tcp keeps the order: the late write would come first if it had been sent
+    EXPECT_EQ(this->receive_text(next), "fresh");
+
+    ASSERT_TRUE(core.stop());
 }
 
 } // namespace test

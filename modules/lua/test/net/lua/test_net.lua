@@ -74,10 +74,17 @@ assert(addr:str():find("127.0.0.1") ~= nil)
 local addr_noport = net.ip_addr("127.0.0.1")
 assert(addr_noport:port() == 0)
 
+-- ClientFrame: the client id then the payload
+local frame = net.ClientFrame.new(42, sihd.util.ArrChar.new("hi")):encode()
+assert(frame:size() == net.ClientFrame.header_size + 2)
+local decoded = net.ClientFrame.decode(frame)
+assert(decoded:client_id() == 42)
+assert(decoded:payload():str() == "hi")
+
 -- UDP device loopback through a Core
 local core = sihd.core.Core("core", nil)
-local sender = net.DeviceUdpSender("sender", core)
-local receiver = net.DeviceUdpReceiver("receiver", core)
+local sender = net.DevUdpSender("sender", core)
+local receiver = net.DevUdpReceiver("receiver", core)
 
 assert(sender:set_conf({host = "127.0.0.1", port = 4300}))
 assert(receiver:set_conf({host = "127.0.0.1", port = 4300}))

@@ -1,14 +1,14 @@
 # csv
 
-Delimited text reading and writing. The reader skips comment lines, splits each line into columns and can expose one column as a timestamp. The writer emits rows and comment lines, and tracks the current row and column. Helpers convert between CSV text, files and typed tuples.
+Delimited text reading and writing. The reader skips comment lines, splits each line into columns and can expose one column as a timestamp. The writer emits rows and comment lines, and tracks the current row and column. Helpers convert between CSV text, files and typed tuples. `CsvRecorder` records channels to a CSV file.
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys`, `core` |
 | External libraries | none |
 | Platforms | all |
 | Build | `make m=csv` |
-| Header | `#include <sihd/csv/CsvReader.hpp>` (also `CsvWriter.hpp`, `utils.hpp`) |
+| Header | `#include <sihd/csv/CsvReader.hpp>` (also `CsvWriter.hpp`, `utils.hpp`, `CsvRecorder.hpp`) |
 
 ## Capabilities
 
@@ -32,6 +32,12 @@ Delimited text reading and writing. The reader skips comment lines, splits each 
 - `new_row()`: ends the current row.
 - `write_commentary(text)`: writes a comment line.
 - `current_row()`, `current_col()`, `max_col()`: position and widest row written so far.
+
+### Recording channels
+
+- `CsvRecorder`: a `core::DevRecorder` handler, like `core::MemRecorder`. Point the recorder at it (`set_handler("..csv")`, conf `handler`) and pick the channels with `add_record_channel("ALIAS=PATH")` (conf `record`). Each record becomes the row `timestamp,channel,value` as soon as it happens: the channel timestamp in nanoseconds, the alias, then the values separated by spaces (bytes and chars in hexadecimal). Rows go straight to the file, line buffered, nothing is kept in memory.
+- `set_path(path)` (conf `path`): `{date}` is replaced by the local time of each `start()` (`%Y-%m-%d_%H-%M-%S`), so a restart writes a new file; a fixed path is truncated on each start. The first row is the header `timestamp,channel,value`.
+- `start()` fails without a path or when the file cannot be opened.
 
 ### Helpers
 

@@ -12,7 +12,7 @@
 
 ## Capabilities
 
-- Loads the util, sys, json, csv, zip, core, net and http bindings that are compiled in, through `SIHD_LUA_WITH_<MODULE>` from the generated `lua` config header.
+- Loads the util, sys, json, core, csv, zip, net and http bindings that are compiled in, in that order (a derived class needs its base registered first), through `SIHD_LUA_WITH_<MODULE>` from the generated `lua` config header.
 - Sets `package.path` to `<executable dir>/etc/sihd/lua/?.lua` and runs `require 'luabin.preload'`, which defines `table_print(tbl)` (prints each key and value). The `etc` directory is copied next to `bin` by the build.
 - Prints the prompt `$> ` and runs each input line with `Vm::do_string`. A Lua error is written to stderr with its code and does not stop the loop. Input ends at EOF.
 - Each line is a separate chunk: a statement that spans several lines must be written on one line.

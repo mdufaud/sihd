@@ -1,10 +1,10 @@
+#include "internal/ProcessMonitor.hpp"
+
 #include <algorithm>
 #include <set>
 
 #include <sihd/sys/info.hpp>
 #include <sihd/util/Clocks.hpp>
-
-#include "internal/process_monitor.hpp"
 
 namespace sihd::sys
 {

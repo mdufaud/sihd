@@ -4,7 +4,7 @@ Terminal user interface components built on FTXUI. `CliComponent` is an interact
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | ftxui |
 | Platforms | all |
 | Build | `make m=tui` |

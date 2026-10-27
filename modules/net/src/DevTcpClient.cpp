@@ -1,4 +1,4 @@
-#include <sihd/net/DeviceTcpClient.hpp>
+#include <sihd/net/DevTcpClient.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
@@ -11,11 +11,11 @@ using namespace sihd::util;
 namespace sihd::net
 {
 
-SIHD_REGISTER_FACTORY(DeviceTcpClient)
+SIHD_REGISTER_FACTORY(DevTcpClient)
 
 SIHD_LOGGER;
 
-DeviceTcpClient::DeviceTcpClient(const std::string & name, Node *parent):
+DevTcpClient::DevTcpClient(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _tcp_client("tcp-client"),
     _start_sync(2),
@@ -34,71 +34,71 @@ DeviceTcpClient::DeviceTcpClient(const std::string & name, Node *parent):
     if constexpr (build::is_windows)
     {
         if (_tcp_client.set_recv_timeout(100) == false)
-            SIHD_LOG(error, "DeviceTcpClient: could not set the windows recv drain timeout");
+            SIHD_LOG(error, "DevTcpClient: could not set the windows recv drain timeout");
     }
     _worker.set_runnable(this);
-    this->add_conf("host", &DeviceTcpClient::set_host);
-    this->add_conf("port", &DeviceTcpClient::set_port);
-    this->add_conf("unix_path", &DeviceTcpClient::set_unix_path);
-    this->add_conf("buffer_capacity", &DeviceTcpClient::set_buffer_capacity);
-    this->add_conf("poll_timeout", &DeviceTcpClient::set_poll_timeout);
-    this->add_conf("connect_timeout", &DeviceTcpClient::set_connect_timeout);
-    this->add_conf("reconnect_interval", &DeviceTcpClient::set_reconnect_interval);
+    this->add_conf("host", &DevTcpClient::set_host);
+    this->add_conf("port", &DevTcpClient::set_port);
+    this->add_conf("unix_path", &DevTcpClient::set_unix_path);
+    this->add_conf("buffer_capacity", &DevTcpClient::set_buffer_capacity);
+    this->add_conf("poll_timeout", &DevTcpClient::set_poll_timeout);
+    this->add_conf("connect_timeout", &DevTcpClient::set_connect_timeout);
+    this->add_conf("reconnect_interval", &DevTcpClient::set_reconnect_interval);
 }
 
-DeviceTcpClient::~DeviceTcpClient()
+DevTcpClient::~DevTcpClient()
 {
     if (this->is_running())
         this->stop();
 }
 
-bool DeviceTcpClient::is_running() const
+bool DevTcpClient::is_running() const
 {
     return _worker.is_worker_running();
 }
 
-bool DeviceTcpClient::set_host(std::string_view host)
+bool DevTcpClient::set_host(std::string_view host)
 {
     _host = host;
     return true;
 }
 
-bool DeviceTcpClient::set_port(int port)
+bool DevTcpClient::set_port(int port)
 {
     _port = port;
     return true;
 }
 
-bool DeviceTcpClient::set_unix_path(std::string_view path)
+bool DevTcpClient::set_unix_path(std::string_view path)
 {
     _unix_path = path;
     return true;
 }
 
-bool DeviceTcpClient::set_buffer_capacity(size_t capacity)
+bool DevTcpClient::set_buffer_capacity(size_t capacity)
 {
     _buffer_capacity = capacity;
     return true;
 }
 
-bool DeviceTcpClient::set_poll_timeout(int milliseconds)
+bool DevTcpClient::set_poll_timeout(int milliseconds)
 {
     return _tcp_client.set_poll_timeout(milliseconds);
 }
 
-bool DeviceTcpClient::set_connect_timeout(int milliseconds)
+bool DevTcpClient::set_connect_timeout(int milliseconds)
 {
     _connect_timeout = milliseconds;
     return true;
 }
 
-bool DeviceTcpClient::set_reconnect_interval(int milliseconds)
+bool DevTcpClient::set_reconnect_interval(int milliseconds)
 {
     _reconnect_interval = milliseconds;
     return true;
 }
 
-bool DeviceTcpClient::on_init()
+bool DevTcpClient::on_init()
 {
     this->add_unlinked_channel_resizable("rx", Type::TYPE_BYTE, 1, _buffer_capacity);
     this->add_unlinked_channel_resizable("tx", Type::TYPE_BYTE, 1, _buffer_capacity);
@@ -106,7 +106,7 @@ bool DeviceTcpClient::on_init()
     return true;
 }
 
-bool DeviceTcpClient::on_start()
+bool DevTcpClient::on_start()
 {
     auto rx = this->get_channel("rx");
     auto tx = this->get_channel("tx");
@@ -119,7 +119,7 @@ bool DeviceTcpClient::on_start()
 
     if (_unix_path.empty() && (_host.empty() || _port <= 0))
     {
-        SIHD_LOG(error, "DeviceTcpClient: host+port or unix_path must be set");
+        SIHD_LOG(error, "DevTcpClient: host+port or unix_path must be set");
         return false;
     }
 
@@ -128,14 +128,14 @@ bool DeviceTcpClient::on_start()
     _stop_requested = false;
     _start_ok = false;
 
-    if (!_worker.start_worker("DeviceTcpClient"))
+    if (!_worker.start_worker("DevTcpClient"))
         return false;
 
     _start_sync.sync();
     return _start_ok;
 }
 
-bool DeviceTcpClient::on_stop()
+bool DevTcpClient::on_stop()
 {
     _stop_requested = true;
     _waitable.notify_all();
@@ -150,7 +150,7 @@ bool DeviceTcpClient::on_stop()
     return true;
 }
 
-bool DeviceTcpClient::on_reset()
+bool DevTcpClient::on_reset()
 {
     _channel_rx = nullptr;
     _channel_tx = nullptr;
@@ -158,20 +158,20 @@ bool DeviceTcpClient::on_reset()
     return true;
 }
 
-Result<void> DeviceTcpClient::_connect()
+Result<void> DevTcpClient::_connect()
 {
     if (!_unix_path.empty())
         return _tcp_client.open_unix_and_connect(_unix_path);
     return _tcp_client.open_and_connect(_host, _port, _connect_timeout);
 }
 
-void DeviceTcpClient::_set_connected(bool connected)
+void DevTcpClient::_set_connected(bool connected)
 {
     if (_channel_connected != nullptr)
         _channel_connected->write<bool>(0, connected);
 }
 
-bool DeviceTcpClient::run()
+bool DevTcpClient::run()
 {
     auto connected = this->_connect();
     if (connected)
@@ -204,7 +204,7 @@ bool DeviceTcpClient::run()
         this->_set_connected(false);
         (void)_tcp_client.close();
 
-        SIHD_LOG(info, "DeviceTcpClient: disconnected, reconnecting...");
+        SIHD_LOG(info, "DevTcpClient: disconnected, reconnecting...");
 
         while (!_stop_requested)
         {
@@ -216,7 +216,7 @@ bool DeviceTcpClient::run()
             auto reconnected = this->_connect();
             if (reconnected)
             {
-                SIHD_LOG(info, "DeviceTcpClient: reconnected");
+                SIHD_LOG(info, "DevTcpClient: reconnected");
                 this->_set_connected(true);
                 _tcp_client.add_observer(this);
                 break;
@@ -230,17 +230,17 @@ bool DeviceTcpClient::run()
     return true;
 }
 
-void DeviceTcpClient::handle(sihd::core::Channel *c)
+void DevTcpClient::handle(sihd::core::Channel *c)
 {
     if (c != _channel_tx)
         return;
     if (_tcp_client.connected())
         SIHD_UNEXPECTED_LOG(_tcp_client.send_all(ArrCharView(*c->array())));
     else
-        SIHD_LOG(warning, "DeviceTcpClient: dropping tx data, client is not connected");
+        SIHD_LOG(warning, "DevTcpClient: dropping tx data, client is not connected");
 }
 
-void DeviceTcpClient::handle(INetReceiver *receiver)
+void DevTcpClient::handle(INetReceiver *receiver)
 {
     if (!_tcp_client.connected())
     {

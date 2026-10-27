@@ -52,6 +52,8 @@ class DesktopNotifier
         sihd::util::Result<void> close(uint32_t id);
 
     private:
+        static sihd::util::Result<void> check_timeout(const std::optional<sihd::util::Duration> & timeout);
+
         struct Impl;
 
         std::unique_ptr<Impl> _impl;

@@ -1,4 +1,4 @@
-#include <sihd/net/DeviceUdpSender.hpp>
+#include <sihd/net/DevUdpSender.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 
@@ -7,53 +7,53 @@ using namespace sihd::util;
 namespace sihd::net
 {
 
-SIHD_REGISTER_FACTORY(DeviceUdpSender)
+SIHD_REGISTER_FACTORY(DevUdpSender)
 
 SIHD_LOGGER;
 
-DeviceUdpSender::DeviceUdpSender(const std::string & name, Node *parent):
+DevUdpSender::DevUdpSender(const std::string & name, Node *parent):
     sihd::core::Device(name, parent),
     _udp_sender("udp-sender"),
     _port(0),
     _channel_tx(nullptr)
 {
-    this->add_conf("host", &DeviceUdpSender::set_host);
-    this->add_conf("port", &DeviceUdpSender::set_port);
-    this->add_conf("unix_path", &DeviceUdpSender::set_unix_path);
+    this->add_conf("host", &DevUdpSender::set_host);
+    this->add_conf("port", &DevUdpSender::set_port);
+    this->add_conf("unix_path", &DevUdpSender::set_unix_path);
 }
 
-DeviceUdpSender::~DeviceUdpSender() = default;
+DevUdpSender::~DevUdpSender() = default;
 
-bool DeviceUdpSender::is_running() const
+bool DevUdpSender::is_running() const
 {
     return _udp_sender.socket().is_open();
 }
 
-bool DeviceUdpSender::set_host(std::string_view host)
+bool DevUdpSender::set_host(std::string_view host)
 {
     _host = host;
     return true;
 }
 
-bool DeviceUdpSender::set_port(int port)
+bool DevUdpSender::set_port(int port)
 {
     _port = port;
     return true;
 }
 
-bool DeviceUdpSender::set_unix_path(std::string_view path)
+bool DevUdpSender::set_unix_path(std::string_view path)
 {
     _unix_path = path;
     return true;
 }
 
-bool DeviceUdpSender::on_init()
+bool DevUdpSender::on_init()
 {
     this->add_unlinked_channel("tx", Type::TYPE_BYTE, 1);
     return true;
 }
 
-bool DeviceUdpSender::on_start()
+bool DevUdpSender::on_start()
 {
     auto tx = this->get_channel("tx");
     if (SIHD_UNEXPECTED_LOG(tx))
@@ -62,7 +62,7 @@ bool DeviceUdpSender::on_start()
 
     if (_unix_path.empty() && (_host.empty() || _port <= 0))
     {
-        SIHD_LOG(error, "DeviceUdpSender: host+port or unix_path must be set");
+        SIHD_LOG(error, "DevUdpSender: host+port or unix_path must be set");
         return false;
     }
 
@@ -79,19 +79,19 @@ bool DeviceUdpSender::on_start()
     return true;
 }
 
-bool DeviceUdpSender::on_stop()
+bool DevUdpSender::on_stop()
 {
     (void)_udp_sender.close();
     return true;
 }
 
-bool DeviceUdpSender::on_reset()
+bool DevUdpSender::on_reset()
 {
     _channel_tx = nullptr;
     return true;
 }
 
-void DeviceUdpSender::handle(sihd::core::Channel *c)
+void DevUdpSender::handle(sihd::core::Channel *c)
 {
     if (c == _channel_tx)
     {

@@ -1,6 +1,9 @@
 #ifndef __SIHD_CORE_ACHANNELCONTAINER_HPP__
 #define __SIHD_CORE_ACHANNELCONTAINER_HPP__
 
+#include <map>
+#include <string>
+
 #include <sihd/core/Channel.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/IHandler.hpp>
@@ -23,6 +26,9 @@ class AChannelContainer: public sihd::util::Node,
 
         sihd::util::Result<Channel *> get_channel(const std::string & name);
 
+        // linked channels except declared ports, once links are resolved: an error if a link is not a channel
+        sihd::util::Result<std::map<std::string, Channel *>> linked_channels();
+
         // store channel configuration, created if unlinked or fetched from the link once links are resolved
         Channel *add_unlinked_channel(const std::string & name,
                                       sihd::util::Type type,
@@ -36,7 +42,7 @@ class AChannelContainer: public sihd::util::Node,
         Channel *add_channel(const std::string & name, sihd::util::Type type, size_t size = 1);
         Channel *add_channel(const std::string & name, std::string_view type_str, size_t size = 1);
 
-        // the resizable flag is always verified at link time, check_match additionally gates type/size
+        // the resizable flag is always verified at link time, check_match additionally gates type and capacity
         Channel *add_unlinked_channel_resizable(const std::string & name,
                                                 sihd::util::Type type,
                                                 size_t size,
@@ -64,6 +70,7 @@ class AChannelContainer: public sihd::util::Node,
         {
                 sihd::util::Type type;
                 size_t size;
+                size_t capacity;
                 bool match;
                 bool resizable;
         };

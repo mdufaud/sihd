@@ -283,6 +283,24 @@ TEST_F(TestChannel, test_channel_resizable)
     EXPECT_EQ(channel.byte_size(), 8u);
     EXPECT_EQ(channel.read<int8_t>(7), 80);
 
+    ArrByte shorter = {10, 20};
+    EXPECT_TRUE(channel.write(shorter));
+    EXPECT_EQ(channel.byte_size(), 2u);
+
+    ArrByte at_offset = {5};
+    EXPECT_TRUE(channel.write(ArrByteView(at_offset), size_t {1}));
+    EXPECT_EQ(channel.byte_size(), 2u);
+    EXPECT_EQ(channel.read<int8_t>(0), 10);
+    EXPECT_EQ(channel.read<int8_t>(1), 5);
+
+    EXPECT_TRUE(channel.write<int8_t>(0, 7));
+    EXPECT_EQ(channel.byte_size(), 2u);
+    EXPECT_EQ(channel.read<int8_t>(1), 5);
+
+    ArrByte empty;
+    EXPECT_TRUE(channel.write(empty));
+    EXPECT_EQ(channel.byte_size(), 2u);
+
     ArrByte too_big;
     too_big.resize(128);
     EXPECT_FALSE(channel.write(too_big));

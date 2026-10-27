@@ -10,6 +10,7 @@
 #include <sihd/sys/SigWatcher.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/util/Clocks.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
@@ -159,6 +160,24 @@ TEST_F(TestSignal, test_signal_watcher)
     watcher.stop();
 
     EXPECT_EQ(sig.load(), sig_term);
+}
+
+TEST_F(TestSignal, test_signal_watcher_stop_skips_the_polling_interval)
+{
+    if constexpr (!build::is_linux || build::is_android || build::is_emscripten)
+        GTEST_SKIP() << "only the signalfd watcher waits without an interval";
+
+    SigWatcher watcher("stop-watcher-test");
+    ASSERT_TRUE(watcher.add_signal(sig_term));
+    ASSERT_TRUE(watcher.set_polling_frequency(0.1));
+    ASSERT_TRUE(watcher.start());
+    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    SteadyClock clock;
+    const Timestamp before = clock.now();
+    EXPECT_TRUE(watcher.stop());
+
+    EXPECT_LT(clock.now() - before, Duration(time::sec(1)));
 }
 
 #if !defined(__SIHD_WINDOWS__)

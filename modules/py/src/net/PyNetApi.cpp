@@ -5,16 +5,18 @@
 #include <optional>
 
 #include <sihd/core/Device.hpp>
-#include <sihd/net/DeviceTcpClient.hpp>
-#include <sihd/net/DeviceTcpServer.hpp>
-#include <sihd/net/DeviceUdpReceiver.hpp>
-#include <sihd/net/DeviceUdpSender.hpp>
+#include <sihd/net/ClientFrame.hpp>
+#include <sihd/net/DevTcpClient.hpp>
+#include <sihd/net/DevTcpServer.hpp>
+#include <sihd/net/DevUdpReceiver.hpp>
+#include <sihd/net/DevUdpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/dns.hpp>
 #include <sihd/net/route.hpp>
 #include <sihd/py/net/PyNetApi.hpp>
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Node.hpp>
@@ -148,6 +150,26 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
               pybind11::arg("resolver_timeout") = dns::default_resolver_timeout,
               pybind11::call_guard<pybind11::gil_scoped_release>());
 
+    pybind11::class_<ClientFrame> client_frame(m_net, "ClientFrame");
+    client_frame.attr("header_size") = ClientFrame::header_size;
+    client_frame
+        .def(pybind11::init([](uint64_t client_id, const IArray & payload) {
+                 return ClientFrame(client_id, ArrCharView(payload));
+             }),
+             pybind11::keep_alive<1, 3>())
+        .def_static(
+            "decode",
+            [](const IArray & frame) { return ClientFrame::decode(ArrByteView(frame)); },
+            pybind11::keep_alive<0, 1>())
+        .def("encode", &ClientFrame::encode)
+        .def("client_id", &ClientFrame::client_id)
+        .def("payload", [](const ClientFrame & self) -> Result<ArrChar> {
+            ArrChar payload;
+            if (!payload.from(self.payload().data(), self.payload().size()))
+                return std::unexpected(Error(ErrorCode::out_of_memory, "ClientFrame: could not copy the payload"));
+            return payload;
+        });
+
     pybind11::enum_<NetMonitorEventType>(m_net, "NetMonitorEventType")
         .value("unknown", NetMonitorEventType::unknown)
         .value("link", NetMonitorEventType::link)
@@ -167,43 +189,43 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
         .def("run", &NetMonitor::run, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("events", &NetMonitor::events);
 
-    pybind11::class_<DeviceTcpClient, Device, SmartNodePtr<DeviceTcpClient>>(m_net, "DeviceTcpClient")
+    pybind11::class_<DevTcpClient, Device, SmartNodePtr<DevTcpClient>>(m_net, "DevTcpClient")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("set_host", &DeviceTcpClient::set_host)
-        .def("set_port", &DeviceTcpClient::set_port)
-        .def("set_unix_path", &DeviceTcpClient::set_unix_path)
-        .def("set_buffer_capacity", &DeviceTcpClient::set_buffer_capacity)
-        .def("set_poll_timeout", &DeviceTcpClient::set_poll_timeout)
-        .def("set_connect_timeout", &DeviceTcpClient::set_connect_timeout)
-        .def("set_reconnect_interval", &DeviceTcpClient::set_reconnect_interval);
+        .def("set_host", &DevTcpClient::set_host)
+        .def("set_port", &DevTcpClient::set_port)
+        .def("set_unix_path", &DevTcpClient::set_unix_path)
+        .def("set_buffer_capacity", &DevTcpClient::set_buffer_capacity)
+        .def("set_poll_timeout", &DevTcpClient::set_poll_timeout)
+        .def("set_connect_timeout", &DevTcpClient::set_connect_timeout)
+        .def("set_reconnect_interval", &DevTcpClient::set_reconnect_interval);
 
-    pybind11::class_<DeviceTcpServer, Device, SmartNodePtr<DeviceTcpServer>>(m_net, "DeviceTcpServer")
+    pybind11::class_<DevTcpServer, Device, SmartNodePtr<DevTcpServer>>(m_net, "DevTcpServer")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("set_host", &DeviceTcpServer::set_host)
-        .def("set_port", &DeviceTcpServer::set_port)
-        .def("set_unix_path", &DeviceTcpServer::set_unix_path)
-        .def("set_buffer_capacity", &DeviceTcpServer::set_buffer_capacity)
-        .def("set_poll_timeout", &DeviceTcpServer::set_poll_timeout)
-        .def("set_poll_limit", &DeviceTcpServer::set_poll_limit)
-        .def("set_queue_size", &DeviceTcpServer::set_queue_size)
-        .def("set_max_clients", &DeviceTcpServer::set_max_clients);
+        .def("set_host", &DevTcpServer::set_host)
+        .def("set_port", &DevTcpServer::set_port)
+        .def("set_unix_path", &DevTcpServer::set_unix_path)
+        .def("set_buffer_capacity", &DevTcpServer::set_buffer_capacity)
+        .def("set_poll_timeout", &DevTcpServer::set_poll_timeout)
+        .def("set_poll_limit", &DevTcpServer::set_poll_limit)
+        .def("set_queue_size", &DevTcpServer::set_queue_size)
+        .def("set_max_clients", &DevTcpServer::set_max_clients);
 
-    pybind11::class_<DeviceUdpSender, Device, SmartNodePtr<DeviceUdpSender>>(m_net, "DeviceUdpSender")
+    pybind11::class_<DevUdpSender, Device, SmartNodePtr<DevUdpSender>>(m_net, "DevUdpSender")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("set_host", &DeviceUdpSender::set_host)
-        .def("set_port", &DeviceUdpSender::set_port)
-        .def("set_unix_path", &DeviceUdpSender::set_unix_path);
+        .def("set_host", &DevUdpSender::set_host)
+        .def("set_port", &DevUdpSender::set_port)
+        .def("set_unix_path", &DevUdpSender::set_unix_path);
 
-    pybind11::class_<DeviceUdpReceiver, Device, SmartNodePtr<DeviceUdpReceiver>>(m_net, "DeviceUdpReceiver")
+    pybind11::class_<DevUdpReceiver, Device, SmartNodePtr<DevUdpReceiver>>(m_net, "DevUdpReceiver")
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>())
-        .def("set_host", &DeviceUdpReceiver::set_host)
-        .def("set_port", &DeviceUdpReceiver::set_port)
-        .def("set_buffer_capacity", &DeviceUdpReceiver::set_buffer_capacity)
-        .def("set_poll_timeout", &DeviceUdpReceiver::set_poll_timeout);
+        .def("set_host", &DevUdpReceiver::set_host)
+        .def("set_port", &DevUdpReceiver::set_port)
+        .def("set_buffer_capacity", &DevUdpReceiver::set_buffer_capacity)
+        .def("set_poll_timeout", &DevUdpReceiver::set_poll_timeout);
 }
 
 namespace

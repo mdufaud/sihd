@@ -5,9 +5,6 @@
 
 #include <sihd/core/Core.hpp>
 #include <sihd/core/DevMessage.hpp>
-#include <sihd/sys/TmpDir.hpp>
-#include <sihd/sys/fs.hpp>
-#include <sihd/sys/platform.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Message.hpp>
@@ -18,7 +15,6 @@ namespace test
 SIHD_LOGGER;
 using namespace sihd::core;
 using namespace sihd::util;
-using namespace sihd::sys;
 
 namespace
 {

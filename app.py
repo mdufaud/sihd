@@ -29,7 +29,7 @@ modules = {
         "export-web-flags": ["-pthread"],
     },
     "util": {
-        "depends": ['json', 'pch'],
+        "depends": ['json'],
         "linux-libs": ['pthread'], # bionic has threading in libc
         "windows-libs": ['pthread'],
         "extlibs": ['fmt', 'cli11', 'pcre2'],
@@ -47,7 +47,7 @@ modules = {
         "export-all-flags": True,
     },
     "sys": {
-        "depends": ['util', 'pch'],
+        "depends": ['util'],
         "env": {
             "x11": 0,
             "wayland": 0,
@@ -80,10 +80,10 @@ modules = {
         "export-all-libs": True,
     },
     "core": {
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['util'],
     },
     "crypto": {
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         "extlibs": ['openssl'],
         "export-libs": ['ssl', 'crypto'],
         "export-windows-libs": ['crypt32', 'bcrypt', 'ws2_32', 'mincore'],
@@ -91,7 +91,7 @@ modules = {
     "curl": {
         # no curl port for web/android
         "exclude-platforms": ["web", "android"],
-        "depends": ['util', 'pch'],
+        "depends": ['util'],
         # openssl/zlib come transitively from the curl port
         "extlibs": ['curl'],
         # shared libcurl resolves its transitive deps internally; the archive does not
@@ -122,14 +122,14 @@ modules = {
     "net": {
         # emscripten proxies neither poll() nor raw sockets
         "exclude-platforms": ["web"],
-        "depends": ['sys', 'core', 'crypto', 'pch'],
+        "depends": ['core', 'crypto'],
         "windows-libs": ['iphlpapi'],
         "export-windows-libs": ['iphlpapi'],
     },
     "http": {
         # no libwebsockets port for web/android
         "exclude-platforms": ["web", "android"],
-        "depends": ['curl', 'net', 'pch'],
+        "depends": ['curl', 'net'],
         "extlibs": [
             'libwebsockets',
             'zlib',
@@ -181,7 +181,7 @@ modules = {
     },
     "pcap": {
         "exclude-platforms": ["android"],
-        "depends": ['net', 'pch'],
+        "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
         "parse-configs": [
@@ -189,7 +189,7 @@ modules = {
         ],
     },
     "zip": {
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         "extlibs": ['libzip'],
         "libs": ['zip'],
         "windows-static-libs": [
@@ -209,13 +209,13 @@ modules = {
     },
     "tui": {
         "exclude-platforms": ["android"],
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
         "exclude-platforms": ["android"],
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
         "linux-static-libs": ['ssl', 'crypto'],
@@ -231,7 +231,7 @@ modules = {
     },
     "usb": {
         "exclude-platforms": ["android", "web"],
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         "extlibs": ['libusb'],
         # cross linux + windows: vcpkg libusb
         "cross-libs": ['usb-1.0'],
@@ -241,20 +241,20 @@ modules = {
     },
     "bt": {
         "allow-platforms": ["linux", "windows"],
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString)
         "windows-libs": ['runtimeobject'],
     },
     "wifi": {
         "allow-platforms": ["linux", "windows"],
         # wlanapi is loaded at runtime, iphlpapi comes exported by net
-        "depends": ['util', 'sys', 'net', 'pch'],
+        "depends": ['net'],
     },
     "csv": {
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys', 'core'],
     },
     "imgui": {
-        "depends": ['util', 'sys', 'pch'],
+        "depends": ['sys'],
         # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android.
         "allow-link-shared": True,
         "android-allow-link-shared": False,
@@ -316,7 +316,7 @@ conditional_modules = {
     "lua": {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
-        "depends": ['util', 'pch'],
+        "depends": ['util'],
         "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'wifi', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
@@ -324,7 +324,7 @@ conditional_modules = {
     },
     "luabin": {
         "conditional-env": "lua",
-        "depends": ['lua', 'pch'],
+        "depends": ['lua'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter"],
     },
@@ -333,7 +333,7 @@ conditional_modules = {
         "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
         "depends": [],
-        "conditional-depends": ['util', 'sys', 'core', 'net', 'wifi', 'http'],
+        "conditional-depends": ['sys', 'core', 'net', 'wifi', 'http'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # pybind11 requires optimization: FORTIFY breaks -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],

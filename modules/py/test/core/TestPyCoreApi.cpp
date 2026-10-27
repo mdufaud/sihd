@@ -44,6 +44,34 @@ TEST_F(TestPyCoreApi, test_pycore_devpulsation)
     EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devpulsation.py"));
 }
 
+TEST_F(TestPyCoreApi, test_pycore_devworker)
+{
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devworker.py"));
+}
+
+TEST_F(TestPyCoreApi, test_pycore_devworkerpool)
+{
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devworkerpool.py"));
+}
+
+TEST_F(TestPyCoreApi, test_pycore_devbatcher)
+{
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devbatcher.py"));
+}
+
+TEST_F(TestPyCoreApi, test_pycore_devstats)
+{
+    DirectorySwitcher dir_switcher(lib_path());
+    require_py_environment();
+    EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/core/py/test_devstats.py"));
+}
+
 TEST_F(TestPyCoreApi, test_pycore_observer)
 {
     DirectorySwitcher dir_switcher(lib_path());

@@ -78,3 +78,11 @@ reader:close()
 
 os.remove(path)
 os.remove(wpath)
+
+local core = sihd.core.Core("core", nil)
+local csv_recorder = sihd.csv.CsvRecorder("csv", core)
+assert(csv_recorder:set_conf({path = "records_{date}.csv"}))
+assert(csv_recorder:set_path("records.csv"))
+assert(not csv_recorder:set_path(""))
+local recorder = sihd.core.DevRecorder("recorder", core)
+assert(recorder:set_conf({handler = "..csv"}))

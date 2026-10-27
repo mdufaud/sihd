@@ -2,10 +2,11 @@
 #define __SIHD_NET_HPP__
 
 #include <sihd/net/BasicServerHandler.hpp>
-#include <sihd/net/DeviceTcpClient.hpp>
-#include <sihd/net/DeviceTcpServer.hpp>
-#include <sihd/net/DeviceUdpReceiver.hpp>
-#include <sihd/net/DeviceUdpSender.hpp>
+#include <sihd/net/ClientFrame.hpp>
+#include <sihd/net/DevTcpClient.hpp>
+#include <sihd/net/DevTcpServer.hpp>
+#include <sihd/net/DevUdpReceiver.hpp>
+#include <sihd/net/DevUdpSender.hpp>
 #include <sihd/net/INetReceiver.hpp>
 #include <sihd/net/INetSender.hpp>
 #include <sihd/net/INetServer.hpp>

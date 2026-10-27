@@ -2,6 +2,7 @@
 #define __SIHD_CSV_HPP__
 
 #include <sihd/csv/CsvReader.hpp>
+#include <sihd/csv/CsvRecorder.hpp>
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/utils.hpp>
 

@@ -40,6 +40,7 @@ class Value
         void clear();
         std::string str() const;
         bool is_float() const;
+        double to_double() const;
 
         template <typename T>
         int compare(const T & cmp_val) const
@@ -132,8 +133,6 @@ class Value
         Type type;
 
     private:
-        double to_double() const;
-
         static int compare_mixed(uint64_t uint_val, int64_t int_val);
         static int compare_mixed(int64_t int_val, uint64_t uint_val);
 

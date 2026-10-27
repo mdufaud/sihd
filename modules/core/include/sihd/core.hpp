@@ -8,12 +8,16 @@
 #include <sihd/core/ChannelMatch.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/core/Core.hpp>
+#include <sihd/core/DevBatcher.hpp>
 #include <sihd/core/DevFilter.hpp>
 #include <sihd/core/DevMessage.hpp>
 #include <sihd/core/DevPlayer.hpp>
 #include <sihd/core/DevPulsation.hpp>
 #include <sihd/core/DevRecorder.hpp>
 #include <sihd/core/DevSampler.hpp>
+#include <sihd/core/DevStats.hpp>
+#include <sihd/core/DevWorker.hpp>
+#include <sihd/core/DevWorkerPool.hpp>
 #include <sihd/core/Device.hpp>
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/Records.hpp>

@@ -7,6 +7,7 @@
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/DynLib.hpp>
+#include <sihd/sys/EventPoll.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/FileCache.hpp>
 #include <sihd/sys/FileMutex.hpp>

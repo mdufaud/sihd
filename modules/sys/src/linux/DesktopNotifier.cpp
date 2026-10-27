@@ -11,8 +11,6 @@
 # include <sihd/sys/linux/dbus.hpp>
 # include <sihd/util/str.hpp>
 # include <sihd/util/time.hpp>
-
-# include "../internal/desktop_notifier.hpp"
 #endif
 
 #include <sihd/sys/DesktopNotifier.hpp>
@@ -145,7 +143,7 @@ struct DesktopNotifier::Impl
 
 Result<uint32_t> DesktopNotifier::notify(const Notification & notification)
 {
-    auto valid_timeout = internal::check_timeout(notification.timeout);
+    auto valid_timeout = DesktopNotifier::check_timeout(notification.timeout);
     SIHD_UNEXPECTED_RETURN(valid_timeout);
     auto body_markup = _impl->has_body_markup();
     SIHD_UNEXPECTED_RETURN(body_markup);

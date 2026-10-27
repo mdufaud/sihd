@@ -4,7 +4,7 @@ USB device enumeration through libusb. A context lists the connected devices wit
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | libusb |
 | Platforms | Linux, Windows |
 | Build | `make m=usb` |

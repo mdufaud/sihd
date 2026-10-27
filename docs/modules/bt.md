@@ -4,7 +4,7 @@ Bluetooth Low Energy scanning. On Linux, it discovers devices through BlueZ over
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | none (Linux: D-Bus through `sys`; Windows: WinRT runtime) |
 | Platforms | Linux, Windows |
 | Build | `make m=bt` |

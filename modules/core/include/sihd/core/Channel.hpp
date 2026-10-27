@@ -94,7 +94,10 @@ class Channel: public sihd::util::Named,
         // empty if idx is out of range
         sihd::util::Value value_at(size_t idx) const;
 
-        bool write(const sihd::util::ArrByteView & arr, size_t byte_offset = 0);
+        // a resizable channel takes the size of arr
+        bool write(const sihd::util::ArrByteView & arr);
+        // a resizable channel grows to fit the write, never shrinks
+        bool write(const sihd::util::ArrByteView & arr, size_t byte_offset);
         bool write(const Channel & other);
 
         template <typename T>
@@ -109,6 +112,8 @@ class Channel: public sihd::util::Named,
         static sihd::util::IClock *_default_channel_clock_ptr;
 
     private:
+        bool _write(const sihd::util::ArrByteView & arr, size_t byte_offset, bool fit_size);
+
         sihd::util::IClock *_clock_ptr;
         sihd::util::Timestamp _timestamp;
 

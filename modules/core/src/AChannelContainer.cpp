@@ -31,12 +31,26 @@ Result<Channel *> AChannelContainer::get_channel(const std::string & name)
     return channel;
 }
 
+Result<std::map<std::string, Channel *>> AChannelContainer::linked_channels()
+{
+    std::map<std::string, Channel *> channels;
+    for (const std::string & name : this->children_keys())
+    {
+        if (this->is_link(name) == false || _channels_link.contains(name))
+            continue;
+        auto channel = this->get_channel(name);
+        SIHD_UNEXPECTED_RETURN(channel);
+        channels[name] = *channel;
+    }
+    return channels;
+}
+
 Channel *AChannelContainer::add_unlinked_channel(const std::string & name, Type type, size_t size, bool check_match)
 {
     if (this->is_link(name))
     {
         constexpr bool resizable = false;
-        _channels_link[name] = {type, size, check_match, resizable};
+        _channels_link[name] = {type, size, size, check_match, resizable};
         return nullptr;
     }
     return this->add_channel(name, type, size);
@@ -59,7 +73,7 @@ Channel *AChannelContainer::add_unlinked_channel_resizable(const std::string & n
     if (this->is_link(name))
     {
         constexpr bool resizable = true;
-        _channels_link[name] = {type, size, check_match, resizable};
+        _channels_link[name] = {type, size, capacity, check_match, resizable};
         return nullptr;
     }
     return this->add_channel_resizable(name, type, size, capacity);
@@ -147,7 +161,7 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
         ret = false;
     }
 
-    if (conf.match && conf.size != chan->array()->size())
+    if (conf.match && !conf.resizable && conf.size != chan->array()->size())
     {
         SIHD_LOG(error,
                  "ChannelContainer: '{}' channel link size not equal '{}': '{}' != '{}'",
@@ -155,6 +169,18 @@ bool AChannelContainer::on_check_link(const std::string & name, Named *child)
                  name,
                  conf.size,
                  chan->array()->size());
+        ret = false;
+    }
+
+    // a resizable channel size follows its writes, only its capacity is a property of the port
+    if (conf.match && conf.resizable && conf.capacity > chan->capacity())
+    {
+        SIHD_LOG(error,
+                 "ChannelContainer: '{}' channel link capacity too small '{}': '{}' < '{}'",
+                 this->full_name(),
+                 name,
+                 chan->capacity(),
+                 conf.capacity);
         ret = false;
     }
     return ret;

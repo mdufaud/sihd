@@ -1,9 +1,10 @@
+#include "../internal/ProcessMonitor.hpp"
+
 #include <unistd.h>
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/str.hpp>
 
-#include "../internal/process_monitor.hpp"
 #include "internal/proc_stat.hpp"
 
 namespace sihd::sys

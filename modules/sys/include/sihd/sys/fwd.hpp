@@ -13,6 +13,7 @@ class CrashHandler;
 class Daemon;
 class DesktopNotifier;
 class DynLib;
+class EventPoll;
 class File;
 class FileCache;
 class FileMutex;

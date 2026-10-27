@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_BASICSERVERHANDLER_HPP__
 #define __SIHD_NET_BASICSERVERHANDLER_HPP__
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -10,6 +11,7 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/TlsSocket.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Configurable.hpp>
 #include <sihd/util/Observable.hpp>
@@ -36,6 +38,8 @@ class BasicServerHandler: public INetServerHandler,
 
                 int fd() const;
 
+                // unique for the handler lifetime, unlike the fd a new client may reuse
+                uint64_t id = 0;
                 TlsSocket socket;
                 mutable std::mutex mutex;
                 sihd::util::ArrByte read_array;
@@ -66,9 +70,9 @@ class BasicServerHandler: public INetServerHandler,
         bool set_tls_accept_timeout(int milliseconds);
         bool set_idle_timeout(int milliseconds);
 
-        bool send_to_client(const ClientPtr & client, const sihd::util::IArray & arr);
+        bool send_to_client(const ClientPtr & client, sihd::util::ArrByteView data);
         bool remove_client(const ClientPtr & client);
-        bool send_to_client(int socket, const sihd::util::IArray & arr);
+        bool send_to_client(int socket, sihd::util::ArrByteView data);
         bool remove_client(int socket);
 
         std::vector<ClientPtr> clients() const;
@@ -80,6 +84,7 @@ class BasicServerHandler: public INetServerHandler,
         INetServer *server();
         size_t client_count() const;
         ClientPtr client(int socket);
+        ClientPtr client_by_id(uint64_t id) const;
 
     protected:
         void handle_no_activity(INetServer *server, sihd::util::time::UnixTime milliseconds);
@@ -116,6 +121,7 @@ class BasicServerHandler: public INetServerHandler,
         int _tls_accept_timeout;
         int _idle_timeout;
         size_t _max_clients;
+        uint64_t _last_client_id;
 };
 
 } // namespace sihd::net

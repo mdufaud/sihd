@@ -4,7 +4,7 @@ Wifi interfaces: the current association, the access points the radio heard, sca
 
 | | |
 |---|---|
-| Depends on | `util`, `sys`, `net` |
+| Depends on | `net` |
 | External libraries | none (Linux: D-Bus through `sys`, nl80211 through `net`; Windows: `wlanapi.dll` loaded at runtime) |
 | Platforms | Linux, Windows |
 | Build | `make m=wifi` |

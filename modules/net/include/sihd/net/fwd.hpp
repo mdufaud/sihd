@@ -5,10 +5,11 @@ namespace sihd::net
 {
 
 class BasicServerHandler;
-class DeviceTcpClient;
-class DeviceTcpServer;
-class DeviceUdpReceiver;
-class DeviceUdpSender;
+class ClientFrame;
+class DevTcpClient;
+class DevTcpServer;
+class DevUdpReceiver;
+class DevUdpSender;
 class INetReceiver;
 class INetSender;
 class INetServer;

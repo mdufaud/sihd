@@ -6,6 +6,7 @@ namespace sihd::csv
 
 class CsvReader;
 class CsvWriter;
+class CsvRecorder;
 
 } // namespace sihd::csv
 

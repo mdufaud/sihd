@@ -233,7 +233,17 @@ bool Channel::write(const Channel & other)
     return this->write(*copy);
 }
 
+bool Channel::write(const ArrByteView & arr_view)
+{
+    return this->_write(arr_view, 0, true);
+}
+
 bool Channel::write(const ArrByteView & arr_view, size_t byte_offset)
+{
+    return this->_write(arr_view, byte_offset, false);
+}
+
+bool Channel::_write(const ArrByteView & arr_view, size_t byte_offset, bool fit_size)
 {
     std::unique_lock notify_lock(_notify_mutex, std::try_to_lock);
     if (!notify_lock.owns_lock())
@@ -246,20 +256,20 @@ bool Channel::write(const ArrByteView & arr_view, size_t byte_offset)
     {
         std::lock_guard lock(_arr_mutex);
         const size_t needed = arr_view.byte_size() + byte_offset;
-        if (needed > _array_ptr->byte_size())
+        if (needed > _array_ptr->byte_size() && (!_resizable || needed > _array_ptr->byte_capacity()))
         {
-            if (!_resizable || needed > _array_ptr->byte_capacity())
-            {
-                SIHD_LOG(error,
-                         "Channel: cannot write {} bytes at {} offset into {} bytes",
-                         arr_view.byte_size(),
-                         byte_offset,
-                         _array_ptr->byte_size());
-                return false;
-            }
-            _array_ptr->byte_resize(needed);
+            SIHD_LOG(error,
+                     "Channel: cannot write {} bytes at {} offset into {} bytes",
+                     arr_view.byte_size(),
+                     byte_offset,
+                     _array_ptr->byte_size());
+            return false;
         }
-        if (_write_change_only && _array_ptr->is_bytes_equal(arr_view, {(ssize_t)byte_offset}))
+        const bool resized = _resizable && arr_view.byte_size() > 0
+                             && (fit_size ? needed != _array_ptr->byte_size() : needed > _array_ptr->byte_size());
+        if (resized && _array_ptr->byte_resize(needed) == false)
+            return false;
+        if (!resized && _write_change_only && _array_ptr->is_bytes_equal(arr_view, {(ssize_t)byte_offset}))
             return true;
         if ((ret = _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset})))
             this->do_timestamp();

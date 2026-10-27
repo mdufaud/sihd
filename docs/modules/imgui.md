@@ -4,7 +4,7 @@ Dear ImGui application loop. `ImguiRunner` drives one platform backend (window a
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | imgui, opengl (SDL3, GLFW and ncursesw for their respective backends) |
 | Platforms | Linux, Windows, Android, Web (emscripten) |
 | Build | `make m=imgui` |

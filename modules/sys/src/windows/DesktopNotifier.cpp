@@ -23,8 +23,6 @@
 #include <sihd/sys/windows/registry.hpp>
 #include <sihd/util/str.hpp>
 
-#include "../internal/desktop_notifier.hpp"
-
 namespace sihd::sys
 {
 
@@ -187,7 +185,7 @@ struct DesktopNotifier::Impl
 
 Result<uint32_t> DesktopNotifier::notify(const Notification & notification)
 {
-    auto valid_timeout = internal::check_timeout(notification.timeout);
+    auto valid_timeout = DesktopNotifier::check_timeout(notification.timeout);
     SIHD_UNEXPECTED_RETURN(valid_timeout);
     std::optional<windows_::ComInit> com;
     auto started = _impl->start_runtime(com);

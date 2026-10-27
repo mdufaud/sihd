@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <string>
 
 // clang-format off
@@ -7,10 +8,11 @@
 // clang-format on
 
 #include <sihd/core/Device.hpp>
-#include <sihd/net/DeviceTcpClient.hpp>
-#include <sihd/net/DeviceTcpServer.hpp>
-#include <sihd/net/DeviceUdpReceiver.hpp>
-#include <sihd/net/DeviceUdpSender.hpp>
+#include <sihd/net/ClientFrame.hpp>
+#include <sihd/net/DevTcpClient.hpp>
+#include <sihd/net/DevTcpServer.hpp>
+#include <sihd/net/DevUdpReceiver.hpp>
+#include <sihd/net/DevUdpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/NetMonitor.hpp>
@@ -55,6 +57,32 @@ class LuaNetMonitor
 
     private:
         std::shared_ptr<NetMonitor> _monitor;
+};
+
+// lua may collect the array a frame points into: the bound frame owns a copy of its payload
+class LuaClientFrame
+{
+    public:
+        LuaClientFrame(uint64_t client_id, ArrCharView payload): _client_id(client_id)
+        {
+            if (!_payload.from(payload.data(), payload.size()))
+                throw std::runtime_error("ClientFrame: could not copy the payload");
+        }
+
+        static Result<LuaClientFrame> decode(const IArray *frame)
+        {
+            auto decoded = ClientFrame::decode(ArrByteView(*frame));
+            SIHD_UNEXPECTED_RETURN(decoded);
+            return LuaClientFrame(decoded->client_id(), decoded->payload());
+        }
+
+        ArrByte encode() const { return ClientFrame(_client_id, _payload).encode(); }
+        uint64_t client_id() const { return _client_id; }
+        ArrChar payload() const { return _payload; }
+
+    private:
+        uint64_t _client_id;
+        ArrChar _payload;
 };
 
 } // namespace
@@ -207,6 +235,18 @@ void LuaNetApi::load_base(Vm & vm)
                          return dns::servers(timeout);
                      }>)
         .endNamespace()
+        .beginClass<LuaClientFrame>("ClientFrame")
+        .addStaticProperty(
+            "header_size",
+            +[] { return ClientFrame::header_size; })
+        .addStaticFunction(
+            "new",
+            +[](uint64_t client_id, const IArray *payload) { return LuaClientFrame(client_id, ArrCharView(*payload)); })
+        .addStaticFunction("decode", checked<&LuaClientFrame::decode>)
+        .addFunction("encode", &LuaClientFrame::encode)
+        .addFunction("client_id", &LuaClientFrame::client_id)
+        .addFunction("payload", &LuaClientFrame::payload)
+        .endClass()
         .beginNamespace("NetMonitorEventType")
         .addVariable("unknown", NetMonitorEventType::unknown)
         .addVariable("link", NetMonitorEventType::link)
@@ -229,39 +269,39 @@ void LuaNetApi::load_base(Vm & vm)
         .addFunction("events", &LuaNetMonitor::events)
         .endClass()
         // devices (derive from core Device: core must be loaded first)
-        .deriveClass<DeviceTcpClient, Device>("DeviceTcpClient")
-        .addConstructorFrom<SmartNodePtr<DeviceTcpClient>, void(const std::string &, Node *)>()
-        .addFunction("set_host", &DeviceTcpClient::set_host)
-        .addFunction("set_port", &DeviceTcpClient::set_port)
-        .addFunction("set_unix_path", &DeviceTcpClient::set_unix_path)
-        .addFunction("set_buffer_capacity", &DeviceTcpClient::set_buffer_capacity)
-        .addFunction("set_poll_timeout", &DeviceTcpClient::set_poll_timeout)
-        .addFunction("set_connect_timeout", &DeviceTcpClient::set_connect_timeout)
-        .addFunction("set_reconnect_interval", &DeviceTcpClient::set_reconnect_interval)
+        .deriveClass<DevTcpClient, Device>("DevTcpClient")
+        .addConstructorFrom<SmartNodePtr<DevTcpClient>, void(const std::string &, Node *)>()
+        .addFunction("set_host", &DevTcpClient::set_host)
+        .addFunction("set_port", &DevTcpClient::set_port)
+        .addFunction("set_unix_path", &DevTcpClient::set_unix_path)
+        .addFunction("set_buffer_capacity", &DevTcpClient::set_buffer_capacity)
+        .addFunction("set_poll_timeout", &DevTcpClient::set_poll_timeout)
+        .addFunction("set_connect_timeout", &DevTcpClient::set_connect_timeout)
+        .addFunction("set_reconnect_interval", &DevTcpClient::set_reconnect_interval)
         .endClass()
-        .deriveClass<DeviceTcpServer, Device>("DeviceTcpServer")
-        .addConstructorFrom<SmartNodePtr<DeviceTcpServer>, void(const std::string &, Node *)>()
-        .addFunction("set_host", &DeviceTcpServer::set_host)
-        .addFunction("set_port", &DeviceTcpServer::set_port)
-        .addFunction("set_unix_path", &DeviceTcpServer::set_unix_path)
-        .addFunction("set_buffer_capacity", &DeviceTcpServer::set_buffer_capacity)
-        .addFunction("set_poll_timeout", &DeviceTcpServer::set_poll_timeout)
-        .addFunction("set_poll_limit", &DeviceTcpServer::set_poll_limit)
-        .addFunction("set_queue_size", &DeviceTcpServer::set_queue_size)
-        .addFunction("set_max_clients", &DeviceTcpServer::set_max_clients)
+        .deriveClass<DevTcpServer, Device>("DevTcpServer")
+        .addConstructorFrom<SmartNodePtr<DevTcpServer>, void(const std::string &, Node *)>()
+        .addFunction("set_host", &DevTcpServer::set_host)
+        .addFunction("set_port", &DevTcpServer::set_port)
+        .addFunction("set_unix_path", &DevTcpServer::set_unix_path)
+        .addFunction("set_buffer_capacity", &DevTcpServer::set_buffer_capacity)
+        .addFunction("set_poll_timeout", &DevTcpServer::set_poll_timeout)
+        .addFunction("set_poll_limit", &DevTcpServer::set_poll_limit)
+        .addFunction("set_queue_size", &DevTcpServer::set_queue_size)
+        .addFunction("set_max_clients", &DevTcpServer::set_max_clients)
         .endClass()
-        .deriveClass<DeviceUdpSender, Device>("DeviceUdpSender")
-        .addConstructorFrom<SmartNodePtr<DeviceUdpSender>, void(const std::string &, Node *)>()
-        .addFunction("set_host", &DeviceUdpSender::set_host)
-        .addFunction("set_port", &DeviceUdpSender::set_port)
-        .addFunction("set_unix_path", &DeviceUdpSender::set_unix_path)
+        .deriveClass<DevUdpSender, Device>("DevUdpSender")
+        .addConstructorFrom<SmartNodePtr<DevUdpSender>, void(const std::string &, Node *)>()
+        .addFunction("set_host", &DevUdpSender::set_host)
+        .addFunction("set_port", &DevUdpSender::set_port)
+        .addFunction("set_unix_path", &DevUdpSender::set_unix_path)
         .endClass()
-        .deriveClass<DeviceUdpReceiver, Device>("DeviceUdpReceiver")
-        .addConstructorFrom<SmartNodePtr<DeviceUdpReceiver>, void(const std::string &, Node *)>()
-        .addFunction("set_host", &DeviceUdpReceiver::set_host)
-        .addFunction("set_port", &DeviceUdpReceiver::set_port)
-        .addFunction("set_buffer_capacity", &DeviceUdpReceiver::set_buffer_capacity)
-        .addFunction("set_poll_timeout", &DeviceUdpReceiver::set_poll_timeout)
+        .deriveClass<DevUdpReceiver, Device>("DevUdpReceiver")
+        .addConstructorFrom<SmartNodePtr<DevUdpReceiver>, void(const std::string &, Node *)>()
+        .addFunction("set_host", &DevUdpReceiver::set_host)
+        .addFunction("set_port", &DevUdpReceiver::set_port)
+        .addFunction("set_buffer_capacity", &DevUdpReceiver::set_buffer_capacity)
+        .addFunction("set_poll_timeout", &DevUdpReceiver::set_poll_timeout)
         .endClass()
         .endNamespace()
         .endNamespace();

@@ -11,10 +11,17 @@ assert("127.0.0.1" in addr.str())
 addr_noport = sihd.net.IpAddr("127.0.0.1")
 assert(addr_noport.port() == 0)
 
+# ClientFrame: the client id then the payload
+frame = sihd.net.ClientFrame(42, sihd.util.ArrChar("hi")).encode()
+assert(frame.size() == sihd.net.ClientFrame.header_size + 2)
+decoded = sihd.net.ClientFrame.decode(frame)
+assert(decoded.client_id() == 42)
+assert(decoded.payload().str() == "hi")
+
 # UDP device loopback through a Core
 core = sihd.core.Core("core")
-sender = sihd.net.DeviceUdpSender("sender", core)
-receiver = sihd.net.DeviceUdpReceiver("receiver", core)
+sender = sihd.net.DevUdpSender("sender", core)
+receiver = sihd.net.DevUdpReceiver("receiver", core)
 
 assert(sender.set_conf(host="127.0.0.1", port=4300))
 assert(receiver.set_conf(host="127.0.0.1", port=4300))

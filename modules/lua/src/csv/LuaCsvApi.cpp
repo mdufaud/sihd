@@ -3,19 +3,25 @@
 
 // clang-format off
 #include <sihd/lua/csv/LuaCsvApi.hpp>
+#include <sihd/lua/util/LuaUtilApi.hpp>
 #include <luabridge3/LuaBridge/Vector.h>
 #include <sihd/lua/checked.hpp>
 // clang-format on
 
+#include <sihd/core/ACoreObject.hpp>
 #include <sihd/csv/CsvReader.hpp>
+#include <sihd/csv/CsvRecorder.hpp>
 #include <sihd/csv/CsvWriter.hpp>
 #include <sihd/csv/utils.hpp>
+#include <sihd/util/Node.hpp>
+#include <sihd/util/SmartNodePtr.hpp>
 
 namespace sihd::lua
 {
 
 using namespace sihd::csv;
 using namespace sihd::util;
+using sihd::core::ACoreObject;
 
 namespace
 {
@@ -146,6 +152,11 @@ void LuaCsvApi::load_base(Vm & vm)
         .addFunction("current_row", &CsvWriter::current_row)
         .addFunction("current_col", &CsvWriter::current_col)
         .addFunction("max_col", &CsvWriter::max_col)
+        .endClass()
+        // derives from core ACoreObject: core must be loaded first
+        .deriveClass<CsvRecorder, ACoreObject>("CsvRecorder")
+        .addConstructorFrom<SmartNodePtr<CsvRecorder>, void(const std::string &, Node *)>()
+        .addFunction("set_path", &CsvRecorder::set_path)
         .endClass()
         .endNamespace()
         .endNamespace();

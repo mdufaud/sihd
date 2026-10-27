@@ -39,7 +39,7 @@ export m="json,util,sys,core,csv,zip,net,wifi,curl,usb${imgui}"
 
 build_target "aarch64" machine=aarch64
 build_target "riscv64" machine=riscv64
-# net runs on windows too since the DeviceTcpClient rx drain got a recv
+# net runs on windows too since the DevTcpClient rx drain got a recv
 # timeout: wine never completes a pending recv async on shutdown, the old
 # shutdown-unblocks-blocking-recv stop path parked both threads forever
 build_target "windows" platform=windows

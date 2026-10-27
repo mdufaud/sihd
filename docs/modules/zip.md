@@ -4,7 +4,7 @@ ZIP archive creation, extraction, inspection and editing on libzip. `ZipFile` is
 
 | | |
 |---|---|
-| Depends on | `util`, `sys` |
+| Depends on | `sys` |
 | External libraries | libzip |
 | Platforms | all |
 | Build | `make m=zip` |
