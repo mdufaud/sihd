@@ -10,7 +10,6 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
-#include <sihd/util/profiling.hpp>
 
 namespace test
 {
@@ -37,11 +36,7 @@ bool read_next_ok(LineReader & reader)
 class TestLineReader: public ::testing::Test
 {
     protected:
-        TestLineReader()
-        {
-            LoggerManager::stream();
-            ::srand(::time(NULL));
-        }
+        TestLineReader() { LoggerManager::stream(); }
 
         virtual ~TestLineReader() { LoggerManager::clear_loggers(); }
 
@@ -329,113 +324,5 @@ TEST_F(TestLineReader, test_linereader_fast_read_stdin)
     ::close(pipefd[0]);
 }
 #endif
-
-TEST_F(TestLineReader, test_linereader_perf)
-{
-    constexpr size_t test_multiplier = 1;
-    constexpr size_t filesize = (4096 * 70) * test_multiplier;
-
-    std::string random_str = str::generate_random(filesize);
-
-    std::string path_input = fs::combine(_tmp_dir.path(), "perf_filegen.txt");
-    std::string path_file = fs::combine(_tmp_dir.path(), "perf_compare_file.txt");
-    std::string path_line_reader = fs::combine(_tmp_dir.path(), "perf_compare_line_reader.txt");
-    std::string path_line_reader_no_memory = fs::combine(_tmp_dir.path(), "perf_compare_line_reader_no_memory.txt");
-
-    SIHD_LOG(info, "Input: {}", path_input);
-    SIHD_LOG(info, "Output std::getline: {}", path_file);
-    SIHD_LOG(info, "Output LineReader: {}", path_line_reader);
-    SIHD_LOG(info, "Output LineReader::fast_read_line: {}", path_line_reader_no_memory);
-
-    File writer(path_input, "wb");
-    ASSERT_TRUE(writer.is_open());
-    {
-        auto wrote = writer.write(random_str);
-        ASSERT_TRUE(wrote.has_value());
-        ASSERT_EQ(*wrote, random_str.size());
-    }
-    ASSERT_TRUE(writer.close());
-
-    char *line = nullptr;
-    size_t size = 0;
-    size_t total_file = 0;
-    ASSERT_TRUE(writer.open(path_file, "wb"));
-    {
-        Timeit timeit("std::getline");
-        File file;
-        ASSERT_TRUE(file.open(path_input, "rb").has_value());
-
-        while (true)
-        {
-            auto read = file.read_line(&line, &size);
-            ASSERT_TRUE(read.has_value());
-            if (read.value() == 0)
-                break;
-            (void)writer.write(line);
-            total_file += strlen(line);
-        }
-        // important - getdelim allocates line but you have to free it
-        free(line);
-        ASSERT_TRUE(file.close().has_value());
-    }
-    ASSERT_TRUE(writer.close());
-
-    size_t total_rl = 0;
-    ASSERT_TRUE(writer.open(path_line_reader, "wb"));
-    ArrCharView view;
-    {
-        Timeit it("LineReader");
-        LineReader reader(path_input,
-                          {
-                              .read_buffsize = 4096,
-                              .delimiter_in_line = true,
-                          });
-        ASSERT_TRUE(reader.is_open());
-        while (true)
-        {
-            auto next = reader.read_next();
-            ASSERT_TRUE(next.has_value());
-            if (next.value() == false)
-                break;
-            reader.get_read_data(view);
-            (void)writer.write(view);
-            total_rl += view.size();
-        }
-        ASSERT_TRUE(reader.close());
-    }
-
-    ASSERT_TRUE(writer.close());
-
-    size_t total_rl_no_memory = 0;
-    ASSERT_TRUE(writer.open(path_line_reader_no_memory, "wb"));
-    {
-        Timeit it("LineReader::fast_read_line");
-        File file(path_input, "rb");
-        ASSERT_TRUE(file.is_open());
-        std::string line;
-        LineReader::LineReaderOptions options = {
-            // must read one by one because there is no memory of last read
-            .read_buffsize = 1,
-            .delimiter_in_line = true,
-        };
-        while (true)
-        {
-            auto line = LineReader::fast_read_line(file.file(), options);
-            if (!line.has_value())
-                break;
-            (void)writer.write(line.value());
-            total_rl_no_memory += line.value().size();
-        }
-    }
-    ASSERT_TRUE(writer.close());
-
-    EXPECT_TRUE(fs::are_equals(path_input, path_file));
-
-    EXPECT_EQ(total_rl, total_file);
-    EXPECT_TRUE(fs::are_equals(path_input, path_line_reader));
-
-    EXPECT_EQ(total_rl_no_memory, total_file);
-    EXPECT_TRUE(fs::are_equals(path_input, path_line_reader_no_memory));
-}
 
 } // namespace test

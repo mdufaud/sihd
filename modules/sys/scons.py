@@ -58,6 +58,9 @@ test = env.build_test(test_sources, libs = [sihd_sys_libname])
 env.export_test(includes = ['test/linux'])
 env.build_bench(Glob('bench/*.cpp'), libs = [sihd_sys_libname])
 
+for src in Glob('fuzz/*.cpp'):
+    env.build_fuzz(src, name = sihd_sys_libname + '_' + env.file_basename(src), libs = [sihd_sys_libname])
+
 if builder.build_tests:
     env.build_bin("test/helper/main.cpp", name = "sihd_sys_test_helper", libs = [sihd_sys_libname])
     if builder.build_platform == "windows":
