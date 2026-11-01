@@ -99,4 +99,14 @@ TEST_F(TestOnDemand, test_for_each_unparsable_element_aborts)
     EXPECT_EQ(count, 1u);
 }
 
+TEST_F(TestOnDemand, test_for_each_truncated_array_is_an_error)
+{
+    for (const std::string data : {R"([1,2)", R"([{"v":1},)", R"([{"v":1})"})
+    {
+        std::expected<size_t, std::string> walked;
+        EXPECT_NO_THROW(walked = utils::for_each(data, [](Json) -> bool { return true; })) << data;
+        EXPECT_FALSE(walked.has_value()) << data;
+    }
+}
+
 } // namespace test

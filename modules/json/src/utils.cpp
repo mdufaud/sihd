@@ -34,8 +34,12 @@ std::expected<Json, std::string> find_first(std::string_view data, std::string_v
     if (doc_result.value().get_array().get(arr) != simdjson::SUCCESS)
         return std::unexpected(std::string("document is not an array"));
 
-    for (simdjson::ondemand::value elem : arr)
+    for (auto elem_result : arr)
     {
+        simdjson::ondemand::value elem;
+        if (const auto error = elem_result.get(elem); error != simdjson::SUCCESS)
+            return std::unexpected(parse_error(error));
+
         simdjson::ondemand::object obj;
         if (elem.get_object().get(obj) != simdjson::SUCCESS)
             break;
@@ -70,8 +74,12 @@ std::expected<size_t, std::string> for_each(std::string_view data, std::function
         return std::unexpected(std::string("document is not an array"));
 
     size_t count = 0;
-    for (simdjson::ondemand::value elem : arr)
+    for (auto elem_result : arr)
     {
+        simdjson::ondemand::value elem;
+        if (const auto error = elem_result.get(elem); error != simdjson::SUCCESS)
+            return std::unexpected(parse_error(error));
+
         auto raw_result = elem.raw_json();
         if (raw_result.error() != simdjson::SUCCESS)
             return std::unexpected(parse_error(raw_result.error()));
