@@ -12,4 +12,7 @@ if env.builder().build_platform != "windows":
 
 test = env.build_test(test_sources, libs = [env.module_format_name()])
 
+for src in Glob('fuzz/*.cpp'):
+    env.build_fuzz(src, name = env.module_format_name() + '_' + env.file_basename(src), libs = [env.module_format_name()])
+
 Return('lib')

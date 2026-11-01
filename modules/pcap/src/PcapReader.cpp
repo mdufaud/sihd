@@ -141,7 +141,7 @@ bool PcapReader::get_read_data(ArrCharView & view) const
 {
     if (_impl_ptr->pkt_data_ptr == nullptr || _impl_ptr->pkt_hdr_ptr == nullptr)
         return false;
-    view = {reinterpret_cast<char *>(_impl_ptr->pkt_data_ptr), _impl_ptr->pkt_hdr_ptr->len};
+    view = {reinterpret_cast<char *>(_impl_ptr->pkt_data_ptr), _impl_ptr->pkt_hdr_ptr->caplen};
     return true;
 }
 

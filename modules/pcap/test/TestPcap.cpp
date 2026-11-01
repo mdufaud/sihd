@@ -53,13 +53,38 @@ TEST_F(TestPcap, test_pcap_reader)
         if (next.value() == false)
             break;
         EXPECT_TRUE(reader.get_read_data(view));
-        EXPECT_EQ(reader.packet_len(), view.size());
+        EXPECT_EQ(reader.packet_caplen(), view.size());
         ++packet_count;
     }
 
     SIHD_TRACE("{} packets read", packet_count);
     EXPECT_EQ(packet_count, 35u);
     EXPECT_TRUE(reader.close());
+}
+
+TEST_F(TestPcap, test_pcap_reader_truncated_capture)
+{
+    TmpDir tmp_dir;
+    const std::string path = fs::combine(tmp_dir.path(), "truncated.pcap");
+    // global header (little endian, v2.4, snaplen 4, ethernet), then one packet of caplen 4 and len 8
+    const std::array<uint8_t, 44> capture {0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x00,
+                                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04,
+                                           0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 'a',  'b',  'c',  'd'};
+    ASSERT_TRUE(fs::write_binary(path, {reinterpret_cast<const char *>(capture.data()), capture.size()}).has_value());
+
+    PcapReader reader("pcap-reader");
+    ASSERT_TRUE(reader.open(path).has_value());
+    auto next = reader.read_next();
+    ASSERT_TRUE(next.has_value());
+    ASSERT_TRUE(next.value());
+
+    ArrCharView view;
+    ASSERT_TRUE(reader.get_read_data(view));
+    EXPECT_EQ(reader.packet_len(), 8u);
+    EXPECT_EQ(reader.packet_caplen(), 4u);
+    EXPECT_EQ(view.size(), 4u);
+    EXPECT_EQ(std::string(view.data(), view.size()), "abcd");
 }
 
 TEST_F(TestPcap, test_pcap_writer)
