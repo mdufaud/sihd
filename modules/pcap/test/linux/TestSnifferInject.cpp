@@ -48,7 +48,7 @@ Result<void> set_loopback_up()
     return os::ioctl(socket.socket(), SIOCSIFFLAGS, &ifr);
 }
 
-int inject_on_loopback()
+int inject_on_loopback(int snaplen, size_t expected_size)
 {
     const std::string frame = "\x02\x00\x00\x00\x00\x01\x02\x00\x00\x00\x00\x02\x88\xb5sihd inject"s;
 
@@ -56,8 +56,8 @@ int inject_on_loopback()
         return child_loopback_down;
 
     Sniffer capture("capture");
-    if (!capture.open("lo") || !capture.set_immediate(true) || !capture.set_timeout(5000) || !capture.activate()
-        || !capture.set_filter("ether proto 0x88b5"))
+    if (!capture.open("lo") || !capture.set_snaplen(snaplen) || !capture.set_immediate(true)
+        || !capture.set_timeout(5000) || !capture.activate() || !capture.set_filter("ether proto 0x88b5"))
         return child_capture_failed;
 
     Sniffer injector("injector");
@@ -74,9 +74,19 @@ int inject_on_loopback()
     if (!received || !*received)
         return child_no_packet;
     ArrCharView view;
-    if (!capture.get_read_data(view) || std::string(view.data(), view.size()) != frame)
+    if (!capture.get_read_data(view) || std::string(view.data(), view.size()) != frame.substr(0, expected_size))
         return child_wrong_frame;
     return child_ok;
+}
+
+int inject_full_frame()
+{
+    return inject_on_loopback(65535, std::string::npos);
+}
+
+int inject_truncated_frame()
+{
+    return inject_on_loopback(16, 16);
 }
 
 } // namespace
@@ -105,7 +115,14 @@ TEST_F(TestSnifferInject, test_inject_loopback)
 {
     constexpr std::array<ns::Type, 1> types = {ns::Type::net};
 
-    expect_in_userns(types, inject_on_loopback);
+    expect_in_userns(types, inject_full_frame);
+}
+
+TEST_F(TestSnifferInject, test_capture_shorter_than_packet)
+{
+    constexpr std::array<ns::Type, 1> types = {ns::Type::net};
+
+    expect_in_userns(types, inject_truncated_frame);
 }
 
 } // namespace test

@@ -183,8 +183,8 @@ void Sniffer::_new_packet(const void *hdr, const void *bytes)
         _pkt_nano_timestamp = Timestamp(time::nano_tv(pkt_hdr->ts));
     else
         _pkt_nano_timestamp = Timestamp(time::tv(pkt_hdr->ts));
-    _array.resize(pkt_hdr->len);
-    _array.copy_from_bytes(data, pkt_hdr->len);
+    _array.resize(pkt_hdr->caplen);
+    _array.copy_from_bytes(data, pkt_hdr->caplen);
     this->notify_observers(this);
 }
 
