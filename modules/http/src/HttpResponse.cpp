@@ -154,11 +154,12 @@ Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
 
     for (size_t i = 1; i < lines.size(); ++i)
     {
-        if (str::starts_with(lines[i], "Set-Cookie: ") || str::starts_with(lines[i], "set-cookie: "))
-        {
-            std::string_view cookie_val = std::string_view(lines[i]).substr(lines[i].find(": ") + 2);
-            resp._cookies.emplace_back(std::string(cookie_val));
-        }
+        // same name and value rules as add_header_from_str
+        const std::string_view line = lines[i];
+        const size_t colon = line.find(':');
+        const std::string_view cookie = colon == std::string_view::npos ? "" : str::trim(line.substr(colon + 1));
+        if (!cookie.empty() && str::iequals(str::trim(line.substr(0, colon)), "set-cookie"))
+            resp._cookies.emplace_back(cookie);
         else
         {
             SIHD_UNEXPECTED_LOG(resp._http_header.add_header_from_str(lines[i]));

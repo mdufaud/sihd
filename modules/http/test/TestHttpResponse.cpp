@@ -146,6 +146,19 @@ TEST_F(TestHttpResponse, test_from_string_with_cookies)
     EXPECT_EQ(resp->set_cookie_headers()[1], "token=xyz; HttpOnly");
 }
 
+TEST_F(TestHttpResponse, test_from_string_cookie_header_case)
+{
+    auto resp = HttpResponse::from_string("HTTP/1.1 200 OK\r\nSET-COOKIE: upper=1\r\nset-Cookie: mixed=2\r\n"
+                                          "Set-Cookie:nospace=3\r\n\r\n");
+
+    ASSERT_TRUE(resp.has_value());
+    ASSERT_EQ(resp->set_cookie_headers().size(), 3u);
+    EXPECT_EQ(resp->set_cookie_headers()[0], "upper=1");
+    EXPECT_EQ(resp->set_cookie_headers()[1], "mixed=2");
+    EXPECT_EQ(resp->set_cookie_headers()[2], "nospace=3");
+    EXPECT_EQ(resp->http_header().find("set-cookie"), "");
+}
+
 TEST_F(TestHttpResponse, test_from_string_http10)
 {
     std::string raw = "HTTP/1.0 301 Moved Permanently\r\n\r\n";
