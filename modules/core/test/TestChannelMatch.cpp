@@ -38,6 +38,15 @@ TEST_F(TestChannelMatch, test_parse_trigger)
     EXPECT_TRUE(match.parse_trigger("1:").has_value());
     EXPECT_EQ(match.idx, 1u);
 
+    match.idx = 3;
+    match.value = Value(7);
+    EXPECT_FALSE(match.parse_trigger("5:zz~"));
+    EXPECT_EQ(match.idx, 3u);
+    EXPECT_TRUE(match.value == Value(7));
+    EXPECT_FALSE(match.parse_trigger("zz~"));
+    EXPECT_EQ(match.idx, 3u);
+    EXPECT_TRUE(match.value == Value(7));
+
     EXPECT_FALSE(match.parse_trigger(""));
     EXPECT_FALSE(match.parse_trigger(":"));
     EXPECT_FALSE(match.parse_trigger("1:2:3"));

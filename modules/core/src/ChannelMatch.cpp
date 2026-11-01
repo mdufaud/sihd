@@ -18,9 +18,10 @@ namespace
 
 Result<void> convert_trigger_value(const std::string & str, Value & value)
 {
-    value = Value::from_any_string(str);
-    if (value.empty())
+    const Value converted = Value::from_any_string(str);
+    if (converted.empty())
         return std::unexpected(Error(invalid_argument, "cannot convert trigger value '{}'", str));
+    value = converted;
     return {};
 }
 
@@ -121,19 +122,26 @@ Result<void> ChannelMatch::parse_trigger(std::string_view conf)
     {
         if (split[0].empty())
             return std::unexpected(Error(invalid_argument, "trigger value empty: '{}'", conf));
+        auto converted = convert_trigger_value(split[0], this->value);
+        SIHD_UNEXPECTED_RETURN(converted);
         this->idx = 0;
-        return convert_trigger_value(split[0], this->value);
+        return {};
     }
     if (split[0].empty() && split[1].empty())
         return std::unexpected(Error(invalid_argument, "trigger idx and value empty: '{}'", conf));
+    size_t new_idx = this->idx;
     if (split[0].empty() == false)
     {
         const auto idx = str::convert_from_string<size_t>(split[0]);
         SIHD_UNEXPECTED_RETURN(idx);
-        this->idx = *idx;
+        new_idx = *idx;
     }
     if (split[1].empty() == false)
-        return convert_trigger_value(split[1], this->value);
+    {
+        auto converted = convert_trigger_value(split[1], this->value);
+        SIHD_UNEXPECTED_RETURN(converted);
+    }
+    this->idx = new_idx;
     return {};
 }
 
