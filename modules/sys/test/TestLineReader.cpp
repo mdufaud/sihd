@@ -278,6 +278,29 @@ TEST_F(TestLineReader, test_linereader_errors)
     EXPECT_TRUE(reader.close());
 }
 
+TEST_F(TestLineReader, test_linereader_fast_read_line)
+{
+    const std::string path = fs::combine(_tmp_dir.path(), "fast.txt");
+    ASSERT_TRUE(fs::write_binary(path, "first\nsecond").has_value());
+
+    File file(path, "rb");
+    ASSERT_TRUE(file.is_open());
+    // no memory between two calls: only a one byte read buffer leaves the next line in the stream
+    const LineReader::LineReaderOptions options = {.read_buffsize = 1, .delimiter_in_line = true};
+
+    auto line = LineReader::fast_read_line(file.file(), options);
+    ASSERT_TRUE(line.has_value());
+    EXPECT_EQ(*line, "first\n");
+
+    line = LineReader::fast_read_line(file.file(), options);
+    ASSERT_TRUE(line.has_value());
+    EXPECT_EQ(*line, "second");
+
+    line = LineReader::fast_read_line(file.file(), options);
+    ASSERT_FALSE(line.has_value());
+    EXPECT_EQ(line.error().code, ErrorCode::not_found);
+}
+
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestLineReader, test_linereader_open_fd)
 {

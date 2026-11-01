@@ -205,4 +205,36 @@ TEST_F(TestFile, test_file_read_to_string)
     EXPECT_EQ(str, "string_data");
 }
 
+TEST_F(TestFile, test_file_read_line)
+{
+    TmpDir tmp;
+    ASSERT_TRUE(tmp);
+
+    const std::string path = fs::combine(tmp.path(), "lines.txt");
+    ASSERT_TRUE(fs::write_binary(path, "one\ntwo;three").has_value());
+
+    File file(path, "rb");
+    ASSERT_TRUE(file.is_open());
+    char *line = nullptr;
+    size_t size = 0;
+
+    auto read = file.read_line(&line, &size);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(std::string(line, *read), "one\n");
+
+    read = file.read_line_delim(&line, &size, ';');
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(std::string(line, *read), "two;");
+
+    read = file.read_line(&line, &size);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(std::string(line, *read), "three");
+
+    read = file.read_line(&line, &size);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(*read, 0u);
+
+    free(line);
+}
+
 } // namespace test
