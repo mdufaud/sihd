@@ -12,6 +12,9 @@ sihd_util_libname = env.module_format_name()
 env.build_demo("demo/util_demo.cpp", name = "util_demo", libs = [sihd_util_libname])
 env.build_bench(Glob('bench/*.cpp'), libs = [sihd_util_libname])
 
+for src in Glob('fuzz/*.cpp'):
+    env.build_fuzz(src, name = sihd_util_libname + '_' + env.file_basename(src), libs = [sihd_util_libname])
+
 test_srcs = [f for f in Glob('test/*.cpp') if 'CppModules' not in str(f)]
 test_kwargs = {}
 if builder.is_cpp_modules and builder.build_tests:
@@ -23,4 +26,4 @@ test = env.build_test(test_srcs,
 					  libs = [sihd_util_libname],
 					  **test_kwargs)
 
-env.export_test(includes = ['test/clock', 'test/wait', 'test/watchdog'])
+env.export_test(includes = ['test/clock', 'test/wait', 'test/watchdog', 'fuzz'])

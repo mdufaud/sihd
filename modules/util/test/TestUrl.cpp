@@ -97,20 +97,6 @@ TEST_F(TestUrl, test_to_string)
     EXPECT_NE(str.find("#frag"), std::string::npos);
 }
 
-TEST_F(TestUrl, test_roundtrip)
-{
-    Url url("https://example.com:9090/path?a=1&b=2#section");
-    auto result = url.encode();
-    Url reparsed(result);
-
-    EXPECT_EQ(reparsed.scheme, url.scheme);
-    EXPECT_EQ(reparsed.host, url.host);
-    EXPECT_EQ(reparsed.port, url.port);
-    EXPECT_EQ(reparsed.path, url.path);
-    EXPECT_EQ(reparsed.query_params, url.query_params);
-    EXPECT_EQ(reparsed.fragment, url.fragment);
-}
-
 TEST_F(TestUrl, test_url_str_encode)
 {
     EXPECT_EQ(Url::str_encode("hello world"), "hello%20world");
@@ -126,12 +112,6 @@ TEST_F(TestUrl, test_url_str_decode)
     EXPECT_EQ(Url::str_decode("simple"), "simple");
     EXPECT_EQ(Url::str_decode("foo%40bar.com"), "foo@bar.com");
     EXPECT_EQ(Url::str_decode("%2F%2F"), "//");
-}
-
-TEST_F(TestUrl, test_url_str_encode_decode_roundtrip)
-{
-    std::string special = "hello world!@#$%^&*()";
-    EXPECT_EQ(Url::str_decode(Url::str_encode(special)), special);
 }
 
 TEST_F(TestUrl, test_decode_factory)

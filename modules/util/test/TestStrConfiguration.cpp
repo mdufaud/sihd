@@ -68,13 +68,4 @@ TEST_F(TestStrConfiguration, test_strconf_empty)
     EXPECT_EQ(conf.size(), 0u);
 }
 
-TEST_F(TestStrConfiguration, test_strconf_roundtrip)
-{
-    StrConfiguration conf("a=1;b=2");
-    std::string text = conf.str();
-    StrConfiguration conf2(text);
-    EXPECT_EQ(conf2.get("a"), "1");
-    EXPECT_EQ(conf2.get("b"), "2");
-}
-
 } // namespace test

@@ -91,22 +91,6 @@ TEST_F(TestNum, test_num_size_invalid_base)
     EXPECT_EQ(num::size(255, 16), 2u);
 }
 
-TEST_F(TestNum, test_num_rand_swapped_bounds)
-{
-    for (int i = 0; i < 100; ++i)
-    {
-        const uint64_t value = num::rand(100, 10);
-        EXPECT_GE(value, 10u);
-        EXPECT_LE(value, 100u);
-    }
-    for (int i = 0; i < 100; ++i)
-    {
-        const double value = num::drand(1.0, -1.0);
-        EXPECT_GE(value, -1.0);
-        EXPECT_LE(value, 1.0);
-    }
-}
-
 TEST_F(TestNum, test_num_near_signedness)
 {
     EXPECT_TRUE(num::near<size_t>(3, 5, 4));

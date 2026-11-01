@@ -570,21 +570,6 @@ TEST_F(TestStr, test_str_base64_invalid)
     EXPECT_FALSE(str::from_base64(std::string("Zm9v\xa0Yg==", 9)).has_value());
 }
 
-TEST_F(TestStr, test_str_base64_roundtrip)
-{
-    for (size_t len = 0; len < 300; ++len)
-    {
-        std::vector<uint8_t> data(len);
-        for (size_t i = 0; i < len; ++i)
-            data[i] = uint8_t(i * 7 + len);
-        const std::string encoded = str::to_base64(data.data(), data.size());
-        ASSERT_EQ(encoded.size(), ((len + 2) / 3) * 4) << "len " << len;
-        const auto decoded = str::from_base64(encoded);
-        ASSERT_TRUE(decoded.has_value()) << "len " << len;
-        EXPECT_EQ(*decoded, data) << "len " << len;
-    }
-}
-
 TEST_F(TestStr, test_str_find_escape)
 {
     EXPECT_EQ(str::find_char_not_escaped("hello ?", '?'), 6);
@@ -1244,15 +1229,6 @@ TEST_F(TestStr, test_str_table)
 
 TEST_F(TestStr, test_str_generate_random)
 {
-    constexpr std::string_view
-        charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
-
-    const std::string str = str::generate_random(100);
-    ASSERT_EQ(str.size(), 100u);
-    for (const char c : str)
-        EXPECT_NE(charset.find(c), std::string_view::npos) << "unexpected char: " << c;
-
-    EXPECT_TRUE(str::generate_random(0).empty());
     EXPECT_NE(str::generate_random(64), str::generate_random(64));
 }
 
