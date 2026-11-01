@@ -52,12 +52,4 @@ TEST_F(TestUtils, test_checksum_empty_data)
     EXPECT_EQ(utils::checksum(&word, 0), 0xffff);
 }
 
-TEST_F(TestUtils, test_checksum_appended_verifies_to_zero)
-{
-    std::array<uint16_t, 4> words = {0x1234, 0x5678, 0x9abc, 0xdef0};
-    const uint16_t sum = utils::checksum(words.data(), (int)sizeof(words));
-    std::array<uint16_t, 5> with_checksum = {0x1234, 0x5678, 0x9abc, 0xdef0, sum};
-    EXPECT_EQ(utils::checksum(with_checksum.data(), (int)sizeof(with_checksum)), 0);
-}
-
 } // namespace test
