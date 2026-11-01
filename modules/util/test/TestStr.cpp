@@ -266,6 +266,10 @@ TEST_F(TestStr, test_str_glob_match)
     EXPECT_TRUE(str::glob_match("F", "[[:upper:]]"));
     EXPECT_TRUE(str::glob_match("_", "[[:punct:]]"));
     EXPECT_TRUE(str::glob_match("ff", "[[:xdigit:]][[:xdigit:]]"));
+    EXPECT_TRUE(str::glob_match("a", "[[:nope:]a]"));
+    EXPECT_FALSE(str::glob_match("a", "[[:nope:]]"));
+    EXPECT_TRUE(str::glob_match("\\", "\\"));
+    EXPECT_TRUE(str::glob_match("[a-", "[a-"));
     EXPECT_FALSE(str::glob_match("gg", "[[:xdigit:]][[:xdigit:]]"));
     EXPECT_TRUE(str::glob_match("a9", "[[:alpha:]][[:digit:]]"));
     EXPECT_TRUE(str::glob_match("a", "[[:alpha:][:digit:]]"));
@@ -568,6 +572,12 @@ TEST_F(TestStr, test_str_base64_invalid)
     EXPECT_FALSE(str::from_base64("Zm9vYg-").has_value()); // base64url is not base64
     // non-ascii bytes are never whitespace, whatever the locale
     EXPECT_FALSE(str::from_base64(std::string("Zm9v\xa0Yg==", 9)).has_value());
+}
+
+TEST_F(TestStr, test_str_nul_is_not_an_enclose)
+{
+    EXPECT_EQ(str::stopping_enclose_index(std::string_view("a\0b\0c", 5), 1), -1);
+    EXPECT_EQ(str::find_str_not_enclosed(std::string_view("a\0bx", 4), "x"), 3);
 }
 
 TEST_F(TestStr, test_str_find_escape)

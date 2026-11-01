@@ -222,6 +222,14 @@ TEST_F(TestValue, test_value_from_buffer)
     EXPECT_EQ(vfloat.type, TYPE_FLOAT);
     EXPECT_TRUE(vfloat == rawf);
 
+    const int8_t negative_byte = -4;
+    EXPECT_TRUE(Value((const uint8_t *)&negative_byte, TYPE_BYTE) == -4);
+    const int16_t negative_short = -4;
+    EXPECT_TRUE(Value((const uint8_t *)&negative_short, TYPE_SHORT) == -4);
+    const int32_t negative_int = -4;
+    EXPECT_TRUE(Value((const uint8_t *)&negative_int, TYPE_INT) == -4);
+    EXPECT_EQ(Value((const uint8_t *)&negative_int, TYPE_INT).to_double(), -4.0);
+
     EXPECT_THROW(Value((const uint8_t *)&raw64, TYPE_NONE), std::invalid_argument);
     EXPECT_THROW(Value((const uint8_t *)&raw64, TYPE_OBJECT), std::invalid_argument);
 }

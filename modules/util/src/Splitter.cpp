@@ -188,6 +188,9 @@ std::vector<std::string_view> Splitter::split_view(std::string_view view) const
 
 int Splitter::count_tokens(std::string_view view) const
 {
+    if (_delimiter.empty() && !_compare_method)
+        return 1;
+
     int count = 0;
     int pos = 0;
     int begin;

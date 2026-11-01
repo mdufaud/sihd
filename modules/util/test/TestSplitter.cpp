@@ -31,6 +31,15 @@ TEST_F(TestSplitter, test_splitter_from_view)
     EXPECT_EQ(split[1], "titi");
 }
 
+TEST_F(TestSplitter, test_splitter_no_delimiter_empty_input)
+{
+    Splitter splitter;
+
+    EXPECT_EQ(splitter.split_view("").size(), 1u);
+    EXPECT_EQ(splitter.count_tokens(""), 1);
+    EXPECT_EQ(splitter.count_tokens("hello"), 1);
+}
+
 TEST_F(TestSplitter, test_splitter_method)
 {
     Splitter splitter;

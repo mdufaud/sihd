@@ -9,6 +9,19 @@
 namespace sihd::util
 {
 
+namespace
+{
+
+template <typename T>
+int64_t read_signed(const uint8_t *buf)
+{
+    T value;
+    memcpy(&value, buf, sizeof(T));
+    return value;
+}
+
+} // namespace
+
 Value::Value(): data({.n = 0}), type(TYPE_NONE) {}
 
 Value::Value(float val): data({.f = val}), type(TYPE_FLOAT) {}
@@ -25,6 +38,14 @@ Value::Value(const uint8_t *buf, Type type)
     this->type = type;
     memset(&this->data, 0, sizeof(this->data));
     memcpy(&this->data, buf, type_size);
+    if (type == TYPE_CHAR)
+        this->data.n = read_signed<char>(buf);
+    else if (type == TYPE_BYTE)
+        this->data.n = read_signed<int8_t>(buf);
+    else if (type == TYPE_SHORT)
+        this->data.n = read_signed<int16_t>(buf);
+    else if (type == TYPE_INT)
+        this->data.n = read_signed<int32_t>(buf);
 }
 
 bool Value::empty() const

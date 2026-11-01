@@ -1440,6 +1440,9 @@ bool is_char_enclose_stop(int c, const char *authorized_stop_enclose)
 
 int stopping_enclose_of(int c)
 {
+    // strchr finds the terminator of the table for a NUL
+    if (c == 0)
+        return -1;
     const char *open_esc = strchr(encloses_start(), c);
     if (open_esc != nullptr)
     {
