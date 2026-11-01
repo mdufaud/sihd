@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -30,21 +29,13 @@ constexpr std::array<std::string_view, 12> mime_pieces = {"text/plain",
                                                           " ",
                                                           ""};
 
-// iequals compares through strncasecmp, which stops at a NUL byte
-std::string consume_without_nul(FuzzedDataProvider & provider, size_t max_size)
-{
-    std::string text = provider.ConsumeRandomLengthString(max_size);
-    std::ranges::replace(text, '\0', ' ');
-    return text;
-}
-
 std::string consume_mime(FuzzedDataProvider & provider)
 {
     std::string mime;
     for (size_t i = provider.ConsumeIntegralInRange<size_t>(0, 3); i > 0; --i)
     {
         const size_t index = provider.ConsumeIntegralInRange<size_t>(0, mime_pieces.size());
-        mime += index < mime_pieces.size() ? std::string(mime_pieces[index]) : consume_without_nul(provider, 6);
+        mime += index < mime_pieces.size() ? std::string(mime_pieces[index]) : provider.ConsumeRandomLengthString(6);
     }
     return mime;
 }

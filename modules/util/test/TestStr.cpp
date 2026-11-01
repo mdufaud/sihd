@@ -1106,6 +1106,8 @@ TEST_F(TestStr, test_str_predicates)
     EXPECT_TRUE(str::iequals("", ""));
     EXPECT_FALSE(str::iequals("hello", "hell"));
     EXPECT_FALSE(str::iequals("hello", "hello "));
+    EXPECT_TRUE(str::iequals(std::string_view("A\0b", 3), std::string_view("a\0B", 3)));
+    EXPECT_FALSE(str::iequals(std::string_view("a\0b", 3), std::string_view("a\0c", 3)));
 
     EXPECT_TRUE(str::is_all_spaces(" \t\n "));
     EXPECT_TRUE(str::is_all_spaces(""));

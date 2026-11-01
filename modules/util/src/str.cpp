@@ -980,9 +980,7 @@ std::string replace(std::string_view s, std::initializer_list<std::pair<std::str
 
 bool iequals(std::string_view s1, std::string_view s2)
 {
-    if (s1.size() != s2.size())
-        return false;
-    return strncasecmp(s1.data(), s2.data(), s1.size()) == 0;
+    return std::ranges::equal(s1, s2, {}, glob_lower, glob_lower);
 }
 
 std::string escape_xml(std::string_view text)
