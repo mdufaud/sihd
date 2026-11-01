@@ -29,13 +29,7 @@ CsvData csv_from_string(std::string_view content, bool remove_header, int delimi
     cols_splitter.set_open_escape_sequences("\"");
     cols_splitter.set_empty_delimitations(true);
 
-    size_t skipped_lines = (int)remove_header;
-    for (std::string_view & line : lines)
-    {
-        if (line.empty() || line[0] == comment_char)
-            ++skipped_lines;
-    }
-    ret.reserve(lines.size() - skipped_lines);
+    ret.reserve(lines.size());
 
     bool first = true;
     for (std::string_view & line : lines)

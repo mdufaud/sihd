@@ -199,6 +199,13 @@ TEST_F(TestCsv, test_csv_from_string_remove_header)
     EXPECT_EQ(csv_lines[1], (std::vector<std::string> {"d", "e", "f"}));
 }
 
+TEST_F(TestCsv, test_csv_from_string_remove_header_without_data)
+{
+    EXPECT_TRUE(utils::csv_from_string("", true).empty());
+    EXPECT_TRUE(utils::csv_from_string("# header\n", true).empty());
+    EXPECT_TRUE(utils::csv_from_string("col1,col2\n", true).empty());
+}
+
 TEST_F(TestCsv, test_csv_custom_delimiter)
 {
     TmpDir tmp_dir;
