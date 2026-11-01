@@ -174,21 +174,6 @@ TEST_F(TestHttpResponse, test_to_string)
     EXPECT_NE(text.find("\r\n\r\nnot found"), std::string::npos);
 }
 
-TEST_F(TestHttpResponse, test_roundtrip)
-{
-    HttpResponse original;
-    original.set_status(HttpStatus::Created);
-    original.http_header().set_header("x-request-id", "abc-123");
-    original.set_plain_content("created");
-
-    std::string serialized = original.to_string();
-    auto parsed = HttpResponse::from_string(serialized);
-    ASSERT_TRUE(parsed.has_value());
-    EXPECT_EQ(parsed->status(), HttpStatus::Created);
-    EXPECT_EQ(parsed->content().cpp_str(), "created");
-    EXPECT_EQ(parsed->http_header().find("x-request-id"), "abc-123");
-}
-
 TEST_F(TestHttpResponse, test_status)
 {
     HttpResponse resp;

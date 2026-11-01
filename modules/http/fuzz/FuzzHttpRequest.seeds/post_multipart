@@ -1,0 +1,16 @@
+POST /upload HTTP/1.1
+Host: example.com
+Content-Type: multipart/form-data; boundary=XyZ
+Content-Length: 168
+
+--XyZ
+Content-Disposition: form-data; name="a"
+
+value
+--XyZ
+Content-Disposition: form-data; name="f"; filename="f.txt"
+Content-Type: text/plain
+
+data
+--XyZ--
+

@@ -211,6 +211,9 @@ Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
         }
     }
 
+    if (path.empty())
+        return std::unexpected(Error(invalid_argument, "request target '{}' has no path", full_path));
+
     HttpRequest req(std::string(path), method);
 
     if (!query_params.empty())
