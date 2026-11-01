@@ -49,4 +49,9 @@ export m="json,util,sys,core,csv,zip,net,wifi"
 
 build_target "arm32" machine=arm32
 
+# libFuzzer only exists for clang on native linux: a short run of every fuzzer. The
+# asan+ubsan+fuzz flags rebuild the clang build dir, so it goes last.
+ACTION=(make fuzztest)
+m="json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap" fuzz_time="${SIHD_FUZZ_TIME:-5}" build_target "fuzz"
+
 summary "tests build results"

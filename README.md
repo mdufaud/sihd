@@ -127,6 +127,7 @@ make test ls                       # list tests
 make iasantest                     # address sanitizer
 make valtest                       # valgrind
 make gdbtest                       # debug under gdb
+make fuzztest m=util t=Url         # libFuzzer fuzzers (clang, native linux), fuzz_time=seconds each
 ```
 
 ## Continuous integration
