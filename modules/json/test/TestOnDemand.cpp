@@ -109,4 +109,14 @@ TEST_F(TestOnDemand, test_for_each_truncated_array_is_an_error)
     }
 }
 
+TEST_F(TestOnDemand, test_find_first_truncated_array_is_an_error)
+{
+    for (const std::string data : {R"([)", R"([,)", R"([{"v":1)"})
+    {
+        std::expected<Json, std::string> found;
+        EXPECT_NO_THROW(found = utils::find_first(data, "v")) << data;
+        EXPECT_FALSE(found.has_value()) << data;
+    }
+}
+
 } // namespace test
