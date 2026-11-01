@@ -48,6 +48,14 @@ jobs:
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             # noble clang-18 defines __cpp_concepts=201907L, libstdc++-14 headers keep <expected> closed
             clang-llvm: true
+          # same module set as scripts/test.sh's fuzz target; asan and ubsan are the
+          # flags make fuzztest sets, the build step shares its build dir
+          - id: x64-linux-fuzz
+            dep-args: fuzz=1 m=json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap
+            make-args: fuzz=1 asan=1 ubsan=1 m=json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap
+            apt: libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
+            clang-llvm: true
+            fuzz: true
           # musl.cc is unreachable from runners; zig carries its own musl sysroot
           # (sbt: MUSL_ONLY_COMPILERS) so it keeps libc=musl coverage in CI.
           # experimental: autotools ports probe gnu-ld specifics that lld rejects
@@ -179,7 +187,7 @@ jobs:
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt-llvm.org.asc >/dev/null
           echo "deb https://apt.llvm.org/noble/ llvm-toolchain-noble-19 main" | sudo tee /etc/apt/sources.list.d/llvm19.list
           sudo apt-get update -qq
-          sudo apt-get install -y clang-19
+          sudo apt-get install -y clang-19 libclang-rt-19-dev libfuzzer-19-dev
           echo "/usr/lib/llvm-19/bin" >> "$GITHUB_PATH"
 
       - name: Install zig
@@ -229,6 +237,10 @@ jobs:
         # ICMPv6 echo to external hosts: runners have no outbound IPv6
         env:
           TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*
+
+      - name: Run fuzzers
+        if: matrix.fuzz
+        run: make fuzztest fuzz_time=20 ${{ matrix.make-args }}
 
       - name: Report binary cache size
         if: always()
