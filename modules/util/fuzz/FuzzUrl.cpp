@@ -16,15 +16,17 @@ constexpr std::string_view url_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMN
 
 void fuzz_percent_encoding(FuzzedDataProvider & provider)
 {
-    const std::string text = provider.ConsumeRandomLengthString(128);
-    test::fuzz_check(Url::str_decode(Url::str_encode(text)) == text, "percent encoding round trips");
+    const test::ExactText text(provider.ConsumeRandomLengthString(128));
+    test::fuzz_check(Url::str_decode(Url::str_encode(text)) == text.view(), "percent encoding round trips");
 
-    (void)Url::str_decode(provider.ConsumeRandomLengthString(128));
+    const test::ExactText encoded(provider.ConsumeRandomLengthString(128));
+    (void)Url::str_decode(encoded);
 }
 
 void fuzz_decode(FuzzedDataProvider & provider)
 {
-    const Url url = Url::decode(provider.ConsumeRandomLengthString(256));
+    const test::ExactText text(provider.ConsumeRandomLengthString(256));
+    const Url url = Url::decode(text);
     (void)url.encode();
 }
 

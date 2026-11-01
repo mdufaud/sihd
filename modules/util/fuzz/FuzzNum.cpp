@@ -18,14 +18,16 @@ void fuzz_saturation(FuzzedDataProvider & provider)
 {
     const T a = provider.ConsumeIntegral<T>();
     const T b = provider.ConsumeIntegral<T>();
-    const int64_t wide_a = static_cast<int64_t>(a);
-    const int64_t wide_b = static_cast<int64_t>(b);
-    const int64_t low = static_cast<int64_t>(std::numeric_limits<T>::min());
-    const int64_t high = static_cast<int64_t>(std::numeric_limits<T>::max());
+    // wider than every T: the exact result of the operation always fits
+    using Wide = __int128;
+    const Wide wide_a = a;
+    const Wide wide_b = b;
+    const Wide low = std::numeric_limits<T>::min();
+    const Wide high = std::numeric_limits<T>::max();
 
-    test::fuzz_check(static_cast<int64_t>(num::add_no_overflow(a, b)) == std::clamp(wide_a + wide_b, low, high),
+    test::fuzz_check(Wide(num::add_no_overflow(a, b)) == std::clamp(wide_a + wide_b, low, high),
                      "add saturates instead of wrapping");
-    test::fuzz_check(static_cast<int64_t>(num::substract_no_overflow(a, b)) == std::clamp(wide_a - wide_b, low, high),
+    test::fuzz_check(Wide(num::substract_no_overflow(a, b)) == std::clamp(wide_a - wide_b, low, high),
                      "substract saturates instead of wrapping");
 }
 
@@ -65,7 +67,7 @@ void fuzz_rand(FuzzedDataProvider & provider)
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     FuzzedDataProvider provider(data, size);
-    switch (provider.ConsumeIntegralInRange<int>(0, 3))
+    switch (provider.ConsumeIntegralInRange<int>(0, 5))
     {
         case 0:
             fuzz_saturation<int32_t>(provider);
@@ -74,6 +76,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
             fuzz_saturation<uint32_t>(provider);
             break;
         case 2:
+            fuzz_saturation<int64_t>(provider);
+            break;
+        case 3:
+            fuzz_saturation<uint64_t>(provider);
+            break;
+        case 4:
             fuzz_near(provider);
             break;
         default:
