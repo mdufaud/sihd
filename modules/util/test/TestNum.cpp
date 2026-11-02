@@ -91,6 +91,20 @@ TEST_F(TestNum, test_num_size_invalid_base)
     EXPECT_EQ(num::size(255, 16), 2u);
 }
 
+TEST_F(TestNum, test_num_rand_swapped_bounds)
+{
+    // past 32 bits: long is 32 bits on arm32 and on windows
+    const uint64_t big = uint64_t {1} << 40;
+    const uint64_t value = num::rand(big + 1, big);
+    EXPECT_GE(value, big);
+    EXPECT_LE(value, big + 1);
+    EXPECT_EQ(num::rand(7, 7), 7u);
+
+    const double dvalue = num::drand(1.0, -1.0);
+    EXPECT_GE(dvalue, -1.0);
+    EXPECT_LE(dvalue, 1.0);
+}
+
 TEST_F(TestNum, test_num_near_signedness)
 {
     EXPECT_TRUE(num::near<size_t>(3, 5, 4));

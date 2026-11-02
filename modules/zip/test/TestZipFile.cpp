@@ -218,6 +218,47 @@ TEST_F(TestZipFile, test_zip_add_file_from_fs)
     }
 }
 
+TEST_F(TestZipFile, test_zip_multi_chunk_read)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "test.zip");
+    const std::string data = str::generate_random(10000);
+
+    {
+        ZipFile zip(zip_path);
+        ASSERT_TRUE(zip.is_open());
+        EXPECT_TRUE(zip.add_file("big_file.txt", data).has_value());
+        ASSERT_TRUE(zip.close().has_value());
+    }
+
+    {
+        ZipFile zip(zip_path, true);
+        ASSERT_TRUE(zip.is_open());
+        EXPECT_TRUE(zip.load_entry("big_file.txt").has_value());
+
+        (void)zip.set_buffer_size(128);
+
+        std::string result;
+        size_t bytes_read = 1;
+        while (true)
+        {
+            auto read = zip.read_entry();
+            ASSERT_TRUE(read.has_value());
+            if (read.value() == 0)
+            {
+                bytes_read = 0;
+                break;
+            }
+            bytes_read = (size_t)read.value();
+            ArrCharView view;
+            ASSERT_TRUE(zip.get_read_data(view));
+            result.append(view.data(), view.size());
+        }
+        EXPECT_EQ(bytes_read, 0u);
+        EXPECT_EQ(result, data);
+    }
+}
+
 TEST_F(TestZipFile, test_zip_ireader_interface)
 {
     const TmpDir tmp_dir;

@@ -301,6 +301,55 @@ TEST_F(TestLineReader, test_linereader_fast_read_line)
     EXPECT_EQ(line.error().code, ErrorCode::not_found);
 }
 
+TEST_F(TestLineReader, test_linereader_lines_across_read_buffers)
+{
+    const std::vector<std::string> lines = {"\n",
+                                            std::string(63, 'a') + "\n",
+                                            std::string(64, 'b') + "\n",
+                                            std::string(65, 'c') + "\r\n",
+                                            std::string(1000, 'd') + "\n",
+                                            "end"};
+    std::string content;
+    for (const std::string & line : lines)
+        content += line;
+    const std::string path = fs::combine(_tmp_dir.path(), "across_buffers.txt");
+    ASSERT_TRUE(fs::write_binary(path, content).has_value());
+
+    LineReader reader(path, {.read_buffsize = 64, .delimiter_in_line = true});
+    ASSERT_TRUE(reader.is_open());
+    ArrCharView view;
+    for (const std::string & line : lines)
+    {
+        ASSERT_TRUE(read_next_ok(reader));
+        ASSERT_TRUE(reader.get_read_data(view));
+        // LineReader opens in text mode: the windows crt reads crlf as lf
+        const bool crlf_read_as_lf = build::is_windows && line.ends_with("\r\n");
+        EXPECT_EQ(view, crlf_read_as_lf ? line.substr(0, line.size() - 2) + "\n" : line);
+    }
+    EXPECT_FALSE(read_next_ok(reader));
+
+    File fast_file(path, "rb");
+    ASSERT_TRUE(fast_file.is_open());
+    for (const std::string & line : lines)
+    {
+        const auto read = LineReader::fast_read_line(fast_file.file(), {.read_buffsize = 1, .delimiter_in_line = true});
+        ASSERT_TRUE(read.has_value());
+        EXPECT_EQ(*read, line);
+    }
+
+    File file(path, "rb");
+    ASSERT_TRUE(file.is_open());
+    char *buffer = nullptr;
+    size_t size = 0;
+    for (const std::string & line : lines)
+    {
+        const auto read = file.read_line(&buffer, &size);
+        ASSERT_TRUE(read.has_value());
+        EXPECT_EQ(std::string(buffer, *read), line);
+    }
+    free(buffer);
+}
+
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestLineReader, test_linereader_open_fd)
 {

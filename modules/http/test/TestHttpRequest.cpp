@@ -150,6 +150,22 @@ TEST_F(TestHttpRequest, test_to_string)
     EXPECT_NE(serialized.find(body), std::string::npos);
 }
 
+TEST_F(TestHttpRequest, test_roundtrip)
+{
+    HttpRequest original("/api/test", HttpRequest::Put);
+    original.http_header().set_header("x-custom", "value");
+    std::string body = "hello world";
+    original.set_content({body.data(), body.size()});
+
+    std::string serialized = original.to_string();
+    auto parsed = HttpRequest::from_string(serialized);
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(parsed->request_type(), HttpRequest::Put);
+    EXPECT_EQ(parsed->url(), "/api/test");
+    EXPECT_EQ(parsed->content().cpp_str(), body);
+    EXPECT_EQ(parsed->http_header().find("x-custom"), "value");
+}
+
 TEST_F(TestHttpRequest, test_auth)
 {
     HttpRequest req("/protected");

@@ -559,6 +559,22 @@ TEST_F(TestStr, test_str_base64_lenient)
     EXPECT_TRUE(decoded->empty());
 }
 
+TEST_F(TestStr, test_str_base64_every_byte)
+{
+    // char is unsigned on arm, signed on x86
+    const std::vector<uint8_t> high {0xff, 0xfe, 0xfd};
+    EXPECT_EQ(str::to_base64(high.data(), high.size()), "//79");
+    EXPECT_EQ(str::from_base64("//79"), high);
+
+    std::vector<uint8_t> data(256);
+    for (size_t i = 0; i < data.size(); ++i)
+        data[i] = static_cast<uint8_t>(i);
+    const std::string encoded = str::to_base64(data.data(), data.size());
+
+    EXPECT_EQ(encoded.size(), 344u);
+    EXPECT_EQ(str::from_base64(encoded), data);
+}
+
 TEST_F(TestStr, test_str_base64_invalid)
 {
     EXPECT_FALSE(str::from_base64("A").has_value()); // data length % 4 == 1
@@ -1241,6 +1257,15 @@ TEST_F(TestStr, test_str_table)
 
 TEST_F(TestStr, test_str_generate_random)
 {
+    constexpr std::string_view
+        charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\n\t ()[]{}'123456789!@#$%^&*_+";
+
+    const std::string str = str::generate_random(100);
+    ASSERT_EQ(str.size(), 100u);
+    for (const char c : str)
+        EXPECT_NE(charset.find(c), std::string_view::npos) << "unexpected char: " << c;
+
+    EXPECT_TRUE(str::generate_random(0).empty());
     EXPECT_NE(str::generate_random(64), str::generate_random(64));
 }
 
