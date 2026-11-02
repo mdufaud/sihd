@@ -8,10 +8,12 @@
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/wifi/ies.hpp>
 
+#include "wifi_fuzz_helper.hpp"
 #include <fuzzer/FuzzedDataProvider.h>
 
 using namespace sihd::util;
 using namespace sihd::wifi;
+using test::Bytes;
 
 namespace
 {
@@ -51,28 +53,9 @@ uint16_t be16(const std::vector<uint8_t> & bytes, size_t offset)
     return static_cast<uint16_t>((bytes[offset] << 8) | bytes[offset + 1]);
 }
 
-void push_le16(std::vector<uint8_t> & bytes, size_t value)
-{
-    bytes.push_back(static_cast<uint8_t>(value));
-    bytes.push_back(static_cast<uint8_t>(value >> 8));
-}
-
 ies::Suite suite_at(const std::vector<uint8_t> & bytes, size_t offset)
 {
     return {.oui = {bytes[offset], bytes[offset + 1], bytes[offset + 2]}, .type = bytes[offset + 3]};
-}
-
-void push_suite(std::vector<uint8_t> & bytes, const ies::Suite & suite)
-{
-    bytes.insert(bytes.end(), suite.oui.begin(), suite.oui.end());
-    bytes.push_back(suite.type);
-}
-
-void push_suites(std::vector<uint8_t> & bytes, const std::vector<ies::Suite> & suites)
-{
-    push_le16(bytes, suites.size());
-    for (const ies::Suite & suite : suites)
-        push_suite(bytes, suite);
 }
 
 std::vector<uint8_t> bytes_of(ArrUByteView view)
@@ -116,51 +99,23 @@ void check_rsn(const std::vector<uint8_t> & body)
         test::fuzz_check(!rsn->capabilities.has_value(), "no bytes left, no capabilities");
 }
 
-ies::Suite consume_suite(FuzzedDataProvider & provider)
-{
-    ies::Suite suite;
-    for (uint8_t & byte : suite.oui)
-        byte = provider.ConsumeIntegral<uint8_t>();
-    suite.type = provider.ConsumeIntegral<uint8_t>();
-    return suite;
-}
-
-std::vector<ies::Suite> consume_suites(FuzzedDataProvider & provider)
-{
-    std::vector<ies::Suite> suites(provider.ConsumeIntegralInRange<size_t>(0, 4));
-    for (ies::Suite & suite : suites)
-        suite = consume_suite(provider);
-    return suites;
-}
-
 void fuzz_rsn_round_trip(FuzzedDataProvider & provider)
 {
-    ies::Rsn rsn;
-    rsn.version = provider.ConsumeIntegral<uint16_t>();
-    rsn.group = consume_suite(provider);
-    rsn.pairwise = consume_suites(provider);
-    rsn.akms = consume_suites(provider);
-    if (provider.ConsumeBool())
-        rsn.capabilities = provider.ConsumeIntegral<uint16_t>();
-
-    std::vector<uint8_t> built;
-    push_le16(built, rsn.version);
-    push_suite(built, rsn.group);
-    push_suites(built, rsn.pairwise);
-    push_suites(built, rsn.akms);
-    if (rsn.capabilities.has_value())
-        push_le16(built, *rsn.capabilities);
-    const std::vector<uint8_t> body(built.begin(), built.end());
+    ies::Rsn rsn = test::consume_rsn(provider);
+    const size_t parts = provider.ConsumeIntegralInRange<size_t>(0, 4);
+    const Bytes body = test::exact_copy(test::encode_rsn(rsn, parts));
 
     const Result<ies::Rsn> parsed = ies::parse_rsn(ArrUByteView(body));
     test::fuzz_check(parsed.has_value(), "a well formed rsn parses");
     if (!parsed.has_value())
         return;
-    test::fuzz_check(parsed->version == rsn.version, "the version round trips");
-    test::fuzz_check(parsed->group == rsn.group, "the group cipher round trips");
-    test::fuzz_check(parsed->pairwise == rsn.pairwise, "the pairwise suites round trip");
-    test::fuzz_check(parsed->akms == rsn.akms, "the akm suites round trip");
-    test::fuzz_check(parsed->capabilities == rsn.capabilities, "the capabilities round trip");
+    test::check_rsn_equal(*parsed, rsn);
+
+    if (parts <= 2)
+    {
+        const Bytes cut = test::exact_copy(Bytes(body.begin(), body.end() - 1));
+        test::fuzz_check(!ies::parse_rsn(ArrUByteView(cut)).has_value(), "an rsn cut inside a part is refused");
+    }
 }
 
 WpsWalk walk_wps(const std::vector<uint8_t> & bytes)
@@ -267,10 +222,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     switch (provider.ConsumeIntegralInRange<int>(0, 2))
     {
         case 0:
-            check_rsn(provider.ConsumeRemainingBytes<uint8_t>());
+            check_rsn(test::exact_copy(provider.ConsumeRemainingBytes<uint8_t>()));
             break;
         case 1:
-            check_wps(provider.ConsumeRemainingBytes<uint8_t>());
+            check_wps(test::exact_copy(provider.ConsumeRemainingBytes<uint8_t>()));
             break;
         default:
             fuzz_rsn_round_trip(provider);

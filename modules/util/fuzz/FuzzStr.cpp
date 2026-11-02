@@ -274,11 +274,43 @@ std::string consume_class_pattern(FuzzedDataProvider & provider)
     return pattern;
 }
 
+// a random text rarely matches: most of a text taken from its pattern stands a chance
+std::string consume_text_like(FuzzedDataProvider & provider, std::string_view pattern)
+{
+    std::string text;
+    for (const char c : pattern)
+    {
+        const int action = provider.ConsumeIntegralInRange<int>(0, 3);
+        if (action == 0)
+            text += glob_class_text_alphabet[provider.ConsumeIntegralInRange<size_t>(
+                0,
+                glob_class_text_alphabet.size() - 1)];
+        else if (action != 1)
+            text += c;
+    }
+    return text;
+}
+
+// posix leaves these undefined and the libcs differ
+bool undefined_for_fnmatch(std::string_view pattern)
+{
+    const size_t last_kept = pattern.find_last_not_of('\\');
+    const size_t escapes = pattern.size() - (last_kept == std::string_view::npos ? 0 : last_kept + 1);
+    const bool range_cut_by_the_end = pattern.ends_with('-') && pattern.contains('[');
+    return escapes % 2 == 1 || range_cut_by_the_end || pattern.contains("[:nope:]") || pattern.contains("-[");
+}
+
 void fuzz_glob_classes(FuzzedDataProvider & provider)
 {
     const std::string pattern = consume_class_pattern(provider);
-    const std::string text = consume_text(provider, glob_class_text_alphabet, 12);
+    const std::string text = provider.ConsumeBool() ? consume_text_like(provider, pattern)
+                                                    : consume_text(provider, glob_class_text_alphabet, 12);
 
+    if (undefined_for_fnmatch(pattern))
+    {
+        (void)str::glob_match(text, pattern, provider.ConsumeBool());
+        return;
+    }
     test::fuzz_check(str::glob_match(text, pattern) == (::fnmatch(pattern.c_str(), text.c_str(), 0) == 0),
                      "glob_match agrees with fnmatch");
     test::fuzz_check(
@@ -327,7 +359,9 @@ void fuzz_wrap(FuzzedDataProvider & provider)
         test::fuzz_check(wrapped == text.view(), "wrap keeps a short text");
     else
     {
-        test::fuzz_check(wrapped.size() <= max_width, "wrap fits a long text in the width");
+        const size_t room = max_width - end_with.view().size();
+        const size_t kept = room > end_with.view().size() ? room - end_with.view().size() : 0;
+        test::fuzz_check(wrapped.size() == kept + end_with.view().size(), "wrap keeps room for the ending twice");
         test::fuzz_check(wrapped.ends_with(end_with.view()), "wrap ends a long text with its ending");
         test::fuzz_check(
             text.view().starts_with(std::string_view(wrapped).substr(0, wrapped.size() - end_with.view().size())),
@@ -346,8 +380,49 @@ std::string without_spaces_and_hyphens(std::string_view text)
     return kept;
 }
 
+// words that fit the width: the layout is greedy, and only a newline of the text breaks a line early
+void fuzz_word_wrap_layout(FuzzedDataProvider & provider)
+{
+    const size_t max_width = provider.ConsumeIntegralInRange<size_t>(1, 16);
+    std::string text;
+    std::string expected;
+    size_t line_width = 0;
+    for (size_t words = provider.ConsumeIntegralInRange<size_t>(1, 8); words > 0; --words)
+    {
+        if (!text.empty())
+        {
+            const size_t newlines = provider.ConsumeIntegralInRange<size_t>(0, 2);
+            text += newlines == 0 ? std::string(1, ' ') : std::string(newlines, '\n');
+            expected.append(newlines, '\n');
+            line_width = newlines == 0 ? line_width : 0;
+        }
+        const std::string word = test::consume_text(provider, "ab", 1, max_width);
+        text += word;
+
+        if (line_width > 0 && line_width + 1 + word.size() > max_width)
+        {
+            expected += '\n';
+            line_width = 0;
+        }
+        else if (line_width > 0)
+        {
+            expected += ' ';
+            ++line_width;
+        }
+        expected += word;
+        line_width += word.size();
+    }
+    test::fuzz_check(str::word_wrap(test::ExactText(text), max_width, false) == expected,
+                     "word_wrap breaks a line at a newline or when the next word does not fit");
+}
+
 void fuzz_word_wrap(FuzzedDataProvider & provider)
 {
+    if (provider.ConsumeBool())
+    {
+        fuzz_word_wrap_layout(provider);
+        return;
+    }
     const test::ExactText text(consume_text(provider, "ab- \n\t", 64));
     const size_t max_width = provider.ConsumeIntegralInRange<size_t>(0, 16);
     const bool append_hyphen = provider.ConsumeBool();
@@ -428,6 +503,49 @@ void fuzz_enclosing(FuzzedDataProvider & provider)
     }
 }
 
+constexpr std::string_view plain_alphabet("ab 12\0", 6);
+
+void fuzz_enclose_index(FuzzedDataProvider & provider)
+{
+    const std::string_view openers = str::encloses_start();
+    const std::string_view closers = str::encloses_stop();
+    const size_t kind = provider.ConsumeIntegralInRange<size_t>(0, openers.size() - 1);
+    const char open = openers[kind];
+    const char close = closers[kind];
+    const std::string prefix = test::consume_text(provider, plain_alphabet, 0, 4);
+    const std::string content = test::consume_text(provider, plain_alphabet, 0, 6);
+    const std::string suffix = test::consume_text(provider, plain_alphabet, 0, 4);
+    const int start = static_cast<int>(prefix.size());
+    const int after_close = start + 1 + static_cast<int>(content.size()) + 1;
+
+    const test::ExactText closed(prefix + open + content + close + suffix);
+    test::fuzz_check(str::stopping_enclose_index(closed, start) == after_close,
+                     "an enclose ends after its closing char");
+    test::fuzz_check(str::stopping_enclose_index(closed, start, std::string(1, open).c_str()) == after_close,
+                     "an authorized opening char starts an enclose");
+    const char unauthorized = openers[(kind + 1) % openers.size()];
+    test::fuzz_check(str::stopping_enclose_index(closed, start, std::string(1, unauthorized).c_str()) == -1,
+                     "an unauthorized opening char starts nothing");
+
+    const test::ExactText open_ended(prefix + open + content);
+    test::fuzz_check(str::stopping_enclose_index(open_ended, start) == -2, "an enclose never closed is -2");
+
+    const test::ExactText escaped_close(prefix + open + content + '\\' + close + content + close + suffix);
+    test::fuzz_check(
+        str::stopping_enclose_index(escaped_close, start) == after_close + 2 + static_cast<int>(content.size()),
+        "an escaped closing char does not end the enclose");
+    const test::ExactText escaped_open(prefix + '\\' + open + content + close);
+    test::fuzz_check(str::stopping_enclose_index(escaped_open, start + 1) == -1,
+                     "an escaped opening char starts nothing");
+
+    test::fuzz_check(str::stopping_enclose_index(closed, static_cast<int>(closed.view().size())) == -1,
+                     "past the end there is no enclose");
+    for (size_t i = 0; i < prefix.size(); ++i)
+    {
+        test::fuzz_check(str::stopping_enclose_index(closed, static_cast<int>(i)) == -1, "a plain char starts nothing");
+    }
+}
+
 int digit_value(char c)
 {
     if (c >= '0' && c <= '9')
@@ -454,7 +572,7 @@ void fuzz_is_number(FuzzedDataProvider & provider)
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     FuzzedDataProvider provider(data, size);
-    switch (provider.ConsumeIntegralInRange<int>(0, 13))
+    switch (provider.ConsumeIntegralInRange<int>(0, 14))
     {
         case 0:
             fuzz_base64(provider);
@@ -495,8 +613,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         case 12:
             fuzz_is_number(provider);
             break;
-        default:
+        case 13:
             fuzz_text(provider);
+            break;
+        default:
+            fuzz_enclose_index(provider);
             break;
     }
     return 0;

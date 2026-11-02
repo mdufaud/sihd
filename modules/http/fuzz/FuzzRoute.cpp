@@ -61,57 +61,118 @@ void fuzz_route_raw(FuzzedDataProvider & provider)
     (void)table.allowed_methods(path);
 }
 
-void fuzz_route_match(FuzzedDataProvider & provider)
+struct Generated
 {
-    std::string pattern;
-    std::string path;
-    std::string wrong_path;
-    Params params;
-    size_t literals = 0;
-    bool catch_all = false;
-    for (size_t i = provider.ConsumeIntegralInRange<size_t>(1, 5); i > 0 && !catch_all; --i)
+        std::string pattern;
+        std::string path;
+        std::string wrong_literal_path;
+        std::string short_path;
+        Params params;
+        size_t literals = 0;
+        bool catch_all = false;
+};
+
+std::string make_literal(FuzzedDataProvider & provider)
+{
+    const std::string word = test::consume_word(provider, 1, 6);
+    switch (provider.ConsumeIntegralInRange<int>(0, 3))
+    {
+        case 1:
+            return "{" + word;
+        case 2:
+            return word + "}";
+        case 3:
+            return "{}";
+        default:
+            return word;
+    }
+}
+
+std::string make_name(FuzzedDataProvider & provider, size_t index)
+{
+    return std::string(1, static_cast<char>('a' + index)) + test::consume_word(provider, 0, 3);
+}
+
+Generated generate_route(FuzzedDataProvider & provider)
+{
+    Generated route;
+    std::vector<std::string> segments;
+    size_t wrong_index = std::string::npos;
+    bool dots_used = false;
+    const size_t count = provider.ConsumeIntegralInRange<size_t>(1, 5);
+    for (size_t i = 0; i < count && !route.catch_all; ++i)
     {
         const std::string value = test::consume_word(provider, 1, 6);
-        const std::string name = "p" + std::to_string(params.size());
-        switch (provider.ConsumeIntegralInRange<int>(0, 3))
+        const std::string name = make_name(provider, i);
+        switch (provider.ConsumeIntegralInRange<int>(0, 4))
         {
             case 2:
-                pattern += "/{" + name + "}";
-                path += "/" + value;
-                wrong_path += "/" + value;
-                params[name] = value;
+                route.pattern += "/{" + name + "}";
+                segments.push_back(value);
+                route.params[name] = value;
                 break;
             case 3:
             {
-                const std::string rest = value + "/" + test::consume_word(provider, 1, 6);
-                pattern += "/{" + name + "...}";
-                path += "/" + rest;
-                wrong_path += "/" + rest;
-                params[name] = rest;
-                catch_all = true;
+                std::string rest = value;
+                for (size_t more = provider.ConsumeIntegralInRange<size_t>(0, 2); more > 0; --more)
+                    rest += "/" + test::consume_word(provider, 1, 4);
+                route.pattern += "/{" + name + "...}";
+                segments.push_back(rest);
+                route.params[name] = rest;
+                route.catch_all = true;
                 break;
             }
-            default:
-                pattern += "/" + value;
-                path += "/" + value;
-                wrong_path += "/" + value + "x";
-                ++literals;
+            case 4:
+                if (dots_used)
+                    break;
+                // three dots is too short to be a catch-all name: a plain parameter called "..."
+                route.pattern += "/{...}";
+                segments.push_back(value);
+                route.params["..."] = value;
+                dots_used = true;
                 break;
+            default:
+            {
+                const std::string literal = make_literal(provider);
+                route.pattern += "/" + literal;
+                segments.push_back(literal);
+                wrong_index = segments.size() - 1;
+                ++route.literals;
+                break;
+            }
         }
     }
 
-    const Route route(pattern, {});
-    const RouteMatch match = route.match(path);
+    for (size_t i = 0; i < segments.size(); ++i)
+    {
+        route.path += "/" + segments[i];
+        route.wrong_literal_path += "/" + segments[i] + (i == wrong_index ? "x" : "");
+        if (i + 1 < segments.size())
+            route.short_path += "/" + segments[i];
+    }
+    return route;
+}
+
+void fuzz_route_match(FuzzedDataProvider & provider)
+{
+    const Generated generated = generate_route(provider);
+
+    const Route route(generated.pattern, {});
+    const RouteMatch match = route.match(generated.path);
     test::fuzz_check(match.matched, "a path built from the pattern matches it");
-    test::fuzz_check(match.params == params, "the parameters are captured");
-    test::fuzz_check(route.pattern() == pattern, "the pattern is kept");
-    test::fuzz_check(route.specificity() == literals, "the specificity counts the literal segments");
-    test::fuzz_check(route.is_parameterized() == !params.empty(), "a route with a parameter is parameterized");
-    test::fuzz_check(route.has_catch_all() == catch_all, "a route knows its catch-all");
-    if (literals > 0)
-        test::fuzz_check(!route.match(wrong_path).matched, "another literal segment does not match");
-    if (!catch_all)
-        test::fuzz_check(!route.match(path + "/extra").matched, "a longer path does not match without a catch-all");
+    test::fuzz_check(match.params == generated.params, "the parameters are captured");
+    test::fuzz_check(route.pattern() == generated.pattern, "the pattern is kept");
+    test::fuzz_check(route.specificity() == generated.literals, "the specificity counts the literal segments");
+    test::fuzz_check(route.is_parameterized() == !generated.params.empty(),
+                     "a route with a parameter is parameterized");
+    test::fuzz_check(route.has_catch_all() == generated.catch_all, "a route knows its catch-all");
+
+    if (generated.literals > 0)
+        test::fuzz_check(!route.match(generated.wrong_literal_path).matched, "another literal segment does not match");
+    if (!generated.catch_all)
+        test::fuzz_check(!route.match(generated.path + "/extra").matched,
+                         "a longer path does not match without a catch-all");
+    test::fuzz_check(!route.match(generated.short_path).matched, "a path missing its last segment does not match");
 }
 
 void fuzz_route_table(FuzzedDataProvider & provider)
@@ -125,6 +186,9 @@ void fuzz_route_table(FuzzedDataProvider & provider)
         {"/s/{p}", HttpRequest::Get},
         {literal_path, HttpRequest::Get},
         {literal_path, HttpRequest::Post},
+        {"/t/{a}/{b}", HttpRequest::Get},
+        {"/t/{a}/" + literal, HttpRequest::Get},
+        {"/t/{r...}", HttpRequest::Get},
     };
     std::ranges::rotate(routes, routes.begin() + provider.ConsumeIntegralInRange<std::ptrdiff_t>(0, routes.size() - 1));
 
@@ -144,6 +208,20 @@ void fuzz_route_table(FuzzedDataProvider & provider)
     test::fuzz_check(
         catch_all_found.has_value() && catch_all_found->match.params == Params {{"rest", other + "/" + literal}},
         "a catch-all route takes the rest of the path");
+
+    const auto specific_found = table.find(HttpRequest::Get, messy("/t/" + other + "/" + literal));
+    test::fuzz_check(specific_found.has_value() && specific_found->match.params == Params {{"a", other}},
+                     "a parameter route with more literals wins over a less specific one");
+
+    const auto two_params_found = table.find(HttpRequest::Get, messy("/t/" + literal + "/" + other));
+    test::fuzz_check(
+        two_params_found.has_value() && two_params_found->match.params == Params {{"a", literal}, {"b", other}},
+        "a parameter route wins over a catch-all");
+
+    const auto deep_found = table.find(HttpRequest::Get, messy("/t/" + literal + "/" + other + "/" + literal));
+    test::fuzz_check(
+        deep_found.has_value() && deep_found->match.params == Params {{"r", literal + "/" + other + "/" + literal}},
+        "a catch-all answers when no other route has the path length");
 
     test::fuzz_check(table.find(HttpRequest::Post, literal_path).has_value(), "a route is found for its method");
     test::fuzz_check(!table.find(HttpRequest::Post, "/s/" + other).has_value(),

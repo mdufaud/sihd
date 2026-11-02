@@ -20,6 +20,7 @@ using namespace sihd::zip;
 constexpr ssize_t max_entries = 16;
 // deflate reaches about 1000:1: a small archive may not keep the fuzzer busy for long
 constexpr size_t max_entry_bytes = 4 * 1024 * 1024;
+const std::string directory_name = "directory";
 
 void read_hostile_entry(ZipFile & zip, size_t buffer_size)
 {
@@ -68,6 +69,8 @@ void fuzz_round_trip(FuzzedDataProvider & provider)
 {
     const size_t buffer_size = provider.ConsumeIntegralInRange<size_t>(1, 4096);
     const std::string name = "entry" + std::to_string(provider.ConsumeIntegralInRange<int>(0, 999)) + ".bin";
+    const std::string entry_comment = test::consume_word(provider, 1, 16);
+    const std::string archive_comment = test::consume_word(provider, 1, 16);
     const std::string content = provider.ConsumeRemainingBytesAsString();
 
     const TmpDir tmp_dir;
@@ -75,16 +78,36 @@ void fuzz_round_trip(FuzzedDataProvider & provider)
     {
         ZipFile zip(zip_path);
         test::fuzz_check(zip.is_open(), "an archive opens for writing");
+        test::fuzz_check(zip.comment_archive(archive_comment).has_value(), "an archive takes a comment");
+        test::fuzz_check(zip.add_dir(directory_name).has_value(), "a directory is added");
         test::fuzz_check(zip.add_file(name, ArrCharView(content.data(), content.size())).has_value(),
                          "an entry is added");
+        test::fuzz_check(zip.load_entry(name).has_value(), "an added entry loads before the close");
+        test::fuzz_check(zip.comment_entry(entry_comment).has_value(), "an entry takes a comment");
         test::fuzz_check(zip.close().has_value(), "an archive closes");
     }
 
-    ZipFile zip(zip_path, true);
-    test::fuzz_check(zip.is_open(), "a written archive opens for reading");
+    ZipFile zip;
+    test::fuzz_check(zip.open(zip_path, true).has_value(), "a written archive opens for reading");
+    test::fuzz_check(zip.is_open(), "an opened archive tells it");
+    test::fuzz_check(zip.archive_comment() == archive_comment, "the archive keeps its comment");
+    test::fuzz_check(zip.count_original_entries() == 2, "the archive holds the directory and the entry");
+    test::fuzz_check(!zip.is_entry_loaded(), "nothing is loaded yet");
+    test::fuzz_check(!zip.is_entry_directory() && zip.entry_comment().empty(), "nothing loaded has no attribute");
+
+    test::fuzz_check(zip.load_entry(size_t {0}).has_value() && zip.is_entry_loaded(), "the first index loads");
+    test::fuzz_check(zip.entry_name() == directory_name + "/", "the first index is the first added entry");
+    test::fuzz_check(!zip.load_entry(size_t {2}).has_value() && !zip.is_entry_loaded(),
+                     "an index past the entries is refused and unloads");
+
+    test::fuzz_check(zip.load_entry(directory_name + "/").has_value(), "the directory is found");
+    test::fuzz_check(zip.is_entry_directory(), "a name ending with a slash is a directory");
+
     const auto entry = zip.load_entry(name);
     test::fuzz_check(entry.has_value(), "an added entry is found");
     test::fuzz_check(entry->size == content.size(), "the entry keeps its size");
+    test::fuzz_check(!zip.is_entry_directory(), "a file is not a directory");
+    test::fuzz_check(zip.entry_comment() == entry_comment, "the entry keeps its comment");
     test::fuzz_check(zip.set_buffer_size(buffer_size).has_value(), "the read buffer is resized");
 
     std::string result;

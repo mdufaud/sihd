@@ -2,7 +2,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <fuzz_helper.hpp>
-#include <limits>
 #include <optional>
 #include <string>
 #include <vector>
@@ -17,10 +16,11 @@ using namespace sihd::wifi;
 
 namespace
 {
-constexpr size_t ht_standard_size = 26;
-constexpr size_t vht_standard_size = 12;
-constexpr size_t country_standard_size = 6;
-constexpr size_t tim_standard_size = 4;
+// where the last field read ends: the ht mcs set at 19, the vht tx map at 12, country environment and tim control at 3
+constexpr size_t ht_needed_size = 19;
+constexpr size_t vht_needed_size = 12;
+constexpr size_t country_needed_size = 3;
+constexpr size_t tim_needed_size = 3;
 
 constexpr size_t ht_mcs_set_offset = 3;
 constexpr size_t ht_rx_highest_offset = 13;
@@ -30,6 +30,12 @@ constexpr size_t country_triplet_size = 3;
 constexpr uint8_t country_last_channel_number = 200;
 constexpr uint8_t extension_he_capabilities = 35;
 constexpr uint8_t extension_eht_capabilities = 108;
+
+struct Kind
+{
+        ies::Id id;
+        size_t needed;
+};
 
 constexpr std::array<uint16_t, 4> vht_mpdu_lengths = {3895, 7991, 11454, 0};
 
@@ -64,7 +70,7 @@ std::vector<ies::Element> isolated(const std::vector<ies::Element> & elements,
 }
 
 template <typename T>
-const T *decoded(const Result<std::optional<T>> & result, const ies::Element *element, size_t standard_size)
+const T *decoded(const Result<std::optional<T>> & result, const ies::Element *element, size_t needed_size)
 {
     if (element == nullptr)
     {
@@ -74,9 +80,10 @@ const T *decoded(const Result<std::optional<T>> & result, const ies::Element *el
     if (!result.has_value())
     {
         test::fuzz_check(result.error().code == ErrorCode::invalid_argument, "a short element is invalid_argument");
-        test::fuzz_check(element->data.size() < standard_size, "an element of the standard size decodes");
+        test::fuzz_check(element->data.size() < needed_size, "an element holding its fields decodes");
         return nullptr;
     }
+    test::fuzz_check(element->data.size() >= needed_size, "an element too short for its fields is refused");
     test::fuzz_check(result->has_value(), "a present element decodes to a value");
     return &**result;
 }
@@ -96,7 +103,7 @@ void check_ht(const std::vector<ies::Element> & elements)
 {
     const ies::Element *element = first_of(elements, ies::Id::ht_capabilities);
     const Result<std::optional<ies::HtCapabilities>> result = ies::ht_capabilities(elements);
-    const ies::HtCapabilities *ht = decoded(result, element, ht_standard_size);
+    const ies::HtCapabilities *ht = decoded(result, element, ht_needed_size);
     if (ht == nullptr)
         return;
 
@@ -107,7 +114,13 @@ void check_ht(const std::vector<ies::Element> & elements)
     test::fuzz_check(ht->width_40mhz == ((info & 0x2) != 0), "40 mhz is bit 1");
     test::fuzz_check(ht->spatial_multiplexing_power_save == ((info >> 2) & 0x3), "smps is bits 2 and 3");
     test::fuzz_check(ht->greenfield == ((info & 0x10) != 0), "greenfield is bit 4");
+    test::fuzz_check(ht->short_gi_20mhz == ((info & 0x20) != 0), "short gi at 20 mhz is bit 5");
+    test::fuzz_check(ht->short_gi_40mhz == ((info & 0x40) != 0), "short gi at 40 mhz is bit 6");
+    test::fuzz_check(ht->tx_stbc == ((info & 0x80) != 0), "tx stbc is bit 7");
     test::fuzz_check(ht->rx_stbc_streams == ((info >> 8) & 0x3), "rx stbc is bits 8 and 9");
+    test::fuzz_check(ht->max_amsdu_7935 == ((info & 0x800) != 0), "the large a-msdu is bit 11");
+    test::fuzz_check(ht->dsss_cck_40mhz == ((info & 0x1000) != 0), "dsss/cck at 40 mhz is bit 12");
+    test::fuzz_check(ht->forty_mhz_intolerant == ((info & 0x4000) != 0), "40 mhz intolerant is bit 14");
     test::fuzz_check(ht->ampdu_length_exponent == (body[2] & 0x3), "the a-mpdu exponent is bits 0 and 1");
     test::fuzz_check(ht->ampdu_min_spacing == ((body[2] >> 2) & 0x7), "the a-mpdu spacing is bits 2 to 4");
     test::fuzz_check(ht->rx_highest_rate_mbps == (read_le(body, ht_rx_highest_offset, 2) & 0x3ff),
@@ -126,7 +139,7 @@ void check_vht(const std::vector<ies::Element> & elements)
 {
     const ies::Element *element = first_of(elements, ies::Id::vht_capabilities);
     const Result<std::optional<ies::VhtCapabilities>> result = ies::vht_capabilities(elements);
-    const ies::VhtCapabilities *vht = decoded(result, element, vht_standard_size);
+    const ies::VhtCapabilities *vht = decoded(result, element, vht_needed_size);
     if (vht == nullptr)
         return;
 
@@ -138,7 +151,13 @@ void check_vht(const std::vector<ies::Element> & elements)
     test::fuzz_check(vht->width_160mhz == (width_set == 1 || width_set == 2), "160 mhz comes with set 1 and 2");
     test::fuzz_check(vht->width_80plus80mhz == (width_set == 2), "80+80 mhz comes with set 2");
     test::fuzz_check(vht->rx_ldpc == ((info & 0x10) != 0), "rx ldpc is bit 4");
+    test::fuzz_check(vht->short_gi_80mhz == ((info & 0x20) != 0), "short gi at 80 mhz is bit 5");
+    test::fuzz_check(vht->short_gi_160mhz == ((info & 0x40) != 0), "short gi at 160 mhz is bit 6");
+    test::fuzz_check(vht->tx_stbc == ((info & 0x80) != 0), "tx stbc is bit 7");
+    test::fuzz_check(vht->rx_stbc_streams == ((info >> 8) & 0x7), "rx stbc is bits 8 to 10");
     test::fuzz_check(vht->su_beamformer == ((info & 0x800) != 0), "su beamformer is bit 11");
+    test::fuzz_check(vht->su_beamformee == ((info & 0x1000) != 0), "su beamformee is bit 12");
+    test::fuzz_check(vht->mu_beamformer == ((info & 0x80000) != 0), "mu beamformer is bit 19");
     test::fuzz_check(vht->mu_beamformee == ((info & 0x100000) != 0), "mu beamformee is bit 20");
     test::fuzz_check(vht->ampdu_length_exponent == ((info >> 23) & 0x7), "the a-mpdu exponent is bits 23 to 25");
     test::fuzz_check(vht->rx_mcs_map == read_le(body, 4, 2), "the rx map follows the info");
@@ -151,7 +170,7 @@ void check_country(const std::vector<ies::Element> & elements)
 {
     const ies::Element *element = first_of(elements, ies::Id::country);
     const Result<std::optional<ies::Country>> result = ies::country(elements);
-    const ies::Country *country = decoded(result, element, country_standard_size);
+    const ies::Country *country = decoded(result, element, country_needed_size);
     if (country == nullptr)
         return;
 
@@ -179,7 +198,7 @@ void check_tim(const std::vector<ies::Element> & elements)
 {
     const ies::Element *element = first_of(elements, ies::Id::tim);
     const Result<std::optional<ies::Tim>> result = ies::tim(elements);
-    const ies::Tim *tim = decoded(result, element, tim_standard_size);
+    const ies::Tim *tim = decoded(result, element, tim_needed_size);
     if (tim == nullptr)
         return;
 
@@ -224,15 +243,17 @@ void check_capabilities(const std::vector<uint8_t> & bytes)
 
 void fuzz_single_element(FuzzedDataProvider & provider)
 {
-    constexpr std::array<ies::Id, 5> ids = {ies::Id::ht_capabilities,
-                                            ies::Id::vht_capabilities,
-                                            ies::Id::country,
-                                            ies::Id::tim,
-                                            ies::Id::extension};
-    const ies::Id id = ids[provider.ConsumeIntegralInRange<size_t>(0, ids.size() - 1)];
-    const std::vector<uint8_t> body = provider.ConsumeBytes<uint8_t>(std::numeric_limits<uint8_t>::max());
+    constexpr std::array<Kind, 5> kinds = {{{ies::Id::ht_capabilities, ht_needed_size},
+                                            {ies::Id::vht_capabilities, vht_needed_size},
+                                            {ies::Id::country, country_needed_size},
+                                            {ies::Id::tim, tim_needed_size},
+                                            {ies::Id::extension, 1}}};
+    const Kind kind = kinds[provider.ConsumeIntegralInRange<size_t>(0, kinds.size() - 1)];
+    const size_t around = kind.needed - 1 + provider.ConsumeIntegralInRange<size_t>(0, 2);
+    const size_t size = provider.ConsumeBool() ? around : provider.ConsumeIntegralInRange<size_t>(0, 255);
+    const std::vector<uint8_t> body = test::consume_exact_bytes(provider, size);
 
-    std::vector<uint8_t> bytes = {static_cast<uint8_t>(id), static_cast<uint8_t>(body.size())};
+    std::vector<uint8_t> bytes = {static_cast<uint8_t>(kind.id), static_cast<uint8_t>(body.size())};
     bytes.insert(bytes.end(), body.begin(), body.end());
     check_capabilities(bytes);
 }

@@ -50,5 +50,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
                      "decryption restores the plaintext");
 
     (void)cipher::decrypt(algorithm, key.data(), key.size(), iv.data(), iv.size(), garbage.data(), garbage.size());
+
+    test::fuzz_check(!cipher::encrypt("NULL", key.data(), 0, iv.data(), 0, plaintext.data(), plaintext.size()),
+                     "a cipher without a key does not encrypt");
+    test::fuzz_check(!cipher::encrypt(algorithm, key.data(), 31, iv.data(), 16, plaintext.data(), plaintext.size()),
+                     "a key of the wrong size is refused");
+    test::fuzz_check(!cipher::encrypt(algorithm, key.data(), 32, iv.data(), 15, plaintext.data(), plaintext.size()),
+                     "an iv of the wrong size is refused");
+    test::fuzz_check(
+        cipher::encrypt("AES-128-ECB", key.data(), 16, iv.data(), 16, plaintext.data(), plaintext.size()).has_value(),
+        "a mode without iv ignores the iv");
     return 0;
 }

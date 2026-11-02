@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -52,28 +54,52 @@ std::string consume_string(FuzzedDataProvider & provider)
     return text;
 }
 
+bool type_matches(const Json & json, Json::Type type)
+{
+    const std::array<bool, 8> predicates = {json.is_null(),
+                                            json.is_bool(),
+                                            json.is_number_integer(),
+                                            json.is_number_unsigned(),
+                                            json.is_number_float(),
+                                            json.is_string(),
+                                            json.is_array(),
+                                            json.is_object()};
+    for (size_t i = 0; i < predicates.size(); ++i)
+    {
+        if (predicates[i] != (static_cast<size_t>(type) == i))
+            return false;
+    }
+    return json.type() == type && !json.is_discarded();
+}
+
+Json typed(Json json, Json::Type type)
+{
+    check(type_matches(json, type), "a built value has the type it was built with and no other");
+    return json;
+}
+
 Json consume_json(FuzzedDataProvider & provider, int depth)
 {
     switch (provider.ConsumeIntegralInRange<int>(0, depth > 0 ? 7 : 5))
     {
         case 0:
-            return Json(nullptr);
+            return typed(Json(nullptr), Json::Type::Null);
         case 1:
-            return Json(provider.ConsumeBool());
+            return typed(Json(provider.ConsumeBool()), Json::Type::Bool);
         case 2:
-            return Json(provider.ConsumeIntegral<int64_t>());
+            return typed(Json(provider.ConsumeIntegral<int64_t>()), Json::Type::Int);
         case 3:
-            return Json((uint64_t(1) << 63) | provider.ConsumeIntegral<uint64_t>());
+            return typed(Json((uint64_t(1) << 63) | provider.ConsumeIntegral<uint64_t>()), Json::Type::Uint);
         case 4:
-            return Json(provider.ConsumeFloatingPoint<double>());
+            return typed(Json(provider.ConsumeFloatingPoint<double>()), Json::Type::Float);
         case 5:
-            return Json(consume_string(provider));
+            return typed(Json(consume_string(provider)), Json::Type::String);
         case 6:
         {
             Json::Array array;
             for (size_t i = provider.ConsumeIntegralInRange<size_t>(0, 3); i > 0; --i)
                 array.push_back(consume_json(provider, depth - 1));
-            return Json(std::move(array));
+            return typed(Json(std::move(array)), Json::Type::Array);
         }
         default:
         {
@@ -83,7 +109,7 @@ Json consume_json(FuzzedDataProvider & provider, int depth)
                 std::string key = consume_string(provider);
                 object.emplace_back(std::move(key), consume_json(provider, depth - 1));
             }
-            return Json(std::move(object));
+            return typed(Json(std::move(object)), Json::Type::Object);
         }
     }
 }
@@ -122,6 +148,36 @@ void walk(const Json & json)
         (void)json.get<double>();
 }
 
+size_t expected_line_breaks(const Json & json)
+{
+    if (!json.is_array() && !json.is_object())
+        return 0;
+    size_t breaks = json.size() + 1;
+    for (const Json & child : json)
+        breaks += expected_line_breaks(child);
+    return breaks;
+}
+
+void check_dump_layout(const Json & json, int indent)
+{
+    const std::string dumped = json.dump(indent);
+    const size_t breaks = static_cast<size_t>(std::count(dumped.begin(), dumped.end(), '\n'));
+    check(breaks == (indent < 0 ? 0 : expected_line_breaks(json)), "a dump breaks lines only with a positive indent");
+    if (indent <= 0)
+        return;
+
+    size_t line_start = 0;
+    while (line_start < dumped.size())
+    {
+        const size_t spaces = dumped.find_first_not_of(' ', line_start) - line_start;
+        check(spaces % static_cast<size_t>(indent) == 0, "a line is indented by a multiple of the indent");
+        const size_t line_end = dumped.find('\n', line_start);
+        if (line_end == std::string::npos)
+            break;
+        line_start = line_end + 1;
+    }
+}
+
 void fuzz_parse_raw(FuzzedDataProvider & provider)
 {
     const int indent = provider.ConsumeIntegralInRange<int>(0, 4);
@@ -136,6 +192,7 @@ void fuzz_parse_raw(FuzzedDataProvider & provider)
     }
 
     walk(*parsed);
+    check_dump_layout(*parsed, indent);
     check(Json(*parsed) == *parsed, "a copy equals its source");
 
     const std::expected<Json, std::string> compact = Json::parse(parsed->dump());
@@ -150,6 +207,8 @@ void fuzz_built_round_trip(FuzzedDataProvider & provider)
 {
     const int indent = provider.ConsumeIntegralInRange<int>(-1, 8);
     const Json built = consume_json(provider, max_depth);
+    walk(built);
+    check_dump_layout(built, indent);
 
     const std::expected<Json, std::string> parsed = Json::parse(built.dump(indent));
     check(parsed.has_value(), "a dumped document parses");

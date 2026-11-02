@@ -39,6 +39,19 @@ void check_frame(const ClientFrame & frame, uint64_t client_id, std::string_view
     test::fuzz_check(std::string_view(decoded->payload()) == payload, "the payload survives a round trip");
 }
 
+// a view without storage: encoding must not copy from its null pointer
+void check_empty_frame(uint64_t client_id)
+{
+    const ClientFrame frame(client_id, ArrCharView());
+    test::fuzz_check(frame.payload().byte_size() == 0, "a frame without payload has an empty payload");
+
+    const ArrByte encoded = frame.encode();
+    test::fuzz_check(encoded.byte_size() == ClientFrame::header_size, "a frame without payload is only its header");
+    uint64_t encoded_id = 0;
+    std::memcpy(&encoded_id, encoded.buf(), sizeof(encoded_id));
+    test::fuzz_check(encoded_id == client_id, "a frame without payload keeps its client id");
+}
+
 void fuzz_decode(FuzzedDataProvider & provider)
 {
     const std::vector<uint8_t> bytes = provider.ConsumeRemainingBytes<uint8_t>();
@@ -69,6 +82,7 @@ void fuzz_encode(FuzzedDataProvider & provider)
     const uint64_t client_id = provider.ConsumeIntegral<uint64_t>();
     const std::string payload = provider.ConsumeRemainingBytesAsString();
     check_frame(ClientFrame(client_id, ArrCharView(payload.data(), payload.size())), client_id, payload);
+    check_empty_frame(client_id);
 }
 } // namespace
 

@@ -12,6 +12,8 @@ using namespace sihd::net;
 
 namespace
 {
+constexpr uint8_t pad_byte = 0xa5;
+
 uint16_t rfc1071_checksum(const uint8_t *bytes, size_t length)
 {
     uint32_t sum = 0;
@@ -43,8 +45,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
     // the checksum reads through a uint16_t pointer: the words storage keeps it aligned
     std::vector<uint16_t> words((bytes.size() + 1) / 2);
     std::memcpy(words.data(), bytes.data(), bytes.size());
+    // a non zero pad byte makes a read past an odd buffer change the sum
+    if (bytes.size() % 2 == 1)
+        reinterpret_cast<uint8_t *>(words.data())[bytes.size()] = pad_byte;
     const uint16_t sum = utils::checksum(words.data(), static_cast<int>(bytes.size()));
     test::fuzz_check(sum == rfc1071_checksum(bytes.data(), bytes.size()), "the checksum is the rfc 1071 checksum");
+
+    // exact size heap copy: ASan sees a read past the last byte
+    const std::vector<uint8_t> exact(bytes.begin(), bytes.end());
+    uint16_t *exact_words = reinterpret_cast<uint16_t *>(const_cast<uint8_t *>(exact.data()));
+    test::fuzz_check(utils::checksum(exact_words, static_cast<int>(exact.size())) == sum,
+                     "the checksum does not depend on what follows the buffer");
 
     const size_t even_size = bytes.size() & ~size_t {1};
     std::vector<uint16_t> verified(words.begin(), words.begin() + static_cast<ptrdiff_t>(even_size / 2));

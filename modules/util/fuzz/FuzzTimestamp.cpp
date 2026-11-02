@@ -6,6 +6,8 @@
 #include <locale>
 #include <string>
 
+#include <fmt/format.h>
+
 #include <sihd/util/Timestamp.hpp>
 
 #include "fuzz_helper.hpp"
@@ -96,18 +98,49 @@ void fuzz_calendar(FuzzedDataProvider & provider)
                      "clocktime gives back the parsed time");
     test::fuzz_check(parsed->format(format, std::locale::classic()) == text, "format gives back the canonical text");
 }
+
+void fuzz_range_edge(FuzzedDataProvider & provider)
+{
+    constexpr std::array<uint32_t, 6> edge_fractions = {0, 145224191, 145224192, 854775807, 854775808, 999999999};
+    const bool upper = provider.ConsumeBool();
+    const int year = upper ? 2262 : 1677;
+    const int month = upper ? 4 : 9;
+    const int day = upper ? 11 : 21;
+    const int hour = upper ? 23 : 0;
+    const int minute = upper ? 47 : 12;
+    const int second = (upper ? 14 : 41) + provider.ConsumeIntegralInRange<int>(0, 5);
+    const uint32_t fraction = provider.ConsumeBool() ? provider.PickValueInArray(edge_fractions)
+                                                     : provider.ConsumeIntegralInRange<uint32_t>(0, 999999999);
+
+    const std::string date = fmt::format("{:04}-{:02}-{:02} {:02}:{:02}:{:02}", year, month, day, hour, minute, second)
+                             + (fraction == 0 ? "" : fmt::format(".{:09}", fraction));
+
+    const __int128 seconds = days_from_civil(year, month, day) * seconds_per_day + hour * 3600 + minute * 60 + second;
+    const __int128 nanos = seconds * nanos_per_second + fraction;
+    const bool representable = nanos >= std::numeric_limits<int64_t>::min()
+                               && nanos <= std::numeric_limits<int64_t>::max();
+
+    const Result<Timestamp> parsed = Timestamp::from_str(date, "%Y-%m-%d %H:%M:%S", std::locale::classic());
+    test::fuzz_check(parsed.has_value() == representable, "a date parses exactly when its nanoseconds fit");
+    if (representable)
+        test::fuzz_check(parsed->get() == static_cast<int64_t>(nanos),
+                         "a date at the range edge is the expected instant");
+}
 } // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     FuzzedDataProvider provider(data, size);
-    switch (provider.ConsumeIntegralInRange<int>(0, 1))
+    switch (provider.ConsumeIntegralInRange<int>(0, 2))
     {
         case 0:
             fuzz_raw(provider);
             break;
-        default:
+        case 1:
             fuzz_calendar(provider);
+            break;
+        default:
+            fuzz_range_edge(provider);
             break;
     }
     return 0;

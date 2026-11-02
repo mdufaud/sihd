@@ -73,6 +73,16 @@ void fuzz_add_round_trip(FuzzedDataProvider & provider)
 
     header.remove_header(name);
     test::fuzz_check(header.headers().empty() && header.find(name).empty(), "a removed header is gone");
+
+    HttpHeader refused;
+    test::fuzz_check(!refused
+                          .add_header_from_str(name + test::consume_text(provider, padding_chars, 0, 2) + ":"
+                                               + test::consume_text(provider, padding_chars, 0, 2))
+                          .has_value(),
+                     "a header line without value is refused");
+    test::fuzz_check(!refused.add_header_from_str(name + " " + test::consume_word(provider, 1, 8)).has_value(),
+                     "a header line without colon is refused");
+    test::fuzz_check(refused.headers().empty(), "a refused header line adds nothing");
 }
 
 void fuzz_set_round_trip(FuzzedDataProvider & provider)
@@ -84,6 +94,16 @@ void fuzz_set_round_trip(FuzzedDataProvider & provider)
     header.set_header(name, value);
     test::fuzz_check(header.find(name) == value, "a set header is found back by the same name");
     test::fuzz_check(header.get(name) == value, "get returns the set value");
+
+    const std::string mime = "text/" + test::consume_word(provider, 1, 8);
+    const std::string charset = test::consume_word(provider, 1, 8);
+    header.set_server(mime).set_accept_charset(charset).set_content_type(mime, charset);
+    test::fuzz_check(header.server() == mime && header.accept_charset() == charset,
+                     "the server and accept-charset getters return what was set");
+    const std::optional<std::string_view> content_type = header.content_type();
+    test::fuzz_check(content_type.has_value() && content_type->starts_with(mime)
+                         && header_param(*content_type, "charset") == charset,
+                     "a content type with a charset carries both");
 }
 
 void fuzz_header_param_round_trip(FuzzedDataProvider & provider)
@@ -96,11 +116,18 @@ void fuzz_header_param_round_trip(FuzzedDataProvider & provider)
         const bool quoted = provider.ConsumeBool();
         std::string param_value = quoted ? "q" + test::consume_text(provider, quoted_chars, 0, 12)
                                          : test::consume_word(provider, 1, 8);
+        // a parameter whose name only contains the wanted one must not be taken for it
+        value += "; x" + name + "=decoy";
         value += test::consume_text(provider, padding_chars, 0, 2) + ";"
                  + test::consume_text(provider, padding_chars, 0, 2) + name + "="
                  + (quoted ? "\"" + param_value + "\"" : param_value);
         params.emplace_back(std::move(name), std::move(param_value));
     }
+    if (provider.ConsumeBool())
+        value += test::consume_text(provider, padding_chars, 0, 2) + ";"
+                 + test::consume_text(provider, padding_chars, 0, 2);
+    if (!params.empty() && provider.ConsumeBool())
+        value += "; " + params.front().first + "=later";
 
     for (const auto & [name, expected] : params)
     {

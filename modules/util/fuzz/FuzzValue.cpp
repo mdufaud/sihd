@@ -96,12 +96,85 @@ void fuzz_float_text(FuzzedDataProvider & provider)
         test::fuzz_check(parsed.type == TYPE_DOUBLE && parsed.data.d == std::strtod(number, nullptr),
                          "text with a dot parses to the nearest double");
 }
+
+constexpr int64_t max_exact_integer = int64_t(1) << 53;
+
+struct Operand
+{
+        Value value;
+        long double exact;
+};
+
+Operand consume_operand(FuzzedDataProvider & provider, bool exact_only)
+{
+    switch (provider.ConsumeIntegralInRange<int>(0, 5))
+    {
+        case 0:
+        {
+            const int64_t signed_number = exact_only ? provider.ConsumeIntegralInRange<int64_t>(-max_exact_integer,
+                                                                                                max_exact_integer)
+                                                     : provider.ConsumeIntegral<int64_t>();
+            return {Value(signed_number), static_cast<long double>(signed_number)};
+        }
+        case 1:
+        {
+            const uint64_t unsigned_number = exact_only
+                                                 ? provider.ConsumeIntegralInRange<uint64_t>(0, max_exact_integer)
+                                                 : provider.ConsumeIntegral<uint64_t>();
+            return {Value(unsigned_number), static_cast<long double>(unsigned_number)};
+        }
+        case 2:
+        {
+            const double number = provider.ConsumeFloatingPoint<double>();
+            return {Value(number), number};
+        }
+        case 3:
+        {
+            // around the zero where the signed and unsigned comparison branches meet
+            const int64_t signed_number = provider.ConsumeIntegralInRange<int64_t>(-1, 1);
+            return {Value(signed_number), static_cast<long double>(signed_number)};
+        }
+
+        case 4:
+        {
+            const uint64_t unsigned_number = provider.ConsumeIntegralInRange<uint64_t>(0, 1);
+            return {Value(unsigned_number), static_cast<long double>(unsigned_number)};
+        }
+
+        default:
+        {
+            // a half step off an integer: the comparison must not round it away
+            const int64_t base = provider.ConsumeIntegralInRange<int64_t>(-1000, 1000);
+            const double number = static_cast<double>(base) + (provider.ConsumeBool() ? 0.5 : -0.5);
+            return {Value(number), number};
+        }
+    }
+}
+
+int sign_of(const long double left, const long double right)
+{
+    return (left > right) - (left < right);
+}
+
+void fuzz_compare(FuzzedDataProvider & provider)
+{
+    const bool exact_only = provider.ConsumeBool();
+    const Operand left = consume_operand(provider, exact_only);
+    const Operand right = consume_operand(provider, exact_only);
+    const bool any_float = left.value.is_float() || right.value.is_float();
+    if (any_float && !exact_only)
+        return;
+
+    const int expected = sign_of(left.exact, right.exact);
+    test::fuzz_check(sign_of(left.value.compare(right.value), 0) == expected, "compare orders two values");
+    test::fuzz_check(sign_of(right.value.compare(left.value), 0) == -expected, "compare is antisymmetric");
+}
 } // namespace
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
     FuzzedDataProvider provider(data, size);
-    switch (provider.ConsumeIntegralInRange<int>(0, 2))
+    switch (provider.ConsumeIntegralInRange<int>(0, 3))
     {
         case 0:
             fuzz_raw_text(provider);
@@ -109,8 +182,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
         case 1:
             fuzz_integer_text(provider);
             break;
-        default:
+        case 2:
             fuzz_float_text(provider);
+            break;
+        default:
+            fuzz_compare(provider);
             break;
     }
     return 0;

@@ -70,6 +70,16 @@ std::string replace_occurrences(std::string_view subject,
     return replaced;
 }
 
+void check_compile_error(const Error & error, std::string_view pattern)
+{
+    test::fuzz_check(error.code == ErrorCode::invalid_argument, "a refused pattern is an invalid argument");
+
+    const std::string prefix = "invalid regex '" + std::string(pattern) + "': ";
+    const size_t offset_pos = error.message.rfind(" at offset ");
+    test::fuzz_check(error.message.starts_with(prefix) && offset_pos != std::string::npos && offset_pos > prefix.size(),
+                     "a refused pattern is explained by pcre between the pattern and its offset");
+}
+
 void fuzz_raw(FuzzedDataProvider & provider)
 {
     const size_t pattern_size = provider.ConsumeIntegralInRange<size_t>(0, max_pattern_size);
@@ -83,7 +93,10 @@ void fuzz_raw(FuzzedDataProvider & provider)
 
     const Result<Regex> regex = Regex::compile(pattern, mode);
     if (!regex.has_value())
+    {
+        check_compile_error(regex.error(), pattern.view());
         return;
+    }
 
     const Result<bool> matched = regex->matches(subject);
     const Result<std::vector<std::string>> found = regex->find_all(subject);

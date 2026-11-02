@@ -142,6 +142,113 @@ void fuzz_expand_unknown(FuzzedDataProvider & provider)
     test::fuzz_check(Environment().expand(view) == view, "nothing is expanded without variables");
 }
 
+char consume_separator(FuzzedDataProvider & provider)
+{
+    return separators[provider.ConsumeIntegralInRange<size_t>(0, separators.size() - 1)];
+}
+
+void append_piece(FuzzedDataProvider & provider,
+                  const std::string & name,
+                  const std::string & value,
+                  std::string & text,
+                  std::string & expected)
+{
+    switch (provider.ConsumeIntegralInRange<int>(0, 8))
+    {
+        case 0:
+        {
+            const std::string literal = consume_text(provider, 8);
+            text += literal;
+            expected += literal;
+            break;
+        }
+
+        case 1:
+        {
+            const char separator = consume_separator(provider);
+            text += '$' + name + separator;
+            expected += value + separator;
+            break;
+        }
+
+        case 2:
+            text += "${" + name + '}';
+            expected += value;
+            break;
+        case 3:
+            text += unknown_reference;
+            expected += unknown_reference;
+            break;
+        case 4:
+        {
+            const char separator = consume_separator(provider);
+            text += "$$" + name + separator;
+            expected += '$' + value + separator;
+            break;
+        }
+
+        case 5:
+        {
+            const char separator = consume_separator(provider);
+            text += '$';
+            text += separator;
+            expected += '$';
+            expected += separator;
+            break;
+        }
+
+        case 6:
+            text += "${}";
+            expected += "${}";
+            break;
+        case 7:
+        {
+            const char separator = consume_separator(provider);
+            text += '$' + name + 'x' + separator;
+            expected += '$' + name + 'x' + separator;
+            break;
+        }
+
+        default:
+            text += "$${" + name + '}';
+            expected += '$' + value;
+            break;
+    }
+}
+
+void append_tail(FuzzedDataProvider & provider,
+                 const std::string & name,
+                 const std::string & value,
+                 std::string & text,
+                 std::string & expected)
+{
+    switch (provider.ConsumeIntegralInRange<int>(0, 5))
+    {
+        case 0:
+            break;
+        case 1:
+            text += '$' + name;
+            expected += value;
+            break;
+        case 2:
+            text += '$';
+            expected += '$';
+            break;
+        case 3:
+            text += "${" + name;
+            expected += "${" + name;
+            break;
+        case 4:
+            text += "${";
+            expected += "${";
+            break;
+        default:
+            text += "$$" + name;
+            expected += '$' + value;
+            break;
+    }
+}
+
 void fuzz_expand_known(FuzzedDataProvider & provider)
 {
     const std::string name = consume_name(provider);
@@ -152,33 +259,8 @@ void fuzz_expand_known(FuzzedDataProvider & provider)
     std::string text;
     std::string expected;
     for (size_t i = provider.ConsumeIntegralInRange<size_t>(0, 8); i > 0; --i)
-    {
-        switch (provider.ConsumeIntegralInRange<int>(0, 3))
-        {
-            case 0:
-            {
-                const std::string literal = consume_text(provider, 8);
-                text += literal;
-                expected += literal;
-                break;
-            }
-            case 1:
-            {
-                const char separator = separators[provider.ConsumeIntegralInRange<size_t>(0, separators.size() - 1)];
-                text += '$' + name + separator;
-                expected += value + separator;
-                break;
-            }
-            case 2:
-                text += "${" + name + '}';
-                expected += value;
-                break;
-            default:
-                text += unknown_reference;
-                expected += unknown_reference;
-                break;
-        }
-    }
+        append_piece(provider, name, value, text, expected);
+    append_tail(provider, name, value, text, expected);
     test::fuzz_check(env.expand(text) == expected, "known references are replaced and unknown ones are kept");
 }
 } // namespace
