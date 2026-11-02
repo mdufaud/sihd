@@ -4,6 +4,7 @@
 
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Timestamp.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -155,6 +156,32 @@ TEST_F(TestTime, test_time_clock_components)
     EXPECT_EQ(time::clock_millisecond(-time::milli(500)), 500);
     EXPECT_EQ(time::clock_millisecond(-1), 999);
     EXPECT_EQ(time::clock_microsecond(-1), 999999);
+}
+
+TEST_F(TestTime, test_time_after_2038)
+{
+    const int64_t seconds_2100 = 4102444800;
+    const time::UnixTime nano = time::sec(seconds_2100);
+
+    const struct timespec ts = time::to_ts(nano);
+    EXPECT_EQ(static_cast<int64_t>(ts.tv_sec), seconds_2100);
+    EXPECT_EQ(time::ts(ts), nano);
+
+    if constexpr (build::is_windows)
+    {
+        // winsock keeps a 32-bit long tv_sec
+        EXPECT_THROW((void)time::to_tv(nano / 1000), std::out_of_range);
+    }
+    else
+    {
+        const struct timeval tv = time::to_tv(nano / 1000);
+        EXPECT_EQ(static_cast<int64_t>(tv.tv_sec), seconds_2100);
+    }
+
+    EXPECT_NO_THROW((void)time::to_tm(nano, true));
+    struct tm utc = time::to_tm(nano);
+    EXPECT_EQ(utc.tm_year, 200);
+    EXPECT_EQ(time::tm(utc), nano);
 }
 
 TEST_F(TestTime, test_time_tm)

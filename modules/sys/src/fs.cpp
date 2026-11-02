@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 #include <fmt/ranges.h>
 
@@ -566,7 +567,9 @@ Result<std::string> read(const std::string & path, Slice slice, bool binary)
     const auto size = file.file_size();
     if (!size)
         SIHD_UNEXPECTED_RETURN(size);
-    const auto range = slice.resolve((size_t)*size);
+    if (!std::in_range<size_t>(*size))
+        return std::unexpected(Error(overflow, "'{}' is too large to read", path));
+    const auto range = slice.resolve(static_cast<size_t>(*size));
 
     if (range.empty())
         return std::string {};

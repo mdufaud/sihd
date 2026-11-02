@@ -48,7 +48,7 @@ sihd::util::Duration filetime_to_duration(uint64_t filetime_ticks);
 sihd::util::Timestamp filetime_now();
 #endif
 
-sihd::util::Result<rlim_t> max_fds();
+sihd::util::Result<ResourceLimit> max_fds();
 pid_t pid();
 
 // real backtrace only on glibc (linux) and windows; no-op elsewhere (musl/android/emscripten/apple)

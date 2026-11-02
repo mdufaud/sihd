@@ -191,7 +191,10 @@ class LuaUtilApi
                 R call_lua_method(T... args)
                 {
                     LuaGilGuard guard(this->_guard_state());
-                    return R(this->_exec_fun()(args...));
+                    auto called = this->_exec_fun()(args...);
+                    // luabridge's operator() reports any returned value as a table size error
+                    const auto returned_values = luabridge::makeErrorCode(luabridge::ErrorCode::InvalidTableSizeInCast);
+                    return R(static_cast<bool>(called) || called.error() == returned_values);
                 }
 
             private:

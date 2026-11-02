@@ -97,7 +97,7 @@ pid_t pid()
     return getpid();
 }
 
-Result<rlim_t> max_fds()
+Result<ResourceLimit> max_fds()
 {
     if constexpr (build::is_emscripten)
     {

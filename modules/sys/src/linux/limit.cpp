@@ -6,6 +6,8 @@
 
 # if !defined(__SIHD_EMSCRIPTEN__)
 #  include <sys/resource.h>
+
+#  include <utility>
 # endif
 
 using enum sihd::util::ErrorCode;
@@ -16,10 +18,19 @@ namespace sihd::sys::linux_::limit
 
 # if !defined(__SIHD_EMSCRIPTEN__)
 
-static_assert(infinity == RLIM_INFINITY);
-
 namespace
 {
+
+ResourceLimit from_native(rlim_t value)
+{
+    return value == RLIM_INFINITY ? infinity : value;
+}
+
+// what a 32-bit rlim_t cannot hold is unlimited for it
+rlim_t to_native(ResourceLimit value)
+{
+    return std::in_range<rlim_t>(value) ? static_cast<rlim_t>(value) : RLIM_INFINITY;
+}
 
 // glibc types the resource as an enum in C++, musl and bionic as int
 using NativeResource = decltype(RLIMIT_NOFILE);
@@ -69,12 +80,12 @@ Result<Limit> get(Resource resource)
     struct rlimit native = {};
     if (getrlimit(native_resource(resource), &native) == -1)
         return std::unexpected(Error::from_errno("could not getrlimit"));
-    return Limit {native.rlim_cur, native.rlim_max};
+    return Limit {from_native(native.rlim_cur), from_native(native.rlim_max)};
 }
 
-Result<void> set(Resource resource, rlim_t current, rlim_t maximum)
+Result<void> set(Resource resource, ResourceLimit current, ResourceLimit maximum)
 {
-    const struct rlimit native = {current, maximum};
+    const struct rlimit native = {to_native(current), to_native(maximum)};
     if (setrlimit(native_resource(resource), &native) == -1)
         return std::unexpected(Error::from_errno("could not setrlimit"));
     return {};
@@ -87,7 +98,7 @@ Result<Limit> get(Resource)
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }
 
-Result<void> set(Resource, rlim_t, rlim_t)
+Result<void> set(Resource, ResourceLimit, ResourceLimit)
 {
     return std::unexpected(Error(not_supported, "not supported on this platform"));
 }

@@ -100,7 +100,7 @@ pid_t pid()
     return GetCurrentProcessId();
 }
 
-Result<rlim_t> max_fds()
+Result<ResourceLimit> max_fds()
 {
     return __SIHD_UTIL_OS_DEFAULT_MAX_FDS__;
 }

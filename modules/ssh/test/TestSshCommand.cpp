@@ -6,6 +6,7 @@
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -48,10 +49,10 @@ TEST_F(TestSshCommand, test_sshcommand_simple)
         });
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
-    EXPECT_TRUE(cmd.execute("echo 'hello world'").has_value());
+    EXPECT_TRUE(cmd.execute("echo hello world").has_value());
     EXPECT_TRUE(cmd.wait(Duration(time::seconds(5))).has_value());
     EXPECT_EQ(stderr_str, "");
-    EXPECT_EQ(stdout_str, "hello world\n");
+    EXPECT_EQ(stdout_str, build::is_windows ? "hello world\r\n" : "hello world\n");
     EXPECT_EQ(cmd.exit_status(), 0);
 }
 
@@ -76,11 +77,11 @@ TEST_F(TestSshCommand, test_sshcommand_async)
     SshCommand cmd = session.make_command();
     cmd.output_handler = &test_output_handler;
 
-    EXPECT_TRUE(cmd.execute_async("echo hello; echo world").has_value());
+    EXPECT_TRUE(cmd.execute_async("echo hello&& echo world").has_value());
     EXPECT_TRUE(cmd.wait(Duration(time::seconds(2))).has_value());
 
     EXPECT_EQ(stderr_str, "");
-    EXPECT_EQ(stdout_str, "hello\nworld\n");
+    EXPECT_EQ(stdout_str, build::is_windows ? "hello\r\nworld\r\n" : "hello\nworld\n");
     EXPECT_EQ(cmd.exit_status(), 0);
 }
 } // namespace test

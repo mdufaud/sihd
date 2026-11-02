@@ -10,6 +10,7 @@
 
 namespace test
 {
+using namespace sihd::util;
 using namespace sihd::sys;
 
 class TestFile: public ::testing::Test
@@ -112,6 +113,41 @@ TEST_F(TestFile, test_file_seek_tell)
     auto read = file.read(buf, 3);
     ASSERT_TRUE(read.has_value());
     EXPECT_STREQ(buf, "def");
+}
+
+TEST_F(TestFile, test_large_file)
+{
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "memfs allocates what it truncates";
+
+    TmpDir tmp;
+    ASSERT_TRUE(tmp);
+
+    const std::string path = fs::combine(tmp.path(), "large.bin");
+    const int64_t large_size = 5LL * 1024 * 1024 * 1024;
+    ASSERT_TRUE(fs::write_binary(path, "").has_value());
+    ASSERT_TRUE(fs::truncate(path, large_size).has_value());
+
+    File file(path, "r+b");
+    ASSERT_TRUE(file.is_open());
+
+    const auto size = file.file_size();
+    ASSERT_TRUE(size.has_value());
+    EXPECT_EQ(size.value(), large_size);
+
+    ASSERT_TRUE(file.seek_end(-1).has_value());
+    const auto end_position = file.tell();
+    ASSERT_TRUE(end_position.has_value());
+    EXPECT_EQ(end_position.value(), large_size - 1);
+
+    ASSERT_TRUE(file.seek_begin(large_size - 2).has_value());
+    ASSERT_TRUE(file.write("x", 1).has_value());
+    ASSERT_TRUE(file.seek(-1).has_value());
+
+    std::string written;
+    const auto read = file.read(written, 1);
+    ASSERT_TRUE(read.has_value());
+    EXPECT_EQ(written, "x");
 }
 
 TEST_F(TestFile, test_file_size)

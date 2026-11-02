@@ -1,6 +1,7 @@
 #ifndef __SIHD_SYS_FILE_HPP__
 #define __SIHD_SYS_FILE_HPP__
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <string_view>
@@ -79,11 +80,11 @@ class File
         sihd::util::Result<size_t> read_line(char **line, size_t *size);
         sihd::util::Result<size_t> read_line_delim(char **line, size_t *size, int delim);
 
-        sihd::util::Result<void> seek(long offset);
-        sihd::util::Result<void> seek_begin(long offset);
-        sihd::util::Result<void> seek_end(long offset);
-        sihd::util::Result<long> tell();
-        sihd::util::Result<long> file_size();
+        sihd::util::Result<void> seek(int64_t offset);
+        sihd::util::Result<void> seek_begin(int64_t offset);
+        sihd::util::Result<void> seek_end(int64_t offset);
+        sihd::util::Result<int64_t> tell();
+        sihd::util::Result<int64_t> file_size();
 
         void lock();
         bool trylock();
@@ -101,7 +102,7 @@ class File
     protected:
 
     private:
-        sihd::util::Result<void> _seek(long offset, int origin);
+        sihd::util::Result<void> _seek(int64_t offset, int origin);
         void _delete_buffer();
         bool _allocate_buffer_if_not_exists();
 

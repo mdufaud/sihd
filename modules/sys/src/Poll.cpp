@@ -65,7 +65,7 @@ size_t count_fds_events(const std::vector<struct pollfd> & lst_fds, int mask)
     return std::ranges::count_if(lst_fds, [mask](const struct pollfd & entry) { return (entry.events & mask) != 0; });
 }
 
-int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, rlim_t max_fds)
+int get_or_add_fd(std::vector<struct pollfd> & lst_fds, int fd, ResourceLimit max_fds)
 {
     if (fd < 0)
         return -1;
@@ -144,6 +144,11 @@ void Poll::resize(int nfds)
         _impl->fds[i].fd = -1;
         ++i;
     }
+}
+
+ResourceLimit Poll::max_fds() const
+{
+    return _max_fds;
 }
 
 bool Poll::set_limit(int limit)

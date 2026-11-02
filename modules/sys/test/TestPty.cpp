@@ -32,6 +32,9 @@ class TestPty: public ::testing::Test
 #if defined(__SIHD_LINUX__)
 TEST_F(TestPty, test_pty_spawn_echo_and_exit)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no pty";
+
     auto pty = Pty::create();
     ASSERT_NE(pty.get(), nullptr);
     ASSERT_TRUE(pty->spawn());
@@ -69,6 +72,9 @@ TEST_F(TestPty, test_pty_spawn_echo_and_exit)
 #if defined(__SIHD_LINUX__)
 TEST_F(TestPty, test_pty_resize_send_eof)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no pty";
+
     auto pty = Pty::create();
     ASSERT_NE(pty.get(), nullptr);
     ASSERT_TRUE(pty->spawn());
@@ -87,6 +93,9 @@ TEST_F(TestPty, test_pty_resize_send_eof)
 #if defined(__SIHD_LINUX__)
 TEST_F(TestPty, test_pty_terminates_child)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no pty";
+
     auto pty = Pty::create();
     ASSERT_NE(pty.get(), nullptr);
     pty->set_args({"-c", "sleep 30"});

@@ -53,6 +53,9 @@ TEST_F(TestOs, test_os_backtrace)
 
 TEST_F(TestOs, test_os_resources)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no getrusage peak";
+
     auto max_fds = sihd::sys::os::max_fds();
     ASSERT_TRUE(max_fds.has_value());
     auto peak = sihd::sys::os::peak_rss();

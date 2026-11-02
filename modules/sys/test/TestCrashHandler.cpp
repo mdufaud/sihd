@@ -39,6 +39,9 @@ class TestCrashHandler: public ::testing::Test
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestCrashHandler, test_previous_alt_stack_restored)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no sigaltstack";
+
     stack_t original;
     ASSERT_EQ(sigaltstack(nullptr, &original), 0);
     std::array<char, 65536> buffer;
@@ -61,6 +64,9 @@ TEST_F(TestCrashHandler, test_previous_alt_stack_restored)
 
 TEST_F(TestCrashHandler, test_crash_handler_raii)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no sigaltstack";
+
     {
         CrashHandler handler(CrashHandler::Options {});
         EXPECT_TRUE(handler.is_installed());
@@ -76,6 +82,9 @@ TEST_F(TestCrashHandler, test_crash_handler_raii)
 
 TEST_F(TestCrashHandler, test_crash_handler_already_installed)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no sigaltstack";
+
     CrashHandler handler;
     CrashHandler other;
     EXPECT_TRUE(handler.install({}));
@@ -85,6 +94,9 @@ TEST_F(TestCrashHandler, test_crash_handler_already_installed)
 
 TEST_F(TestCrashHandler, test_crash_handler_dump)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no sigaltstack";
+
     const std::string dump_path = fs::combine(fs::tmp_path(),
                                               "sihd_crash_" + str::generate_random_printable(8) + ".dmp");
 

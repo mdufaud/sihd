@@ -254,11 +254,13 @@ bool HttpServer::on_start()
         return false;
     }
 
-    for (size_t tsi = 1; tsi < _impl->service_thread_count; ++tsi)
+    // a stock libwebsockets defaults to LWS_MAX_SMP=1 and clamps: a tsi over its count is out of bounds
+    const int effective_thread_count = lws_get_count_threads(_impl->lws_context_ptr);
+    for (int tsi = 1; tsi < effective_thread_count; ++tsi)
     {
         _impl->service_threads.emplace_back([this, tsi] {
             while (!_impl->stop)
-                lws_service_tsi(_impl->lws_context_ptr, 0, (int)tsi);
+                lws_service_tsi(_impl->lws_context_ptr, 0, tsi);
         });
     }
 

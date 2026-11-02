@@ -11,6 +11,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ansi.hpp>
+#include <sihd/util/build.hpp>
 
 #include "ssh_test_helpers.hpp"
 
@@ -105,6 +106,9 @@ TEST_F(TestSshSession, test_sshsession_connect_timeout)
 // ProxyCommand breaks the connection only when config processing is enabled
 TEST_F(TestSshSession, test_sshsession_process_config_ignores_proxy)
 {
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "libssh has no ProxyCommand on windows";
+
     auto test_server = make_test_server("test-sshsession-process-config");
     ASSERT_NE(test_server, nullptr);
 

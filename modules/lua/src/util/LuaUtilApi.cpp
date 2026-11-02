@@ -814,9 +814,9 @@ void LuaUtilApi::load_base(Vm & vm)
          * Nodes
          */
         .beginClass<Node::ChildEntry>("ChildEntry")
-        .addProperty("name", &Node::ChildEntry::name)
-        .addProperty("obj", &Node::ChildEntry::obj)
-        .addProperty("ownership", &Node::ChildEntry::ownership)
+        .addPropertyReadWrite("name", &Node::ChildEntry::name)
+        .addPropertyReadWrite("obj", &Node::ChildEntry::obj)
+        .addPropertyReadWrite("ownership", &Node::ChildEntry::ownership)
         .endClass()
         .beginClass<Named>("Named")
         .addFactory(

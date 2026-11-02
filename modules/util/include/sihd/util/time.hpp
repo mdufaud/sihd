@@ -10,6 +10,10 @@
 
 #include <sihd/util/traits.hpp>
 
+#if defined(__GLIBC__) && defined(__arm__)
+static_assert(sizeof(time_t) == 8, "build 32-bit arm code with -D_FILE_OFFSET_BITS=64 -D_TIME_BITS=64");
+#endif
+
 namespace sihd::util
 {
 

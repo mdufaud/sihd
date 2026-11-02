@@ -101,6 +101,9 @@ class TestSnifferInject: public ::testing::Test
 
 TEST_F(TestSnifferInject, test_inject_not_activated)
 {
+    if (os::is_run_by_qemu())
+        GTEST_SKIP() << "qemu-user has no SIOCETHTOOL: pcap_create fails on ENOTTY";
+
     Sniffer sniffer("sniffer");
     const std::string frame = "frame";
     ASSERT_TRUE(sniffer.open("lo").has_value());

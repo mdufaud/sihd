@@ -43,6 +43,8 @@ else:
         sihd_imgui_srcs.extend([
             "src/ImguiBackendGlfw.cpp",
         ])
+    else:
+        sihd_imgui_tests.remove("test/TestOpenGL3_GLFW.cpp")
 
     # SDL
     sihd_imgui_srcs.extend([

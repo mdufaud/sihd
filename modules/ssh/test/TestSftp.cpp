@@ -7,6 +7,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ansi.hpp>
+#include <sihd/util/build.hpp>
 
 #include "ssh_test_helpers.hpp"
 
@@ -37,7 +38,8 @@ TEST_F(TestSftp, test_sftp)
     SIHD_UNEXPECTED_LOG(sihd::sys::fs::remove_directories(test_dir));
     SIHD_UNEXPECTED_LOG(sihd::sys::fs::make_directories(test_dir));
 
-    auto test_server = make_test_server_with_sftp("test-sftp", "/");
+    // windows has no single root, the absolute test paths start with a drive: no jail
+    auto test_server = make_test_server_with_sftp("test-sftp", build::is_windows ? "" : "/");
     ASSERT_NE(test_server, nullptr);
 
     SshSession session;

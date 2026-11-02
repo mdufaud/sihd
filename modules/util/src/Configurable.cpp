@@ -95,6 +95,15 @@ Result<void> Configurable::set_conf_int(const std::string & name, int64_t param)
         return this->_call_conf<int8_t>(name, static_cast<int8_t>(param));
     if (_callback_manager.check_call_type<bool, uint8_t>(name))
         return this->_call_conf<uint8_t>(name, static_cast<uint8_t>(param));
+    // size_t is unsigned long on wasm32, where uint32_t is unsigned int; int64_t is long long on windows and 32-bit
+    if (_callback_manager.check_call_type<bool, long>(name))
+        return this->_call_conf<long>(name, static_cast<long>(param));
+    if (_callback_manager.check_call_type<bool, unsigned long>(name))
+        return this->_call_conf<unsigned long>(name, static_cast<unsigned long>(param));
+    if (_callback_manager.check_call_type<bool, long long>(name))
+        return this->_call_conf<long long>(name, static_cast<long long>(param));
+    if (_callback_manager.check_call_type<bool, unsigned long long>(name))
+        return this->_call_conf<unsigned long long>(name, static_cast<unsigned long long>(param));
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 

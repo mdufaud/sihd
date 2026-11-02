@@ -16,7 +16,7 @@ namespace sihd::sys::linux_::limit
 
 constexpr bool supported = sihd::util::build::is_linux && !sihd::util::build::is_emscripten;
 
-constexpr rlim_t infinity = std::numeric_limits<rlim_t>::max();
+constexpr ResourceLimit infinity = std::numeric_limits<ResourceLimit>::max();
 
 enum class Resource
 {
@@ -39,12 +39,12 @@ enum class Resource
 
 struct Limit
 {
-        rlim_t current = 0;
-        rlim_t maximum = 0;
+        ResourceLimit current = 0;
+        ResourceLimit maximum = 0;
 };
 
 sihd::util::Result<Limit> get(Resource resource);
-sihd::util::Result<void> set(Resource resource, rlim_t current, rlim_t maximum);
+sihd::util::Result<void> set(Resource resource, ResourceLimit current, ResourceLimit maximum);
 
 } // namespace sihd::sys::linux_::limit
 

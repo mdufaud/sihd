@@ -15,6 +15,10 @@ static_defines = ['SIHD_STATIC']
 arm32_libs = ['atomic']
 riscv64_libs = ['atomic']
 riscv32_libs = ['atomic']
+# Python.h forces the first on 32-bit: rlim_t and off_t must match across libs and bindings,
+# and readdir hits EOVERFLOW on 64-bit inodes without it. The second moves time_t past 2038.
+# vcpkg/config.py passes them to the ports: pcap_pkthdr and libusb take a struct timeval
+arm32_defines = ['_FILE_OFFSET_BITS=64', '_TIME_BITS=64']
 arm64_flags = ['-mbranch-protection=standard']
 
 ## mode specifics

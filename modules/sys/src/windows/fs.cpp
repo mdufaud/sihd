@@ -40,11 +40,6 @@ struct CopyProgressCtx
         const std::function<bool(size_t, size_t)> *progress;
 };
 
-bool do_stat(const std::string & path, struct stat *s)
-{
-    return ::_stat(path.c_str(), reinterpret_cast<struct _stat *>(s)) == 0;
-}
-
 // FILETIME counts 100ns intervals since 1601-01-01; 0 means the field is not tracked
 Timestamp filetime_to_ts(int64_t filetime)
 {
@@ -202,10 +197,10 @@ Timestamp last_write(ZStringView path)
     return times(path).value_or(FileTimes()).write;
 }
 
-Result<size_t> file_size(ZStringView path)
+Result<uint64_t> file_size(ZStringView path)
 {
-    struct stat s;
-    if (!do_stat(path.c_str(), &s))
+    struct _stat64 s;
+    if (::_stat64(path.c_str(), &s) != 0)
         return std::unexpected(Error::from_errno("could not stat '{}'", path));
     return s.st_size;
 }

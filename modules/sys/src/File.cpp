@@ -31,8 +31,13 @@
 # include <share.h>
 # include <sys/stat.h>
 # include <windows.h>
+# define file_seek _fseeki64
+# define file_tell _ftelli64
 #else
 # include <unistd.h>
+# define file_seek fseeko
+# define file_tell ftello
+static_assert(sizeof(off_t) == sizeof(int64_t));
 #endif
 
 using enum sihd::util::ErrorCode;
@@ -382,7 +387,7 @@ Result<void> File::close()
     return {};
 }
 
-Result<long> File::file_size()
+Result<int64_t> File::file_size()
 {
     auto current_offset = this->tell();
     SIHD_UNEXPECTED_RETURN(current_offset);
@@ -491,32 +496,32 @@ Result<void> File::open_mem(const std::string & mode, std::string_view put_in_bu
     return this->set_stream(stream, true);
 }
 
-Result<long> File::tell()
+Result<int64_t> File::tell()
 {
-    long ret = ftell(_file_ptr);
+    const int64_t ret = file_tell(_file_ptr);
     if (ret < 0)
         return std::unexpected(Error::from_errno("could not tell position of '{}'", _path));
     return ret;
 }
 
-Result<void> File::seek(long offset)
+Result<void> File::seek(int64_t offset)
 {
     return this->_seek(offset, SEEK_CUR);
 }
 
-Result<void> File::seek_begin(long offset)
+Result<void> File::seek_begin(int64_t offset)
 {
     return this->_seek(offset, SEEK_SET);
 }
 
-Result<void> File::seek_end(long offset)
+Result<void> File::seek_end(int64_t offset)
 {
     return this->_seek(offset, SEEK_END);
 }
 
-Result<void> File::_seek(long offset, int origin)
+Result<void> File::_seek(int64_t offset, int origin)
 {
-    int ret = fseek(_file_ptr, offset, origin);
+    int ret = file_seek(_file_ptr, offset, origin);
     if (ret < 0)
         return std::unexpected(Error::from_errno("could not seek in '{}'", _path));
     return {};

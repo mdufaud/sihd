@@ -35,19 +35,20 @@ file:close()
 
 local fs = sihd.sys.fs
 
-assert(fs.combine({"a", "b", "c"}) == "a/b/c")
-assert(fs.combine("toto", "tata") == "toto/tata")
+local sep = package.config:sub(1, 1)
+assert(fs.combine({"a", "b", "c"}) == "a" .. sep .. "b" .. sep .. "c")
+assert(fs.combine("toto", "tata") == "toto" .. sep .. "tata")
 
 -- path queries on the running test file
-local existing = "test/sys/lua/test_files.lua"
+local existing = table.concat({"test", "sys", "lua", "test_files.lua"}, sep)
 assert(fs.exists(existing) == true)
 assert(fs.is_file(existing) == true)
 assert(fs.is_dir(existing) == false)
 assert(fs.filename(existing) == "test_files.lua")
 assert(fs.extension(existing) == "lua")
-assert(fs.parent(existing) == "test/sys/lua")
+assert(fs.parent(existing) == table.concat({"test", "sys", "lua"}, sep))
 assert(fs.is_absolute(existing) == false)
-assert(fs.is_absolute("/tmp") == true)
+assert(fs.is_absolute(sep == "\\" and "C:\\tmp" or "/tmp") == true)
 assert(type(fs.normalize(existing)) == "string")
 assert(type(fs.cwd()) == "string")
 

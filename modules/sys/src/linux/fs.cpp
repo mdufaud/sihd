@@ -376,7 +376,7 @@ Timestamp last_write(ZStringView path)
     return times(path).value_or(FileTimes()).write;
 }
 
-Result<size_t> file_size(ZStringView path)
+Result<uint64_t> file_size(ZStringView path)
 {
     struct stat s;
     if (!do_stat(path.c_str(), &s))

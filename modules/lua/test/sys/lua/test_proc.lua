@@ -1,15 +1,16 @@
 local proc = sihd.sys.proc
+local is_windows = package.config:sub(1, 1) == "\\"
 
 -- success exit code crosses the bridge
-local fut = proc.execute({ "true" })
+local fut = proc.execute(is_windows and { "cmd", "/c", "exit", "0" } or { "true" })
 assert(fut:valid() == true)
 assert(fut:get() == 0)
 assert(fut:valid() == false)
 
 -- failure exit code
-assert(proc.execute({ "false" }):get() ~= 0)
+assert(proc.execute(is_windows and { "cmd", "/c", "exit", "1" } or { "false" }):get() ~= 0)
 
-local fut_echo = proc.execute({ "echo", "hi" })
+local fut_echo = proc.execute(is_windows and { "cmd", "/c", "echo", "hi" } or { "echo", "hi" })
 local ready = fut_echo:wait_for(sihd.util.time.sec(2))
 assert(type(ready) == "boolean")
 assert(ready == true)

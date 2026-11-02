@@ -2,7 +2,7 @@ local util = sihd.util
 
 -- clock
 before = util.clock:now()
-util.time.usleep(1)
+util.time.msleep(2)
 after = util.clock:now()
 assert(before < after)
 

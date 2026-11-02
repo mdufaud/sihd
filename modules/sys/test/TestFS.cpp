@@ -338,6 +338,9 @@ TEST_F(TestFS, test_fs_permission)
 
 TEST_F(TestFS, test_fs_mount_type)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten memfs has no mount table";
+
     // the build tree lives on a real local disk on every CI we run
     EXPECT_EQ(fs::mount_type(fs::cwd()), fs::MountType::local);
 
@@ -479,7 +482,10 @@ TEST_F(TestFS, test_fs_copy_file)
     const auto dst_times = fs::times(dst);
     ASSERT_TRUE(src_times.has_value());
     ASSERT_TRUE(dst_times.has_value());
-    EXPECT_EQ(dst_times->write.get(), src_times->write.get());
+    if constexpr (!build::is_emscripten)
+    {
+        EXPECT_EQ(dst_times->write.get(), src_times->write.get());
+    }
 
     EXPECT_TRUE(fs::copy_file(src, dst).has_value());
     EXPECT_TRUE(fs::are_equals(src, dst));
@@ -669,6 +675,24 @@ TEST_F(TestFS, test_fs_make_tmp_directory)
     EXPECT_TRUE(fs::remove_directory(*tmp1).has_value());
     EXPECT_TRUE(fs::remove_directory(*tmp2).has_value());
     EXPECT_FALSE(fs::exists(*tmp1));
+}
+
+TEST_F(TestFS, test_fs_large_file)
+{
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "memfs allocates what it truncates";
+
+    TmpDir tmp;
+    ASSERT_TRUE(tmp);
+
+    const std::string path = fs::combine(tmp.path(), "large.bin");
+    const int64_t large_size = 5LL * 1024 * 1024 * 1024;
+    ASSERT_TRUE(fs::write_binary(path, "").has_value());
+    ASSERT_TRUE(fs::truncate(path, large_size).has_value());
+
+    const auto size = fs::file_size(path);
+    ASSERT_TRUE(size.has_value());
+    EXPECT_EQ(size.value(), static_cast<uint64_t>(large_size));
 }
 
 } // namespace test

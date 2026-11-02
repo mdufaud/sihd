@@ -8,6 +8,7 @@
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ansi.hpp>
+#include <sihd/util/build.hpp>
 
 #include "../lua_fixture.hpp"
 
@@ -45,6 +46,9 @@ TEST_F(TestLuaSysApi, test_luasys_tools)
 
 TEST_F(TestLuaSysApi, test_luasys_process)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no process spawn";
+
     LuaUtilApi::load_base(_vm);
     LuaSysApi::load_base(_vm);
     LuaSysApi::load_process(_vm);
@@ -56,6 +60,7 @@ TEST_F(TestLuaSysApi, test_luasys_process_errors)
     LuaUtilApi::load_base(_vm);
     LuaSysApi::load_base(_vm);
     LuaSysApi::load_process(_vm);
+    LuaSysApi::load_tools(_vm);
     this->do_script("test/sys/lua/test_process_errors.lua");
 }
 
@@ -69,6 +74,9 @@ TEST_F(TestLuaSysApi, test_luasys_files)
 
 TEST_F(TestLuaSysApi, test_luasys_proc)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no process spawn";
+
     LuaUtilApi::load_base(_vm);
     LuaUtilApi::load_tools(_vm);
     LuaSysApi::load_base(_vm);

@@ -358,6 +358,9 @@ TEST_F(TestSignal, test_signal_waiter_timeout)
 
 TEST_F(TestSignal, test_signal_watcher_rm_signal)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten delivers a signal on its sender thread";
+
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "Buggy with valgrind";
 
@@ -399,6 +402,9 @@ TEST_F(TestSignal, test_signal_watcher_rm_signal)
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestSignal, test_signal_exit_config_exits_with_sig_number)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no fork";
+
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "fork under valgrind";
 

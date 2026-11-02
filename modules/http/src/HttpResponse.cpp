@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/json/Json.hpp>
@@ -59,6 +61,11 @@ bool HttpResponse::set_file_content(const std::string & path)
     const auto size = file.file_size();
     if (SIHD_UNEXPECTED_LOG(size))
         return false;
+    if (!std::in_range<size_t>(*size))
+    {
+        SIHD_LOG(error, "HttpResponse: '{}' is too large to serve", path);
+        return false;
+    }
 
     this->set_content_type_from_extension(sihd::sys::fs::extension(path));
     _http_header.set_content_length(*size);

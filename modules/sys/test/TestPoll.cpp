@@ -51,6 +51,9 @@ class TestPoll: public ::testing::Test
 
 TEST_F(TestPoll, test_poll)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten reports a pipe read end writable";
+
     Poll empty(2);
     EXPECT_FALSE(empty.rm_read_fd(42));
     EXPECT_FALSE(empty.rm_write_fd(42));
@@ -139,6 +142,9 @@ TEST_F(TestPoll, test_poll)
 
 TEST_F(TestPoll, test_poll_rm_fd_releases_slot)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten reports a pipe read end writable";
+
     Poll poll(1);
 
     std::array<int, 2> closed_pair;
@@ -159,6 +165,9 @@ TEST_F(TestPoll, test_poll_rm_fd_releases_slot)
 #if defined(SIGUSR2)
 TEST_F(TestPoll, test_poll_resumes_after_signal)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no EINTR on poll";
+
     std::array<int, 2> fd;
     ASSERT_TRUE(make_fd_pair(fd));
     _to_close.push_back(fd[0]);

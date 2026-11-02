@@ -99,7 +99,8 @@ void register_error_class(lua_State *state)
 
 Error pop_lua_error(ErrorCode code, lua_State *state)
 {
-    if (error_class_registered(state))
+    // Stack<Error>::get raises on any other value, and nothing protects this call
+    if (error_class_registered(state) && luabridge::Stack<Error>::isInstance(state, -1))
     {
         if (auto raised = luabridge::Stack<Error>::get(state, -1))
         {

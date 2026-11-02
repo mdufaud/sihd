@@ -37,10 +37,8 @@ build_target "riscv64" machine=riscv64
 # timeout: wine never completes a pending recv async on shutdown, the old
 # shutdown-unblocks-blocking-recv stop path parked both threads forever
 build_target "windows" platform=windows
-
-export m="json,util,sys,core,csv,zip,net,wifi,curl,http"
-
 build_target "arm32" machine=arm32
+m="json,util,sys,core,csv,zip,crypto,tui,imgui" build_target "emscripten" platform=web
 
 # libFuzzer only exists for clang on native linux: a short run of every fuzzer. The
 # asan+ubsan+fuzz flags rebuild the clang build dir, so it goes last.

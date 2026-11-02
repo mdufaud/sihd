@@ -5,10 +5,13 @@
 #include <fmt/format.h>
 #include <gtest/gtest.h>
 
+#include <sihd/lua/checked.hpp>
+
 #include "../lua_fixture.hpp"
 
 namespace test
 {
+using namespace sihd::util;
 
 namespace
 {
@@ -41,6 +44,18 @@ TEST_F(TestLuaVm, test_luavm_print_stack)
     const std::string expected = fmt::format("lua stack {} (2):\nstack[1]:\t42 (number)\nstack[2]:\thello (string)\n",
                                              static_cast<void *>(state));
     EXPECT_EQ(printed, expected);
+}
+
+TEST_F(TestLuaVm, test_luavm_plain_error_with_error_class_registered)
+{
+    lua_State *state = _vm.lua_state();
+    sihd::lua::push_error(state, Error(ErrorCode::unknown, "registers the class"));
+    lua_pop(state, 1);
+
+    auto ran = _vm.do_string("error('plain', 0)");
+
+    ASSERT_FALSE(ran.has_value());
+    EXPECT_EQ(ran.error().message, "plain");
 }
 
 } // namespace test

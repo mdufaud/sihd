@@ -366,11 +366,15 @@ void LuaSysApi::load_process(Vm & vm)
                          sihd::lua::LuaGilRelease release(state);
                          return self->wait(options);
                      }>)
-#if !defined(__SIHD_WINDOWS__)
         .addFunction("wait_exit", checked<+[](LuaProcess *self, int options, lua_State *state) {
                          sihd::lua::LuaGilRelease release(state);
                          return self->wait_exit(options);
                      }>)
+        .addFunction("wait_any", checked<+[](LuaProcess *self, int options, lua_State *state) {
+                         sihd::lua::LuaGilRelease release(state);
+                         return self->wait_any(options);
+                     }>)
+#if !defined(__SIHD_WINDOWS__)
         .addFunction("wait_stop", checked<+[](LuaProcess *self, int options, lua_State *state) {
                          sihd::lua::LuaGilRelease release(state);
                          return self->wait_stop(options);
@@ -379,18 +383,14 @@ void LuaSysApi::load_process(Vm & vm)
                          sihd::lua::LuaGilRelease release(state);
                          return self->wait_continue(options);
                      }>)
-        .addFunction("wait_any", checked<+[](LuaProcess *self, int options, lua_State *state) {
-                         sihd::lua::LuaGilRelease release(state);
-                         return self->wait_any(options);
-                     }>)
 #endif
         .addFunction("read_pipes", &LuaProcess::read_pipes)
         .addFunction("terminate", &LuaProcess::terminate)
         .addFunction("kill", checked<+[](LuaProcess *self, int sig) {
                          return self->kill(sig);
                      }>)
-#if !defined(__SIHD_WINDOWS__)
         .addFunction("has_exited", &LuaProcess::has_exited)
+#if !defined(__SIHD_WINDOWS__)
         .addFunction("has_core_dumped", &LuaProcess::has_core_dumped)
         .addFunction("has_stopped_by_signal", &LuaProcess::has_stopped_by_signal)
         .addFunction("has_exited_by_signal", &LuaProcess::has_exited_by_signal)
@@ -450,8 +450,8 @@ void LuaSysApi::load_files(Vm & vm)
         .addFunction("is_dir", &fs::is_dir)
         .addFunction(
             "file_size",
-            +[](const char *path) -> std::optional<size_t> {
-                std::optional<size_t> ret;
+            +[](const char *path) -> std::optional<uint64_t> {
+                std::optional<uint64_t> ret;
                 if (auto size = fs::file_size(path))
                     ret = *size;
                 return ret;
@@ -611,9 +611,13 @@ void LuaSysApi::load_tools(Vm & vm)
             +[] { return sihd::sys::os::max_fds().value_or(0); })
         .addFunction("is_run_by_debugger", &sihd::sys::os::is_run_by_debugger)
         .addFunction("is_run_by_valgrind", &sihd::sys::os::is_run_by_valgrind)
+        .addFunction("is_run_by_qemu", &sihd::sys::os::is_run_by_qemu)
         .addProperty(
             "is_run_with_asan",
             +[] { return build::is_run_with_asan; })
+        .addProperty(
+            "is_emscripten",
+            +[] { return build::is_emscripten; })
         .addFunction(
             "peak_rss",
             +[] { return sihd::sys::os::peak_rss().value_or(-1); })

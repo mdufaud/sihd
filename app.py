@@ -180,7 +180,7 @@ modules = {
         "windows-shared-libs": ['websockets'],
     },
     "pcap": {
-        "exclude-platforms": ["android"],
+        "exclude-platforms": ["android", "web"],
         "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
@@ -205,6 +205,7 @@ modules = {
         "linux-static-libs": ['z', 'bz2', 'crypto'],
         "export-linux-libs": ['zip'],
         "export-linux-static-libs": ['z', 'bz2', 'crypto'],
+        "export-web-libs": ['zip', 'z', 'bz2', 'crypto'],
         "export-windows-static-libs": ['zip', 'zlib', 'bz2', 'bcrypt'],
     },
     "tui": {
@@ -214,7 +215,7 @@ modules = {
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
     },
     "ssh": {
-        "exclude-platforms": ["android"],
+        "exclude-platforms": ["android", "web"],
         "depends": ['sys'],
         "extlibs": ["libssh"],
         "libs": ['ssh'],
@@ -255,9 +256,10 @@ modules = {
     },
     "imgui": {
         "depends": ['sys'],
-        # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android.
+        # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android and web (GLES, SDL3).
         "allow-link-shared": True,
         "android-allow-link-shared": False,
+        "web-allow-link-shared": False,
         "extlibs": ['imgui', 'opengl'],
         # libxcrypt: autotools, no windows/web port
         "linux-extlibs": ['ncurses', 'libxcrypt'],
@@ -379,8 +381,9 @@ def __get_python_libname():
 def on_build_success(build_modules, builder):
     if "py" not in build_modules:
         return
-    # importable by the interpreter only as sihd.cpython-VER-ARCH.so
-    python_libname = __get_python_libname()
+    # importable by the interpreter only as sihd.cpython-VER-ARCH.so, or plain sihd.so:
+    # python3-config describes the host, a cross-built interpreter wants its own ARCH
+    python_libname = ".so" if builder.is_cross_building() else __get_python_libname()
     if not python_libname:
         return
     import os

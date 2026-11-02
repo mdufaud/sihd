@@ -23,6 +23,15 @@ assert(arr_int:at(1) == 34)
 arr_int:set(0, 15)
 assert(arr_int:at(0) == 15)
 
+-- int and int64 stay two distinct classes where int64_t is long long: arm32, wasm32, mingw
+local arr_long = sihd.util.ArrLong()
+arr_long:push_back(1 << 40)
+arr_long:push_back(2)
+assert(arr_long:at(0) == 1 << 40)
+assert(arr_long:at(1) == 2)
+assert(arr_long:data_size() == 8)
+assert(arr_int:data_size() == 4)
+
 arr_int:copy_from({10, 30})
 assert(arr_int:at(0) == 10)
 assert(arr_int:at(1) == 30)

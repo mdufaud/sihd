@@ -39,7 +39,7 @@ extlibs = {
     # other
     "libjpeg": "9d",
     "lua": "5.3.5-5",
-    "luabridge3": "3.0-rc3",
+    "luabridge3": "3.0-rc12",
     # sys (linux)
     "dbus": "1.16.2#2",
 }
@@ -79,7 +79,6 @@ extlibs_skip_web = [
     "libpcap",
     "libusb",
     "libxcrypt",
-    "ftxui",
     "opengl",
     "glfw3",
     "dbus",

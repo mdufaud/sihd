@@ -64,6 +64,9 @@ TEST_F(TestDaemon, test_daemon_resolves_user_group)
 #if defined(__SIHD_LINUX__)
 TEST_F(TestDaemon, test_daemon_pid_file_lifecycle)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no process spawn";
+
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "fork under valgrind";
     TmpDir tmp_dir;

@@ -112,21 +112,18 @@ default_matrix() {
     build_target "gcc-musl" libc=musl mode=size
     build_target "aarch64" machine=aarch64
     build_target "riscv64" machine=riscv64
+    build_target "arm32" machine=arm
 
     # release just to check it builds
     build_target "gcc-release" mode=release
 
     # windows: py disabled (vcpkg python3 unsupported on mingw)
     # emscripten: has no python
-    # arm32: not worth it
     export py=0
     build_target "windows" platform=windows
+    build_target "emscripten" platform=web
 
     export lua=0
-    export m="util,sys,core,csv,zip,net,wifi,curl,http"
-    build_target "arm32" machine=arm
-    export m="util,sys,core,csv,zip,net,wifi"
-    build_target "emscripten" platform=web
 
     # Android: only when ANDROID_NDK_PATH is set
     if [[ -n "${ANDROID_NDK_PATH:-}" ]]; then

@@ -69,7 +69,7 @@ bool is_socket(std::string_view path);
 bool is_block(std::string_view path);
 bool is_character(std::string_view path);
 bool is_fifo(std::string_view path);
-sihd::util::Result<size_t> file_size(sihd::util::ZStringView path);
+sihd::util::Result<uint64_t> file_size(sihd::util::ZStringView path);
 
 // creation is epoch 0 when the backing filesystem/kernel doesn't track birth times
 sihd::util::Result<FileTimes> times(sihd::util::ZStringView path);

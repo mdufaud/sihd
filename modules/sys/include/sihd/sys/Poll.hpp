@@ -60,7 +60,7 @@ class Poll: public sihd::util::Observable<Poll>,
         size_t write_fds_size() const;
         size_t fds_size() const;
 
-        rlim_t max_fds() const { return _max_fds; };
+        ResourceLimit max_fds() const;
         // in ms
         sihd::util::time::UnixTime timeout() const { return _timeout_milliseconds; }
 
@@ -79,7 +79,7 @@ class Poll: public sihd::util::Observable<Poll>,
         int _timeout_milliseconds;
 
         mutable std::mutex _fds_mutex;
-        rlim_t _max_fds;
+        ResourceLimit _max_fds;
         sihd::util::SteadyClock _clock;
 
         std::vector<PollEvent> _lst_events;

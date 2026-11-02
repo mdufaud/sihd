@@ -33,8 +33,6 @@ class SshSubsystemSftp: public ISshSubsystemHandler
                 uint64_t atime;
                 uint64_t mtime;
                 uint8_t type; // SSH_FILEXFER_TYPE_*
-
-                static SftpAttributes from_stat(const std::string & name, const struct stat & st);
         };
 
         struct StatResult

@@ -46,8 +46,8 @@ void PySysApi::add_sys_api(PyApi::PyModule & pymodule)
         .def("is_file", &fs::is_file)
         .def("is_dir", &fs::is_dir)
         .def("file_size",
-             [](const std::string & path) -> std::optional<size_t> {
-                 std::optional<size_t> ret;
+             [](const std::string & path) -> std::optional<uint64_t> {
+                 std::optional<uint64_t> ret;
                  if (auto size = fs::file_size(path))
                      ret = *size;
                  return ret;

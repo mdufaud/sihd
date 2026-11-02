@@ -284,6 +284,9 @@ TEST_F(TestApp, test_signal_stop)
 #if defined(SIGHUP)
 TEST_F(TestApp, test_signal_reload)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten delivers a signal on its sender thread";
+
     std::string path = tmp_path("reload.json");
     ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["HUP"]}}, "serve": {"port": 9}})").has_value());
 
@@ -309,6 +312,9 @@ TEST_F(TestApp, test_signal_reload)
 # if defined(SIGUSR2)
 TEST_F(TestApp, test_signal_reload_custom)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten delivers a signal on its sender thread";
+
     std::string path = tmp_path("customreload.json");
     ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"reload": ["USR2"]}}})").has_value());
 
@@ -407,6 +413,9 @@ TEST_F(TestApp, test_signal_float_conf_rejected)
 #if defined(SIGUSR1)
 TEST_F(TestApp, test_signal_callback)
 {
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten delivers a signal on its sender thread";
+
     std::string path = tmp_path("callback.json");
     ASSERT_TRUE(fs::write(path, R"({"sihd": {"signals": {"callback": ["USR2"]}}})").has_value());
 
@@ -438,7 +447,7 @@ TEST_F(TestApp, test_daemon_keys)
     app.root().add_command("run", "run").on_run([] {});
 
     ASSERT_EQ(run_app(app, {"--conf", path, "run"}), 0);
-    if constexpr (build::is_windows == false)
+    if constexpr (build::is_windows == false && build::is_emscripten == false)
     {
         EXPECT_TRUE(app.daemon().supported);
     }

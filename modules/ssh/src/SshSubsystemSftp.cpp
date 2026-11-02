@@ -69,6 +69,48 @@ constexpr std::array<std::pair<mode_t, char>, 9> permission_bits {{
     {S_IXOTH, 'x'},
 }};
 
+SshSubsystemSftp::SftpAttributes attributes_from_stat(const std::string & name, const struct stat & st)
+{
+    SshSubsystemSftp::SftpAttributes attrs;
+    attrs.name = name;
+    // Keep full mode including file type bits (S_IFDIR, S_IFREG, etc.)
+    // SFTP v3 derives file type from the mode field, not a separate type field
+    attrs.permissions = st.st_mode;
+    attrs.uid = st.st_uid;
+    attrs.gid = st.st_gid;
+    attrs.size = st.st_size;
+    attrs.atime = st.st_atime;
+    attrs.mtime = st.st_mtime;
+
+    if (S_ISDIR(st.st_mode))
+        attrs.type = SSH_FILEXFER_TYPE_DIRECTORY;
+    else if (S_ISLNK(st.st_mode))
+        attrs.type = SSH_FILEXFER_TYPE_SYMLINK;
+    else if (S_ISREG(st.st_mode))
+        attrs.type = SSH_FILEXFER_TYPE_REGULAR;
+    else
+        attrs.type = SSH_FILEXFER_TYPE_SPECIAL;
+
+    std::string mode_str(1, S_ISDIR(st.st_mode) ? 'd' : (S_ISLNK(st.st_mode) ? 'l' : '-'));
+    for (const auto & [bit, letter] : permission_bits)
+        mode_str += (st.st_mode & bit) ? letter : '-';
+
+    std::array<char, 64> time_str;
+    struct tm tm_info = time::to_tm(st.st_mtime * static_cast<int64_t>(1e9), true);
+    strftime(time_str.data(), time_str.size(), "%b %d %H:%M", &tm_info);
+
+    attrs.longname = fmt::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",
+                                 mode_str,
+                                 static_cast<int>(st.st_nlink),
+                                 st.st_uid,
+                                 st.st_gid,
+                                 attrs.size,
+                                 time_str.data(),
+                                 name);
+
+    return attrs;
+}
+
 } // namespace
 
 struct SshSubsystemSftp::Impl
@@ -107,49 +149,6 @@ struct SshSubsystemSftp::Impl
         std::string generate_handle();
         void reply_status(sftp_client_message_struct *msg, uint32_t status, const std::string & message = "");
 };
-
-SshSubsystemSftp::SftpAttributes SshSubsystemSftp::SftpAttributes::from_stat(const std::string & name,
-                                                                             const struct stat & st)
-{
-    SftpAttributes attrs;
-    attrs.name = name;
-    // Keep full mode including file type bits (S_IFDIR, S_IFREG, etc.)
-    // SFTP v3 derives file type from the mode field, not a separate type field
-    attrs.permissions = st.st_mode;
-    attrs.uid = st.st_uid;
-    attrs.gid = st.st_gid;
-    attrs.size = st.st_size;
-    attrs.atime = st.st_atime;
-    attrs.mtime = st.st_mtime;
-
-    if (S_ISDIR(st.st_mode))
-        attrs.type = SSH_FILEXFER_TYPE_DIRECTORY;
-    else if (S_ISLNK(st.st_mode))
-        attrs.type = SSH_FILEXFER_TYPE_SYMLINK;
-    else if (S_ISREG(st.st_mode))
-        attrs.type = SSH_FILEXFER_TYPE_REGULAR;
-    else
-        attrs.type = SSH_FILEXFER_TYPE_SPECIAL;
-
-    std::string mode_str(1, S_ISDIR(st.st_mode) ? 'd' : (S_ISLNK(st.st_mode) ? 'l' : '-'));
-    for (const auto & [bit, letter] : permission_bits)
-        mode_str += (st.st_mode & bit) ? letter : '-';
-
-    std::array<char, 64> time_str;
-    struct tm tm_info = time::to_tm(st.st_mtime * static_cast<int64_t>(1e9), true);
-    strftime(time_str.data(), time_str.size(), "%b %d %H:%M", &tm_info);
-
-    attrs.longname = fmt::format("{} {:3d} {:5d} {:5d} {:8d} {} {}",
-                                 mode_str,
-                                 static_cast<int>(st.st_nlink),
-                                 st.st_uid,
-                                 st.st_gid,
-                                 static_cast<long>(st.st_size),
-                                 time_str.data(),
-                                 name);
-
-    return attrs;
-}
 
 SshSubsystemSftp::StatResult SshSubsystemSftp::StatResult::ok(const SftpAttributes & attrs)
 {
@@ -552,7 +551,7 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
         return;
     }
 
-    SftpAttributes attrs = SftpAttributes::from_stat(sihd::sys::fs::filename(path), st);
+    SftpAttributes attrs = attributes_from_stat(sihd::sys::fs::filename(path), st);
     sftp_attributes sa = create_sftp_attributes(attrs);
     if (sa)
     {
@@ -645,7 +644,7 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
         if (::stat(full_path.c_str(), &st) == 0)
 #endif
         {
-            entries.push_back(SftpAttributes::from_stat(entry->d_name, st));
+            entries.push_back(attributes_from_stat(entry->d_name, st));
         }
     }
     closedir(dir);
@@ -831,7 +830,7 @@ void SshSubsystemSftp::Impl::handle_read(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: READ '{}' offset={} len={}", path, offset, len);
 
-    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<long>(offset))))
+    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<int64_t>(offset))))
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;
@@ -888,7 +887,7 @@ void SshSubsystemSftp::Impl::handle_write(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: WRITE '{}' offset={} len={}", path, offset, len);
 
-    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<long>(offset))))
+    if (SIHD_UNEXPECTED_LOG(file.seek_begin(static_cast<int64_t>(offset))))
     {
         reply_status(msg, SSH_FX_FAILURE);
         return;

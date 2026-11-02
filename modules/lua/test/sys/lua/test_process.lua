@@ -1,6 +1,8 @@
+local is_windows = package.config:sub(1, 1) == "\\"
+
 -- Test Process with thread-safe callbacks using flush()
 local echo = sihd.sys.Process()
-echo:add_argv({ "echo", "hello world" })
+echo:add_argv(is_windows and { "cmd", "/c", "echo", "hello world" } or { "echo", "hello world" })
 
 echo:execute()
 echo:wait_any(0)
@@ -9,7 +11,7 @@ assert(echo:return_code() == 0)
 
 -- Test stdout_to with callback and flush using execute + read_pipes (manual mode)
 local ls = sihd.sys.Process()
-ls:add_argv({ "ls" })
+ls:add_argv(is_windows and { "cmd", "/c", "dir" } or { "ls" })
 
 local ls_output = ""
 ls:stdout_to(function(str)
@@ -31,7 +33,8 @@ print("ls output length: " .. #ls_output)
 
 -- Test stdin with stdout callback using execute + read_pipes
 local wc = sihd.sys.Process()
-wc:add_argv({ "wc", "-c" })
+-- no wc on windows: sort passes stdin through
+wc:add_argv(is_windows and { "sort" } or { "wc", "-c" })
 
 wc:stdin_from("toto")
 
@@ -54,11 +57,13 @@ assert(code == 0, "wc return code: " .. tostring(code))
 
 -- wc -c on "toto" should return "4\n" or "4" depending on platform
 print("wc result: '" .. wc_result .. "'")
-assert(wc_result:match("^%s*4%s*$"), "Expected '4', got: '" .. wc_result .. "'")
+local wc_expected = is_windows and "^%s*toto%s*$" or "^%s*4%s*$"
+assert(wc_result:match(wc_expected), "Expected " .. wc_expected .. ", got: '" .. wc_result .. "'")
 
 -- Test stderr callback
 local err_proc = sihd.sys.Process()
-err_proc:add_argv({ "ls", "/nonexistent_path_12345" })
+err_proc:add_argv(is_windows and { "cmd", "/c", "type", "Z:\\nonexistent_path_12345" }
+                  or { "ls", "/nonexistent_path_12345" })
 
 local err_output = ""
 err_proc:stderr_to(function(str)

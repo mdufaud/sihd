@@ -2,6 +2,7 @@
 #include <cstring>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 #include <fmt/core.h>
 
@@ -285,7 +286,7 @@ bool Bitmap::read_bmp(const std::string & path)
 
     (void)file.seek_end(0);
     const auto file_size = file.tell();
-    if (!file_size || *file_size <= 0)
+    if (!file_size || *file_size <= 0 || !std::in_range<size_t>(*file_size))
         return false;
 
     (void)file.seek_begin(0);

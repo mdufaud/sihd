@@ -29,7 +29,14 @@ log.info("Executing a nonexistent binary fails cleanly")
 do
     local proc = sihd.sys.Process()
     proc:add_argv({ "no_such_binary_sihd_12345" })
-    must_raise(function() proc:execute() end, "execute(nonexistent binary)")
+    if sihd.sys.os.is_run_by_qemu() then
+        -- qemu breaks posix_spawn exec-failure report: spawn "succeeds", child execve fails and _exit(127)
+        proc:execute()
+        proc:wait_any(0)
+        assert(proc:return_code() == 127, "execute(nonexistent binary) under qemu")
+    else
+        must_raise(function() proc:execute() end, "execute(nonexistent binary)")
+    end
 end
 
 log.info("all process bad-path assertions passed")

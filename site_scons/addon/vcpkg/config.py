@@ -23,6 +23,16 @@ vcpkg_cflags = [
 ]
 vcpkg_cxxflags = []
 
+
+def configure(app):
+    from sbt.core import builder
+
+    if builder.build_machine == "arm32":
+        arm32_flags = [f"-D{define}" for define in app.arm32_defines]
+        app.vcpkg_cflags = app.vcpkg_cflags + arm32_flags
+        app.vcpkg_cxxflags = app.vcpkg_cxxflags + arm32_flags
+
+
 ###############################################################################
 # vcpkg per-port cmake configure options
 ###############################################################################

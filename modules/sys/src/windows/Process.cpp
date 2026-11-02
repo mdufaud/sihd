@@ -165,6 +165,10 @@ struct StdFdWrapper
         std::string path;
 
         void add_pipe();
+        bool has_reader() const
+        {
+            return this->fd_read != nullptr && (this->action == File || this->action == FileAppend || this->fun);
+        }
         bool process_read_pipe();
 
         void close();
@@ -270,7 +274,15 @@ struct PipeWrapper
         StdFdWrapper std_err;
 
         void reset();
+        bool read_output();
 };
+
+bool PipeWrapper::read_output()
+{
+    const bool read_stdout = std_out.has_reader() && std_out.process_read_pipe();
+    const bool read_stderr = std_err.has_reader() && std_err.process_read_pipe();
+    return read_stdout || read_stderr;
+}
 
 void PipeWrapper::reset()
 {
@@ -699,12 +711,15 @@ bool Process::read_pipes(int milliseconds_timeout)
     bool timed_out = false;
     while (!timed_out)
     {
-        _impl->pipe.std_out.process_read_pipe();
-        _impl->pipe.std_err.process_read_pipe();
+        if (_impl->pipe.read_output())
+            return true;
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         timed_out = (clock.now() - begin) >= timeout;
     }
-    return true;
+    // like the unix poll timeout: nothing to read, reap a finished child
+    if (this->is_process_running())
+        (void)this->wait_no_hang();
+    return _impl->pipe.read_output();
 }
 
 bool Process::terminate()
