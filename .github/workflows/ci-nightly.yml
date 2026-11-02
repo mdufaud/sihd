@@ -238,9 +238,27 @@ jobs:
         env:
           TEST_FILTER_FLAG: --gtest_filter=*-*test_icmp_ipv6*
 
+      # each night resumes from the corpus of the last green night instead of the seeds
+      - name: Restore fuzz corpus
+        if: matrix.fuzz
+        uses: actions/cache@v4
+        with:
+          path: build/last/fuzz/work/*/corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+
       - name: Run fuzzers
         if: matrix.fuzz
         run: make fuzztest fuzz_time=20 ${{ matrix.make-args }}
+
+      - name: Upload fuzz crashes
+        if: matrix.fuzz && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes
+          path: |
+            build/last/fuzz/work/*/artifacts
+            build/last/fuzz/logs
 
       - name: Report binary cache size
         if: always()
