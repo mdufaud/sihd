@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 
@@ -156,6 +157,38 @@ TEST_F(TestFS, test_fs_jail)
     ASSERT_TRUE(fs::write(inside, "data").has_value());
     EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
 #endif
+}
+
+TEST_F(TestFS, test_fs_jail_real_files)
+{
+    TmpDir tmp;
+    ASSERT_TRUE(tmp);
+    const std::string root = fs::combine(tmp.path(), "root");
+    const std::string inside = fs::combine(root, "inside.txt");
+    ASSERT_TRUE(fs::make_directory(root).has_value());
+    ASSERT_TRUE(fs::write(inside, "inside").has_value());
+    ASSERT_TRUE(fs::write(fs::combine(tmp.path(), "secret.txt"), "secret").has_value());
+
+    EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
+    EXPECT_EQ(fs::jail(root, "../secret.txt"), root);
+    EXPECT_EQ(fs::jail(root, "../not_created.txt"), root);
+
+    if constexpr (build::is_windows)
+    {
+        std::string forward_root = root;
+        std::ranges::replace(forward_root, '\\', '/');
+
+        EXPECT_EQ(fs::jail(forward_root, "inside.txt"), fs::realpath(inside));
+        EXPECT_EQ(fs::jail(root, "..\\secret.txt"), root);
+        EXPECT_EQ(fs::jail(root, "..\\not_created.txt"), root);
+    }
+    else
+    {
+        const std::string link = fs::combine(tmp.path(), "link_to_root");
+        ASSERT_TRUE(fs::make_file_link(root, link).has_value());
+
+        EXPECT_EQ(fs::jail(link, "inside.txt"), fs::realpath(inside));
+    }
 }
 
 TEST_F(TestFS, test_fs_creation)

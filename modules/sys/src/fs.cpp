@@ -1,5 +1,6 @@
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -52,10 +53,19 @@ std::string combine_impl(std::string_view path1, std::string_view path2)
 
 bool is_under_root(const std::string & root, const std::string & path)
 {
-    if (root == "/")
-        return !path.empty() && path[0] == '/';
+    if (root.size() == 1 && root[0] == g_separator_char)
+        return !path.empty() && path[0] == g_separator_char;
     return path == root
-           || (path.size() > root.size() && path.compare(0, root.size(), root) == 0 && path[root.size()] == '/');
+           || (path.size() > root.size() && path.compare(0, root.size(), root) == 0
+               && path[root.size()] == g_separator_char);
+}
+
+// windows takes both '/' and '\' as separators
+std::string with_one_separator(std::string path)
+{
+    if (build::is_windows)
+        std::ranges::replace(path, g_separator_char == '/' ? '\\' : '/', g_separator_char);
+    return path;
 }
 
 Result<void> internal_set_perm(std::string_view path, unsigned int mode, std::filesystem::perm_options option)
@@ -509,25 +519,29 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     if (root_view.empty())
         return std::string(path_view);
 
-    std::string root = normalize(root_view);
-    while (root.size() > 1 && root.back() == '/')
+    std::string root = normalize(with_one_separator(std::string(root_view)));
+    while (root.size() > 1 && root.back() == g_separator_char)
         root.pop_back();
 
-    std::string clean_path(path_view);
-    if (!clean_path.empty() && clean_path[0] == '/')
+    std::string clean_path = with_one_separator(std::string(path_view));
+    if (!clean_path.empty() && clean_path[0] == g_separator_char)
         clean_path.erase(0, 1);
 
     // lexical resolve first so not-yet-existing targets are jailed; no '//' prefix when root is "/"
-    std::string joined = (root == "/") ? ("/" + clean_path) : (root + "/" + clean_path);
+    const std::string separator = sep_str();
+    std::string joined = (root == separator) ? (separator + clean_path) : (root + separator + clean_path);
     std::string candidate = normalize(joined);
 
     if (!is_under_root(root, candidate))
         return root;
 
     // resolve symlinks and re-check to catch escaping links; nonexistent targets keep the lexical path
-    std::string real_str = realpath(candidate);
+    std::string real_str = with_one_separator(realpath(candidate));
     if (!real_str.empty())
-        return is_under_root(root, real_str) ? real_str : root;
+    {
+        const std::string real_root = with_one_separator(realpath(root));
+        return is_under_root(real_root.empty() ? root : real_root, real_str) ? real_str : root;
+    }
 
     return candidate;
 }
