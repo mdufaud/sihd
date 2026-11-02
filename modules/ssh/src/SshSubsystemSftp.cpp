@@ -69,7 +69,28 @@ constexpr std::array<std::pair<mode_t, char>, 9> permission_bits {{
     {S_IXOTH, 'x'},
 }};
 
-SshSubsystemSftp::SftpAttributes attributes_from_stat(const std::string & name, const struct stat & st)
+#if defined(__SIHD_WINDOWS__)
+
+// struct stat has a 32-bit st_size on windows
+using FileStat = struct _stat64;
+
+int stat_file(const std::string & path, FileStat & st, bool)
+{
+    return ::_stat64(path.c_str(), &st);
+}
+
+#else
+
+using FileStat = struct stat;
+
+int stat_file(const std::string & path, FileStat & st, bool follow_links)
+{
+    return follow_links ? ::stat(path.c_str(), &st) : ::lstat(path.c_str(), &st);
+}
+
+#endif
+
+SshSubsystemSftp::SftpAttributes attributes_from_stat(const std::string & name, const FileStat & st)
 {
     SshSubsystemSftp::SftpAttributes attrs;
     attrs.name = name;
@@ -536,13 +557,8 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
     SIHD_LOG(debug, "SshSubsystemSftp: {} '{}'", follow_links ? "STAT" : "LSTAT", path);
 
     std::string resolved = resolve_path(path);
-    struct stat st;
-#if !defined(__SIHD_WINDOWS__)
-    int rc = follow_links ? ::stat(resolved.c_str(), &st) : ::lstat(resolved.c_str(), &st);
-#else
-    (void)follow_links;
-    int rc = ::stat(resolved.c_str(), &st);
-#endif
+    FileStat st;
+    const int rc = stat_file(resolved, st, follow_links);
 
     if (rc < 0)
     {
@@ -637,12 +653,8 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     while ((entry = readdir(dir)) != nullptr)
     {
         std::string full_path = resolved + "/" + entry->d_name;
-        struct stat st;
-#if !defined(__SIHD_WINDOWS__)
-        if (::lstat(full_path.c_str(), &st) == 0)
-#else
-        if (::stat(full_path.c_str(), &st) == 0)
-#endif
+        FileStat st;
+        if (stat_file(full_path, st, false) == 0)
         {
             entries.push_back(attributes_from_stat(entry->d_name, st));
         }

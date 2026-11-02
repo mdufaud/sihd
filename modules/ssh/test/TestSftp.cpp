@@ -91,6 +91,31 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_EQ(ndir, 1);
 }
 
+TEST_F(TestSftp, test_sftp_large_file_attribute)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+
+    const std::string large_file = fs::combine(tmp_dir.path(), "large.bin");
+    const int64_t large_size = 5LL * 1024 * 1024 * 1024;
+    ASSERT_TRUE(fs::write_binary(large_file, "").has_value());
+    ASSERT_TRUE(fs::truncate(large_file, large_size).has_value());
+
+    auto test_server = make_test_server_with_sftp("test-sftp-large", build::is_windows ? "" : "/");
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    std::vector<SftpAttribute> attrs;
+    ASSERT_TRUE(sftp.list_dir(tmp_dir.path(), attrs).has_value());
+    ASSERT_EQ(attrs.size(), 1u);
+    EXPECT_EQ(attrs[0].size(), static_cast<uint64_t>(large_size));
+}
+
 TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
 {
     TmpDir base;

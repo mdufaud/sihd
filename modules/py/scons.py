@@ -25,6 +25,9 @@ for module in modules:
     test_srcs += Glob(str(test_dir) + "/{}/*.cpp".format(module))
 
 lib = env.build_lib(srcs)
+if builder.build_static_libs:
+    # each api registers from a constructor, an archive member nothing references is dropped
+    env.Append(LINKFLAGS = ["-Wl,--whole-archive", "-l" + modname, "-Wl,--no-whole-archive"])
 test = env.build_test(test_srcs, libs = [env.module_format_name()])
 
 Return("lib")

@@ -66,10 +66,9 @@ assert(isinstance(children, list))
 assert(len(children) > 0)
 
 # test file operations via temp file
-import tempfile
-with tempfile.NamedTemporaryFile(delete=False) as f:
+tmp_path = os.path.join(cwd, f"test_fs_{os.getpid()}.tmp")
+with open(tmp_path, "wb") as f:
     f.write(b"hello world")
-    tmp_path = f.name
 
 assert(fs.exists(tmp_path))
 assert(fs.is_file(tmp_path))

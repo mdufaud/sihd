@@ -126,12 +126,12 @@ Result<void> write_full(int fd, const char *data, size_t size)
 
 template <typename CopyChunk>
 Result<CopyResult>
-    kernel_copy_loop(CopyChunk copy_chunk, size_t total, const std::function<bool(size_t, size_t)> & progress)
+    kernel_copy_loop(CopyChunk copy_chunk, uint64_t total, const std::function<bool(uint64_t, uint64_t)> & progress)
 {
-    size_t transferred = 0;
+    uint64_t transferred = 0;
     while (transferred < total)
     {
-        ssize_t bytes = copy_chunk(std::min(total - transferred, range_chunk_max));
+        ssize_t bytes = copy_chunk(static_cast<size_t>(std::min<uint64_t>(total - transferred, range_chunk_max)));
         if (bytes < 0)
         {
             if (errno == EINTR)
@@ -147,18 +147,20 @@ Result<CopyResult>
             // the source shrank under fstat; do not report a short copy as done
             return std::unexpected(Error(io_error, "copy_file: source shortened during copy"));
         }
-        transferred += (size_t)bytes;
+        transferred += static_cast<uint64_t>(bytes);
         if (progress && !progress(transferred, total))
             return CopyResult::cancelled;
     }
     return CopyResult::done;
 }
 
-Result<CopyResult>
-    read_write_copy_loop(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
+Result<CopyResult> read_write_copy_loop(int in_fd,
+                                        int out_fd,
+                                        uint64_t total,
+                                        const std::function<bool(uint64_t, uint64_t)> & progress)
 {
     std::vector<char> buf(256 * 1024);
-    size_t transferred = 0;
+    uint64_t transferred = 0;
     for (;;)
     {
         ssize_t bytes = ::read(in_fd, buf.data(), buf.size());
@@ -172,7 +174,7 @@ Result<CopyResult>
             return CopyResult::done;
         auto written = write_full(out_fd, buf.data(), (size_t)bytes);
         SIHD_UNEXPECTED_RETURN(written);
-        transferred += (size_t)bytes;
+        transferred += static_cast<uint64_t>(bytes);
         if (progress && !progress(transferred, total))
             return CopyResult::cancelled;
     }
@@ -181,7 +183,7 @@ Result<CopyResult>
 #if defined(__linux__)
 
 Result<CopyResult>
-    kernel_copy(int in_fd, int out_fd, size_t total, const std::function<bool(size_t, size_t)> & progress)
+    kernel_copy(int in_fd, int out_fd, uint64_t total, const std::function<bool(uint64_t, uint64_t)> & progress)
 {
     // bionic declares copy_file_range only from API 30
 # if !defined(__ANDROID__) || __ANDROID_API__ >= 30
@@ -462,8 +464,9 @@ Result<void> truncate(ZStringView path, int64_t size)
     return {};
 }
 
-Result<void>
-    copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
+Result<void> copy_file(const std::string & from,
+                       const std::string & to,
+                       const std::function<bool(uint64_t, uint64_t)> & progress)
 {
     int in_fd = ::open(from.c_str(), O_RDONLY);
     if (in_fd < 0)
@@ -477,7 +480,7 @@ Result<void>
         ::close(in_fd);
         return ret;
     }
-    const size_t total = s.st_size > 0 ? (size_t)s.st_size : 0;
+    const uint64_t total = s.st_size > 0 ? static_cast<uint64_t>(s.st_size) : 0;
 
     // opening the destination would truncate the source itself
     struct stat dst;

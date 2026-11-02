@@ -353,7 +353,7 @@ std::vector<SftpExtension> Sftp::extensions()
     return ret;
 }
 
-SftpAttribute::SftpAttribute(std::string_view name, uint8_t type, size_t size)
+SftpAttribute::SftpAttribute(std::string_view name, uint8_t type, uint64_t size)
 {
     _name = name;
     _size = size;

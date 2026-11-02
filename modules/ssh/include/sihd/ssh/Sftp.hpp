@@ -23,7 +23,7 @@ struct SftpExtension
 class SftpAttribute
 {
     public:
-        SftpAttribute(std::string_view name, uint8_t type, size_t size);
+        SftpAttribute(std::string_view name, uint8_t type, uint64_t size);
         ~SftpAttribute();
 
         const std::string & name() const;
@@ -36,7 +36,7 @@ class SftpAttribute
     private:
         std::string _name;
         uint8_t _type;
-        size_t _size;
+        uint64_t _size;
 };
 
 class Sftp

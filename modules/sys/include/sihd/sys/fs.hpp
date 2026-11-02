@@ -128,9 +128,10 @@ sihd::util::Result<void> truncate(sihd::util::ZStringView path, int64_t size);
 bool are_equals(const std::string & path1, const std::string & path2);
 
 // overwrites 'to'; false from 'progress' cancels and removes the partial 'to', a failed start leaves it untouched
-sihd::util::Result<void> copy_file(const std::string & from,
-                                   const std::string & to,
-                                   const std::function<bool(size_t transferred, size_t total)> & progress = nullptr);
+sihd::util::Result<void>
+    copy_file(const std::string & from,
+              const std::string & to,
+              const std::function<bool(uint64_t transferred, uint64_t total)> & progress = nullptr);
 
 std::string realpath(sihd::util::ZStringView path);
 

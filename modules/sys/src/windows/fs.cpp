@@ -37,7 +37,7 @@ namespace
 
 struct CopyProgressCtx
 {
-        const std::function<bool(size_t, size_t)> *progress;
+        const std::function<bool(uint64_t, uint64_t)> *progress;
 };
 
 // FILETIME counts 100ns intervals since 1601-01-01; 0 means the field is not tracked
@@ -54,8 +54,8 @@ COPYFILE2_MESSAGE_ACTION CALLBACK copy_progress_cb(const COPYFILE2_MESSAGE *mess
     if (message->Type == COPYFILE2_CALLBACK_CHUNK_FINISHED && ctx->progress && *ctx->progress)
     {
         const auto & chunk = message->Info.ChunkFinished;
-        const size_t transferred = (size_t)chunk.uliTotalBytesTransferred.QuadPart;
-        const size_t total = (size_t)chunk.uliTotalFileSize.QuadPart;
+        const uint64_t transferred = chunk.uliTotalBytesTransferred.QuadPart;
+        const uint64_t total = chunk.uliTotalFileSize.QuadPart;
         if (!(*ctx->progress)(transferred, total))
             return COPYFILE2_PROGRESS_CANCEL; // CopyFile2 then removes the partial destination
     }
@@ -314,8 +314,9 @@ Result<void> truncate(ZStringView path, int64_t size)
     return {};
 }
 
-Result<void>
-    copy_file(const std::string & from, const std::string & to, const std::function<bool(size_t, size_t)> & progress)
+Result<void> copy_file(const std::string & from,
+                       const std::string & to,
+                       const std::function<bool(uint64_t, uint64_t)> & progress)
 {
     const std::wstring wfrom = str::to_wstr(from);
     const std::wstring wto = str::to_wstr(to);

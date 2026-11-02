@@ -7,6 +7,10 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/util/build.hpp>
+
+extern "C" PyObject *PyInit_sihd();
+
 namespace test
 {
 
@@ -14,7 +18,13 @@ namespace test
 class __attribute__((visibility("hidden"))) PyEnvironment: public ::testing::Environment
 {
     public:
-        void SetUp() override { _interpreter = std::make_unique<pybind11::scoped_interpreter>(); }
+        void SetUp() override
+        {
+            // a static build has no sihd.so to import
+            if constexpr (sihd::util::build::is_statically_linked)
+                PyImport_AppendInittab("sihd", PyInit_sihd);
+            _interpreter = std::make_unique<pybind11::scoped_interpreter>();
+        }
 
         void TearDown() override { _interpreter.reset(); }
 

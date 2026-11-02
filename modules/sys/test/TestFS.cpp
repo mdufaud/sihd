@@ -465,8 +465,8 @@ TEST_F(TestFS, test_fs_copy_file)
     ASSERT_TRUE(fs::write_binary(src, content).has_value());
 
     // Wine lacks the CopyFile2 progress callback (kernelbase/file.c): progress and cancellation cannot be verified
-    size_t transferred = 0;
-    EXPECT_TRUE(fs::copy_file(src, dst, [&](size_t progress, size_t total) {
+    uint64_t transferred = 0;
+    EXPECT_TRUE(fs::copy_file(src, dst, [&](uint64_t progress, uint64_t total) {
                     EXPECT_EQ(total, content.size());
                     EXPECT_GE(progress, transferred);
                     transferred = progress;
@@ -502,7 +502,7 @@ TEST_F(TestFS, test_fs_copy_file)
     if (!os::is_run_by_wine())
     {
         bool cancelled = false;
-        EXPECT_FALSE(fs::copy_file(src, dst_cancel, [&](size_t progress, size_t total) {
+        EXPECT_FALSE(fs::copy_file(src, dst_cancel, [&](uint64_t progress, uint64_t total) {
                          if (progress >= total / 2)
                          {
                              cancelled = true;
