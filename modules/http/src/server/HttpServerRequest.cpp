@@ -23,6 +23,8 @@ using namespace sihd::sys;
 namespace
 {
 
+constexpr size_t max_discarded_body_size = 1024 * 1024;
+
 struct RequestHeader
 {
         enum lws_token_indexes token;
@@ -100,7 +102,7 @@ void HttpServer::Impl::session_cleanup(HttpSession *session)
 
 int HttpServer::Impl::complete_transaction(HttpSession *session, int rc)
 {
-    if (session->close_connection)
+    if (session->close_connection && session->waiting_body == false)
         // lws only discards a body it can measure: for a refused one it must flush the
         // response and drop the connection, otherwise the next request is swallowed
         return lws_raw_transaction_completed(session->wsi);
@@ -946,18 +948,28 @@ bool HttpServer::Impl::send_http_error(HttpSession *session, int code, const std
     return this->send_http_headers(session->wsi, response);
 }
 
-bool HttpServer::Impl::reject_body(HttpSession *session, HttpResponse & response)
+void HttpServer::Impl::mark_body_rejected(HttpSession *session)
 {
     session->reject_body = true;
     session->close_connection = true;
+    if (session->request == nullptr)
+        return;
+    // closing on unread bytes resets the connection and windows then drops the unread response: read small bodies first
+    const size_t announced = session->request->http_header().content_length().value_or(0);
+    if (announced > 0 && announced <= max_discarded_body_size)
+        session->waiting_body = true;
+}
+
+bool HttpServer::Impl::reject_body(HttpSession *session, HttpResponse & response)
+{
+    this->mark_body_rejected(session);
     response.http_header().set_header("connection:", "close");
     return this->send_http_headers(session->wsi, response);
 }
 
 bool HttpServer::Impl::reject_body(HttpSession *session, int code)
 {
-    session->reject_body = true;
-    session->close_connection = true;
+    this->mark_body_rejected(session);
     return this->send_http_error(session, code);
 }
 

@@ -667,6 +667,48 @@ TEST_F(TestHttpServer, test_max_request_size)
     EXPECT_EQ(hits, 2);
 }
 
+TEST_F(TestHttpServer, test_refused_body_is_read_before_closing)
+{
+    ServerScope scope;
+
+    int hits = 0;
+    scope.server.set_max_request_size(1024);
+    scope.server._webservice->set_entry_point(
+        "small",
+        [&hits](const HttpRequest &, HttpResponse & resp) {
+            ++hits;
+            resp.set_plain_content("ok");
+        },
+        HttpRequest::Post);
+
+    scope.start();
+
+    RawHttpClient small_body_client;
+    ASSERT_TRUE(small_body_client.connect());
+    ASSERT_TRUE(small_body_client.send("POST /api/small HTTP/1.1\r\nHost: localhost\r\nContent-Length: 4096\r\n\r\n"));
+
+    auto response = small_body_client.read_response();
+    ASSERT_TRUE(response.has_value());
+    EXPECT_EQ(response->status(), HttpStatus::PayloadTooLarge);
+    EXPECT_EQ(response->http_header().find("connection"), "close");
+    EXPECT_TRUE(small_body_client.still_open_after(100));
+
+    ASSERT_TRUE(small_body_client.send(std::string(4096, 'x')));
+    EXPECT_TRUE(small_body_client.wait_closed());
+
+    // too much to read for a client that may never stop: this one is cut at once
+    RawHttpClient big_body_client;
+    ASSERT_TRUE(big_body_client.connect());
+    ASSERT_TRUE(big_body_client.send("POST /api/small HTTP/1.1\r\nHost: localhost\r\nContent-Length: 2097152\r\n\r\n"));
+
+    response = big_body_client.read_response();
+    ASSERT_TRUE(response.has_value());
+    EXPECT_EQ(response->status(), HttpStatus::PayloadTooLarge);
+    EXPECT_TRUE(big_body_client.wait_closed());
+
+    EXPECT_EQ(hits, 0);
+}
+
 TEST_F(TestHttpServer, test_upload_chunked_not_supported)
 {
     ServerScope scope;

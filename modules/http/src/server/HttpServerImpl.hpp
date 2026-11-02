@@ -167,6 +167,7 @@ struct HttpServer::Impl
         // ends by dropping the connection instead of desyncing it
         bool reject_body(HttpSession *session, int code);
         bool reject_body(HttpSession *session, HttpResponse & response);
+        void mark_body_rejected(HttpSession *session);
         bool send_http_redirect(struct lws *wsi, const std::string & redirect_path, int code = 301);
         bool send_http_headers(struct lws *wsi, HttpResponse & response);
 

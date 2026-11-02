@@ -579,6 +579,14 @@ class RawHttpClient
             return _client.connected() == false;
         }
 
+        bool still_open_after(int timeout_ms)
+        {
+            _client.set_poll_timeout(timeout_ms);
+            const bool closed = this->wait_closed();
+            _client.set_poll_timeout(2000);
+            return closed == false;
+        }
+
         void close() { (void)_client.close(); }
 
     private:
