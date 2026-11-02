@@ -21,6 +21,7 @@ if builder.build_platform == "windows":
     sources += Glob('src/windows/internal/*.cpp')
 else:
     sources += Glob('src/linux/*.cpp')
+    sources += Glob('src/linux/dbus/*.cpp')
     # shared plumbing for the clipboard / screenshot backends
     sources += Glob('src/linux/internal/*.cpp')
     # x11 / wayland backends compile when their opt is enabled, their stub otherwise: no define, the pch stays shared

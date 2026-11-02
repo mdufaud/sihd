@@ -106,7 +106,8 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 
 Every header in `sihd/sys/linux/` raises a compile error on other platforms.
 
-- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus, or to a bus address: `open`, `is_open`, `add_match`, `remove_match`, `request_name`, `name_has_owner`, `interrupt`, and `disable_auto_start` so its calls fail instead of starting an unowned activatable service. `Message` builds method calls, signals and replies (`method_call`, `signal`, `method_return`, `error_return`, `properties_get`, `properties_get_all`, `add`, `add_object_path`) and reads them (`type`, `path`, `interface`, `member`, `sender`, `error_name`, `to_error`, `changed_property` of a `PropertiesChanged` signal). `call` waits for one reply, `call_all` sends every request before awaiting the replies, in request order; `send`, `receive` and `receive_until` (the first accepted message, `timeout` otherwise) stay asynchronous. An error reply becomes `permission_denied` for `AccessDenied`, `timeout` for `NoReply`, `io_error` otherwise, its message starting with the error name (`has_error_name`). `Appender` writes values and containers (`add_array`, `add_entry` for an `a{sv}` entry, `open_array`, `open_variant`, `open_struct`, `open_dict_entry`, `close`) checked against their signature and their nesting order, so libdbus never aborts; `Iter` reads them back (`get`, `get_array`, `for_each_entry` with the variants unwrapped). `get_property` / `get_array_property` read one property, `signal_rule` / `properties_changed_rule` build match rules. Not available on Android or Emscripten.
+- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus, or to a bus address: `open`, `is_open`, `add_match`, `remove_match`, `request_name` (`NameOptions`: `allow_replacement`, `replace_existing`, `queue`), `release_name`, `name_has_owner`, `credentials` of a caller (user, pid, groups), `interrupt`, and `disable_auto_start` so its calls fail instead of starting an unowned activatable service. `Message` builds method calls, signals and replies (`method_call`, `signal`, `method_return`, `error_return`, `properties_get`, `properties_get_all`, `set_no_reply`, `add`, `add_object_path`, `add_signature`, `add_unix_fd`) and reads them (`type`, `path`, `interface`, `member`, `sender`, `destination`, `signature`, `expects_reply`, `error_name`, `to_error`, `changed_property` of a `PropertiesChanged` signal). `call` waits for one reply, `call_all` sends every request before awaiting the replies, in request order; `send`, `receive` and `receive_until` (the first accepted message, `timeout` otherwise) stay asynchronous. An error reply becomes `permission_denied` for `AccessDenied`, `timeout` for `NoReply`, `invalid_argument` for `InvalidArgs`, `not_supported` for `NotSupported`, `io_error` otherwise, its message starting with the error name (`has_error_name`). `Appender` writes values and containers (`add_array`, `add_entry` for an `a{sv}` entry, `open_array`, `open_variant`, `open_struct`, `open_dict_entry`, `close`) checked against their signature and their nesting order, so libdbus never aborts; `Iter` reads them back (`get`, `get_array`, `get_unix_fd` as an owning `UnixFd`, `signature`, `for_each_entry` with the variants unwrapped). Fixed values cover `bool`, `uint8_t`, `int16_t`, `uint16_t`, `int32_t`, `uint32_t`, `int64_t`, `uint64_t` and `double`. `get_property` / `get_array_property` read one property, `signal_rule` / `properties_changed_rule` build match rules. A thread calling while another one receives needs its own `Connection`: `receive` can steal the reply `call` awaits. Not available on Android or Emscripten.
+- `linux_::dbus::ObjectServer`: answers the method calls of registered objects from your `receive` loop, see [D-Bus service](#d-bus-service).
 - `linux_::prctl`: process control flags: `set_pdeathsig`, `set_dumpable`, `set_no_new_privs`, `set_child_subreaper`, with matching getters.
 - `linux_::cgroup`: cgroup v2 state and limits: `is_container`, `current_group`, `memory_max`, `memory_current`, `cpu_max`, `write_memory_max`, `write_cpu_max`.
 - `linux_::ns`: Linux namespaces: `unshare`, `setns`, `id`, `to_str`.
@@ -150,6 +151,155 @@ int main()
 ```
 
 Adapted from `modules/sys/test/TestProc.cpp`.
+
+## D-Bus service
+
+`linux_::dbus::ObjectServer` (`sihd/sys/linux/dbus/ObjectServer.hpp`, or everything through `sihd/sys/linux/dbus.hpp`) turns a connection into a service visible from `busctl` or `gdbus`. It starts no thread: your loop calls `Message::receive` and passes each message to `handle`, which answers the method calls and gives back everything else (signals, `NameLost`, replies).
+
+It answers on its own:
+
+- `org.freedesktop.DBus.Peer` on any path, and `org.freedesktop.DBus.Introspectable` on objects and on their parent paths, so `busctl tree` can walk down from `/`.
+- `org.freedesktop.DBus.Properties` on objects: `Get`, `GetAll` and `Set`. A property without `get` is write only, one without `set` read only. A successful `Set` emits `PropertiesChanged` unless `emits_changed` is false. Call `emit_properties_changed` for values changed elsewhere: it reads each one through its `get`. While a `get` runs `add_object` and `remove_object` refuse with `invalid_argument`; a handler or a `set` can use them.
+- `org.freedesktop.DBus.ObjectManager` at each `add_object_manager` path, until `remove_object_manager`: `GetManagedObjects`, plus `InterfacesAdded` / `InterfacesRemoved` from `add_object` / `remove_object`.
+- The errors `UnknownObject`, `UnknownInterface`, `UnknownMethod`, `UnknownProperty`, `PropertyReadOnly`, and `InvalidArgs` when the arguments do not match the declared signature, so a handler can trust its argument types.
+
+A call without interface header reaches the object's method of that name, or else the standard one (`Ping`, `Introspect`, `Get`...).
+
+Every step can be written by hand, with shortcuts for the usual cases: `Call::argument<T>()` reads the first argument, `Call::reply(value)` answers one value, `Property::read_only<T>(name, getter)` and `Property::bound(name, value)` declare a property whose signature follows `T`. Several arguments or values, containers and other signatures go through `Iter`, `method_return` and `Appender`.
+
+A method handler receives a `Call`:
+
+- Returning success without answering sends an empty reply.
+- Returning an error answers through `Call::fail`: `invalid_argument` is `InvalidArgs`, `permission_denied` is `AccessDenied`, `not_supported` is `NotSupported`, `timeout` is `TimedOut`, any other code is `Failed`. A client reads these names back as the same codes. For another error name, build the reply with `error_return` and pass it to `Call::send`.
+- Moving the `Call` out of the handler defers the answer: `Call::send` then works from any thread while the connection lives. A `Call` dropped unanswered answers `Failed`, so the client never waits for its timeout.
+- Nothing is sent when the caller set `set_no_reply`.
+
+Everything else in `ObjectServer` stays on the loop thread.
+
+```cpp
+#include <atomic>
+#include <string>
+#include <utility>
+
+#include <sihd/sys/linux/dbus.hpp>
+#include <sihd/util/Result.hpp>
+#include <sihd/util/time.hpp>
+
+using namespace sihd::util;
+using namespace sihd::sys::linux_::dbus;
+
+Result<void> serve(const std::atomic<bool> & stop)
+{
+    Connection connection;
+    auto opened = connection.open(Bus::session);
+    SIHD_UNEXPECTED_RETURN(opened);
+
+    std::string name = "initial";
+    ObjectServer server(connection);
+    auto added = server.add_object(
+        "/org/example/Echo",
+        {ObjectServer::Interface {
+            .name = "org.example.Echo",
+            .methods = {ObjectServer::Method {
+                .name = "Echo",
+                .in = {{"text", "s"}},
+                .out = {{"echoed", "s"}},
+                .handler = [](ObjectServer::Call & call) -> Result<void> {
+                    auto text = call.argument<std::string>();
+                    SIHD_UNEXPECTED_RETURN(text);
+                    return call.reply(*text);
+                },
+            }},
+            .properties = {ObjectServer::Property::bound("Name", name)},
+            .signals = {},
+        }});
+    SIHD_UNEXPECTED_RETURN(added);
+
+    // objects first: a call can come in as soon as the name is owned
+    auto owned = connection.request_name("org.example.Echo");
+    SIHD_UNEXPECTED_RETURN(owned);
+
+    // another thread stops the loop with stop = true then connection.interrupt()
+    while (!stop)
+    {
+        auto received = Message::receive(connection, Duration(time::sec(1)));
+        SIHD_UNEXPECTED_RETURN(received);
+        if (!received->has_value())
+            continue;
+        auto other = server.handle(std::move(**received));
+        SIHD_UNEXPECTED_RETURN(other);
+        if (other->has_value() && (*other)->member() == "NameLost")
+            break;
+    }
+    return connection.release_name("org.example.Echo");
+}
+```
+
+The handler and the property come from `modules/sys/test/linux/TestDBusObjectServer.cpp`, the name handling in the loop is not under test.
+
+To check it from a shell:
+
+```bash
+busctl --user introspect org.example.Echo /org/example/Echo
+```
+
+```bash
+busctl --user call org.example.Echo /org/example/Echo org.example.Echo Echo s hello
+```
+
+To clean up after clients that disappear, subscribe to `NameOwnerChanged` with `add_match(signal_rule("org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "NameOwnerChanged"))`: the signal comes back from `handle`, and its third argument is empty once the name is gone. To restrict a method per caller, read `Connection::credentials(call.message().sender(), timeout)` in the handler, on the loop thread.
+
+### Deploying a service
+
+The session bus lets any connection own a name. To start the service on demand, install an activation file named after the bus name, `/usr/share/dbus-1/services/org.example.Echo.service`:
+
+```ini
+[D-BUS Service]
+Name=org.example.Echo
+Exec=/usr/bin/echo-service
+```
+
+The system bus refuses every name without a policy, and `request_name` then fails with `permission_denied`. Install `/usr/share/dbus-1/system.d/org.example.Echo.conf`:
+
+```xml
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <policy user="echo">
+    <allow own="org.example.Echo"/>
+  </policy>
+  <policy context="default">
+    <allow send_destination="org.example.Echo"/>
+  </policy>
+</busconfig>
+```
+
+Run it as a systemd unit that counts as started once the name is owned, `/usr/lib/systemd/system/echo.service`:
+
+```ini
+[Unit]
+Description=Echo service
+
+[Service]
+Type=dbus
+BusName=org.example.Echo
+ExecStart=/usr/bin/echo-service
+User=echo
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+To also start it on demand, install `/usr/share/dbus-1/system-services/org.example.Echo.service`:
+
+```ini
+[D-BUS Service]
+Name=org.example.Echo
+Exec=/bin/false
+User=echo
+SystemdService=echo.service
+```
 
 ## Scripting
 

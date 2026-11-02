@@ -1,3 +1,7 @@
+#include <optional>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
 #include <sihd/sys/linux/dbus.hpp>
@@ -229,6 +233,76 @@ TEST_F(TestDBusMessage, test_reply_needs_received_call)
     EXPECT_EQ(unsent_error.error().message, "a dbus reply answers a received method call");
     ASSERT_FALSE(signal_reply.has_value());
     EXPECT_EQ(signal_reply.error().message, "a dbus reply answers a method call");
+}
+
+TEST_F(TestDBusMessage, test_wide_types)
+{
+    ASSERT_TRUE(_message->add(int64_t {-5000000000}).has_value());
+    ASSERT_TRUE(_message->add(uint64_t {18000000000000000000u}).has_value());
+    ASSERT_TRUE(_message->add(2.5).has_value());
+    ASSERT_TRUE(Appender(*_message).add_array(std::vector<double> {1.5, -0.25}).has_value());
+
+    Iter body(*_message);
+
+    EXPECT_EQ(_message->signature(), "xtdad");
+    EXPECT_EQ(body.get<int64_t>().value_or(0), -5000000000);
+    ASSERT_TRUE(body.next());
+    EXPECT_EQ(body.get<uint64_t>().value_or(0), 18000000000000000000u);
+    ASSERT_TRUE(body.next());
+    EXPECT_EQ(body.get<double>().value_or(0.0), 2.5);
+    ASSERT_TRUE(body.next());
+    EXPECT_EQ(body.get_array<double>().value_or(std::vector<double> {}), (std::vector<double> {1.5, -0.25}));
+}
+
+TEST_F(TestDBusMessage, test_signature_argument)
+{
+    auto invalid = _message->add_signature("a");
+    ASSERT_TRUE(_message->add_signature("a{sv}").has_value());
+
+    Iter body(*_message);
+
+    ASSERT_FALSE(invalid.has_value());
+    EXPECT_EQ(invalid.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(invalid.error().message, "invalid dbus signature: a");
+    EXPECT_EQ(body.type(), 'g');
+    EXPECT_EQ(body.get<std::string>().value_or(""), "a{sv}");
+}
+
+TEST_F(TestDBusMessage, test_iter_signature)
+{
+    Appender body(*_message);
+    auto variant = body.open_variant("as");
+    ASSERT_TRUE(variant.has_value()) << variant.error().message;
+    ASSERT_TRUE(variant->add_array(std::vector<std::string> {"one"}).has_value());
+    ASSERT_TRUE(body.close(std::move(*variant)).has_value());
+
+    Iter reader(*_message);
+    auto value = reader.recurse();
+    ASSERT_TRUE(value.has_value()) << value.error().message;
+
+    EXPECT_EQ(reader.signature(), "v");
+    EXPECT_EQ(value->signature(), "as");
+    EXPECT_FALSE(reader.next());
+    EXPECT_EQ(reader.signature(), "");
+}
+
+TEST_F(TestDBusMessage, test_call_metadata)
+{
+    EXPECT_EQ(_message->destination(), "org.sihd.Test");
+    EXPECT_EQ(_message->signature(), "");
+    EXPECT_TRUE(_message->expects_reply());
+
+    ASSERT_TRUE(_message->set_no_reply().has_value());
+
+    EXPECT_FALSE(_message->expects_reply());
+}
+
+TEST_F(TestDBusMessage, test_signal_expects_no_reply)
+{
+    auto signal = Message::signal("/org/sihd/Test", "org.sihd.Test", "Changed");
+    ASSERT_TRUE(signal.has_value()) << signal.error().message;
+
+    EXPECT_FALSE(signal->expects_reply());
 }
 
 TEST_F(TestDBusMessage, test_open_bad_address)

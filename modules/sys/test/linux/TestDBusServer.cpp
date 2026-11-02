@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <functional>
 #include <map>
 #include <optional>
@@ -5,16 +6,21 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/linux/EventFd.hpp>
 #include <sihd/sys/linux/dbus.hpp>
+#include <sihd/sys/os.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
 
+#include "../test_helper.hpp"
 #include "private_dbus.hpp"
 
 namespace test
 {
 using namespace sihd::util;
 using namespace sihd::sys::linux_::dbus;
+using sihd::sys::linux_::EventFd;
 
 class TestDBusServer: public ::testing::Test
 {
@@ -205,6 +211,147 @@ TEST_F(TestDBusServer, test_object_path_argument)
     Iter argument(*call);
     EXPECT_EQ(argument.type(), 'o');
     EXPECT_EQ(argument.get<std::string>().value_or(""), "/org/sihd/Device/1");
+}
+
+TEST_F(TestDBusServer, test_received_call_metadata)
+{
+    ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
+    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(request.has_value()) << request.error().message;
+    ASSERT_TRUE(request->add("hello").has_value());
+    ASSERT_TRUE(request->add_signature("s").has_value());
+    ASSERT_TRUE(request->set_no_reply().has_value());
+
+    ASSERT_TRUE(request->send(_client).has_value());
+    auto call = receive_member(_server, "Ping");
+    auto locked = request->set_no_reply();
+
+    ASSERT_TRUE(call.has_value());
+    EXPECT_EQ(call->destination(), "org.sihd.Test");
+    EXPECT_EQ(call->signature(), "sg");
+    EXPECT_FALSE(call->expects_reply());
+    EXPECT_EQ(code_of(locked), ErrorCode::invalid_argument);
+    EXPECT_EQ(error_of(locked), "dbus message was already sent or received");
+}
+
+TEST_F(TestDBusServer, test_request_name_denied_by_policy)
+{
+    auto denied = _server.request_name("org.sihd.Denied");
+
+    ASSERT_EQ(code_of(denied), ErrorCode::permission_denied);
+    EXPECT_TRUE(has_error_name(denied.error(), "org.freedesktop.DBus.Error.AccessDenied")) << denied.error().message;
+}
+
+TEST_F(TestDBusServer, test_queued_name)
+{
+    auto owned = _server.request_name("org.sihd.Test");
+    auto queued = _client.request_name("org.sihd.Test", {.queue = true});
+
+    auto released = _server.release_name("org.sihd.Test");
+    auto acquired = receive_accepted(_client, [](const Message & message) {
+        return message.member() == "NameAcquired" && Iter(message).get<std::string>().value_or("") == "org.sihd.Test";
+    });
+    auto owned_now = _client.request_name("org.sihd.Test");
+
+    ASSERT_TRUE(owned.has_value()) << owned.error().message;
+    EXPECT_EQ(*owned, NameRequest::primary_owner);
+    ASSERT_TRUE(queued.has_value()) << queued.error().message;
+    EXPECT_EQ(*queued, NameRequest::queued);
+    EXPECT_TRUE(released.has_value());
+    EXPECT_TRUE(acquired.has_value());
+    ASSERT_TRUE(owned_now.has_value()) << owned_now.error().message;
+    EXPECT_EQ(*owned_now, NameRequest::primary_owner);
+}
+
+TEST_F(TestDBusServer, test_replaced_name)
+{
+    ASSERT_TRUE(_server.request_name("org.sihd.Test", {.allow_replacement = true}).has_value());
+
+    auto replaced = _client.request_name("org.sihd.Test", {.replace_existing = true});
+    auto lost = receive_member(_server, "NameLost");
+
+    ASSERT_TRUE(replaced.has_value()) << replaced.error().message;
+    EXPECT_EQ(*replaced, NameRequest::primary_owner);
+    ASSERT_TRUE(lost.has_value());
+    EXPECT_EQ(lost->type(), Message::Type::signal);
+    EXPECT_EQ(Iter(*lost).get<std::string>().value_or(""), "org.sihd.Test");
+}
+
+TEST_F(TestDBusServer, test_release_name_not_owned)
+{
+    auto unowned = _server.release_name("org.sihd.Test");
+    ASSERT_TRUE(_client.request_name("org.sihd.Test").has_value());
+    auto foreign = _server.release_name("org.sihd.Test");
+    auto invalid = _server.release_name("not a name");
+
+    EXPECT_EQ(code_of(unowned), ErrorCode::not_found);
+    EXPECT_EQ(error_of(unowned), "dbus name org.sihd.Test has no owner");
+    EXPECT_EQ(code_of(foreign), ErrorCode::invalid_argument);
+    EXPECT_EQ(error_of(foreign), "dbus name org.sihd.Test is owned by another connection");
+    EXPECT_EQ(error_of(invalid), "invalid dbus name: not a name");
+}
+
+TEST_F(TestDBusServer, test_caller_credentials)
+{
+    ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
+    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(request.has_value()) << request.error().message;
+    ASSERT_TRUE(request->send(_client).has_value());
+    auto call = receive_member(_server, "Ping");
+    ASSERT_TRUE(call.has_value());
+
+    auto credentials = _server.credentials(call->sender(), Duration(time::sec(5)));
+    auto unknown = _server.credentials(":1.9999", Duration(time::sec(5)));
+
+    ASSERT_TRUE(credentials.has_value()) << credentials.error().message;
+    EXPECT_EQ(credentials->user, sihd::sys::user::effective_user());
+    EXPECT_EQ(credentials->pid, sihd::sys::os::pid());
+    for (const sihd::sys::user::GroupId & group : sihd::sys::user::groups())
+        EXPECT_NE(std::ranges::find(credentials->groups, group), credentials->groups.end());
+    ASSERT_FALSE(unknown.has_value());
+    EXPECT_TRUE(has_error_name(unknown.error(), "org.freedesktop.DBus.Error.NameHasNoOwner"))
+        << unknown.error().message;
+}
+
+TEST_F(TestDBusServer, test_unix_fd_argument)
+{
+    ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
+    EventFd event;
+    ASSERT_TRUE(event.open().has_value());
+    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(request.has_value()) << request.error().message;
+    ASSERT_TRUE(request->add_unix_fd(event.fd()).has_value());
+
+    ASSERT_TRUE(request->send(_client).has_value());
+    auto call = receive_member(_server, "Ping");
+    ASSERT_TRUE(call.has_value());
+    auto received = Iter(*call).get_unix_fd();
+    auto not_a_fd = Iter(*request).get<int32_t>();
+    ASSERT_TRUE(received.has_value()) << received.error().message;
+    ASSERT_TRUE(event.notify(3).has_value());
+
+    uint64_t count = 0;
+    const ssize_t read_size = read_fd(received->fd(), &count, sizeof(count));
+
+    EXPECT_EQ(call->signature(), "h");
+    EXPECT_NE(received->fd(), event.fd());
+    EXPECT_EQ(read_size, static_cast<ssize_t>(sizeof(count)));
+    EXPECT_EQ(count, 3u);
+    EXPECT_EQ(error_of(not_a_fd), "dbus type mismatch: expected 'i', got 'h'");
+}
+
+TEST_F(TestDBusServer, test_unix_fd_invalid)
+{
+    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(request.has_value()) << request.error().message;
+    ASSERT_TRUE(request->add("not a fd").has_value());
+
+    auto invalid = request->add_unix_fd(-1);
+    auto mismatch = Iter(*request).get_unix_fd();
+
+    EXPECT_EQ(code_of(invalid), ErrorCode::invalid_argument);
+    EXPECT_EQ(error_of(invalid), "cannot fstat a negative fd");
+    EXPECT_EQ(error_of(mismatch), "dbus type mismatch: expected 'h', got 's'");
 }
 
 TEST_F(TestDBusServer, test_reply_dict_entries)

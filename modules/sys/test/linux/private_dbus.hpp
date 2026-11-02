@@ -29,6 +29,7 @@ inline constexpr const char *private_dbus_config = R"(<!DOCTYPE busconfig PUBLIC
     <allow send_destination="*" eavesdrop="true"/>
     <allow eavesdrop="true"/>
     <allow own="*"/>
+    <deny own="org.sihd.Denied"/>
   </policy>
 </busconfig>
 )";
@@ -78,6 +79,18 @@ inline std::optional<sihd::sys::linux_::dbus::Message>
     if (!received.has_value())
         return std::nullopt;
     return std::move(*received);
+}
+
+template <typename T>
+std::string error_of(const sihd::util::Result<T> & result)
+{
+    return result.has_value() ? "no error" : result.error().message;
+}
+
+template <typename T>
+sihd::util::ErrorCode code_of(const sihd::util::Result<T> & result)
+{
+    return result.has_value() ? sihd::util::ErrorCode::none : result.error().code;
 }
 
 inline std::optional<sihd::sys::linux_::dbus::Message> receive_member(sihd::sys::linux_::dbus::Connection & connection,

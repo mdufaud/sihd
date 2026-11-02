@@ -199,6 +199,7 @@ class FakeDaemon
         // handlers and properties stay untouched by the test thread from here on
         void serve()
         {
+            this->publish_objects();
             _thread = std::jthread([this](std::stop_token stop) { this->loop(stop); });
         }
 
@@ -270,6 +271,26 @@ class FakeDaemon
         dbus::Connection & connection() { return _server; }
 
     private:
+        void publish_objects()
+        {
+            for (const auto & [path, interfaces] : _objects)
+            {
+                std::vector<dbus::ObjectServer::Interface> published;
+                for (const auto & [interface, properties] : interfaces)
+                {
+                    std::vector<dbus::ObjectServer::Property> members;
+                    for (const auto & [name, value] : properties)
+                        members.push_back({.name = name, .signature = value.signature, .get = value.append, .set = {}});
+                    published.push_back(
+                        {.name = interface, .methods = {}, .properties = std::move(members), .signals = {}});
+                }
+                auto added = _object_server.add_object(path, std::move(published));
+                ASSERT_TRUE(added.has_value()) << added.error().message;
+            }
+            auto manager_added = _object_server.add_object_manager("/");
+            ASSERT_TRUE(manager_added.has_value()) << manager_added.error().message;
+        }
+
         void loop(const std::stop_token & stop)
         {
             while (!stop.stop_requested())
@@ -278,94 +299,23 @@ class FakeDaemon
                 if (!received.has_value())
                     return;
                 if (received->has_value() && (*received)->type() == dbus::Message::Type::method_call)
-                    this->dispatch(**received);
+                    this->dispatch(std::move(**received));
             }
         }
 
-        void dispatch(const dbus::Message & call)
+        // a handler answers its member on any path, without declaring a signature: the server answers the rest
+        void dispatch(dbus::Message && call)
         {
             _calls.push_back({.interface = call.interface(), .member = call.member()});
-            if (call.interface() == "org.freedesktop.DBus.Properties" && call.member() == "Get")
-                return this->answer_get(call);
-            if (call.interface() == "org.freedesktop.DBus.Properties" && call.member() == "GetAll")
-                return this->answer_get_all(call);
-            if (call.interface() == "org.freedesktop.DBus.ObjectManager" && call.member() == "GetManagedObjects")
-                return this->answer_managed_objects(call);
             const auto found = _handlers.find(std::make_pair(call.interface(), call.member()));
-            if (found == _handlers.end())
-                return this->fail(call, "org.freedesktop.DBus.Error.UnknownMethod", call.member());
-            found->second(call);
-        }
-
-        void answer_get(const dbus::Message & call)
-        {
-            dbus::Iter arguments(call);
-            const std::string interface = arguments.get<std::string>().value_or("");
-            arguments.next();
-            const std::string name = arguments.get<std::string>().value_or("");
-            const auto object = _objects.find(call.path());
-            if (object == _objects.end() || !object->second.contains(interface)
-                || !object->second.at(interface).contains(name))
-                return this->fail(call, "org.freedesktop.DBus.Error.UnknownProperty", name);
-            const FakeValue & value = object->second.at(interface).at(name);
-            this->reply(call, {FakeValue {"v", [&value](dbus::Appender & to) -> sihd::util::Result<void> {
-                                              auto variant = to.open_variant(value.signature);
-                                              SIHD_UNEXPECTED_RETURN(variant);
-                                              auto appended = value.append(*variant);
-                                              SIHD_UNEXPECTED_RETURN(appended);
-                                              return to.close(std::move(*variant));
-                                          }}});
-        }
-
-        void answer_get_all(const dbus::Message & call)
-        {
-            const std::string interface = dbus::Iter(call).get<std::string>().value_or("");
-            const auto object = _objects.find(call.path());
-            if (object == _objects.end() || !object->second.contains(interface))
-                return this->fail(call, "org.freedesktop.DBus.Error.UnknownInterface", interface);
-            const auto & properties = object->second.at(interface);
-            this->reply(call, {dict(FakeEntries(properties.begin(), properties.end()))});
-        }
-
-        void answer_managed_objects(const dbus::Message & call)
-        {
-            this->reply(
-                call,
-                {FakeValue {"a{oa{sa{sv}}}", [this](dbus::Appender & to) { return this->append_objects(to); }}});
-        }
-
-        sihd::util::Result<void> append_objects(dbus::Appender & to)
-        {
-            auto objects = to.open_array("{oa{sa{sv}}}");
-            SIHD_UNEXPECTED_RETURN(objects);
-            for (const auto & [path, interfaces] : _objects)
-            {
-                auto object = objects->open_dict_entry();
-                SIHD_UNEXPECTED_RETURN(object);
-                auto path_added = object->add_object_path(path);
-                SIHD_UNEXPECTED_RETURN(path_added);
-                auto interface_list = object->open_array("{sa{sv}}");
-                SIHD_UNEXPECTED_RETURN(interface_list);
-                for (const auto & [interface, properties] : interfaces)
-                {
-                    auto entry = interface_list->open_dict_entry();
-                    SIHD_UNEXPECTED_RETURN(entry);
-                    auto interface_added = entry->add(interface);
-                    SIHD_UNEXPECTED_RETURN(interface_added);
-                    auto appended = append_entries(*entry, FakeEntries(properties.begin(), properties.end()));
-                    SIHD_UNEXPECTED_RETURN(appended);
-                    auto entry_closed = interface_list->close(std::move(*entry));
-                    SIHD_UNEXPECTED_RETURN(entry_closed);
-                }
-                auto list_closed = object->close(std::move(*interface_list));
-                SIHD_UNEXPECTED_RETURN(list_closed);
-                auto object_closed = objects->close(std::move(*object));
-                SIHD_UNEXPECTED_RETURN(object_closed);
-            }
-            return to.close(std::move(*objects));
+            if (found != _handlers.end())
+                return found->second(call);
+            auto handled = _object_server.handle(std::move(call));
+            ASSERT_TRUE(handled.has_value()) << handled.error().message;
         }
 
         dbus::Connection _server;
+        dbus::ObjectServer _object_server {_server};
         std::map<std::string, std::map<std::string, std::map<std::string, FakeValue>>> _objects;
         std::map<std::pair<std::string, std::string>, Handler> _handlers;
         std::vector<Call> _calls;

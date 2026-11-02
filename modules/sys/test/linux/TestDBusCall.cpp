@@ -178,6 +178,16 @@ TEST_F(TestDBusCall, test_receive_until)
     EXPECT_EQ(refused.error().message, "unexpected message");
 }
 
+TEST_F(TestDBusCall, test_receive_until_interrupted)
+{
+    ASSERT_TRUE(_server.interrupt().has_value());
+
+    auto interrupted = Message::receive_until(_server, timeout, [](const Message &) -> Result<bool> { return false; });
+
+    EXPECT_EQ(code_of(interrupted), ErrorCode::interrupted);
+    EXPECT_EQ(error_of(interrupted), "dbus receive interrupted");
+}
+
 TEST_F(TestDBusCall, test_to_error)
 {
     auto requests = pings(2);

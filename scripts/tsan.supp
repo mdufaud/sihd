@@ -1,0 +1,2 @@
+# libdbus locks bus and bus_datas around a connection no other thread has yet, then that connection before bus at close
+deadlock:libdbus-1.so

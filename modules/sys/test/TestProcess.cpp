@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <thread>
@@ -752,15 +753,19 @@ TEST_F(TestProcess, test_process_child_policy)
     auto mask = sched::affinity(os::pid());
     ASSERT_TRUE(mask.has_value());
 
+    auto own_nice = sched::nice(static_cast<pid_t>(os::pid()));
+    ASSERT_TRUE(own_nice.has_value());
+    const int child_nice = std::max(*own_nice, 10);
+
     Process proc(cmd_sleep());
 
-    ASSERT_TRUE(proc.set_nice(10));
+    ASSERT_TRUE(proc.set_nice(child_nice));
     ASSERT_TRUE(proc.set_affinity(*mask));
     ASSERT_TRUE(proc.execute());
 
     auto nice = sched::nice(static_cast<pid_t>(proc.pid()));
     ASSERT_TRUE(nice.has_value());
-    EXPECT_EQ(*nice, 10);
+    EXPECT_EQ(*nice, child_nice);
 
     auto child_mask = sched::affinity(static_cast<pid_t>(proc.pid()));
     ASSERT_TRUE(child_mask.has_value());
