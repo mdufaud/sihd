@@ -123,8 +123,9 @@ default_matrix() {
     build_target "windows" platform=windows
 
     export lua=0
-    export m="util,sys,core,csv,zip,net,wifi"
+    export m="util,sys,core,csv,zip,net,wifi,curl,http"
     build_target "arm32" machine=arm
+    export m="util,sys,core,csv,zip,net,wifi"
     build_target "emscripten" platform=web
 
     # Android: only when ANDROID_NDK_PATH is set

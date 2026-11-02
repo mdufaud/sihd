@@ -69,8 +69,8 @@ jobs:
           # static-only arm32 entry (arm-linux is the static vcpkg triplet);
           # same module set as scripts/test.sh's arm32 target
           - id: arm32-linux-static
-            dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
-            make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net
+            dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net,curl,http
+            make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net,curl,http
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             gcc14: arm-linux-gnueabihf
           - id: arm64-linux
