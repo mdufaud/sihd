@@ -1,3 +1,5 @@
+#include <array>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
@@ -153,6 +155,20 @@ TEST_F(TestEndian, test_endian_read_be)
     EXPECT_EQ(endian::read_be<uint16_t>(be16, sizeof(be16)), 0x1234u);
 }
 
+TEST_F(TestEndian, test_endian_write_be)
+{
+    std::array<uint8_t, 4> be32 {};
+    endian::write_be<uint32_t>(0x12345678u, be32.data(), be32.size());
+    EXPECT_EQ(be32, (std::array<uint8_t, 4> {0x12, 0x34, 0x56, 0x78}));
+
+    // fewer bytes than T: the low bytes are written
+    std::array<uint8_t, 3> be24 {};
+    endian::write_be<uint32_t>(0x00345678u, be24.data(), be24.size());
+    EXPECT_EQ(be24, (std::array<uint8_t, 3> {0x34, 0x56, 0x78}));
+
+    EXPECT_EQ(endian::read_be<uint32_t>(be32.data(), be32.size()), 0x12345678u);
+}
+
 TEST_F(TestEndian, test_endian_read_le)
 {
     const uint8_t le32[] = {0x78, 0x56, 0x34, 0x12};
@@ -164,6 +180,20 @@ TEST_F(TestEndian, test_endian_read_le)
 
     const uint8_t le16[] = {0x34, 0x12};
     EXPECT_EQ(endian::read_le<uint16_t>(le16, sizeof(le16)), 0x1234u);
+}
+
+TEST_F(TestEndian, test_endian_write_le)
+{
+    std::array<uint8_t, 4> le32 {};
+    endian::write_le<uint32_t>(0x12345678u, le32.data(), le32.size());
+    EXPECT_EQ(le32, (std::array<uint8_t, 4> {0x78, 0x56, 0x34, 0x12}));
+
+    // fewer bytes than T: the low bytes are written
+    std::array<uint8_t, 3> le24 {};
+    endian::write_le<uint32_t>(0x00345678u, le24.data(), le24.size());
+    EXPECT_EQ(le24, (std::array<uint8_t, 3> {0x78, 0x56, 0x34}));
+
+    EXPECT_EQ(endian::read_le<uint32_t>(le32.data(), le32.size()), 0x12345678u);
 }
 
 } // namespace test

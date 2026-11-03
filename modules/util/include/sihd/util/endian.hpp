@@ -107,6 +107,24 @@ T read_be(const uint8_t *data, size_t size)
     return convert<T, std::endian::big>(value);
 }
 
+/* Write the 'size' low bytes of value little-endian */
+template <typename T>
+    requires SwappableEndian<T>
+void write_le(T value, uint8_t *data, size_t size)
+{
+    const T little = convert<T, std::endian::little>(value);
+    std::memcpy(data, &little, size);
+}
+
+/* Write the 'size' low bytes of value big-endian */
+template <typename T>
+    requires SwappableEndian<T>
+void write_be(T value, uint8_t *data, size_t size)
+{
+    const T big = convert<T, std::endian::big>(value);
+    std::memcpy(data, reinterpret_cast<const uint8_t *>(&big) + (sizeof(T) - size), size);
+}
+
 } // namespace endian
 
 } // namespace sihd::util
