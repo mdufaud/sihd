@@ -52,6 +52,9 @@ class UdpReceiver: public INetReceiver,
         // to set blocking/broadcast
         const Socket & socket() const;
 
+        bool is_ready() const override;
+        bool wait_ready(sihd::util::Duration timeout) const override;
+
     protected:
         void handle(sihd::sys::Poll *poll) override;
         bool on_start() override;

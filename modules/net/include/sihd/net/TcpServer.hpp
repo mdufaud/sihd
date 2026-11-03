@@ -54,6 +54,9 @@ class TcpServer: public INetServer,
         const Socket & socket() const;
         size_t queue_size() const;
 
+        bool is_ready() const override;
+        bool wait_ready(sihd::util::Duration timeout) const override;
+
     protected:
         void handle(sihd::sys::EventPoll *poll) override;
         bool on_start() override;

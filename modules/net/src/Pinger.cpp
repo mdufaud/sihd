@@ -151,6 +151,8 @@ bool Pinger::on_start()
         return false;
     }
 
+    // a stop landing after set_ready must not be erased here
+    _stop = false;
     this->service_set_ready();
 
     this->_clear_event();
@@ -163,7 +165,6 @@ bool Pinger::on_start()
 
     _result.time_start = _clock_ptr->now();
 
-    _stop = false;
     bool ret = true;
     size_t i = 0;
     while (_stop == false && (_ping_count == 0 || i < _ping_count))

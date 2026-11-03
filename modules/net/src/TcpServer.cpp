@@ -189,8 +189,18 @@ bool TcpServer::on_start()
     }
     if (SIHD_UNEXPECTED_LOG(_socket.listen(this->queue_size())))
         return false;
-    this->service_set_ready();
     return _poll.start();
+}
+
+// ready once the poll runs: a stop before would find it stopped and be lost
+bool TcpServer::is_ready() const
+{
+    return _poll.is_ready();
+}
+
+bool TcpServer::wait_ready(Duration timeout) const
+{
+    return _poll.wait_ready(timeout);
 }
 
 bool TcpServer::on_stop()

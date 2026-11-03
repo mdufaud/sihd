@@ -1,3 +1,5 @@
+#include <future>
+
 #include <gtest/gtest.h>
 
 #include <sihd/net/Pinger.hpp>
@@ -112,6 +114,26 @@ TEST_F(TestPinger, test_pinger_ignores_forged_reply)
     EXPECT_EQ(result.transmitted, 1);
     EXPECT_EQ(result.received, 1);
     EXPECT_LT(result.rtt.max, time::sec(1));
+}
+
+TEST_F(TestPinger, test_pinger_stops_right_after_ready)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+
+    Pinger pinger("pinger");
+    if (pinger.open(false).has_value() == false)
+        GTEST_SKIP() << raw_socket_skip_reason();
+    pinger.set_interval(50);
+    pinger.set_ping_count(0);
+    pinger.set_client({"127.0.0.1"});
+
+    auto run = std::async(std::launch::async, [&pinger] { return pinger.start(); });
+    ASSERT_TRUE(pinger.wait_ready(std::chrono::seconds(2)));
+
+    // a lost stop never returns: the pinger pings forever
+    EXPECT_TRUE(pinger.stop());
+    EXPECT_TRUE(run.get());
 }
 
 } // namespace test
