@@ -11,6 +11,8 @@
 # include <sihd/sys/linux/dbus.hpp>
 # include <sihd/util/str.hpp>
 # include <sihd/util/time.hpp>
+
+# include "internal/desktop_bus.hpp"
 #endif
 
 #include <sihd/sys/DesktopNotifier.hpp>
@@ -30,7 +32,6 @@ namespace
 
 constexpr ZStringView notifications_service = "org.freedesktop.Notifications";
 constexpr ZStringView notifications_path = "/org/freedesktop/Notifications";
-constexpr Duration call_timeout(time::sec(5));
 
 uint8_t urgency_level(DesktopNotifier::Urgency urgency)
 {
@@ -120,7 +121,7 @@ struct DesktopNotifier::Impl
         // a failed call drops the connection: the next one reconnects to a restarted bus or server
         Result<dbus::Message> call(const dbus::Message & request)
         {
-            auto reply = request.call(connection, call_timeout);
+            auto reply = request.call(connection, internal::dbus_call_timeout);
             if (!reply.has_value())
                 connection.close();
             return reply;

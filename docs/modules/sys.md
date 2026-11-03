@@ -79,6 +79,11 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 - `mouse`: `mouse_move`, `mouse_move_by`, `mouse_button`, `mouse_click`, `mouse_scroll`.
 - `Bitmap`: in-memory pixel buffer: `create`, `fill`, `get`, `set`, `save_bmp`, `read_bmp`, `to_bmp_data`, `read_bmp_data`.
 - `DesktopNotifier`: desktop notifications: `notify` a `Notification` (summary, body, icon, `Urgency`, optional timeout) and get its id, `close(id)`. A negative timeout is rejected (`invalid_argument`). Linux sends them to the `org.freedesktop.Notifications` service of the session bus (D-Bus): the icon is an icon name or a path, the urgency maps to the `urgency` hint, the timeout to the expiration (server default when unset); the server capabilities are asked once per connection so that the body is escaped when the server reads markup; `set_app_name` and `set_app_id` (the `desktop-entry` hint) are optional; ids come from the server, so any notifier can `close` them. Windows shows WinRT toasts and requires `set_app_id` (AppUserModelID): the first `notify` registers it under `HKCU\Software\Classes\AppUserModelId\<id>` (per user, no admin rights, how unpackaged apps get a notification identity) with `set_app_name` as display name; the icon is an image path, `low` shows a silent toast, `critical` a long one (`duration="long"`), `normal` a short one with sound; the timeout is ignored (the system sets the display time); ids are per notifier and `close` only reaches the toasts of its own notifier. Other platforms return `not_supported`.
+- `PowerInhibitor`: keeps the machine awake while it lives: `inhibit_sleep(reason)`, `inhibit_display(reason)`, `release`, `is_sleep_inhibited`, `is_display_inhibited`, see [Desktop services](#desktop-services).
+- `SleepWatcher`: `start(callback)` gets `Event::suspending` before the system sleeps and `Event::resumed` after, `stop`, `is_running`.
+- `SecretStore`: one secret per service and account in the keyring of the user: `store`, `lookup`, `remove`, `set_prompt_timeout`.
+- `desktop`: `open_uri` in the default application of its scheme, `open_file`, `reveal` a file in the file manager, `color_scheme` (`no_preference`, `dark`, `light`).
+- `network`: `connectivity` as the system network manager sees it (`unknown`, `none`, `portal`, `limited`, `full`).
 
 ### Users, privileges and sessions
 
@@ -151,6 +156,95 @@ int main()
 ```
 
 Adapted from `modules/sys/test/TestProc.cpp`.
+
+## Desktop services
+
+`PowerInhibitor`, `SleepWatcher`, `SecretStore`, `desktop` and `network` keep one interface over the standard services of each system. Android and Emscripten return `not_supported`, after the validation of the arguments.
+
+| API | Linux | Windows |
+|---|---|---|
+| `inhibit_sleep` | login1 `Inhibit` on the system bus, `block` mode | `PowerCreateRequest` + `PowerRequestSystemRequired` |
+| `inhibit_display` | portal `Inhibit`, idle flag | `PowerRequestDisplayRequired` + `PowerRequestSystemRequired` |
+| `SleepWatcher` | login1 `PrepareForSleep` + a `delay` lock released when the callback returns | `PowerRegisterSuspendResumeNotification` |
+| `SecretStore` | Secret Service (`org.freedesktop.secrets`), default collection, attributes `service` and `username` as written by python-keyring and read by `secret-tool` | Credential Manager, generic credential named `service/account`, persisted on the machine |
+| `open_uri` | portal `OpenURI` | `ShellExecuteExW` |
+| `open_file` | portal `OpenFile` | `ShellExecuteExW` |
+| `reveal` | portal `OpenDirectory` | `SHOpenFolderAndSelectItems` |
+| `color_scheme` | portal `Settings`, `org.freedesktop.appearance` | registry `AppsUseLightTheme`, unset means `light` |
+| `connectivity` | NetworkManager `Connectivity` | `INetworkListManager::GetConnectivity` |
+
+Differences between the systems:
+
+- `set_app_name` names the lock in `systemd-inhibit --list`. Windows has no such field and ignores it.
+- `inhibit_sleep` on Linux also blocks a sleep the user asks for. On Windows the user's sleep (power button, lid, Start menu) wins and ends the request.
+- `SleepWatcher` holds the sleep until the callback returns, at most `InhibitDelayMaxUSec` (logind, 5 seconds by default). Windows gives about 2 seconds and offers no way to extend them. The callback runs on an internal thread and must not call `stop`.
+- `set_prompt_timeout` is how long the keyring may ask the user to unlock it. Until it is set, a needed prompt is refused. Windows never prompts and ignores it.
+- `open_uri`, `open_file` and `reveal` wait for the portal's response on Linux, 30 seconds at most, since an application choice can be on screen.
+- `connectivity` never reports `portal` on Windows.
+
+The same failure gives the same code everywhere:
+
+| Failure | Code |
+|---|---|
+| `open_uri` of something without a scheme, of a one-letter scheme or of a `file://` uri | `invalid_argument` |
+| `open_file` or `reveal` of a missing path | `not_found` |
+| `inhibit_*` when this instance already holds it, `start` of a running watcher | `already_exists` |
+| `SleepWatcher::start` without a callback | `invalid_argument` |
+| Secret with an empty service or account, a `/` in the service, or over `SecretStore::max_secret_size` (2560 bytes, the Credential Manager limit) | `invalid_argument` |
+| `lookup` or `remove` of a secret that does not exist | `not_found` |
+| Keyring prompt refused or dismissed, portal request cancelled by the user | `permission_denied` |
+
+On Linux, `SecretStore::store` also returns `not_found` when the keyring has no default collection, `connectivity` returns `not_supported` without NetworkManager, and a keyring prompt without answer returns `timeout`.
+
+```cpp
+#include <sihd/sys/PowerInhibitor.hpp>
+#include <sihd/sys/SecretStore.hpp>
+#include <sihd/sys/SleepWatcher.hpp>
+#include <sihd/sys/desktop.hpp>
+#include <sihd/sys/network.hpp>
+#include <sihd/util/time.hpp>
+
+using namespace sihd::sys;
+using namespace sihd::util;
+
+int main()
+{
+    PowerInhibitor inhibitor;
+    inhibitor.set_app_name("recorder");
+    auto inhibited = inhibitor.inhibit_sleep("Recording");
+    if (!inhibited)
+        return 1;
+
+    SleepWatcher watcher;
+    auto started = watcher.start([](SleepWatcher::Event event) {
+        if (event == SleepWatcher::Event::suspending)
+        {
+            // flush what must survive the sleep
+        }
+    });
+    if (!started)
+        return 1;
+
+    SecretStore secrets;
+    secrets.set_prompt_timeout(Duration(time::sec(60)));
+    auto stored = secrets.store("recorder", "upload-token", "hunter2");
+    auto token = secrets.lookup("recorder", "upload-token");
+    if (!stored || !token)
+        return 1;
+
+    auto scheme = desktop::color_scheme();
+    auto connectivity = network::connectivity();
+    if (connectivity && *connectivity == network::Connectivity::full)
+    {
+        auto opened = desktop::open_uri("https://example.org/");
+        if (!opened)
+            return 1;
+    }
+    return scheme ? 0 : 1;
+}
+```
+
+Adapted from `modules/sys/test/linux/TestPowerInhibitor.cpp`, `TestSleepWatcher.cpp`, `TestSecretService.cpp`, `TestDesktopPortal.cpp` and `TestNetwork.cpp`.
 
 ## D-Bus service
 

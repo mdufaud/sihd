@@ -6,9 +6,9 @@
 #include <optional>
 #include <string>
 
+#include <sihd/sys/desktop.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
-#include <sihd/util/build.hpp>
 
 namespace sihd::sys
 {
@@ -32,9 +32,7 @@ class DesktopNotifier
                 std::optional<sihd::util::Duration> timeout;
         };
 
-        static constexpr bool supported = (sihd::util::build::is_linux && !sihd::util::build::is_android
-                                           && !sihd::util::build::is_emscripten)
-                                          || sihd::util::build::is_windows;
+        static constexpr bool supported = desktop::supported;
 
         DesktopNotifier();
         DesktopNotifier(DesktopNotifier && other);

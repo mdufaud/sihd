@@ -1,7 +1,9 @@
+#include <array>
 #include <chrono>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
+#include <future>
 #include <map>
 #include <optional>
 #include <string>
@@ -17,8 +19,13 @@
 #include <sihd/sys/Daemon.hpp>
 #include <sihd/sys/DesktopNotifier.hpp>
 #include <sihd/sys/MessageQueue.hpp>
+#include <sihd/sys/PowerInhibitor.hpp>
+#include <sihd/sys/SecretStore.hpp>
 #include <sihd/sys/Semaphore.hpp>
 #include <sihd/sys/SharedMemory.hpp>
+#include <sihd/sys/SleepWatcher.hpp>
+#include <sihd/sys/desktop.hpp>
+#include <sihd/sys/network.hpp>
 #include <sihd/util/time.hpp>
 
 using namespace sihd::util;
@@ -210,6 +217,198 @@ int do_notify_close(int argc, char **argv)
     return 0;
 }
 
+void wait_proceed()
+{
+    fflush(stdout);
+    std::array<char, 8> line {};
+    (void)fgets(line.data(), static_cast<int>(line.size()), stdin);
+}
+
+void print_error(const Error & error)
+{
+    printf("error %d: %s\n", static_cast<int>(error.code), error.message.c_str());
+}
+
+void print_result(const Result<void> & result, const char *success)
+{
+    if (result.has_value())
+        printf("%s\n", success);
+    else
+        print_error(result.error());
+}
+
+Result<void> power_inhibit(sihd::sys::PowerInhibitor & inhibitor, const std::string & what, const std::string & reason)
+{
+    return what == "display" ? inhibitor.inhibit_display(reason) : inhibitor.inhibit_sleep(reason);
+}
+
+int do_power_inhibit(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    std::optional<sihd::sys::PowerInhibitor> inhibitor;
+    inhibitor.emplace();
+    inhibitor->set_app_name(args["app_name"]);
+    auto inhibited = power_inhibit(*inhibitor, args["what"], args["reason"]);
+    print_result(inhibited, "held");
+    if (!inhibited.has_value())
+    {
+        printf("inhibited=%d\n", inhibitor->is_sleep_inhibited() || inhibitor->is_display_inhibited() ? 1 : 0);
+        fflush(stdout);
+        return 1;
+    }
+
+    if (args["twice"] == "1")
+        print_result(power_inhibit(*inhibitor, args["what"], args["reason"]), "held");
+    wait_proceed();
+    if (args["end"] == "destroy")
+    {
+        inhibitor.reset();
+        printf("released\n");
+    }
+    else
+    {
+        print_result(inhibitor->release(), "released");
+    }
+    wait_proceed();
+    return 0;
+}
+
+int do_sleep_watch(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    sihd::sys::SleepWatcher watcher;
+    watcher.set_app_name(args["app_name"]);
+    std::promise<void> resumed;
+    const sihd::sys::SleepWatcher::Callback callback = [&resumed](sihd::sys::SleepWatcher::Event event) {
+        if (event == sihd::sys::SleepWatcher::Event::suspending)
+        {
+            printf("suspending\n");
+            wait_proceed();
+        }
+        else
+        {
+            printf("resumed\n");
+            fflush(stdout);
+            resumed.set_value();
+        }
+    };
+
+    auto started = watcher.start(callback);
+    print_result(started, "started");
+    if (!started.has_value())
+    {
+        printf("running=%d\n", watcher.is_running() ? 1 : 0);
+        fflush(stdout);
+        return 1;
+    }
+    if (args["twice"] == "1")
+        print_result(watcher.start(callback), "started");
+    fflush(stdout);
+    resumed.get_future().wait();
+    print_result(watcher.stop(), "stopped");
+    wait_proceed();
+    return 0;
+}
+
+const char *color_scheme_name(sihd::sys::desktop::ColorScheme scheme)
+{
+    switch (scheme)
+    {
+        case sihd::sys::desktop::ColorScheme::dark:
+            return "dark";
+        case sihd::sys::desktop::ColorScheme::light:
+            return "light";
+        default:
+            return "no_preference";
+    }
+}
+
+int do_desktop(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    Result<void> result;
+    if (args["action"] == "color_scheme")
+    {
+        auto scheme = sihd::sys::desktop::color_scheme();
+        if (scheme.has_value())
+            printf("scheme=%s\n", color_scheme_name(*scheme));
+        else
+            print_error(scheme.error());
+        fflush(stdout);
+        wait_proceed();
+        return scheme.has_value() ? 0 : 1;
+    }
+
+    if (args["action"] == "open_uri")
+        result = sihd::sys::desktop::open_uri(args["target"]);
+    else if (args["action"] == "open_file")
+        result = sihd::sys::desktop::open_file(args["target"]);
+    else
+        result = sihd::sys::desktop::reveal(args["target"]);
+    print_result(result, "ok");
+    wait_proceed();
+    return result.has_value() ? 0 : 1;
+}
+
+const char *connectivity_name(sihd::sys::network::Connectivity connectivity)
+{
+    switch (connectivity)
+    {
+        case sihd::sys::network::Connectivity::none:
+            return "none";
+        case sihd::sys::network::Connectivity::portal:
+            return "portal";
+        case sihd::sys::network::Connectivity::limited:
+            return "limited";
+        case sihd::sys::network::Connectivity::full:
+            return "full";
+        default:
+            return "unknown";
+    }
+}
+
+int do_connectivity()
+{
+    auto connectivity = sihd::sys::network::connectivity();
+    if (connectivity.has_value())
+        printf("%s\n", connectivity_name(*connectivity));
+    else
+        print_error(connectivity.error());
+    wait_proceed();
+    return connectivity.has_value() ? 0 : 1;
+}
+
+int do_secret(int argc, char **argv)
+{
+    std::map<std::string, std::string> args = named_args(argc, argv);
+    sihd::sys::SecretStore store;
+    if (!args["prompt_ms"].empty())
+        store.set_prompt_timeout(Duration(time::milli(std::stoll(args["prompt_ms"]))));
+    std::optional<Error> error;
+    if (args["action"] == "lookup")
+    {
+        auto secret = store.lookup(args["service"], args["account"]);
+        if (secret.has_value())
+            printf("secret=%s\n", secret->c_str());
+        else
+            error = secret.error();
+    }
+    else
+    {
+        auto done = args["action"] == "store" ? store.store(args["service"], args["account"], args["secret"])
+                                              : store.remove(args["service"], args["account"]);
+        if (done.has_value())
+            printf("ok\n");
+        else
+            error = done.error();
+    }
+
+    if (error.has_value())
+        print_error(*error);
+    wait_proceed();
+    return error.has_value() ? 1 : 0;
+}
+
 int do_crash(const char *dump_path)
 {
     sihd::sys::CrashHandler::Options options;
@@ -252,6 +451,16 @@ int main(int argc, char **argv)
         return do_notify(argc - 2, argv + 2);
     if (argc >= 2 && strcmp(argv[1], "notify-close") == 0)
         return do_notify_close(argc - 2, argv + 2);
+    if (argc >= 2 && strcmp(argv[1], "power-inhibit") == 0)
+        return do_power_inhibit(argc - 2, argv + 2);
+    if (argc >= 2 && strcmp(argv[1], "sleep-watch") == 0)
+        return do_sleep_watch(argc - 2, argv + 2);
+    if (argc >= 2 && strcmp(argv[1], "desktop") == 0)
+        return do_desktop(argc - 2, argv + 2);
+    if (argc >= 2 && strcmp(argv[1], "connectivity") == 0)
+        return do_connectivity();
+    if (argc >= 2 && strcmp(argv[1], "secret") == 0)
+        return do_secret(argc - 2, argv + 2);
     if (argc >= 5 && strcmp(argv[1], "daemonize") == 0)
         return do_daemonize(argv[2], argv[3], argv[4]);
     return 255;

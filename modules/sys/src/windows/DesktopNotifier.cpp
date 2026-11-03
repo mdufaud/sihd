@@ -8,7 +8,6 @@
 #include <shlwapi.h>
 
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <windows.data.xml.dom.h>
 #include <windows.ui.notifications.h>
@@ -22,6 +21,8 @@
 #include <sihd/sys/windows/ComInit.hpp>
 #include <sihd/sys/windows/registry.hpp>
 #include <sihd/util/str.hpp>
+
+#include "internal/com.hpp"
 
 namespace sihd::sys
 {
@@ -155,15 +156,7 @@ struct DesktopNotifier::Impl
         {
             if (app_id.empty())
                 return std::unexpected(Error(invalid_argument, "a windows desktop notification needs an app id"));
-            try
-            {
-                com.emplace(windows_::ComInit::Threading::multithreaded);
-            }
-            catch (const std::runtime_error & error)
-            {
-                return std::unexpected(Error(io_error, "{}", error.what()));
-            }
-            return {};
+            return internal::init_com(com, windows_::ComInit::Threading::multithreaded);
         }
 
         Result<void> register_app_id()

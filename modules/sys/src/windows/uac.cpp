@@ -4,7 +4,6 @@
 // clang-format on
 
 #include <optional>
-#include <stdexcept>
 #include <string_view>
 #include <vector>
 
@@ -12,6 +11,7 @@
 #include <sihd/sys/windows/ComInit.hpp>
 #include <sihd/sys/windows/uac.hpp>
 
+#include "internal/com.hpp"
 #include "internal/command_line.hpp"
 #include "internal/win_error.hpp"
 
@@ -25,14 +25,8 @@ namespace sihd::sys::windows_::uac
 Result<void> relaunch_elevated(std::span<const std::string> args)
 {
     std::optional<ComInit> com;
-    try
-    {
-        com.emplace();
-    }
-    catch (const std::runtime_error & error)
-    {
-        return std::unexpected(Error(io_error, "could not relaunch elevated: {}", error.what()));
-    }
+    auto initialized = internal::init_com(com);
+    SIHD_UNEXPECTED_RETURN(initialized);
     const std::string path = program::path();
     const std::vector<std::string_view> views(args.begin(), args.end());
     const std::string parameters = internal::command_line(views);

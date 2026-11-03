@@ -28,10 +28,12 @@ class MessageQueue;
 class PathManager;
 class PluginLoader;
 class Poll;
+class PowerInhibitor;
 class Process;
 class ProcessInfo;
 class ProcessMonitor;
 class Pty;
+class SecretStore;
 class Semaphore;
 class SharedMemory;
 class SigHandler;
@@ -40,6 +42,7 @@ class SigThreadBlocker;
 #endif
 class SigWaiter;
 class SigWatcher;
+class SleepWatcher;
 class TmpDir;
 class Uuid;
 
