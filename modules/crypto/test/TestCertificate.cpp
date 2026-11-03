@@ -176,6 +176,74 @@ TEST_F(TestCertificate, verify_requires_matching_issuer)
     EXPECT_FALSE(first.verify(second));
 }
 
+TEST_F(TestCertificate, url_extensions_roundtrip)
+{
+    CertOptions opts;
+    opts.common_name = "leaf.example";
+    opts.ocsp_urls = {"http://ocsp.example/a", "http://ocsp.example/b"};
+    opts.crl_urls = {"http://crl.example/ca.crl"};
+
+    Certificate cert;
+    ASSERT_TRUE(cert.generate_self_signed(_key, opts));
+
+    EXPECT_EQ(cert.ocsp_urls(), (std::vector<std::string> {"http://ocsp.example/a", "http://ocsp.example/b"}));
+    EXPECT_EQ(cert.crl_urls(), (std::vector<std::string> {"http://crl.example/ca.crl"}));
+
+    Certificate bare;
+    ASSERT_TRUE(bare.generate_self_signed(_key, "bare.example"));
+    EXPECT_TRUE(bare.ocsp_urls().empty());
+    EXPECT_TRUE(bare.crl_urls().empty());
+}
+
+TEST_F(TestCertificate, url_extensions_reject_separator)
+{
+    CertOptions opts;
+    opts.crl_urls = {"http://crl.example/a.crl,URI:http://evil.example"};
+
+    Certificate cert;
+    auto res = cert.generate_self_signed(_key, opts);
+    ASSERT_FALSE(res);
+    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(res.error().message, "invalid url: http://crl.example/a.crl,URI:http://evil.example");
+    EXPECT_FALSE(cert);
+}
+
+TEST_F(TestCertificate, generate_signed)
+{
+    CertOptions ca_opts;
+    ca_opts.common_name = "ca.example";
+    ca_opts.is_ca = true;
+    Certificate ca;
+    ASSERT_TRUE(ca.generate_self_signed(_key, ca_opts));
+
+    CertOptions leaf_opts;
+    leaf_opts.common_name = "leaf.example";
+    leaf_opts.subject_alt_names = {"DNS:leaf.example"};
+    Certificate leaf;
+    ASSERT_TRUE(leaf.generate_signed(other_rsa_key(), leaf_opts, ca, _key));
+
+    EXPECT_EQ(leaf.subject_common_name(), "leaf.example");
+    EXPECT_EQ(leaf.issuer_common_name(), "ca.example");
+    EXPECT_FALSE(leaf.is_ca());
+    EXPECT_TRUE(leaf.verify(ca));
+    EXPECT_FALSE(leaf.verify(leaf));
+}
+
+TEST_F(TestCertificate, generate_signed_rejects_foreign_issuer_key)
+{
+    Certificate ca;
+    ASSERT_TRUE(ca.generate_self_signed(_key, "ca.example"));
+
+    CertOptions opts;
+    opts.common_name = "leaf.example";
+    Certificate leaf;
+    auto res = leaf.generate_signed(_key, opts, ca, other_rsa_key());
+    ASSERT_FALSE(res);
+    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(res.error().message, "issuer key does not match the issuer certificate");
+    EXPECT_FALSE(leaf);
+}
+
 TEST_F(TestCertificate, pem_roundtrip)
 {
     Certificate cert;

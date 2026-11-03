@@ -30,6 +30,8 @@ struct CertOptions
         int days = 365;
         uint64_t serial = 0; // 0 => random
         bool is_ca = false;
+        std::vector<std::string> ocsp_urls;
+        std::vector<std::string> crl_urls;
         // opt out of the DNS/IP/email/URI kinds: otherName, RID, dirName pass, separators never do
         bool any_alt_name_kind = false;
 };
@@ -50,6 +52,10 @@ class Certificate
         sihd::util::Result<void>
             generate_self_signed(const PrivateKey & key, const std::string & common_name, int days = 365);
         sihd::util::Result<void> generate_self_signed(const PrivateKey & key, const CertOptions & opts);
+        sihd::util::Result<void> generate_signed(const PrivateKey & key,
+                                                 const CertOptions & opts,
+                                                 const Certificate & issuer,
+                                                 const PrivateKey & issuer_key);
 
         sihd::util::Result<void> load_pem(sihd::util::ZStringView path);
         sihd::util::Result<void> save_pem(const std::string & path) const;
@@ -63,6 +69,8 @@ class Certificate
         std::string subject_common_name() const;
         std::string issuer_common_name() const;
         std::vector<std::string> subject_alt_names() const;
+        std::vector<std::string> ocsp_urls() const;
+        std::vector<std::string> crl_urls() const;
         sihd::util::Timestamp not_before() const;
         sihd::util::Timestamp not_after() const;
         std::string serial_hex() const;

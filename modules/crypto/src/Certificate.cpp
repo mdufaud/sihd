@@ -10,6 +10,8 @@
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
+#include "asn1_time.hpp"
+
 #if !defined(__SIHD_WINDOWS__)
 # include <arpa/inet.h>
 #else
@@ -49,10 +51,6 @@ struct X509ExtFree
 struct BnFree
 {
         void operator()(BIGNUM *bn) const { BN_free(bn); }
-};
-struct Asn1TimeFree
-{
-        void operator()(ASN1_TIME *time) const { ASN1_TIME_free(time); }
 };
 
 std::shared_ptr<void> make_handle(X509 *cert)
@@ -96,38 +94,38 @@ std::string name_common_name(X509_NAME *name)
     return result;
 }
 
-Timestamp asn1_time_to_timestamp(const ASN1_TIME *time)
+// same config grammar as the alt names: a separator would smuggle another entry
+bool valid_url(const std::string & url)
 {
-    if (!time)
-        return Timestamp(0);
-    std::unique_ptr<ASN1_TIME, Asn1TimeFree> epoch(ASN1_TIME_set(nullptr, 0));
-    if (epoch == nullptr)
-        return Timestamp(0);
-    int days = 0;
-    int secs = 0;
-    int ok = ASN1_TIME_diff(&days, &secs, epoch.get(), time);
-    if (ok != 1)
-        return Timestamp(0);
-    int64_t total = static_cast<int64_t>(days) * 86400 + secs;
-    return Timestamp(time::seconds(total));
+    return !url.empty() && url.find_first_of(",\n\r") == std::string::npos && url.find('\0') == std::string::npos;
 }
 
-} // namespace
-
-Result<void> Certificate::generate_self_signed(const PrivateKey & key, const std::string & common_name, int days)
+Result<void> add_url_extension(X509 *cert, int nid, std::string_view prefix, const std::vector<std::string> & urls)
 {
-    CertOptions opts;
-    opts.common_name = common_name;
-    opts.days = days;
-    return this->generate_self_signed(key, opts);
+    if (urls.empty())
+        return {};
+    std::vector<std::string> entries;
+    for (const std::string & url : urls)
+    {
+        if (!valid_url(url))
+            return std::unexpected(Error(invalid_argument, "invalid url: {}", url));
+        entries.emplace_back(fmt::format("{}URI:{}", prefix, url));
+    }
+    std::string conf = str::join(entries, ",");
+    std::unique_ptr<X509_EXTENSION, X509ExtFree> ext(X509V3_EXT_conf_nid(nullptr, nullptr, nid, conf.c_str()));
+    if (ext == nullptr)
+    {
+        ERR_clear_error();
+        return std::unexpected(Error(invalid_argument, "invalid url extension: {}", conf));
+    }
+    if (X509_add_ext(cert, ext.get(), -1) != 1)
+        return make_error("could not add url extension");
+    return {};
 }
 
-Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
+Result<std::unique_ptr<X509, X509Free>>
+    build_certificate(const PrivateKey & key, const CertOptions & opts, X509 *issuer, const PrivateKey & signer)
 {
-    ERR_clear_error();
-    this->clear();
-    if (!key)
-        return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
     std::unique_ptr<X509, X509Free> cert(X509_new());
     if (cert == nullptr)
         return make_error("X509_new");
@@ -175,7 +173,7 @@ Result<void> Certificate::generate_self_signed(const PrivateKey & key, const Cer
         if (!add_name_entry(name, field, value))
             return make_error(fmt::format("invalid subject field {}", field));
     }
-    if (X509_set_issuer_name(cert.get(), name) != 1)
+    if (X509_set_issuer_name(cert.get(), issuer != nullptr ? X509_get_subject_name(issuer) : name) != 1)
         return make_error("X509_set_issuer_name");
 
     for (const std::string & entry : opts.subject_alt_names)
@@ -212,9 +210,58 @@ Result<void> Certificate::generate_self_signed(const PrivateKey & key, const Cer
             return make_error("could not add basic constraints");
     }
 
-    if (X509_sign(cert.get(), static_cast<EVP_PKEY *>(key.native()), EVP_sha256()) <= 0)
+    auto aia = add_url_extension(cert.get(), NID_info_access, "OCSP;", opts.ocsp_urls);
+    SIHD_UNEXPECTED_RETURN(aia);
+    auto cdp = add_url_extension(cert.get(), NID_crl_distribution_points, "", opts.crl_urls);
+    SIHD_UNEXPECTED_RETURN(cdp);
+
+    if (X509_sign(cert.get(), static_cast<EVP_PKEY *>(signer.native()), EVP_sha256()) <= 0)
         return make_error("X509_sign");
-    _handle = make_handle(cert.release());
+    return cert;
+}
+
+} // namespace
+
+Result<void> Certificate::generate_self_signed(const PrivateKey & key, const std::string & common_name, int days)
+{
+    CertOptions opts;
+    opts.common_name = common_name;
+    opts.days = days;
+    return this->generate_self_signed(key, opts);
+}
+
+Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
+{
+    ERR_clear_error();
+    this->clear();
+    if (!key)
+        return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
+    auto cert = build_certificate(key, opts, nullptr, key);
+    SIHD_UNEXPECTED_RETURN(cert);
+    _handle = make_handle(cert->release());
+    return {};
+}
+
+Result<void> Certificate::generate_signed(const PrivateKey & key,
+                                          const CertOptions & opts,
+                                          const Certificate & issuer,
+                                          const PrivateKey & issuer_key)
+{
+    ERR_clear_error();
+    this->clear();
+    if (!key || !issuer_key)
+        return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
+    if (!issuer)
+        return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty issuer"));
+    X509 *issuer_cert = static_cast<X509 *>(issuer.native());
+    if (X509_check_private_key(issuer_cert, static_cast<EVP_PKEY *>(issuer_key.native())) != 1)
+    {
+        ERR_clear_error();
+        return std::unexpected(Error(invalid_argument, "issuer key does not match the issuer certificate"));
+    }
+    auto cert = build_certificate(key, opts, issuer_cert, issuer_key);
+    SIHD_UNEXPECTED_RETURN(cert);
+    _handle = make_handle(cert->release());
     return {};
 }
 
@@ -359,6 +406,51 @@ std::vector<std::string> Certificate::subject_alt_names() const
     }
 
     GENERAL_NAMES_free(names);
+    return result;
+}
+
+std::vector<std::string> Certificate::ocsp_urls() const
+{
+    std::vector<std::string> result;
+    if (!_handle)
+        return result;
+    STACK_OF(OPENSSL_STRING) *urls = X509_get1_ocsp(static_cast<X509 *>(_handle.get()));
+    if (!urls)
+        return result;
+    for (int i = 0; i < sk_OPENSSL_STRING_num(urls); ++i)
+        result.emplace_back(sk_OPENSSL_STRING_value(urls, i));
+    X509_email_free(urls);
+    return result;
+}
+
+std::vector<std::string> Certificate::crl_urls() const
+{
+    std::vector<std::string> result;
+    if (!_handle)
+        return result;
+    auto *points = static_cast<CRL_DIST_POINTS *>(
+        X509_get_ext_d2i(static_cast<X509 *>(_handle.get()), NID_crl_distribution_points, nullptr, nullptr));
+    if (!points)
+        return result;
+
+    for (int i = 0; i < sk_DIST_POINT_num(points); ++i)
+    {
+        const DIST_POINT *point = sk_DIST_POINT_value(points, i);
+        if (!point->distpoint || point->distpoint->type != 0)
+            continue;
+        const GENERAL_NAMES *names = point->distpoint->name.fullname;
+        for (int j = 0; j < sk_GENERAL_NAME_num(names); ++j)
+        {
+            const GENERAL_NAME *gen = sk_GENERAL_NAME_value(names, j);
+            if (gen->type != GEN_URI)
+                continue;
+            const ASN1_IA5STRING *uri = gen->d.uniformResourceIdentifier;
+            result.emplace_back(reinterpret_cast<const char *>(ASN1_STRING_get0_data(uri)),
+                                static_cast<size_t>(ASN1_STRING_length(uri)));
+        }
+    }
+
+    CRL_DIST_POINTS_free(points);
     return result;
 }
 

@@ -1,6 +1,6 @@
 # crypto
 
-OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, a TLS context, symmetric ciphers, message digests and signatures. OpenSSL types stay out of the public headers; keys, certificates and contexts are type-erased handles, and failures are reported as `sihd::util::Result` errors carrying the OpenSSL error queue.
+OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revocation checks (OCSP and CRL), a TLS context, symmetric ciphers, message digests and signatures. OpenSSL types stay out of the public headers; keys, certificates and contexts are type-erased handles, and failures are reported as `sihd::util::Result` errors carrying the OpenSSL error queue.
 
 | | |
 |---|---|
@@ -8,7 +8,7 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, a TLS 
 | External libraries | openssl |
 | Platforms | all |
 | Build | `make m=crypto` |
-| Header | `#include <sihd/crypto/PrivateKey.hpp>` (also `Certificate.hpp`, `TlsContext.hpp`, `cipher.hpp`, `digest.hpp`, `utils.hpp`) |
+| Header | `#include <sihd/crypto/PrivateKey.hpp>` (also `Certificate.hpp`, `OcspRequest.hpp`, `Crl.hpp`, `RevocationChecker.hpp`, `TlsContext.hpp`, `cipher.hpp`, `digest.hpp`, `utils.hpp`) |
 
 ## Capabilities
 
@@ -18,10 +18,17 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, a TLS 
 
 ### Certificates
 
-- `Certificate`: `generate_self_signed(key, common_name, days)` or `generate_self_signed(key, CertOptions)` creates a certificate; `CertOptions` sets subject fields, subject alternative names (`DNS:` / `IP:` prefixes), validity, serial, CA flag.
+- `Certificate`: `generate_self_signed(key, common_name, days)` or `generate_self_signed(key, CertOptions)` creates a certificate; `generate_signed(key, CertOptions, issuer, issuer_key)` creates one issued by `issuer`. `CertOptions` sets subject fields, subject alternative names (`DNS:` / `IP:` prefixes), validity, serial, CA flag, OCSP responder urls (authority information access) and CRL urls (distribution points).
 - `load_pem(path)`, `save_pem(path)`, `load_pem_string(pem)`, `to_pem_string()`, `load_der(data, len)`: load and save.
 - `verify(ca)`: checks the certificate was issued by `ca`.
-- `subject_common_name()`, `issuer_common_name()`, `subject_alt_names()`, `not_before()`, `not_after()`, `serial_hex()`, `is_ca()`: inspection.
+- `subject_common_name()`, `issuer_common_name()`, `subject_alt_names()`, `ocsp_urls()`, `crl_urls()`, `not_before()`, `not_after()`, `serial_hex()`, `is_ca()`: inspection.
+
+### Revocation
+
+- `RevocationInfo`: `status` (`good`, `revoked`, `unknown`), `source` (`none`, `ocsp`, `crl`), `this_update`, `next_update` (0 when absent), `revocation_time`.
+- `OcspRequest`: `build(cert, issuer)` makes a request with a fresh nonce, `to_der()` encodes it for an HTTP POST. `verify_response(data, len, chain)` checks the responder's answer: signed by the issuer or a delegated responder chaining to the last certificate of `chain`, same nonce when the responder echoes one, within its validity period (5 minutes of clock skew), then returns the status of the requested certificate.
+- `Crl`: `load_der(data, len)`, `verify(issuer)` (issuer name, signature, validity period), `status(cert)` (`unknown` for a certificate of another issuer), `this_update()`, `next_update()`.
+- `RevocationChecker`: `check(chain)` on a chain ordered certificate, issuer, ..., trust anchor (the order `net::TlsConnection::peer_certificates` returns). It tries the certificate's OCSP responders, then its CRLs; a certificate naming neither gets `unknown` from source `none`, an error comes back only when every named source failed. The transport is the caller's: `set_ocsp_fetcher` POSTs a DER request and returns the DER response, `set_crl_fetcher` GETs a DER CRL; an unset fetcher skips its source. OCSP answers are cached per certificate, CRLs per url, until their `next_update`, capped by `set_max_cache_age` (one hour by default). Thread-safe; nothing is logged, the hard or soft-fail policy on `unknown` stays with the caller.
 
 ### TLS
 
@@ -74,6 +81,46 @@ void sign_and_hash()
 
     auto hash = sihd::crypto::digest::compute("SHA-256", data, message.size());
     // valid == true, hash->size() == 32
+}
+```
+
+Revocation check with `curl` as transport, adapted from `modules/crypto/test/TestRevocationChecker.cpp`:
+
+```cpp
+#include <sihd/crypto/RevocationChecker.hpp>
+#include <sihd/curl/HeaderList.hpp>
+#include <sihd/curl/Request.hpp>
+
+sihd::util::Result<std::vector<uint8_t>> fetch(const std::string & url, sihd::util::ArrUByteView body)
+{
+    std::vector<uint8_t> answer;
+    sihd::curl::Request request;
+    (void)request.set_url(url);
+    (void)request.set_proxy("");
+    if (!body.empty())
+    {
+        sihd::curl::HeaderList headers;
+        (void)headers.append("Content-Type: application/ocsp-request");
+        (void)request.set_headers(headers);
+        (void)request.set_body(body);
+    }
+    (void)request.set_write_callback([&](sihd::util::ArrByteView chunk) {
+        answer.insert(answer.end(), chunk.data(), chunk.data() + chunk.size());
+        return true;
+    });
+    auto performed = request.perform();
+    if (!performed.has_value())
+        return std::unexpected(std::move(performed).error());
+    return answer;
+}
+
+void check(const std::vector<sihd::crypto::Certificate> & chain)
+{
+    sihd::crypto::RevocationChecker checker;
+    checker.set_ocsp_fetcher(fetch);
+    checker.set_crl_fetcher([](const std::string & url) { return fetch(url, {}); });
+    auto info = checker.check(chain);
+    // info->status == RevocationStatus::good, info->source == RevocationSource::ocsp
 }
 ```
 
