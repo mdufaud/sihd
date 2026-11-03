@@ -3,6 +3,7 @@
 #include <csignal>
 
 #include <sihd/crypto/TlsContext.hpp>
+#include <sihd/crypto/error.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TlsConnection.hpp>
 #include <sihd/net/ip.hpp>
@@ -254,7 +255,7 @@ Result<std::vector<sihd::crypto::Certificate>> TlsConnection::peer_certificates(
         unsigned char *der = nullptr;
         const int len = i2d_X509(sk_X509_value(chain, static_cast<int>(i)), &der);
         if (len <= 0)
-            return std::unexpected(Error(ErrorCode::out_of_memory, "cannot encode peer certificate"));
+            return sihd::crypto::make_error("i2d_X509");
         auto loaded = certificates[i].load_der(der, static_cast<size_t>(len));
         OPENSSL_free(der);
         SIHD_UNEXPECTED_RETURN(loaded);

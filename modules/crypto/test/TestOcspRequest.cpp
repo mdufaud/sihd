@@ -1,3 +1,7 @@
+#include <memory>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
 #include <sihd/crypto/Certificate.hpp>
@@ -6,6 +10,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "crypto_test_helpers.hpp"
+#include <openssl/ocsp.h>
 
 using namespace sihd::util;
 
@@ -13,6 +18,20 @@ namespace test
 {
 SIHD_LOGGER;
 using namespace sihd::crypto;
+
+namespace
+{
+
+struct OcspRequestFree
+{
+        void operator()(OCSP_REQUEST *request) const { OCSP_REQUEST_free(request); }
+};
+struct OcspCertIdFree
+{
+        void operator()(OCSP_CERTID *id) const { OCSP_CERTID_free(id); }
+};
+
+} // namespace
 
 class TestOcspRequest: public ::testing::Test
 {
@@ -23,15 +42,22 @@ class TestOcspRequest: public ::testing::Test
         void SetUp() override
         {
             _ca = make_ca(rsa_key(), "ca.example");
-            CertOptions opts;
-            opts.common_name = "leaf.example";
-            _leaf = make_leaf(_ca, rsa_key(), opts);
+            _leaf = this->issue("leaf.example");
             ASSERT_TRUE(_ca);
             ASSERT_TRUE(_leaf);
+
             ASSERT_TRUE(_request.build(_leaf, _ca));
             auto der = _request.to_der();
             ASSERT_TRUE(der);
             _request_der = *der;
+        }
+
+        // issued by the CA with other_rsa_key(), the key a delegated responder signs with
+        Certificate issue(const std::string & name) const
+        {
+            CertOptions opts;
+            opts.common_name = name;
+            return make_leaf(_ca, rsa_key(), other_rsa_key(), opts);
         }
 
         Result<RevocationInfo> verify(const std::vector<uint8_t> & response) const
@@ -60,30 +86,34 @@ class TestOcspRequest: public ::testing::Test
 TEST_F(TestOcspRequest, to_der_carries_cert_id_and_nonce)
 {
     const unsigned char *in = _request_der.data();
-    OCSP_REQUEST *decoded = d2i_OCSP_REQUEST(nullptr, &in, static_cast<long>(_request_der.size()));
+    std::unique_ptr<OCSP_REQUEST, OcspRequestFree> decoded(
+        d2i_OCSP_REQUEST(nullptr, &in, static_cast<long>(_request_der.size())));
+    std::unique_ptr<OCSP_CERTID, OcspCertIdFree> expected(
+        OCSP_cert_to_id(nullptr, static_cast<X509 *>(_leaf.native()), static_cast<X509 *>(_ca.native())));
     ASSERT_NE(decoded, nullptr);
-    OCSP_CERTID *expected = OCSP_cert_to_id(nullptr,
-                                            static_cast<X509 *>(_leaf.native()),
-                                            static_cast<X509 *>(_ca.native()));
 
-    EXPECT_EQ(OCSP_request_onereq_count(decoded), 1);
-    EXPECT_EQ(OCSP_id_cmp(OCSP_onereq_get0_id(OCSP_request_onereq_get0(decoded, 0)), expected), 0);
-    EXPECT_GE(OCSP_REQUEST_get_ext_by_NID(decoded, NID_id_pkix_OCSP_Nonce, -1), 0);
-
-    OCSP_CERTID_free(expected);
-    OCSP_REQUEST_free(decoded);
+    EXPECT_EQ(OCSP_request_onereq_count(decoded.get()), 1);
+    EXPECT_EQ(OCSP_id_cmp(OCSP_onereq_get0_id(OCSP_request_onereq_get0(decoded.get(), 0)), expected.get()), 0);
+    EXPECT_GE(OCSP_REQUEST_get_ext_by_NID(decoded.get(), NID_id_pkix_OCSP_Nonce, -1), 0);
 }
 
 TEST_F(TestOcspRequest, empty_request_refused)
 {
     OcspRequest empty;
     EXPECT_FALSE(empty);
+
     auto der = empty.to_der();
     ASSERT_FALSE(der);
     EXPECT_EQ(der.error().code, ErrorCode::not_initialized);
+    EXPECT_EQ(der.error().message, "no ocsp request built");
+
+    this->expect_error(empty.verify_response(_request_der.data(), _request_der.size(), {_leaf, _ca}),
+                       ErrorCode::not_initialized,
+                       "no ocsp request built");
 
     auto built = empty.build(_leaf, Certificate());
     ASSERT_FALSE(built);
+    EXPECT_EQ(built.error().code, ErrorCode::not_initialized);
     EXPECT_EQ(built.error().message, "cannot build an ocsp request without certificate and issuer");
 }
 
@@ -98,6 +128,7 @@ TEST_F(TestOcspRequest, verify_reports_each_status)
     {
         OcspAnswer ocsp_answer;
         ocsp_answer.status = ocsp_status;
+
         auto info = this->answer(ocsp_answer);
 
         ASSERT_TRUE(info.has_value()) << info.error().message;
@@ -110,9 +141,7 @@ TEST_F(TestOcspRequest, verify_reports_each_status)
 
 TEST_F(TestOcspRequest, verify_accepts_delegated_responder)
 {
-    CertOptions opts;
-    opts.common_name = "ocsp.example";
-    Certificate responder = make_leaf(_ca, rsa_key(), opts);
+    Certificate responder = this->issue("ocsp.example");
     add_ocsp_signing_usage(responder, rsa_key());
 
     auto info = this->verify(ocsp_respond(_request_der, responder, other_rsa_key()));
@@ -121,43 +150,63 @@ TEST_F(TestOcspRequest, verify_accepts_delegated_responder)
     EXPECT_EQ(info->status, RevocationStatus::good);
 }
 
-TEST_F(TestOcspRequest, verify_rejects_unauthorized_signer)
+TEST_F(TestOcspRequest, verify_rejects_responder_without_ocsp_signing)
 {
-    CertOptions opts;
-    opts.common_name = "not-a-responder.example";
-    Certificate sibling = make_leaf(_ca, rsa_key(), opts);
-    Certificate stranger = make_ca(other_rsa_key(), "stranger.example");
+    const Certificate sibling = this->issue("not-a-responder.example");
 
-    EXPECT_FALSE(this->verify(ocsp_respond(_request_der, sibling, other_rsa_key())).has_value());
-    EXPECT_FALSE(this->verify(ocsp_respond(_request_der, stranger, other_rsa_key())).has_value());
+    this->expect_error(this->verify(ocsp_respond(_request_der, sibling, other_rsa_key())),
+                       ErrorCode::invalid_argument,
+                       "ocsp response is not signed by a trusted responder: root ca not trusted");
 }
 
-TEST_F(TestOcspRequest, verify_checks_nonce)
+TEST_F(TestOcspRequest, verify_rejects_foreign_responder)
+{
+    const Certificate stranger = make_ca(other_rsa_key(), "stranger.example");
+
+    this->expect_error(this->verify(ocsp_respond(_request_der, stranger, other_rsa_key())),
+                       ErrorCode::invalid_argument,
+                       "ocsp response is not signed by a trusted responder: certificate verify error");
+}
+
+TEST_F(TestOcspRequest, verify_rejects_foreign_nonce)
 {
     OcspAnswer foreign;
     foreign.echo_nonce = false;
     foreign.foreign_nonce = true;
+
     this->expect_error(this->answer(foreign),
                        ErrorCode::invalid_argument,
                        "ocsp response nonce does not match the request");
-
-    OcspAnswer absent;
-    absent.echo_nonce = false;
-    EXPECT_TRUE(this->answer(absent).has_value());
 }
 
-TEST_F(TestOcspRequest, verify_rejects_outdated_response)
+TEST_F(TestOcspRequest, verify_accepts_absent_nonce)
+{
+    OcspAnswer absent;
+    absent.echo_nonce = false;
+
+    auto info = this->answer(absent);
+
+    ASSERT_TRUE(info.has_value()) << info.error().message;
+    EXPECT_EQ(info->status, RevocationStatus::good);
+}
+
+TEST_F(TestOcspRequest, verify_rejects_expired_response)
 {
     OcspAnswer expired;
     expired.this_update_offset = -7200;
     expired.next_update_offset = -3600;
+
     this->expect_error(this->answer(expired),
                        ErrorCode::invalid_argument,
                        "ocsp response is outside its validity period");
+}
 
+TEST_F(TestOcspRequest, verify_rejects_future_response)
+{
     OcspAnswer future;
     future.this_update_offset = 3600;
     future.next_update_offset = 7200;
+
     this->expect_error(this->answer(future),
                        ErrorCode::invalid_argument,
                        "ocsp response is outside its validity period");
@@ -172,16 +221,14 @@ TEST_F(TestOcspRequest, verify_reports_responder_refusal)
 
 TEST_F(TestOcspRequest, verify_rejects_other_request_answer)
 {
-    CertOptions opts;
-    opts.common_name = "other.example";
-    Certificate other = make_leaf(_ca, rsa_key(), opts);
+    const Certificate other = this->issue("other.example");
     OcspRequest other_request;
     ASSERT_TRUE(other_request.build(other, _ca));
     auto other_der = other_request.to_der();
     ASSERT_TRUE(other_der);
-
     OcspAnswer no_nonce;
     no_nonce.echo_nonce = false;
+
     this->expect_error(this->verify(ocsp_respond(*other_der, _ca, rsa_key(), no_nonce)),
                        ErrorCode::not_found,
                        "ocsp response has no status for the certificate");
@@ -190,8 +237,22 @@ TEST_F(TestOcspRequest, verify_rejects_other_request_answer)
 TEST_F(TestOcspRequest, verify_rejects_garbage)
 {
     const std::vector<uint8_t> garbage {0x30, 0x03, 0x01, 0x02, 0x03};
-    EXPECT_FALSE(this->verify(garbage).has_value());
-    EXPECT_FALSE(_request.verify_response(garbage.data(), garbage.size(), {}).has_value());
+
+    auto res = this->verify(garbage);
+
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+    // the tail is the OpenSSL error text
+    EXPECT_TRUE(res.error().message.starts_with("read ocsp response: ")) << res.error().message;
+}
+
+TEST_F(TestOcspRequest, verify_needs_trust_anchor)
+{
+    auto response = ocsp_respond(_request_der, _ca, rsa_key());
+
+    this->expect_error(_request.verify_response(response.data(), response.size(), {}),
+                       ErrorCode::invalid_argument,
+                       "ocsp verification needs a trust anchor");
 }
 
 } // namespace test

@@ -197,15 +197,30 @@ TEST_F(TestCertificate, url_extensions_roundtrip)
 
 TEST_F(TestCertificate, url_extensions_reject_separator)
 {
-    CertOptions opts;
-    opts.crl_urls = {"http://crl.example/a.crl,URI:http://evil.example"};
+    const std::vector<std::string> smuggled {
+        "http://crl.example/a.crl,URI:http://evil.example",
+        "http://crl.example/a.crl\nURI:http://evil.example",
+        "",
+    };
+    for (const std::string & url : smuggled)
+    {
+        CertOptions crl_opts;
+        crl_opts.crl_urls = {url};
+        CertOptions ocsp_opts;
+        ocsp_opts.ocsp_urls = {url};
 
-    Certificate cert;
-    auto res = cert.generate_self_signed(_key, opts);
-    ASSERT_FALSE(res);
-    EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(res.error().message, "invalid url: http://crl.example/a.crl,URI:http://evil.example");
-    EXPECT_FALSE(cert);
+        Certificate cert;
+        auto crl_res = cert.generate_self_signed(_key, crl_opts);
+        auto ocsp_res = cert.generate_self_signed(_key, ocsp_opts);
+
+        for (const auto & res : {crl_res, ocsp_res})
+        {
+            ASSERT_FALSE(res);
+            EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
+            EXPECT_EQ(res.error().message, "invalid url: " + url);
+        }
+        EXPECT_FALSE(cert);
+    }
 }
 
 TEST_F(TestCertificate, generate_signed)
@@ -241,6 +256,30 @@ TEST_F(TestCertificate, generate_signed_rejects_foreign_issuer_key)
     ASSERT_FALSE(res);
     EXPECT_EQ(res.error().code, ErrorCode::invalid_argument);
     EXPECT_EQ(res.error().message, "issuer key does not match the issuer certificate");
+    EXPECT_FALSE(leaf);
+}
+
+TEST_F(TestCertificate, generate_signed_needs_keys_and_issuer)
+{
+    Certificate ca;
+    ASSERT_TRUE(ca.generate_self_signed(_key, "ca.example"));
+    CertOptions opts;
+    opts.common_name = "leaf.example";
+    Certificate leaf;
+
+    auto no_key = leaf.generate_signed(PrivateKey(), opts, ca, _key);
+    auto no_issuer_key = leaf.generate_signed(_key, opts, ca, PrivateKey());
+    auto no_issuer = leaf.generate_signed(_key, opts, Certificate(), _key);
+
+    for (const auto & res : {no_key, no_issuer_key})
+    {
+        ASSERT_FALSE(res);
+        EXPECT_EQ(res.error().code, ErrorCode::not_initialized);
+        EXPECT_EQ(res.error().message, "cannot generate a certificate with an empty private key");
+    }
+    ASSERT_FALSE(no_issuer);
+    EXPECT_EQ(no_issuer.error().code, ErrorCode::not_initialized);
+    EXPECT_EQ(no_issuer.error().message, "cannot generate a certificate with an empty issuer");
     EXPECT_FALSE(leaf);
 }
 

@@ -16,8 +16,6 @@ namespace sihd::crypto
 namespace
 {
 
-constexpr long validity_leeway_seconds = 300;
-
 struct OcspRequestFree
 {
         void operator()(OCSP_REQUEST *request) const { OCSP_REQUEST_free(request); }
@@ -138,7 +136,13 @@ Result<RevocationInfo>
             return make_error("ocsp certificate chain");
     }
     if (OCSP_basic_verify(basic.get(), certs.get(), store.get(), 0) != 1)
-        return make_error("ocsp response verification");
+    {
+        const char *reason_text = ERR_reason_error_string(ERR_peek_last_error());
+        ERR_clear_error();
+        return std::unexpected(Error(invalid_argument,
+                                     "ocsp response is not signed by a trusted responder: {}",
+                                     reason_text != nullptr ? reason_text : "unknown reason"));
+    }
 
     OCSP_CERTID *id = OCSP_onereq_get0_id(OCSP_request_onereq_get0(request, 0));
     int cert_status = V_OCSP_CERTSTATUS_UNKNOWN;

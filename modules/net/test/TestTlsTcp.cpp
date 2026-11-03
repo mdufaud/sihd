@@ -713,6 +713,10 @@ TEST_F(TestTlsTcp, tls_socket_standalone_accept)
 
     EXPECT_TRUE(client.tls_active());
     EXPECT_TRUE(server_side->tls_active());
+    // the fixture client does not verify its peer
+    auto unverified = client.tls_peer_certificates();
+    ASSERT_FALSE(unverified.has_value());
+    EXPECT_EQ(unverified.error().message, "no verified peer certificate chain");
 
     const ArrChar hello("tls standalone");
     ASSERT_EQ(client.send(hello).value_or(0), (size_t)hello.size());

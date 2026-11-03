@@ -5,7 +5,9 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
+#include <sihd/crypto/Certificate.hpp>
 #include <sihd/crypto/TlsContext.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TlsConnection.hpp>

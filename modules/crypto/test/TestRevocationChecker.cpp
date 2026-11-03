@@ -1,3 +1,7 @@
+#include <set>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
 #include <sihd/crypto/Certificate.hpp>
@@ -23,28 +27,40 @@ class TestRevocationChecker: public ::testing::Test
         void SetUp() override
         {
             _ca = make_ca(rsa_key(), "ca.example");
-            CertOptions opts;
-            opts.common_name = "leaf.example";
-            opts.ocsp_urls = {"http://ocsp.test"};
-            opts.crl_urls = {"http://crl.test/ca.crl"};
-            _leaf = make_leaf(_ca, rsa_key(), opts);
+            _leaf = this->issue({"http://ocsp.test"}, {"http://crl.test/ca.crl"});
             ASSERT_TRUE(_leaf);
 
             _checker.set_ocsp_fetcher([this](const std::string & url, ArrUByteView request) {
-                ++_ocsp_fetches;
-                EXPECT_EQ(url, "http://ocsp.test");
-                if (!_ocsp_up)
-                    return Result<std::vector<uint8_t>>(std::unexpected(Error(ErrorCode::io_error, "unreachable")));
+                _fetched.push_back(url);
+                if (_down.contains(url))
+                    return unreachable();
                 const std::vector<uint8_t> der(request.data(), request.data() + request.size());
                 return Result<std::vector<uint8_t>>(ocsp_respond(der, _ca, rsa_key()));
             });
-            _checker.set_crl_fetcher([this](const std::string & url) {
-                ++_crl_fetches;
-                EXPECT_EQ(url, "http://crl.test/ca.crl");
-                if (!_crl_up)
-                    return Result<std::vector<uint8_t>>(std::unexpected(Error(ErrorCode::io_error, "unreachable")));
-                return Result<std::vector<uint8_t>>(make_crl_der(_ca, rsa_key(), {.revoked = {&_leaf}}));
-            });
+            _checker.set_crl_fetcher([this](const std::string & url) { return this->fetch_crl(url); });
+        }
+
+        static Result<std::vector<uint8_t>> unreachable()
+        {
+            return std::unexpected(Error(ErrorCode::io_error, "unreachable"));
+        }
+
+        // the CRL of the CA revoking _leaf, signed by a stranger for the urls in _forged
+        Result<std::vector<uint8_t>> fetch_crl(const std::string & url)
+        {
+            _fetched.push_back(url);
+            if (_down.contains(url))
+                return unreachable();
+            return make_crl_der(_ca, _forged.contains(url) ? other_rsa_key() : rsa_key(), {.revoked = {&_leaf}});
+        }
+
+        Certificate issue(const std::vector<std::string> & ocsp_urls, const std::vector<std::string> & crl_urls) const
+        {
+            CertOptions opts;
+            opts.common_name = "leaf.example";
+            opts.ocsp_urls = ocsp_urls;
+            opts.crl_urls = crl_urls;
+            return make_leaf(_ca, rsa_key(), other_rsa_key(), opts);
         }
 
         Result<RevocationInfo> check() { return _checker.check({_leaf, _ca}); }
@@ -56,55 +72,86 @@ class TestRevocationChecker: public ::testing::Test
             EXPECT_EQ(info->source, source);
         }
 
+        void expect_error(const Result<RevocationInfo> & info, ErrorCode code, const std::string & message) const
+        {
+            ASSERT_FALSE(info.has_value());
+            EXPECT_EQ(info.error().code, code);
+            EXPECT_EQ(info.error().message, message);
+        }
+
         Certificate _ca;
         Certificate _leaf;
         RevocationChecker _checker;
-        bool _ocsp_up = true;
-        bool _crl_up = true;
-        int _ocsp_fetches = 0;
-        int _crl_fetches = 0;
+        std::set<std::string> _down;
+        std::set<std::string> _forged;
+        std::vector<std::string> _fetched;
 };
 
 TEST_F(TestRevocationChecker, ocsp_answers_first)
 {
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
 
-    EXPECT_EQ(_ocsp_fetches, 1);
-    EXPECT_EQ(_crl_fetches, 0);
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test"}));
 }
 
 TEST_F(TestRevocationChecker, ocsp_failure_falls_back_to_crl)
 {
-    _ocsp_up = false;
+    _down = {"http://ocsp.test"};
 
     this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
 
-    EXPECT_EQ(_ocsp_fetches, 1);
-    EXPECT_EQ(_crl_fetches, 1);
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://crl.test/ca.crl"}));
+}
+
+TEST_F(TestRevocationChecker, next_url_answers_after_a_failed_one)
+{
+    _leaf = this->issue({"http://ocsp1.test", "http://ocsp2.test"}, {});
+    _down = {"http://ocsp1.test"};
+
+    this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp1.test", "http://ocsp2.test"}));
 }
 
 TEST_F(TestRevocationChecker, every_source_failing_is_an_error)
 {
-    _ocsp_up = false;
-    _crl_up = false;
+    _leaf = this->issue({"http://ocsp1.test", "http://ocsp2.test"}, {"http://crl.test/ca.crl"});
+    _down = {"http://ocsp1.test", "http://ocsp2.test", "http://crl.test/ca.crl"};
 
-    auto info = this->check();
+    this->expect_error(this->check(),
+                       ErrorCode::io_error,
+                       "ocsp http://ocsp1.test: unreachable; ocsp http://ocsp2.test: unreachable; "
+                       "crl http://crl.test/ca.crl: unreachable");
+}
 
-    ASSERT_FALSE(info.has_value());
-    EXPECT_EQ(info.error().code, ErrorCode::io_error);
-    EXPECT_EQ(info.error().message, "ocsp http://ocsp.test: unreachable; crl http://crl.test/ca.crl: unreachable");
+TEST_F(TestRevocationChecker, rejected_answer_outweighs_unreachable_source)
+{
+    _leaf = this->issue({}, {"http://crl1.test", "http://crl2.test"});
+    _forged = {"http://crl1.test"};
+    _down = {"http://crl2.test"};
+
+    this->expect_error(this->check(),
+                       ErrorCode::invalid_argument,
+                       "crl http://crl1.test: CRL signature does not match 'ca.example'; "
+                       "crl http://crl2.test: unreachable");
+}
+
+TEST_F(TestRevocationChecker, non_http_urls_are_never_fetched)
+{
+    _leaf = this->issue({"file:///etc/passwd"}, {"ldap://ldap.test/ca", "gopher://crl.test/ca.crl"});
+
+    this->expect_info(this->check(), RevocationStatus::unknown, RevocationSource::none);
+
+    EXPECT_TRUE(_fetched.empty());
 }
 
 TEST_F(TestRevocationChecker, certificate_without_source_is_unknown)
 {
-    CertOptions opts;
-    opts.common_name = "silent.example";
-    Certificate silent = make_leaf(_ca, rsa_key(), opts);
+    _leaf = this->issue({}, {});
 
-    this->expect_info(_checker.check({silent, _ca}), RevocationStatus::unknown, RevocationSource::none);
+    this->expect_info(this->check(), RevocationStatus::unknown, RevocationSource::none);
 
-    EXPECT_EQ(_ocsp_fetches, 0);
-    EXPECT_EQ(_crl_fetches, 0);
+    EXPECT_TRUE(_fetched.empty());
 }
 
 TEST_F(TestRevocationChecker, unset_fetchers_skip_their_source)
@@ -114,51 +161,61 @@ TEST_F(TestRevocationChecker, unset_fetchers_skip_their_source)
     this->expect_info(bare.check({_leaf, _ca}), RevocationStatus::unknown, RevocationSource::none);
 }
 
-TEST_F(TestRevocationChecker, answers_are_cached)
+TEST_F(TestRevocationChecker, ocsp_answer_is_cached)
 {
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
-    EXPECT_EQ(_ocsp_fetches, 1);
 
-    _ocsp_up = false;
-    RevocationChecker crl_only;
-    crl_only.set_crl_fetcher([this](const std::string &) {
-        ++_crl_fetches;
-        return Result<std::vector<uint8_t>>(make_crl_der(_ca, rsa_key(), {.revoked = {&_leaf}}));
-    });
-    this->expect_info(crl_only.check({_leaf, _ca}), RevocationStatus::revoked, RevocationSource::crl);
-    this->expect_info(crl_only.check({_leaf, _ca}), RevocationStatus::revoked, RevocationSource::crl);
-    EXPECT_EQ(_crl_fetches, 1);
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test"}));
+}
+
+TEST_F(TestRevocationChecker, crl_is_cached)
+{
+    _down = {"http://ocsp.test"};
+
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://crl.test/ca.crl", "http://ocsp.test"}));
 }
 
 TEST_F(TestRevocationChecker, failures_are_not_cached)
 {
-    _ocsp_up = false;
-    _crl_up = false;
+    _down = {"http://ocsp.test", "http://crl.test/ca.crl"};
     EXPECT_FALSE(this->check().has_value());
 
-    _ocsp_up = true;
+    _down.clear();
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
-    EXPECT_EQ(_ocsp_fetches, 2);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://crl.test/ca.crl", "http://ocsp.test"}));
 }
 
-TEST_F(TestRevocationChecker, max_cache_age_caps_reuse)
+TEST_F(TestRevocationChecker, max_cache_age_caps_ocsp_reuse)
 {
     _checker.set_max_cache_age(Duration(0));
 
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
     this->expect_info(this->check(), RevocationStatus::good, RevocationSource::ocsp);
 
-    EXPECT_EQ(_ocsp_fetches, 2);
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://ocsp.test"}));
+}
+
+TEST_F(TestRevocationChecker, max_cache_age_caps_crl_reuse)
+{
+    _leaf = this->issue({}, {"http://crl.test/ca.crl"});
+    _checker.set_max_cache_age(Duration(0));
+
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://crl.test/ca.crl", "http://crl.test/ca.crl"}));
 }
 
 TEST_F(TestRevocationChecker, chain_needs_issuer)
 {
-    auto info = _checker.check({_leaf});
-
-    ASSERT_FALSE(info.has_value());
-    EXPECT_EQ(info.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(info.error().message, "revocation check needs the certificate and its issuer");
+    this->expect_error(_checker.check({_leaf}),
+                       ErrorCode::invalid_argument,
+                       "revocation check needs the certificate and its issuer");
 }
 
 } // namespace test

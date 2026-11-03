@@ -27,8 +27,8 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revoca
 
 - `RevocationInfo`: `status` (`good`, `revoked`, `unknown`), `source` (`none`, `ocsp`, `crl`), `this_update`, `next_update` (0 when absent), `revocation_time`.
 - `OcspRequest`: `build(cert, issuer)` makes a request with a fresh nonce, `to_der()` encodes it for an HTTP POST. `verify_response(data, len, chain)` checks the responder's answer: signed by the issuer or a delegated responder chaining to the last certificate of `chain`, same nonce when the responder echoes one, within its validity period (5 minutes of clock skew), then returns the status of the requested certificate.
-- `Crl`: `load_der(data, len)`, `verify(issuer)` (issuer name, signature, validity period), `status(cert)` (`unknown` for a certificate of another issuer), `this_update()`, `next_update()`.
-- `RevocationChecker`: `check(chain)` on a chain ordered certificate, issuer, ..., trust anchor (the order `net::TlsConnection::peer_certificates` returns). It tries the certificate's OCSP responders, then its CRLs; a certificate naming neither gets `unknown` from source `none`, an error comes back only when every named source failed. The transport is the caller's: `set_ocsp_fetcher` POSTs a DER request and returns the DER response, `set_crl_fetcher` GETs a DER CRL; an unset fetcher skips its source. OCSP answers are cached per certificate, CRLs per url, until their `next_update`, capped by `set_max_cache_age` (one hour by default). Thread-safe; nothing is logged, the hard or soft-fail policy on `unknown` stays with the caller.
+- `Crl`: `load_der(data, len)`, `verify(issuer)` (issuer name, signature, validity period; a delta CRL is refused with `not_supported`), `status(cert)` (`unknown` for a certificate of another issuer, or outside the partition an issuing distribution point restricts the CRL to), `this_update()`, `next_update()`.
+- `RevocationChecker`: `check(chain)` on a chain ordered certificate, issuer, ..., trust anchor (the order `net::TlsConnection::peer_certificates` returns). It tries the certificate's OCSP responders, then its CRLs; urls come from the peer, so only `http://` ones reach a fetcher, others are skipped. A certificate naming no usable source gets `unknown` from source `none`, an error comes back only when every named source failed: `invalid_argument` when one of them answered with a forged or stale answer, else the code of the last failure. The transport is the caller's: `set_ocsp_fetcher` POSTs a DER request and returns the DER response, `set_crl_fetcher` GETs a DER CRL; an unset fetcher skips its source. OCSP answers are cached per certificate, CRLs per url, until their `next_update`, capped by `set_max_cache_age` (one hour by default). Thread-safe; nothing is logged, the hard or soft-fail policy on `unknown` stays with the caller.
 
 ### TLS
 
@@ -84,7 +84,7 @@ void sign_and_hash()
 }
 ```
 
-Revocation check with `curl` as transport, adapted from `modules/crypto/test/TestRevocationChecker.cpp`:
+Revocation check with `curl` as transport (an illustration, compiled but not part of the test suite):
 
 ```cpp
 #include <sihd/crypto/RevocationChecker.hpp>

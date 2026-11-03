@@ -42,7 +42,7 @@ class RevocationChecker
         // caps the reuse of an answer, which otherwise lasts until its nextUpdate
         void set_max_cache_age(sihd::util::Duration age);
 
-        // chain: certificate, issuer, ..., trust anchor; an error only when every named source failed
+        // chain: certificate, issuer, ..., trust anchor; only http urls are fetched, an error when every one failed
         sihd::util::Result<RevocationInfo> check(const std::vector<Certificate> & chain);
 
     private:

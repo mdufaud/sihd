@@ -29,9 +29,8 @@ class Crl
 
         sihd::util::Result<void> load_der(const uint8_t *data, size_t len);
 
-        // signed by issuer and current: thisUpdate passed, nextUpdate not yet
         sihd::util::Result<void> verify(const Certificate & issuer) const;
-        // unknown when cert was not issued by the CRL issuer
+        // unknown when cert has another issuer or lies outside the CRL partition
         sihd::util::Result<RevocationInfo> status(const Certificate & cert) const;
 
         sihd::util::Timestamp this_update() const;

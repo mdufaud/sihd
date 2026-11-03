@@ -8,6 +8,9 @@
 namespace sihd::crypto
 {
 
+// clock skew tolerated around the thisUpdate/nextUpdate of OCSP responses and CRLs
+inline constexpr long validity_leeway_seconds = 300;
+
 // 0 when the time is absent or unreadable
 sihd::util::Timestamp asn1_time_to_timestamp(const ASN1_TIME *time);
 

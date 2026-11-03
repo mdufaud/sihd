@@ -72,13 +72,17 @@ bool add_name_entry(X509_NAME *name, const char *field, const std::string & valu
            == 1;
 }
 
-// the list goes through the openssl config grammar: only plain "kind:value" entries may pass
+// entries go through the openssl config grammar: a separator would smuggle another entry
+bool no_config_separator(const std::string & entry)
+{
+    return entry.find_first_of(",\n\r") == std::string::npos && entry.find('\0') == std::string::npos;
+}
+
 bool valid_alt_name(const std::string & entry, bool any_kind)
 {
     const bool known_kind = entry.starts_with("DNS:") || entry.starts_with("IP:") || entry.starts_with("email:")
                             || entry.starts_with("URI:");
-    return (known_kind || any_kind) && entry.find_first_of(",\n\r") == std::string::npos
-           && entry.find('\0') == std::string::npos;
+    return (known_kind || any_kind) && no_config_separator(entry);
 }
 
 std::string name_common_name(X509_NAME *name)
@@ -94,10 +98,9 @@ std::string name_common_name(X509_NAME *name)
     return result;
 }
 
-// same config grammar as the alt names: a separator would smuggle another entry
 bool valid_url(const std::string & url)
 {
-    return !url.empty() && url.find_first_of(",\n\r") == std::string::npos && url.find('\0') == std::string::npos;
+    return !url.empty() && no_config_separator(url);
 }
 
 Result<void> add_url_extension(X509 *cert, int nid, std::string_view prefix, const std::vector<std::string> & urls)
