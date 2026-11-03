@@ -4,7 +4,9 @@
 #include <cstddef>
 #include <memory>
 #include <string_view>
+#include <vector>
 
+#include <sihd/crypto/Certificate.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/ZStringView.hpp>
 
@@ -54,6 +56,9 @@ class TlsConnection
         sihd::util::Result<size_t> write(const void *buf, size_t len);
 
         bool pending() const;
+
+        // the chain the handshake verified, peer certificate first, trust anchor last
+        sihd::util::Result<std::vector<sihd::crypto::Certificate>> peer_certificates() const;
 
         sihd::util::Result<void> shutdown() const;
         void clear();

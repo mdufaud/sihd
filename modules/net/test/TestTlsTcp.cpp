@@ -459,6 +459,50 @@ TEST_F(TestTlsTcp, tls_client_verifies_server_name)
     EXPECT_FALSE(run_handshake(_server_ctx, strict_client, "127.0.0.1").client_ok);
 }
 
+TEST_F(TestTlsTcp, tls_peer_certificates_return_verified_chain)
+{
+    sihd::sys::TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string ca_path = sihd::sys::fs::combine(tmp_dir.path(), "ca.pem");
+    CertOptions ca_opts;
+    ca_opts.common_name = "ca.example";
+    ca_opts.is_ca = true;
+    Certificate ca;
+    ASSERT_TRUE(ca.generate_self_signed(_key, ca_opts).has_value());
+    ASSERT_TRUE(ca.save_pem(ca_path).has_value());
+
+    CertOptions leaf_opts;
+    leaf_opts.common_name = "localhost";
+    leaf_opts.subject_alt_names = {"DNS:localhost"};
+    Certificate leaf;
+    ASSERT_TRUE(leaf.generate_signed(_key, leaf_opts, ca, _key).has_value());
+
+    TlsContext server_ctx;
+    ASSERT_TRUE(server_ctx.init(true).has_value());
+    ASSERT_TRUE(server_ctx.set_certificate(leaf).has_value());
+    ASSERT_TRUE(server_ctx.set_private_key(_key).has_value());
+
+    TlsContext strict_client;
+    ASSERT_TRUE(strict_client.init(false).has_value());
+    ASSERT_TRUE(strict_client.load_ca_cert(ca_path).has_value());
+
+    TlsPair verified;
+    ASSERT_TRUE(handshake_pair(verified, server_ctx, strict_client, "localhost").client_ok);
+    auto chain = verified.client_conn.peer_certificates();
+    ASSERT_TRUE(chain.has_value()) << chain.error().message;
+    ASSERT_EQ(chain->size(), 2u);
+    EXPECT_EQ((*chain)[0].subject_common_name(), "localhost");
+    EXPECT_EQ((*chain)[1].subject_common_name(), "ca.example");
+
+    TlsPair unverified;
+    ASSERT_TRUE(handshake_pair(unverified, server_ctx, _client_ctx).client_ok);
+    auto refused = unverified.client_conn.peer_certificates();
+    ASSERT_FALSE(refused.has_value());
+    EXPECT_EQ(refused.error().message, "no verified peer certificate chain");
+
+    EXPECT_EQ(TlsConnection().peer_certificates().error().code, ErrorCode::not_initialized);
+}
+
 TEST_F(TestTlsTcp, tls_server_requires_client_certificate_when_verifying)
 {
     sihd::sys::TmpDir tmp_dir;

@@ -33,6 +33,7 @@ class TlsSocket: public Socket
         sihd::util::Result<TlsHandshakeStep> tls_accept_step();
         bool tls_active() const;
         bool tls_pending() const;
+        sihd::util::Result<std::vector<sihd::crypto::Certificate>> tls_peer_certificates() const;
 
         using Socket::connect;
         using Socket::receive;

@@ -240,6 +240,28 @@ bool TlsConnection::pending() const
     return _handle && SSL_pending(as_ssl(_handle.get())) > 0;
 }
 
+Result<std::vector<sihd::crypto::Certificate>> TlsConnection::peer_certificates() const
+{
+    if (!_handle)
+        return std::unexpected(Error(ErrorCode::not_initialized, "no TLS connection"));
+    SSL *ssl = as_ssl(_handle.get());
+    STACK_OF(X509) *chain = SSL_get0_verified_chain(ssl);
+    if (chain == nullptr || SSL_get_verify_result(ssl) != X509_V_OK)
+        return std::unexpected(Error(ErrorCode::not_found, "no verified peer certificate chain"));
+    std::vector<sihd::crypto::Certificate> certificates(static_cast<size_t>(sk_X509_num(chain)));
+    for (size_t i = 0; i < certificates.size(); ++i)
+    {
+        unsigned char *der = nullptr;
+        const int len = i2d_X509(sk_X509_value(chain, static_cast<int>(i)), &der);
+        if (len <= 0)
+            return std::unexpected(Error(ErrorCode::out_of_memory, "cannot encode peer certificate"));
+        auto loaded = certificates[i].load_der(der, static_cast<size_t>(len));
+        OPENSSL_free(der);
+        SIHD_UNEXPECTED_RETURN(loaded);
+    }
+    return certificates;
+}
+
 Result<size_t> TlsConnection::read(void *buf, size_t len)
 {
     if (!_handle)

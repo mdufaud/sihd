@@ -39,6 +39,11 @@ bool TlsSocket::tls_pending() const
     return _tls_conn.pending();
 }
 
+Result<std::vector<sihd::crypto::Certificate>> TlsSocket::tls_peer_certificates() const
+{
+    return _tls_conn.peer_certificates();
+}
+
 Result<TlsHandshakeStep> TlsSocket::tls_accept_step()
 {
     if (!_tls_ctx || !this->is_open())
