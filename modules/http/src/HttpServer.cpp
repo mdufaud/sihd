@@ -50,7 +50,8 @@ HttpServer::Impl::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): ser
 
 bool HttpServer::Impl::LwsPollingScheduler::run()
 {
-    server->_impl->check_all_protocols();
+    // lws is not thread safe: the service thread marks the protocols writable on LWS_CALLBACK_EVENT_WAIT_CANCELLED
+    lws_cancel_service(server->_impl->lws_context_ptr);
     return true;
 }
 

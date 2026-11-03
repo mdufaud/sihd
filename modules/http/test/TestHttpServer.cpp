@@ -235,7 +235,7 @@ TEST_F(TestHttpServer, test_http_filter)
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "ok");
-    EXPECT_GE(filter.filter_calls, 1);
+    EXPECT_GE(filter.filter_calls(), 1);
 
     resp = sihd::http::get(shard_url("localhost:3001/api/secret"));
     ASSERT_TRUE(resp.has_value());

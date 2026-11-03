@@ -83,19 +83,41 @@ class TestFilter: public sihd::http::IHttpFilter
 {
     public:
         std::string blocked_uri;
-        std::string last_uri;
-        std::string last_client_ip;
-        int filter_calls = 0;
 
         bool on_filter_connection(const sihd::http::HttpFilterInfo & info) override
         {
-            last_uri = std::string(info.uri);
-            last_client_ip = info.client_ip;
-            ++filter_calls;
+            std::lock_guard lock(_mutex);
+            _last_uri = std::string(info.uri);
+            _last_client_ip = info.client_ip;
+            ++_filter_calls;
             if (!blocked_uri.empty() && info.uri.find(blocked_uri) != std::string_view::npos)
                 return false;
             return true;
         }
+
+        int filter_calls() const
+        {
+            std::lock_guard lock(_mutex);
+            return _filter_calls;
+        }
+
+        std::string last_uri() const
+        {
+            std::lock_guard lock(_mutex);
+            return _last_uri;
+        }
+
+        std::string last_client_ip() const
+        {
+            std::lock_guard lock(_mutex);
+            return _last_client_ip;
+        }
+
+    private:
+        mutable std::mutex _mutex;
+        std::string _last_uri;
+        std::string _last_client_ip;
+        int _filter_calls = 0;
 };
 
 class TestAuth: public sihd::http::IHttpAuthenticator

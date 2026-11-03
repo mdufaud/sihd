@@ -45,13 +45,13 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_runs_http_filter)
     scope.start(shard_port(3002));
 
     EXPECT_EQ(ws_upgrade(shard_port(3002), "/blocked", "proto-two"), "");
-    EXPECT_EQ(filter.filter_calls, 1);
-    EXPECT_EQ(filter.last_uri, "/blocked");
+    EXPECT_EQ(filter.filter_calls(), 1);
+    EXPECT_EQ(filter.last_uri(), "/blocked");
 
     EXPECT_EQ(ws_upgrade(shard_port(3002), "/open", "proto-two"), SimpleWsClient::switching_protocols);
-    EXPECT_EQ(filter.filter_calls, 2);
-    EXPECT_EQ(filter.last_uri, "/open");
-    EXPECT_EQ(filter.last_client_ip, "127.0.0.1");
+    EXPECT_EQ(filter.filter_calls(), 2);
+    EXPECT_EQ(filter.last_uri(), "/open");
+    EXPECT_EQ(filter.last_client_ip(), "127.0.0.1");
     ASSERT_TRUE(scope.server.wait_for_open());
     EXPECT_EQ(scope.server._nopen, 1);
 }

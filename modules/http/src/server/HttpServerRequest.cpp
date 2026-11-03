@@ -337,6 +337,11 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
         {
             break;
         }
+        case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
+        {
+            this->check_all_protocols();
+            break;
+        }
         default:
             break;
     }
