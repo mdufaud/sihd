@@ -6,7 +6,7 @@ Packet capture, packet injection and capture-file I/O on top of libpcap. It offe
 |---|---|
 | Depends on | `net` |
 | External libraries | libpcap |
-| Platforms | all except Android |
+| Platforms | all except web; on Android live capture needs root, see the VPN capture demo |
 | Build | `make m=pcap` |
 | Header | `#include <sihd/pcap/Sniffer.hpp>` (namespace `sihd::pcap`) |
 
@@ -85,6 +85,19 @@ sihd::util::Result<size_t> send_frame(const std::string & device, const std::str
     return injector.inject({frame.data(), frame.size()});
 }
 ```
+
+## Android capture without root
+
+An app has no `CAP_NET_RAW` and SELinux forbids it from opening packet sockets, so `Sniffer` cannot open a device. The `vpn_capture` demo APK (`make m=net,pcap demo=1 platform=android`) captures through a `VpnService` instead:
+
+- `VpnActivity` asks the VPN consent, `CaptureVpnService` builds the tun (all IPv4 and IPv6 routes, the app itself excluded) and passes its descriptor to the native `main` as `--tun-fd`;
+- `net::linux_::TunRelay` relays the traffic from the start, commands typed in the terminal choose what happens to its packets:
+  - `start` prints one line per packet: direction (`>` sent, `<` received), protocol, remote address and port, TCP flags, size;
+  - `capture` prints them too and `PcapWriter` writes them to `files/capture.pcap` with the `RAW` link type, flushed after every packet; `start` closes the file;
+  - `stop` or the VPN revoked ends the relay;
+- `adb exec-out run-as sihd.pcap.demo.vpn_capture cat files/capture.pcap > capture.pcap` pulls the file of the debug APK.
+
+Outgoing packets are the apps' own. Incoming TCP headers are written by the relay: the payload is the server's, sequence numbers, window, options and TTL are not.
 
 ## Scripting
 

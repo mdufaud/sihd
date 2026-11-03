@@ -102,7 +102,7 @@ build_target() {
     fi
 }
 
-ANDROID_TARGET=(platform=android machine=aarch64 static=1 m=util,imgui demo=1)
+ANDROID_TARGET=(platform=android machine=aarch64 static=1 m=util,imgui,net,pcap demo=1)
 
 # Build matrix shared by compile.sh and dependencies.sh.
 # The caller exports the base flags (lua/py/demo/test) beforehand.

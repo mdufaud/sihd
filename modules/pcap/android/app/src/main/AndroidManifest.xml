@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    __SBT_PERMISSIONS__
+
+    <application
+        android:label="__SBT_APP_LABEL__"
+        android:allowBackup="false"
+        android:hasCode="true">
+
+        <activity
+            android:name="__SBT_NAMESPACE__.VpnActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="__SBT_NAMESPACE__.TerminalActivity"
+            android:taskAffinity="__SBT_NAMESPACE__.capture"
+            android:theme="@android:style/Theme.NoTitleBar"
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|density|keyboard|keyboardHidden|uiMode|locale|layoutDirection|navigation|touchscreen|mcc|mnc|colorMode"
+            android:exported="false" />
+
+        <service
+            android:name="__SBT_NAMESPACE__.CaptureVpnService"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:exported="false">
+
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

@@ -180,7 +180,7 @@ modules = {
         "windows-shared-libs": ['websockets'],
     },
     "pcap": {
-        "exclude-platforms": ["android", "web"],
+        "exclude-platforms": ["web"],
         "depends": ['net'],
         "extlibs": ['libpcap'],
         "libs": ['pcap'],
