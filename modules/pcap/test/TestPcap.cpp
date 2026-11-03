@@ -106,4 +106,25 @@ TEST_F(TestPcap, test_pcap_writer)
     std::string content = fs::read_all(path, true).value();
     EXPECT_EQ(memcmp(content.c_str() + content.size() - hw.size(), hw.data(), hw.size()), 0);
 }
+
+TEST_F(TestPcap, test_pcap_writer_timestamp_round_trip)
+{
+    TmpDir tmp_dir;
+    const std::string path = fs::combine(tmp_dir.path(), "timestamp.pcap");
+    const std::array<char, 4> data {'a', 'b', 'c', 'd'};
+
+    PcapWriter writer("pcap-writer");
+    ASSERT_TRUE(writer.open(path, DLT_RAW).has_value());
+    EXPECT_TRUE(writer.write({data.data(), data.size()}, Timestamp(1700000000123456789)));
+    EXPECT_TRUE(writer.close());
+
+    PcapReader reader("pcap-reader");
+    ASSERT_TRUE(reader.open(path).has_value());
+    auto next = reader.read_next();
+    ASSERT_TRUE(next.has_value());
+    ASSERT_TRUE(next.value());
+    auto timestamp = reader.get_read_timestamp();
+    ASSERT_TRUE(timestamp.has_value());
+    EXPECT_EQ(timestamp.value().get(), 1700000000123456000);
+}
 } // namespace test

@@ -124,7 +124,7 @@ ssize_t PcapWriter::write(ArrCharView view, Timestamp timestamp)
     pcap_pkthdr hdr;
     hdr.caplen = view.size();
     hdr.len = view.size();
-    hdr.ts = timestamp.tv();
+    hdr.ts = time::to_tv(time::to_micro(timestamp.get()));
     pcap_dump((u_char *)_impl_ptr->dumper_ptr, &hdr, (const u_char *)view.data());
     return view.size();
 }
