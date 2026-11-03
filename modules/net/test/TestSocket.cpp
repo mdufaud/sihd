@@ -46,6 +46,18 @@ class TestSocket: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+        void connect_tcp(Socket & server, Socket & client, Socket & accepted)
+        {
+            ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+            ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
+            const int port = server.local_port().value();
+            ASSERT_TRUE(server.listen(1).has_value());
+            ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+            ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port)).has_value());
+            accepted = Socket(server.accept().value_or(-1));
+            ASSERT_TRUE(accepted.is_open());
+        }
 };
 
 TEST_F(TestSocket, test_socket_stream_client_server)
@@ -733,6 +745,38 @@ TEST_F(TestSocket, test_socket_unix_datagram_roundtrip)
     ArrChar recv2(64);
     EXPECT_EQ(receiver.receive_from_unix(from, recv2), (ssize_t)payload.size());
     EXPECT_EQ(strncmp(recv2.data(), payload.data(), payload.size()), 0);
+}
+
+TEST_F(TestSocket, test_socket_shutdown_send_keeps_receiving)
+{
+    Socket server;
+    Socket client;
+    Socket accepted;
+    ASSERT_NO_FATAL_FAILURE(this->connect_tcp(server, client, accepted));
+
+    ASSERT_TRUE(client.shutdown_send().has_value());
+
+    ArrChar received(16);
+    EXPECT_EQ(accepted.receive(received), 0);
+    ASSERT_TRUE(accepted.send_all("reply").has_value());
+    EXPECT_EQ(client.receive(received), 5);
+    EXPECT_EQ(std::string(received.data(), 5), "reply");
+}
+
+TEST_F(TestSocket, test_socket_shutdown_receive_keeps_sending)
+{
+    Socket server;
+    Socket client;
+    Socket accepted;
+    ASSERT_NO_FATAL_FAILURE(this->connect_tcp(server, client, accepted));
+
+    ASSERT_TRUE(client.shutdown_receive().has_value());
+
+    ArrChar received(16);
+    EXPECT_EQ(client.receive(received), 0);
+    ASSERT_TRUE(client.send_all("request").has_value());
+    EXPECT_EQ(accepted.receive(received), 7);
+    EXPECT_EQ(std::string(received.data(), 7), "request");
 }
 
 } // namespace test

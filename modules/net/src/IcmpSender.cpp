@@ -316,7 +316,7 @@ Result<void> IcmpSender::send_to(const IpAddr & addr)
     else
     {
         icmp()->icmp_cksum = 0;
-        icmp()->icmp_cksum = utils::checksum((unsigned short *)icmp(), _array_send_ptr->size());
+        icmp()->icmp_cksum = htons(utils::checksum(ArrUByteView((const uint8_t *)icmp(), _array_send_ptr->size())));
         if (icmp()->icmp_cksum == 0)
             icmp()->icmp_cksum = 0xffff;
     }
@@ -507,7 +507,7 @@ void IcmpSender::_process_ipv4()
         return;
     const struct icmp *icmphdr = (const struct icmp *)(base + icmp_offset);
     // some raw delivery paths skip kernel checksum validation
-    if (utils::checksum((uint16_t *)icmphdr, (int)(total - icmp_offset)) != 0)
+    if (utils::checksum(ArrUByteView((const uint8_t *)icmphdr, total - icmp_offset)) != 0)
         return;
 
     const bool time_exceeded = (icmphdr->icmp_type == ICMP_TIME_EXCEEDED

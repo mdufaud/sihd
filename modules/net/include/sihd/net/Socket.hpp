@@ -101,6 +101,8 @@ class Socket
         sihd::util::Result<void> open(int domain, int socket_type, int protocol);
         virtual sihd::util::Result<void> close();
         virtual sihd::util::Result<void> shutdown() const;
+        virtual sihd::util::Result<void> shutdown_send() const;
+        virtual sihd::util::Result<void> shutdown_receive() const;
         bool is_open() const;
 
         // MSG_NOSIGNAL by default where it exists: a dead peer gives EPIPE, not SIGPIPE
@@ -168,6 +170,7 @@ class Socket
 
     protected:
         void _clear_socket_info();
+        sihd::util::Result<void> _shutdown(int how) const;
         sihd::util::Result<void>
             _multicast_membership(const IpAddr & group, const std::string & iface, int ipv4_opt, int ipv6_opt);
 

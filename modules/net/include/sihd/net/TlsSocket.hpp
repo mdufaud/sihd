@@ -43,6 +43,7 @@ class TlsSocket: public Socket
         sihd::util::Result<size_t> send(sihd::util::ArrCharView view) override;
         sihd::util::Result<size_t> receive(void *data, size_t size) override;
         sihd::util::Result<void> shutdown() const override;
+        sihd::util::Result<void> shutdown_send() const override;
         sihd::util::Result<void> close() override;
 
     private:

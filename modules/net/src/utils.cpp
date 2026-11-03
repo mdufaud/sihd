@@ -1,40 +1,27 @@
-
 #include <sihd/net/utils.hpp>
 
 namespace sihd::net::utils
 {
 
-// Source code from the book "UNIX Network Programming"
-uint16_t checksum(uint16_t *addr, int len)
+using namespace sihd::util;
+
+uint32_t checksum_add(ArrUByteView data, uint32_t sum)
 {
-    int nleft = len;
-    uint32_t sum = 0;
-    uint16_t *words = addr;
-    uint16_t answer = 0;
+    const uint8_t *bytes = data.data();
+    const size_t size = data.size();
+    uint64_t total = sum;
+    for (size_t i = 0; i + 1 < size; i += 2)
+        total += static_cast<uint32_t>(bytes[i] << 8 | bytes[i + 1]);
+    if (size % 2 != 0)
+        total += static_cast<uint32_t>(bytes[size - 1] << 8);
+    while (total >> 16 != 0)
+        total = (total & 0xffff) + (total >> 16);
+    return static_cast<uint32_t>(total);
+}
 
-    /*
-     * Our algorithm is simple, using a 32 bit accumulator (sum), we add
-     * sequential 16 bit words to it, and at the end, fold back all the
-     * carry bits from the top 16 bits into the lower 16 bits.
-     */
-    while (nleft > 1)
-    {
-        sum += *words++;
-        nleft -= 2;
-    }
-
-    /* 4mop ​​up an odd byte, if necessary */
-    if (nleft == 1)
-    {
-        *(unsigned char *)(&answer) = *(unsigned char *)words;
-        sum += answer;
-    }
-
-    /* 4add back carry outs from top 16 bits to low 16 bits */
-    sum = (sum >> 16) + (sum & 0xffff); /* add hi 16 to low 16 */
-    sum += (sum >> 16);                 /* add carry */
-    answer = ~sum;                      /* truncate to 16 bits */
-    return answer;
+uint16_t checksum(ArrUByteView data, uint32_t sum)
+{
+    return static_cast<uint16_t>(~checksum_add(data, sum));
 }
 
 } // namespace sihd::net::utils

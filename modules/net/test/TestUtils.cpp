@@ -1,5 +1,4 @@
 #include <array>
-#include <bit>
 #include <cstdint>
 
 #include <gtest/gtest.h>
@@ -27,37 +26,51 @@ class TestUtils: public ::testing::Test
 
 TEST_F(TestUtils, test_checksum_rfc1071_vector)
 {
-    std::array<uint16_t, 4> words = {0x0001, 0xf203, 0xf4f5, 0xf6f7};
-    EXPECT_EQ(utils::checksum(words.data(), (int)sizeof(words)), 0x220d);
+    const std::array<uint8_t, 8> bytes = {0x00, 0x01, 0xf2, 0x03, 0xf4, 0xf5, 0xf6, 0xf7};
+
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data(), bytes.size())), 0x220d);
 }
 
 TEST_F(TestUtils, test_checksum_all_ones_is_zero)
 {
-    std::array<uint16_t, 4> words = {0xffff, 0xffff, 0xffff, 0xffff};
-    EXPECT_EQ(utils::checksum(words.data(), (int)sizeof(words)), 0);
-    uint16_t single = 0xffff;
-    EXPECT_EQ(utils::checksum(&single, (int)sizeof(single)), 0);
+    const std::array<uint8_t, 8> bytes = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data(), bytes.size())), 0);
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data(), 2)), 0);
 }
 
-TEST_F(TestUtils, test_checksum_odd_byte)
+TEST_F(TestUtils, test_checksum_odd_byte_is_padded)
 {
-    alignas(uint16_t) unsigned char bytes[] = {0x01, 0x02, 0x03};
-    const uint16_t expected = (std::endian::native == std::endian::little) ? 0xfdfb : 0xfbfd;
-    EXPECT_EQ(utils::checksum((uint16_t *)bytes, (int)sizeof(bytes)), expected);
+    const std::array<uint8_t, 3> bytes = {0x01, 0x02, 0x03};
+
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data(), bytes.size())), 0xfbfd);
 }
 
 TEST_F(TestUtils, test_checksum_empty_data)
 {
-    uint16_t word = 0x1234;
-    EXPECT_EQ(utils::checksum(&word, 0), 0xffff);
+    EXPECT_EQ(utils::checksum(ArrUByteView()), 0xffff);
 }
 
 TEST_F(TestUtils, test_checksum_appended_verifies_to_zero)
 {
-    std::array<uint16_t, 4> words = {0x1234, 0x5678, 0x9abc, 0xdef0};
-    const uint16_t sum = utils::checksum(words.data(), (int)sizeof(words));
-    std::array<uint16_t, 5> with_checksum = {0x1234, 0x5678, 0x9abc, 0xdef0, sum};
-    EXPECT_EQ(utils::checksum(with_checksum.data(), (int)sizeof(with_checksum)), 0);
+    std::array<uint8_t, 10> bytes = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x00, 0x00};
+
+    const uint16_t sum = utils::checksum(ArrUByteView(bytes.data(), 8));
+    bytes[8] = static_cast<uint8_t>(sum >> 8);
+    bytes[9] = static_cast<uint8_t>(sum);
+
+    EXPECT_EQ(sum, 0x1da6);
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data(), bytes.size())), 0);
+}
+
+TEST_F(TestUtils, test_checksum_chains_a_pseudo_header)
+{
+    const std::array<uint8_t, 8> bytes = {0x00, 0x01, 0xf2, 0x03, 0xf4, 0xf5, 0xf6, 0xf7};
+
+    const uint32_t header = utils::checksum_add(ArrUByteView(bytes.data(), 4));
+
+    EXPECT_EQ(header, 0xf204u);
+    EXPECT_EQ(utils::checksum(ArrUByteView(bytes.data() + 4, 4), header), 0x220d);
 }
 
 } // namespace test

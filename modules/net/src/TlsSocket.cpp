@@ -133,6 +133,13 @@ Result<void> TlsSocket::shutdown() const
     return Socket::shutdown();
 }
 
+Result<void> TlsSocket::shutdown_send() const
+{
+    if (_tls_conn)
+        (void)_tls_conn.shutdown();
+    return Socket::shutdown_send();
+}
+
 Result<void> TlsSocket::close()
 {
     if (_tls_conn)

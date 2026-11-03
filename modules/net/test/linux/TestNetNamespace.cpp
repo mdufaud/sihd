@@ -36,6 +36,7 @@
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 
+#include "netns_helpers.hpp"
 #include <linux/if_tun.h>
 #include <linux/sockios.h>
 #include <net/if.h>
@@ -54,14 +55,10 @@ namespace
 
 using Interfaces = std::map<std::string, NetInterface>;
 
-constexpr int child_ok = 0;
-constexpr int child_failed = 1;
-constexpr int child_tun_unavailable = 3;
 constexpr int child_bridge_unavailable = 4;
 constexpr int child_mount_unavailable = 5;
 constexpr int child_dbus_unavailable = 6;
 
-constexpr std::array<ns::Type, 1> network_namespace = {ns::Type::net};
 constexpr std::array<ns::Type, 2> network_and_mount_namespaces = {ns::Type::net, ns::Type::mount};
 
 const std::map<int, std::string> skipped_child_codes = {
@@ -70,12 +67,6 @@ const std::map<int, std::string> skipped_child_codes = {
     {child_mount_unavailable, "mount(8) missing or refused in the user namespace"},
     {child_dbus_unavailable, "dbus-daemon unavailable"},
 };
-
-// the forked child records its gtest failures in its own copy of the test state
-int child_result()
-{
-    return ::testing::Test::HasFailure() ? child_failed : child_ok;
-}
 
 bool run_command(std::initializer_list<std::string_view> args)
 {
@@ -95,30 +86,6 @@ bool bind_resolv_conf(const TmpDir & tmp, const std::string & content)
     return fs::write(resolv_conf, content) && run_command({"mount", "--bind", resolv_conf, "/etc/resolv.conf"});
 }
 
-ifreq make_ifreq(const std::string & name)
-{
-    ifreq request {};
-    name.copy(request.ifr_name, IFNAMSIZ - 1);
-    return request;
-}
-
-Result<Socket> open_control()
-{
-    Socket control;
-    auto opened = control.open(AF_INET, SOCK_DGRAM, 0);
-    SIHD_UNEXPECTED_RETURN(opened);
-    return control;
-}
-
-// a missing or refused /dev/net/tun skips, any other failure is a bug
-int tun_failure(const Error & error)
-{
-    if (error.code == ErrorCode::not_found || error.code == ErrorCode::permission_denied)
-        return child_tun_unavailable;
-    ADD_FAILURE() << "tun creation failed: " << error.message;
-    return child_failed;
-}
-
 // a tun device lives while its descriptor is open: the callers keep the File in scope
 Result<File> create_tun(const std::string & name, int flags)
 {
@@ -133,37 +100,12 @@ Result<File> create_tun(const std::string & name, int flags)
     return tun;
 }
 
-Result<void> set_up(const Socket & control, const std::string & name, bool up)
-{
-    ifreq request = make_ifreq(name);
-    auto flags = os::ioctl(control.socket(), SIOCGIFFLAGS, &request);
-    SIHD_UNEXPECTED_RETURN(flags);
-    request.ifr_flags = static_cast<short>(up ? request.ifr_flags | IFF_UP : request.ifr_flags & ~IFF_UP);
-    return os::ioctl(control.socket(), SIOCSIFFLAGS, &request);
-}
-
 Result<void> set_hwaddr(const Socket & control, const std::string & name, const std::array<uint8_t, 6> & mac)
 {
     ifreq request = make_ifreq(name);
     request.ifr_hwaddr.sa_family = ARPHRD_ETHER;
     std::memcpy(request.ifr_hwaddr.sa_data, mac.data(), mac.size());
     return os::ioctl(control.socket(), SIOCSIFHWADDR, &request);
-}
-
-// a label like "tun0:1" adds a secondary address
-Result<void> set_ipv4(const Socket & control, const std::string & label, const std::string & address)
-{
-    ifreq request = make_ifreq(label);
-    const sockaddr_in ip = IpAddr(address).addr4();
-    std::memcpy(&request.ifr_addr, &ip, sizeof(ip));
-    auto assigned = os::ioctl(control.socket(), SIOCSIFADDR, &request);
-    SIHD_UNEXPECTED_RETURN(assigned);
-    if (address == "0.0.0.0")
-        return {};
-
-    const sockaddr_in netmask = IpAddr("255.255.255.0").addr4();
-    std::memcpy(&request.ifr_netmask, &netmask, sizeof(netmask));
-    return os::ioctl(control.socket(), SIOCSIFNETMASK, &request);
 }
 
 Result<void> add_default_route(const Socket & control, std::string name, uint32_t metric, const std::string & gateway)

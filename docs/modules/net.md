@@ -20,7 +20,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 ### Sockets
 
-- `Socket`: wrapper over a file descriptor (IPv4, IPv6, Unix). Opens with `open`, then `bind`, `connect`, `listen`, `accept`, `send`/`send_all`, `receive`, `send_to`/`receive_from`, and `*_unix` variants. Static and member option setters/getters: TCP nodelay, blocking, reuse address/port, keepalive, broadcast, TTL, buffer sizes, recv timeout, bind to device. Multicast: `join_multicast`, `leave_multicast`, `set_multicast_ttl`, `set_multicast_loop`.
+- `Socket`: wrapper over a file descriptor (IPv4, IPv6, Unix). Opens with `open`, then `bind`, `connect`, `listen`, `accept`, `send`/`send_all`, `receive`, `send_to`/`receive_from`, and `*_unix` variants. `shutdown` closes both directions, `shutdown_send` half-closes: the peer reads end of stream and can still send (`TlsSocket` sends its close_notify first); `shutdown_receive` stops reading: `receive` then reads end of stream on every platform, while sending still works (on Windows, data still arriving resets the connection). Static and member option setters/getters: TCP nodelay, blocking, reuse address/port, keepalive, broadcast, TTL, buffer sizes, recv timeout, bind to device. Multicast: `join_multicast`, `leave_multicast`, `set_multicast_ttl`, `set_multicast_loop`.
 - `TlsSocket`: `Socket` with TLS. `set_tls_context`, `set_tls_server_name`, `tls_accept`, `tls_accept_step`, `tls_active`.
 - `TlsConnection`: low-level TLS session on a `Socket`. `init`, `connect`, `accept`, `accept_step`, `read`, `write`, `session`, `set_session` (resumption), `shutdown`.
 
@@ -81,6 +81,24 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 ### Netlink (Linux)
 
 - `sihd/net/linux/netlink.hpp`: the netlink socket behind routes and monitoring, public for other families (`wifi` drives nl80211 with it). `linux_::netlink::Netlink` (`open`, `subscribe`, `set_nonblocking`, `request`, `receive`), `Request` (`set_header`, `add_attribute`, `add_u32`, `add_string`), and `Message` / `Attribute` read through free decoders (`header`, `attributes`, `nested`, `u8`, `u16`, `u32`, `str`, `ip`).
+
+### Tun relay (Linux, Android)
+
+The way to capture packets on Android without root: libpcap needs `CAP_NET_RAW`, an app gets a tun from `VpnService` instead, and everything routed into the tun must be relayed or the phone loses its network.
+
+- `sihd/net/Tun.hpp`: `Tun`, one `read` or `write` = one IP packet, no link header; `read` gives `would_block` when no packet is pending, `wait_readable(timeout)` waits for one (false on timeout). `open(name)` (1 to 15 characters) creates the interface without address:
+  - Linux: `/dev/net/tun`, needs `CAP_NET_ADMIN`, the interface stays down; `Tun::adopt(fd)` and `fd()` (`not_supported` on Windows) adopt the non-blocking descriptor `VpnService.Builder.establish()` hands;
+  - Windows: loads `wintun.dll` (shipped beside the program, from wintun.net) and needs admin rights; a missing DLL is `not_found`, a full ring `would_block`.
+- `sihd/net/linux/TunRelay.hpp`: `linux_::TunRelay`, a blocking service that takes a `Tun` (`set_tun`) and terminates the flows it reads on real sockets:
+  - UDP: one connected socket per flow, dropped after `set_udp_timeout` (60 s) of silence;
+  - TCP: the relay answers the handshake once its own connect succeeds (RST when it fails), acknowledges what the socket accepted (the app retransmits the rest), segments the replies at the app MSS inside the app window, retransmits after `set_retransmit_timeout` (1 s, doubled, 8 tries), probes a closed window on the retransmit backoff until it reopens, forwards half-closes and resets, and drops a flow idle for `set_tcp_timeout` (1 h);
+  - no window scaling, SACK or timestamps are announced: the app window stays under 64 KiB, enough for a local tun;
+  - ICMP, IPv4 fragments and IPv6 extension headers are not relayed;
+  - `set_mtu` (1500) sets the MSS announced to the apps.
+  - the service stops when the tun ends or is down: a revoked Android VPN leaves its tun down, its writes then fail with `EIO`; another refused write only loses that packet. `start` again after `set_tun` relays a new tun; every setter returns false while it runs.
+- Observers see every packet: `packet()` and `direction()` (`from_tun`: as the app sent it, `to_tun`: a reply whose TCP header is the relay's, not the remote peer's).
+- The relay sockets must not route back into the tun: on Android the app excludes itself with `addDisallowedApplication(packageName)`, the test puts the tun in another network namespace.
+- `pcap` ships the Android demo, `vpn_capture`, that writes a pcap file from it.
 
 ### Recipes
 

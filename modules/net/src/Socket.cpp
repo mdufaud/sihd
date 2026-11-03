@@ -50,14 +50,38 @@ auto retry_interrupted(Syscall && syscall)
     return ret;
 }
 
+Error socket_error(std::string_view op, int err)
+{
+    return Error(error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err));
+}
+
 Result<ssize_t> socket_call(std::string_view op, auto && syscall)
 {
     auto ret = retry_interrupted(syscall);
     if (ret >= 0)
         return ret;
+    return std::unexpected(socket_error(op, sihd::sys::os::last_socket_error()));
+}
 
+bool read_side_shut_down([[maybe_unused]] int err)
+{
+#if !defined(__SIHD_WINDOWS__)
+    return false;
+#else
+    return err == WSAESHUTDOWN;
+#endif
+}
+
+// winsock fails a receive once the read side is shut down, posix reads the end of the stream
+Result<size_t> receive_call(std::string_view op, auto && syscall)
+{
+    auto ret = retry_interrupted(syscall);
+    if (ret >= 0)
+        return (size_t)ret;
     const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(Error(error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
+    if (read_side_shut_down(err))
+        return 0;
+    return std::unexpected(socket_error(op, err));
 }
 
 Result<size_t> size_result(Result<ssize_t> && res)
@@ -77,8 +101,7 @@ Result<void> opt_result(std::string_view op, bool ok)
     if (ok)
         return {};
 
-    const int err = sihd::sys::os::last_socket_error();
-    return std::unexpected(Error(error_errno(err), "{} error: {}", op, sihd::sys::os::error_str(err)));
+    return std::unexpected(socket_error(op, sihd::sys::os::last_socket_error()));
 }
 
 Error closed_socket_error(std::string_view op)
@@ -646,9 +669,24 @@ Result<void> Socket::close()
 
 Result<void> Socket::shutdown() const
 {
+    return this->_shutdown(SHUT_RDWR);
+}
+
+Result<void> Socket::shutdown_send() const
+{
+    return this->_shutdown(SHUT_WR);
+}
+
+Result<void> Socket::shutdown_receive() const
+{
+    return this->_shutdown(SHUT_RD);
+}
+
+Result<void> Socket::_shutdown(int how) const
+{
     if (_socket < 0)
         return {};
-    if (::shutdown(_socket, SHUT_RDWR) == 0)
+    if (::shutdown(_socket, how) == 0)
         return {};
     return std::unexpected(make_error("shutdown error"));
 }
@@ -805,13 +843,13 @@ Result<size_t> Socket::receive(void *data, size_t size)
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("receive"));
 
-    return size_result(socket_call("receive", [&] {
+    return receive_call("receive", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::recv(_socket, data, size, _rcv_flags);
 #else
         return ::recv(_socket, (char *)data, size, _rcv_flags);
 #endif
-    }));
+    });
 }
 
 Result<size_t> Socket::receive(IArray & arr)
@@ -861,13 +899,13 @@ Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, void *d
     if (this->is_open() == false)
         return std::unexpected(closed_socket_error("receive_from"));
 
-    return size_result(socket_call("receive_from", [&] {
+    return receive_call("receive_from", [&] {
 #if !defined(__SIHD_WINDOWS__)
         return ::recvfrom(_socket, data, size, _rcv_flags, addr, addr_len);
 #else
         return ::recvfrom(_socket, (char *)data, size, _rcv_flags, addr, addr_len);
 #endif
-    }));
+    });
 }
 
 Result<size_t> Socket::receive_from(sockaddr *addr, socklen_t *addr_len, IArray & arr)

@@ -193,6 +193,30 @@ class TestTlsTcp: public ::testing::Test
             ASSERT_TRUE(_client_ctx.set_verify_peer(false));
         }
 
+        void connect_tls_sockets(Socket & listener, TlsSocket & client, std::unique_ptr<TlsSocket> & server_side)
+        {
+            make_listener(listener, IpAddr::localhost(0));
+            const int port = listener.local_port().value();
+            ASSERT_GT(port, 0);
+            ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+            client.set_tls_context(_client_ctx);
+
+            Worker worker([&] {
+                const int fd = listener.accept(tls_connect_timeout_ms).value_or(-1);
+                if (fd < 0)
+                    return false;
+                server_side = std::make_unique<TlsSocket>(fd, true);
+                server_side->set_tls_context(_server_ctx);
+                return server_side->tls_accept(tls_connect_timeout_ms).has_value();
+            });
+            ASSERT_TRUE(worker.start_sync_worker("tls-server-accept"));
+            Defer stop_worker([&] { worker.stop_worker(); });
+
+            ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms).has_value());
+            ASSERT_TRUE(worker.stop_worker());
+            ASSERT_NE(server_side.get(), nullptr);
+        }
+
         const PrivateKey & _key = tls_key();
         const Certificate & _cert = tls_cert();
         TlsContext _server_ctx;
@@ -639,29 +663,9 @@ TEST_F(TestTlsTcp, tls_socket_connect_failure_closes_socket)
 TEST_F(TestTlsTcp, tls_socket_standalone_accept)
 {
     Socket listener;
-    make_listener(listener, IpAddr::localhost(0));
-    const int port = listener.local_port().value();
-    ASSERT_GT(port, 0);
-
     TlsSocket client;
-    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
-    client.set_tls_context(_client_ctx);
-
     std::unique_ptr<TlsSocket> server_side;
-    Worker worker([&] {
-        const int fd = listener.accept(tls_connect_timeout_ms).value_or(-1);
-        if (fd < 0)
-            return false;
-        server_side = std::make_unique<TlsSocket>(fd, true);
-        server_side->set_tls_context(_server_ctx);
-        return server_side->tls_accept(tls_connect_timeout_ms).has_value();
-    });
-    ASSERT_TRUE(worker.start_sync_worker("tls-server-accept"));
-    Defer stop_worker([&] { worker.stop_worker(); });
-
-    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port), tls_connect_timeout_ms).has_value());
-    ASSERT_TRUE(worker.stop_worker());
-    ASSERT_NE(server_side.get(), nullptr);
+    ASSERT_NO_FATAL_FAILURE(this->connect_tls_sockets(listener, client, server_side));
 
     EXPECT_TRUE(client.tls_active());
     EXPECT_TRUE(server_side->tls_active());
@@ -682,6 +686,26 @@ TEST_F(TestTlsTcp, tls_socket_standalone_accept)
     (void)client.close();
     (void)server_side->close();
     (void)listener.close();
+}
+
+TEST_F(TestTlsTcp, tls_socket_shutdown_send_keeps_receiving)
+{
+    Socket listener;
+    TlsSocket client;
+    std::unique_ptr<TlsSocket> server_side;
+    ASSERT_NO_FATAL_FAILURE(this->connect_tls_sockets(listener, client, server_side));
+    ASSERT_TRUE(server_side->set_recv_timeout(tls_connect_timeout_ms).has_value());
+    ASSERT_TRUE(client.set_recv_timeout(tls_connect_timeout_ms).has_value());
+
+    ASSERT_TRUE(client.shutdown_send().has_value());
+    std::array<char, 16> received {};
+    const auto end_of_stream = server_side->receive(received.data(), received.size());
+    ASSERT_TRUE(server_side->send_all("reply").has_value());
+    const auto reply = client.receive(received.data(), received.size());
+
+    EXPECT_EQ(end_of_stream.value_or(1), 0u);
+    ASSERT_EQ(reply.value_or(0), 5u);
+    EXPECT_EQ(std::string(received.data(), 5), "reply");
 }
 
 TEST_F(TestTlsTcp, tls_socket_plain_fallback_without_context)
