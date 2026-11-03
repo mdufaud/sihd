@@ -35,7 +35,7 @@ class TestRevocationChecker: public ::testing::Test
                 if (_down.contains(url))
                     return unreachable();
                 const std::vector<uint8_t> der(request.data(), request.data() + request.size());
-                return Result<std::vector<uint8_t>>(ocsp_respond(der, _ca, rsa_key()));
+                return Result<std::vector<uint8_t>>(ocsp_respond(der, _ca, rsa_key(), {.status = _ocsp_status}));
             });
             _checker.set_crl_fetcher([this](const std::string & url) { return this->fetch_crl(url); });
         }
@@ -85,6 +85,7 @@ class TestRevocationChecker: public ::testing::Test
         std::set<std::string> _down;
         std::set<std::string> _forged;
         std::vector<std::string> _fetched;
+        int _ocsp_status = V_OCSP_CERTSTATUS_GOOD;
 };
 
 TEST_F(TestRevocationChecker, ocsp_answers_first)
@@ -209,6 +210,64 @@ TEST_F(TestRevocationChecker, max_cache_age_caps_crl_reuse)
     this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
 
     EXPECT_EQ(_fetched, (std::vector<std::string> {"http://crl.test/ca.crl", "http://crl.test/ca.crl"}));
+}
+
+TEST_F(TestRevocationChecker, disabled_mode_fetches_nothing)
+{
+    _checker.set_mode(RevocationChecker::Mode::disabled);
+
+    this->expect_info(this->check(), RevocationStatus::unknown, RevocationSource::none);
+
+    EXPECT_TRUE(_fetched.empty());
+}
+
+TEST_F(TestRevocationChecker, crl_mode_skips_ocsp)
+{
+    _checker.set_mode(RevocationChecker::Mode::crl);
+
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://crl.test/ca.crl"}));
+}
+
+TEST_F(TestRevocationChecker, ocsp_mode_never_asks_crl)
+{
+    _checker.set_mode(RevocationChecker::Mode::ocsp);
+    _down = {"http://ocsp.test"};
+
+    this->expect_error(this->check(), ErrorCode::io_error, "ocsp http://ocsp.test: unreachable");
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test"}));
+}
+
+TEST_F(TestRevocationChecker, ocsp_mode_keeps_unknown_answer)
+{
+    _checker.set_mode(RevocationChecker::Mode::ocsp);
+    _ocsp_status = V_OCSP_CERTSTATUS_UNKNOWN;
+
+    this->expect_info(this->check(), RevocationStatus::unknown, RevocationSource::ocsp);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test"}));
+}
+
+TEST_F(TestRevocationChecker, best_effort_asks_crl_after_unknown_ocsp)
+{
+    _ocsp_status = V_OCSP_CERTSTATUS_UNKNOWN;
+
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+    this->expect_info(this->check(), RevocationStatus::revoked, RevocationSource::crl);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://crl.test/ca.crl"}));
+}
+
+TEST_F(TestRevocationChecker, best_effort_keeps_unknown_ocsp_when_crl_fails)
+{
+    _ocsp_status = V_OCSP_CERTSTATUS_UNKNOWN;
+    _down = {"http://crl.test/ca.crl"};
+
+    this->expect_info(this->check(), RevocationStatus::unknown, RevocationSource::ocsp);
+
+    EXPECT_EQ(_fetched, (std::vector<std::string> {"http://ocsp.test", "http://crl.test/ca.crl"}));
 }
 
 TEST_F(TestRevocationChecker, chain_needs_issuer)

@@ -50,7 +50,34 @@ void erase_expired(Cache & cache, Timestamp now)
 
 } // namespace
 
-RevocationChecker::RevocationChecker(): _max_cache_age(time::hours(1)) {}
+// every source that failed, in order: a forged or stale answer outweighs an unreachable source
+class RevocationChecker::Failures
+{
+    public:
+        void add(std::string_view source, const std::string & url, const Error & error)
+        {
+            _code = error.code;
+            _rejected = _rejected || error.code == invalid_argument;
+            _lines.emplace_back(fmt::format("{} {}: {}", source, url, error.message));
+        }
+
+        bool empty() const { return _lines.empty(); }
+
+        Error error() const { return Error(_rejected ? invalid_argument : _code, "{}", str::join(_lines, "; ")); }
+
+    private:
+        std::vector<std::string> _lines;
+        ErrorCode _code = none;
+        bool _rejected = false;
+};
+
+RevocationChecker::RevocationChecker(): _mode(Mode::ocsp_then_crl), _max_cache_age(time::hours(1)) {}
+
+void RevocationChecker::set_mode(Mode mode)
+{
+    std::lock_guard lock(_mutex);
+    _mode = mode;
+}
 
 void RevocationChecker::set_ocsp_fetcher(OcspFetcher fetcher)
 {
@@ -79,55 +106,70 @@ Result<RevocationInfo> RevocationChecker::check(const std::vector<Certificate> &
 
     OcspFetcher ocsp_fetcher;
     CrlFetcher crl_fetcher;
+    std::optional<RevocationInfo> ocsp_answer;
     {
         std::lock_guard lock(_mutex);
-        ocsp_fetcher = _ocsp_fetcher;
-        crl_fetcher = _crl_fetcher;
+        if (_mode == Mode::ocsp || _mode == Mode::ocsp_then_crl)
+            ocsp_fetcher = _ocsp_fetcher;
+        if (_mode == Mode::crl || _mode == Mode::ocsp_then_crl)
+            crl_fetcher = _crl_fetcher;
         auto it = key.empty() ? _ocsp_cache.end() : _ocsp_cache.find(key);
-        if (it != _ocsp_cache.end() && it->second.expiry > Timestamp::now())
-            return it->second.info;
+        if (ocsp_fetcher && it != _ocsp_cache.end() && it->second.expiry > Timestamp::now())
+            ocsp_answer = it->second.info;
     }
 
-    std::vector<std::string> failures;
-    ErrorCode last_code = none;
-    bool answer_rejected = false;
+    Failures failures;
+    if (ocsp_fetcher && !ocsp_answer.has_value())
+        ocsp_answer = this->_ask_ocsp(ocsp_fetcher, key, chain, failures);
+    if (ocsp_answer.has_value() && (ocsp_answer->status != RevocationStatus::unknown || !crl_fetcher))
+        return *ocsp_answer;
 
-    if (ocsp_fetcher)
-    {
-        for (const std::string & url : http_urls(cert.ocsp_urls()))
-        {
-            auto info = this->_check_ocsp(ocsp_fetcher, url, chain);
-            if (info.has_value())
-            {
-                std::lock_guard lock(_mutex);
-                erase_expired(_ocsp_cache, Timestamp::now());
-                if (!key.empty())
-                    _ocsp_cache[key] = CachedOcsp {.info = *info, .expiry = this->_expiry(info->next_update)};
-                return info;
-            }
-            last_code = info.error().code;
-            answer_rejected = answer_rejected || last_code == invalid_argument;
-            failures.emplace_back(fmt::format("ocsp {}: {}", url, info.error().message));
-        }
-    }
-
+    std::optional<RevocationInfo> crl_answer;
     if (crl_fetcher)
-    {
-        for (const std::string & url : http_urls(cert.crl_urls()))
-        {
-            auto info = this->_check_crl(crl_fetcher, url, chain);
-            if (info.has_value())
-                return info;
-            last_code = info.error().code;
-            answer_rejected = answer_rejected || last_code == invalid_argument;
-            failures.emplace_back(fmt::format("crl {}: {}", url, info.error().message));
-        }
-    }
+        crl_answer = this->_ask_crl(crl_fetcher, chain, failures);
+    if (crl_answer.has_value())
+        return *crl_answer;
 
+    if (ocsp_answer.has_value())
+        return *ocsp_answer;
     if (failures.empty())
         return RevocationInfo {};
-    // a forged or stale answer outweighs an unreachable source
-    return std::unexpected(Error(answer_rejected ? invalid_argument : last_code, "{}", str::join(failures, "; ")));
+    return std::unexpected(failures.error());
+}
+
+std::optional<RevocationInfo> RevocationChecker::_ask_ocsp(const OcspFetcher & fetcher,
+                                                           const std::string & key,
+                                                           const std::vector<Certificate> & chain,
+                                                           Failures & failures)
+{
+    for (const std::string & url : http_urls(chain[0].ocsp_urls()))
+    {
+        auto info = this->_check_ocsp(fetcher, url, chain);
+        if (!info.has_value())
+        {
+            failures.add("ocsp", url, info.error());
+            continue;
+        }
+        std::lock_guard lock(_mutex);
+        erase_expired(_ocsp_cache, Timestamp::now());
+        if (!key.empty())
+            _ocsp_cache[key] = CachedOcsp {.info = *info, .expiry = this->_expiry(info->next_update)};
+        return *info;
+    }
+    return std::nullopt;
+}
+
+std::optional<RevocationInfo>
+    RevocationChecker::_ask_crl(const CrlFetcher & fetcher, const std::vector<Certificate> & chain, Failures & failures)
+{
+    for (const std::string & url : http_urls(chain[0].crl_urls()))
+    {
+        auto info = this->_check_crl(fetcher, url, chain);
+        if (info.has_value())
+            return *info;
+        failures.add("crl", url, info.error());
+    }
+    return std::nullopt;
 }
 
 Result<RevocationInfo> RevocationChecker::_check_ocsp(const OcspFetcher & fetcher,
