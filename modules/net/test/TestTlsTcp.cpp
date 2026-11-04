@@ -225,7 +225,7 @@ class TestTlsTcp: public ::testing::Test
 
 TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
 {
-    IpAddr localhost = IpAddr::localhost(4343);
+    IpAddr localhost = IpAddr::localhost(0);
 
     ArrChar hello_arr("hello tls");
 
@@ -238,6 +238,7 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
     client.set_tls_context(_client_ctx);
 
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -310,7 +311,7 @@ TEST_F(TestTlsTcp, test_tls_tcp_send_receive)
 
 TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
 {
-    IpAddr localhost = IpAddr::localhost(4346);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpServer server("tls-server");
     TcpClient client("tls-client");
     BasicServerHandler server_handler;
@@ -323,6 +324,7 @@ TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
     });
     server_handler.add_observer(&connected_handler);
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -349,12 +351,13 @@ TEST_F(TestTlsTcp, tls_silent_peer_does_not_block_another_client)
 
 TEST_F(TestTlsTcp, tls_connect_timeout_on_non_tls_peer)
 {
-    IpAddr localhost = IpAddr::localhost(4344);
+    IpAddr localhost = IpAddr::localhost(0);
 
     // plain TCP listener that completes the TCP handshake but never speaks TLS:
     // the client's SSL handshake must time out instead of hanging forever
     Socket listener;
     make_listener(listener, localhost);
+    localhost = bound_address(listener);
 
     TcpClient client("tls-client");
     client.set_tls_context(_client_ctx);

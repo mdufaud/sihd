@@ -11,6 +11,8 @@
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/build.hpp>
 
+#include "net_test_helpers.hpp"
+
 using namespace sihd::util;
 
 namespace test
@@ -36,8 +38,8 @@ TEST_F(TestUdp, test_udp_receiver_run)
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
-    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4242}).has_value());
-    EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 4242}).has_value());
+    EXPECT_TRUE(receiver.open_and_bind({"127.0.0.1", 0}).has_value());
+    EXPECT_TRUE(sender.open_and_connect(bound_address(receiver.socket())).has_value());
 
     Synchronizer start_sync(2);
     ssize_t receive_ret = -1;
@@ -70,8 +72,8 @@ TEST_F(TestUdp, test_udp_sendrcv_connect)
     UdpSender sender("udp-sender");
     UdpReceiver receiver("udp-receiver");
 
-    EXPECT_TRUE(sender.open_and_connect({"127.0.0.1", 4252}).has_value());
-    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(4252)).has_value());
+    EXPECT_TRUE(receiver.open_and_bind(IpAddr::localhost(0)).has_value());
+    EXPECT_TRUE(sender.open_and_connect(bound_address(receiver.socket())).has_value());
 
     EXPECT_TRUE(receiver.socket_opened());
     EXPECT_TRUE(receiver.socket().set_blocking(false));
@@ -108,12 +110,13 @@ TEST_F(TestUdp, test_udp_sendrcv_broadcast)
     EXPECT_TRUE(sender.socket_opened());
     EXPECT_TRUE(sender.socket().set_broadcast(true));
 
-    IpAddr any_ip(4253);
+    IpAddr any_ip(0);
     UdpReceiver receiver("udp-receiver");
     EXPECT_TRUE(receiver.open_and_bind(any_ip).has_value());
     EXPECT_TRUE(receiver.socket_opened());
 
-    EXPECT_EQ(sender.send_to({"127.255.255.255", 4253}, helloworld), (ssize_t)strlen(helloworld));
+    const int port = receiver.socket().local_port().value_or(0);
+    EXPECT_EQ(sender.send_to({"127.255.255.255", port}, helloworld), (ssize_t)strlen(helloworld));
 
     IpAddr iprcv;
     (void)receiver.receive(iprcv, array_rcv);
@@ -156,10 +159,11 @@ TEST_F(TestUdp, test_udp_receiver_shares_its_port_unless_disabled)
     UdpReceiver second("udp-second");
     UdpReceiver exclusive("udp-exclusive");
 
-    ASSERT_TRUE(first.open_and_bind(IpAddr::localhost(4243)).has_value());
-    EXPECT_TRUE(second.open_and_bind(IpAddr::localhost(4243)).has_value());
+    ASSERT_TRUE(first.open_and_bind(IpAddr::localhost(0)).has_value());
+    const IpAddr shared = bound_address(first.socket());
+    EXPECT_TRUE(second.open_and_bind(shared).has_value());
     EXPECT_TRUE(exclusive.set_reuseaddr(false));
-    EXPECT_FALSE(exclusive.open_and_bind(IpAddr::localhost(4243)).has_value());
+    EXPECT_FALSE(exclusive.open_and_bind(shared).has_value());
 }
 
 TEST_F(TestUdp, test_udp_unix_roundtrip)

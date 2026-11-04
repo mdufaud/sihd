@@ -21,6 +21,7 @@
 #include <sihd/util/Worker.hpp>
 
 #include "listener/make_listener.hpp"
+#include "net_test_helpers.hpp"
 
 namespace test
 {
@@ -43,7 +44,7 @@ class TestTcp: public ::testing::Test
 
 TEST_F(TestTcp, test_tcp_server)
 {
-    IpAddr localhost = IpAddr::localhost(4242);
+    IpAddr localhost = IpAddr::localhost(0);
 
     ArrChar hello_world_arr("hello world");
     ArrChar welcome_arr("welcome");
@@ -59,6 +60,7 @@ TEST_F(TestTcp, test_tcp_server)
     ObserverWaiter observer_count(&server_handler);
 
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     server.set_queue_size(3);
@@ -145,7 +147,7 @@ TEST_F(TestTcp, test_tcp_server)
 
 TEST_F(TestTcp, test_tcp_client)
 {
-    IpAddr localhost = IpAddr::localhost(4247);
+    IpAddr localhost = IpAddr::localhost(0);
     ArrChar hello("hello world");
     ArrChar bye("bye");
     ArrChar recv_arr(20);
@@ -153,6 +155,7 @@ TEST_F(TestTcp, test_tcp_client)
     Socket server;
 
     make_listener(server, localhost);
+    localhost = bound_address(server);
 
     EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.socket_opened());
@@ -183,10 +186,11 @@ TEST_F(TestTcp, test_tcp_client)
 }
 TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
 {
-    IpAddr localhost = IpAddr::localhost(4246);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpClient client("tcp-client");
     Socket server;
     make_listener(server, localhost);
+    localhost = bound_address(server);
 
     ASSERT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     Socket accepted(server.accept(connect_timeout_ms).value_or(-1));
@@ -214,13 +218,14 @@ TEST_F(TestTcp, test_tcp_client_reads_data_before_peer_hangup)
 
 TEST_F(TestTcp, test_tcp_connect_timeout)
 {
-    IpAddr localhost = IpAddr::localhost(4243);
+    IpAddr localhost = IpAddr::localhost(0);
     ArrChar hello("hello");
     ArrChar recv_arr(20);
     TcpClient client("tcp-client");
     Socket server;
 
     make_listener(server, localhost);
+    localhost = bound_address(server);
 
     EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.connected());
@@ -239,13 +244,14 @@ TEST_F(TestTcp, test_tcp_connect_timeout)
 
 TEST_F(TestTcp, test_tcp_reconnect)
 {
-    IpAddr localhost = IpAddr::localhost(4244);
+    IpAddr localhost = IpAddr::localhost(0);
     ArrChar hello("hello");
     ArrChar recv_arr(20);
     TcpClient client("tcp-client");
     Socket server;
 
     make_listener(server, localhost);
+    localhost = bound_address(server);
 
     EXPECT_TRUE(client.open_and_connect(localhost, connect_timeout_ms).has_value());
     EXPECT_TRUE(client.connected());
@@ -310,7 +316,7 @@ TEST_F(TestTcp, test_tcp_connect_timeout_unreachable)
 
 TEST_F(TestTcp, test_tcp_server_poll_limit)
 {
-    IpAddr localhost = IpAddr::localhost(4245);
+    IpAddr localhost = IpAddr::localhost(0);
     ArrChar hello("hello");
     ArrChar recv_arr(20);
     TcpServer server("tcp-server");
@@ -320,6 +326,7 @@ TEST_F(TestTcp, test_tcp_server_poll_limit)
     BasicServerHandler server_handler;
 
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     // the listener takes one slot, only one client can be polled
@@ -368,11 +375,12 @@ TEST_F(TestTcp, test_tcp_server_poll_limit)
 TEST_F(TestTcp, test_tcp_server_default_poll_limit_follows_max_clients)
 {
     constexpr size_t default_max_clients = 12;
-    IpAddr localhost = IpAddr::localhost(4251);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpServer server("tcp-server");
     BasicServerHandler server_handler;
 
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -405,12 +413,13 @@ TEST_F(TestTcp, test_tcp_server_default_poll_limit_follows_max_clients)
 
 TEST_F(TestTcp, test_tcp_server_clients_use_keepalive)
 {
-    IpAddr localhost = IpAddr::localhost(4261);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpServer server("tcp-server");
     TcpClient client("tcp-client");
     BasicServerHandler server_handler;
 
     ASSERT_TRUE(server.open_and_bind(localhost).has_value());
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
 
@@ -440,12 +449,13 @@ TEST_F(TestTcp, test_tcp_server_clients_use_keepalive)
 
 TEST_F(TestTcp, test_tcp_server_drops_idle_clients)
 {
-    IpAddr localhost = IpAddr::localhost(4262);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpServer server("tcp-server");
     TcpClient client("tcp-client");
     BasicServerHandler server_handler;
 
     ASSERT_TRUE(server.open_and_bind(localhost).has_value());
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     ASSERT_TRUE(server_handler.set_idle_timeout(500));
@@ -477,12 +487,13 @@ TEST_F(TestTcp, test_tcp_server_drops_idle_clients)
 
 TEST_F(TestTcp, test_tcp_server_partial_write)
 {
-    IpAddr localhost = IpAddr::localhost(4248);
+    IpAddr localhost = IpAddr::localhost(0);
     TcpServer server("tcp-server");
     TcpClient client("tcp-client");
     BasicServerHandler server_handler;
 
     (void)server.open_and_bind(localhost);
+    localhost = bound_address(server.socket());
     server.set_server_handler(&server_handler);
     server.set_poll_timeout(1);
     Worker worker([&server] { return server.start(); });

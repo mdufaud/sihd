@@ -72,13 +72,14 @@ TEST_F(TestSocket, test_socket_stream_client_server)
     SIHD_TRACE("Socket rcv: {}", socket_server.socket());
     SIHD_TRACE("Socket send: {}", socket_client.socket());
 
-    IpAddr local_ipv6 = {"::1", 4200};
+    IpAddr local_ipv6 = {"::1", 0};
     const char buff[] = "hello world";
     size_t buff_len = strlen(buff);
     ArrChar byte_arr(buff_len + 1);
 
     EXPECT_TRUE(socket_server.bind(local_ipv6).has_value());
     EXPECT_TRUE(socket_server.listen(5).has_value());
+    local_ipv6 = {"::1", socket_server.local_port().value_or(0)};
 
     EXPECT_TRUE(socket_client.connect(local_ipv6).has_value());
 
@@ -121,12 +122,13 @@ TEST_F(TestSocket, test_socket_datagram_no_connect)
     EXPECT_EQ(socket_send.type(), SOCK_DGRAM);
     EXPECT_EQ(socket_send.protocol(), IPPROTO_UDP);
 
-    IpAddr local_ip = {"127.0.0.1", 4200};
+    IpAddr local_ip = {"127.0.0.1", 0};
     const char buff[] = "hello world";
     size_t buff_len = strlen(buff);
     ArrChar byte_arr(buff_len + 1);
 
     EXPECT_TRUE(socket_receive.bind(local_ip).has_value());
+    local_ip = bound_address(socket_receive);
 
     EXPECT_EQ(socket_send.send_to(local_ip, buff), (ssize_t)buff_len);
     EXPECT_EQ(socket_receive.receive_from(local_ip, byte_arr), (ssize_t)buff_len);
@@ -143,12 +145,13 @@ TEST_F(TestSocket, test_socket_datagram_connect)
 
     EXPECT_TRUE(socket_send.open("ipv4", "datagram", "udp").has_value());
 
-    IpAddr local_ip = {"127.0.0.1", 4254};
+    IpAddr local_ip = {"127.0.0.1", 0};
     const char buff[] = "hello world";
     size_t buff_len = strlen(buff);
     ArrChar byte_arr(buff_len + 1);
 
     EXPECT_TRUE(socket_receive.bind(local_ip).has_value());
+    local_ip = bound_address(socket_receive);
     EXPECT_TRUE(socket_send.connect(local_ip).has_value());
 
     EXPECT_EQ(socket_send.send(buff), (ssize_t)buff_len);
@@ -201,7 +204,7 @@ TEST_F(TestSocket, test_socket_multicast)
     EXPECT_TRUE(sock.set_reuseaddr(true).has_value());
 
     IpAddr group("239.0.0.1");
-    IpAddr bind_addr(4250);
+    IpAddr bind_addr(0);
 
     EXPECT_TRUE(sock.bind(bind_addr).has_value());
     EXPECT_TRUE(sock.join_multicast(group).has_value());
@@ -213,7 +216,7 @@ TEST_F(TestSocket, test_socket_multicast)
     EXPECT_TRUE(sender.set_multicast_loop(true).has_value());
 
     const char msg[] = "multicast";
-    IpAddr dest("239.0.0.1", 4250);
+    IpAddr dest("239.0.0.1", sock.local_port().value_or(0));
     EXPECT_EQ(sender.send_to(dest, msg), (ssize_t)strlen(msg));
 
     sihd::sys::Poll poll(1);
@@ -257,9 +260,8 @@ TEST_F(TestSocket, test_socket_unix_abstract)
     if (sihd::sys::os::is_run_by_wine())
         GTEST_SKIP() << "AF_UNIX stream is not supported by wine";
 
-    // abstract namespace: the leading null byte is part of the address name
-    const char raw_name[] = "\0sihd-net-test-abstract";
-    const std::string_view name(raw_name, sizeof(raw_name) - 1);
+    // abstract namespace: the leading null byte is part of the address name, the pid keeps concurrent runs apart
+    const std::string name = std::string(1, '\0') + "sihd-net-test-abstract-" + std::to_string(sihd::sys::os::pid());
 
     Socket server;
     ASSERT_TRUE(server.open(AF_UNIX, SOCK_STREAM, 0).has_value());
@@ -284,8 +286,8 @@ TEST_F(TestSocket, test_socket_unix_abstract)
     EXPECT_EQ(Socket::unix_socket_peername(client.socket()), name);
 
     // abstract accepts the full sun_path, one byte more is refused
-    std::string long_name(108, 'a');
-    long_name[0] = '\0';
+    std::string long_name = name;
+    long_name.resize(108, 'a');
     Socket long_server;
     ASSERT_TRUE(long_server.open(AF_UNIX, SOCK_STREAM, 0).has_value());
     EXPECT_TRUE(long_server.bind_unix(long_name).has_value());
@@ -321,12 +323,12 @@ TEST_F(TestSocket, test_socket_move_assign_closes_previous)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4210)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(1).has_value());
 
     Socket client;
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
-    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", 4210)).has_value());
+    ASSERT_TRUE(client.connect(bound_address(server)).has_value());
 
     Socket replacement;
     ASSERT_TRUE(replacement.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
@@ -357,12 +359,12 @@ TEST_F(TestSocket, test_socket_non_blocking_would_block)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4211)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(1).has_value());
 
     Socket client;
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
-    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", 4211)).has_value());
+    ASSERT_TRUE(client.connect(bound_address(server)).has_value());
 
     int accepted_fd = server.accept().value_or(-1);
     ASSERT_GE(accepted_fd, 0);
@@ -394,7 +396,7 @@ TEST_F(TestSocket, test_socket_accept_would_block)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4213)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(1).has_value());
     ASSERT_TRUE(server.set_blocking(false).has_value());
 
@@ -455,12 +457,12 @@ TEST_F(TestSocket, test_socket_receive_eintr)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4212)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(1).has_value());
 
     Socket client;
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
-    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", 4212)).has_value());
+    ASSERT_TRUE(client.connect(bound_address(server)).has_value());
     int accepted_fd = server.accept().value_or(-1);
     ASSERT_GE(accepted_fd, 0);
     Socket accepted(accepted_fd);
@@ -482,10 +484,10 @@ TEST_F(TestSocket, test_socket_accept_timeout_survives_eintr)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4214)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(1).has_value());
 
-    std::jthread releaser(connect_after_sigusr1, 4214);
+    std::jthread releaser(connect_after_sigusr1, server.local_port().value_or(0));
 
     interruption.unblock();
 
@@ -510,14 +512,14 @@ TEST_F(TestSocket, test_socket_connect_timeout_survives_eintr)
     Socket server;
     ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
     ASSERT_TRUE(server.set_reuseaddr(true).has_value());
-    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 4215)).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
     ASSERT_TRUE(server.listen(0).has_value());
 
     Socket queued;
     ASSERT_TRUE(queued.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
-    ASSERT_TRUE(queued.connect(IpAddr("127.0.0.1", 4215), 1000).has_value());
+    ASSERT_TRUE(queued.connect(bound_address(server), 1000).has_value());
 
-    std::jthread releaser(connect_after_sigusr1, 4215);
+    std::jthread releaser(connect_after_sigusr1, server.local_port().value_or(0));
 
     interruption.unblock();
 
@@ -525,7 +527,7 @@ TEST_F(TestSocket, test_socket_connect_timeout_survives_eintr)
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
 
     const auto start = std::chrono::steady_clock::now();
-    auto connected = client.connect(IpAddr("127.0.0.1", 4215), 400);
+    auto connected = client.connect(bound_address(server), 400);
     const auto elapsed = std::chrono::steady_clock::now() - start;
 
     ASSERT_FALSE(connected.has_value());

@@ -14,6 +14,7 @@
 #include <sihd/util/Logger.hpp>
 
 #include "listener/make_listener.hpp"
+#include "net_test_helpers.hpp"
 
 namespace test
 {
@@ -65,10 +66,11 @@ TEST_F(TestDevices, test_udp_devices)
     auto *sender = core.add_child<DevUdpSender>("sender");
     auto *receiver = core.add_child<DevUdpReceiver>("receiver");
 
+    const int port = free_loopback_port();
     sender->set_host("127.0.0.1");
-    sender->set_port(4300);
+    sender->set_port(port);
     receiver->set_host("127.0.0.1");
-    receiver->set_port(4300);
+    receiver->set_port(port);
     receiver->set_poll_timeout(1);
     receiver->set_buffer_capacity(1024);
 
@@ -100,13 +102,13 @@ TEST_F(TestDevices, test_udp_devices)
 TEST_F(TestDevices, test_tcp_client_device)
 {
     Socket server;
-    make_listener(server, IpAddr::localhost(4301));
+    make_listener(server, IpAddr::localhost(0));
 
     Core core;
 
     auto *client = core.add_child<DevTcpClient>("client");
     client->set_host("127.0.0.1");
-    client->set_port(4301);
+    client->set_port(server.local_port().value_or(0));
     client->set_poll_timeout(1);
     client->set_buffer_capacity(1024);
     client->set_connect_timeout(1000);
@@ -159,8 +161,9 @@ TEST_F(TestDevices, test_tcp_server_device)
     Core core;
 
     auto *srv = core.add_child<DevTcpServer>("server");
+    const int port = free_loopback_port();
     srv->set_host("127.0.0.1");
-    srv->set_port(4302);
+    srv->set_port(port);
     srv->set_poll_timeout(1);
     srv->set_queue_size(2);
     srv->set_max_clients(4);
@@ -181,7 +184,7 @@ TEST_F(TestDevices, test_tcp_server_device)
 
     Socket client;
     ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, 0).has_value());
-    ASSERT_TRUE(client.connect(IpAddr::localhost(4302)).has_value());
+    ASSERT_TRUE(client.connect(IpAddr::localhost(port)).has_value());
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -215,13 +218,14 @@ TEST_F(TestDevices, test_tcp_server_device)
 TEST_F(TestDevices, test_tcp_client_device_reconnect)
 {
     Socket server;
-    make_listener(server, IpAddr::localhost(4303));
+    make_listener(server, IpAddr::localhost(0));
+    const int port = server.local_port().value_or(0);
 
     Core core;
 
     auto *client = core.add_child<DevTcpClient>("client");
     client->set_host("127.0.0.1");
-    client->set_port(4303);
+    client->set_port(port);
     client->set_poll_timeout(1);
     client->set_buffer_capacity(1024);
     client->set_connect_timeout(200);
@@ -249,7 +253,7 @@ TEST_F(TestDevices, test_tcp_client_device_reconnect)
     EXPECT_EQ(connected->read<bool>(0), false);
 
     Socket server2;
-    make_listener(server2, IpAddr::localhost(4303));
+    make_listener(server2, IpAddr::localhost(port));
 
     // the waiter must exist first: qemu delivery wins the race
     ChannelWaiter rx_waiter(rx);

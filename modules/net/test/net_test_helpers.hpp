@@ -3,11 +3,31 @@
 
 #include <optional>
 
+#include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
+#include <sihd/net/Socket.hpp>
 #include <sihd/sys/platform.hpp>
 
 namespace test
 {
+
+inline sihd::net::IpAddr bound_address(const sihd::net::Socket & socket)
+{
+    return sihd::net::IpAddr::localhost(socket.local_port().value_or(0));
+}
+
+// a loopback port free for tcp and udp right now, for a device that cannot bind port 0: use it at once
+inline int free_loopback_port()
+{
+    sihd::net::Socket tcp;
+    sihd::net::Socket udp;
+    if (!tcp.open(AF_INET, SOCK_STREAM, IPPROTO_TCP) || !tcp.bind(sihd::net::IpAddr::localhost(0)))
+        return 0;
+    const int port = tcp.local_port().value_or(0);
+    if (!udp.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP) || !udp.bind(sihd::net::IpAddr::localhost(port)))
+        return 0;
+    return port;
+}
 
 inline std::optional<sihd::net::NetInterface> find_interface(sihd::net::NetInterface::Kind kind, bool running)
 {
