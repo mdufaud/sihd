@@ -4,7 +4,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 | | |
 |---|---|
-| Depends on | `core`, `crypto` |
+| Depends on | `crypto` |
 | External libraries | openssl (through `crypto`, for TLS); iphlpapi on Windows |
 | Platforms | all except web (Emscripten) |
 | Build | `make m=net` |

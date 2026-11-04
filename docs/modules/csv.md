@@ -4,7 +4,7 @@ Delimited text reading and writing. The reader skips comment lines, splits each 
 
 | | |
 |---|---|
-| Depends on | `sys`, `core` |
+| Depends on | `sys` |
 | External libraries | none |
 | Platforms | all |
 | Build | `make m=csv` |

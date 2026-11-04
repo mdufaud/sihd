@@ -4,7 +4,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 | | |
 |---|---|
-| Depends on | `util` |
+| Depends on | `core` |
 | External libraries | Linux: libuuid, libcap, libdbus-1. Windows: system libraries (advapi32, ole32, psapi, ws2_32, runtimeobject, and others). Optional desktop backends: X11, Xtst, Xrandr, wayland-client |
 | Platforms | Linux, Windows. Android and Emscripten are partial: check the `supported` constant of platform-dependent APIs |
 | Build | `make m=sys` |
@@ -67,6 +67,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 - `DynLib`: shared library handle: `open`, `open_system`, `load_symbol`, `load_function<F>`, `close`, `is_open`. `DynLib(file)` opens at construction and throws `std::runtime_error` on failure. `open` hands its file name or path to the loader untouched, no prefix or extension guessed. `open_system` refuses a path and loads a system library by name only: Windows searches System32 alone (`LOAD_LIBRARY_SEARCH_SYSTEM32`), so a planted DLL in the application directory, the current directory or the `PATH` is never picked; Linux goes through the dynamic loader search path, which never includes the current directory. `load_function<F>` returns the symbol as an `F *` function pointer. `DynLib::supported` is false where the libc has no usable loader: Emscripten and statically linked Linux builds (musl's static `dlopen` always fails, static glibc loads a second libc). Static Windows builds keep it: `LoadLibrary` lives in kernel32, always dynamic.
 - `PluginLoader`: creates `Named` objects from a library (`create_from_library`) or from a class linked in the binary (`create_from_linked`), and unloads libraries (`unload`). `create_from_library` takes the library name and loads `lib<name>.so` on Linux, `<name>.dll` on Windows.
+- `device_tree::load(parent, json)` (`device_tree.hpp`): builds a `core` device tree under `parent` from a JSON object with optional `channels`, `links` and `devices`. A channel is `{"name", "type", "size" (default 1), "capacity" (makes it resizable)}`, `links` maps a link name to a path (`Node::add_link`), a device is `{"class", "name", "conf", "channels", "links", "devices"}` created by `PluginLoader::create_from_linked` (the class registered with `SIHD_REGISTER_FACTORY` and linked in the binary; a static build without the factory table, Emscripten, resolves no class) and configured with `Configurable::set_conf`. Unknown keys, wrong value types, an unknown class, a class that is not a `Device` and a name already taken are errors (`Result<void>`, nothing logged); the devices added before an error stay in `parent`. Links are only declared: they resolve at `start()` like any other link, in any order.
 
 ### Desktop integration
 

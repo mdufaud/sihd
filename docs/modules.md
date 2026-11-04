@@ -6,14 +6,14 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 |--------|-------------|--------------|
 | [`json`](modules/json.md) | JSON parsing/serialization | simdjson |
 | [`util`](modules/util.md) | Base: logging, services, threads, scheduling, observers, CLI, time, containers, named nodes | json, fmt, cli11, pcre2 |
-| [`sys`](modules/sys.md) | OS abstraction: files, processes, IPC, signals, dynamic loading, clipboard, screenshot, input injection, desktop notifications, keyring, sleep inhibition, open files and URIs, users, Linux/Windows-only APIs | util |
 | [`core`](modules/core.md) | Devices, Channels, recording/playback, sampling, profiling | util |
+| [`sys`](modules/sys.md) | OS abstraction: files, processes, IPC, signals, dynamic loading, device trees from JSON, clipboard, screenshot, input injection, desktop notifications, keyring, sleep inhibition, open files and URIs, users, Linux/Windows-only APIs | core |
 | [`crypto`](modules/crypto.md) | Keys, certificates, OCSP/CRL revocation, TLS context, ciphers, digests, signatures | sys, openssl |
 | [`curl`](modules/curl.md) | libcurl transfer wrapper | util, curl |
-| [`net`](modules/net.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, interfaces, routes, VPN detection, network monitoring | core, crypto |
+| [`net`](modules/net.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, interfaces, routes, VPN detection, network monitoring | crypto |
 | [`http`](modules/http.md) | HTTP/WebSocket server, HTTP client | curl, net, libwebsockets, libuv, zlib, openssl |
 | [`pcap`](modules/pcap.md) | Packet capture, injection, capture files, Android VPN capture | net, libpcap |
-| [`csv`](modules/csv.md) | CSV reading/writing, channel recording | sys, core |
+| [`csv`](modules/csv.md) | CSV reading/writing, channel recording | sys |
 | [`zip`](modules/zip.md) | Archive compression and encryption | sys, libzip |
 | [`tui`](modules/tui.md) | Terminal UI components (ftxui) | sys, ftxui |
 | [`ssh`](modules/ssh.md) | SSH client and server, SFTP | sys, libssh |

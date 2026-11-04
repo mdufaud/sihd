@@ -47,7 +47,7 @@ modules = {
         "export-all-flags": True,
     },
     "sys": {
-        "depends": ['util'],
+        "depends": ['core'],
         "env": {
             "x11": 0,
             "wayland": 0,
@@ -122,7 +122,7 @@ modules = {
     "net": {
         # emscripten proxies neither poll() nor raw sockets
         "exclude-platforms": ["web"],
-        "depends": ['core', 'crypto'],
+        "depends": ['crypto'],
         "windows-libs": ['iphlpapi'],
         "export-windows-libs": ['iphlpapi'],
     },
@@ -252,7 +252,7 @@ modules = {
         "depends": ['net'],
     },
     "csv": {
-        "depends": ['sys', 'core'],
+        "depends": ['sys'],
     },
     "imgui": {
         "depends": ['sys'],
