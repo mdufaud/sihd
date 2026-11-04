@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/lua/Vm.hpp>
 #include <sihd/lua/checked.hpp>

@@ -1,4 +1,4 @@
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/time.hpp>

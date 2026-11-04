@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/sys/Bitmap.hpp>
 #include <sihd/sys/File.hpp>

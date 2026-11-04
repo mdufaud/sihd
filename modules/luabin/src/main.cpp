@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/lua.hpp>
 

@@ -7,7 +7,7 @@
 #include <system_error>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 // bails out of the function propagating the error: `res` must be a stored sihd::util::Result<...>,
 // not a call — the macro names its argument twice

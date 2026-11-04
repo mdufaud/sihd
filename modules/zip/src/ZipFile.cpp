@@ -11,7 +11,7 @@
 #include <optional>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>

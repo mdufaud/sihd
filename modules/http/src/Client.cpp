@@ -7,7 +7,7 @@
 #include <string_view>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/curl.hpp>
 #include <sihd/http/HttpRequest.hpp>

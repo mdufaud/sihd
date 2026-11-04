@@ -4,7 +4,7 @@
 #include <thread>
 #include <vector>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 #include <sihd/util/ALogger.hpp>

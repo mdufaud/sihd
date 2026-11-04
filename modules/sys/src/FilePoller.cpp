@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <sihd/sys/FilePoller.hpp>
 #include <sihd/sys/fs.hpp>

@@ -7,7 +7,7 @@
 #include <string_view>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/printf.h>
 
 #include <sihd/util/LoggerManager.hpp>

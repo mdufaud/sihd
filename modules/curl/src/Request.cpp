@@ -2,7 +2,7 @@
 #include <expected>
 #include <mutex>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/ranges.h>
 
 #include <sihd/curl/HeaderList.hpp>
