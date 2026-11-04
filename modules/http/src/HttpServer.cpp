@@ -91,6 +91,11 @@ bool HttpServer::set_port(int port)
     return true;
 }
 
+int HttpServer::get_port() const
+{
+    return _impl->listen_port;
+}
+
 bool HttpServer::set_root_dir(const std::string & root_dir)
 {
     bool ret = fs::is_dir(root_dir);
@@ -248,6 +253,7 @@ bool HttpServer::on_start()
     });
 
     _impl->port = lws_info.port;
+    _impl->listen_port = lws_get_vhost_listen_port(lws_get_vhost_by_name(_impl->lws_context_ptr, "default"));
 
     if (_impl->stepworker.start_sync_worker(this->name() + "-callback") == false)
     {

@@ -189,6 +189,7 @@ struct HttpServer::Impl
 
         std::atomic<bool> stop;
         int port;
+        std::atomic<int> listen_port {0};
         std::string root_dir;
         std::set<std::string> resources_path;
         std::string ssl_cert_path;

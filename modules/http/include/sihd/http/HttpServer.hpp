@@ -47,6 +47,8 @@ class HttpServer: public sihd::util::Node,
         bool set_service_thread_count(size_t count);
 
         void request_stop();
+        // the port the server listens on once ready, the one picked by the system when set to 0
+        int get_port() const;
 
         bool add_resource_path(const std::string & path);
         bool remove_resource_path(const std::string & path);

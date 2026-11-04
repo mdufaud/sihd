@@ -14,7 +14,7 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 
 ### Server
 
-- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop.
+- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop. `get_port` returns the bound port once ready, the system-picked one when the port is 0.
 - `HttpServer::set_http_filter`, `set_authenticator`: install one connection filter and one authenticator.
 - `HttpServer::add_websocket`, `add_websocket_origin`: register a WebSocket protocol handler and the origins allowed to open it.
 - `HttpServer::get_resource_path`: virtual hook that resolves a request path to a file.

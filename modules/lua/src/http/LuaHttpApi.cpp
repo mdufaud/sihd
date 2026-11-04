@@ -476,6 +476,7 @@ void LuaHttpApi::load_base(Vm & vm)
         .deriveClass<HttpServer, Node>("HttpServer")
         .addConstructorFrom<SmartNodePtr<HttpServer>, void(const std::string &, Node *)>()
         .addFunction("set_port", &HttpServer::set_port)
+        .addFunction("get_port", &HttpServer::get_port)
         .addFunction(
             "set_root_dir",
             +[](HttpServer *self, const std::string & dir) -> bool { return self->set_root_dir(dir); })
