@@ -54,6 +54,8 @@ modules = {
         },
         "linux-extlibs": ['libuuid', 'libcap', 'dbus'],
         "linux-libs": ['dl', 'uuid', 'cap', 'dbus-1'],
+        # system dbus keeps its headers under dbus-1.0/ (vcpkg port is flattened); static would pull -lsystemd
+        "linux-shared-pkg-configs": ['dbus-1'],
         "android-extlibs": ['libuuid'],
         "android-libs": ['log', 'android', 'uuid'],
         "windows-libs": [
