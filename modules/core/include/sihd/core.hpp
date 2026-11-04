@@ -21,6 +21,7 @@
 #include <sihd/core/Device.hpp>
 #include <sihd/core/MemRecorder.hpp>
 #include <sihd/core/Records.hpp>
+#include <sihd/core/TreeMonitor.hpp>
 #include <sihd/core/TreeProfiler.hpp>
 
 #endif

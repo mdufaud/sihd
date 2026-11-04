@@ -155,6 +155,13 @@ bool ChannelMatch::match(const Channel *channel) const
     return this->match(in_value);
 }
 
+bool ChannelMatch::match(const IArray & array) const
+{
+    if (this->idx >= array.size())
+        return false;
+    return this->match(Value(array.buf_at(this->idx), array.data_type()));
+}
+
 bool ChannelMatch::match(const Value & in_value) const
 {
     if (in_value.empty() || this->comparison == None)
@@ -197,28 +204,30 @@ bool ChannelMatch::verify(const Channel *channel) const
 {
     if (channel == nullptr)
         return false;
+    const std::string error = this->_verify_error(*channel->array());
+    if (error.empty() == false)
+        SIHD_LOG(error, "ChannelMatch: channel '{}': {}", channel->full_name(), error);
+    return error.empty();
+}
+
+bool ChannelMatch::verify(const IArray & array) const
+{
+    const std::string error = this->_verify_error(array);
+    if (error.empty() == false)
+        SIHD_LOG(error, "ChannelMatch: {}", error);
+    return error.empty();
+}
+
+std::string ChannelMatch::_verify_error(const IArray & array) const
+{
     if (this->comparison == None)
-    {
-        SIHD_LOG(error, "ChannelMatch: no comparison set");
-        return false;
-    }
-    const IArray *array = channel->array();
-    if (this->idx >= array->size())
-    {
-        SIHD_LOG(error,
-                 "ChannelMatch: index {} is out of range of channel '{}' size {}",
-                 this->idx,
-                 channel->full_name(),
-                 array->size());
-        return false;
-    }
-    const bool array_is_float = array->data_type() == TYPE_FLOAT || array->data_type() == TYPE_DOUBLE;
+        return "no comparison set";
+    if (this->idx >= array.size())
+        return fmt::format("index {} is out of range of size {}", this->idx, array.size());
+    const bool array_is_float = array.data_type() == TYPE_FLOAT || array.data_type() == TYPE_DOUBLE;
     if (this->value.is_float() && array_is_float == false)
-    {
-        SIHD_LOG(error, "ChannelMatch: value is float and channel '{}' is not a floating type", channel->full_name());
-        return false;
-    }
-    return true;
+        return "value is float and data is not a floating type";
+    return {};
 }
 
 ChannelMatch ChannelMatch::equal(Value val)

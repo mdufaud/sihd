@@ -2,6 +2,7 @@
 
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/ChannelMatch.hpp>
+#include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 
 namespace test
@@ -113,6 +114,12 @@ TEST_F(TestChannelMatch, test_match)
     EXPECT_FALSE(ChannelMatch().match(Value(20)));
     EXPECT_FALSE(ChannelMatch::equal(0).match(Value()));
 
+    ArrInt copy;
+    ASSERT_TRUE(chan.copy_resized_to(copy));
+    EXPECT_TRUE(ChannelMatch(ChannelMatch::Equal, Value(20), 1).match(copy));
+    EXPECT_FALSE(ChannelMatch(ChannelMatch::Equal, Value(20), 0).match(copy));
+    EXPECT_FALSE(ChannelMatch(ChannelMatch::Equal, Value(20), 3).match(copy));
+
     Channel bool_chan("bool_chan", "bool", 1);
     ASSERT_TRUE(bool_chan.write<bool>(0, true));
     EXPECT_TRUE(ChannelMatch::equal(true).match(&bool_chan));
@@ -137,6 +144,11 @@ TEST_F(TestChannelMatch, test_verify)
 
     Channel float_chan("float_chan", "float", 1);
     EXPECT_TRUE(ChannelMatch(ChannelMatch::Equal, Value(1.5f)).verify(&float_chan));
+
+    const ArrInt ints {0, 0};
+    EXPECT_TRUE(ChannelMatch(ChannelMatch::Equal, Value(1), 1).verify(ints));
+    EXPECT_FALSE(ChannelMatch(ChannelMatch::Equal, Value(1), 2).verify(ints));
+    EXPECT_FALSE(ChannelMatch(ChannelMatch::Equal, Value(1.5)).verify(ints));
 }
 
 TEST_F(TestChannelMatch, test_value_at)

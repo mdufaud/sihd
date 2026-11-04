@@ -34,6 +34,9 @@ TEST_F(TestChannelView, test_channel_str)
 
     EXPECT_EQ(channel_str(numbers), "1 -2 3");
     EXPECT_EQ(channel_str(name), "home");
+
+    EXPECT_EQ(array_str(ArrInt {4, 5}), "4 5");
+    EXPECT_EQ(array_str(ArrChar {'l', 'a', 'b', '\0', 'x'}), "lab");
 }
 
 TEST_F(TestChannelView, test_channel_gauge)

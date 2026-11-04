@@ -39,9 +39,11 @@ class ChannelMatch
 
         // compares an already read value, the channel is not read again
         bool match(const sihd::util::Value & in_value) const;
+        bool match(const sihd::util::IArray & array) const;
 
         // comparison set, index in range and float value only against a floating channel
         bool verify(const Channel *channel) const;
+        bool verify(const sihd::util::IArray & array) const;
 
         static const char *comparison_str(Comparison comparison);
         static Comparison comparison_from_str(std::string_view str);
@@ -59,6 +61,9 @@ class ChannelMatch
         size_t idx = 0;
         sihd::util::Value value {0};
         bool invert = false;
+
+    private:
+        std::string _verify_error(const sihd::util::IArray & array) const;
 };
 
 } // namespace sihd::core

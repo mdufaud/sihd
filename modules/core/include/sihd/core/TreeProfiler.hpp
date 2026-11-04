@@ -8,8 +8,6 @@
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <set>
 #include <string>
 #include <thread>
 #include <variant>
@@ -17,18 +15,14 @@
 
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/ChannelMatch.hpp>
+#include <sihd/core/TreeMonitor.hpp>
 #include <sihd/util/AService.hpp>
-#include <sihd/util/Clocks.hpp>
+#include <sihd/util/IArray.hpp>
 #include <sihd/util/IHandler.hpp>
-#include <sihd/util/IObserverWatcher.hpp>
-#include <sihd/util/Node.hpp>
 #include <sihd/util/Observable.hpp>
 #include <sihd/util/ServiceController.hpp>
 #include <sihd/util/Stat.hpp>
 #include <sihd/util/Timestamp.hpp>
-#include <sihd/util/Waitable.hpp>
-#include <sihd/util/Worker.hpp>
-#include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
 
 namespace sihd::core
@@ -45,7 +39,7 @@ struct TreeProfilerEvent
 
         sihd::util::Timestamp timestamp {0};
         size_t id = 0;
-        pthread_t thread_id = 0;
+        std::thread::id thread_id;
         std::string source;
         std::string what;
         Kind kind = exit;
@@ -53,48 +47,29 @@ struct TreeProfilerEvent
         bool success = true;
 };
 
-// observed objects must outlive it, or be detached first with reset()
-class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>,
+// subscribes to a monitor that outlives it
+class TreeProfiler: public sihd::util::IHandler<TreeMonitorEvent *>,
                     public sihd::util::Observable<TreeProfilerEvent>
 {
     private:
         using Operation = sihd::util::AService::Operation;
 
-        struct ChannelEntry: public sihd::util::IObserverWatcher<Channel>
+        struct ObserverStat
         {
-                struct ObsStat
-                {
-                        sihd::util::IHandler<Channel *> *obs = nullptr;
-                        std::string label;
-                        sihd::util::Stat<sihd::util::time::UnixTime> stat;
-                        sihd::util::time::UnixTime last = 0;
-                };
-
-                Channel *channel = nullptr;
-                TreeProfiler *profiler = nullptr;
-                std::vector<ObsStat> stats;
-                sihd::util::Stat<sihd::util::time::UnixTime> notify_stat;
-                // Channel::write rejects re-entrant writes: one notification in flight
-                sihd::util::IHandler<Channel *> *pending_obs = nullptr;
-                sihd::util::Timestamp pending_begin {0};
-                bool write_in_flight = false;
-                sihd::util::Timestamp write_begin {0};
-                bool write_recorded = false;
-                std::vector<std::string> write_detail;
-
-                void before_notification(Channel *sender) override;
-                void after_notification(Channel *sender) override;
-                void before_observer(sihd::util::IHandler<Channel *> *obs, Channel *sender) override;
-                void after_observer(sihd::util::IHandler<Channel *> *obs, Channel *sender) override;
-
-                ObsStat *_find_stat(sihd::util::IHandler<Channel *> *obs);
-                void _prune_stats();
+                TreeMonitorEvent::Observer observer;
+                sihd::util::Stat<sihd::util::time::UnixTime> stat;
         };
 
-        struct ServiceEntry
+        struct ChannelStats
         {
-                sihd::util::AService *service = nullptr;
-                sihd::util::ServiceController *ctrl = nullptr;
+                std::vector<ObserverStat> observers;
+                sihd::util::Stat<sihd::util::time::UnixTime> notify_stat;
+                bool write_in_flight = false;
+                bool write_recorded = false;
+        };
+
+        struct ServiceStats
+        {
                 sihd::util::Timestamp op_begin {0};
                 Operation pending_op = sihd::util::AService::Failure;
                 bool op_pending = false;
@@ -104,8 +79,8 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
 
     public:
         using Event = TreeProfilerEvent;
-        using ChannelCondition = std::function<bool(Channel *)>;
-        using ServiceCondition = std::function<bool(sihd::util::ServiceController *)>;
+        using ChannelCondition = std::function<bool(const sihd::util::IArray &)>;
+        using ServiceCondition = std::function<bool(sihd::util::ServiceController::State)>;
 
         struct ReportOpts
         {
@@ -113,16 +88,11 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
                 bool description = false;
         };
 
-        TreeProfiler();
+        explicit TreeProfiler(TreeMonitor & monitor);
         virtual ~TreeProfiler();
 
         TreeProfiler(const TreeProfiler &) = delete;
         TreeProfiler & operator=(const TreeProfiler &) = delete;
-
-        // children created during lifecycle operations are picked up as services change state
-        bool observe(sihd::util::Node *root, size_t max_recursion = 0);
-        bool observe(Channel *channel);
-        bool observe(sihd::util::AService *service);
 
         void reset();
 
@@ -130,22 +100,8 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
 
         void set_trace(bool active);
 
-        // set before observe: wrapped handlers keep the clock they were created with
-        void set_clock(sihd::util::IClock *clock);
-
         // keeps at most max_events most recent events in the polled history, 0 keeps everything
         void set_max_events(size_t max_events);
-
-        // past queue_max (0 = unbounded) events drop and enter/exit pairs break; warnings past warning_threshold
-        void set_queue_max(size_t queue_max);
-        void set_queue_warning(size_t warning_threshold);
-
-        bool flush(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(1))) const;
-
-        size_t dropped_events() const;
-
-        bool add_observer(sihd::util::IHandler<Event *> *obs, bool add_to_front = false);
-        void remove_observer(sihd::util::IHandler<Event *> *obs);
 
         // start conditions latch and open the window when all fire (also once at attach), stop ones close it
         bool start_when(Channel *channel, ChannelMatch match);
@@ -183,33 +139,15 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
         std::string events_str() const;
         std::vector<Event> events() const;
 
-        size_t channels_count() const;
-        size_t services_count() const;
-
-        void handle(sihd::util::ServiceController *ctrl) override;
+        void handle(TreeMonitorEvent *event) override;
 
     private:
-        struct DispatchQueue
-        {
-                // one waitable serves the has-items and drained waits: notify_all on both sides
-                sihd::util::Waitable waitable;
-                std::deque<Event> items;
-                size_t pending = 0;
-        };
-
-        // the profiler lock doubles as the ops gate: a report holds the walk flag to block op_start; taken last
-        mutable sihd::util::WaitableRecursive _waitable;
-        mutable bool _walk_in_progress = false;
-        mutable size_t _ops_in_flight = 0;
-        mutable std::map<std::thread::id, size_t> _ops_depth;
-
         struct CaptureCondition
         {
                 std::variant<ChannelMatch, ChannelCondition, ServiceCondition> matcher;
-                std::string path;
+                std::string path {};
                 Channel *channel = nullptr;
                 sihd::util::AService *service = nullptr;
-                sihd::util::ServiceController *ctrl = nullptr;
                 bool is_start = true;
                 bool satisfied = false;
                 bool attached = false;
@@ -226,118 +164,62 @@ class TreeProfiler: public sihd::util::IHandler<sihd::util::ServiceController *>
                 bool captured() const;
         };
 
-        void _observe_node(sihd::util::Node *node,
-                           size_t current_recursion,
-                           size_t max_recursion,
-                           std::set<sihd::util::Node *> & visited);
-        bool _observe_channel(Channel *channel);
-        bool _observe_service(sihd::util::AService *service);
-        void _add_root(sihd::util::Named *root);
+        void _flush() const;
 
-        void _notify_begin(ChannelEntry *entry);
-        void _notify_end(ChannelEntry *entry);
-        void _observer_begin(ChannelEntry *entry, sihd::util::IHandler<Channel *> *obs);
-        void _observer_end(ChannelEntry *entry, sihd::util::IHandler<Channel *> *obs);
+        void _handle_write_begin(const TreeMonitorEvent & event, std::vector<Event> & emitted);
+        void _handle_write_end(const TreeMonitorEvent & event, std::vector<Event> & emitted);
+        void _handle_op_begin(const TreeMonitorEvent & event, std::vector<Event> & emitted);
+        void _handle_op_end(const TreeMonitorEvent & event, std::vector<Event> & emitted);
+        void _handle_detached(const TreeMonitorEvent & event);
 
-        // runs under the profiler lock, returns the trace line to log after it is released
-        std::string _handle_op_enter(ServiceEntry *entry,
-                                     sihd::util::ServiceController *ctrl,
-                                     Operation started_op,
-                                     const std::string & name);
-        std::string _handle_op_exit(ServiceEntry *entry, sihd::util::ServiceController *ctrl, const std::string & name);
-        void _push_ops_depth();
-        void _pop_ops_depth();
-        std::optional<std::string> _handle_op(ServiceEntry *entry,
-                                              sihd::util::ServiceController *ctrl,
-                                              const std::optional<Operation> & started_op,
-                                              const std::string & name);
+        bool _when(bool is_start, CaptureCondition && entry);
+        void _resolve_pending_conditions(sihd::util::Timestamp now, const TreeMonitorEvent *event);
+        void _resolve_condition(const std::shared_ptr<CaptureCondition> & cond,
+                                sihd::util::Timestamp now,
+                                const TreeMonitorEvent *event);
+        bool _verify_match(const CaptureCondition & cond, const Channel *channel, const TreeMonitorEvent *event) const;
 
-        Event _push_event(sihd::util::Timestamp timestamp,
-                          const std::string & source,
+        WindowCheck _evaluate_window_conditions(const TreeMonitorEvent & event);
+        bool _matches_event(const CaptureCondition & cond, const TreeMonitorEvent & event) const;
+        bool _matches_live(const CaptureCondition & cond) const;
+        void _settle_condition(CaptureCondition & cond, bool result, sihd::util::Timestamp now);
+        bool _condition_active(const CaptureCondition & cond) const;
+        bool _all_satisfied(const ConditionList & conditions) const;
+        void _update_window(sihd::util::Timestamp now);
+        void _open_window(sihd::util::Timestamp now);
+        void _close_window(sihd::util::Timestamp now);
+
+        Event _push_event(const TreeMonitorEvent & source_event,
+                          sihd::util::Timestamp timestamp,
                           const std::string & what,
                           Event::Kind kind,
                           sihd::util::time::UnixTime duration,
                           bool success);
 
-        void _emit_enter(sihd::util::Timestamp timestamp, const std::string & source, const std::string & what);
-        void _emit_exit(sihd::util::Timestamp timestamp,
-                        const std::string & source,
-                        const std::string & what,
-                        sihd::util::time::UnixTime duration,
-                        bool success);
-
-        void _dispatch(Event && event);
-        void _ensure_dispatcher();
-        void _stop_dispatcher();
-        void _dispatch_loop();
-
-        bool _when(bool is_start, Channel *channel, ChannelMatch match);
-        bool _when(bool is_start, Channel *channel, ChannelCondition cond);
-        bool _when(bool is_start, sihd::util::AService *service, ServiceCondition cond);
-        bool _when(bool is_start, const std::string & path, ChannelMatch match);
-        bool _when(bool is_start, const std::string & path, ChannelCondition cond);
-        bool _when(bool is_start, const std::string & path, ServiceCondition cond);
-        bool _add_condition(bool is_start, CaptureCondition && entry);
-        void _resolve_pending_conditions();
-        void _resolve_condition(const std::shared_ptr<CaptureCondition> & cond);
-        bool _resolve_channel_condition(const std::shared_ptr<CaptureCondition> & cond);
-        bool _resolve_service_condition(const std::shared_ptr<CaptureCondition> & cond);
-        sihd::util::Named *_find_from_roots(const std::string & path);
-        WindowCheck _evaluate_window_conditions(const void *target, bool by_ctrl);
-        WindowCheck _evaluate_window_conditions(Channel *channel);
-        WindowCheck _evaluate_window_conditions(sihd::util::ServiceController *ctrl);
-        void _evaluate_conditions(const void *target, bool by_ctrl);
-        void _evaluate_condition(const std::shared_ptr<CaptureCondition> & cond);
-        bool _all_satisfied(const ConditionList & conditions) const;
-        void _update_window();
-        void _open_window();
-        void _close_window();
-
-        void _report_named(const sihd::util::Named *named,
+        void _report_named(sihd::util::Named *named,
                            const sihd::util::Node *parent,
                            const std::string & key,
-                           std::string & s,
-                           const ReportOpts & opts,
                            size_t depth,
-                           std::set<const sihd::util::Named *> & visited) const;
+                           const ReportOpts & opts,
+                           std::string & s) const;
 
-        ServiceEntry *_find_service_entry(sihd::util::ServiceController *ctrl);
-        const ServiceEntry *_cfind_service_entry(const sihd::util::AService *service) const;
-
-        void _collect_live(const sihd::util::Named *named,
-                           std::set<const sihd::util::Named *> & nameds,
-                           std::set<const sihd::util::AService *> & services) const;
-
-        sihd::util::Timestamp _now() const;
-
+        TreeMonitor & _monitor;
+        // taken after the monitor tree lock (walk), never around a monitor call
+        mutable std::recursive_mutex _mutex;
         std::atomic<bool> _trace {false};
         std::atomic<size_t> _max_events {0};
         size_t _event_counter = 0;
-        std::atomic<size_t> _queue_max {4096};
-        std::atomic<size_t> _queue_warning {1024};
-        std::atomic<bool> _stop_dispatch {false};
-        std::atomic<bool> _dispatcher_running {false};
-        std::atomic<size_t> _dropped_events_total {0};
-        // guarded by the dispatch queue waitable
-        std::set<std::string> _warned_sources;
-        std::set<std::string> _errored_sources;
-        mutable DispatchQueue _dispatch_queue;
-        std::recursive_mutex _dispatch_mutex;
-        sihd::util::Worker _worker;
-        sihd::util::IClock *_clock_ptr = nullptr;
-        sihd::util::SteadyClock _clock;
         std::atomic<bool> _capturing {true};
         std::atomic<bool> _rearm {false};
         bool _window_done = false;
         size_t _window_opens = 0;
         sihd::util::Timestamp _session_begin {0};
         sihd::util::Duration _last_session_duration {0};
-        std::vector<sihd::util::Named *> _roots;
         std::deque<Event> _events;
         ConditionList _start_conditions;
         ConditionList _stop_conditions;
-        std::map<Channel *, std::unique_ptr<ChannelEntry>> _channels;
-        std::map<sihd::util::ServiceController *, std::unique_ptr<ServiceEntry>> _services;
+        std::map<const Channel *, ChannelStats> _channels;
+        std::map<const sihd::util::AService *, ServiceStats> _services;
 };
 
 } // namespace sihd::core

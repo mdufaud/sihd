@@ -31,6 +31,24 @@ std::string bars_of(const std::deque<double> & samples)
     return line;
 }
 
+std::string bytes_str(const uint8_t *bytes, size_t byte_size, Type type)
+{
+    if (type == TYPE_CHAR)
+    {
+        const char *chars = reinterpret_cast<const char *>(bytes);
+        return std::string(chars, std::find(chars, chars + byte_size, '\0'));
+    }
+    const size_t element_size = type::size(type);
+    std::string str;
+    for (size_t offset = 0; element_size > 0 && offset + element_size <= byte_size; offset += element_size)
+    {
+        if (str.empty() == false)
+            str += ' ';
+        str += Value(bytes + offset, type).str();
+    }
+    return str;
+}
+
 } // namespace
 
 std::string channel_str(const Channel & channel)
@@ -38,21 +56,12 @@ std::string channel_str(const Channel & channel)
     ArrByte bytes;
     if (channel.copy_resized_to(bytes) == false)
         return {};
-    const Type type = channel.data_type();
-    if (type == TYPE_CHAR)
-    {
-        const char *chars = reinterpret_cast<const char *>(bytes.data());
-        return std::string(chars, std::find(chars, chars + bytes.size(), '\0'));
-    }
-    const size_t element_size = type::size(type);
-    std::string str;
-    for (size_t offset = 0; element_size > 0 && offset + element_size <= bytes.size(); offset += element_size)
-    {
-        if (str.empty() == false)
-            str += ' ';
-        str += Value(reinterpret_cast<const uint8_t *>(bytes.data()) + offset, type).str();
-    }
-    return str;
+    return bytes_str(bytes.buf(), bytes.byte_size(), channel.data_type());
+}
+
+std::string array_str(const IArray & array)
+{
+    return bytes_str(array.buf(), array.byte_size(), array.data_type());
 }
 
 Element channel_text(const Channel & channel)

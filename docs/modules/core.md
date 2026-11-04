@@ -62,9 +62,22 @@ Several devices can alias the same channel and each one observes it, so a stream
 - `DevBatcher`: concatenates `samples` writes of each linked channel `NAME` into one block written on `NAME_batch` (its type, a capacity of `samples` times its size, or its capacity when resizable). A block takes the size of its data and notifies even when it equals the previous one. Blocks are written every `period` milliseconds (default 100); a partial block is written once it is a full period old, and on `stop()`.
 - `DevStats`: for each linked channel `NAME`, every `period` milliseconds (default 1000) and on `stop()`, publishes the totals since `start()`: `NAME_count` and `NAME_rate` (writes and writes per second), `NAME_bytes` and `NAME_byte_rate`, and `NAME_min`, `NAME_max`, `NAME_mean` of the elements for numeric types (zero for `bool`, `char`, `byte` and `ubyte`). `NAME_count` is written last.
 
-### Profiling
+### Monitoring and profiling
 
-- `TreeProfiler`: strace-like tracer of channel notifications and service operations. `observe(Node *)`, `observe(Channel *)`, `observe(AService *)`, `start_when` / `stop_when` for a capture window, `start_capture`, `stop_capture`, `report_str`, `log_report`, `events`, `add_observer`, `set_trace`.
+- `TreeMonitor`: watches a tree and hands what happens to its subscribers. `observe(Node *, max_recursion)` hooks every channel and service under the root, `observe(Channel *)` and `observe(AService *)` the object alone; children a lifecycle operation creates or destroys are attached or detached when it ends, within the `max_recursion` of their root. `observes(channel)` / `observes(service)` tell whether an object is hooked. A channel has one watcher slot, so one monitor per tree: a second monitor still observes the services but not the channels, and warns once per channel. On the producer thread the monitor only timestamps and copies, then queues a `TreeMonitorEvent` that its own thread delivers to every subscriber (`add_observer`, `remove_observer`). A slow subscriber only delays the others, never the producers; past `set_queue_max` write and operation events are dropped (`dropped_events`), attach and detach events never are; `set_queue_warning` logs before. `flush(timeout)` waits for queued events to be delivered (false at once from the delivery thread). `walk(visitor, max_recursion, timeout)` visits the live tree once in-flight operations ended, holding new ones; it is refused from inside an operation and gives up past the timeout. `find(path)` resolves a path relative to a root. `set_clock` stamps every event, `reset()` detaches everything and emits a detach event per object.
+- `TreeMonitorEvent`: every event has `kind`, `timestamp`, `thread_id` (the producer thread), `path` (a shared string, the full name at attach) and the `channel` or `service` pointer, an identity that must not be dereferenced: the object may be gone by delivery. The other fields are optional (`value` a null pointer) and only the kind fills them:
+
+| `kind` | filled |
+|---|---|
+| `channel_attached` | `value`, a copy of the channel data |
+| `service_attached` | `state` |
+| `channel_detached`, `service_detached` | nothing more |
+| `write_begin` | `value`, the written data |
+| `write_end` | `duration` of the notification, `observers`: handler, label and duration of each observer |
+| `op_begin` | `state`, `operation` |
+| `op_end` | `state`, `operation`, `duration`, `success` |
+
+- `TreeProfiler(monitor)`: a subscriber that turns monitor events into an strace-like trace and statistics. Its queries take in every event produced before them. `start_when` / `stop_when` (channel match or predicate on the copied data, service predicate on the state, by pointer or by path) open and close a capture window; a condition waits until the monitor attaches its target, and a pointer condition is dropped when its object is detached. `start_capture`, `stop_capture`, `capturing`, `session_duration`, `set_rearm`; `report_str` (the live tree with write, observer and operation statistics), `log_report`, `events`, `events_str`, `set_max_events`, `set_trace`, `clear`, `reset`; `add_observer` receives each enter and exit event. Several profilers can share one monitor.
 
 ## Example
 
@@ -104,6 +117,54 @@ bool run_pulsation()
 ```
 
 Adapted from `modules/core/test/TestDevPulsation.cpp`.
+
+### Profiling a tree
+
+```cpp
+#include <chrono>
+
+#include <sihd/core/ChannelWaiter.hpp>
+#include <sihd/core/Core.hpp>
+#include <sihd/core/DevPulsation.hpp>
+#include <sihd/core/TreeMonitor.hpp>
+#include <sihd/core/TreeProfiler.hpp>
+
+using namespace sihd::core;
+
+bool profile_pulsation()
+{
+    Core core;
+    DevPulsation *pulse = core.add_child<DevPulsation>("pulse");
+    if (!pulse->set_frequency(100))
+        return false;
+
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    profiler.start_when("pulse", TreeProfiler::running());
+    profiler.stop_when("pulse.heartbeat", ChannelMatch::equal(10));
+    sihd::util::Node & root = core;
+    monitor.observe(&root);
+
+    if (!core.init() || !core.start())
+        return false;
+    Channel *activate = pulse->get_channel("activate").value_or(nullptr);
+    Channel *beat = pulse->get_channel("heartbeat").value_or(nullptr);
+    if (activate == nullptr || beat == nullptr)
+        return false;
+
+    bool beaten = false;
+    {
+        ChannelWaiter waiter(beat);
+        activate->write(0, true);
+        beaten = waiter.wait_for_nb(std::chrono::milliseconds(1000), 10);
+    }
+    const bool closed = profiler.capturing() == false;
+    profiler.log_report();
+    return core.stop() && beaten && closed;
+}
+```
+
+Adapted from `modules/tui/demo/tui_tree_monitor.cpp`.
 
 ### Handing a stream to another thread
 

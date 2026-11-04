@@ -3,39 +3,26 @@
 #include <clock_helper.hpp>
 #include <functional>
 #include <thread>
-#include <wait_for.hpp>
 
+#include <fmt/std.h>
 #include <gtest/gtest.h>
 
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/Device.hpp>
+#include <sihd/core/TreeMonitor.hpp>
 #include <sihd/core/TreeProfiler.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Synchronizer.hpp>
-#include <sihd/util/thread.hpp>
 #include <sihd/util/time.hpp>
+
+#include "tree_helper.hpp"
 
 namespace test
 {
 using namespace sihd::util;
 using namespace sihd::core;
-
-class NamedObserver: public Named,
-                     public IHandler<Channel *>
-{
-    public:
-        NamedObserver(const std::string & name): Named(name) {}
-
-        void handle(Channel *c) override
-        {
-            ++calls;
-            (void)c;
-        }
-
-        int calls = 0;
-};
 
 class LambdaObserver: public Named,
                       public IHandler<Channel *>
@@ -49,92 +36,6 @@ class LambdaObserver: public Named,
 
     private:
         std::function<void(Channel *)> _fun;
-};
-
-class ProfilingDevice: public Device
-{
-    public:
-        ProfilingDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
-
-        bool is_running() const override { return _running; }
-
-        void handle(Channel *c) override
-        {
-            ++handled;
-            Device::handle(c);
-        }
-
-        int handled = 0;
-
-    protected:
-        bool on_init() override
-        {
-            this->add_channel("c1", "int");
-            this->add_channel("c2", "int");
-            return true;
-        }
-
-        bool on_start() override
-        {
-            (void)this->observe_channel("c1");
-            (void)this->observe_channel("c2");
-            _running = true;
-            return true;
-        }
-
-        bool on_stop() override
-        {
-            _running = false;
-            return true;
-        }
-
-    private:
-        bool _running = false;
-};
-
-// reclaims its channels when the service stops: their pointers die on the state change
-class ReclaimingDevice: public Device
-{
-    public:
-        ReclaimingDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
-
-        bool is_running() const override { return this->device_state() == ServiceController::Running; }
-
-    protected:
-        bool on_init() override
-        {
-            this->add_channel("c1", "int");
-            return true;
-        }
-
-        bool on_stop() override
-        {
-            this->remove_child("c1");
-            return true;
-        }
-};
-
-// holds its init body until released: simulates an op caught in flight
-class GatedInitDevice: public Device
-{
-    public:
-        GatedInitDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
-
-        bool is_running() const override { return this->device_state() == ServiceController::Running; }
-
-        void release_init() { _init_released = true; }
-
-    protected:
-        bool on_init() override
-        {
-            while (_init_released == false)
-                time::msleep(1);
-            this->add_channel("c1", "int");
-            return true;
-        }
-
-    private:
-        std::atomic<bool> _init_released = false;
 };
 
 // reports from its own op body, where nodes may die before the op ends
@@ -201,24 +102,6 @@ class LinkingDevice: public Device
         bool _running = false;
 };
 
-// holds the dispatch thread while block is set: simulates an observer too slow for the producers
-class BlockingObserver: public IHandler<TreeProfiler::Event *>
-{
-    public:
-        void handle([[maybe_unused]] TreeProfiler::Event *event) override
-        {
-            if (block)
-                ++held;
-            while (block)
-                time::msleep(1);
-            ++calls;
-        }
-
-        std::atomic<bool> block = false;
-        std::atomic<int> held = 0;
-        int calls = 0;
-};
-
 class EventCollector: public IHandler<TreeProfiler::Event *>
 {
     public:
@@ -237,38 +120,6 @@ class EventCollector: public IHandler<TreeProfiler::Event *>
         std::vector<std::string> whats;
         std::vector<std::string> sources;
         std::vector<TreeProfiler::Event::Kind> kinds;
-};
-
-class GateObserver: public IHandler<TreeProfiler::Event *>
-{
-    public:
-        GateObserver() { entered.init_sync(2); }
-
-        void handle([[maybe_unused]] TreeProfiler::Event *event) override
-        {
-            if (_first.exchange(false) == false)
-                return;
-            entered.sync();
-            std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        }
-
-        Synchronizer entered;
-
-    private:
-        std::atomic<bool> _first = true;
-};
-
-class LateCallCounter: public IHandler<TreeProfiler::Event *>
-{
-    public:
-        void handle([[maybe_unused]] TreeProfiler::Event *event) override
-        {
-            if (removed)
-                ++late_calls;
-        }
-
-        std::atomic<bool> removed = false;
-        std::atomic<int> late_calls = 0;
 };
 
 class TestTreeProfiler: public ::testing::Test
@@ -301,12 +152,13 @@ TEST_F(TestTreeProfiler, test_observe_tree)
     c1->add_observer(&extra);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
-    EXPECT_EQ(profiler.channels_count(), 3u);
-    EXPECT_EQ(profiler.services_count(), 1u);
+    EXPECT_EQ(monitor.channels_count(), 3u);
+    EXPECT_EQ(monitor.services_count(), 1u);
 
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(c1->write<int>(0, 2));
@@ -339,9 +191,10 @@ TEST_F(TestTreeProfiler, test_observe_late_observer)
     ASSERT_TRUE(dev->start());
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     NamedObserver late("late");
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
@@ -376,9 +229,10 @@ TEST_F(TestTreeProfiler, test_report_links)
     ASSERT_NE(declared, nullptr);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     EXPECT_TRUE(declared->write<int>(0, 1));
     EXPECT_EQ(dev->handled, 1);
@@ -412,14 +266,16 @@ TEST_F(TestTreeProfiler, test_restore_on_reset)
     Handler<Channel *> waiter([&](Channel *) { ++waiter_calls; });
     c1->add_observer(&waiter);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     EXPECT_TRUE(c1->is_observer(&waiter));
 
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_EQ(waiter_calls, 1);
     EXPECT_EQ(dev->handled, 1);
 
+    monitor.reset();
     profiler.reset();
     EXPECT_TRUE(c1->is_observer(&waiter));
 
@@ -427,37 +283,10 @@ TEST_F(TestTreeProfiler, test_restore_on_reset)
     EXPECT_EQ(waiter_calls, 2);
     EXPECT_EQ(dev->handled, 2);
 
-    EXPECT_EQ(profiler.channels_count(), 0u);
-    EXPECT_EQ(profiler.services_count(), 0u);
+    EXPECT_EQ(monitor.channels_count(), 0u);
+    EXPECT_EQ(monitor.services_count(), 0u);
     EXPECT_EQ(profiler.report_str(), "");
     EXPECT_TRUE(profiler.events().empty());
-}
-
-TEST_F(TestTreeProfiler, test_observer_removal)
-{
-    Node root("root");
-    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
-
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(dev->start());
-
-    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
-    ASSERT_NE(c1, nullptr);
-
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
-
-    EXPECT_TRUE(dev->stop());
-    EXPECT_TRUE(c1->write<int>(0, 1));
-    EXPECT_EQ(dev->handled, 0);
-
-    EXPECT_TRUE(dev->start());
-    EXPECT_TRUE(c1->write<int>(0, 2));
-    EXPECT_EQ(dev->handled, 1);
-
-    profiler.reset();
-    EXPECT_TRUE(c1->write<int>(0, 3));
-    EXPECT_EQ(dev->handled, 2);
 }
 
 TEST_F(TestTreeProfiler, test_service_op_timing)
@@ -466,19 +295,20 @@ TEST_F(TestTreeProfiler, test_service_op_timing)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
     // observed before the lifecycle: operations are timed, channels do not exist yet
-    ASSERT_TRUE(profiler.observe(&root));
-    EXPECT_EQ(profiler.services_count(), 1u);
+    ASSERT_TRUE(monitor.observe(&root));
+    EXPECT_EQ(monitor.services_count(), 1u);
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(dev->stop());
 
-    EXPECT_TRUE(profiler.observe(&root));
-    EXPECT_EQ(profiler.channels_count(), 2u);
+    EXPECT_TRUE(monitor.observe(&root));
+    EXPECT_EQ(monitor.channels_count(), 2u);
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
@@ -504,22 +334,23 @@ TEST_F(TestTreeProfiler, test_events)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
     profiler.set_max_events(4);
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_TRUE(c1->write<int>(0, 2));
 
-    const std::string tid = thread::id_str();
+    const std::string tid = fmt::format("{}", std::this_thread::get_id());
     const std::string expected = "[" + tid + "] root.device.c1 write ...\n" + "[" + tid
                                  + "] root.device.c1 write = +3ms:0us\n" + "[" + tid + "] root.device.c1 write ...\n"
                                  + "[" + tid + "] root.device.c1 write = +3ms:0us\n";
@@ -548,25 +379,26 @@ TEST_F(TestTreeProfiler, test_event_hook)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
     profiler.set_max_events(2);
 
     EventCollector collector;
     profiler.add_observer(&collector);
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
     // hooks fire twice per measured action: the enter event then the exit one
-    ASSERT_TRUE(profiler.flush());
+    ASSERT_TRUE(monitor.flush());
     ASSERT_EQ(collector.calls, 8);
     const std::vector<std::string> expected_whats =
         {"setup", "setup", "init", "init", "start", "start", "write", "write"};
@@ -583,11 +415,11 @@ TEST_F(TestTreeProfiler, test_event_hook)
     EXPECT_EQ(collector.sources[0], "root.device");
     EXPECT_EQ(collector.sources[7], "root.device.c1");
     EXPECT_EQ(profiler.events().size(), 2u);
-    EXPECT_EQ(profiler.dropped_events(), 0u);
+    EXPECT_EQ(monitor.dropped_events(), 0u);
 
     profiler.remove_observer(&collector);
     EXPECT_TRUE(c1->write<int>(0, 2));
-    ASSERT_TRUE(profiler.flush());
+    ASSERT_TRUE(monitor.flush());
     EXPECT_EQ(collector.calls, 8);
 }
 
@@ -597,7 +429,8 @@ TEST_F(TestTreeProfiler, test_event_hook_reentrancy)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     int hook_calls = 0;
-    TreeProfiler profiler;
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
     // the hook runs on the dispatch thread after the profiler released its locks, so it may call back
     Handler<TreeProfiler::Event *> hook([&]([[maybe_unused]] TreeProfiler::Event *event) {
         (void)profiler.report_str();
@@ -605,18 +438,18 @@ TEST_F(TestTreeProfiler, test_event_hook_reentrancy)
         ++hook_calls;
     });
     profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
 
-    ASSERT_TRUE(profiler.flush());
+    ASSERT_TRUE(monitor.flush());
     EXPECT_EQ(hook_calls, 8);
 }
 
@@ -626,15 +459,16 @@ TEST_F(TestTreeProfiler, test_event_poll)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
     profiler.set_max_events(3);
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
@@ -667,110 +501,21 @@ TEST_F(TestTreeProfiler, test_event_poll)
     EXPECT_EQ(more[2].duration, time::milli(3));
 }
 
-class CapturingLogger: public ALogger
-{
-    public:
-        CapturingLogger(): ALogger("capturing") {}
-
-        void log(const LogInfo & info, std::string_view msg) override
-        {
-            entries.emplace_back(info.level, std::string(msg));
-        }
-
-        std::vector<std::pair<LogLevel, std::string>> entries;
-};
-
-TEST_F(TestTreeProfiler, test_event_queue_pressure)
-{
-    Node root("root");
-    new Channel("c1", "int", &root);
-    new Channel("c2", "int", &root);
-    Channel *c1 = root.get_child<Channel>("c1");
-    Channel *c2 = root.get_child<Channel>("c2");
-    ASSERT_NE(c1, nullptr);
-    ASSERT_NE(c2, nullptr);
-
-    TreeProfiler profiler;
-    profiler.set_queue_max(6);
-    profiler.set_queue_warning(2);
-
-    CapturingLogger logger;
-    ASSERT_TRUE(LoggerManager::add(&logger));
-
-    BlockingObserver hook;
-    profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
-
-    hook.block = true;
-    EXPECT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(wait_for([&] { return hook.held >= 1; }));
-    EXPECT_TRUE(c2->write<int>(0, 1));
-    EXPECT_TRUE(c1->write<int>(0, 2));
-    EXPECT_TRUE(c2->write<int>(0, 2));
-    EXPECT_TRUE(c1->write<int>(0, 3));
-    EXPECT_TRUE(c2->write<int>(0, 3));
-
-    size_t warned = 0;
-    size_t lost = 0;
-    for (const auto & [level, msg] : logger.entries)
-    {
-        if (level == LogLevel::warning && msg.find("almost full") != std::string::npos)
-            ++warned;
-        if (level == LogLevel::error && msg.find("are lost") != std::string::npos)
-            ++lost;
-    }
-    EXPECT_EQ(warned, 2u);
-    EXPECT_EQ(lost, 2u);
-
-    hook.block = false;
-    EXPECT_TRUE(profiler.flush());
-    // every produced event was either notified or lost: 6 writes = 12 events
-    EXPECT_EQ(hook.calls + static_cast<int>(profiler.dropped_events()), 12);
-
-    const size_t entries_before = logger.entries.size();
-    profiler.set_queue_max(64);
-
-    hook.block = true;
-    EXPECT_TRUE(c1->write<int>(0, 4));
-    ASSERT_TRUE(wait_for([&] { return hook.held >= 2; }));
-    EXPECT_TRUE(c2->write<int>(0, 4));
-    EXPECT_TRUE(c1->write<int>(0, 5));
-    EXPECT_TRUE(c2->write<int>(0, 5));
-
-    warned = 0;
-    lost = 0;
-    for (size_t i = entries_before; i < logger.entries.size(); ++i)
-    {
-        const auto & [level, msg] = logger.entries[i];
-        if (level == LogLevel::warning && msg.find("almost full") != std::string::npos)
-            ++warned;
-        if (level == LogLevel::error && msg.find("are lost") != std::string::npos)
-            ++lost;
-    }
-
-    EXPECT_EQ(warned, 2u);
-    EXPECT_EQ(lost, 0u);
-
-    hook.block = false;
-    EXPECT_TRUE(profiler.flush());
-
-    LoggerManager::rm(&logger);
-}
-
 TEST_F(TestTreeProfiler, test_trace)
 {
     Node root("root");
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.set_trace(true);
 
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
@@ -793,294 +538,14 @@ TEST_F(TestTreeProfiler, test_trace)
     EXPECT_EQ(profiler.report_str(), expected);
 }
 
-TEST_F(TestTreeProfiler, test_threaded_writes)
-{
-    Node root("root");
-    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
-
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(dev->start());
-
-    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
-    ASSERT_NE(c1, nullptr);
-
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
-
-    std::atomic<bool> done = false;
-    std::thread writer([&] {
-        for (int i = 0; i < 100; ++i)
-        {
-            // the channel starts zeroed: write_on_change would skip a first zero write
-            EXPECT_TRUE(c1->write<int>(0, i + 1));
-            time::msleep(1);
-        }
-        done = true;
-    });
-    ASSERT_TRUE(wait_for([&] {
-        (void)profiler.report_str();
-        return done.load();
-    }));
-    writer.join();
-
-    EXPECT_EQ(dev->handled, 100);
-    EXPECT_EQ(profiler.channels_count(), 2u);
-    EXPECT_EQ(profiler.services_count(), 1u);
-}
-
-TEST_F(TestTreeProfiler, test_concurrent_observe)
-{
-    Node root("root");
-    for (int i = 0; i < 8; ++i)
-        new Channel("c" + std::to_string(i), "int", &root);
-
-    TreeProfiler profiler;
-    int calls = 0;
-    Handler<TreeProfiler::Event *> hook([&]([[maybe_unused]] TreeProfiler::Event *event) { ++calls; });
-    profiler.add_observer(&hook);
-
-    std::atomic<bool> stop = false;
-    std::atomic<int> observes = 0;
-    std::thread observer1([&] {
-        while (stop == false)
-        {
-            EXPECT_TRUE(profiler.observe(&root));
-            ++observes;
-        }
-    });
-
-    std::thread observer2([&] {
-        while (stop == false)
-        {
-            EXPECT_TRUE(profiler.observe(&root));
-            ++observes;
-        }
-    });
-
-    // wait for a first observe: CI descheduling can start them past the write loop, making every count vacuous
-    ASSERT_TRUE(wait_for([&] { return observes >= 2; }));
-    for (int i = 0; i < 50; ++i)
-    {
-        for (const std::string & name : root.children_keys())
-        {
-            Channel *channel = root.get_child<Channel>(name);
-            ASSERT_NE(channel, nullptr);
-            ASSERT_TRUE(channel->write<int>(0, i));
-        }
-    }
-    stop = true;
-    observer1.join();
-    observer2.join();
-    ASSERT_TRUE(profiler.flush());
-
-    EXPECT_EQ(profiler.channels_count(), 8u);
-    EXPECT_EQ(profiler.dropped_events(), 0u);
-    EXPECT_GT(calls, 0);
-}
-
-TEST_F(TestTreeProfiler, test_stale_events_after_children_destruction)
-{
-    Node root("root");
-    ReclaimingDevice *dev = root.add_child<ReclaimingDevice>("dev");
-
-    TreeProfiler profiler;
-    profiler.set_queue_max(0);
-    BlockingObserver hook;
-    profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
-
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(dev->start());
-    ASSERT_EQ(profiler.channels_count(), 1u);
-    Channel *c1 = dev->get_child<Channel>("c1");
-    ASSERT_NE(c1, nullptr);
-
-    hook.block = true;
-    ASSERT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(wait_for([&] { return hook.held >= 1; }));
-    for (int i = 0; i < 100; ++i)
-        ASSERT_TRUE(c1->write<int>(0, i + 2));
-
-    // the service stops and reclaims its channel while events are stacked: queued events turn stale
-    ASSERT_TRUE(dev->stop());
-    EXPECT_EQ(dev->get_child<Channel>("c1"), nullptr);
-    EXPECT_EQ(profiler.channels_count(), 1u);
-
-    hook.block = false;
-    ASSERT_TRUE(profiler.flush());
-
-    const std::vector<TreeProfiler::Event> events = profiler.events();
-    EXPECT_EQ(hook.calls, 101 * 2 + 6);
-    ASSERT_EQ(events.size(), 101u * 2 + 6u);
-    size_t stale = 0;
-    for (const TreeProfiler::Event & event : events)
-    {
-        if (event.source == "root.dev.c1")
-            stale += 1;
-    }
-    EXPECT_EQ(stale, 202u);
-    EXPECT_EQ(profiler.dropped_events(), 0u);
-
-    EXPECT_EQ(profiler.report_str().find("dev.c1"), std::string::npos);
-}
-
-TEST_F(TestTreeProfiler, test_stale_events_interleave_with_live_ones)
-{
-    Node root("root");
-    ReclaimingDevice *dev_a = root.add_child<ReclaimingDevice>("a");
-    ReclaimingDevice *dev_b = root.add_child<ReclaimingDevice>("b");
-
-    TreeProfiler profiler;
-    profiler.set_queue_max(0);
-    BlockingObserver hook;
-    profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
-    ASSERT_TRUE(dev_a->init());
-    ASSERT_TRUE(dev_b->init());
-    ASSERT_TRUE(dev_a->start());
-    ASSERT_TRUE(dev_b->start());
-    Channel *ac1 = dev_a->get_child<Channel>("c1");
-    Channel *bc1 = dev_b->get_child<Channel>("c1");
-    ASSERT_NE(ac1, nullptr);
-    ASSERT_NE(bc1, nullptr);
-
-    hook.block = true;
-    ASSERT_TRUE(ac1->write<int>(0, 1));
-    ASSERT_TRUE(wait_for([&] { return hook.held >= 1; }));
-    for (int i = 0; i < 50; ++i)
-    {
-        ASSERT_TRUE(ac1->write<int>(0, i + 2));
-        ASSERT_TRUE(bc1->write<int>(0, i + 2));
-    }
-    ASSERT_TRUE(dev_a->stop());
-    for (int i = 0; i < 10; ++i)
-        ASSERT_TRUE(bc1->write<int>(0, i + 52));
-
-    hook.block = false;
-    ASSERT_TRUE(profiler.flush());
-
-    const std::vector<TreeProfiler::Event> events = profiler.events();
-    // a.c1: 51 writes, b.c1: 60 writes, a ops: init/start/stop, b ops: init/start
-    EXPECT_EQ(hook.calls, 51 * 2 + 60 * 2 + 6 + 4);
-    ASSERT_EQ(events.size(), (51 + 60) * 2u + 10u);
-
-    size_t stale = 0;
-    size_t fresh = 0;
-    size_t first_fresh = events.size();
-    size_t last_stale = 0;
-
-    for (size_t i = 0; i < events.size(); ++i)
-    {
-        if (events[i].source == "root.a.c1")
-        {
-            stale += 1;
-            last_stale = i;
-        }
-        else if (events[i].source == "root.b.c1")
-        {
-            fresh += 1;
-            if (first_fresh == events.size())
-                first_fresh = i;
-        }
-    }
-    EXPECT_EQ(stale, 102u);
-    EXPECT_EQ(fresh, 120u);
-    EXPECT_LT(first_fresh, last_stale);
-    EXPECT_EQ(profiler.dropped_events(), 0u);
-    EXPECT_EQ(profiler.channels_count(), 2u);
-    EXPECT_EQ(profiler.services_count(), 2u);
-}
-
-TEST_F(TestTreeProfiler, test_report_stops_chain_in_op_start)
-{
-    Node root("root");
-    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
-
-    TreeProfiler profiler;
-    profiler.set_queue_max(0);
-    BlockingObserver hook;
-    profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(profiler.observe(&root));
-    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
-    ASSERT_NE(c1, nullptr);
-
-    std::atomic<bool> report_done = false;
-    hook.block = true;
-    ASSERT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(wait_for([&] { return hook.held >= 1; }));
-    std::thread report([&] {
-        (void)profiler.report_str();
-        report_done = true;
-    });
-    time::msleep(30);
-    std::thread starter([&] { dev->start(); });
-    // the notification chain is stopped inside op_start: the transition happened, the start body did not run
-    ASSERT_TRUE(wait_for([&] { return dev->device_state() == ServiceController::Starting; }));
-    EXPECT_EQ(dev->handled, 0);
-
-    hook.block = false;
-    ASSERT_TRUE(wait_for([&] { return report_done.load(); }));
-    ASSERT_TRUE(wait_for([&] { return dev->device_state() == ServiceController::Running; }));
-    starter.join();
-    report.join();
-
-    const std::vector<TreeProfiler::Event> events = profiler.events();
-    bool start_enter = false;
-    bool start_exit = false;
-    for (const TreeProfiler::Event & event : events)
-    {
-        if (event.source == "root.device" && event.what == "start")
-        {
-            start_enter |= event.kind == TreeProfiler::Event::enter;
-            start_exit |= event.kind == TreeProfiler::Event::exit;
-        }
-    }
-    EXPECT_TRUE(start_enter);
-    EXPECT_TRUE(start_exit);
-    ASSERT_TRUE(c1->write<int>(0, 2));
-    EXPECT_EQ(dev->handled, 1);
-    EXPECT_EQ(profiler.channels_count(), 2u);
-    // drains the last event so the dispatcher is out of the stack hook
-    ASSERT_TRUE(profiler.flush());
-}
-
-TEST_F(TestTreeProfiler, test_report_waits_for_in_flight_op)
-{
-    Node root("root");
-    GatedInitDevice *dev = root.add_child<GatedInitDevice>("device");
-
-    TreeProfiler profiler;
-    profiler.set_queue_max(0);
-    ASSERT_TRUE(profiler.observe(&root));
-
-    std::thread init([&] { ASSERT_TRUE(dev->init()); });
-    ASSERT_TRUE(wait_for([&] { return dev->device_state() == ServiceController::Initializing; }));
-
-    std::atomic<bool> report_done = false;
-    std::thread report([&] {
-        (void)profiler.report_str();
-        report_done = true;
-    });
-    EXPECT_FALSE(wait_for([&] { return report_done.load(); }, std::chrono::milliseconds(100)));
-
-    dev->release_init();
-    ASSERT_TRUE(wait_for([&] { return report_done.load(); }));
-    init.join();
-    report.join();
-
-    EXPECT_EQ(profiler.channels_count(), 1u);
-    EXPECT_NE(profiler.report_str().find("c1"), std::string::npos);
-}
-
 TEST_F(TestTreeProfiler, test_report_from_service_op)
 {
     Node root("root");
     ReportingDevice *dev = root.add_child<ReportingDevice>("device");
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     dev->set_profiler(&profiler);
 
     ASSERT_TRUE(dev->init());
@@ -1094,8 +559,9 @@ TEST_F(TestTreeProfiler, test_capture_start_on_service)
     Node root("root");
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     EXPECT_TRUE(profiler.capturing());
 
     profiler.start_when("device", TreeProfiler::running());
@@ -1127,8 +593,9 @@ TEST_F(TestTreeProfiler, test_capture_start_condition_already_satisfied)
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.start_when("device", TreeProfiler::running());
     EXPECT_TRUE(profiler.capturing());
 }
@@ -1139,8 +606,9 @@ TEST_F(TestTreeProfiler, test_capture_multiple_start_conditions)
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
     ProfilingDevice *dev2 = root.add_child<ProfilingDevice>("device2");
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.start_when("device", TreeProfiler::running());
     profiler.start_when("device2", TreeProfiler::running());
     EXPECT_FALSE(profiler.capturing());
@@ -1162,8 +630,9 @@ TEST_F(TestTreeProfiler, test_capture_stop_on_channel)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.start_when("device", TreeProfiler::running());
     // the flag is born false: the stop condition is not satisfied at attach
     profiler.stop_when("flag", ChannelMatch::equal(false));
@@ -1194,8 +663,9 @@ TEST_F(TestTreeProfiler, test_capture_stop_on_late_channel)
     Node root("root");
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.start_when("device", TreeProfiler::running());
     // c1 is created by init: the path resolves without calling observe again
     profiler.stop_when("device.c1", ChannelMatch::equal(2));
@@ -1224,8 +694,9 @@ TEST_F(TestTreeProfiler, test_capture_stop_only)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     profiler.stop_when("flag", ChannelMatch::equal(false));
     EXPECT_TRUE(profiler.capturing());
 
@@ -1243,8 +714,9 @@ TEST_F(TestTreeProfiler, test_capture_manual)
     Channel *chan = root.get_child<Channel>("chan");
     ASSERT_NE(chan, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
     EXPECT_TRUE(profiler.capturing());
 
     profiler.stop_capture();
@@ -1266,11 +738,12 @@ TEST_F(TestTreeProfiler, test_capture_rearm)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
     profiler.set_rearm(true);
     profiler.start_when("device", TreeProfiler::running());
     profiler.stop_when("flag", ChannelMatch::equal(false));
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
     EXPECT_FALSE(profiler.capturing());
 
     ASSERT_TRUE(dev->init());
@@ -1300,10 +773,11 @@ TEST_F(TestTreeProfiler, test_capture_one_shot)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
     profiler.start_when("device", TreeProfiler::running());
     profiler.stop_when("flag", ChannelMatch::equal(false));
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
@@ -1327,10 +801,11 @@ TEST_F(TestTreeProfiler, test_capture_clear_and_reset)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
     profiler.start_when("device", TreeProfiler::running());
     profiler.stop_when("flag", ChannelMatch::equal(false));
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
@@ -1346,6 +821,7 @@ TEST_F(TestTreeProfiler, test_capture_clear_and_reset)
     EXPECT_FALSE(profiler.capturing());
 
     // reset drops the conditions: the capture is always on, but nothing is observed anymore
+    monitor.reset();
     profiler.reset();
     EXPECT_TRUE(profiler.capturing());
     EXPECT_TRUE(flag->write<bool>(0, true));
@@ -1360,16 +836,18 @@ TEST_F(TestTreeProfiler, test_session_duration)
     Channel *flag = root.get_child<Channel>("flag");
     ASSERT_NE(flag, nullptr);
 
-    TreeProfiler profiler;
+    FakeClock clock;
+    TreeMonitor monitor;
+    monitor.set_clock(&clock);
+    TreeProfiler profiler(monitor);
     profiler.start_when("device", TreeProfiler::running());
     profiler.stop_when("flag", ChannelMatch::equal(false));
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     EXPECT_EQ(profiler.session_duration().get(), 0);
 
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
-    time::msleep(1);
     const Duration running = profiler.session_duration();
     EXPECT_GT(running.get(), 0);
 
@@ -1381,7 +859,6 @@ TEST_F(TestTreeProfiler, test_session_duration)
     EXPECT_EQ(profiler.session_duration().get(), frozen.get());
 
     profiler.clear();
-    time::msleep(1);
     EXPECT_TRUE(profiler.capturing());
     EXPECT_GT(profiler.session_duration().get(), 0);
 
@@ -1389,7 +866,6 @@ TEST_F(TestTreeProfiler, test_session_duration)
     const Duration stopped = profiler.session_duration();
     EXPECT_EQ(profiler.session_duration().get(), stopped.get());
     profiler.start_capture();
-    time::msleep(1);
     EXPECT_GT(profiler.session_duration().get(), 0);
 }
 
@@ -1404,51 +880,25 @@ TEST_F(TestTreeProfiler, test_reset_from_observer)
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
 
     // an observer resetting the profiler mid-notification is not called again by the watcher
-    Handler<Channel *> resetter([&]([[maybe_unused]] Channel *) { profiler.reset(); });
+    Handler<Channel *> resetter([&]([[maybe_unused]] Channel *) {
+        monitor.reset();
+        profiler.reset();
+    });
     c1->add_observer(&resetter);
 
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_EQ(dev->handled, 1);
-    EXPECT_EQ(profiler.channels_count(), 0u);
-    EXPECT_EQ(profiler.services_count(), 0u);
+    EXPECT_EQ(monitor.channels_count(), 0u);
+    EXPECT_EQ(monitor.services_count(), 0u);
     EXPECT_TRUE(profiler.events().empty());
 
     EXPECT_TRUE(c1->write<int>(0, 2));
     EXPECT_EQ(dev->handled, 2);
-}
-
-TEST_F(TestTreeProfiler, test_threaded_event_order)
-{
-    Node root("root");
-    new Channel("c1", "int", &root);
-    new Channel("c2", "int", &root);
-    Channel *c1 = root.get_child<Channel>("c1");
-    Channel *c2 = root.get_child<Channel>("c2");
-    ASSERT_NE(c1, nullptr);
-    ASSERT_NE(c2, nullptr);
-
-    TreeProfiler profiler;
-    EventCollector collector;
-    profiler.add_observer(&collector);
-    ASSERT_TRUE(profiler.observe(&root));
-
-    std::thread writer1([&] {
-        for (int i = 0; i < 50; ++i)
-            EXPECT_TRUE(c1->write<int>(0, i + 1));
-    });
-    std::thread writer2([&] {
-        for (int i = 0; i < 50; ++i)
-            EXPECT_TRUE(c2->write<int>(0, i + 1));
-    });
-    writer1.join();
-    writer2.join();
-
-    EXPECT_TRUE(profiler.flush());
-    EXPECT_EQ(collector.calls, 200);
 }
 
 TEST_F(TestTreeProfiler, test_event_thread_id)
@@ -1461,8 +911,9 @@ TEST_F(TestTreeProfiler, test_event_thread_id)
     ASSERT_NE(c1, nullptr);
     ASSERT_NE(c2, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
 
     std::thread writer1([&] {
         for (int i = 0; i < 10; ++i)
@@ -1485,21 +936,21 @@ TEST_F(TestTreeProfiler, test_event_thread_id)
         {
             if (c1_thread == nullptr)
                 c1_thread = &event;
-            EXPECT_TRUE(thread::equals(event.thread_id, c1_thread->thread_id));
+            EXPECT_EQ(event.thread_id, c1_thread->thread_id);
         }
         else if (event.source == "root.c2")
         {
             if (c2_thread == nullptr)
                 c2_thread = &event;
-            EXPECT_TRUE(thread::equals(event.thread_id, c2_thread->thread_id));
+            EXPECT_EQ(event.thread_id, c2_thread->thread_id);
         }
     }
     ASSERT_NE(c1_thread, nullptr);
     ASSERT_NE(c2_thread, nullptr);
-    EXPECT_FALSE(thread::equals(c1_thread->thread_id, c2_thread->thread_id));
+    EXPECT_NE(c1_thread->thread_id, c2_thread->thread_id);
 
     EXPECT_TRUE(c1->write<int>(0, 100));
-    EXPECT_FALSE(thread::equals(profiler.events().back().thread_id, c1_thread->thread_id));
+    EXPECT_NE(profiler.events().back().thread_id, c1_thread->thread_id);
 }
 
 TEST_F(TestTreeProfiler, test_clear_from_observer)
@@ -1514,9 +965,10 @@ TEST_F(TestTreeProfiler, test_clear_from_observer)
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     // clear from an observer leaves the envelope in flight alone; the second clear drops the first sample
     LambdaObserver clearer("clearer", [&](Channel *) { profiler.clear(); });
@@ -1548,8 +1000,9 @@ TEST_F(TestTreeProfiler, test_reset_and_reobserve_from_observer)
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
-    TreeProfiler profiler;
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
 
     // reset then re-observe mid-notification hands the remaining hooks to fresh entries that must ignore them
     bool rebuilt = false;
@@ -1557,14 +1010,15 @@ TEST_F(TestTreeProfiler, test_reset_and_reobserve_from_observer)
         if (rebuilt)
             return;
         rebuilt = true;
+        monitor.reset();
         profiler.reset();
-        profiler.observe(&root);
+        monitor.observe(&root);
     });
     c1->add_observer(&rebuilder);
 
     EXPECT_TRUE(c1->write<int>(0, 1));
     EXPECT_EQ(dev->handled, 1);
-    EXPECT_EQ(profiler.channels_count(), 2u);
+    EXPECT_EQ(monitor.channels_count(), 2u);
 
     EXPECT_TRUE(c1->write<int>(0, 2));
     EXPECT_EQ(dev->handled, 2);
@@ -1589,9 +1043,10 @@ TEST_F(TestTreeProfiler, test_reentrant_write_rejected)
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     bool inner_ok = true;
     LambdaObserver selfwriter("selfwriter", [&](Channel *c) { inner_ok = c->write<int>(0, 42); });
@@ -1626,9 +1081,10 @@ TEST_F(TestTreeProfiler, test_cross_channel_write_profiling)
     ASSERT_NE(c2, nullptr);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     LambdaObserver forwarder("forwarder", [&](Channel *) { c2->write<int>(0, 7); });
     c1->add_observer(&forwarder);
@@ -1650,39 +1106,6 @@ TEST_F(TestTreeProfiler, test_cross_channel_write_profiling)
     EXPECT_EQ(profiler.report_str(), expected);
 }
 
-TEST_F(TestTreeProfiler, test_two_profilers)
-{
-    Node root("root");
-    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
-
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(dev->start());
-
-    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
-    ASSERT_NE(c1, nullptr);
-
-    TreeProfiler first;
-    ASSERT_TRUE(first.observe(&root));
-
-    // a second profiler cannot steal the watched channels but still observes the services
-    TreeProfiler second;
-    ASSERT_TRUE(second.observe(&root));
-    EXPECT_EQ(first.channels_count(), 2u);
-    EXPECT_EQ(second.channels_count(), 0u);
-    EXPECT_EQ(first.services_count(), 1u);
-    EXPECT_EQ(second.services_count(), 1u);
-
-    EXPECT_TRUE(c1->write<int>(0, 1));
-    EXPECT_EQ(dev->handled, 1);
-    EXPECT_EQ(first.events().size(), 2u);
-    EXPECT_TRUE(second.events().empty());
-
-    ASSERT_TRUE(dev->stop());
-    ASSERT_TRUE(dev->start());
-    EXPECT_EQ(first.events().size(), 6u);
-    EXPECT_EQ(second.events().size(), 4u);
-}
-
 TEST_F(TestTreeProfiler, test_stop_from_observer)
 {
     Node root("root");
@@ -1695,9 +1118,10 @@ TEST_F(TestTreeProfiler, test_stop_from_observer)
     ASSERT_NE(c1, nullptr);
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     // an observer stopping the device mid-notification unsubscribes it from the next ones
     bool stopped = false;
@@ -1718,14 +1142,14 @@ TEST_F(TestTreeProfiler, test_stop_from_observer)
   device: test::ProfilingDevice [stopped]
     stop: n=1 total=+1ms:0us avg=+1ms:0us min=+1ms:0us max=+1ms:0us
     c1: sihd::core::Channel
-      writes=2 total=+11ms:0us avg=+5ms:500us min=+3ms:0us max=+8ms:0us
-      -> stopper (test::LambdaObserver): n=2 total=+5ms:0us avg=+2ms:500us min=+1ms:0us max=+4ms:0us
+      writes=2 total=+10ms:0us avg=+5ms:0us min=+3ms:0us max=+7ms:0us
+      -> stopper (test::LambdaObserver): n=2 total=+4ms:0us avg=+2ms:0us min=+1ms:0us max=+3ms:0us
     c2: sihd::core::Channel
 )";
     EXPECT_EQ(profiler.report_str(), expected);
 }
 
-TEST_F(TestTreeProfiler, test_destroy_while_writing)
+TEST_F(TestTreeProfiler, test_two_profilers)
 {
     Node root("root");
     ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
@@ -1736,72 +1160,19 @@ TEST_F(TestTreeProfiler, test_destroy_while_writing)
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
-    int hook_calls = 0;
-    Handler<TreeProfiler::Event *> hook([&]([[maybe_unused]] TreeProfiler::Event *) { ++hook_calls; });
-    std::thread writer;
-    {
-        TreeProfiler profiler;
-        profiler.add_observer(&hook);
-        ASSERT_TRUE(profiler.observe(&root));
-        writer = std::thread([&] {
-            for (int i = 0; i < 100; ++i)
-            {
-                EXPECT_TRUE(c1->write<int>(0, i + 1));
-                time::msleep(1);
-            }
-        });
-        // the profiler dies while the writer thread is notifying: the destructor waits for the notification
-        time::msleep(20);
-    }
-    writer.join();
-
-    EXPECT_EQ(dev->handled, 100);
-    EXPECT_GT(hook_calls, 0);
-}
-
-TEST_F(TestTreeProfiler, test_reset_from_dispatch_hook)
-{
-    Node root("root");
-    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
-
-    ASSERT_TRUE(dev->init());
-    ASSERT_TRUE(dev->start());
-
-    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
-    ASSERT_NE(c1, nullptr);
-
-    TreeProfiler profiler;
-    // the hook resets the profiler from the dispatch thread: later writes go unwatched
-    Handler<TreeProfiler::Event *> hook([&]([[maybe_unused]] TreeProfiler::Event *) { profiler.reset(); });
-    profiler.add_observer(&hook);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler first(monitor);
+    TreeProfiler second(monitor);
+    second.start_when("device.c1", ChannelMatch::equal(2));
+    ASSERT_TRUE(monitor.observe(&root));
 
     EXPECT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(profiler.flush());
-    EXPECT_EQ(profiler.channels_count(), 0u);
-    EXPECT_EQ(profiler.services_count(), 0u);
-    EXPECT_TRUE(profiler.events().empty());
-
     EXPECT_TRUE(c1->write<int>(0, 2));
-    EXPECT_EQ(dev->handled, 2);
+
+    EXPECT_EQ(first.events().size(), 4u);
+    EXPECT_EQ(second.events().size(), 2u);
+    EXPECT_TRUE(second.capturing());
 }
-
-class FailingStartDevice: public Device
-{
-    public:
-        FailingStartDevice(const std::string & name, Node *parent = nullptr): Device(name, parent) {}
-
-        bool is_running() const override { return false; }
-
-    protected:
-        bool on_init() override
-        {
-            this->add_channel("c1", "int");
-            return true;
-        }
-
-        bool on_start() override { return false; }
-};
 
 class ExitSuccessCollector: public IHandler<TreeProfiler::Event *>
 {
@@ -1821,11 +1192,12 @@ TEST_F(TestTreeProfiler, test_failing_op_exit_is_unsuccessful)
     FailingStartDevice *dev = root.add_child<FailingStartDevice>("device");
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
     ExitSuccessCollector collector;
     profiler.add_observer(&collector);
-    ASSERT_TRUE(profiler.observe(&root));
+    ASSERT_TRUE(monitor.observe(&root));
 
     ASSERT_TRUE(dev->setup());
     ASSERT_TRUE(dev->init());
@@ -1834,7 +1206,7 @@ TEST_F(TestTreeProfiler, test_failing_op_exit_is_unsuccessful)
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
     EXPECT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(profiler.flush());
+    ASSERT_TRUE(monitor.flush());
 
     ASSERT_EQ(collector.exit_success["start"].size(), 1u);
     EXPECT_FALSE(collector.exit_success["start"][0]);
@@ -1851,9 +1223,10 @@ TEST_F(TestTreeProfiler, test_report_opts_recursion_and_description)
     ASSERT_TRUE(dev->start());
 
     FakeClock clock;
-    TreeProfiler profiler;
-    profiler.set_clock(&clock);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    monitor.set_clock(&clock);
+    ASSERT_TRUE(monitor.observe(&root));
 
     Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
@@ -1875,26 +1248,138 @@ TEST_F(TestTreeProfiler, test_report_opts_recursion_and_description)
     EXPECT_GT(with_desc.size(), full.size());
 }
 
-TEST_F(TestTreeProfiler, test_removed_observer_not_called)
+TEST_F(TestTreeProfiler, test_report_during_threaded_writes)
 {
     Node root("root");
-    new Channel("c1", "int", &root);
-    Channel *c1 = root.get_child<Channel>("c1");
+    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
+
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
     ASSERT_NE(c1, nullptr);
 
-    TreeProfiler profiler;
-    GateObserver gate;
-    LateCallCounter counter;
-    profiler.add_observer(&gate);
-    profiler.add_observer(&counter);
-    ASSERT_TRUE(profiler.observe(&root));
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
 
-    EXPECT_TRUE(c1->write<int>(0, 1));
-    ASSERT_TRUE(gate.entered.sync(Duration(time::sec(1))));
-    profiler.remove_observer(&counter);
-    counter.removed = true;
-    ASSERT_TRUE(profiler.flush());
-    EXPECT_EQ(counter.late_calls, 0);
+    std::thread writer([&] {
+        for (int i = 0; i < 100; ++i)
+            EXPECT_TRUE(c1->write<int>(0, i + 1));
+    });
+    for (int i = 0; i < 20; ++i)
+        EXPECT_FALSE(profiler.report_str().empty());
+    writer.join();
+
+    EXPECT_EQ(dev->handled, 100);
+    EXPECT_EQ(profiler.events().size(), 200u);
+}
+
+TEST_F(TestTreeProfiler, test_report_after_reclaimed_channel)
+{
+    Node root("root");
+    ReclaimingDevice *dev = root.add_child<ReclaimingDevice>("dev");
+
+    FakeClock clock;
+    TreeMonitor monitor;
+    monitor.set_clock(&clock);
+    monitor.set_queue_max(0);
+    EventGate gate;
+    Handler<TreeMonitorEvent *> blocker([&](TreeMonitorEvent *) { gate.pass(); });
+    monitor.add_observer(&blocker);
+    TreeProfiler profiler(monitor);
+    ASSERT_TRUE(monitor.observe(&root));
+
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+    Channel *c1 = dev->get_child<Channel>("c1");
+    ASSERT_NE(c1, nullptr);
+
+    gate.block();
+    ASSERT_TRUE(c1->write<int>(0, 1));
+    ASSERT_TRUE(gate.wait_held(1));
+    for (int i = 0; i < 100; ++i)
+        ASSERT_TRUE(c1->write<int>(0, i + 2));
+    ASSERT_TRUE(dev->stop());
+    gate.release();
+
+    const std::vector<TreeProfiler::Event> events = profiler.events();
+    const size_t stale = std::count_if(events.begin(), events.end(), [](const TreeProfiler::Event & event) {
+        return event.source == "root.dev.c1";
+    });
+    // 101 writes of an enter and an exit, then init, start and stop
+    EXPECT_EQ(events.size(), 101u * 2 + 6u);
+    EXPECT_EQ(stale, 202u);
+    const std::string expected = R"(root: sihd::util::Node
+  dev: test::ReclaimingDevice [stopped]
+    init: n=1 total=+1ms:0us avg=+1ms:0us min=+1ms:0us max=+1ms:0us
+    start: n=1 total=+1ms:0us avg=+1ms:0us min=+1ms:0us max=+1ms:0us
+    stop: n=1 total=+1ms:0us avg=+1ms:0us min=+1ms:0us max=+1ms:0us
+)";
+    EXPECT_EQ(profiler.report_str(), expected);
+}
+
+TEST_F(TestTreeProfiler, test_destroy_while_writing)
+{
+    Node root("root");
+    ProfilingDevice *dev = root.add_child<ProfilingDevice>("device");
+
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+
+    Channel *c1 = dev->get_channel("c1").value_or(nullptr);
+    ASSERT_NE(c1, nullptr);
+
+    TreeMonitor monitor;
+    ASSERT_TRUE(monitor.observe(&root));
+
+    Synchronizer writing;
+    writing.init_sync(2);
+    std::atomic<bool> first_event = true;
+    Handler<TreeProfiler::Event *> hook([&]([[maybe_unused]] TreeProfiler::Event *event) {
+        if (first_event.exchange(false))
+            writing.sync();
+    });
+
+    std::atomic<bool> stop = false;
+    std::atomic<int> writes = 0;
+    std::thread writer;
+    bool synced = false;
+    {
+        TreeProfiler profiler(monitor);
+        profiler.add_observer(&hook);
+        writer = std::thread([&] {
+            for (int i = 1; stop == false; ++i)
+            {
+                EXPECT_TRUE(c1->write<int>(0, i));
+                ++writes;
+            }
+        });
+        synced = writing.sync(Duration(time::sec(1)));
+    }
+    stop = true;
+    writer.join();
+
+    EXPECT_TRUE(synced);
+    EXPECT_EQ(dev->handled, writes.load());
+    EXPECT_TRUE(monitor.flush());
+}
+
+TEST_F(TestTreeProfiler, test_pointer_condition_waits_for_observe)
+{
+    Node root("root");
+    new Channel("flag", "bool", &root);
+    Channel *flag = root.get_child<Channel>("flag");
+    ASSERT_NE(flag, nullptr);
+
+    TreeMonitor monitor;
+    TreeProfiler profiler(monitor);
+    EXPECT_TRUE(profiler.start_when(flag, ChannelMatch::equal(true)));
+    EXPECT_TRUE(flag->write<bool>(0, true));
+    EXPECT_FALSE(profiler.capturing());
+
+    ASSERT_TRUE(monitor.observe(&root));
+    EXPECT_TRUE(profiler.capturing());
 }
 
 } // namespace test

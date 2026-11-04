@@ -212,6 +212,12 @@ bool Channel::copy_resized_to(IArray & arr, Timestamp *timestamp) const
     return byte_size == 0 || arr.copy_from_bytes(_array_ptr->buf(), byte_size);
 }
 
+IArrayUnique Channel::clone_array() const
+{
+    std::lock_guard lock(_arr_mutex);
+    return IArrayUnique(_array_ptr->clone_array());
+}
+
 bool Channel::copy_to(IArray & arr, Slice slice, Timestamp *timestamp) const
 {
     std::lock_guard lock(_arr_mutex);

@@ -1,6 +1,6 @@
 # tui
 
-Terminal user interface components built on FTXUI. `CliComponent` is an interactive command prompt with output history, `LoggerComponent` is a live view of the `sihd::util` log stream with a filter bar, `TableComponent` and `MessageTableComponent` are sortable tables, `CardGridComponent` lays out selectable cards, and `DevScreen` with `Refresher` redraws a screen when `core` channels change. The components return `ftxui::Component` values that can be embedded in any FTXUI layout.
+Terminal user interface components built on FTXUI. `CliComponent` is an interactive command prompt with output history, `LoggerComponent` is a live view of the `sihd::util` log stream with a filter bar, `TableComponent` and `MessageTableComponent` are sortable tables, `CardGridComponent` lays out selectable cards, `DevScreen` with `Refresher` redraws a screen when `core` channels change, and `TreeMonitorComponent` with `TreeTraceComponent` show a `core` tree live from a `TreeMonitor`. The components return `ftxui::Component` values that can be embedded in any FTXUI layout.
 
 | | |
 |---|---|
@@ -8,7 +8,7 @@ Terminal user interface components built on FTXUI. `CliComponent` is an interact
 | External libraries | ftxui |
 | Platforms | all |
 | Build | `make m=tui` |
-| Header | `#include <sihd/tui/CliComponent.hpp>`, `#include <sihd/tui/LoggerComponent.hpp>`, `#include <sihd/tui/TableComponent.hpp>`, `#include <sihd/tui/MessageTableComponent.hpp>`, `#include <sihd/tui/CardGridComponent.hpp>`, `#include <sihd/tui/Refresher.hpp>`, `#include <sihd/tui/DevScreen.hpp>`, `#include <sihd/tui/channel_view.hpp>` (umbrella header: `#include <sihd/tui.hpp>`) |
+| Header | `#include <sihd/tui/CliComponent.hpp>`, `#include <sihd/tui/LoggerComponent.hpp>`, `#include <sihd/tui/TableComponent.hpp>`, `#include <sihd/tui/MessageTableComponent.hpp>`, `#include <sihd/tui/CardGridComponent.hpp>`, `#include <sihd/tui/Refresher.hpp>`, `#include <sihd/tui/DevScreen.hpp>`, `#include <sihd/tui/channel_view.hpp>`, `#include <sihd/tui/TreeMonitorComponent.hpp>`, `#include <sihd/tui/TreeTraceComponent.hpp>` (umbrella header: `#include <sihd/tui.hpp>`) |
 
 ## Capabilities
 
@@ -35,7 +35,48 @@ Terminal user interface components built on FTXUI. `CliComponent` is an interact
 
 - `Refresher(post)`: coalesces redraw requests from any thread. `request()` calls `post` (for a screen, `screen.PostEvent(ftxui::Event::Custom)`) only when no frame is pending; `rendered()` marks a frame drawn. `RefreshOnRender(component, refresher)` calls `rendered()` each time `component` is drawn.
 - `DevScreen`: a `core` device whose linked channels are all inputs, whatever their name; a write of any of them calls `request()` on the refresher given by `set_refresher`. Link a heartbeat (`DevPulsation`) for a steady rate, or the data channels for a redraw on change.
-- `channel_str(channel)` / `channel_text(channel)`: every element separated by a space, a `char` channel as text up to its first NUL, read under the channel lock. `channel_gauge(channel, min, max)`: the first element as a gauge. `ChannelSparkline(channel, samples)`: the first element sampled at each frame, the last `samples` drawn as bars.
+- `channel_str(channel)` / `channel_text(channel)`: every element separated by a space, a `char` channel as text up to its first NUL, read under the channel lock. `array_str(array)`: the same text from a copy, such as the data of a `TreeMonitorEvent`. `channel_gauge(channel, min, max)`: the first element as a gauge. `ChannelSparkline(channel, samples)`: the first element sampled at each frame, the last `samples` drawn as bars.
+
+### Device tree on screen
+
+- `TreeMonitorComponent(monitor, refresher)`: the tree of a `core::TreeMonitor`, one line per node: service state in color, channel value, write count. It subscribes to the monitor and calls `request()` on the refresher at every event that changes a line, so the screen redraws on each change with no polling; a detached object loses its line. Built after `observe`, it starts from a walk of the tree; built before, the attached events fill it. Up and Down select a line, Left folds a node (or goes to its parent), Right unfolds it.
+- `TreeTraceComponent(monitor, refresher, max_events)`: a `TableComponent` of the `max_events` most recent monitor events (at least one), newest first: attaches, detaches, writes with their value, write durations, operations with the service state.
+- The monitor and the refresher outlive the components. `modules/tui/demo/tui_tree_monitor.cpp` shows a pulsing device and its statistics live.
+
+```cpp
+#include <ftxui/component/component.hpp>
+#include <ftxui/component/screen_interactive.hpp>
+#include <ftxui/dom/elements.hpp>
+
+#include <sihd/core/Core.hpp>
+#include <sihd/core/TreeMonitor.hpp>
+#include <sihd/tui/Refresher.hpp>
+#include <sihd/tui/TreeMonitorComponent.hpp>
+#include <sihd/tui/TreeTraceComponent.hpp>
+
+using namespace sihd::core;
+using namespace sihd::tui;
+using namespace ftxui;
+
+void show(Core & core)
+{
+    TreeMonitor monitor;
+    auto screen = ScreenInteractive::Fullscreen();
+    Refresher refresher([&screen] { screen.PostEvent(Event::Custom); });
+    Component tree = TreeMonitorComponent(monitor, refresher);
+    Component trace = TreeTraceComponent(monitor, refresher, 500);
+    sihd::util::Node & root = core;
+    monitor.observe(&root);
+
+    Component layout = Container::Horizontal({tree, trace});
+    Component view = Renderer(layout, [&] {
+        return hbox({window(text("tree"), tree->Render()) | flex, window(text("trace"), trace->Render()) | flex});
+    });
+    screen.Loop(RefreshOnRender(view, refresher));
+}
+```
+
+Adapted from `modules/tui/demo/tui_tree_monitor.cpp`.
 
 ## Example
 

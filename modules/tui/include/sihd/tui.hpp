@@ -8,6 +8,8 @@
 #include <sihd/tui/MessageTableComponent.hpp>
 #include <sihd/tui/Refresher.hpp>
 #include <sihd/tui/TableComponent.hpp>
+#include <sihd/tui/TreeMonitorComponent.hpp>
+#include <sihd/tui/TreeTraceComponent.hpp>
 #include <sihd/tui/channel_view.hpp>
 
 #endif

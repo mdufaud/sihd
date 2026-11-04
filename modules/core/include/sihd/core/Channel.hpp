@@ -77,6 +77,7 @@ class Channel: public sihd::util::Named,
                            sihd::util::Slice byte_slice,
                            sihd::util::Timestamp *timestamp = nullptr) const;
         bool copy_resized_to(sihd::util::IArray & arr, sihd::util::Timestamp *timestamp = nullptr) const;
+        sihd::util::IArrayUnique clone_array() const;
 
         template <typename T>
         bool read_into(size_t idx, T & val) const
