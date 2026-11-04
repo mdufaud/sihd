@@ -44,10 +44,14 @@ class Sniffer: public sihd::util::Named,
         bool sniff();
         // sniff one packet: false means no packet, an error means the read failed
         sihd::util::Result<bool> read_next() override;
+        // any thread: a blocked read_next or sniff returns without a packet, libpcap's timeout does not on linux
+        void interrupt();
         sihd::util::Result<size_t> inject(sihd::util::ArrCharView frame);
         bool get_read_data(sihd::util::ArrCharView & view) const override;
         sihd::util::Result<sihd::util::Timestamp> get_read_timestamp() const override;
         const sihd::util::ArrByte & data() const;
+        // length on the wire of the last packet, larger than its data when the snaplen cut it
+        size_t packet_len() const;
 
         bool set_max_sniff(size_t n);
         bool set_linux_protocol(int protocol);
@@ -101,6 +105,7 @@ class Sniffer: public sihd::util::Named,
         bool _nano_precision;
 
         sihd::util::Timestamp _pkt_nano_timestamp;
+        size_t _packet_len;
         sihd::util::ArrByte _array;
 };
 

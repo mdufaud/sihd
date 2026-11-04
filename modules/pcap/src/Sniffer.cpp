@@ -36,7 +36,8 @@ Sniffer::Sniffer(const std::string & name, Node *parent):
     _max_sniff(-1),
     _timestamp_type(-1),
     _nano_precision(false),
-    _pkt_nano_timestamp(0)
+    _pkt_nano_timestamp(0),
+    _packet_len(0)
 {
     utils::init();
     this->add_conf("max_sniff", &Sniffer::set_max_sniff);
@@ -131,8 +132,13 @@ bool Sniffer::on_start()
 
 bool Sniffer::on_stop()
 {
-    pcap_breakloop(_impl_ptr->pcap_ptr);
+    this->interrupt();
     return true;
+}
+
+void Sniffer::interrupt()
+{
+    pcap_breakloop(_impl_ptr->pcap_ptr);
 }
 
 bool Sniffer::sniff()
@@ -183,6 +189,7 @@ void Sniffer::_new_packet(const void *hdr, const void *bytes)
         _pkt_nano_timestamp = Timestamp(time::nano_tv(pkt_hdr->ts));
     else
         _pkt_nano_timestamp = Timestamp(time::tv(pkt_hdr->ts));
+    _packet_len = pkt_hdr->len;
     _array.resize(pkt_hdr->caplen);
     _array.copy_from_bytes(data, pkt_hdr->caplen);
     this->notify_observers(this);
@@ -191,6 +198,11 @@ void Sniffer::_new_packet(const void *hdr, const void *bytes)
 const ArrByte & Sniffer::data() const
 {
     return _array;
+}
+
+size_t Sniffer::packet_len() const
+{
+    return _packet_len;
 }
 
 const ArrByte & Sniffer::array() const

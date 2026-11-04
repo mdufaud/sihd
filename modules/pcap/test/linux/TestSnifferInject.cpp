@@ -1,19 +1,15 @@
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-
 #include <array>
 #include <string>
 #include <userns_child.hpp>
 
 #include <gtest/gtest.h>
 
-#include <sihd/net/Socket.hpp>
 #include <sihd/pcap/Sniffer.hpp>
 #include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 
-#include <net/if.h>
+#include "loopback.hpp"
 
 namespace test
 {
@@ -34,19 +30,6 @@ constexpr int child_inject_failed = 4;
 constexpr int child_wrong_inject_size = 5;
 constexpr int child_no_packet = 6;
 constexpr int child_wrong_frame = 7;
-
-Result<void> set_loopback_up()
-{
-    sihd::net::Socket socket;
-    if (auto opened = socket.open(AF_INET, SOCK_DGRAM, 0); !opened)
-        return opened;
-    struct ifreq ifr {};
-    std::string_view("lo").copy(ifr.ifr_name, IFNAMSIZ - 1);
-    if (auto flags = os::ioctl(socket.socket(), SIOCGIFFLAGS, &ifr); !flags)
-        return flags;
-    ifr.ifr_flags = static_cast<short>(ifr.ifr_flags | IFF_UP);
-    return os::ioctl(socket.socket(), SIOCSIFFLAGS, &ifr);
-}
 
 int inject_on_loopback(int snaplen, size_t expected_size)
 {
@@ -74,7 +57,8 @@ int inject_on_loopback(int snaplen, size_t expected_size)
     if (!received || !*received)
         return child_no_packet;
     ArrCharView view;
-    if (!capture.get_read_data(view) || std::string(view.data(), view.size()) != frame.substr(0, expected_size))
+    if (!capture.get_read_data(view) || std::string(view.data(), view.size()) != frame.substr(0, expected_size)
+        || capture.packet_len() != frame.size())
         return child_wrong_frame;
     return child_ok;
 }
