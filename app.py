@@ -258,7 +258,7 @@ modules = {
     },
     "imgui": {
         "depends": ['sys'],
-        # pulls libGL/libGLEW (no static archive) + dlopen GL loader: can't link static EXCEPT android and web (GLES, SDL3).
+        # pulls libGL (no static archive) + dlopen GL loader: can't link static EXCEPT android and web (GLES, SDL3).
         "allow-link-shared": True,
         "android-allow-link-shared": False,
         "web-allow-link-shared": False,
@@ -267,8 +267,8 @@ modules = {
         "linux-extlibs": ['ncurses', 'libxcrypt'],
         "libs": ["imgui"],
         "linux-libs": ['glfw', 'SDL3', 'ncursesw'],
-        # native linux: system GL/GLEW; cross linux: vcpkg glfw (imgui loads GL itself, GLEW unused)
-        "linux-native-libs": ['GLEW', 'GL'],
+        # native linux: system GL; cross linux: vcpkg glfw (imgui loads GL itself)
+        "linux-native-libs": ['GL'],
         "linux-cross-libs": ['glfw'],
         "android-libs": ['android', 'EGL', 'GLESv3', 'log'],
         "android-defines": ['IMGUI_IMPL_OPENGL_ES3'],
