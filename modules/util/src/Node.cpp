@@ -304,6 +304,11 @@ bool Node::on_check_link(const std::string & name, Named *child)
     return true;
 }
 
+Result<void> Node::on_links_resolved()
+{
+    return {};
+}
+
 bool Node::on_add_child(const std::string & name, Named *child)
 {
     (void)name;
@@ -351,7 +356,9 @@ Result<void> Node::resolve_links(size_t recursion)
                 Error(permission_denied, "'{}' refused link '{}' => '{}'", this->full_name(), link, path));
         }
     }
-    return ret;
+    if (!ret)
+        return ret;
+    return this->on_links_resolved();
 }
 
 const std::unordered_map<std::string, Node::ChildEntry *> & Node::children() const

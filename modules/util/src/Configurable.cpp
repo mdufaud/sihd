@@ -104,6 +104,9 @@ Result<void> Configurable::set_conf_int(const std::string & name, int64_t param)
         return this->_call_conf<long long>(name, static_cast<long long>(param));
     if (_callback_manager.check_call_type<bool, unsigned long long>(name))
         return this->_call_conf<unsigned long long>(name, static_cast<unsigned long long>(param));
+    // an integer is a valid floating point value: a json 10 sets a double conf
+    if (_callback_manager.check_call_type<bool, double>(name) || _callback_manager.check_call_type<bool, float>(name))
+        return this->set_conf_float(name, static_cast<double>(param));
     return std::unexpected(Error(ErrorCode::not_supported, "conf '{}': no handler for this value", name));
 }
 

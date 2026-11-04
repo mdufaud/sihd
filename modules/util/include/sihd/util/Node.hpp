@@ -134,6 +134,8 @@ class Node: public Named
         static std::pair<std::string, std::string> parent_path(std::string_view path);
 
         virtual bool on_check_link(const std::string & name, Named *child);
+        // every link resolved: outputs derived from them are created here, so a link can reach them before start
+        virtual sihd::util::Result<void> on_links_resolved();
         virtual bool on_add_child(const std::string & name, Named *child);
         virtual void on_remove_child(const std::string & name, Named *child);
 

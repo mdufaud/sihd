@@ -1,6 +1,7 @@
 #ifndef __SIHD_UTIL_MESSAGE_HPP__
 #define __SIHD_UTIL_MESSAGE_HPP__
 
+#include <functional>
 #include <span>
 #include <stdexcept>
 #include <unordered_map>
@@ -76,6 +77,13 @@ class Message: public Node,
                 return false;
             return field->write_value<T>(idx, value);
         }
+
+        // the whole field, the view lives as long as the message
+        ArrUByteView get_bytes(const std::string & name) const;
+        // copied to the start of the field, the bytes past them keep their value
+        bool set_bytes(const std::string & name, ArrUByteView bytes);
+
+        bool for_each_record(ArrUByteView records, const std::function<void(const Message &)> & callback);
 
     protected:
         ArrByte _arr;

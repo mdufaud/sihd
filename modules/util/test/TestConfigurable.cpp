@@ -275,6 +275,11 @@ TEST_F(TestConfigurable, test_configurable_class)
     EXPECT_TRUE(obj.set_conf_float("double", 12345.678).has_value());
     EXPECT_FLOAT_EQ(obj.double_val, 12345.678);
 
+    EXPECT_TRUE(obj.set_conf_int("double", 10).has_value());
+    EXPECT_EQ(obj.double_val, 10.0);
+    EXPECT_TRUE(obj.set_conf_int("float", 3).has_value());
+    EXPECT_EQ(obj.float_val, 3.0f);
+
     EXPECT_EQ(obj.str_val, "");
     EXPECT_TRUE(obj.set_conf("cstr", "hello").has_value());
     EXPECT_EQ(obj.str_val, "hello");

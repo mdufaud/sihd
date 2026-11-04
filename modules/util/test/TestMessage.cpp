@@ -252,4 +252,50 @@ TEST_F(TestMessage, test_message_simple)
     for (size_t i = 0; i < farr.size(); ++i)
         EXPECT_FLOAT_EQ(ffield->read_value<float>(i), 3.0 + (0.1 * i));
 }
+
+TEST_F(TestMessage, test_message_bytes)
+{
+    Message msg("message");
+    ASSERT_TRUE(msg.add_field<uint8_t>("mac", 6));
+    ASSERT_TRUE(msg.add_field<uint16_t>("port"));
+    ASSERT_TRUE(msg.finish());
+    const std::vector<uint8_t> mac {0x02, 0x11, 0x22, 0x33, 0x44, 0x55};
+
+    EXPECT_TRUE(msg.set_bytes("mac", mac));
+    EXPECT_TRUE(msg.set_bytes("mac", std::vector<uint8_t> {0x0a, 0x0b}));
+
+    const ArrUByteView bytes = msg.get_bytes("mac");
+    EXPECT_EQ(std::vector<uint8_t>(bytes.begin(), bytes.end()),
+              std::vector<uint8_t>({0x0a, 0x0b, 0x22, 0x33, 0x44, 0x55}));
+    EXPECT_FALSE(msg.set_bytes("mac", std::vector<uint8_t>(7, 0)));
+    EXPECT_FALSE(msg.set_bytes("nothing", mac));
+    EXPECT_THROW(msg.get_bytes("nothing"), std::invalid_argument);
+}
+
+TEST_F(TestMessage, test_message_for_each_record)
+{
+    Message msg("record");
+    ASSERT_TRUE(msg.add_field<uint16_t>("id"));
+    ASSERT_TRUE(msg.add_field<int8_t>("level"));
+    ASSERT_TRUE(msg.finish());
+    std::vector<uint8_t> records;
+    for (const auto & [id, level] : {std::pair<uint16_t, int8_t> {1, -40}, {2, -70}})
+    {
+        msg.set<uint16_t>("id", id);
+        msg.set<int8_t>("level", level);
+        const std::vector<uint8_t> record = msg.to_bytes();
+        records.insert(records.end(), record.begin(), record.end());
+    }
+
+    std::vector<std::pair<uint16_t, int8_t>> read;
+    const bool walked = msg.for_each_record(records, [&read](const Message & record) {
+        read.emplace_back(record.get<uint16_t>("id"), record.get<int8_t>("level"));
+    });
+
+    EXPECT_TRUE(walked);
+    EXPECT_EQ(read, (std::vector<std::pair<uint16_t, int8_t>> {{1, -40}, {2, -70}}));
+    EXPECT_TRUE(msg.for_each_record({}, [](const Message &) { ADD_FAILURE(); }));
+    records.pop_back();
+    EXPECT_FALSE(msg.for_each_record(records, [](const Message &) { ADD_FAILURE(); }));
+}
 } // namespace test

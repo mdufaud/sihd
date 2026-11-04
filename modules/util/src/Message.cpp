@@ -202,6 +202,32 @@ bool Message::from_bytes(std::span<const uint8_t> data)
     return this->field_read_from(data.data(), data.size());
 }
 
+ArrUByteView Message::get_bytes(const std::string & name) const
+{
+    const MessageField *field = this->_require_field(name);
+    return ArrUByteView(field->array()->buf(), field->field_byte_size());
+}
+
+bool Message::set_bytes(const std::string & name, ArrUByteView bytes)
+{
+    MessageField *field = this->get_child<MessageField>(name);
+    return field != nullptr && field->field_read_from(bytes.data(), bytes.byte_size());
+}
+
+bool Message::for_each_record(ArrUByteView records, const std::function<void(const Message &)> & callback)
+{
+    const size_t record_size = this->field_byte_size();
+    if (record_size == 0 || records.byte_size() % record_size != 0)
+        return false;
+    for (size_t offset = 0; offset < records.byte_size(); offset += record_size)
+    {
+        if (this->field_read_from(records.data() + offset, record_size) == false)
+            return false;
+        callback(*this);
+    }
+    return true;
+}
+
 SIHD_REGISTER_FACTORY(Message);
 
 } // namespace sihd::util
