@@ -228,7 +228,6 @@ test_web_link = [
 ## demo specifics
 
 demo_extlibs = ['cli11']
-demo_libs = ['CLI11']
 
 
 def configure(app):

@@ -122,6 +122,11 @@ vcpkg_ports = {
     "libcap": {
         "recipe_patches": ["patches/libcap/recipe.patch"],
     },
+    "cli11": {
+        # header-only like the distro packages, so a system cli11 links the same way
+        "manifest": {"version": "2.6.1"},
+        "recipe_patches": ["patches/cli11/recipe.patch"],
+    },
     "ncurses": {
         "recipe_patches": ["patches/ncurses/recipe.patch"],
     },
