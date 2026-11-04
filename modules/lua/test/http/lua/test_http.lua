@@ -6,7 +6,7 @@ nav:set_ssrf_guard(false)
 nav:set_timeout(sihd.util.time.sec(5))
 
 -- GET
-local resp = nav:get("localhost:3011/api/hello")
+local resp = nav:get(server_host .. "/api/hello")
 assert(resp ~= nil)
 assert(resp.status == 200)
 assert(resp.content == "navigator-ok")
@@ -22,13 +22,13 @@ assert(nav:clear_cookies() == true)
 assert(next(nav:cookies()) == nil)
 
 -- POST echo
-local echoed = nav:post("localhost:3011/api/echo", "hello lua")
+local echoed = nav:post(server_host .. "/api/echo", "hello lua")
 assert(echoed ~= nil)
 assert(echoed.status == 200)
 assert(echoed.content == "hello lua")
 
 -- unknown route yields a response (404), not nil
-local missing = nav:get("localhost:3011/api/nope")
+local missing = nav:get(server_host .. "/api/nope")
 assert(missing ~= nil)
 assert(missing.status == 404)
 
@@ -37,18 +37,18 @@ local reuse = http.Navigator()
 reuse:clear_proxy()
 reuse:set_ssrf_guard(false)
 reuse:set_timeout(sihd.util.time.sec(5))
-local r1 = reuse:get("localhost:3011/api/hello")
+local r1 = reuse:get(server_host .. "/api/hello")
 assert(r1 ~= nil)
 assert(r1.status == 200)
 assert(r1.content == "navigator-ok")
 assert(reuse:new_connection_count() >= 1)
 
-local r2 = reuse:get("localhost:3011/api/hello")
+local r2 = reuse:get(server_host .. "/api/hello")
 assert(r2 ~= nil)
 assert(r2.content == "navigator-ok")
 assert(reuse:new_connection_count() == 0)
 
-local r3 = reuse:post("localhost:3011/api/echo", "hello navigator")
+local r3 = reuse:post(server_host .. "/api/echo", "hello navigator")
 assert(r3 ~= nil)
 assert(r3.content == "hello navigator")
 assert(reuse:new_connection_count() == 0)
@@ -57,23 +57,23 @@ assert(reuse:new_connection_count() == 0)
 local preflight = http.RequestOptions()
 preflight:set_header("Origin", "https://app.com")
 preflight:set_header("Access-Control-Request-Method", "POST")
-local pre = http.options("localhost:3011/api/echo", preflight)
+local pre = http.options(server_host .. "/api/echo", preflight)
 assert(pre ~= nil)
 assert(pre.status == 204)
 assert(pre.headers["access-control-allow-methods"] == "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS")
 
 -- stateless requests, one connection per call
-local s1 = http.get("localhost:3011/api/hello")
+local s1 = http.get(server_host .. "/api/hello")
 assert(s1 ~= nil)
 assert(s1.status == 200)
 assert(s1.content == "navigator-ok")
 
-local s2 = http.post("localhost:3011/api/echo", "hello stateless")
+local s2 = http.post(server_host .. "/api/echo", "hello stateless")
 assert(s2 ~= nil)
 assert(s2.content == "hello stateless")
 
 -- tables are rejected as request bodies instead of being stringified
-local ok, err = pcall(function() http.post("localhost:3011/api/echo", {}) end)
+local ok, err = pcall(function() http.post(server_host .. "/api/echo", {}) end)
 assert(not ok)
 assert(err.code == sihd.ErrorCode.invalid_argument)
 assert(err.message == "http: request body must be a string or nil")
@@ -86,18 +86,18 @@ opt.verbose = false
 opt:set_header("X-Test", "1")
 opt:set_parameter("q", "1")
 opt.timeout = sihd.util.time.sec(5)
-local with_options = http.get("localhost:3011/api/hello", opt)
+local with_options = http.get(server_host .. "/api/hello", opt)
 assert(with_options ~= nil)
 assert(with_options.status == 200)
 assert(with_options.content == "navigator-ok")
 
 -- methods missing from the stateless helpers
-local patched = http.patch("localhost:3011/api/echo", "hello patch")
+local patched = http.patch(server_host .. "/api/echo", "hello patch")
 assert(patched ~= nil)
 assert(patched.status == 200)
 assert(patched.content == "hello patch")
 
-local deleted = http.delete("localhost:3011/api/nope")
+local deleted = http.delete(server_host .. "/api/nope")
 assert(deleted ~= nil)
 assert(deleted.status == 404)
 
@@ -107,32 +107,32 @@ form:add_field("field", "multipart-value")
 assert(not form:empty())
 assert(form:value("field") == "multipart-value")
 
-local uploaded = nav:post_multipart("localhost:3011/api/upload", form)
+local uploaded = nav:post_multipart(server_host .. "/api/upload", form)
 assert(uploaded ~= nil)
 assert(uploaded.status == 200)
 assert(uploaded.content == "multipart-value")
 
 local with_form = http.RequestOptions()
 with_form:set_multipart(form)
-local sent = http.post("localhost:3011/api/upload", "", with_form)
+local sent = http.post(server_host .. "/api/upload", "", with_form)
 assert(sent ~= nil)
 assert(sent.status == 200)
 assert(sent.content == "multipart-value")
 
 -- a plain OPTIONS reaches the routes: known path, method without a route
-local plain = http.options("localhost:3011/api/echo", opt)
+local plain = http.options(server_host .. "/api/echo", opt)
 assert(plain ~= nil)
 assert(plain.status == 405)
 assert(plain.headers["allow"] == "POST, PATCH")
 
 -- an OPTIONS route is answered with its body
-local handled = http.options("localhost:3011/api/hello", opt)
+local handled = http.options(server_host .. "/api/hello", opt)
 assert(handled ~= nil)
 assert(handled.status == 200)
 assert(handled.content == "options-ok")
 
 -- unknown path still yields 404
-local nowhere = http.options("localhost:3011/api/nope", opt)
+local nowhere = http.options(server_host .. "/api/nope", opt)
 assert(nowhere ~= nil)
 assert(nowhere.status == 404)
 
@@ -143,7 +143,7 @@ assert(not failed_ok)
 assert(failed.code == sihd.ErrorCode.io_error)
 assert(failed.message:sub(1, 37) == "perform 'localhost:19999/api/hello': ")
 
-local recovered = nav:get("localhost:3011/api/hello")
+local recovered = nav:get(server_host .. "/api/hello")
 assert(recovered ~= nil)
 assert(recovered.status == 200)
 
@@ -158,7 +158,7 @@ assert(proxy_err.message == "http: unknown proxy type 'socks9'")
 
 -- download writes the response body to disk, put_file streams a file as the body
 local download_path = "/tmp/sihd-lua-download.txt"
-local downloaded = nav:download("localhost:3011/api/hello", download_path)
+local downloaded = nav:download(server_host .. "/api/hello", download_path)
 assert(downloaded ~= nil)
 assert(downloaded.status == 200)
 local f = io.open(download_path, "r")
@@ -171,7 +171,7 @@ local pf = io.open(put_path, "w")
 assert(pf ~= nil)
 pf:write("lua put file")
 pf:close()
-local put_resp = nav:put_file("localhost:3011/api/echo_put", put_path)
+local put_resp = nav:put_file(server_host .. "/api/echo_put", put_path)
 assert(put_resp ~= nil)
 assert(put_resp.status == 200)
 assert(put_resp.content == "lua put file")

@@ -6,7 +6,7 @@ nav.set_ssrf_guard(False)
 nav.set_timeout(sihd.util.time.sec(5))
 
 # GET
-resp = nav.get("localhost:3012/api/hello")
+resp = nav.get(server_host + "/api/hello")
 assert(resp is not None)
 assert(resp.status() == 200)
 assert(resp.text() == "navigator-ok")
@@ -22,13 +22,13 @@ nav.clear_cookies()
 assert(nav.cookies() == {})
 
 # POST echo
-echoed = nav.post("localhost:3012/api/echo", "hello py")
+echoed = nav.post(server_host + "/api/echo", "hello py")
 assert(echoed is not None)
 assert(echoed.status() == 200)
 assert(echoed.text() == "hello py")
 
 # unknown route yields a response (404), not None
-missing = nav.get("localhost:3012/api/nope")
+missing = nav.get(server_host + "/api/nope")
 assert(missing is not None)
 assert(missing.status() == 404)
 
@@ -55,12 +55,12 @@ assert(int(seconds.connect_timeout) == sihd.util.time.ms(2500))
 assert(not hasattr(seconds, "type"))
 
 # stateless request helper consuming RequestOptions
-r = sihd.http.get("localhost:3012/api/hello", opt)
+r = sihd.http.get(server_host + "/api/hello", opt)
 assert(r is not None)
 assert(r.status() == 200)
 assert(r.text() == "navigator-ok")
 
-patched = sihd.http.patch("localhost:3012/api/echo", "hello patch", opt)
+patched = sihd.http.patch(server_host + "/api/echo", "hello patch", opt)
 assert(patched is not None)
 assert(patched.status() == 200)
 assert(patched.text() == "hello patch")
@@ -68,25 +68,25 @@ assert(patched.text() == "hello patch")
 # the server allows https://app.com: a preflight carries origin and access-control-request-method
 preflight = sihd.http.RequestOptions()
 preflight.headers = {"Origin": "https://app.com", "Access-Control-Request-Method": "POST"}
-pre = sihd.http.options("localhost:3012/api/echo", preflight)
+pre = sihd.http.options(server_host + "/api/echo", preflight)
 assert(pre is not None)
 assert(pre.status() == 204)
 assert(pre.headers()["access-control-allow-methods"] == "GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS")
 
 # a plain OPTIONS reaches the routes: known path, method without a route
-plain = sihd.http.options("localhost:3012/api/echo", opt)
+plain = sihd.http.options(server_host + "/api/echo", opt)
 assert(plain is not None)
 assert(plain.status() == 405)
 assert(plain.headers()["allow"] == "POST, PATCH")
 
 # an OPTIONS route is answered with its body
-handled = sihd.http.options("localhost:3012/api/hello", opt)
+handled = sihd.http.options(server_host + "/api/hello", opt)
 assert(handled is not None)
 assert(handled.status() == 200)
 assert(handled.text() == "options-ok")
 
 # unknown path still yields 404
-nowhere = sihd.http.options("localhost:3012/api/nope", opt)
+nowhere = sihd.http.options(server_host + "/api/nope", opt)
 assert(nowhere is not None)
 assert(nowhere.status() == 404)
 
@@ -97,14 +97,14 @@ assert(not form.empty())
 assert(form.value("field") == "multipart-value")
 assert(form.value("missing") is None)
 
-uploaded = nav.post_multipart("localhost:3012/api/upload", form)
+uploaded = nav.post_multipart(server_host + "/api/upload", form)
 assert(uploaded is not None)
 assert(uploaded.status() == 200)
 assert(uploaded.text() == "multipart-value")
 
 with_form = sihd.http.RequestOptions()
 with_form.multipart = form
-sent = sihd.http.post("localhost:3012/api/upload", b"", with_form)
+sent = sihd.http.post(server_host + "/api/upload", b"", with_form)
 assert(sent is not None)
 assert(sent.status() == 200)
 assert(sent.text() == "multipart-value")
@@ -114,18 +114,18 @@ reuse = sihd.http.Navigator()
 reuse.clear_proxy()
 reuse.set_ssrf_guard(False)
 reuse.set_timeout(sihd.util.time.sec(5))
-r1 = reuse.get("localhost:3012/api/hello")
+r1 = reuse.get(server_host + "/api/hello")
 assert(r1 is not None)
 assert(r1.status() == 200)
 assert(r1.text() == "navigator-ok")
 assert(reuse.new_connection_count() >= 1)
 
-r2 = reuse.get("localhost:3012/api/hello")
+r2 = reuse.get(server_host + "/api/hello")
 assert(r2 is not None)
 assert(r2.text() == "navigator-ok")
 assert(reuse.new_connection_count() == 0)
 
-r3 = reuse.post("localhost:3012/api/echo", "hello reuse")
+r3 = reuse.post(server_host + "/api/echo", "hello reuse")
 assert(r3 is not None)
 assert(r3.text() == "hello reuse")
 assert(reuse.new_connection_count() == 0)
@@ -138,6 +138,6 @@ except sihd.Error as failed:
     assert(failed.code == sihd.ErrorCode.io_error)
     assert(str(failed).startswith("perform 'localhost:19999/api/hello': "))
 
-recovered = reuse.get("localhost:3012/api/hello")
+recovered = reuse.get(server_host + "/api/hello")
 assert(recovered is not None)
 assert(recovered.status() == 200)

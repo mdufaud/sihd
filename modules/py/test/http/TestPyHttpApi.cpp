@@ -40,6 +40,7 @@ TEST_F(TestPyHttpApi, test_pyhttp_navigator)
 {
     DirectorySwitcher dir_switcher(lib_path());
     require_py_environment();
+    pybind11::globals()["server_host"] = "localhost:" + std::to_string(_server->server.get_port());
     EXPECT_NO_THROW(pybind11::eval_file(dir_switcher.old_cwd() + "/test/http/py/test_http.py"));
 }
 

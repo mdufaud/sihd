@@ -2,7 +2,7 @@ import sihd
 import threading
 
 server = sihd.http.HttpServer("py-server")
-assert server.set_port(3013)
+assert server.set_port(0)
 
 svc = server.add_web_service("api")
 
@@ -30,14 +30,14 @@ try:
     nav.set_ssrf_guard(False)
     nav.set_timeout(sihd.util.time.sec(5))
 
-    resp = nav.post("localhost:3013/api/compute", "payload")
+    resp = nav.post("localhost:%d/api/compute" % server.get_port(), "payload")
     assert resp is not None
     assert resp.status() == 200
     assert resp.text() == "from-python:payload"
 
     form = sihd.http.Multipart()
     form.add_field("field", "from-python")
-    uploaded = nav.post_multipart("localhost:3013/api/upload", form)
+    uploaded = nav.post_multipart("localhost:%d/api/upload" % server.get_port(), form)
     assert uploaded is not None
     assert uploaded.status() == 200
     assert uploaded.text() == "uploaded:from-python"

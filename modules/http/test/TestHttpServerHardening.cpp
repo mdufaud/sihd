@@ -32,7 +32,7 @@ TEST_F(TestHttpServerHardening, test_cors_is_off_by_default)
     });
     scope.start();
 
-    auto resp = sihd::http::get(shard_url("localhost:3001/api/hello"));
+    auto resp = sihd::http::get(loopback_url("localhost:3001/api/hello"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->http_header().find("access-control-allow-origin"), "");
 }
@@ -44,7 +44,7 @@ TEST_F(TestHttpServerHardening, test_half_configured_tls_refuses_to_start)
     ASSERT_TRUE(fs::write(cert_path, "cert").has_value());
 
     FeatureHttpServer server;
-    server.set_port(shard_port(3002));
+    server.set_port(0);
     ASSERT_TRUE(server.set_ssl_cert_path(cert_path));
 
     EXPECT_FALSE(server.start());
@@ -96,16 +96,16 @@ TEST_F(TestHttpServerHardening, test_routing_path_is_decoded_once)
 
     scope.start();
 
-    auto encoded = sihd::http::get(shard_url("localhost:3001/api/files/%252e%252e%252fetc%252fpasswd"));
+    auto encoded = sihd::http::get(loopback_url("localhost:3001/api/files/%252e%252e%252fetc%252fpasswd"));
     ASSERT_TRUE(encoded.has_value());
     EXPECT_EQ(encoded->status(), HttpStatus::Ok);
     EXPECT_EQ(encoded->content().cpp_str(), "%2e%2e%2fetc%2fpasswd");
 
-    auto single = sihd::http::get(shard_url("localhost:3001/api/files/a%20b"));
+    auto single = sihd::http::get(loopback_url("localhost:3001/api/files/a%20b"));
     ASSERT_TRUE(single.has_value());
     EXPECT_EQ(single->content().cpp_str(), "a b");
 
-    auto double_encoded = sihd::http::get(shard_url("localhost:3001/api/%2573ecret"));
+    auto double_encoded = sihd::http::get(loopback_url("localhost:3001/api/%2573ecret"));
     ASSERT_TRUE(double_encoded.has_value());
     EXPECT_EQ(double_encoded->status(), HttpStatus::NotFound);
 }

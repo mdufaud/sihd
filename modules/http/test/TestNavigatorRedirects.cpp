@@ -39,15 +39,15 @@ TEST_F(TestNavigatorRedirects, test_navigator_relative_redirect)
     allow_local_targets(navigator);
     navigator.set_redirect_policy(RedirectPolicy::SameHost);
 
-    auto resp = navigator.get(shard_url("localhost:3001/api/absolute_path"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/absolute_path"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
-    EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/dest"));
+    EXPECT_EQ(resp->final_url(), loopback_url("http://localhost:3001/api/dest"));
 
-    resp = navigator.get(shard_url("localhost:3001/api/sibling"));
+    resp = navigator.get(loopback_url("localhost:3001/api/sibling"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
-    EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/dest"));
+    EXPECT_EQ(resp->final_url(), loopback_url("http://localhost:3001/api/dest"));
 }
 
 TEST_F(TestNavigatorRedirects, test_navigator_relative_meta_refresh)
@@ -69,10 +69,10 @@ TEST_F(TestNavigatorRedirects, test_navigator_relative_meta_refresh)
     allow_local_targets(navigator);
     navigator.set_redirect_policy(RedirectPolicy::SameHost);
 
-    auto resp = navigator.get(shard_url("localhost:3001/api/meta_relative"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/meta_relative"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
-    EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/dest"));
+    EXPECT_EQ(resp->final_url(), loopback_url("http://localhost:3001/api/dest"));
 }
 
 TEST_F(TestNavigatorRedirects, test_navigator_meta_refresh_url_key_is_a_whole_token)
@@ -95,10 +95,10 @@ TEST_F(TestNavigatorRedirects, test_navigator_meta_refresh_url_key_is_a_whole_to
     allow_local_targets(navigator);
     navigator.set_redirect_policy(RedirectPolicy::SameHost);
 
-    auto resp = navigator.get(shard_url("localhost:3001/api/meta_curl"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/meta_curl"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "arrived");
-    EXPECT_EQ(resp->final_url(), shard_url("http://localhost:3001/api/next"));
+    EXPECT_EQ(resp->final_url(), loopback_url("http://localhost:3001/api/next"));
 }
 
 TEST_F(TestNavigatorRedirects, test_navigator_same_domain_policy_does_not_group_ip_addresses)
@@ -106,9 +106,7 @@ TEST_F(TestNavigatorRedirects, test_navigator_same_domain_policy_does_not_group_
     ServerScope scope;
 
     scope.server.set_interface("");
-    scope.server._webservice->set_entry_point(
-        "hop",
-        redirect_to(HttpStatus::Found, shard_url("http://127.9.5.1:3001/api/dest")));
+    scope.server._webservice->set_entry_point("hop", redirect_to(HttpStatus::Found, "http://127.9.5.1:3001/api/dest"));
     scope.server._webservice->set_entry_point("dest", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("arrived");
     });
@@ -119,7 +117,7 @@ TEST_F(TestNavigatorRedirects, test_navigator_same_domain_policy_does_not_group_
     allow_local_targets(navigator);
     navigator.set_redirect_policy(RedirectPolicy::SameDomain);
 
-    auto resp = navigator.get(shard_url("127.0.5.1:3001/api/hop"));
+    auto resp = navigator.get(loopback_url("127.0.5.1:3001/api/hop"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Found);
     EXPECT_TRUE(resp->redirect_history().empty());
@@ -144,7 +142,7 @@ TEST_F(TestNavigatorRedirects, test_navigator_meta_refresh_hostile_html)
     allow_local_targets(navigator);
 
     Stopwatch stopwatch;
-    auto resp = navigator.get(shard_url("localhost:3001/api/hostile"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/hostile"));
     const Duration elapsed = stopwatch.time();
 
     ASSERT_TRUE(resp.has_value());
@@ -175,7 +173,7 @@ TEST_F(TestNavigatorRedirects, test_navigator_redirect_to_non_http_scheme_is_not
     allow_local_targets(navigator);
 
     for (const std::string & path :
-         {shard_url("localhost:3001/api/to_file"), shard_url("localhost:3001/api/to_gopher")})
+         {loopback_url("localhost:3001/api/to_file"), loopback_url("localhost:3001/api/to_gopher")})
     {
         auto resp = navigator.get(path);
         ASSERT_TRUE(resp.has_value()) << path;
@@ -185,10 +183,10 @@ TEST_F(TestNavigatorRedirects, test_navigator_redirect_to_non_http_scheme_is_not
         EXPECT_FALSE(resp->redirect_refusal().empty());
     }
 
-    auto meta = navigator.get(shard_url("localhost:3001/api/meta_file"));
+    auto meta = navigator.get(loopback_url("localhost:3001/api/meta_file"));
     ASSERT_TRUE(meta.has_value());
     EXPECT_EQ(meta->content().cpp_str(), meta_page);
-    EXPECT_EQ(meta->final_url(), shard_url("localhost:3001/api/meta_file"));
+    EXPECT_EQ(meta->final_url(), loopback_url("localhost:3001/api/meta_file"));
 }
 
 TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_drops_auth)
@@ -200,12 +198,10 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_drops_auth)
     scope.server._webservice->set_entry_point("secure", [](const HttpRequest &, HttpResponse & resp) {
         resp.set_plain_content("auth-ok");
     });
-    scope.server._webservice->set_entry_point(
-        "to_secure_same",
-        redirect_to(HttpStatus::Found, shard_url("http://localhost:3001/api/secure")));
-    scope.server._webservice->set_entry_point(
-        "to_secure_other_host",
-        redirect_to(HttpStatus::Found, shard_url("http://127.0.0.1:3001/api/secure")));
+    scope.server._webservice->set_entry_point("to_secure_same",
+                                              redirect_to(HttpStatus::Found, "http://localhost:3001/api/secure"));
+    scope.server._webservice->set_entry_point("to_secure_other_host",
+                                              redirect_to(HttpStatus::Found, "http://127.0.0.1:3001/api/secure"));
 
     scope.start();
 
@@ -213,17 +209,17 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_drops_auth)
     allow_local_targets(navigator);
     navigator.set_basic_auth("admin", "secret");
 
-    auto resp = navigator.get(shard_url("localhost:3001/api/to_secure_same"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/to_secure_same"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "auth-ok");
 
-    resp = navigator.get(shard_url("localhost:3001/api/to_secure_other_host"));
+    resp = navigator.get(loopback_url("localhost:3001/api/to_secure_other_host"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 
     navigator.set_token_auth("my-secret-token-123");
-    resp = navigator.get(shard_url("localhost:3001/api/to_secure_other_host"));
+    resp = navigator.get(loopback_url("localhost:3001/api/to_secure_other_host"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Unauthorized);
 }
@@ -236,12 +232,10 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_drops_custom
         resp.set_plain_content(
             fmt::format("cookie=[{}] accept=[{}]", req.http_header().find("cookie"), req.http_header().find("accept")));
     });
-    scope.server._webservice->set_entry_point(
-        "to_echo_same",
-        redirect_to(HttpStatus::Found, shard_url("http://localhost:3001/api/echo_headers")));
-    scope.server._webservice->set_entry_point(
-        "to_echo_other_host",
-        redirect_to(HttpStatus::Found, shard_url("http://127.0.0.1:3001/api/echo_headers")));
+    scope.server._webservice->set_entry_point("to_echo_same",
+                                              redirect_to(HttpStatus::Found, "http://localhost:3001/api/echo_headers"));
+    scope.server._webservice->set_entry_point("to_echo_other_host",
+                                              redirect_to(HttpStatus::Found, "http://127.0.0.1:3001/api/echo_headers"));
 
     scope.start();
 
@@ -250,16 +244,16 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_drops_custom
     navigator.set_header("Cookie", "session=s3cr3t");
     navigator.set_header("Accept", "text/plain");
 
-    auto resp = navigator.get(shard_url("localhost:3001/api/to_echo_same"));
+    auto resp = navigator.get(loopback_url("localhost:3001/api/to_echo_same"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "cookie=[session=s3cr3t] accept=[text/plain]");
 
-    resp = navigator.get(shard_url("localhost:3001/api/to_echo_other_host"));
+    resp = navigator.get(loopback_url("localhost:3001/api/to_echo_other_host"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "cookie=[] accept=[*/*]");
 
     navigator.set_cross_origin_headers({"ACCEPT"});
-    resp = navigator.get(shard_url("localhost:3001/api/to_echo_other_host"));
+    resp = navigator.get(loopback_url("localhost:3001/api/to_echo_other_host"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "cookie=[] accept=[text/plain]");
 }
@@ -270,11 +264,11 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_refuses_payl
 
     scope.server._webservice->set_entry_point(
         "post_to_other_host",
-        redirect_to(HttpStatus::TemporaryRedirect, shard_url("http://127.0.0.1:3001/api/sink")),
+        redirect_to(HttpStatus::TemporaryRedirect, "http://127.0.0.1:3001/api/sink"),
         HttpRequest::Post);
     scope.server._webservice->set_entry_point(
         "post_to_same_host",
-        redirect_to(HttpStatus::TemporaryRedirect, shard_url("http://localhost:3001/api/sink")),
+        redirect_to(HttpStatus::TemporaryRedirect, "http://localhost:3001/api/sink"),
         HttpRequest::Post);
     scope.server._webservice->set_entry_point(
         "sink",
@@ -286,17 +280,18 @@ TEST_F(TestNavigatorRedirects, test_navigator_cross_origin_redirect_refuses_payl
     Navigator navigator;
     allow_local_targets(navigator);
 
-    auto resp = navigator.post(shard_url("localhost:3001/api/post_to_same_host"), "password=hunter2");
+    auto resp = navigator.post(loopback_url("localhost:3001/api/post_to_same_host"), "password=hunter2");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
     EXPECT_EQ(resp->content().cpp_str(), "password=hunter2");
 
-    resp = navigator.post(shard_url("localhost:3001/api/post_to_other_host"), "password=hunter2");
+    resp = navigator.post(loopback_url("localhost:3001/api/post_to_other_host"), "password=hunter2");
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::TemporaryRedirect);
     EXPECT_TRUE(resp->redirect_history().empty());
-    EXPECT_EQ(resp->redirect_refusal(),
-              shard_url("cross-origin redirect refused for a request with a payload: http://127.0.0.1:3001/api/sink"));
+    EXPECT_EQ(
+        resp->redirect_refusal(),
+        loopback_url("cross-origin redirect refused for a request with a payload: http://127.0.0.1:3001/api/sink"));
 }
 
 } // namespace test

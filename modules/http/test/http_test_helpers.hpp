@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <sstream>
@@ -44,12 +45,50 @@
 namespace test
 {
 
-// concurrent gtest shards (jtest=N) share the loopback: each shard gets its own port range
-inline int shard_port(int port)
+struct LoopbackPorts
 {
-    const char *shard = std::getenv("GTEST_SHARD_INDEX");
-    return shard == nullptr ? port : port + std::atoi(shard) * 100;
+        std::mutex mutex;
+        std::map<int, int> ports;
+};
+
+inline LoopbackPorts & loopback_ports()
+{
+    static LoopbackPorts ports;
+    return ports;
 }
+
+// servers bind port 0: a key without a running server maps to port 1, where nothing listens
+inline int loopback_port(int key)
+{
+    LoopbackPorts & registry = loopback_ports();
+    std::lock_guard lock(registry.mutex);
+    const auto it = registry.ports.find(key);
+    return it == registry.ports.end() ? 1 : it->second;
+}
+
+class PublishedPort
+{
+    public:
+        PublishedPort(int key, int port): _key(key)
+        {
+            LoopbackPorts & registry = loopback_ports();
+            std::lock_guard lock(registry.mutex);
+            EXPECT_TRUE(registry.ports.emplace(key, port).second) << "port " << key << " already published";
+        }
+
+        ~PublishedPort()
+        {
+            LoopbackPorts & registry = loopback_ports();
+            std::lock_guard lock(registry.mutex);
+            registry.ports.erase(_key);
+        }
+
+        PublishedPort(const PublishedPort &) = delete;
+        PublishedPort & operator=(const PublishedPort &) = delete;
+
+    private:
+        int _key;
+};
 
 inline bool is_digit_at(std::string_view text, size_t idx)
 {
@@ -63,8 +102,8 @@ inline bool is_port_at(std::string_view text, size_t i)
     return is_digit_at(text, i + 3) && is_digit_at(text, i + 4) && (i + 5 == text.size() || !is_digit_at(text, i + 5));
 }
 
-// shifts every ":30xx" port of a url or header
-inline std::string shard_url(std::string_view text)
+// maps every ":30xx" port of a url or header to its loopback_port
+inline std::string loopback_url(std::string_view text)
 {
     std::string out;
     for (size_t i = 0; i < text.size(); ++i)
@@ -72,7 +111,7 @@ inline std::string shard_url(std::string_view text)
         out += text[i];
         if (is_port_at(text, i))
         {
-            out += std::to_string(shard_port(std::atoi(std::string(text.substr(i + 1, 4)).c_str())));
+            out += std::to_string(loopback_port(std::atoi(std::string(text.substr(i + 1, 4)).c_str())));
             i += 4;
         }
     }
@@ -162,18 +201,22 @@ struct BasicServerScope
         {
         }
 
-        void start(int port = shard_port(3001))
+        void start(int key = 3001)
         {
-            server.set_port(port);
+            server.set_port(0);
             ASSERT_TRUE(worker.start_sync_worker("test-server"));
             ASSERT_TRUE(server.wait_ready(std::chrono::milliseconds(500)));
+            published.emplace(key, server.get_port());
         }
 
         void stop()
         {
             server.set_service_wait_stop(true);
             server.stop();
+            published.reset();
         }
+
+        std::optional<PublishedPort> published;
 
         ~BasicServerScope() { stop(); }
 };
@@ -185,9 +228,10 @@ struct ServerScope: BasicServerScope<FeatureHttpServer>
 inline std::function<void(const sihd::http::HttpRequest &, sihd::http::HttpResponse &)>
     redirect_to(uint32_t status, std::string location)
 {
+    // resolved per request: the server port is published once it started
     return [status, location = std::move(location)](const sihd::http::HttpRequest &, sihd::http::HttpResponse & resp) {
         resp.set_status(status);
-        resp.http_header().set_header("location", location);
+        resp.http_header().set_header("location", loopback_url(location));
     };
 }
 
@@ -392,14 +436,16 @@ class SimpleConnectProxy
 
         ~SimpleConnectProxy() { stop(); }
 
-        bool start(int port)
+        int port() const { return _port; }
+
+        bool start()
         {
             if (!_listen.open(AF_INET, SOCK_STREAM, IPPROTO_TCP))
                 return false;
             (void)_listen.set_reuseaddr(true);
-            if (!_listen.bind(sihd::net::IpAddr("127.0.0.1", port)) || !_listen.listen(16))
+            if (!_listen.bind(sihd::net::IpAddr("127.0.0.1", 0)) || !_listen.listen(16))
                 return false;
-            _port = port;
+            _port = _listen.local_port().value_or(-1);
             _running = true;
             _accept_thread = std::thread([this] { _accept_loop(); });
             return true;
@@ -563,7 +609,7 @@ class SimpleConnectProxy
 class RawHttpClient
 {
     public:
-        bool connect(int port = shard_port(3001))
+        bool connect(int port = loopback_port(3001))
         {
             _client.set_poll_timeout(2000);
             return _client.open_and_connect("127.0.0.1", port).has_value();

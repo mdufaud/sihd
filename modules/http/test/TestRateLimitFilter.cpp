@@ -103,15 +103,15 @@ TEST(TestRateLimitFilter, test_rate_limit_filter_server)
     });
     scope.start();
 
-    auto resp = get(shard_url("localhost:3001/api/limited"));
+    auto resp = get(loopback_url("localhost:3001/api/limited"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
-    resp = get(shard_url("localhost:3001/api/limited"));
+    resp = get(loopback_url("localhost:3001/api/limited"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Ok);
 
-    resp = get(shard_url("localhost:3001/api/limited"));
+    resp = get(loopback_url("localhost:3001/api/limited"));
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::Forbidden);
 }

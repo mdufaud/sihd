@@ -42,13 +42,13 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_runs_http_filter)
     TestFilter filter;
     filter.blocked_uri = "/blocked";
     scope.server.set_http_filter(&filter);
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/blocked", "proto-two"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/blocked", "proto-two"), "");
     EXPECT_EQ(filter.filter_calls(), 1);
     EXPECT_EQ(filter.last_uri(), "/blocked");
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/open", "proto-two"), SimpleWsClient::switching_protocols);
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/open", "proto-two"), SimpleWsClient::switching_protocols);
     EXPECT_EQ(filter.filter_calls(), 2);
     EXPECT_EQ(filter.last_uri(), "/open");
     EXPECT_EQ(filter.last_client_ip(), "127.0.0.1");
@@ -61,15 +61,15 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_requires_authentic
     SimpleServerScope scope;
     TestAuth auth;
     scope.server.set_authenticator(&auth);
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two"), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Authorization: Bearer wrong-token\r\n"), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Authorization: Basic YWRtaW46d3Jvbmc=\r\n"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Authorization: Bearer wrong-token\r\n"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Authorization: Basic YWRtaW46d3Jvbmc=\r\n"), "");
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Authorization: Bearer my-secret-token-123\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Authorization: Bearer my-secret-token-123\r\n"),
               SimpleWsClient::switching_protocols);
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Authorization: Basic YWRtaW46c2VjcmV0\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Authorization: Basic YWRtaW46c2VjcmV0\r\n"),
               SimpleWsClient::switching_protocols);
 }
 
@@ -77,37 +77,37 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_checks_origin)
 {
     SimpleServerScope scope;
     ASSERT_TRUE(scope.server.add_websocket_origin("http://trusted.example"));
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two"), SimpleWsClient::switching_protocols);
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: http://localhost\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two"), SimpleWsClient::switching_protocols);
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: http://localhost\r\n"),
               SimpleWsClient::switching_protocols);
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: http://trusted.example\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: http://trusted.example\r\n"),
               SimpleWsClient::switching_protocols);
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: HTTP://Trusted.Example\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: HTTP://Trusted.Example\r\n"),
               SimpleWsClient::switching_protocols);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: http://evil.example\r\n"), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: http://localhost:9\r\n"), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: null\r\n"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: http://evil.example\r\n"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: http://localhost:9\r\n"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: null\r\n"), "");
 }
 
 TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_same_origin_needs_a_literal_host)
 {
     SimpleServerScope scope;
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002),
                          "/",
                          "proto-two",
-                         shard_url("Origin: http://127.0.0.1:3002\r\n"),
-                         shard_url("127.0.0.1:3002")),
+                         loopback_url("Origin: http://127.0.0.1:3002\r\n"),
+                         loopback_url("127.0.0.1:3002")),
               SimpleWsClient::switching_protocols);
-    EXPECT_EQ(ws_upgrade(shard_port(3002),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002),
                          "/",
                          "proto-two",
-                         shard_url("Origin: http://rebound.example:3002\r\n"),
-                         shard_url("rebound.example:3002")),
+                         loopback_url("Origin: http://rebound.example:3002\r\n"),
+                         loopback_url("rebound.example:3002")),
               "");
 }
 
@@ -115,20 +115,20 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_any_origin_when_al
 {
     SimpleServerScope scope;
     ASSERT_TRUE(scope.server.add_websocket_origin("*"));
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two", "Origin: http://evil.example\r\n"),
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two", "Origin: http://evil.example\r\n"),
               SimpleWsClient::switching_protocols);
 }
 
 TEST_F(TestHttpServerWebsocketUpgrade, test_websocket_upgrade_refuses_the_http_protocol)
 {
     SimpleServerScope scope;
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", ""), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "http-server"), "");
-    EXPECT_EQ(ws_upgrade(shard_port(3002), "/", "proto-two"), SimpleWsClient::switching_protocols);
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", ""), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "http-server"), "");
+    EXPECT_EQ(ws_upgrade(loopback_port(3002), "/", "proto-two"), SimpleWsClient::switching_protocols);
 }
 
 TEST_F(TestHttpServerWebsocketUpgrade, test_h2c_upgrade_is_refused)
@@ -137,10 +137,10 @@ TEST_F(TestHttpServerWebsocketUpgrade, test_h2c_upgrade_is_refused)
     TestFilter filter;
     filter.blocked_uri = "/blocked";
     scope.server.set_http_filter(&filter);
-    scope.start(shard_port(3002));
+    scope.start(3002);
 
     RawHttpClient client;
-    ASSERT_TRUE(client.connect(shard_port(3002)));
+    ASSERT_TRUE(client.connect(loopback_port(3002)));
 
     ASSERT_TRUE(client.send("GET /blocked HTTP/1.1\r\n"
                             "Host: localhost\r\n"

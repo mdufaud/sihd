@@ -33,8 +33,8 @@ TEST_F(TestRequestGuards, test_resolve_to_pins_the_connection_address)
 
     RequestOptions options;
     options.proxy = "";
-    options.resolve = ResolvePin {"pinned.example.invalid", shard_port(3001), {"127.0.0.1"}};
-    auto resp = http::get(shard_url("pinned.example.invalid:3001/api/res"), options);
+    options.resolve = ResolvePin {"pinned.example.invalid", loopback_port(3001), {"127.0.0.1"}};
+    auto resp = http::get(loopback_url("pinned.example.invalid:3001/api/res"), options);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->content().cpp_str(), "pinned");
 }
@@ -58,12 +58,12 @@ TEST_F(TestRequestGuards, test_server_refuses_line_breaks_in_response_headers)
 
     scope.start();
 
-    auto clean = http::get(shard_url("localhost:3001/api/clean"));
+    auto clean = http::get(loopback_url("localhost:3001/api/clean"));
     ASSERT_TRUE(clean.has_value());
     EXPECT_EQ(clean->http_header().find("x-next"), "a");
 
     for (const std::string & path :
-         {shard_url("localhost:3001/api/header_injection"), shard_url("localhost:3001/api/cookie_injection")})
+         {loopback_url("localhost:3001/api/header_injection"), loopback_url("localhost:3001/api/cookie_injection")})
     {
         auto resp = http::get(path);
         ASSERT_FALSE(resp.has_value()) << path;

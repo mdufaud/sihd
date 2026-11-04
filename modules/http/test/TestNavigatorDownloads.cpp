@@ -37,7 +37,7 @@ TEST_F(TestNavigatorDownloads, test_navigator_download_honors_max_response_size)
 
     sihd::sys::TmpDir dir;
     const std::string path = sihd::sys::fs::combine(dir.path(), "big.bin");
-    auto resp = navigator.download(shard_url("localhost:3001/api/big"), path);
+    auto resp = navigator.download(loopback_url("localhost:3001/api/big"), path);
 
     ASSERT_FALSE(resp.has_value());
     EXPECT_EQ(resp.error().code, ErrorCode::overflow);
@@ -62,7 +62,7 @@ TEST_F(TestNavigatorDownloads, test_navigator_download_failure_keeps_the_existin
     const std::string path = sihd::sys::fs::combine(dir.path(), "kept.txt");
     ASSERT_TRUE(sihd::sys::fs::write(path, "old").has_value());
 
-    auto resp = navigator.download(shard_url("localhost:3001/api/missing"), path);
+    auto resp = navigator.download(loopback_url("localhost:3001/api/missing"), path);
 
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), HttpStatus::NotFound);
@@ -86,7 +86,7 @@ TEST_F(TestNavigatorDownloads, test_navigator_download_replaces_the_file_without
     const std::string path = sihd::sys::fs::combine(dir.path(), "replaced.txt");
     ASSERT_TRUE(sihd::sys::fs::write(path, "old").has_value());
 
-    auto resp = navigator.download(shard_url("localhost:3001/api/file"), path);
+    auto resp = navigator.download(loopback_url("localhost:3001/api/file"), path);
 
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(sihd::sys::fs::read_all(path).value_or("unreadable"), "fresh");

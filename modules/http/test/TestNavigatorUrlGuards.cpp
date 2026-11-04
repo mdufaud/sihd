@@ -25,11 +25,11 @@ TEST_F(TestNavigatorUrlGuards, test_navigator_ssrf_guard_scheme_less_host)
     navigator.set_ssrf_guard(true);
 
     const std::vector<std::string> urls {
-        shard_url("localhost:3001/api/hello"),
+        loopback_url("localhost:3001/api/hello"),
         "metadata.internal:80/latest",
-        shard_url("[::1]:3001/api/hello"),
-        shard_url("http://[::ffff:127.0.0.1]:3001/api/hello"),
-        shard_url("http://[::]:3001/api/hello"),
+        loopback_url("[::1]:3001/api/hello"),
+        loopback_url("http://[::ffff:127.0.0.1]:3001/api/hello"),
+        loopback_url("http://[::]:3001/api/hello"),
         "http://100.100.100.200/latest",
     };
 
@@ -46,13 +46,13 @@ TEST_F(TestNavigatorUrlGuards, test_navigator_guards_private_hosts_by_default)
     Navigator navigator;
     navigator.clear_proxy();
 
-    auto resp = navigator.get(shard_url("http://127.0.0.1:3001/api/hello"));
+    auto resp = navigator.get(loopback_url("http://127.0.0.1:3001/api/hello"));
     ASSERT_FALSE(resp.has_value());
     EXPECT_EQ(resp.error().message,
-              shard_url("SSRF guard blocked a request to a private host: http://127.0.0.1:3001/api/hello"));
+              loopback_url("SSRF guard blocked a request to a private host: http://127.0.0.1:3001/api/hello"));
 
-    EXPECT_FALSE(navigator.ws_connect(shard_url("ws://127.0.0.1:3013"), "proto-two"));
-    EXPECT_FALSE(navigator.ws_connect(shard_url("WS://[::ffff:127.0.0.1]:3013"), "proto-two"));
+    EXPECT_FALSE(navigator.ws_connect(loopback_url("ws://127.0.0.1:3013"), "proto-two"));
+    EXPECT_FALSE(navigator.ws_connect(loopback_url("WS://[::ffff:127.0.0.1]:3013"), "proto-two"));
     EXPECT_FALSE(navigator.ws_connect("file:///etc/passwd", "proto-two"));
 }
 
@@ -94,7 +94,7 @@ TEST_F(TestNavigatorUrlGuards, test_navigator_ws_connect_refuses_a_socks_proxy)
     allow_local_targets(navigator);
     navigator.set_proxy("127.0.0.1:1", ProxyType::Socks5);
 
-    auto connected = navigator.ws_connect(shard_url("ws://localhost:3013"), "proto-two");
+    auto connected = navigator.ws_connect(loopback_url("ws://localhost:3013"), "proto-two");
 
     ASSERT_FALSE(connected.has_value());
     EXPECT_EQ(connected.error().code, ErrorCode::not_supported);

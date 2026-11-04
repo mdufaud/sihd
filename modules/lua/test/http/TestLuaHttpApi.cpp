@@ -30,6 +30,9 @@ class TestLuaHttpApi: public test::LuaFixture
             _server = std::make_unique<EchoServerScope>();
             _server->server.set_cors_origin("https://app.com");
             _server->start(3011);
+            luabridge::setGlobal(_vm.lua_state(),
+                                 "localhost:" + std::to_string(_server->server.get_port()),
+                                 "server_host");
         }
 
         void TearDown() override
@@ -76,7 +79,8 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
     RequestOptions opt;
     opt.proxy = "";
     opt.timeout = Duration(time::sec(5));
-    auto resp = sihd::http::post("localhost:3021/api/compute", "payload", opt);
+    const std::string host = "localhost:" + std::to_string(lua_server->get_port());
+    auto resp = sihd::http::post(host + "/api/compute", "payload", opt);
     ASSERT_TRUE(resp.has_value());
     EXPECT_EQ(resp->status(), 200u);
     EXPECT_EQ(resp->content().cpp_str(), "from-lua:payload");
@@ -84,7 +88,7 @@ TEST_F(TestLuaHttpApi, test_luahttp_server_route)
     Multipart form;
     form.add_field("field", "lua-multipart-value");
     opt.multipart = form;
-    auto upload = sihd::http::post("localhost:3021/api/upload", "", opt);
+    auto upload = sihd::http::post(host + "/api/upload", "", opt);
     ASSERT_TRUE(upload.has_value());
     EXPECT_EQ(upload->status(), 200u);
     EXPECT_EQ(upload->content().cpp_str(), "lua-multipart:lua-multipart-value");
