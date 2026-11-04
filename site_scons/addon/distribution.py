@@ -15,12 +15,13 @@ contributors = ["azouiten <alexandre.zouiten1@gmail.com>"]
 
 # packages equivalent to build DEBIAN/control dependencies
 # Note: simdjson is NOT listed — the system package lacks simdjson::builder (added in 4.x),
-#       use vcpkg to get the correct version.
+#       use vcpkg to get the correct version. Same for ftxui (trixie ships 5.x, tui needs the 6.x API).
 apt_packages = {
     "gtest": "libgtest-dev",
     "fmt": "libfmt-dev",
     "pcre2": "libpcre2-dev",
     "libuuid": "uuid-dev",
+    "cli11": "libcli11-dev",
     "openssl": "libssl-dev",
     "curl": "libcurl4-openssl-dev",
     "libwebsockets": "libwebsockets-dev",
@@ -34,7 +35,7 @@ apt_packages = {
     "dbus": "libdbus-1-dev",
     "pybind11": "python3-pybind11",
     "opengl": "libgl-dev",
-    "ftxui": "libftxui-dev",
+    "ncurses": "libncurses-dev",
     "glfw3": "libglfw3-dev",
     "glew": "libglew-dev",
     "sdl3": "libsdl3-dev",
@@ -70,6 +71,7 @@ pacman_packages = {
     "pybind11": "pybind11",
     "opengl": "mesa",
     # "ftxui": "ftxui",
+    "ncurses": "ncurses",
     "glfw3": "glfw",
     "glew": "glew",
     "sdl3": "sdl3",
