@@ -1,5 +1,7 @@
 #include <algorithm>
 
+#include <fmt/format.h>
+
 #include <sihd/util/endian.hpp>
 #include <sihd/wifi/management.hpp>
 
@@ -131,6 +133,113 @@ Result<uint16_t> parse_reason(ArrUByteView body)
     if (body.size() < reason_size)
         return std::unexpected(too_short("reason", reason_size));
     return u16_at(body, 0);
+}
+
+std::string reason_str(uint16_t reason)
+{
+    switch (reason)
+    {
+        case 1:
+            return "unspecified";
+        case 2:
+            return "previous authentication no longer valid";
+        case 3:
+            return "leaving the network";
+        case 4:
+            return "inactivity";
+        case 5:
+            return "access point busy";
+        case 6:
+            return "class 2 frame from an unauthenticated station";
+        case 7:
+            return "class 3 frame from an unassociated station";
+        case 8:
+            return "leaving the bss";
+        case 9:
+            return "association without authentication";
+        case 10:
+            return "unacceptable power capability";
+        case 11:
+            return "unacceptable supported channels";
+        case 12:
+            return "bss transition disassociation";
+        case 13:
+            return "invalid element";
+        case 14:
+            return "mic failure";
+        case 15:
+            return "4-way handshake timeout";
+        case 16:
+            return "group key handshake timeout";
+        case 17:
+            return "handshake element mismatch";
+        case 18:
+            return "invalid group cipher";
+        case 19:
+            return "invalid pairwise cipher";
+        case 20:
+            return "invalid akm";
+        case 21:
+            return "unsupported rsn version";
+        case 22:
+            return "invalid rsn capabilities";
+        case 23:
+            return "802.1X authentication failed";
+        case 24:
+            return "cipher suite rejected";
+        case 25:
+            return "tdls peer unreachable";
+        case 26:
+            return "tdls unspecified";
+        case 32:
+            return "unspecified qos";
+        case 33:
+            return "not enough bandwidth";
+        case 34:
+            return "too many lost acks";
+        case 35:
+            return "txop exceeded";
+        case 36:
+            return "station leaving";
+        case 37:
+            return "end of stream or block ack";
+        case 38:
+            return "stream or block ack setup required";
+        case 39:
+            return "timeout";
+        case 52:
+            return "mesh peering canceled";
+        case 53:
+            return "mesh max peers";
+        case 54:
+            return "mesh configuration policy";
+        case 55:
+            return "mesh close";
+        case 56:
+            return "mesh max retries";
+        case 57:
+            return "mesh confirm timeout";
+        case 58:
+            return "mesh invalid gtk";
+        case 59:
+            return "mesh inconsistent parameters";
+        case 60:
+            return "mesh invalid security capability";
+        case 61:
+            return "mesh path error";
+        case 62:
+            return "mesh no forwarding information";
+        case 63:
+            return "mesh destination unreachable";
+        case 64:
+            return "mac address already in the mbss";
+        case 65:
+            return "mesh channel switch regulatory";
+        case 66:
+            return "mesh channel switch unspecified";
+        default:
+            return fmt::format("reason {}", reason);
+    }
 }
 
 Result<Action> parse_action(ArrUByteView body)

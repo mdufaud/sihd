@@ -107,6 +107,15 @@ TEST_F(TestManagement, test_management_reason)
     EXPECT_EQ(parse_reason(ArrUByteView(body)), 7u);
 }
 
+TEST_F(TestManagement, test_management_reason_str)
+{
+    EXPECT_EQ(reason_str(3), "leaving the network");
+    EXPECT_EQ(reason_str(15), "4-way handshake timeout");
+    EXPECT_EQ(reason_str(0), "reason 0");
+    EXPECT_EQ(reason_str(12), "bss transition disassociation");
+    EXPECT_EQ(reason_str(45), "reason 45");
+}
+
 TEST_F(TestManagement, test_management_action)
 {
     const std::vector<uint8_t> body = {0x03, 0x01, 0x02};

@@ -4,6 +4,8 @@
 #include <array>
 #include <span>
 
+#include <fmt/format.h>
+
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/str.hpp>
@@ -155,6 +157,19 @@ Result<WLAN_INTERFACE_STATE> Session::interface_state(const GUID & guid)
         return std::unexpected(error(code, "wlan interface state"));
     Defer free_state([this, data] { _api.free_memory(data); });
     return *static_cast<const WLAN_INTERFACE_STATE *>(data);
+}
+
+Result<std::optional<ULONG>> Session::query_ulong(const GUID & guid, WLAN_INTF_OPCODE opcode)
+{
+    DWORD data_size = 0;
+    void *data = nullptr;
+    const DWORD code = _api.query_interface(_client, &guid, opcode, nullptr, &data_size, &data, nullptr);
+    if (code == ERROR_INVALID_STATE)
+        return std::nullopt;
+    if (code != ERROR_SUCCESS)
+        return std::unexpected(error(code, fmt::format("wlan interface opcode {}", static_cast<int>(opcode))));
+    Defer free_value([this, data] { _api.free_memory(data); });
+    return *static_cast<const ULONG *>(data);
 }
 
 Result<void> Session::listen()

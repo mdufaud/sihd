@@ -68,6 +68,8 @@ class Session
         // nullopt when the interface is not associated
         sihd::util::Result<std::optional<WLAN_CONNECTION_ATTRIBUTES>> connection(const GUID & guid);
         sihd::util::Result<WLAN_INTERFACE_STATE> interface_state(const GUID & guid);
+        // a ULONG opcode, nullopt when the interface state does not hold it (a channel while disconnected)
+        sihd::util::Result<std::optional<ULONG>> query_ulong(const GUID & guid, WLAN_INTF_OPCODE opcode);
 
         // must come before acting on the interface: queues the acm notifications from here on
         sihd::util::Result<void> listen();

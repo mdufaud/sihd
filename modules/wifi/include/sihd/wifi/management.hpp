@@ -2,6 +2,7 @@
 #define __SIHD_WIFI_MANAGEMENT_HPP__
 
 #include <cstdint>
+#include <string>
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Result.hpp>
@@ -68,6 +69,8 @@ sihd::util::Result<AssocResponse> parse_assoc_response(sihd::util::ArrUByteView 
 sihd::util::Result<Authentication> parse_authentication(sihd::util::ArrUByteView body);
 // reason code of a deauthentication or a disassociation; check Frame::protected_frame first
 sihd::util::Result<uint16_t> parse_reason(sihd::util::ArrUByteView body);
+// IEEE 802.11 reason code name, "reason N" for a reserved or unnamed one
+std::string reason_str(uint16_t reason);
 // same trap as parse_reason(): an action frame can be protected
 sihd::util::Result<Action> parse_action(sihd::util::ArrUByteView body);
 

@@ -7,9 +7,11 @@
 #include <sihd/wifi/data.hpp>
 #include <sihd/wifi/dissect.hpp>
 #include <sihd/wifi/frame.hpp>
+#include <sihd/wifi/frequency.hpp>
 #include <sihd/wifi/ies.hpp>
 #include <sihd/wifi/link.hpp>
 #include <sihd/wifi/management.hpp>
+#include <sihd/wifi/radio.hpp>
 #include <sihd/wifi/radiotap.hpp>
 #include <sihd/wifi/scan.hpp>
 #include <sihd/wifi/taxonomy.hpp>
