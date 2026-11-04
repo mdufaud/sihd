@@ -18,6 +18,14 @@ using namespace sihd::core;
 using namespace sihd::sys;
 using sihd::json::Json;
 
+// a static binary pulls only the archive members it references: keep the factories the trees name
+extern "C" Named *sihd_factory_DevPulsation(const std::string & name, Node *parent);
+extern "C" Named *sihd_factory_DevStats(const std::string & name, Node *parent);
+extern "C" Named *sihd_factory_MemRecorder(const std::string & name, Node *parent);
+[[gnu::used]] static constexpr decltype(FactoryEntry::create) g_linked_factories[] = {&sihd_factory_DevPulsation,
+                                                                                      &sihd_factory_DevStats,
+                                                                                      &sihd_factory_MemRecorder};
+
 class TestDeviceTree: public ::testing::Test
 {
     protected:
