@@ -170,8 +170,12 @@ void fuzz_resizable_same_size(FuzzedDataProvider & provider)
     test::fuzz_check(channel->write(view, size_t {0}), "an unchanged write succeeds");
     test::fuzz_check(counter.count == 0, "an unchanged write that fits does not notify");
 
-    (void)channel->write(ArrByteView(bytes.data(), 0));
-    test::fuzz_check(channel->size() == size && same_content(*channel, bytes), "an empty write does not resize");
+    (void)channel->write(ArrByteView(bytes.data(), 0), size + 1);
+    test::fuzz_check(channel->size() == size && same_content(*channel, bytes),
+                     "an empty write at an offset does not resize");
+
+    test::fuzz_check(channel->write(ArrByteView(bytes.data(), 0)), "an empty write succeeds");
+    test::fuzz_check(channel->size() == 0, "an empty write empties a resizable channel");
 }
 
 void fuzz_value_at(FuzzedDataProvider & provider)

@@ -201,6 +201,17 @@ bool Channel::copy_to_bytes(IArray & arr, Slice byte_slice, Timestamp *timestamp
     return arr.copy_from_bytes(_array_ptr->buf() + range.from, range.size());
 }
 
+bool Channel::copy_resized_to(IArray & arr, Timestamp *timestamp) const
+{
+    std::lock_guard lock(_arr_mutex);
+    if (timestamp != nullptr)
+        *timestamp = _timestamp;
+    const size_t byte_size = _array_ptr->byte_size();
+    if (arr.byte_resize(byte_size) == false)
+        return false;
+    return byte_size == 0 || arr.copy_from_bytes(_array_ptr->buf(), byte_size);
+}
+
 bool Channel::copy_to(IArray & arr, Slice slice, Timestamp *timestamp) const
 {
     std::lock_guard lock(_arr_mutex);
@@ -265,13 +276,15 @@ bool Channel::_write(const ArrByteView & arr_view, size_t byte_offset, bool fit_
                      _array_ptr->byte_size());
             return false;
         }
-        const bool resized = _resizable && arr_view.byte_size() > 0
+        const bool resized = _resizable && (fit_size || arr_view.byte_size() > 0)
                              && (fit_size ? needed != _array_ptr->byte_size() : needed > _array_ptr->byte_size());
         if (resized && _array_ptr->byte_resize(needed) == false)
             return false;
         if (!resized && _write_change_only && _array_ptr->is_bytes_equal(arr_view, {(ssize_t)byte_offset}))
             return true;
-        if ((ret = _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset})))
+        // an empty whole write only shrinks a resizable channel
+        ret = (resized && arr_view.byte_size() == 0) || _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset});
+        if (ret)
             this->do_timestamp();
     }
 

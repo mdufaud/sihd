@@ -14,14 +14,14 @@ SIHD_LOGGER;
 Core::Core(const std::string & name, Node *parent): sihd::core::Device(name, parent)
 {
     _running = false;
-    _is_reset = true;
 }
 
 Core::~Core()
 {
     if (_running)
         this->stop();
-    if (_is_reset == false)
+    // a failed start or stop leaves a state that refuses a reset
+    if (this->device_state() == ServiceController::Stopped)
         this->reset();
 }
 
@@ -32,7 +32,6 @@ bool Core::is_running() const
 
 bool Core::on_init()
 {
-    _is_reset = false;
     return true;
 }
 
@@ -50,7 +49,6 @@ bool Core::on_stop()
 
 bool Core::on_reset()
 {
-    _is_reset = true;
     return true;
 }
 

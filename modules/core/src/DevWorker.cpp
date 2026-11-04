@@ -81,6 +81,27 @@ bool DevWorker::on_init()
     return true;
 }
 
+Result<void> DevWorker::on_links_resolved()
+{
+    auto inputs = this->linked_channels();
+    SIHD_UNEXPECTED_RETURN(inputs);
+    for (const auto & [name, in] : *inputs)
+    {
+        const std::string out_name = name + OUT_SUFFIX;
+        if (this->get_channel(out_name))
+            continue;
+        Channel *out = in->resizable()
+                           ? this->add_channel_resizable(out_name, in->data_type(), in->size(), in->capacity())
+                           : this->add_channel(out_name, in->data_type(), in->size());
+        if (out == nullptr)
+            return std::unexpected(
+                Error(ErrorCode::invalid_argument, "'{}' could not create '{}'", this->full_name(), out_name));
+        // every write of the source is replayed, even an equal one
+        out->set_write_on_change(false);
+    }
+    return {};
+}
+
 bool DevWorker::bind_relays()
 {
     auto dropped = this->get_channel(CHANNEL_DROPPED);
@@ -94,18 +115,10 @@ bool DevWorker::bind_relays()
     _out_of.clear();
     for (const auto & [name, in] : *inputs)
     {
-        const std::string out_name = name + OUT_SUFFIX;
-        Channel *out = this->get_channel(out_name).value_or(nullptr);
-        if (out == nullptr)
-        {
-            out = in->resizable() ? this->add_channel_resizable(out_name, in->data_type(), in->size(), in->capacity())
-                                  : this->add_channel(out_name, in->data_type(), in->size());
-            if (out == nullptr)
-                return false;
-            // every write of the source is replayed, even an equal one
-            out->set_write_on_change(false);
-        }
-        _out_of[in] = out;
+        auto out = this->get_channel(name + OUT_SUFFIX);
+        if (SIHD_UNEXPECTED_LOG(out))
+            return false;
+        _out_of[in] = *out;
     }
 
     _dropped = 0;

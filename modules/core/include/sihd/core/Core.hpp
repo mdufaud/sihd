@@ -21,7 +21,6 @@ class Core: public sihd::core::Device
 
     private:
         bool _running;
-        bool _is_reset;
 };
 
 } // namespace sihd::core

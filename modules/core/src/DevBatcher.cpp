@@ -95,13 +95,30 @@ void DevBatcher::_write_current(Lane & lane)
     lane.current = Block {};
 }
 
-bool DevBatcher::on_start()
+Result<void> DevBatcher::on_links_resolved()
 {
     if (_samples == 0)
+        return std::unexpected(Error(ErrorCode::invalid_argument, "'{}' needs a number of samples", this->full_name()));
+    auto inputs = this->linked_channels();
+    SIHD_UNEXPECTED_RETURN(inputs);
+    for (const auto & [name, in] : *inputs)
     {
-        SIHD_LOG(error, "DevBatcher: {} needs a number of samples", this->name());
-        return false;
+        const std::string batch_name = name + BATCH_SUFFIX;
+        if (this->get_channel(batch_name))
+            continue;
+        const size_t block_capacity = _samples * (in->resizable() ? in->capacity() : in->size());
+        Channel *batch = this->add_channel_resizable(batch_name, in->data_type(), block_capacity, block_capacity);
+        if (batch == nullptr)
+            return std::unexpected(
+                Error(ErrorCode::invalid_argument, "'{}' could not create '{}'", this->full_name(), batch_name));
+        // every block is an event, even one equal to the previous
+        batch->set_write_on_change(false);
     }
+    return {};
+}
+
+bool DevBatcher::on_start()
+{
     auto inputs = this->linked_channels();
     if (SIHD_UNEXPECTED_LOG(inputs))
         return false;
@@ -110,18 +127,10 @@ bool DevBatcher::on_start()
     _pending.clear();
     for (const auto & [name, in] : *inputs)
     {
-        const std::string batch_name = name + BATCH_SUFFIX;
-        Channel *batch = this->get_channel(batch_name).value_or(nullptr);
-        if (batch == nullptr)
-        {
-            const size_t block_capacity = _samples * (in->resizable() ? in->capacity() : in->size());
-            batch = this->add_channel_resizable(batch_name, in->data_type(), block_capacity, block_capacity);
-            if (batch == nullptr)
-                return false;
-            // every block is an event, even one equal to the previous
-            batch->set_write_on_change(false);
-        }
-        _lanes[in].batch = batch;
+        auto batch = this->get_channel(name + BATCH_SUFFIX);
+        if (SIHD_UNEXPECTED_LOG(batch))
+            return false;
+        _lanes[in].batch = *batch;
     }
 
     if (_step_worker.start_worker(this->name()) == false)

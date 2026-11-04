@@ -45,26 +45,28 @@ bool DevMessage::is_running() const
     return _running;
 }
 
+bool DevMessage::_write_field(IMessageField *field, Channel *out)
+{
+    std::vector<uint8_t> bytes(out->byte_size());
+    if (field->field_write_to(bytes.data(), bytes.size()) == false || out->write(ArrByteView(bytes)) == false)
+    {
+        SIHD_LOG(error, "DevMessage: cannot write into channel {}", out->name());
+        return false;
+    }
+    return true;
+}
+
 void DevMessage::_compute_output()
 {
-    if (_msg_ptr->field_write_to(_channel_msg_out->data(), _channel_msg_out->byte_size()) == false)
-    {
-        SIHD_LOG(error, "DevMessage: cannot write message {}", _channel_msg_out->name());
-        return;
-    }
-    _channel_msg_out->notify();
+    this->_write_field(_msg_ptr, _channel_msg_out);
 }
 
 void DevMessage::_fill_channels_out()
 {
     for (const auto & [field, ch_out] : _fields_to_channel_out)
     {
-        if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
-        {
-            SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
+        if (this->_write_field(field, ch_out) == false)
             return;
-        }
-        ch_out->notify();
     }
 }
 
@@ -82,7 +84,7 @@ void DevMessage::handle(sihd::core::Channel *channel)
     }
     else if (channel == _channel_msg_in)
     {
-        if (_msg_ptr->field_read_from(channel->array()->buf(), channel->size()) == false)
+        if (_msg_ptr->field_read_from(channel->array()->buf(), channel->byte_size()) == false)
         {
             SIHD_LOG(error, "DevMessage: cannot fill message from channel {}", _channel_msg_in->name());
             return;
@@ -100,23 +102,14 @@ void DevMessage::handle(sihd::core::Channel *channel)
     if (it != _channels_in_to_field.end())
     {
         IMessageField *field = it->second;
-        if (field->field_read_from(channel->array()->buf(), channel->size()) == false)
+        if (field->field_read_from(channel->array()->buf(), channel->byte_size()) == false)
         {
             SIHD_LOG(error, "DevMessage: cannot fill field from channel {}", channel->name());
             return;
         }
 
-        if (_trigger_mode == false)
-        {
-            Channel *ch_out = _fields_to_channel_out.at(field);
-            if (field->field_write_to(ch_out->data(), ch_out->byte_size()) == false)
-            {
-                SIHD_LOG(error, "DevMessage: cannot write into channel {}", ch_out->name());
-                return;
-            }
-            ch_out->notify();
+        if (_trigger_mode == false && this->_write_field(field, _fields_to_channel_out.at(field)))
             this->_compute_output();
-        }
     }
 }
 

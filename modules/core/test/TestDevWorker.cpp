@@ -66,6 +66,34 @@ TEST_F(TestDevWorker, test_dev_worker_relays_on_its_thread_and_stamps_the_relay_
     EXPECT_TRUE(core.stop());
 }
 
+TEST_F(TestDevWorker, test_dev_worker_relays_are_linkable_by_a_device_started_before)
+{
+    Core core;
+    Core *consumer = core.add_child<Core>("consumer");
+    ASSERT_TRUE(consumer->add_link("relayed", "..second.first_out_out"));
+    DevWorker *second = core.add_child<DevWorker>("second");
+    ASSERT_TRUE(second->add_link("first_out", "..first.source_out"));
+    DevWorker *first = core.add_child<DevWorker>("first");
+    ASSERT_TRUE(first->add_link("source", "..source"));
+    Channel *source = core.add_channel("source", "int", 1);
+
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+    Channel *relayed = channel_of(consumer, "relayed");
+    ASSERT_NE(relayed, nullptr);
+    Synchronizer reached(2);
+    Handler<Channel *> relayed_observer([&reached](Channel *) { reached.sync(); });
+    relayed->add_observer(&relayed_observer);
+    ASSERT_TRUE(source->write<int>(0, 42));
+
+    ASSERT_TRUE(reached.sync(Duration(time::sec(2))));
+    EXPECT_EQ(relayed, channel_of(second, "first_out_out"));
+    EXPECT_NE(channel_of(first, "source_out"), nullptr);
+    EXPECT_EQ(relayed->read<int>(0), 42);
+    EXPECT_TRUE(core.stop());
+    EXPECT_TRUE(core.reset());
+}
+
 TEST_F(TestDevWorker, test_dev_worker_relays_several_channels_on_one_thread)
 {
     Core core;

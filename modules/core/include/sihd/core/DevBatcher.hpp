@@ -37,6 +37,7 @@ class DevBatcher: public sihd::core::Device,
         bool on_start() override;
         bool on_stop() override;
         bool on_reset() override;
+        sihd::util::Result<void> on_links_resolved() override;
 
     private:
         struct Sample

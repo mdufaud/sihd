@@ -96,10 +96,10 @@
 ### Named tree and values
 
 - `Named`: object with a name and an optional parent. `name`, `full_name`, `parent`, `root`, `find` (dotted paths such as `parent.child` and `..`), `set_parent`, ownership flags.
-- `Node`: `Named` with children. `add_child` (with or without ownership), `get_child`, `remove_child`, `has_ownership`, `execute_children`, `add_link` and `resolve_link` for named links, `tree_str`.
+- `Node`: `Named` with children. `add_child` (with or without ownership), `get_child`, `remove_child`, `has_ownership`, `execute_children`, `add_link` and `resolve_link` for named links, `tree_str`. `resolve_links` adds each link as a non-owned child (`is_link`); a missing target makes the target's parent resolve its own links first, up to `SIHD_NODE_MAX_LINK_RECURSION`, then the virtual `on_links_resolved()` runs, where a subclass creates what derives from its links.
 - `NamedFactory`: `SIHD_REGISTER_FACTORY(Class)` registers a class for lookup by name; `create_from_factory_table` resolves a class name.
 - `Value`: type-tagged scalar (`Value(T)`, `compare`, `compare_double_epsilon`, `to_double`, `str`, `from_*_string` parsers).
-- `Message`, `DynMessage`: `Node` holding typed `MessageField`s with a byte layout (`add_field`, `get`, `set`, `from_bytes`, `finish`); `DynMessage` adds per-field rules and hidden fields (`add_rule`, `hide_field`, `reset`).
+- `Message`, `DynMessage`: `Node` holding typed `MessageField`s with a byte layout (`add_field`, `get`, `set`, `from_bytes`, `finish`), byte fields read as a view with `get_bytes` and written with `set_bytes` (a shorter write keeps the bytes past it), and `for_each_record(records, callback)` reading a buffer of records of the message back to back (`false` when its size is not a multiple of the message size); `DynMessage` adds per-field rules and hidden fields (`add_rule`, `hide_field`, `reset`).
 - `MessageField`, `IMessageField`: one typed field, scalar or array (`build_array`, `read_value`, `write_value`, `field_read_from`, `field_write_to`).
 - `Provider<Container>`, `VectorProvider`, `ListProvider`, `SetProvider`, `DequeProvider`, `ArrayProvider`, `FunctionProvider`, `IProvider<T>`: pull-style sources of values (`provide`, `providing`).
 - `IReader`, `IReaderTimestamp`, `IWriter`, `IWriterTimestamp`: byte-stream interfaces, with variants carrying a `Timestamp`.
@@ -107,7 +107,7 @@
 
 ### Configuration
 
-- `Configurable`: registers named setters (`add_conf` with a member function, a free function or a `std::function`) and applies them from a JSON document or one value (`set_conf`, `set_conf_int`, `set_conf_float`, `set_conf_str`). Returns `Result<void>`.
+- `Configurable`: registers named setters (`add_conf` with a member function, a free function or a `std::function`) and applies them from a JSON document or one value (`set_conf`, `set_conf_int`, `set_conf_float`, `set_conf_str`); an integer also sets a `float` or `double` setter. Returns `Result<void>`.
 - `StrConfiguration`: parses a `key=value` string (`parse_configuration`, `has`, `find`, `get`, `str`).
 
 ### Strings

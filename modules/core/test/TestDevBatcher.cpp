@@ -52,6 +52,20 @@ class TestDevBatcher: public ::testing::Test
         Channel *_batch = nullptr;
 };
 
+TEST_F(TestDevBatcher, test_dev_batcher_batch_is_linkable_by_a_device_started_before)
+{
+    Core core;
+    Core *consumer = core.add_child<Core>("consumer");
+    ASSERT_TRUE(consumer->add_link("batch", "..batcher.source_batch"));
+    DevBatcher *batcher = this->wire(core, 2, 10000);
+
+    this->start(core, batcher);
+
+    EXPECT_EQ(channel_of(consumer, "batch"), _batch);
+    EXPECT_TRUE(core.stop());
+    EXPECT_TRUE(core.reset());
+}
+
 TEST_F(TestDevBatcher, test_dev_batcher_writes_a_full_block)
 {
     Core core;

@@ -1,3 +1,4 @@
+
 #include <sihd/core/Device.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -17,8 +18,10 @@ bool for_each_child_service(Node *node, Callable && fn)
     bool ret = true;
     for (const std::string & child_name : node->children_keys())
     {
-        Named *child = node->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
+        // a link is an alias whose target may already be gone, never a child to drive
+        if (node->is_link(child_name))
+            continue;
+        AService *service = dynamic_cast<AService *>(node->get_child(child_name));
         if (service != nullptr && fn(service, child_name) == false)
             ret = false;
     }
@@ -85,8 +88,9 @@ bool Device::do_start()
     std::list<AService *> started_services;
     for (const std::string & child_name : this->children_keys())
     {
-        Named *child = this->get_child(child_name);
-        AService *service = dynamic_cast<AService *>(child);
+        if (this->is_link(child_name))
+            continue;
+        AService *service = dynamic_cast<AService *>(this->get_child(child_name));
         if (service != nullptr)
         {
             if (service->start() == false)

@@ -1,6 +1,10 @@
 #ifndef __SIHD_CORE_DEVMESSAGE_HPP__
 #define __SIHD_CORE_DEVMESSAGE_HPP__
 
+#include <cstdint>
+#include <map>
+#include <vector>
+
 #include <sihd/core/Device.hpp>
 #include <sihd/util/IMessageField.hpp>
 
@@ -30,6 +34,7 @@ class DevMessage: public sihd::core::Device
         bool on_reset() override;
 
     private:
+        bool _write_field(sihd::util::IMessageField *field, Channel *out);
         void _fill_channels_out();
         void _compute_output();
 

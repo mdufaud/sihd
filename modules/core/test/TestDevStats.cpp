@@ -41,6 +41,21 @@ class TestDevStats: public ::testing::Test
         Channel *_source = nullptr;
 };
 
+TEST_F(TestDevStats, test_dev_stats_outputs_are_linkable_by_a_device_started_before)
+{
+    Core core;
+    Core *consumer = core.add_child<Core>("consumer");
+    ASSERT_TRUE(consumer->add_link("count", "..stats.source_count"));
+    DevStats *stats = this->wire(core, "int", 10000);
+
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    EXPECT_EQ(channel_of(consumer, "count"), channel_of(stats, "source_count"));
+    EXPECT_TRUE(core.stop());
+    EXPECT_TRUE(core.reset());
+}
+
 TEST_F(TestDevStats, test_dev_stats_counts_writes_and_bytes)
 {
     Core core;

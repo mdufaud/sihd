@@ -87,9 +87,10 @@ TEST_F(TestDevMessage, test_devmessage)
     ASSERT_EQ(ch_trigger->size(), 1u);
 
     EXPECT_EQ(ch_size_out->read<int>(0), 0);
-    EXPECT_TRUE(ch_size_in->write(0, 10));
-    EXPECT_EQ(ch_size_out->read<int>(0), 10);
-    EXPECT_EQ(ch_buffer_out->read<int>(1), 10);
+    EXPECT_TRUE(ch_size_in->write(0, 300));
+    EXPECT_EQ(ch_size_out->read<int>(0), 300);
+    EXPECT_EQ(ch_buffer_out->read<int>(1), 300);
+    EXPECT_GT(ch_size_out->timestamp(), Timestamp(0));
 
     s_msg msgtest;
     memset(&msgtest, 0, sizeof(msgtest));
@@ -134,6 +135,39 @@ TEST_F(TestDevMessage, test_devmessage)
     EXPECT_EQ(ch_size_out->read<int>(0), 40);
     EXPECT_STREQ((char *)ch_str_out->data(), "toto");
 
+    ASSERT_TRUE(core.stop());
+}
+
+TEST_F(TestDevMessage, test_devmessage_trigger_notifies_only_changed_fields)
+{
+    Core core;
+    DevMessage *dev = core.add_child<DevMessage>("dev");
+    Message *msg = core.add_child<Message>("msg");
+    msg->add_field("size", TYPE_INT, 1);
+    ASSERT_TRUE(msg->finish());
+    (void)dev->set_conf_str("message", "..msg");
+    dev->set_trigger_mode(true);
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    auto [ch_size_in, ch_size_out, ch_buffer_out, ch_trigger] = dev->get_all_child<Channel>("size_in",
+                                                                                            "size_out",
+                                                                                            "buffer_out",
+                                                                                            "trigger");
+    int size_notified = 0;
+    int buffer_notified = 0;
+    Handler<Channel *> size_observer([&size_notified](Channel *) { ++size_notified; });
+    Handler<Channel *> buffer_observer([&buffer_notified](Channel *) { ++buffer_notified; });
+    ch_size_out->add_observer(&size_observer);
+    ch_buffer_out->add_observer(&buffer_observer);
+
+    EXPECT_TRUE(ch_size_in->write(0, 30));
+    ch_trigger->notify();
+    ch_trigger->notify();
+
+    EXPECT_EQ(size_notified, 1);
+    EXPECT_EQ(buffer_notified, 3);
+    EXPECT_EQ(ch_buffer_out->read<int>(0), 30);
     ASSERT_TRUE(core.stop());
 }
 

@@ -119,6 +119,22 @@ bool DevStats::_bind_lane(const std::string & name, Lane & lane)
            && lane.mean_ptr != nullptr;
 }
 
+Result<void> DevStats::on_links_resolved()
+{
+    auto inputs = this->linked_channels();
+    SIHD_UNEXPECTED_RETURN(inputs);
+    for (const auto & [name, in] : *inputs)
+    {
+        Lane lane;
+        if (this->_bind_lane(name, lane) == false)
+            return std::unexpected(Error(ErrorCode::invalid_argument,
+                                         "'{}' could not create the outputs of '{}'",
+                                         this->full_name(),
+                                         name));
+    }
+    return {};
+}
+
 bool DevStats::on_start()
 {
     auto inputs = this->linked_channels();

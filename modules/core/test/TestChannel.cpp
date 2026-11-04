@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/core/Channel.hpp>
+#include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/time.hpp>
@@ -182,6 +183,23 @@ TEST_F(TestChannel, test_channel_copy_to)
     EXPECT_EQ(dst[4], 50);
 }
 
+TEST_F(TestChannel, test_channel_copy_resized_to)
+{
+    Channel channel("chan", "byte", size_t {0});
+    channel.reserve(8);
+    channel.set_resizable(true);
+    ArrByte dst = {9, 9, 9, 9};
+
+    EXPECT_TRUE(channel.copy_resized_to(dst));
+    EXPECT_EQ(dst.size(), 0u);
+
+    ASSERT_TRUE(channel.write(ArrByte {1, 2, 3}));
+    Timestamp timestamp;
+    EXPECT_TRUE(channel.copy_resized_to(dst, &timestamp));
+    EXPECT_EQ(dst, (ArrByte {1, 2, 3}));
+    EXPECT_EQ(timestamp, channel.timestamp());
+}
+
 TEST_F(TestChannel, test_channel_copy_to_slice)
 {
     Channel channel("chan", "int", 5);
@@ -298,8 +316,13 @@ TEST_F(TestChannel, test_channel_resizable)
     EXPECT_EQ(channel.read<int8_t>(1), 5);
 
     ArrByte empty;
-    EXPECT_TRUE(channel.write(empty));
+    (void)channel.write(ArrByteView(empty), size_t {6});
     EXPECT_EQ(channel.byte_size(), 2u);
+
+    ChannelWaiter waiter(&channel);
+    EXPECT_TRUE(channel.write(empty));
+    EXPECT_EQ(channel.byte_size(), 0u);
+    EXPECT_EQ(waiter.notifications(), 1u);
 
     ArrByte too_big;
     too_big.resize(128);
