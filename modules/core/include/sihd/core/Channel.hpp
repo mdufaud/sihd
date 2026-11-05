@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <thread>
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Clocks.hpp>
@@ -37,7 +38,9 @@ class Channel: public sihd::util::Named,
 
         virtual std::string description() const override;
 
+        // unlocked views: stable inside a notification or without a concurrent writer
         uint8_t *data() const;
+        sihd::util::ArrUByteView arrview() const;
         const sihd::util::IArray *array() const;
 
         size_t size() const;
@@ -47,6 +50,7 @@ class Channel: public sihd::util::Named,
         bool resizable() const;
         size_t capacity() const;
         size_t byte_capacity() const;
+        // refused while notifying, like every write
         bool reserve(size_t capacity);
         bool resize(size_t size);
 
@@ -61,13 +65,10 @@ class Channel: public sihd::util::Named,
             return sihd::util::type::is_same<T>(_array_ptr->data_type());
         }
 
-        // thread safe
         sihd::util::Timestamp timestamp() const;
 
-        void do_timestamp();
-
-        // notifies all observers and prevent writing inside notification thread
-        void notify();
+        // refused while notifying, like every write
+        bool notify();
 
         bool copy_to(sihd::util::IArray & arr, sihd::util::Timestamp *timestamp = nullptr) const;
         bool copy_to(sihd::util::IArray & arr,
@@ -115,6 +116,10 @@ class Channel: public sihd::util::Named,
 
     private:
         bool _write(const sihd::util::ArrByteView & arr, size_t byte_offset, bool fit_size);
+        // owns nothing when another mutation or a notification is in progress
+        std::unique_lock<std::mutex> _lock_mutation(const char *operation);
+        void _notify();
+        void _do_timestamp();
 
         sihd::util::IClock *_clock_ptr;
         sihd::util::Timestamp _timestamp;
@@ -122,8 +127,8 @@ class Channel: public sihd::util::Named,
         sihd::util::IArray *_array_ptr;
         mutable std::mutex _arr_mutex;
 
-        std::atomic<bool> _notifying;
-        mutable std::mutex _notify_mutex;
+        std::atomic<std::thread::id> _notifying_thread;
+        std::mutex _notify_mutex;
 
         bool _write_change_only;
         bool _resizable;

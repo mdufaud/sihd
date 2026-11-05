@@ -101,7 +101,7 @@ TEST_F(TestDevMessage, test_devmessage)
     EXPECT_TRUE(ch_buffer_in->write({&msgtest, sizeof(msgtest)}));
     EXPECT_EQ(ch_active_out->read<bool>(0), true);
     EXPECT_EQ(ch_size_out->read<int>(0), 20);
-    EXPECT_STREQ((char *)ch_str_out->data(), "hello world");
+    EXPECT_STREQ((const char *)ch_str_out->data(), "hello world");
 
     EXPECT_EQ(ch_buffer_out->read<bool>(0), true);
     EXPECT_EQ(ch_buffer_out->read<int>(1), 20);
@@ -127,13 +127,13 @@ TEST_F(TestDevMessage, test_devmessage)
 
     EXPECT_EQ(ch_active_out->read<bool>(0), true);
     EXPECT_EQ(ch_size_out->read<int>(0), 30);
-    EXPECT_STREQ((char *)ch_str_out->data(), "hello world");
+    EXPECT_STREQ((const char *)ch_str_out->data(), "hello world");
 
     ch_trigger->notify();
 
     EXPECT_EQ(ch_active_out->read<bool>(0), false);
     EXPECT_EQ(ch_size_out->read<int>(0), 40);
-    EXPECT_STREQ((char *)ch_str_out->data(), "toto");
+    EXPECT_STREQ((const char *)ch_str_out->data(), "toto");
 
     ASSERT_TRUE(core.stop());
 }

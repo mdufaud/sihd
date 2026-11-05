@@ -1,6 +1,7 @@
 #include <sihd/core/Channel.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/ScopedModifier.hpp>
 #include <sihd/util/StrConfiguration.hpp>
 #include <sihd/util/array_utils.hpp>
 
@@ -22,7 +23,6 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
             fmt::format("Channel: no such type {} for channel {}", type::str(type), this->name()));
     }
     _array_ptr->resize(size);
-    _notifying = false;
     _write_change_only = true;
     _resizable = false;
     _timestamp = Timestamp(0);
@@ -95,11 +95,13 @@ IClock *Channel::default_clock()
 
 void Channel::set_write_on_change(bool activate)
 {
+    std::lock_guard lock(_arr_mutex);
     _write_change_only = activate;
 }
 
 void Channel::set_resizable(bool activate)
 {
+    std::lock_guard lock(_arr_mutex);
     _resizable = activate;
 }
 
@@ -114,6 +116,11 @@ uint8_t *Channel::data() const
     return _array_ptr->buf();
 }
 
+ArrUByteView Channel::arrview() const
+{
+    return ArrUByteView(_array_ptr->buf(), _array_ptr->byte_size());
+}
+
 const IArray *Channel::array() const
 {
     return _array_ptr;
@@ -121,11 +128,13 @@ const IArray *Channel::array() const
 
 size_t Channel::size() const
 {
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->size();
 }
 
 size_t Channel::byte_size() const
 {
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->byte_size();
 }
 
@@ -136,26 +145,37 @@ size_t Channel::byte_index(size_t idx) const
 
 bool Channel::resizable() const
 {
+    std::lock_guard lock(_arr_mutex);
     return _resizable;
 }
 
 size_t Channel::capacity() const
 {
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->capacity();
 }
 
 size_t Channel::byte_capacity() const
 {
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->byte_capacity();
 }
 
 bool Channel::reserve(size_t capacity)
 {
+    std::unique_lock mutation_lock = this->_lock_mutation("reserve");
+    if (!mutation_lock.owns_lock())
+        return false;
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->reserve(capacity);
 }
 
 bool Channel::resize(size_t size)
 {
+    std::unique_lock mutation_lock = this->_lock_mutation("resize");
+    if (!mutation_lock.owns_lock())
+        return false;
+    std::lock_guard lock(_arr_mutex);
     return _array_ptr->resize(size);
 }
 
@@ -180,7 +200,7 @@ Timestamp Channel::timestamp() const
     return _timestamp;
 }
 
-void Channel::do_timestamp()
+void Channel::_do_timestamp()
 {
     _timestamp = _clock_ptr->now();
 }
@@ -262,12 +282,9 @@ bool Channel::write(const ArrByteView & arr_view, size_t byte_offset)
 
 bool Channel::_write(const ArrByteView & arr_view, size_t byte_offset, bool fit_size)
 {
-    std::unique_lock notify_lock(_notify_mutex, std::try_to_lock);
-    if (!notify_lock.owns_lock())
-    {
-        SIHD_LOG(warning, "Channel: cannot write while notifying");
+    std::unique_lock mutation_lock = this->_lock_mutation("write");
+    if (!mutation_lock.owns_lock())
         return false;
-    }
 
     bool ret = false;
     {
@@ -291,30 +308,44 @@ bool Channel::_write(const ArrByteView & arr_view, size_t byte_offset, bool fit_
         // an empty whole write only shrinks a resizable channel
         ret = (resized && arr_view.byte_size() == 0) || _array_ptr->copy_from_bytes(arr_view, {(ssize_t)byte_offset});
         if (ret)
-            this->do_timestamp();
+            this->_do_timestamp();
     }
 
     if (ret)
-    {
-        _notifying = true;
-        this->notify_observers(this);
-        _notifying = false;
-    }
+        this->_notify();
     return ret;
 }
 
-void Channel::notify()
+bool Channel::notify()
 {
-    std::lock_guard lock(_notify_mutex);
-    _notifying = true;
+    std::unique_lock mutation_lock = this->_lock_mutation("notify");
+    if (!mutation_lock.owns_lock())
+        return false;
+    this->_notify();
+    return true;
+}
+
+std::unique_lock<std::mutex> Channel::_lock_mutation(const char *operation)
+{
+    std::unique_lock<std::mutex> lock;
+    // try_lock from the thread that already owns the mutex is undefined behaviour
+    if (_notifying_thread.load() != std::this_thread::get_id())
+        lock = std::unique_lock(_notify_mutex, std::try_to_lock);
+    if (!lock.owns_lock())
+        SIHD_LOG(warning, "Channel: cannot {} {} while it is written or notifying", operation, this->name());
+    return lock;
+}
+
+void Channel::_notify()
+{
+    // restored even when an observer throws, else this thread could never mutate the channel again
+    ScopedModifier notifying(_notifying_thread, std::this_thread::get_id());
     this->notify_observers(this);
-    _notifying = false;
 }
 
 std::string Channel::description() const
 {
-    if (_array_ptr == nullptr)
-        return "empty";
+    std::lock_guard lock(_arr_mutex);
     return fmt::format("{}[{}]", _array_ptr->data_type_str(), _array_ptr->size());
 };
 

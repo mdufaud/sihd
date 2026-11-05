@@ -79,7 +79,10 @@ bool MemRecorder::provide(PlayableRecord *record)
 
 void MemRecorder::handle(const std::string & name, const Channel *channel)
 {
-    this->add_record(name, channel->timestamp(), channel->array());
+    const Timestamp timestamp = channel->timestamp();
+    IArrayShared arr(channel->clone_array());
+    std::lock_guard lock(_mutex);
+    _map_sorted_records.insert(std::pair<Timestamp, PlayableRecord>(timestamp, {name, timestamp, arr}));
 }
 
 MapListRecordedValues MemRecorder::make_recorded_values() const

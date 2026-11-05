@@ -67,8 +67,7 @@ class TestDevCapture: public ::testing::Test
         void observe(Synchronizer & reached, DevCapture::Status status)
         {
             _packet_observer.set_method([this](Channel *channel) {
-                const CapturedPacket
-                    packet = CapturedPacket::decode(ArrUByteView(channel->data(), channel->byte_size())).value();
+                const CapturedPacket packet = CapturedPacket::decode(channel->arrview()).value();
                 _recorded.push_back({packet.timestamp(),
                                      packet.original_length(),
                                      packet.datalink(),

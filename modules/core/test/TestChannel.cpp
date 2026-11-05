@@ -1,11 +1,15 @@
+#include <array>
 #include <clock_helper.hpp>
+#include <thread>
 
 #include <gtest/gtest.h>
 
 #include <sihd/core/Channel.hpp>
 #include <sihd/core/ChannelWaiter.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -149,6 +153,63 @@ TEST_F(TestChannel, test_channel_resize)
     EXPECT_EQ(channel.size(), 4u);
     EXPECT_TRUE(channel.write<int>(3, 9));
     EXPECT_EQ(channel.read<int>(3), 9);
+}
+
+TEST_F(TestChannel, test_channel_observer_cannot_mutate_its_channel)
+{
+    Channel channel("chan", "int", 2);
+    std::array<bool, 4> mutations {};
+    Handler<Channel *> observer([&mutations](Channel *notifier) {
+        mutations = {notifier->write<int>(1, 7), notifier->resize(4), notifier->reserve(16), notifier->notify()};
+    });
+    channel.add_observer(&observer);
+
+    ASSERT_TRUE(channel.write<int>(0, 1));
+
+    EXPECT_EQ(mutations, (std::array<bool, 4> {false, false, false, false}));
+    EXPECT_EQ(channel.size(), 2u);
+    EXPECT_EQ(channel.capacity(), 2u);
+    EXPECT_EQ(channel.read<int>(1), 0);
+}
+
+TEST_F(TestChannel, test_channel_other_thread_cannot_mutate_while_notifying)
+{
+    Channel channel("chan", "int", 2);
+    Synchronizer notifying(2);
+    Synchronizer checked(2);
+    Handler<Channel *> observer([&](Channel *) {
+        notifying.sync();
+        checked.sync(Duration(time::sec(2)));
+    });
+    channel.add_observer(&observer);
+    std::thread writer([&channel] { channel.write<int>(0, 1); });
+
+    EXPECT_TRUE(notifying.sync(Duration(time::sec(2))));
+    const std::array<bool, 4> mutations = {channel.write<int>(1, 7),
+                                           channel.resize(4),
+                                           channel.reserve(16),
+                                           channel.notify()};
+    EXPECT_TRUE(checked.sync(Duration(time::sec(2))));
+    writer.join();
+
+    EXPECT_EQ(mutations, (std::array<bool, 4> {false, false, false, false}));
+    EXPECT_EQ(channel.size(), 2u);
+    EXPECT_EQ(channel.read<int>(0), 1);
+    EXPECT_EQ(channel.read<int>(1), 0);
+}
+
+TEST_F(TestChannel, test_channel_mutable_again_after_a_throwing_observer)
+{
+    Channel channel("chan", "int", 2);
+    Handler<Channel *> observer([](Channel *) { throw std::runtime_error("observer"); });
+    channel.add_observer(&observer);
+
+    EXPECT_THROW(channel.write<int>(0, 1), std::runtime_error);
+    channel.remove_observer(&observer);
+
+    EXPECT_TRUE(channel.write<int>(1, 2));
+    EXPECT_TRUE(channel.resize(4));
+    EXPECT_EQ(channel.arrview().size(), 4 * sizeof(int));
 }
 
 TEST_F(TestChannel, test_channel_conf)
