@@ -23,6 +23,7 @@ Channel::Channel(const std::string & name, Type type, size_t size, Node *parent)
             fmt::format("Channel: no such type {} for channel {}", type::str(type), this->name()));
     }
     _array_ptr->resize(size);
+    _notifying = false;
     _write_change_only = true;
     _resizable = false;
     _timestamp = Timestamp(0);
@@ -325,12 +326,11 @@ bool Channel::notify()
     return true;
 }
 
-std::unique_lock<std::mutex> Channel::_lock_mutation(const char *operation)
+std::unique_lock<std::recursive_mutex> Channel::_lock_mutation(const char *operation)
 {
-    std::unique_lock<std::mutex> lock;
-    // try_lock from the thread that already owns the mutex is undefined behaviour
-    if (_notifying_thread.load() != std::this_thread::get_id())
-        lock = std::unique_lock(_notify_mutex, std::try_to_lock);
+    std::unique_lock lock(_notify_mutex, std::try_to_lock);
+    if (lock.owns_lock() && _notifying)
+        lock = {};
     if (!lock.owns_lock())
         SIHD_LOG(warning, "Channel: cannot {} {} while it is written or notifying", operation, this->name());
     return lock;
@@ -339,7 +339,7 @@ std::unique_lock<std::mutex> Channel::_lock_mutation(const char *operation)
 void Channel::_notify()
 {
     // restored even when an observer throws, else this thread could never mutate the channel again
-    ScopedModifier notifying(_notifying_thread, std::this_thread::get_id());
+    ScopedModifier notifying(_notifying, true);
     this->notify_observers(this);
 }
 

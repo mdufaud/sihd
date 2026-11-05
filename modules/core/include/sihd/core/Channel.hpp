@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <mutex>
-#include <thread>
 
 #include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Clocks.hpp>
@@ -117,7 +116,7 @@ class Channel: public sihd::util::Named,
     private:
         bool _write(const sihd::util::ArrByteView & arr, size_t byte_offset, bool fit_size);
         // owns nothing when another mutation or a notification is in progress
-        std::unique_lock<std::mutex> _lock_mutation(const char *operation);
+        std::unique_lock<std::recursive_mutex> _lock_mutation(const char *operation);
         void _notify();
         void _do_timestamp();
 
@@ -127,8 +126,9 @@ class Channel: public sihd::util::Named,
         sihd::util::IArray *_array_ptr;
         mutable std::mutex _arr_mutex;
 
-        std::atomic<std::thread::id> _notifying_thread;
-        std::mutex _notify_mutex;
+        // recursive: an observer mutating its channel relocks it, then sees _notifying
+        std::recursive_mutex _notify_mutex;
+        bool _notifying;
 
         bool _write_change_only;
         bool _resizable;
