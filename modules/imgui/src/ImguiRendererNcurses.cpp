@@ -1393,10 +1393,10 @@ void ImguiRendererNcurses::_draw_fill(const ImDrawList *dl,
             std::tie(x0, x1) = centre_cell(columns);
         if (this->_virtual_pixels() && y0 >= y1)
             std::tie(y0, y1) = centre_cell(rows);
-        for (int y = y0; y < y1; ++y)
+        if (x0 < x1)
         {
-            for (int x = x0; x < x1; ++x)
-                this->_cover_cell(this->_index(x, y), prim.col);
+            for (int y = y0; y < y1; ++y)
+                this->_cover_cells(this->_index(x0, y), (size_t)(x1 - x0), prim.col);
         }
         return;
     }
@@ -1437,19 +1437,33 @@ void ImguiRendererNcurses::_draw_shaded_fill(const ImDrawList *dl,
 void ImguiRendererNcurses::_paint_cell(int x, int y, ImU32 col, const ImVec4 & clip)
 {
     if (this->_in_clip(x, y, clip))
-        this->_cover_cell(this->_index(x, y), col);
+        this->_cover_cells(this->_index(x, y), 1, col);
 }
 
-void ImguiRendererNcurses::_cover_cell(size_t index, ImU32 col)
+void ImguiRendererNcurses::_cover_cells(size_t index, size_t count, ImU32 col)
 {
-    TCell & cell = _screen[index];
-    cell.bg = this->_blend(this->_cell_bg(cell), col);
-    cell.has_bg = true;
-    if ((col >> IM_COL32_A_SHIFT) >= opaque_alpha)
+    const bool opaque = (col >> IM_COL32_A_SHIFT) >= opaque_alpha;
+    uint32_t under = _clear_rgb;
+    uint32_t bg = this->_blend(under, col);
+    for (TCell & cell : std::span(_screen).subspan(index, count))
     {
-        cell = TCell {.ch = blank_char, .fg = cell.fg, .bg = cell.bg, .has_bg = true};
-        _line_arms[index] = 0;
-        _braille[index] = 0;
+        if (this->_cell_bg(cell) != under)
+        {
+            under = this->_cell_bg(cell);
+            bg = this->_blend(under, col);
+        }
+        if (opaque)
+            cell = TCell {.ch = blank_char, .fg = cell.fg, .bg = bg, .has_bg = true};
+        else
+        {
+            cell.bg = bg;
+            cell.has_bg = true;
+        }
+    }
+    if (opaque)
+    {
+        std::fill_n(_line_arms.begin() + (std::ptrdiff_t)index, count, 0);
+        std::fill_n(_braille.begin() + (std::ptrdiff_t)index, count, 0);
     }
 }
 

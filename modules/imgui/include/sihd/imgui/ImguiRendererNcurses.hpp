@@ -144,7 +144,7 @@ class ImguiRendererNcurses: public sihd::imgui::IImguiRenderer
                                ImU32 ch_col,
                                const ImVec4 & clip);
         void _paint_cell(int x, int y, ImU32 col, const ImVec4 & clip);
-        void _cover_cell(size_t index, ImU32 col);
+        void _cover_cells(size_t index, size_t count, ImU32 col);
         void _draw_grab(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
         void _draw_tab(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
         void _draw_histogram(const ImDrawList *dl, const ImDrawCmd & cmd, const Primitive & prim, const ImVec4 & clip);
