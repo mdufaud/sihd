@@ -10,7 +10,6 @@ class Core: public sihd::core::Device
 {
     public:
         Core(const std::string & name = "core", sihd::util::Node *parent = nullptr);
-        virtual ~Core();
 
         bool is_running() const override;
 
@@ -18,9 +17,6 @@ class Core: public sihd::core::Device
         bool on_start() override;
         bool on_stop() override;
         bool on_reset() override;
-
-    private:
-        bool _running;
 };
 
 } // namespace sihd::core

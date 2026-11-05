@@ -39,9 +39,10 @@ Device::~Device()
 {
     if (this->parent() == nullptr)
     {
-        if (_service_controller.last_event() == AService::Start)
+        if (this->device_state() == ServiceController::Running)
             this->stop();
-        if (_service_controller.last_event() == AService::Stop)
+        // a failed start or stop leaves a state that refuses a reset
+        if (this->device_state() == ServiceController::Stopped)
             this->reset();
     }
 }

@@ -11,23 +11,11 @@ SIHD_REGISTER_FACTORY(Core)
 
 SIHD_LOGGER;
 
-Core::Core(const std::string & name, Node *parent): sihd::core::Device(name, parent)
-{
-    _running = false;
-}
-
-Core::~Core()
-{
-    if (_running)
-        this->stop();
-    // a failed start or stop leaves a state that refuses a reset
-    if (this->device_state() == ServiceController::Stopped)
-        this->reset();
-}
+Core::Core(const std::string & name, Node *parent): sihd::core::Device(name, parent) {}
 
 bool Core::is_running() const
 {
-    return _running;
+    return this->device_state() == ServiceController::Running;
 }
 
 bool Core::on_init()
@@ -37,13 +25,11 @@ bool Core::on_init()
 
 bool Core::on_start()
 {
-    _running = true;
     return true;
 }
 
 bool Core::on_stop()
 {
-    _running = false;
     return true;
 }
 

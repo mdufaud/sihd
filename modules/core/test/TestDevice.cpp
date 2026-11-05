@@ -395,6 +395,22 @@ TEST_F(TestDevice, test_device_stops_and_resets_in_start_order)
     EXPECT_EQ(journal, expected);
 }
 
+TEST_F(TestDevice, test_device_root_destroyed_while_running_stops_and_resets_children)
+{
+    std::vector<std::string> journal;
+    {
+        SomeDevice root("root");
+        for (const char *name : {"first", "second"})
+            root.add_child<JournalDevice>(name)->set_journal(&journal);
+        ASSERT_TRUE(root.init());
+        ASSERT_TRUE(root.start());
+    }
+
+    const std::vector<std::string> expected =
+        {"start first", "start second", "stop first", "stop second", "reset first", "reset second"};
+    EXPECT_EQ(journal, expected);
+}
+
 TEST_F(TestDevice, test_device_stop_drains_a_worker_into_running_consumers)
 {
     constexpr int writes = 1000;
