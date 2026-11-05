@@ -8,6 +8,7 @@
 #include <sihd/util/IHandler.hpp>
 #include <sihd/util/Named.hpp>
 #include <sihd/util/Waitable.hpp>
+#include <sihd/util/time.hpp>
 
 namespace test
 {
@@ -143,11 +144,17 @@ class EventGate
         {
             {
                 auto lock = _waitable.guard();
-                if (_blocked)
-                    ++_held;
+                // an event that found the gate open passes, else a block() before the wait holds it uncounted
+                if (_blocked == false)
+                    return;
+                ++_held;
             }
             _waitable.notify_all();
-            _waitable.wait([this] { return _blocked == false; });
+            // a test that fails before release() must not freeze the dispatcher its monitor joins
+            if (_waitable.wait_for(sihd::util::Duration(sihd::util::time::sec(10)),
+                                   [this] { return _blocked == false; })
+                == false)
+                this->release();
         }
 
     private:

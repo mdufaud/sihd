@@ -302,9 +302,9 @@ TEST_F(TestTreeMonitor, test_value_copy_is_exact)
     Channel *c1 = root.get_child<Channel>("c1");
     ASSERT_NE(c1, nullptr);
 
+    MonitorCollector collector;
     TreeMonitor monitor;
     ASSERT_TRUE(monitor.observe(&root));
-    MonitorCollector collector;
     monitor.add_observer(&collector);
 
     collector.gate.block();
@@ -393,6 +393,7 @@ TEST_F(TestTreeMonitor, test_event_queue_pressure)
     ASSERT_NE(c1, nullptr);
     ASSERT_NE(c2, nullptr);
 
+    MonitorCollector hook;
     TreeMonitor monitor;
     monitor.set_queue_max(6);
     monitor.set_queue_warning(2);
@@ -401,7 +402,6 @@ TEST_F(TestTreeMonitor, test_event_queue_pressure)
     CapturingLogger logger;
     ASSERT_TRUE(LoggerManager::add(&logger));
 
-    MonitorCollector hook;
     monitor.add_observer(&hook);
 
     hook.gate.block();
@@ -524,10 +524,10 @@ TEST_F(TestTreeMonitor, test_attach_events_never_drop)
     Channel *c0 = root.get_child<Channel>("c0");
     ASSERT_NE(c0, nullptr);
 
+    MonitorCollector collector;
     TreeMonitor monitor;
     monitor.set_queue_max(1);
     monitor.set_queue_warning(0);
-    MonitorCollector collector;
     monitor.add_observer(&collector);
 
     collector.gate.block();
@@ -601,9 +601,9 @@ TEST_F(TestTreeMonitor, test_stale_events_after_children_destruction)
     Node root("root");
     ReclaimingDevice *dev = root.add_child<ReclaimingDevice>("dev");
 
+    MonitorCollector hook;
     TreeMonitor monitor;
     monitor.set_queue_max(0);
-    MonitorCollector hook;
     monitor.add_observer(&hook);
     ASSERT_TRUE(monitor.observe(&root));
 
@@ -640,9 +640,9 @@ TEST_F(TestTreeMonitor, test_stale_events_interleave_with_live_ones)
     ReclaimingDevice *dev_a = root.add_child<ReclaimingDevice>("a");
     ReclaimingDevice *dev_b = root.add_child<ReclaimingDevice>("b");
 
+    MonitorCollector hook;
     TreeMonitor monitor;
     monitor.set_queue_max(0);
-    MonitorCollector hook;
     monitor.add_observer(&hook);
     ASSERT_TRUE(monitor.observe(&root));
     ASSERT_TRUE(dev_a->init());

@@ -1281,11 +1281,11 @@ TEST_F(TestTreeProfiler, test_report_after_reclaimed_channel)
     ReclaimingDevice *dev = root.add_child<ReclaimingDevice>("dev");
 
     FakeClock clock;
+    EventGate gate;
+    Handler<TreeMonitorEvent *> blocker([&](TreeMonitorEvent *) { gate.pass(); });
     TreeMonitor monitor;
     monitor.set_clock(&clock);
     monitor.set_queue_max(0);
-    EventGate gate;
-    Handler<TreeMonitorEvent *> blocker([&](TreeMonitorEvent *) { gate.pass(); });
     monitor.add_observer(&blocker);
     TreeProfiler profiler(monitor);
     ASSERT_TRUE(monitor.observe(&root));
