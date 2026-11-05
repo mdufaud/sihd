@@ -59,8 +59,9 @@ TEST_F(TestSftp, test_sftp)
     EXPECT_TRUE(fs::is_file(test_dir + "/recv_file.txt"));
     EXPECT_EQ(fs::file_size(test_dir + "/sent_file.txt").value(), fs::file_size("test/resources/file.txt").value());
 
-    std::vector<std::string> list;
-    EXPECT_TRUE(sftp.list_dir_filenames(test_dir, list).has_value());
+    auto listed = sftp.list_dir_filenames(test_dir);
+    ASSERT_TRUE(listed.has_value());
+    const std::vector<std::string> & list = *listed;
     EXPECT_EQ(list.size(), 3u);
     EXPECT_TRUE(std::find(list.begin(), list.end(), "recv_file.txt") != list.end());
     EXPECT_TRUE(std::find(list.begin(), list.end(), "sent_file.txt") != list.end());
@@ -70,15 +71,15 @@ TEST_F(TestSftp, test_sftp)
         SIHD_LOG(debug, "{}", name);
     }
 
-    std::vector<SftpAttribute> attrs;
-    EXPECT_TRUE(sftp.list_dir(test_dir, attrs).has_value());
-    EXPECT_EQ(attrs.size(), 3u);
+    auto attrs = sftp.list_dir(test_dir);
+    ASSERT_TRUE(attrs.has_value());
+    EXPECT_EQ(attrs->size(), 3u);
 
     int nlink = 0;
     int nregular = 0;
     int ndir = 0;
 
-    for (const SftpAttribute & attr : attrs)
+    for (const SftpAttribute & attr : *attrs)
     {
         if (attr.is_file())
         {
@@ -112,10 +113,39 @@ TEST_F(TestSftp, test_sftp_large_file_attribute)
     Sftp sftp = session.make_sftp();
     ASSERT_TRUE(sftp.open().has_value());
 
-    std::vector<SftpAttribute> attrs;
-    ASSERT_TRUE(sftp.list_dir(tmp_dir.path(), attrs).has_value());
-    ASSERT_EQ(attrs.size(), 1u);
-    EXPECT_EQ(attrs[0].size(), static_cast<uint64_t>(large_size));
+    auto attrs = sftp.list_dir(tmp_dir.path());
+    ASSERT_TRUE(attrs.has_value());
+    ASSERT_EQ(attrs->size(), 1u);
+    EXPECT_EQ((*attrs)[0].size(), static_cast<uint64_t>(large_size));
+}
+
+TEST_F(TestSftp, test_sftp_readlink)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "the sftp server refuses symbolic links on windows";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+
+    const std::string target = fs::combine(tmp_dir.path(), "target.txt");
+    const std::string link = fs::combine(tmp_dir.path(), "link.txt");
+    ASSERT_TRUE(fs::write(target, "hello"));
+    std::filesystem::create_symlink(target, link);
+
+    auto test_server = make_test_server_with_sftp("test-sftp-readlink", "/");
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    auto read_target = sftp.readlink(link);
+    ASSERT_TRUE(read_target.has_value()) << read_target.error().message;
+    EXPECT_EQ(*read_target, target);
+
+    EXPECT_FALSE(sftp.readlink(target).has_value());
 }
 
 TEST_F(TestSftp, test_sftp_jail_blocks_traversal)

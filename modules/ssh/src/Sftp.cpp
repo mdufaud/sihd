@@ -220,12 +220,12 @@ Result<void> Sftp::symlink(ZStringView from, ZStringView to)
                                  sftp_error_str(_impl_ptr->sftp_session_ptr)));
 }
 
-Result<void> Sftp::list_dir_filenames(ZStringView path, std::vector<std::string> & list)
+Result<std::vector<std::string>> Sftp::list_dir_filenames(ZStringView path)
 {
-    std::vector<SftpAttribute> attrs;
-    if (auto res = this->list_dir(path, attrs); !res)
-        return res;
-    for (const SftpAttribute & attr : attrs)
+    auto attrs = this->list_dir(path);
+    SIHD_UNEXPECTED_RETURN(attrs);
+    std::vector<std::string> list;
+    for (const SftpAttribute & attr : *attrs)
     {
         if (attr.is_dir())
         {
@@ -236,11 +236,12 @@ Result<void> Sftp::list_dir_filenames(ZStringView path, std::vector<std::string>
         else
             list.push_back(attr.name());
     }
-    return {};
+    return list;
 }
 
-Result<void> Sftp::list_dir(ZStringView path, std::vector<SftpAttribute> & list)
+Result<std::vector<SftpAttribute>> Sftp::list_dir(ZStringView path)
 {
+    std::vector<SftpAttribute> list;
     SftpDirPtr dir(sftp_opendir(_impl_ptr->sftp_session_ptr, path.c_str()));
     if (dir.get() == nullptr)
     {
@@ -265,15 +266,22 @@ Result<void> Sftp::list_dir(ZStringView path, std::vector<SftpAttribute> & list)
                                      path,
                                      sftp_error_str(_impl_ptr->sftp_session_ptr)));
     }
-    return {};
+    return list;
 }
 
-std::string Sftp::readlink(ZStringView path)
+Result<std::string> Sftp::readlink(ZStringView path)
 {
     char *ret = sftp_readlink(_impl_ptr->sftp_session_ptr, path.c_str());
     if (ret == nullptr)
-        return "";
-    return std::string(ret);
+    {
+        return std::unexpected(Error(_impl_ptr->sftp_session_ptr,
+                                     "could not read symbolic link '{}': {}",
+                                     path,
+                                     sftp_error_str(_impl_ptr->sftp_session_ptr)));
+    }
+    std::string target(ret);
+    ssh_string_free_char(ret);
+    return target;
 }
 
 Result<void> Sftp::rename(ZStringView from, ZStringView to)

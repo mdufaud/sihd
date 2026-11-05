@@ -16,9 +16,10 @@ using namespace sihd::ssh;
 void print_dir(Sftp & sftp, const std::string & path)
 {
     fmt::print("Listing directories in '{}':\n", path);
-    std::vector<sihd::ssh::SftpAttribute> list;
-    if (sftp.list_dir(path, list).has_value())
+    auto listed = sftp.list_dir(path);
+    if (listed.has_value())
     {
+        std::vector<sihd::ssh::SftpAttribute> & list = *listed;
         container::sort(list, [](const SftpAttribute & attr1, const SftpAttribute & attr2) {
             if (str::starts_with(attr1.name(), ".") != str::starts_with(attr2.name(), "."))
                 return str::starts_with(attr1.name(), ".") > str::starts_with(attr2.name(), ".");
@@ -37,7 +38,10 @@ void print_dir(Sftp & sftp, const std::string & path)
             if (attr.is_file())
                 fmt::print(" ({} bytes)", attr.size());
             if (attr.is_link())
-                fmt::print(" -> {}", sftp.readlink(fs::combine(path, attr.name())));
+            {
+                auto target = sftp.readlink(fs::combine(path, attr.name()));
+                fmt::print(" -> {}", target ? *target : target.error().message);
+            }
             fmt::print("\n");
         }
     }
