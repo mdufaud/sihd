@@ -135,8 +135,8 @@ sihd::util::Result<void>
 
 std::string realpath(sihd::util::ZStringView path);
 
-// collapses '.'/'..' lexically, then resolves symlinks; escapes clamp to 'root'; empty root = unchanged
-std::string jail(std::string_view root, std::string_view path);
+// collapses '.'/'..' lexically, then resolves symlinks; permission_denied on escape; empty root = unchanged
+sihd::util::Result<std::string> jail(std::string_view root, std::string_view path);
 
 sihd::util::Result<void> make_file_link(const std::string & target, const std::string & link);
 sihd::util::Result<void> make_dir_link(const std::string & target, const std::string & link);

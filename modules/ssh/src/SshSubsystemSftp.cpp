@@ -32,6 +32,7 @@
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -166,7 +167,9 @@ struct SshSubsystemSftp::Impl
         void handle_readlink(sftp_client_message_struct *msg);
         void handle_symlink(sftp_client_message_struct *msg);
 
-        std::string resolve_path(const std::string & path);
+        Result<std::string> resolve_path(const std::string & path);
+        Result<std::string> resolve_entry_path(const std::string & path);
+        bool reply_if_refused(sftp_client_message_struct *msg, const Result<std::string> & resolved);
         std::string generate_handle();
         void reply_status(sftp_client_message_struct *msg, uint32_t status, const std::string & message = "");
 };
@@ -510,8 +513,10 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
     }
     else
     {
-        std::string full = resolve_path(path);
-        std::string real_result = sihd::sys::fs::realpath(full);
+        const auto full = resolve_path(path);
+        if (reply_if_refused(msg, full))
+            return;
+        std::string real_result = sihd::sys::fs::realpath(*full);
         if (!real_result.empty())
         {
             if (!root_path.empty() && real_result.find(root_path) == 0)
@@ -556,13 +561,15 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
 
     SIHD_LOG(debug, "SshSubsystemSftp: {} '{}'", follow_links ? "STAT" : "LSTAT", path);
 
-    std::string resolved = resolve_path(path);
+    const auto resolved = follow_links ? resolve_path(path) : resolve_entry_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
     FileStat st;
-    const int rc = stat_file(resolved, st, follow_links);
+    const int rc = stat_file(*resolved, st, follow_links);
 
     if (rc < 0)
     {
-        auto err = Error::from_errno("could not stat '{}'", resolved);
+        auto err = Error::from_errno("could not stat '{}'", *resolved);
         reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
@@ -587,11 +594,13 @@ void SshSubsystemSftp::Impl::handle_opendir(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: OPENDIR '{}'", path);
 
-    std::string resolved = resolve_path(path);
-    DIR *dir = opendir(resolved.c_str());
+    const auto resolved = resolve_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
+    DIR *dir = opendir(resolved->c_str());
     if (!dir)
     {
-        auto err = Error::from_errno("could not open directory '{}'", resolved);
+        auto err = Error::from_errno("could not open directory '{}'", *resolved);
         reply_status(msg, sftp_status_from_error(err), err.message);
         return;
     }
@@ -640,8 +649,10 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
         return;
     }
 
-    std::string resolved = resolve_path(path);
-    DIR *dir = opendir(resolved.c_str());
+    const auto resolved = resolve_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
+    DIR *dir = opendir(resolved->c_str());
     if (!dir)
     {
         reply_status(msg, SSH_FX_NO_SUCH_FILE);
@@ -652,7 +663,7 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     struct dirent *entry;
     while ((entry = readdir(dir)) != nullptr)
     {
-        std::string full_path = resolved + "/" + entry->d_name;
+        std::string full_path = *resolved + "/" + entry->d_name;
         FileStat st;
         if (stat_file(full_path, st, false) == 0)
         {
@@ -715,8 +726,10 @@ void SshSubsystemSftp::Impl::handle_mkdir(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: MKDIR '{}' mode={:o}", path, mode);
 
-    std::string resolved = resolve_path(path);
-    auto res = sihd::sys::fs::make_directory(resolved, mode);
+    const auto resolved = resolve_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
+    auto res = sihd::sys::fs::make_directory(*resolved, mode);
     if (!res)
     {
         reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
@@ -733,8 +746,10 @@ void SshSubsystemSftp::Impl::handle_rmdir(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: RMDIR '{}'", path);
 
-    std::string resolved = resolve_path(path);
-    auto res = sihd::sys::fs::remove_directory(resolved);
+    const auto resolved = resolve_entry_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
+    auto res = sihd::sys::fs::remove_directory(*resolved);
     if (!res)
     {
         reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
@@ -786,9 +801,11 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
         open_mode = "rb";
     }
 
-    std::string resolved = resolve_path(path);
+    const auto resolved = resolve_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
     sihd::sys::File file;
-    auto opened = file.open(resolved, open_mode);
+    auto opened = file.open(*resolved, open_mode);
     if (!opened)
     {
         reply_status(msg, sftp_status_from_error(opened.error()), opened.error().message);
@@ -797,7 +814,7 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
 
     // Apply permissions only when creating a new file
     if (has_creat && (attrs && (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)))
-        SIHD_UNEXPECTED_LOG(sihd::sys::fs::permission_set(resolved, mode));
+        SIHD_UNEXPECTED_LOG(sihd::sys::fs::permission_set(*resolved, mode));
 
     std::string handle = generate_handle();
     handle_to_path[handle] = path;
@@ -924,8 +941,10 @@ void SshSubsystemSftp::Impl::handle_remove(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: REMOVE '{}'", path);
 
-    std::string resolved = resolve_path(path);
-    auto res = sihd::sys::fs::remove_file(resolved);
+    const auto resolved = resolve_entry_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
+    auto res = sihd::sys::fs::remove_file(*resolved);
     if (!res)
     {
         reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
@@ -944,9 +963,13 @@ void SshSubsystemSftp::Impl::handle_rename(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: RENAME '{}' -> '{}'", from, to);
 
-    std::string resolved_from = resolve_path(from);
-    std::string resolved_to = resolve_path(to);
-    auto res = sihd::sys::fs::rename(resolved_from, resolved_to);
+    const auto resolved_from = resolve_entry_path(from);
+    if (reply_if_refused(msg, resolved_from))
+        return;
+    const auto resolved_to = resolve_entry_path(to);
+    if (reply_if_refused(msg, resolved_to))
+        return;
+    auto res = sihd::sys::fs::rename(*resolved_from, *resolved_to);
     if (!res)
     {
         reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
@@ -970,11 +993,13 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
         return;
     }
 
-    std::string resolved = resolve_path(path);
+    const auto resolved = resolve_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
 
     if (attrs->flags & SSH_FILEXFER_ATTR_PERMISSIONS)
     {
-        if (auto res = sihd::sys::fs::permission_set(resolved, attrs->permissions); !res)
+        if (auto res = sihd::sys::fs::permission_set(*resolved, attrs->permissions); !res)
         {
             reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
             return;
@@ -984,7 +1009,7 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
     if (attrs->flags & SSH_FILEXFER_ATTR_UIDGID)
     {
 #if !defined(__SIHD_WINDOWS__)
-        if (chown(resolved.c_str(), attrs->uid, attrs->gid) < 0)
+        if (chown(resolved->c_str(), attrs->uid, attrs->gid) < 0)
         {
             reply_status(msg, SSH_FX_PERMISSION_DENIED);
             return;
@@ -994,7 +1019,7 @@ void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
 
     if (attrs->flags & SSH_FILEXFER_ATTR_SIZE)
     {
-        if (auto res = sihd::sys::fs::truncate(resolved, attrs->size); !res)
+        if (auto res = sihd::sys::fs::truncate(*resolved, attrs->size); !res)
         {
             reply_status(msg, sftp_status_from_error(res.error()), res.error().message);
             return;
@@ -1015,9 +1040,11 @@ void SshSubsystemSftp::Impl::handle_readlink(sftp_client_message_struct *msg)
     (void)path;
     reply_status(msg, SSH_FX_OP_UNSUPPORTED, "Symlinks not supported on Windows");
 #else
-    std::string resolved = resolve_path(path);
+    const auto resolved = resolve_entry_path(path);
+    if (reply_if_refused(msg, resolved))
+        return;
     std::array<char, PATH_MAX> buf;
-    ssize_t len = ::readlink(resolved.c_str(), buf.data(), buf.size() - 1);
+    ssize_t len = ::readlink(resolved->c_str(), buf.data(), buf.size() - 1);
     if (len <= 0)
     {
         reply_status(msg, SSH_FX_NO_SUCH_FILE);
@@ -1053,8 +1080,10 @@ void SshSubsystemSftp::Impl::handle_symlink(sftp_client_message_struct *msg)
     (void)link;
     reply_status(msg, SSH_FX_OP_UNSUPPORTED, "Symlinks not supported on Windows");
 #else
-    std::string resolved_link = resolve_path(link);
-    if (::symlink(target.c_str(), resolved_link.c_str()) < 0)
+    const auto resolved_link = resolve_entry_path(link);
+    if (reply_if_refused(msg, resolved_link))
+        return;
+    if (::symlink(target.c_str(), resolved_link->c_str()) < 0)
     {
         uint32_t error = (errno == EEXIST) ? SSH_FX_FILE_ALREADY_EXISTS : SSH_FX_PERMISSION_DENIED;
         reply_status(msg, error);
@@ -1065,9 +1094,43 @@ void SshSubsystemSftp::Impl::handle_symlink(sftp_client_message_struct *msg)
 #endif
 }
 
-std::string SshSubsystemSftp::Impl::resolve_path(const std::string & path)
+Result<std::string> SshSubsystemSftp::Impl::resolve_path(const std::string & path)
 {
     return sihd::sys::fs::jail(root_path, path);
+}
+
+// the entry itself, its last component not followed (rm, rename, lstat... act on a link, not its target)
+Result<std::string> SshSubsystemSftp::Impl::resolve_entry_path(const std::string & path)
+{
+    if (root_path.empty())
+        return this->resolve_path(path);
+
+    const std::string clean = sihd::sys::fs::normalize("/" + path);
+    const std::string name = sihd::sys::fs::filename(clean);
+    Result<std::string> entry;
+    // windows refuses symbolic links: no last component to keep unfollowed
+    if (build::is_windows || name.empty() || name == "..")
+        entry = this->resolve_path(path);
+    else
+    {
+        auto parent = this->resolve_path(sihd::sys::fs::parent(clean));
+        SIHD_UNEXPECTED_RETURN(parent);
+        entry = sihd::sys::fs::combine(*parent, name);
+    }
+    SIHD_UNEXPECTED_RETURN(entry);
+
+    const auto root = this->resolve_path("");
+    if (root && *entry == *root)
+        return std::unexpected(Error(permission_denied, "'{}' names the jail root", path));
+    return entry;
+}
+
+bool SshSubsystemSftp::Impl::reply_if_refused(sftp_client_message_struct *msg, const Result<std::string> & resolved)
+{
+    if (resolved)
+        return false;
+    reply_status(msg, sftp_status_from_error(resolved.error()), resolved.error().message);
+    return true;
 }
 
 std::string SshSubsystemSftp::Impl::generate_handle()

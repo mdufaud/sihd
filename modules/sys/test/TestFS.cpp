@@ -41,6 +41,12 @@ class TestFS: public ::testing::Test
             return std::filesystem::create_directories(path);
         }
 
+        static std::string jailed(std::string_view root, std::string_view path)
+        {
+            auto res = fs::jail(root, path);
+            return res ? *res : fmt::format("refused: {}", res.error().message);
+        }
+
         char original_slash = fs::sep();
 };
 
@@ -118,6 +124,7 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::normalize("path/.."), "");
     EXPECT_EQ(fs::normalize("/path/.."), "/");
     EXPECT_EQ(fs::normalize(".."), "..");
+    EXPECT_EQ(fs::normalize("path/..hidden/test"), "path/..hidden/test");
     EXPECT_EQ(fs::normalize(""), "");
 
     fs::set_sep('\\');
@@ -129,33 +136,43 @@ TEST_F(TestFS, test_fs_jail)
 {
     fs::set_sep('/');
 
-    EXPECT_EQ(fs::jail("", "any/../path"), "any/../path");
+    EXPECT_EQ(jailed("", "any/../path"), "any/../path");
 
     // nonexistent root: realpath fails, jail returns the lexically-jailed candidate
-    EXPECT_EQ(fs::jail("/srv/ftp", "file.txt"), "/srv/ftp/file.txt");
-    EXPECT_EQ(fs::jail("/srv/ftp", "sub/dir/file.txt"), "/srv/ftp/sub/dir/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none", "file.txt"), "/srv/sihd_none/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none", "sub/dir/file.txt"), "/srv/sihd_none/sub/dir/file.txt");
 
-    EXPECT_EQ(fs::jail("/srv/ftp", "/file.txt"), "/srv/ftp/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none", "/file.txt"), "/srv/sihd_none/file.txt");
 
-    EXPECT_EQ(fs::jail("/srv/ftp/", "file.txt"), "/srv/ftp/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none/", "file.txt"), "/srv/sihd_none/file.txt");
 
-    EXPECT_EQ(fs::jail("/srv/ftp", "sub/../file.txt"), "/srv/ftp/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none", "sub/../file.txt"), "/srv/sihd_none/file.txt");
+    EXPECT_EQ(jailed("/srv/sihd_none", "..hidden"), "/srv/sihd_none/..hidden");
 
-    EXPECT_EQ(fs::jail("/srv/ftp", "../../etc/passwd"), "/srv/ftp");
-    EXPECT_EQ(fs::jail("/srv/ftp", "../ftp_evil"), "/srv/ftp");
-    EXPECT_EQ(fs::jail("/srv/ftp", "/../etc/passwd"), "/srv/ftp");
+    EXPECT_EQ(jailed("/srv/sihd_none", "../../etc/passwd"),
+              "refused: path '../../etc/passwd' escapes '/srv/sihd_none'");
+    EXPECT_EQ(jailed("/srv/sihd_none", "../ftp_evil"), "refused: path '../ftp_evil' escapes '/srv/sihd_none'");
+    EXPECT_EQ(jailed("/srv/sihd_none", "/../etc/passwd"), "refused: path '/../etc/passwd' escapes '/srv/sihd_none'");
 
 #if !defined(__SIHD_WINDOWS__)
     // symlink creation + realpath resolution are POSIX-specific (windows symlinks need privilege)
     TmpDir root_dir;
     ASSERT_TRUE(static_cast<bool>(root_dir));
-    const std::string & root = root_dir.path();
+    const std::string root = fs::realpath(root_dir.path());
     ASSERT_TRUE(fs::make_file_link("/etc/passwd", fs::combine(root, "escape")).has_value());
-    EXPECT_EQ(fs::jail(root, "escape"), root);
+    EXPECT_EQ(jailed(root, "escape"), fmt::format("refused: path 'escape' escapes '{}'", root));
 
     const std::string inside = fs::combine(root, "inside.txt");
     ASSERT_TRUE(fs::write(inside, "data").has_value());
-    EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
+    EXPECT_EQ(jailed(root, "inside.txt"), inside);
+    EXPECT_EQ(jailed(root, "not_created/file.txt"), fs::combine(root, "not_created/file.txt"));
+
+    ASSERT_TRUE(fs::make_dir_link("/tmp", fs::combine(root, "out")).has_value());
+    EXPECT_EQ(jailed(root, "out/not_created"), fmt::format("refused: path 'out/not_created' escapes '{}'", root));
+
+    ASSERT_TRUE(fs::make_file_link("/nonexistent/target", fs::combine(root, "dangling")).has_value());
+    EXPECT_EQ(jailed(root, "dangling"), "refused: path 'dangling' goes through a dangling link");
+    EXPECT_EQ(jailed(root, "dangling/file.txt"), "refused: path 'dangling/file.txt' goes through a dangling link");
 #endif
 }
 
@@ -169,25 +186,26 @@ TEST_F(TestFS, test_fs_jail_real_files)
     ASSERT_TRUE(fs::write(inside, "inside").has_value());
     ASSERT_TRUE(fs::write(fs::combine(tmp.path(), "secret.txt"), "secret").has_value());
 
-    EXPECT_EQ(fs::jail(root, "inside.txt"), fs::realpath(inside));
-    EXPECT_EQ(fs::jail(root, "../secret.txt"), root);
-    EXPECT_EQ(fs::jail(root, "../not_created.txt"), root);
+    EXPECT_EQ(jailed(root, "inside.txt"), fs::realpath(inside));
+    EXPECT_EQ(jailed(root, "../secret.txt"), fmt::format("refused: path '../secret.txt' escapes '{}'", root));
+    EXPECT_EQ(jailed(root, "../not_created.txt"), fmt::format("refused: path '../not_created.txt' escapes '{}'", root));
 
     if constexpr (build::is_windows)
     {
         std::string forward_root = root;
         std::ranges::replace(forward_root, '\\', '/');
 
-        EXPECT_EQ(fs::jail(forward_root, "inside.txt"), fs::realpath(inside));
-        EXPECT_EQ(fs::jail(root, "..\\secret.txt"), root);
-        EXPECT_EQ(fs::jail(root, "..\\not_created.txt"), root);
+        EXPECT_EQ(jailed(forward_root, "inside.txt"), fs::realpath(inside));
+        EXPECT_EQ(jailed(root, "..\\secret.txt"), fmt::format("refused: path '..\\secret.txt' escapes '{}'", root));
+        EXPECT_EQ(jailed(root, "..\\not_created.txt"),
+                  fmt::format("refused: path '..\\not_created.txt' escapes '{}'", root));
     }
     else
     {
         const std::string link = fs::combine(tmp.path(), "link_to_root");
         ASSERT_TRUE(fs::make_file_link(root, link).has_value());
 
-        EXPECT_EQ(fs::jail(link, "inside.txt"), fs::realpath(inside));
+        EXPECT_EQ(jailed(link, "inside.txt"), fs::realpath(inside));
     }
 }
 

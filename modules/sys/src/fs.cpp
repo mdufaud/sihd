@@ -311,7 +311,7 @@ std::string normalize(std::string_view path)
 
     for (const std::string & split : splits)
     {
-        if (split.find("..") == 0 && lst.size() > 0)
+        if (split == ".." && lst.size() > 0)
             lst.pop_back();
         else
             lst.push_back(split);
@@ -515,7 +515,7 @@ Result<void> remove_file(ZStringView path)
     return {};
 }
 
-std::string jail(std::string_view root_view, std::string_view path_view)
+Result<std::string> jail(std::string_view root_view, std::string_view path_view)
 {
     if (root_view.empty())
         return std::string(path_view);
@@ -534,17 +534,28 @@ std::string jail(std::string_view root_view, std::string_view path_view)
     std::string candidate = normalize(joined);
 
     if (!is_under_root(root, candidate))
-        return root;
+        return std::unexpected(Error(permission_denied, "path '{}' escapes '{}'", path_view, root));
 
-    // resolve symlinks and re-check to catch escaping links; nonexistent targets keep the lexical path
-    std::string real_str = with_one_separator(realpath(candidate));
-    if (!real_str.empty())
+    // the kernel follows the links of a path not created yet: resolve its deepest existing ancestor
+    std::string existing = candidate;
+    std::string missing;
+    std::string real_str = with_one_separator(realpath(existing));
+    while (real_str.empty() && existing != root)
     {
-        const std::string real_root = with_one_separator(realpath(root));
-        return is_under_root(real_root.empty() ? root : real_root, real_str) ? real_str : root;
+        if (is_symlink(existing))
+            return std::unexpected(Error(permission_denied, "path '{}' goes through a dangling link", path_view));
+        missing = missing.empty() ? filename(existing) : combine(filename(existing), missing);
+        existing = parent(existing);
+        real_str = with_one_separator(realpath(existing));
     }
+    if (real_str.empty())
+        return candidate;
 
-    return candidate;
+    const std::string real_root = with_one_separator(realpath(root));
+    std::string resolved = missing.empty() ? real_str : combine(real_str, missing);
+    if (!is_under_root(real_root.empty() ? root : real_root, resolved))
+        return std::unexpected(Error(permission_denied, "path '{}' escapes '{}'", path_view, root));
+    return resolved;
 }
 
 Result<void> write(const std::string & path, std::string_view view, bool append)

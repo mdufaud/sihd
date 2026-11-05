@@ -294,22 +294,22 @@ Result<std::string> HttpServer::get_resource_path(std::string_view path)
 
     if (!_impl->root_dir.empty())
     {
-        std::string full_path = fs::jail(_impl->root_dir, path);
-        if (fs::is_file(full_path))
-            return full_path;
-        if (path.empty() || fs::is_dir(full_path))
+        const auto full_path = fs::jail(_impl->root_dir, path);
+        if (full_path && fs::is_file(*full_path))
+            return *full_path;
+        if (full_path && (path.empty() || fs::is_dir(*full_path)))
         {
-            std::string index_path = fs::jail(_impl->root_dir, fs::combine(path, "index.html"));
-            if (fs::is_file(index_path))
-                return index_path;
+            const auto index_path = fs::jail(_impl->root_dir, fs::combine(path, "index.html"));
+            if (index_path && fs::is_file(*index_path))
+                return *index_path;
         }
     }
 
     for (const std::string & resource_path : _impl->resources_path)
     {
-        std::string tmp_path = fs::jail(resource_path, path);
-        if (fs::is_file(tmp_path))
-            return tmp_path;
+        const auto tmp_path = fs::jail(resource_path, path);
+        if (tmp_path && fs::is_file(*tmp_path))
+            return *tmp_path;
     }
 
     return std::unexpected(Error(ErrorCode::not_found, "no resource for '{}'", path));

@@ -1,3 +1,5 @@
+#include <filesystem>
+
 #include <gtest/gtest.h>
 
 #include <sihd/ssh/Sftp.hpp>
@@ -153,5 +155,86 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
 
     EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt").has_value());
     EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
+}
+
+TEST_F(TestSftp, test_sftp_jail_escaping_link_blocks_writes)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "the sftp server refuses symbolic links on windows";
+
+    TmpDir base;
+    const std::string jail = fs::combine(base.path(), "jail");
+    const std::string outside = fs::combine(base.path(), "outside");
+    ASSERT_TRUE(fs::make_directories(jail));
+    ASSERT_TRUE(fs::make_directories(outside));
+    ASSERT_TRUE(fs::write(fs::combine(jail, "ok.txt"), "hello"));
+    std::filesystem::create_directory_symlink(outside, fs::combine(jail, "out"));
+
+    auto test_server = make_test_server_with_sftp("test-sftp-escaping-link", jail);
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    EXPECT_FALSE(sftp.mkdir("/out/created").has_value());
+    EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "/out/sent.txt").has_value());
+
+    EXPECT_FALSE(fs::exists(fs::combine(outside, "created")));
+    EXPECT_FALSE(fs::exists(fs::combine(outside, "sent.txt")));
+}
+
+TEST_F(TestSftp, test_sftp_jail_escape_never_targets_root)
+{
+    TmpDir base;
+    const std::string jail = fs::combine(base.path(), "jail");
+    ASSERT_TRUE(fs::make_directories(jail));
+    const unsigned int jail_mode = fs::permission_get(jail);
+
+    auto test_server = make_test_server_with_sftp("test-sftp-escape-root", jail);
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    EXPECT_FALSE(sftp.chmod("/../elsewhere", 0500).has_value());
+    EXPECT_FALSE(sftp.rmdir("/../elsewhere").has_value());
+    EXPECT_FALSE(sftp.rmdir("/").has_value());
+
+    EXPECT_TRUE(fs::is_dir(jail));
+    EXPECT_EQ(fs::permission_get(jail), jail_mode);
+}
+
+TEST_F(TestSftp, test_sftp_link_operations_keep_target)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "the sftp server refuses symbolic links on windows";
+
+    TmpDir jail;
+    const std::string target = fs::combine(jail.path(), "target.txt");
+    ASSERT_TRUE(fs::write(target, "hello"));
+    std::filesystem::create_symlink(target, fs::combine(jail.path(), "removed.txt"));
+    std::filesystem::create_symlink(target, fs::combine(jail.path(), "renamed.txt"));
+
+    auto test_server = make_test_server_with_sftp("test-sftp-link-ops", jail.path());
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    EXPECT_TRUE(sftp.rm("/removed.txt").has_value());
+    EXPECT_TRUE(sftp.rename("/renamed.txt", "/moved.txt").has_value());
+
+    EXPECT_TRUE(fs::is_file(target));
+    EXPECT_FALSE(std::filesystem::is_symlink(std::filesystem::symlink_status(fs::combine(jail.path(), "removed.txt"))));
+    EXPECT_TRUE(std::filesystem::is_symlink(fs::combine(jail.path(), "moved.txt")));
 }
 } // namespace test
