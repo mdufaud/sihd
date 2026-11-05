@@ -221,7 +221,8 @@ void wait_proceed()
 {
     fflush(stdout);
     std::array<char, 8> line {};
-    (void)fgets(line.data(), static_cast<int>(line.size()), stdin);
+    if (fgets(line.data(), static_cast<int>(line.size()), stdin) == nullptr)
+        return;
 }
 
 void print_error(const Error & error)
