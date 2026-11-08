@@ -6,6 +6,7 @@
 # Usage:
 #   scripts/format.sh            # format in place
 #   scripts/format.sh --check    # report files that would change, no write
+#   scripts/format.sh --help     # this message
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,6 +14,22 @@ ROOT="$(cd "$HERE/.." && pwd)"
 
 CLANG_FORMAT="${CLANG_FORMAT:-clang-format}"
 ROOTS=("modules" "site_scons")
+
+CHECK=0
+case "${1:-}" in
+    "") ;;
+    --check)
+        CHECK=1
+        ;;
+    --help | -h)
+        sed '/^set -euo pipefail$/,$d' "$0"
+        exit 0
+        ;;
+    *)
+        printf 'Error: unknown option %s, see --help\n' "$1" >&2
+        exit 1
+        ;;
+esac
 
 command -v "$CLANG_FORMAT" >/dev/null 2>&1 || {
     printf 'Error: %s not found in PATH\n' "$CLANG_FORMAT" >&2
@@ -22,9 +39,6 @@ command -v "$CLANG_FORMAT" >/dev/null 2>&1 || {
     printf 'Error: %s/.clang-format missing\n' "$ROOT" >&2
     exit 1
 }
-
-CHECK=0
-[[ "${1:-}" == "--check" ]] && CHECK=1
 
 mapfile -d '' -t files < <(
     find "${ROOTS[@]/#/$ROOT/}" \

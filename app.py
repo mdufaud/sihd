@@ -210,6 +210,19 @@ modules = {
         "export-web-libs": ['zip', 'z', 'bz2', 'crypto'],
         "export-windows-static-libs": ['zip', 'zlib', 'bz2', 'bcrypt'],
     },
+    "zlib": {
+        "depends": ['core'],
+        "extlibs": ['zlib'],
+        "linux-libs": ['z'],
+        "android-libs": ['z'],
+        "web-libs": ['z'],
+        # vcpkg installs libzlib on mingw
+        "windows-libs": ['zlib'],
+        "export-linux-static-libs": ['z'],
+        "export-android-static-libs": ['z'],
+        "export-web-libs": ['z'],
+        "export-windows-static-libs": ['zlib'],
+    },
     "tui": {
         "exclude-platforms": ["android"],
         "depends": ['sys'],
@@ -323,7 +336,7 @@ conditional_modules = {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util'],
-        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'net', 'wifi', 'http'],
+        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'zlib', 'net', 'wifi', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
@@ -339,7 +352,7 @@ conditional_modules = {
         "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
         "depends": [],
-        "conditional-depends": ['sys', 'core', 'net', 'wifi', 'http'],
+        "conditional-depends": ['sys', 'core', 'zlib', 'net', 'wifi', 'http'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # pybind11 requires optimization: FORTIFY breaks -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],

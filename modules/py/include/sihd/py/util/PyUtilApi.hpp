@@ -12,8 +12,6 @@
 #include <sihd/util/SmartNodePtr.hpp>
 #include <sihd/util/Task.hpp>
 
-PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
-
 namespace sihd::py
 {
 

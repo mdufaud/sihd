@@ -19,7 +19,7 @@ if [[ "${BUILD_STATIC:-0}" != "1" ]]; then
     imgui=",imgui"
 fi
 
-export m="json,util,sys,core,csv,zip,net,wifi,curl,http,usb${imgui}"
+export m="json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,usb${imgui}"
 
 build_target "clang" compiler=clang
 # the terminal tests drive the scenes binary the clang build just made
@@ -38,11 +38,11 @@ build_target "riscv64" machine=riscv64
 # shutdown-unblocks-blocking-recv stop path parked both threads forever
 build_target "windows" platform=windows
 build_target "arm32" machine=arm32
-m="json,util,sys,core,csv,zip,crypto,tui,imgui" build_target "emscripten" platform=web
+m="json,util,sys,core,csv,zip,zlib,crypto,tui,imgui" build_target "emscripten" platform=web
 
 # libFuzzer only exists for clang on native linux: a short run of every fuzzer. The
 # asan+ubsan+fuzz flags rebuild the clang build dir, so it goes last.
 ACTION=(make fuzztest)
-m="json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap" fuzz_time="${SIHD_FUZZ_TIME:-5}" build_target "fuzz"
+m="json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,crypto,pcap" fuzz_time="${SIHD_FUZZ_TIME:-5}" build_target "fuzz"
 
 summary "tests build results"

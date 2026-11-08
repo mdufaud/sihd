@@ -1,10 +1,10 @@
 # py
 
-Python bindings for sihd, built on pybind11. The build produces the extension module `sihd`, whose submodules `sihd.util`, `sihd.sys`, `sihd.core`, `sihd.net` and `sihd.http` expose the sihd classes and functions of the modules compiled in. `PyApi` lets each binding register itself into the module before the interpreter imports it.
+Python bindings for sihd, built on pybind11. The build produces the extension module `sihd`, whose submodules `sihd.util`, `sihd.sys`, `sihd.core`, `sihd.net`, `sihd.zlib` and `sihd.http` expose the sihd classes and functions of the modules compiled in. `PyApi` lets each binding register itself into the module before the interpreter imports it.
 
 | | |
 |---|---|
-| Depends on | any of `util`, `sys`, `core`, `net`, `http` that are in the build |
+| Depends on | any of `util`, `sys`, `core`, `zlib`, `net`, `http` that are in the build |
 | External libraries | pybind11, python3 (3.12) |
 | Platforms | Linux |
 | Build | `make py=1 m=util,sys,core,net,http,py` (`py=1` is required; a lone `m=py` builds no bindings) |
@@ -20,11 +20,13 @@ Python bindings for sihd, built on pybind11. The build produces the extension mo
 
 ### Reachable from Python (`sihd.<module>`)
 
+- A node deleted by its parent (`reset()`, `remove_children`) leaves its script handle dangling: collecting the handle is safe, calling it is not. Drop the handles of a device before resetting its parent.
 - `util`: `Node`, `Named`, `Configurable`, `Node.ChildEntry`, `AService`, `ServiceController`, `IClock`, `SystemClock`, `SteadyClock`, `Waitable`, `Scheduler`, `Splitter`, `Timestamp`, `Duration`, `IArray` and typed arrays (`ArrChar` and the others); submodules `log`, `types`, `thread`, `time`.
 - `sys`: `Uuid`, `ProcessInfo`, `Color`, `Bitmap`; submodules `fs` (`exists`, `is_file`, `is_dir`, `children`, `recursive_children`, `normalize`, `combine`, `remove_file`, ...), `os` (`pid`, `current_rss`, `peak_rss`, `max_fds`, `is_run_by_debugger`, ...), `user` (`is_root`, `name`; `name` returns `None` on failure), `signal` (`stop_received`, `should_stop`, `reset_received`, ...), `screenshot` (`take_screen`, `take_under_cursor`, `take_focused`, `take_window_name`).
 - `core`: `Channel` (`write`, `write_array`, `read`, `copy_to`, `size`, `resize`, `set_observer`, `notify`), `Device` (`add_channel`, `setup`, `init`, `start`, `stop`, `reset`), `Core`, `ACoreObject`, `ChannelWaiter` (`observe`, `wait`, `wait_for`, `prev_wait`, `prev_wait_for`), `DevFilter`, `DevPulsation`, `DevSampler`, `DevWorker`, `DevWorkerPool`, `DevBatcher`, `DevStats`, `DevPlayer`, `DevRecorder`, `DevMessage` (`set_message_path`, `set_trigger_mode`).
 - `net`: `IpAddr` (`localhost`, `set_hostname`, `has_ip`, `is_ipv4`, `is_ipv6`, `port`, `str`, subnet functions), `DevTcpClient`, `DevTcpServer`, `DevUdpSender`, `DevUdpReceiver`, `NetInterface` (`get_all_interfaces` as a dict, `Kind`, `addresses`, every accessor), `route.find` / `route.defaults_ipv4` / `route.defaults_ipv6`, `dns.servers(resolver_timeout)`, `ClientFrame` (`encode`, static `decode`, `client_id`, `payload`, `header_size`), `NetMonitor` (`run` then `events`). Errors raise `sihd.Error`, the `NetMonitor` constructor included.
 - `wifi`: `Security`, `Backend`, `State`, `Link`, `AccessPoint`, `KnownNetwork`, `link`, `access_points`, `security_of(bytes, privacy)`, `scan`, `backend`, `state`, both `connect` overloads, `disconnect`, `known_networks`, `forget`, `Monitor([run_timeout])` (`open(interface)`, `run` then `events` of `Monitor.Event`, `Monitor.Event.Type`), and the passive 802.11 decoders (`dissect_radiotap`, `dissect_80211`, `Packet`, `Radiotap`, `Frame`, `Addresses`, the `parse_*` management and LLC parsers, the `ies` submodule). Errors raise `sihd.Error`, `Monitor.open` included.
+- `zlib`: `DevDeflate` (`set_mode`, `set_level`, `set_format`), `DevInflate` (`set_mode`, `set_output_capacity`). `Deflater` and `Inflater` are not bound: the standard `zlib` and `gzip` modules cover them.
 - `http`: `Navigator` (configuration only: `set_*`, `clear_auth`, `clear_headers`, `cookies`, `save_cookies`, `load_cookies`, `set_proxy`; the request methods are not bound to Python), `RequestOptions` (read-write properties), `Multipart`, `Progress`, `HttpRequest`, `HttpResponse`, `NavigatorResponse`, `WebService`, `HttpServer` (`set_port`, `get_port`, `set_root_dir`, `set_cors_origin`, `request_stop`, `is_running`).
 
 ## Example

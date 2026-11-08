@@ -51,8 +51,8 @@ jobs:
           # same module set as scripts/test.sh's fuzz target; asan and ubsan are the
           # flags make fuzztest sets, the build step shares its build dir
           - id: x64-linux-fuzz
-            dep-args: fuzz=1 m=json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap
-            make-args: fuzz=1 asan=1 ubsan=1 m=json,util,sys,core,csv,zip,net,wifi,curl,http,crypto,pcap
+            dep-args: fuzz=1 m=json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,crypto,pcap
+            make-args: fuzz=1 asan=1 ubsan=1 m=json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,crypto,pcap
             apt: libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             clang-llvm: true
             fuzz: true
@@ -69,8 +69,8 @@ jobs:
           # static-only arm32 entry (arm-linux is the static vcpkg triplet);
           # same module set as scripts/test.sh's arm32 target
           - id: arm32-linux-static
-            dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net,curl,http
-            make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,net,curl,http
+            dep-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,zlib,net,curl,http
+            make-args: machine=arm32 static=1 lua=0 py=0 demo=1 m=json,util,sys,core,csv,zip,zlib,net,curl,http
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxtst-dev libwayland-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             gcc14: arm-linux-gnueabihf
           - id: arm64-linux
@@ -108,8 +108,8 @@ jobs:
             env: 'py=0'
             llvm-mingw: true
           - id: wasm32-emscripten
-            dep-args: compiler=em m=util,sys,core,csv,zip,net demo=1
-            make-args: compiler=em m=util,sys,core,csv,zip,net demo=1
+            dep-args: compiler=em m=util,sys,core,csv,zip,zlib,net demo=1
+            make-args: compiler=em m=util,sys,core,csv,zip,zlib,net demo=1
             apt: libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl1-mesa-dev libglew-dev libudev-dev libusb-1.0-0-dev libpcap-dev autoconf autoconf-archive automake libtool libltdl-dev
             env: 'lua=0 py=0'
             emsdk: true

@@ -40,6 +40,9 @@ void load_available_apis(Vm & vm)
 #if SIHD_LUA_WITH_ZIP
     LuaZipApi::load_all(vm);
 #endif
+#if SIHD_LUA_WITH_ZLIB
+    LuaZlibApi::load_all(vm);
+#endif
 #if SIHD_LUA_WITH_NET
     LuaNetApi::load_all(vm);
 #endif

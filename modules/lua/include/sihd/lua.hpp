@@ -26,6 +26,9 @@
 #if SIHD_LUA_WITH_ZIP
 # include <sihd/lua/zip/LuaZipApi.hpp>
 #endif
+#if SIHD_LUA_WITH_ZLIB
+# include <sihd/lua/zlib/LuaZlibApi.hpp>
+#endif
 #if SIHD_LUA_WITH_NET
 # include <sihd/lua/net/LuaNetApi.hpp>
 #endif

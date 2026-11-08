@@ -59,7 +59,7 @@ struct ContainerTraits<sihd::util::SmartNodePtr<C>>
 {
         using Type = C;
 
-        static sihd::util::SmartNodePtr<C> construct(C *obj) { return obj; }
+        static sihd::util::SmartNodePtr<C> construct(C *obj) { return sihd::util::SmartNodePtr<C>(obj); }
 
         static C *get(sihd::util::SmartNodePtr<C> & obj) { return obj.get(); }
 };

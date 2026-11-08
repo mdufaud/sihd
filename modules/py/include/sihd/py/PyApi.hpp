@@ -9,6 +9,10 @@
 #include <string_view>
 #include <vector>
 
+#include <sihd/util/SmartNodePtr.hpp>
+
+PYBIND11_DECLARE_HOLDER_TYPE(T, sihd::util::SmartNodePtr<T>);
+
 namespace sihd::py
 {
 

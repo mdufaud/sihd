@@ -4,7 +4,7 @@ Lua 5.3 bindings for sihd. `sihd::lua::Vm` embeds a Lua state in a C++ program, 
 
 | | |
 |---|---|
-| Depends on | `util`, plus any of `sys`, `core`, `json`, `csv`, `zip`, `net`, `http` that are in the build |
+| Depends on | `util`, plus any of `sys`, `core`, `json`, `csv`, `zip`, `zlib`, `net`, `http` that are in the build |
 | External libraries | lua 5.3, luabridge3 |
 | Platforms | all (the `net` and `http` bindings are not built for web) |
 | Build | `make lua=1 m=util,sys,core,lua` (`lua=1` is required; list the sihd modules whose bindings you want next to `lua`, a lone `m=lua` builds no bindings) |
@@ -30,12 +30,13 @@ The header `sihd/lua/config.hpp` is generated in the build directory and defines
 - `LuaUtilApi::load_base`, `load_tools`, `load_threading`, `load_all`: util bindings. `load_all` calls the three others in order.
 - `LuaSysApi::load_base`, `load_tools`, `load_files`, `load_process`, `load_all`: sys bindings. `load_base` also sets `sihd.dir` to the executable directory.
 - `LuaCoreApi::load(vm)` and `LuaCoreApi::unload(vm)`: core bindings.
-- `LuaNetApi::load_base`, `load_all`; `LuaHttpApi::load_base`, `load_all`; `LuaJsonApi::load_base`, `load_all`; `LuaCsvApi::load_base`, `load_all`; `LuaZipApi::load_base`, `load_all`.
+- `LuaNetApi::load_base`, `load_all`; `LuaHttpApi::load_base`, `load_all`; `LuaJsonApi::load_base`, `load_all`; `LuaCsvApi::load_base`, `load_all`; `LuaZipApi::load_base`, `load_all`; `LuaZlibApi::load_base`, `load_all` (load core first).
 - Load the util bindings before the other ones, as `luabin` and the core tests do.
 
 ### Reachable from scripts (`sihd.<module>`)
 
 - `sihd.Error`: raised by a failing binding, caught with `pcall`; `code` compares to `sihd.ErrorCode.<name>` (the `sihd::util::ErrorCode` names), `message`, `retryable()`.
+- A node deleted by its parent (`reset()`, `remove_children`) leaves its script handle dangling: collecting the handle is safe, calling it is not. Drop the handles of a device before resetting its parent.
 - `util` (`LuaUtilApi`): `Node`, `Named`, `AService`, `ServiceController`, `IArray` and typed arrays (`ArrBool` to `ArrDouble`), `Splitter`, `Timestamp`, `Duration`, `Random`, `IClock`, `SystemClock`, `SteadyClock`, `Waitable`, `Scheduler` (`add_task`, `start`, `stop`), `Worker`, `StepWorker`; namespaces `time`, `thread`, `str`, `num`, `endian`, `log` (`info`, `error`, ... `console`, `stream`, `clear`).
 - `sys` (`LuaSysApi`): `Uuid`, `ProcessInfo`, `Color`, `Bitmap`, `FileMutex`, `Process`, `ProcFuture`, `File`, `LineReader`; namespaces `sihd.sys.fs`, `sihd.sys.os`, `sihd.sys.user` (`name` returns `nil` on failure), `sihd.sys.signal`, `sihd.sys.screenshot`.
 - `core` (`LuaCoreApi`): `Device`, `Core`, `Channel` (`read`, `write`, `write_array`, `set_observer`), `ACoreObject`, `ChannelWaiter`, `DevFilter`, `DevPulsation`, `DevSampler`, `DevWorker`, `DevWorkerPool`, `DevBatcher`, `DevStats`, `DevPlayer`, `DevRecorder`, `DevMessage`.
@@ -45,6 +46,7 @@ The header `sihd/lua/config.hpp` is generated in the build directory and defines
 - `json` (`LuaJsonApi`): `sihd.json.decode` / `parse`, `sihd.json.encode` / `dump`.
 - `csv` (`LuaCsvApi`): `CsvReader`, `CsvWriter`, `CsvRecorder` (`set_path`; load core first).
 - `zip` (`LuaZipApi`): `ZipFile`.
+- `zlib` (`LuaZlibApi`): `Deflater` (formats in `Deflater.Format`, `deflate_stream`, `deflate_message`, `output_bound`), `Inflater` (`inflate_stream`, `inflate_message`), `DevDeflate`, `DevInflate`; buffers are lua strings. Failures raise a bound `Error`.
 
 ## Example
 

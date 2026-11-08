@@ -91,7 +91,7 @@
 - `Splitter`, `SplitterOptions`: string tokenizer with delimiter, escape sequences and enclosures (`split`, `split_view`, `count_tokens`, `next_token`).
 - `container.hpp`: generic helpers on STL-like containers (`find`, `find_if`, `contains`, `sort`, `erase`, `erase_if`, `emplace_back_unique`, `get_or`, `recursive_get`, `ordered_keys`, `sum`, `average`, `transform_if`, `insert_at_end`).
 - `array_utils.hpp`: `read`, `read_into`, `write` on a typed `IArray` by index, `create_from_type`, `distribute_array`.
-- `SmartNodePtr<T>`: `unique_ptr` alias for `Named`-derived nodes, with a custom deleter (`SmartNodeDeleter`).
+- `SmartNodePtr<T>`: move-only holder of a `Named`-derived node. It deletes the node only when no parent owned it when held, and never reads a parent-owned node again, so it outlives a parent that deleted it.
 
 ### Named tree and values
 

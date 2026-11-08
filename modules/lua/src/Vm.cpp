@@ -1,3 +1,6 @@
+#include <exception>
+#include <stdexcept>
+
 #include <fmt/format.h>
 
 #include <sihd/lua/Vm.hpp>
@@ -132,6 +135,12 @@ int push_error(lua_State *state, const Error & error)
     if (!luabridge::Stack<Error>::push(state, error))
         lua_pushlstring(state, error.message.data(), error.message.size());
     return -1;
+}
+
+Error error_from_exception(const std::exception & exception)
+{
+    const bool invalid = dynamic_cast<const std::invalid_argument *>(&exception) != nullptr;
+    return Error(invalid ? ErrorCode::invalid_argument : ErrorCode::unknown, exception.what());
 }
 
 Vm::Vm(): _state_ownership(false), _state_ptr(nullptr)

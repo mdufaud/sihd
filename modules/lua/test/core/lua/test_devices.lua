@@ -27,3 +27,15 @@ check_device(sihd.core.DevRecorder("recorder", core))
 local msg = sihd.core.DevMessage("message", core)
 check_device(msg)
 assert(msg:set_trigger_mode(true))
+
+-- a reset deletes devices the script still holds: collecting their handles must not touch them
+do
+    local owner = sihd.core.Core("owner", nil)
+    local worker = sihd.core.DevWorker("worker", owner)
+    check_device(worker)
+    assert(owner:init())
+    assert(owner:start())
+    assert(owner:stop())
+    assert(owner:reset())
+end
+collectgarbage("collect")

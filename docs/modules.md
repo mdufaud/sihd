@@ -15,6 +15,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`pcap`](modules/pcap.md) | Packet capture, injection, capture files, Android VPN capture | net, libpcap |
 | [`csv`](modules/csv.md) | CSV reading/writing, channel recording | sys |
 | [`zip`](modules/zip.md) | Archive compression and encryption | sys, libzip |
+| [`zlib`](modules/zlib.md) | Deflate/inflate byte streams (zlib, gzip), compression devices | core, zlib |
 | [`tui`](modules/tui.md) | Terminal UI components (ftxui) | sys, ftxui |
 | [`ssh`](modules/ssh.md) | SSH client and server, SFTP | sys, libssh |
 | [`usb`](modules/usb.md) | USB device enumeration, udev hardware names | sys, libusb |

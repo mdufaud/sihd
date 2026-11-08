@@ -231,7 +231,7 @@ void PyCoreApi::add_core_api(PyApi::PyModule & pymodule)
         .def(pybind11::init<const std::string &, Node *>(), pybind11::keep_alive<1, 3>())
         .def(pybind11::init<const std::string &>());
 
-    pybind11::class_<ACoreObject, Named, Configurable>(m_core, "ACoreObject")
+    pybind11::class_<ACoreObject, Named, Configurable, SmartNodePtr<ACoreObject>>(m_core, "ACoreObject")
         .def("setup",
              static_cast<bool (ACoreObject::*)()>(&ACoreService::setup),
              pybind11::call_guard<pybind11::gil_scoped_release>())

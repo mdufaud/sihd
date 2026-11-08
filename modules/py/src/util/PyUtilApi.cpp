@@ -283,7 +283,9 @@ void PyUtilApi::add_util_api(PyApi::PyModule & pymodule)
         .def("split", &Splitter::split)
         .def("count_tokens", &Splitter::count_tokens);
 
-    pybind11::class_<Configurable>(m_util, "Configurable").def("set_conf", &PyUtilApi::_configurable_set_conf);
+    // a base of SmartNodePtr nodes: pybind refuses a std::unique_ptr holder beside theirs
+    pybind11::class_<Configurable, std::shared_ptr<Configurable>>(m_util, "Configurable")
+        .def("set_conf", &PyUtilApi::_configurable_set_conf);
 
     pybind11::class_<Named, SmartNodePtr<Named>>(m_util, "Named")
         .def(pybind11::init([](const std::string & name, Node *parent) {

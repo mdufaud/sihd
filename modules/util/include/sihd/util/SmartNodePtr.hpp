@@ -1,7 +1,6 @@
 #ifndef __SIHD_UTIL_SMARTNODEPTR_HPP__
 #define __SIHD_UTIL_SMARTNODEPTR_HPP__
 
-#include <memory>
 #include <type_traits>
 
 #include <sihd/util/Named.hpp>
@@ -9,24 +8,43 @@
 namespace sihd::util
 {
 
-template <typename T>
-struct SmartNodeDeleter
+// a node owned by its parent when held is never read again: the parent may delete it first
+class SmartNodeHolder
 {
-        static_assert(std::has_virtual_destructor_v<Named>,
-                      "the deleter deletes through base pointers: Named must have a virtual destructor");
-        static_assert(std::is_base_of_v<Named, T>, "SmartNodePtr manages Named-derived nodes only");
+    public:
+        explicit SmartNodeHolder(Named *node = nullptr);
+        SmartNodeHolder(const SmartNodeHolder &) = delete;
+        SmartNodeHolder & operator=(const SmartNodeHolder &) = delete;
+        SmartNodeHolder(SmartNodeHolder && other) noexcept;
+        SmartNodeHolder & operator=(SmartNodeHolder && other) noexcept;
+        ~SmartNodeHolder();
 
-        void operator()(T *ptr)
-        {
-            if (ptr != nullptr && ptr->is_owned_by_parent() == false)
-            {
-                delete ptr;
-            }
-        }
+        Named *get() const;
+
+    private:
+        void _delete();
+
+        Named *_node;
+        bool _deletes_node;
 };
 
 template <class T>
-using SmartNodePtr = std::unique_ptr<T, SmartNodeDeleter<T>>;
+class SmartNodePtr
+{
+        static_assert(std::is_base_of_v<Named, T>, "SmartNodePtr manages Named-derived nodes only");
+
+    public:
+        SmartNodePtr() = default;
+        explicit SmartNodePtr(T *ptr): _holder(ptr) {}
+
+        T *get() const { return static_cast<T *>(_holder.get()); }
+        T *operator->() const { return this->get(); }
+        T & operator*() const { return *this->get(); }
+        explicit operator bool() const { return _holder.get() != nullptr; }
+
+    private:
+        SmartNodeHolder _holder;
+};
 
 } // namespace sihd::util
 

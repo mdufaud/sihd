@@ -23,6 +23,8 @@ namespace sihd::lua
 
 // leaves the error on the stack and returns -1: the caller raises it once its C++ locals are gone
 int push_error(lua_State *state, const sihd::util::Error & error);
+// invalid_argument for a std::invalid_argument, unknown for any other exception
+sihd::util::Error error_from_exception(const std::exception & exception);
 
 namespace checked_detail
 {
@@ -97,13 +99,9 @@ struct Checked<Function, Return (*)(Args...)>
                     return 1;
                 }
             }
-            catch (const std::invalid_argument & exception)
-            {
-                return push_error(state, sihd::util::Error(sihd::util::ErrorCode::invalid_argument, exception.what()));
-            }
             catch (const std::exception & exception)
             {
-                return push_error(state, sihd::util::Error(sihd::util::ErrorCode::unknown, exception.what()));
+                return push_error(state, error_from_exception(exception));
             }
         }
 
