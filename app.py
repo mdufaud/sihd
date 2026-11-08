@@ -228,8 +228,6 @@ modules = {
         "depends": ['sys'],
         "extlibs": ['ftxui'],
         "libs": ["ftxui-component", "ftxui-dom", "ftxui-screen"],
-        # mingw auto-exports static ftxui from the dll: demos then link it twice
-        "windows-shared-link": ["-Wl,--exclude-libs,ALL"],
     },
     "ssh": {
         "exclude-platforms": ["android", "web"],

@@ -16,7 +16,9 @@ if builder.build_compiler == "gcc":
 env.Append(CPPFLAGS = cppflags)
 
 # build library from lib sources - not added to environment
-lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name())
+ftxui_libs = ["ftxui-component", "ftxui-dom", "ftxui-screen"]
+
+lib = env.build_lib(Glob('src/*.cpp'), name = env.module_format_name(), static_libs = ftxui_libs)
 
 env.build_demos(Glob("demo/*.cpp"), libs = [env.module_format_name()])
 
@@ -31,4 +33,4 @@ env.Append(
 import os
 for src in Glob('bin/*.cpp'):
     bin_name = os.path.basename(os.path.splitext(str(src))[0])
-    env.build_bin(src, name = bin_name)
+    env.build_bin(src, name = bin_name, libs = ftxui_libs)
