@@ -27,6 +27,7 @@
 #if defined(__SIHD_WINDOWS__)
 # include <afunix.h>
 #else
+# include <fcntl.h>
 # include <sys/socket.h>
 # include <sys/un.h>
 #endif
@@ -302,6 +303,21 @@ TEST_F(TestSocket, test_socket_unix_abstract)
     ASSERT_TRUE(empty_path.open(AF_UNIX, SOCK_STREAM, 0).has_value());
     EXPECT_FALSE(empty_path.bind_unix(std::string_view {}).has_value());
 }
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestSocket, test_socket_closed_on_exec)
+{
+    Socket server;
+    Socket client;
+    Socket accepted;
+
+    connect_tcp(server, client, accepted);
+
+    EXPECT_NE(fcntl(server.socket(), F_GETFD) & FD_CLOEXEC, 0);
+    EXPECT_NE(fcntl(client.socket(), F_GETFD) & FD_CLOEXEC, 0);
+    EXPECT_NE(fcntl(accepted.socket(), F_GETFD) & FD_CLOEXEC, 0);
+}
+#endif
 
 TEST_F(TestSocket, test_socket_move_construct_transfers_descriptor)
 {

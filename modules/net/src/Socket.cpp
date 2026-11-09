@@ -634,7 +634,12 @@ Result<void> Socket::open(int domain, int type, int protocol)
     if (this->is_open())
         return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
 
+#ifdef SOCK_CLOEXEC
+    // a spawned child must not keep the socket alive
+    _socket = ::socket(domain, type | SOCK_CLOEXEC, protocol);
+#else
     _socket = ::socket(domain, type, protocol);
+#endif
     _domain = domain;
     _type = type;
     _protocol = protocol;
@@ -722,7 +727,11 @@ Result<int> Socket::accept(sockaddr *addr, socklen_t *addr_len, int timeout_ms)
             return std::unexpected(Error(ErrorCode::timeout, "accept timeout after {}ms", timeout_ms));
     }
 
+#ifdef SOCK_CLOEXEC
+    return size_result(socket_call("accept", [&] { return ::accept4(_socket, addr, addr_len, SOCK_CLOEXEC); }));
+#else
     return size_result(socket_call("accept", [&] { return (int)::accept(_socket, addr, addr_len); }));
+#endif
 }
 
 Result<void> Socket::listen(uint16_t queue_size)
