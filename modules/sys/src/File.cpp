@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <cerrno>
@@ -306,11 +307,61 @@ Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const
 Result<void> File::open(const std::string & path, const std::string & mode)
 {
     // a refused path keeps the open file; flushed first so its close cannot write into a file the new open truncated
-    if (_file_ptr != nullptr)
-        fflush(_file_ptr);
+    if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
+        return std::unexpected(Error::from_errno("could not flush before opening '{}'", path));
     FILE *opened = fopen(path.c_str(), mode.c_str());
     if (opened == nullptr)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
+    return this->_replace_stream(opened, path);
+}
+
+Result<void> File::open(const std::string & path, const OpenOptions & options)
+{
+    if (!options.read && !options.write)
+        return std::unexpected(Error(invalid_argument, "a file opens to read, to write or both"));
+    if (!options.write && (options.truncate || options.append))
+        return std::unexpected(Error(invalid_argument, "truncate and append need write"));
+    if (options.exclusive && !options.create)
+        return std::unexpected(Error(invalid_argument, "exclusive needs create"));
+
+    int flags = O_RDONLY;
+    if (options.write)
+        flags = options.read ? O_RDWR : O_WRONLY;
+    if (options.create)
+        flags |= O_CREAT;
+    if (options.truncate)
+        flags |= O_TRUNC;
+    if (options.exclusive)
+        flags |= O_EXCL;
+    if (options.append)
+        flags |= O_APPEND;
+#if defined(O_BINARY)
+    flags |= O_BINARY;
+#endif
+    // fdopen never creates nor truncates: its mode only matches the descriptor access
+    std::string mode = "rb";
+    if (options.write && options.append)
+        mode = options.read ? "a+b" : "ab";
+    else if (options.write)
+        mode = options.read ? "r+b" : "wb";
+
+    if (_file_ptr != nullptr && fflush(_file_ptr) != 0)
+        return std::unexpected(Error::from_errno("could not flush before opening '{}'", path));
+    const int fd = ::open(path.c_str(), flags, options.permissions);
+    if (fd < 0)
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    FILE *opened = fdopen(fd, mode.c_str());
+    if (opened == nullptr)
+    {
+        auto error = Error::from_errno("could not open '{}'", path);
+        ::close(fd);
+        return std::unexpected(std::move(error));
+    }
+    return this->_replace_stream(opened, path);
+}
+
+Result<void> File::_replace_stream(FILE *opened, const std::string & path)
+{
     auto closed = this->close();
     if (!closed)
     {

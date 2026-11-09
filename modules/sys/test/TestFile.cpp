@@ -20,6 +20,16 @@ class TestFile: public ::testing::Test
         virtual ~TestFile() = default;
         virtual void SetUp() {}
         virtual void TearDown() {}
+
+        static std::string
+            content_after_write(const std::string & path, const File::OpenOptions & options, std::string_view data)
+        {
+            File file;
+            if (!file.open(path, options).has_value() || !file.write(data.data(), data.size()).has_value()
+                || !file.close().has_value())
+                return "<failed>";
+            return fs::read_all(path).value_or("<unreadable>");
+        }
 };
 
 TEST_F(TestFile, test_file_write_read)
@@ -283,6 +293,71 @@ TEST_F(TestFile, test_file_reopen_truncates_after_previous_writes)
     ASSERT_TRUE(file.close().has_value());
 
     EXPECT_EQ(fs::read_all(path).value_or(""), "z");
+}
+
+TEST_F(TestFile, test_file_open_options_write_modes)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine(tmp_dir.path(), "options.txt");
+    ASSERT_TRUE(fs::write(path, "0123456789").has_value());
+
+    const std::string in_place = content_after_write(path, {.write = true}, "ab");
+    const std::string appended = content_after_write(path, {.write = true, .append = true}, "!");
+    const std::string created_over = content_after_write(path, {.write = true, .create = true}, "cd");
+    const std::string truncated = content_after_write(path, {.write = true, .truncate = true}, "z");
+    const std::string created = content_after_write(fs::combine(tmp_dir.path(), "new.txt"),
+                                                    {.write = true, .create = true, .exclusive = true},
+                                                    "new");
+
+    EXPECT_EQ(in_place, "ab23456789");
+    EXPECT_EQ(appended, "ab23456789!");
+    EXPECT_EQ(created_over, "cd23456789!");
+    EXPECT_EQ(truncated, "z");
+    EXPECT_EQ(created, "new");
+}
+
+TEST_F(TestFile, test_file_open_options_exclusive_refuses_an_existing_file)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine(tmp_dir.path(), "existing.txt");
+    ASSERT_TRUE(fs::write(path, "kept").has_value());
+    File file;
+
+    const auto opened = file.open(path, {.write = true, .create = true, .exclusive = true});
+
+    ASSERT_FALSE(opened.has_value());
+    EXPECT_EQ(opened.error().code, ErrorCode::already_exists);
+    EXPECT_FALSE(file.is_open());
+    EXPECT_EQ(fs::read_all(path).value_or(""), "kept");
+}
+
+TEST_F(TestFile, test_file_open_options_refuses_misuse)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine(tmp_dir.path(), "misuse.txt");
+    ASSERT_TRUE(fs::write(path, "kept").has_value());
+    File file;
+    ASSERT_TRUE(file.open(path, {.read = true}).has_value());
+
+    const auto no_access = file.open(path, File::OpenOptions {});
+    const auto read_truncate = file.open(path, {.read = true, .truncate = true});
+    const auto read_append = file.open(path, {.read = true, .append = true});
+    const auto exclusive_alone = file.open(path, {.write = true, .exclusive = true});
+
+    ASSERT_FALSE(no_access.has_value());
+    EXPECT_EQ(no_access.error().message, "a file opens to read, to write or both");
+    ASSERT_FALSE(read_truncate.has_value());
+    EXPECT_EQ(read_truncate.error().message, "truncate and append need write");
+    ASSERT_FALSE(read_append.has_value());
+    EXPECT_EQ(read_append.error().message, "truncate and append need write");
+    ASSERT_FALSE(exclusive_alone.has_value());
+    EXPECT_EQ(exclusive_alone.error().message, "exclusive needs create");
+    std::string read;
+    ASSERT_TRUE(file.read(read, 4).has_value());
+    EXPECT_EQ(read, "kept");
 }
 
 TEST_F(TestFile, test_file_open_tmp)

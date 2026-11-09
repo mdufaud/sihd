@@ -16,6 +16,18 @@ namespace sihd::sys
 class File
 {
     public:
+        struct OpenOptions
+        {
+                bool read = false;
+                bool write = false;
+                bool create = false;
+                bool truncate = false;
+                bool exclusive = false;
+                bool append = false;
+                // mode of a created file, before the umask
+                unsigned int permissions = 0666;
+        };
+
         File();
         File(int fd, const std::string & mode);
         File(FILE *stream, bool ownership);
@@ -34,6 +46,7 @@ class File
 
         // mode = r/w/a - r+/w+/a+ - rb/wb/ab - rb+/wb+/ab+
         sihd::util::Result<void> open(const std::string & path, const std::string & mode);
+        sihd::util::Result<void> open(const std::string & path, const OpenOptions & options);
         sihd::util::Result<void> open_fd(int fd, const std::string & mode);
         sihd::util::Result<void> set_stream(FILE *stream, bool ownership);
         sihd::util::Result<void>
@@ -102,6 +115,7 @@ class File
     protected:
 
     private:
+        sihd::util::Result<void> _replace_stream(FILE *opened, const std::string & path);
         sihd::util::Result<void> _seek(int64_t offset, int origin);
         void _delete_buffer();
         bool _allocate_buffer_if_not_exists();

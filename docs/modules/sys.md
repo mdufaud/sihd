@@ -14,7 +14,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Files and filesystem
 
-- `File`: buffered wrapper over a `FILE *` or a file descriptor, with `open`, `read`, `write`, `read_line`, `seek`, `tell`, `flush`, `set_buffer_size` and `lock`/`trylock`.
+- `File`: buffered wrapper over a `FILE *` or a file descriptor, with `open`, `read`, `write`, `read_line`, `seek`, `tell`, `flush`, `set_buffer_size` and `lock`/`trylock`. `open(path, mode)` takes a fopen mode; `open(path, OpenOptions)` (`read`, `write`, `create`, `truncate`, `exclusive`, `append`, `permissions` of a created file) also creates without truncating or refuses an existing file (`already_exists`); truncate or append without write, exclusive without create, or neither read nor write is `invalid_argument`. A refused open keeps the file already open.
 - `LineReader`: buffered line reader over a `File` or a path: `open`, `read_next`, `get_read_data`. `fast_read_line` reads one line from a `FILE *` (default `stdin`).
 - `FileMutex`: inter-process lock on a file: `lock`, `try_lock`, `try_lock_for`, `lock_shared`, `unlock`.
 - `MappedFile`: memory-mapped file: `create`, `open_read_only`, `open_read_write`, `data`, `size`, `sync`, `clear`.
