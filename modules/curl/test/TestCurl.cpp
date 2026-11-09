@@ -302,4 +302,16 @@ TEST(TestCurl, test_mime)
     empty.name("x").data("y").content_type("text/plain");
 }
 
+TEST(TestCurl, test_mime_part_survives_next_parts)
+{
+    Mime mime;
+    Mime::Part first = mime.add_part();
+    for (int i = 0; i < 16; ++i)
+        mime.add_part();
+
+    first.name("first");
+
+    EXPECT_EQ(mime.parts().front().name, "first");
+}
+
 } // namespace test

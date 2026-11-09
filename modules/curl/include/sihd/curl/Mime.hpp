@@ -2,6 +2,7 @@
 #define __SIHD_CURL_MIME_HPP__
 
 #include <cstdint>
+#include <deque>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -46,10 +47,11 @@ class Mime
 
         Part add_part();
 
-        const std::vector<MimePart> & parts() const;
+        const std::deque<MimePart> & parts() const;
 
     private:
-        std::vector<MimePart> _parts;
+        // a deque keeps every Part handle valid while parts are added
+        std::deque<MimePart> _parts;
 };
 
 } // namespace sihd::curl

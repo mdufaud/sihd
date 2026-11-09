@@ -5,7 +5,7 @@ namespace sihd::curl
 
 Mime::Part::Part(MimePart *part): _part(part) {}
 
-const std::vector<MimePart> & Mime::parts() const
+const std::deque<MimePart> & Mime::parts() const
 {
     return _parts;
 }
