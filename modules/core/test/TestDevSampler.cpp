@@ -1,3 +1,7 @@
+#include <atomic>
+#include <string>
+#include <thread>
+
 #include <gtest/gtest.h>
 
 #include <sihd/core/ChannelWaiter.hpp>
@@ -166,6 +170,44 @@ TEST_F(TestDevSampler, test_devsampler_two_mappings)
     EXPECT_TRUE(out2_waiter.prev_wait_for(Duration(time::sec(1))));
     EXPECT_EQ(out2->read<int>(0), 43);
 
+    ASSERT_TRUE(core.stop());
+}
+
+TEST_F(TestDevSampler, test_devsampler_handles_writes_during_start)
+{
+    Core core;
+    DevSampler *dev_ptr = core.add_child<DevSampler>("sampler");
+    ASSERT_TRUE(dev_ptr->set_conf("frequency", 100.0));
+    // many mappings keep on_start filling its map while the writer already notifies the first input
+    for (int i = 0; i < 500; ++i)
+    {
+        core.add_channel("in" + std::to_string(i), "int", 1);
+        core.add_channel("out" + std::to_string(i), "int", 1);
+        ASSERT_TRUE(dev_ptr->set_conf_str("sample", "..out" + std::to_string(i) + "=..in" + std::to_string(i)));
+    }
+    ASSERT_TRUE(core.init());
+
+    Channel *in0 = core.get_channel("in0").value_or(nullptr);
+    Channel *out0 = core.get_channel("out0").value_or(nullptr);
+    ASSERT_NE(in0, nullptr);
+    ASSERT_NE(out0, nullptr);
+
+    std::atomic<bool> started = false;
+    std::thread writer([in0, &started] {
+        int value = 0;
+        while (started == false)
+            in0->write<int>(0, ++value);
+    });
+
+    const bool start = core.start();
+    started = true;
+    writer.join();
+    ChannelWaiter out0_waiter(out0);
+    in0->write<int>(0, -1);
+
+    EXPECT_TRUE(start);
+    EXPECT_TRUE(out0_waiter.prev_wait_for(Duration(time::sec(1))));
+    EXPECT_EQ(out0->read<int>(0), -1);
     ASSERT_TRUE(core.stop());
 }
 

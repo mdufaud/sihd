@@ -103,6 +103,8 @@ bool DevSampler::on_start()
                 SIHD_LOG(error, "DevSampler: could not observe channel '{}'", channel_in_path);
                 ret = false;
             }
+            // handle reads the map on the writer threads as soon as the input is observed
+            std::lock_guard lock(_set_mutex);
             _channels_map[channel_in] = channel_out;
         }
         else
@@ -152,9 +154,9 @@ bool DevSampler::on_stop()
 {
     if (_step_worker.stop_worker() == false)
         SIHD_LOG(error, "DevSampler: could not stop worker");
-    _channels_map.clear();
     {
         std::lock_guard lock(_set_mutex);
+        _channels_map.clear();
         _channels_sample_set.clear();
     }
     return true;
