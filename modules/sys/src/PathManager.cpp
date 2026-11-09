@@ -44,11 +44,11 @@ bool check_if_match(std::string_view path, std::string_view search, std::string_
     bool ret = false;
     std::filesystem::perms mode = mode_from_str(mode_str);
     std::string path_to_search = (std::filesystem::path(path) / search).string();
-    if (std::filesystem::exists(path_to_search))
+    std::error_code ec;
+    if (std::filesystem::exists(path_to_search, ec))
     {
         if (mode != std::filesystem::perms::none)
         {
-            std::error_code ec;
             std::filesystem::perms file_perms = std::filesystem::status(path_to_search, ec).permissions();
             ret = !ec && (file_perms & mode) != std::filesystem::perms::none;
         }
@@ -95,18 +95,21 @@ std::string PathManager::find(std::string_view search, std::string_view mode_str
 
 void PathManager::push_back(std::string_view path_item)
 {
+    std::lock_guard lock(_mutex);
     if (!container::contains(_path_lst, path_item))
         _path_lst.emplace_back(path_item);
 }
 
 void PathManager::push_front(std::string_view path_item)
 {
+    std::lock_guard lock(_mutex);
     if (!container::contains(_path_lst, path_item))
         _path_lst.emplace(_path_lst.begin(), path_item);
 }
 
 Result<void> PathManager::remove(std::string_view path_item)
 {
+    std::lock_guard lock(_mutex);
     auto it = std::remove(_path_lst.begin(), _path_lst.end(), path_item);
     if (it == _path_lst.end())
     {
@@ -118,6 +121,7 @@ Result<void> PathManager::remove(std::string_view path_item)
 
 void PathManager::clear()
 {
+    std::lock_guard lock(_mutex);
     _path_lst.clear();
 }
 

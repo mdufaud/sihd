@@ -1,12 +1,17 @@
 #include <filesystem>
 #include <fstream>
 #include <random>
+#include <thread>
 
 #include <gtest/gtest.h>
 
 #include <sihd/sys/PathManager.hpp>
 #include <sihd/sys/TmpDir.hpp>
+#include <sihd/sys/fs.hpp>
+#include <sihd/sys/user.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 
 namespace test
 {
@@ -98,5 +103,43 @@ TEST_F(TestPathManager, test_pathmanager_get)
     ASSERT_EQ(all_twins.size(), 2U);
     EXPECT_EQ(all_twins[0], test_path_parent_twin.string());
     EXPECT_EQ(all_twins[1], test_path_twin.string());
+}
+
+TEST_F(TestPathManager, test_pathmanager_concurrent_push_and_find)
+{
+    PathManager path_manager;
+
+    std::thread pusher([&] {
+        for (int i = 0; i < 200; ++i)
+            path_manager.push_back(fmt::format("/sihd_nonexistent_{}", i));
+    });
+    for (int i = 0; i < 200; ++i)
+        EXPECT_EQ(path_manager.find("file.txt"), "");
+    pusher.join();
+
+    EXPECT_EQ(path_manager.path_lst().size(), 200U);
+}
+
+TEST_F(TestPathManager, test_pathmanager_find_skips_unsearchable_directory)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "windows has no directory search permission";
+    if (user::is_root())
+        GTEST_SKIP() << "root searches regardless of permissions";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string locked = fs::combine(tmp_dir.path(), "locked");
+    const std::string file = fs::combine(tmp_dir.path(), "file.txt");
+    ASSERT_TRUE(std::filesystem::create_directory(locked));
+    ASSERT_TRUE(fs::write(file, "content").has_value());
+    ASSERT_TRUE(fs::permission_set(locked, 0).has_value());
+    Defer restore([&] { (void)fs::permission_set(locked, 0700); });
+    PathManager path_manager;
+    path_manager.push_back(locked);
+    path_manager.push_back(tmp_dir.path());
+
+    EXPECT_EQ(path_manager.find("file.txt"), file);
+    EXPECT_EQ(path_manager.find_all("file.txt"), std::vector<std::string> {file});
 }
 } // namespace test
