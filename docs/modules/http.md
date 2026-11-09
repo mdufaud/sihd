@@ -51,7 +51,7 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 - `Navigator` transport: `set_timeout`, `set_connect_timeout`, `set_ssl_verify`, `set_http2`, `set_max_response_size`, `set_proxy`, `add_proxy`, `set_proxy_rotation` (`ProxyRotation`), `set_retry`, `set_domain_delay_ms`, `set_user_agent_rotation`.
 - `Navigator` redirects and safety: `set_follow_redirects`, `set_max_redirects`, `set_redirect_policy` (`RedirectPolicy`), `set_ssrf_guard`, `set_cross_origin_headers`.
 - `Navigator` hooks: `on_before_request` (may edit `RequestInfo`), `on_after_response`, `on_auth_required`.
-- `Navigator` WebSocket client: `ws_connect`, `ws_send`, `ws_send_binary`, `ws_close`, `ws_is_connected`, with `on_ws_open`, `on_ws_text`, `on_ws_binary`, `on_ws_close`, `on_ws_peer_close`.
+- `Navigator` WebSocket client: `ws_connect` (replaces the current connection), `ws_send`, `ws_send_binary`, `ws_close`, `ws_is_connected`, with `on_ws_open`, `on_ws_text`, `on_ws_binary`, `on_ws_close`, `on_ws_peer_close`.
 - `NavigatorResponse`: `HttpResponse` plus `final_url`, `redirect_history`, `cookies`, `was_method_downgraded`, `redirect_refusal`, `truncated`.
 - `RobotsTxt`: fetch and parse a `robots.txt`; `is_allowed(user_agent, path)`, `crawl_delay`, TTL with `set_ttl`.
 - `extract_links`: links from HTML with optional base URL resolution (`ExtractedLink`).

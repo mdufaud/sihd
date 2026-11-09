@@ -33,7 +33,7 @@ Thin wrapper over libcurl for single transfers: URL and option setting, request 
 
 - `HeaderList`: request header lines. `append`, `lines`, `size`, `empty`. Applied with `Request::set_headers`.
 - `Mime`: multipart form builder. `add_part()` returns a `Mime::Part` with `name`, `data`, `file`, `filename`, `content_type` setters. Parts are copied when applied with `Request::set_mime`; `clear_mime` removes them.
-- `MimePart`: plain data record of one part, exposed by `Mime::parts()`.
+- `MimePart`: plain data record of one part, exposed by `Mime::parts()` (a `std::deque`: a part stays at its address while parts are added).
 
 ### Cookies
 
