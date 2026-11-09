@@ -25,17 +25,17 @@ class CallbackManager
         template <typename R, typename... Targs>
         void set(const std::string & name, R (*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun](Targs... args) {
-                                   return (*fun)(args...);
-                               })));
+            _callbacks.insert_or_assign(name,
+                                        std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
+                                            [fun](Targs... args) { return (*fun)(args...); })));
         }
 
         template <typename C, typename R, typename... Targs>
         void set(const std::string & name, C *obj, R (C::*fun)(Targs...))
         {
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>([fun, obj](Targs... args) {
-                                   return (obj->*fun)(args...);
-                               })));
+            _callbacks.insert_or_assign(name,
+                                        std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(
+                                            [fun, obj](Targs... args) { return (obj->*fun)(args...); })));
         }
 
         // The entire signature of the callable must be passed to this overload.
@@ -43,7 +43,7 @@ class CallbackManager
         void set(const std::string & name, Callable callable)
         {
             MoveOnlyFunction<R(Targs...)> fun(std::move(callable));
-            _callbacks.emplace(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
+            _callbacks.insert_or_assign(name, std::unique_ptr<CallbackBase>(new Callback<R, Targs...>(std::move(fun))));
         }
 
         template <typename... Targs>

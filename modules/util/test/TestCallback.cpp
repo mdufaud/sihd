@@ -134,6 +134,16 @@ TEST_F(TestCallback, test_callback_lambda)
     cbm.remove("no_such_key");
 }
 
+TEST_F(TestCallback, test_callback_set_replaces_the_callback_of_a_name)
+{
+    CallbackManager cbm;
+
+    cbm.set<int>("test_ret", []() { return 1; });
+    cbm.set<int>("test_ret", []() { return 2; });
+
+    EXPECT_EQ(cbm.call<int>("test_ret"), 2);
+}
+
 TEST_F(TestCallback, test_callback_check_call_type)
 {
     CallbackManager cbm;
