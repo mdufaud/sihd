@@ -644,6 +644,24 @@ TEST_F(TestFS, test_fs_copy_file_refused_keeps_destination)
     EXPECT_EQ(fs::read_all(dst).value_or(""), "existing data");
 }
 
+TEST_F(TestFS, test_fs_copy_file_cancelled_keeps_destination)
+{
+    if (os::is_run_by_wine())
+        GTEST_SKIP() << "wine lacks the CopyFile2 progress callback";
+
+    TmpDir tmp_path;
+    const std::string src = fs::combine(tmp_path.path(), "src.bin");
+    const std::string dst = fs::combine(tmp_path.path(), "dst.txt");
+    ASSERT_TRUE(fs::write_binary(src, std::string(5 * 1024 * 1024, 'x')).has_value());
+    ASSERT_TRUE(fs::write(dst, "existing data").has_value());
+
+    const auto copied = fs::copy_file(src, dst, [](uint64_t progress, uint64_t total) { return progress < total / 2; });
+
+    EXPECT_FALSE(copied.has_value());
+    EXPECT_EQ(fs::read_all(dst).value_or(""), "existing data");
+    EXPECT_EQ(fs::children(tmp_path.path()).size(), 2u);
+}
+
 TEST_F(TestFS, test_fs_platform_paths)
 {
     for (const std::string & path : {fs::config_path(), fs::data_path(), fs::cache_path(), fs::download_path()})

@@ -505,10 +505,14 @@ Result<void> copy_file(const std::string & from,
         return std::unexpected(Error(invalid_argument, "'{}' and '{}' are the same file", from, to));
     }
 
-    int out_fd = ::open(to.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    // copied beside the destination then renamed over it: a failed copy keeps the old one, a link is followed as cp
+    const std::string resolved = is_symlink(to) ? realpath(to) : "";
+    const std::string target = resolved.empty() ? to : resolved;
+    std::string tmp_path = target + ".sihd-XXXXXX";
+    int out_fd = ::mkstemp(tmp_path.data());
     if (out_fd < 0)
     {
-        std::unexpected<Error> ret(Error::from_errno("could not open '{}' for copy", to));
+        std::unexpected<Error> ret(Error::from_errno("could not create a temporary copy of '{}'", to));
         ::close(in_fd);
         return ret;
     }
@@ -532,7 +536,7 @@ Result<void> copy_file(const std::string & from,
     {
         ::close(in_fd);
         ::close(out_fd);
-        ::unlink(to.c_str());
+        ::unlink(tmp_path.c_str());
         return std::unexpected(Error(interrupted, "copy of '{}' to '{}' cancelled", from, to));
     }
 
@@ -540,7 +544,7 @@ Result<void> copy_file(const std::string & from,
     {
         ::close(in_fd);
         ::close(out_fd);
-        ::unlink(to.c_str());
+        ::unlink(tmp_path.c_str());
         SIHD_UNEXPECTED_RETURN_CTX(result, "could not copy '{}' to '{}'", from, to);
     }
     ::close(in_fd);
@@ -564,8 +568,12 @@ Result<void> copy_file(const std::string & from,
     {
         res = std::unexpected(Error::from_errno("could not close '{}'", to));
     }
+    if (res && ::rename(tmp_path.c_str(), target.c_str()) != 0)
+    {
+        res = std::unexpected(Error::from_errno("could not replace '{}'", to));
+    }
     if (!res)
-        ::unlink(to.c_str());
+        ::unlink(tmp_path.c_str());
     return res;
 }
 

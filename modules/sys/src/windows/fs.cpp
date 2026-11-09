@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <winioctl.h>
 
+#include <array>
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
@@ -318,8 +319,21 @@ Result<void> copy_file(const std::string & from,
                        const std::string & to,
                        const std::function<bool(uint64_t, uint64_t)> & progress)
 {
+    // copied beside the destination then moved over it: a failed copy keeps the old one, a link is followed as cp
+    const std::string resolved = is_symlink(to) ? realpath(to) : "";
+    const std::string target = resolved.empty() ? to : resolved;
     const std::wstring wfrom = str::to_wstr(from);
-    const std::wstring wto = str::to_wstr(to);
+    const std::wstring wto = str::to_wstr(target);
+    // moving the copy over the source itself would succeed
+    std::error_code same_error;
+    if (std::filesystem::equivalent(std::filesystem::path(wfrom), std::filesystem::path(wto), same_error))
+        return std::unexpected(Error(invalid_argument, "'{}' and '{}' are the same file", from, to));
+    const std::string target_dir = parent(target);
+    const std::wstring wdir = str::to_wstr(target_dir.empty() ? "." : target_dir);
+    std::array<wchar_t, MAX_PATH> wtmp {};
+    if (::GetTempFileNameW(wdir.c_str(), L"sih", 0, wtmp.data()) == 0)
+        return std::unexpected(
+            Error(io_error, "could not create a temporary copy of '{}': {}", to, os::last_error_str()));
 #if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0602
     CopyProgressCtx ctx {progress ? &progress : nullptr};
 
@@ -328,24 +342,32 @@ Result<void> copy_file(const std::string & from,
     params.pProgressRoutine = &copy_progress_cb;
     params.pvCallbackContext = &ctx;
 
-    // a failing CopyFile2 that never started the copy leaves the destination untouched: remove only ours
-    const bool dest_existed = ::GetFileAttributesW(wto.c_str()) != INVALID_FILE_ATTRIBUTES;
-    const HRESULT hr = ::CopyFile2(wfrom.c_str(), wto.c_str(), &params);
-    if (SUCCEEDED(hr))
-        return {};
-    if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED) || !dest_existed)
-        ::DeleteFileW(wto.c_str());
-    if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED))
-        return std::unexpected(Error(interrupted, "copy '{}' cancelled", from));
-    return std::unexpected(
-        Error(io_error, "could not copy '{}' to '{}': CopyFile2 0x{:08x}", from, to, (unsigned long)hr));
+    const HRESULT hr = ::CopyFile2(wfrom.c_str(), wtmp.data(), &params);
+    if (FAILED(hr))
+    {
+        ::DeleteFileW(wtmp.data());
+        if (hr == HRESULT_FROM_WIN32(ERROR_REQUEST_ABORTED))
+            return std::unexpected(Error(interrupted, "copy '{}' cancelled", from));
+        return std::unexpected(
+            Error(io_error, "could not copy '{}' to '{}': CopyFile2 0x{:08x}", from, to, (unsigned long)hr));
+    }
 #else
     // SDK without the CopyFile2 declarations (Win7-era): no progress support
     (void)progress;
-    if (::CopyFileW(wfrom.c_str(), wto.c_str(), FALSE) == 0)
-        return std::unexpected(Error(io_error, "could not copy '{}' to '{}': {}", from, to, os::last_error_str()));
-    return {};
+    if (::CopyFileW(wfrom.c_str(), wtmp.data(), FALSE) == 0)
+    {
+        auto error = Error(io_error, "could not copy '{}' to '{}': {}", from, to, os::last_error_str());
+        ::DeleteFileW(wtmp.data());
+        return std::unexpected(std::move(error));
+    }
 #endif
+    if (::MoveFileExW(wtmp.data(), wto.c_str(), MOVEFILE_REPLACE_EXISTING) == 0)
+    {
+        auto error = Error(io_error, "could not replace '{}': {}", to, os::last_error_str());
+        ::DeleteFileW(wtmp.data());
+        return std::unexpected(std::move(error));
+    }
+    return {};
 }
 
 // the C rename refuses an existing destination, posix replaces it
