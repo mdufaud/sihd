@@ -115,11 +115,15 @@ uint32_t SftpPacketClient::read_u32(std::string_view data, size_t offset)
 
 bool SftpPacketClient::send(uint8_t type, const std::string & payload)
 {
-    const std::string packet = u32(static_cast<uint32_t>(payload.size() + 1)) + static_cast<char>(type) + payload;
+    return this->send_raw(u32(static_cast<uint32_t>(payload.size() + 1)) + static_cast<char>(type) + payload);
+}
+
+bool SftpPacketClient::send_raw(std::string_view bytes)
+{
     size_t sent = 0;
-    while (sent < packet.size())
+    while (sent < bytes.size())
     {
-        const int written = _channel.write({packet.data() + sent, packet.size() - sent});
+        const int written = _channel.write({bytes.data() + sent, bytes.size() - sent});
         if (written <= 0)
             return false;
         sent += static_cast<size_t>(written);

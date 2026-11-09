@@ -9,8 +9,10 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/ansi.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
 
@@ -481,5 +483,20 @@ TEST_F(TestSftp, test_sftp_lstat_jail_root)
     auto dot = _client->request_path(SSH_FXP_LSTAT, ".");
     ASSERT_TRUE(dot.has_value());
     EXPECT_EQ(dot->type, SSH_FXP_ATTRS);
+}
+
+TEST_F(TestSftp, test_sftp_partial_packet_leaves_the_server_serving)
+{
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-partial-packet"));
+    // a request length announced, its bytes never sent
+    ASSERT_TRUE(_client->send_raw(SftpPacketClient::u32(64)));
+
+    SshSession other;
+    Stopwatch watch;
+    const bool connected = connect_to_test_server(*_server, other);
+    const Duration connect_time = watch.time();
+
+    EXPECT_TRUE(connected);
+    EXPECT_LT(connect_time, Duration(time::sec(2)));
 }
 } // namespace test

@@ -34,6 +34,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/endian.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
 
@@ -58,6 +59,24 @@ SIHD_LOGGER;
 
 namespace
 {
+
+constexpr size_t packet_length_size = sizeof(uint32_t);
+
+// sftp packets are a big endian length then that many bytes
+size_t complete_packets(const uint8_t *data, size_t len)
+{
+    size_t count = 0;
+    size_t offset = 0;
+    while (data != nullptr && len - offset >= packet_length_size)
+    {
+        const uint32_t size = endian::read_be<uint32_t>(data + offset, packet_length_size);
+        if (len - offset - packet_length_size < size)
+            break;
+        offset += packet_length_size + size;
+        ++count;
+    }
+    return count;
+}
 
 // a READ asks for any length: answer at most what OpenSSH's sftp-server does, short reads are legal
 constexpr uint32_t max_read_length = 256 * 1024 - 1024;
@@ -153,8 +172,11 @@ struct SshSubsystemSftp::Impl
         std::map<std::string, std::string> handle_to_path;
         std::map<std::string, sihd::sys::File> handle_to_file;
         std::map<std::string, size_t> dir_positions;
+        // sftp_get_client_message spins until a whole packet arrived: only complete ones are read
+        size_t ready_packets = 0;
 
         bool do_init();
+        void handle_message(sftp_client_message_struct *msg);
         void handle_realpath(sftp_client_message_struct *msg);
         void handle_stat(sftp_client_message_struct *msg, bool follow_links);
         void handle_opendir(sftp_client_message_struct *msg);
@@ -305,7 +327,24 @@ bool SshSubsystemSftp::forward_output()
 {
     if (!_impl_ptr->running || !_impl_ptr->sftp)
         return false;
-    return on_data(nullptr, 0) >= 0;
+    const bool ready = _impl_ptr->ready_packets > 0;
+    while (_impl_ptr->ready_packets > 0)
+    {
+        // a reply can show the data callback the buffer again: it recounts what is left
+        --_impl_ptr->ready_packets;
+        if (!_impl_ptr->initialized)
+        {
+            if (!_impl_ptr->do_init())
+                return false;
+            continue;
+        }
+        sftp_client_message msg = sftp_get_client_message(_impl_ptr->sftp);
+        if (msg == nullptr)
+            return false;
+        _impl_ptr->handle_message(msg);
+        sftp_client_message_free(msg);
+    }
+    return ready;
 }
 
 void SshSubsystemSftp::set_root_path(std::string_view path)
@@ -362,17 +401,6 @@ bool SshSubsystemSftp::Impl::do_init()
     if (!sftp)
         return false;
 
-    // Check if data is available on the channel before trying to init
-    // This avoids blocking in non-blocking mode
-    ssh_channel ssh_chan = static_cast<ssh_channel>(channel->channel());
-    int available = ssh_channel_poll(ssh_chan, 0);
-    if (available <= 0)
-    {
-        return false;
-    }
-
-    SIHD_LOG(debug, "SshSubsystemSftp: {} bytes available, initializing SFTP", available);
-
     int rc = sftp_server_init(sftp);
     if (rc != SSH_OK)
     {
@@ -385,87 +413,76 @@ bool SshSubsystemSftp::Impl::do_init()
     return true;
 }
 
-int SshSubsystemSftp::on_data([[maybe_unused]] const void *data, [[maybe_unused]] size_t len)
+int SshSubsystemSftp::on_data(const void *data, size_t len)
 {
     if (!_impl_ptr->running || !_impl_ptr->sftp)
         return -1;
+    // the bytes stay in libssh for sftp_get_client_message: they are shown whole from its read position
+    _impl_ptr->ready_packets = complete_packets(static_cast<const uint8_t *>(data), len);
+    return 0;
+}
 
-    if (!_impl_ptr->initialized)
-    {
-        if (!_impl_ptr->do_init())
-        {
-            return 0;
-        }
-    }
-
-    // One message per callback: sftp_get_client_message blocks on an empty channel buffer, a drain
-    // loop would stall the single-threaded server - libssh re-invokes this callback per packet
-    sftp_client_message msg = sftp_get_client_message(_impl_ptr->sftp);
-    if (msg == nullptr)
-        return static_cast<int>(len);
-
+void SshSubsystemSftp::Impl::handle_message(sftp_client_message_struct *msg)
+{
     int type = sftp_client_message_get_type(msg);
     SIHD_LOG(debug, "SshSubsystemSftp: received message type {}", type);
 
     switch (type)
     {
         case SSH_FXP_REALPATH:
-            _impl_ptr->handle_realpath(msg);
+            this->handle_realpath(msg);
             break;
         case SSH_FXP_STAT:
-            _impl_ptr->handle_stat(msg, true);
+            this->handle_stat(msg, true);
             break;
         case SSH_FXP_LSTAT:
-            _impl_ptr->handle_stat(msg, false);
+            this->handle_stat(msg, false);
             break;
         case SSH_FXP_OPENDIR:
-            _impl_ptr->handle_opendir(msg);
+            this->handle_opendir(msg);
             break;
         case SSH_FXP_READDIR:
-            _impl_ptr->handle_readdir(msg);
+            this->handle_readdir(msg);
             break;
         case SSH_FXP_CLOSE:
-            _impl_ptr->handle_close(msg);
+            this->handle_close(msg);
             break;
         case SSH_FXP_MKDIR:
-            _impl_ptr->handle_mkdir(msg);
+            this->handle_mkdir(msg);
             break;
         case SSH_FXP_RMDIR:
-            _impl_ptr->handle_rmdir(msg);
+            this->handle_rmdir(msg);
             break;
         case SSH_FXP_OPEN:
-            _impl_ptr->handle_open(msg);
+            this->handle_open(msg);
             break;
         case SSH_FXP_READ:
-            _impl_ptr->handle_read(msg);
+            this->handle_read(msg);
             break;
         case SSH_FXP_WRITE:
-            _impl_ptr->handle_write(msg);
+            this->handle_write(msg);
             break;
         case SSH_FXP_REMOVE:
-            _impl_ptr->handle_remove(msg);
+            this->handle_remove(msg);
             break;
         case SSH_FXP_RENAME:
-            _impl_ptr->handle_rename(msg);
+            this->handle_rename(msg);
             break;
         case SSH_FXP_SETSTAT:
         case SSH_FXP_FSETSTAT:
-            _impl_ptr->handle_setstat(msg);
+            this->handle_setstat(msg);
             break;
         case SSH_FXP_READLINK:
-            _impl_ptr->handle_readlink(msg);
+            this->handle_readlink(msg);
             break;
         case SSH_FXP_SYMLINK:
-            _impl_ptr->handle_symlink(msg);
+            this->handle_symlink(msg);
             break;
         default:
             SIHD_LOG(warning, "SshSubsystemSftp: unsupported message type {}", type);
-            _impl_ptr->reply_status(msg, SSH_FX_OP_UNSUPPORTED, "Operation not supported");
+            this->reply_status(msg, SSH_FX_OP_UNSUPPORTED, "Operation not supported");
             break;
     }
-
-    sftp_client_message_free(msg);
-    return static_cast<int>(len);
 }
 
 void SshSubsystemSftp::on_resize([[maybe_unused]] const WinSize & winsize) {}

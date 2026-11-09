@@ -390,6 +390,8 @@ void BasicSshServerHandler::on_channel_data([[maybe_unused]] SshServer *server,
         return;
     }
 
+    // a handler reading the channel itself is shown the same buffered bytes again until it reads them
+    if (!state->handler->manages_channel_io())
     {
         std::lock_guard<std::mutex> lock(_counters_mtx);
         ++_counters.data_received;

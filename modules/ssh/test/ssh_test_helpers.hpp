@@ -152,6 +152,8 @@ class SftpPacketClient
         std::optional<Packet> request(uint8_t type, const std::string & payload);
         std::optional<Packet> request_path(uint8_t type, std::string_view path);
         std::string open_file(std::string_view path, uint32_t pflags);
+        // bytes as they are, a packet cut short included
+        bool send_raw(std::string_view bytes);
 
         static std::string u32(uint32_t value);
         static std::string u64(uint64_t value);

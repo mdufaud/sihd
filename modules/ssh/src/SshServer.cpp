@@ -379,17 +379,13 @@ int callback_channel_data([[maybe_unused]] ssh_session session,
     if (!ch_data)
         return len;
 
-    // If the channel handler manages its own I/O (e.g., SFTP), don't consume the data.
-    // Return 0 to leave it in libssh's internal buffers for ssh_channel_read().
-    if (data->server->server_handler()
-        && data->server->server_handler()->channel_bypasses_data_callback(ch_data->wrapper))
+    if (data->server->server_handler() == nullptr)
+        return len;
+    data->server->server_handler()
+        ->on_channel_data(data->server, data->session, ch_data->wrapper, data_buf, len, is_stderr != 0);
+    // a handler reading the channel itself (sftp) only saw the buffer: the bytes stay for its ssh_channel_read
+    if (data->server->server_handler()->channel_bypasses_data_callback(ch_data->wrapper))
         return 0;
-
-    if (data->server->server_handler())
-    {
-        data->server->server_handler()
-            ->on_channel_data(data->server, data->session, ch_data->wrapper, data_buf, len, is_stderr != 0);
-    }
     return len;
 }
 
