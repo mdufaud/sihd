@@ -1,3 +1,5 @@
+#include <limits>
+
 #include <gtest/gtest.h>
 
 #include <sihd/json/Json.hpp>
@@ -84,6 +86,15 @@ TEST_F(TestJson, test_json_float)
     Json j_double(2.71828);
     EXPECT_TRUE(j_double.is_number_float());
     EXPECT_DOUBLE_EQ(j_double.get<double>(), 2.71828);
+}
+
+TEST_F(TestJson, test_json_non_finite_dumps_null)
+{
+    const Json values({std::numeric_limits<double>::quiet_NaN(),
+                       std::numeric_limits<double>::infinity(),
+                       -std::numeric_limits<double>::infinity()});
+
+    EXPECT_EQ(values.dump(), "[null,null,null]");
 }
 
 TEST_F(TestJson, test_json_string)

@@ -1,6 +1,7 @@
 #include <simdjson.h>
 
 #include <bit>
+#include <cmath>
 
 #include <sihd/json/Json.hpp>
 
@@ -786,8 +787,15 @@ void Json::Dumper::dump(simdjson::builder::string_builder & sb, const Json & jso
             sb.append(std::get<uint64_t>(json._value));
             break;
         case idx_float:
-            sb.append(std::get<double>(json._value));
+        {
+            // JSON has no NaN nor infinity: null, never a finite stand-in
+            const double value = std::get<double>(json._value);
+            if (std::isfinite(value))
+                sb.append(value);
+            else
+                sb.append_null();
             break;
+        }
         case idx_string:
             sb.escape_and_append_with_quotes(std::string_view(std::get<std::string>(json._value)));
             break;

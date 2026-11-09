@@ -15,7 +15,7 @@ JSON document parsing, typed access and serialization. Parsed documents are back
 ### Parsing and serialization
 
 - `Json::parse(std::string_view)` and `Json::parse(begin, end)`: parse a document, returns `std::expected<Json, std::string>`.
-- `Json::dump(int indent = -1)`: serialize to a string; a negative indent produces compact output.
+- `Json::dump(int indent = -1)`: serialize to a string; a negative indent produces compact output. NaN and infinities serialize as `null`.
 
 ### Construction
 
