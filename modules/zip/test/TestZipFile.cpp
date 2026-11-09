@@ -97,6 +97,26 @@ TEST_F(TestZipFile, test_zip_write_read)
     EXPECT_EQ(end_read.value(), 0);
 }
 
+TEST_F(TestZipFile, test_zip_entry_time_roundtrip)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "time.zip");
+    const Timestamp entry_time = Calendar {.day = 21, .month = 2, .year = 2000};
+    {
+        ZipFile zip_writer(zip_path);
+        ASSERT_TRUE(zip_writer.add_file("dated", "content").has_value());
+        ASSERT_TRUE(zip_writer.load_entry("dated").has_value());
+        ASSERT_TRUE(zip_writer.modify_entry_time(entry_time).has_value());
+        ASSERT_TRUE(zip_writer.close().has_value());
+    }
+
+    ZipFile zip_reader(zip_path);
+    const auto entry = zip_reader.load_entry("dated");
+
+    ASSERT_TRUE(entry.has_value());
+    EXPECT_EQ(entry->modification_time, entry_time);
+}
+
 TEST_F(TestZipFile, test_zip_not_open)
 {
     const TmpDir tmp_dir;

@@ -146,7 +146,7 @@ void save_entry(struct zip_stat *zip_stat, ZipFile::ZipEntry & zip_entry)
     if (zip_stat->valid & ZIP_STAT_COMP_SIZE)
         zip_entry.compressed_size = zip_stat->comp_size;
     if (zip_stat->valid & ZIP_STAT_MTIME)
-        zip_entry.modification_time = Timestamp(zip_stat->mtime);
+        zip_entry.modification_time = Timestamp(time::sec(zip_stat->mtime));
     if (zip_stat->valid & ZIP_STAT_CRC)
         zip_entry.crc = zip_stat->crc;
 }
