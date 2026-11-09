@@ -42,6 +42,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 ### SFTP client
 
 - `Sftp`: `open`, `close`, `list_dir`, `list_dir_filenames`, `send_file`, `get_file`, `mkdir`, `rmdir`, `rm`, `rename`, `chmod`, `chown`, `symlink`, `readlink`, `extensions`, `version`.
+- `get_file` opens the remote file before the local one: a missing remote file leaves the local file untouched.
 - `SftpAttribute`: directory entry with `name`, `is_dir`, `is_file`, `is_link`, `size`.
 
 ### Server

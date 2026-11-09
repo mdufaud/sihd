@@ -158,10 +158,6 @@ Result<void> Sftp::send_file(const std::string & local_path, const std::string &
 
 Result<void> Sftp::get_file(const std::string & remote_path, const std::string & local_path)
 {
-    sihd::sys::File local_file(local_path, "wb");
-    if (local_file.is_open() == false)
-        return std::unexpected(Error(io_error, "could not open local file '{}'", local_path));
-
     const int flags = O_RDONLY;
     SftpFilePtr remote_file(sftp_open(_impl_ptr->sftp_session_ptr, remote_path.c_str(), flags, 0));
     if (remote_file.get() == nullptr)
@@ -171,6 +167,10 @@ Result<void> Sftp::get_file(const std::string & remote_path, const std::string &
                                      remote_path,
                                      sftp_error_str(_impl_ptr->sftp_session_ptr)));
     }
+
+    sihd::sys::File local_file(local_path, "wb");
+    if (local_file.is_open() == false)
+        return std::unexpected(Error(io_error, "could not open local file '{}'", local_path));
 
     std::array<char, SIHD_SSH_SFTP_BUFSIZE + 1> buf;
     while (true)

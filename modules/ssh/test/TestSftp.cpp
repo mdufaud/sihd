@@ -205,13 +205,8 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     TmpDir out;
     std::string leaked = fs::combine(out.path(), "leaked.txt");
 
-    // Traversal read must fail without leaking the secret; get_file opens the local sink before the
-    // remote file so an empty local file may remain - the guarantee is no secret bytes leak
     EXPECT_FALSE(sftp.get_file("../secret.txt", leaked).has_value());
-    if (fs::is_file(leaked))
-    {
-        EXPECT_EQ(fs::file_size(leaked).value(), 0u);
-    }
+    EXPECT_FALSE(fs::is_file(leaked));
 
     std::string got = fs::combine(out.path(), "got.txt");
     EXPECT_TRUE(sftp.get_file("ok.txt", got).has_value());
@@ -219,6 +214,27 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
 
     EXPECT_FALSE(sftp.send_file(fs::combine(jail, "ok.txt"), "../escape.txt").has_value());
     EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
+}
+
+TEST_F(TestSftp, test_sftp_get_missing_file_keeps_local_file)
+{
+    TmpDir base;
+    auto test_server = make_test_server_with_sftp("test-sftp-get-missing", base.path());
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    Sftp sftp = session.make_sftp();
+    ASSERT_TRUE(sftp.open().has_value());
+
+    TmpDir out;
+    const std::string local = fs::combine(out.path(), "keep.txt");
+    ASSERT_TRUE(fs::write(local, "precious"));
+
+    EXPECT_FALSE(sftp.get_file("missing.txt", local).has_value());
+
+    EXPECT_EQ(fs::read_all(local).value_or(""), "precious");
 }
 
 TEST_F(TestSftp, test_sftp_jail_escaping_link_blocks_writes)
