@@ -52,6 +52,7 @@ class App: public sihd::util::CliApp
                 bool installed = false;
         };
 
+        bool _apply_sihd_conf(const sihd::json::Json & conf);
         void _set_default_signal_actions();
         bool _set_signal_action(int64_t sig, SigAction action);
         bool _signal_actions_from_json(const sihd::json::Json & json, SigAction action);

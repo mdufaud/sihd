@@ -14,6 +14,7 @@
 #include <sihd/sys/signal.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/CliApp.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
@@ -373,6 +374,24 @@ TEST_F(TestApp, test_signal_removed_on_reload)
     EXPECT_TRUE(signal::handle(SIGUSR1, &previous));
     EXPECT_EQ(previous, SIG_DFL);
     EXPECT_TRUE(signal::unhandle(SIGUSR1));
+}
+
+TEST_F(TestApp, test_signal_policy_kept_on_failed_reload)
+{
+    ConfigApp app({.name = "signal-failed-reload", .setup_logging = false});
+    auto conf = sihd::json::Json::parse(fmt::format(R"({{"signals":{{"stop":[{}]}}}})", SIGUSR1));
+    ASSERT_TRUE(conf);
+    ASSERT_TRUE(app.apply_sihd_conf(*conf));
+    app.on_conf_reloaded();
+    Defer unhandle([] { (void)signal::unhandle(SIGUSR1); });
+    auto refused = sihd::json::Json::parse(R"({"signals":{"nope":[1]}})");
+    ASSERT_TRUE(refused);
+
+    EXPECT_FALSE(app.apply_sihd_conf(*refused));
+    (void)signal::kill(os::pid(), SIGUSR1);
+    app.wait_for_termination(Duration(time::milli(150)));
+
+    EXPECT_TRUE(app.should_stop());
 }
 
 TEST_F(TestApp, test_signal_ignore)

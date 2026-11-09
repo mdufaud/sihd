@@ -142,6 +142,16 @@ ALogger *App::create_logger_sink(const std::string & plugin,
 
 bool App::apply_sihd_conf(const sihd::json::Json & conf)
 {
+    // a refused conf keeps the signal policy its installed handlers serve
+    const auto previous_actions = _sig_actions;
+    const bool applied = this->_apply_sihd_conf(conf);
+    if (!applied)
+        _sig_actions = previous_actions;
+    return applied;
+}
+
+bool App::_apply_sihd_conf(const sihd::json::Json & conf)
+{
     // each conf application recomputes the whole signal policy from the defaults
     this->_set_default_signal_actions();
     if (CliApp::apply_sihd_conf(conf) == false)
