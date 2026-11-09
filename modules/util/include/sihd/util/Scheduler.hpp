@@ -98,6 +98,8 @@ class Scheduler: public Named,
         Waitable _waitable_pause;
 
         Timestamp _begin_run;
+        // when the last run stopped playing tasks: a restart shifts relative tasks like a resume
+        Timestamp _stopped_at;
         bool _tasks_prepared;
         // only pushed by the worker thread
         std::list<Task *> _trash_task_list;

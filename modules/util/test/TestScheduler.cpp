@@ -514,6 +514,53 @@ TEST_F(TestScheduler, test_sched_grid_arithmetic_no_clock)
     }
 }
 
+TEST_F(TestScheduler, test_sched_restart_shifts_relative_tasks)
+{
+    const Timestamp t0 = Timestamp(time::sec(100));
+    const Duration period = Duration(time::milli(10));
+    const Duration stopped = Duration(time::sec(1));
+    Scheduler sched("sched-restart");
+    ManualClock clock(t0);
+    sched.set_clock(&clock);
+
+    Waitable waitable;
+    std::vector<Timestamp> relative_runs;
+    bool restarted = false;
+    Task *relative = nullptr;
+    relative = new Task(
+        [&] {
+            auto lock = waitable.guard();
+            relative_runs.push_back(relative->run_at);
+            waitable.notify_all();
+            return true;
+        },
+        {.run_in = period, .reschedule_time = period});
+    sched.add_task(relative);
+
+    // due right at the restart: its run tells the restart is prepared
+    sched.add_task(new Task(
+        [&] {
+            auto lock = waitable.guard();
+            restarted = true;
+            waitable.notify_all();
+            return true;
+        },
+        {.run_at = t0 + stopped}));
+
+    sched.set_start_synchronised(true);
+    sched.start();
+    sched.stop();
+    clock.set(t0 + stopped);
+
+    sched.start();
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return restarted; }));
+    clock.set(t0 + stopped + period);
+    ASSERT_TRUE(waitable.wait_for(Duration(time::sec(3)), [&] { return !relative_runs.empty(); }));
+    sched.stop();
+
+    EXPECT_EQ(relative_runs[0].get(), (t0 + stopped + period).get());
+}
+
 // sleep_then_spin must spend most of the wait on the cv, then poll over spin_window: a 40ms poll
 // costs hundreds of thousands of clock reads vs a pure cv sleep; wide enough for coarse timers
 TEST_F(TestScheduler, test_sched_spin_sleep_classification)

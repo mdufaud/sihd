@@ -11,6 +11,17 @@ namespace sihd::util
 
 SIHD_LOGGER;
 
+namespace
+{
+
+void skip_missed_slots(Task *task, Timestamp begin)
+{
+    if (task->reschedule_time > 0 && task->run_at != 0 && task->run_at < begin)
+        task->run_at += (((begin - task->run_at) / task->reschedule_time) + 1) * task->reschedule_time;
+}
+
+} // namespace
+
 Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent), AWorkerService(name)
 {
     overrun_at = Duration(time::micro(300));
@@ -20,6 +31,7 @@ Scheduler::Scheduler(const std::string & name, Node *parent): Named(name, parent
 
     _next_run = Timestamp(0);
     _paused_time_at = Timestamp(0);
+    _stopped_at = Timestamp(0);
     _paused = false;
     _no_delay = false;
     _tasks_prepared = false;
@@ -252,16 +264,27 @@ void Scheduler::_play_task(Task *task, Timestamp now)
 void Scheduler::_prepare_tasks()
 {
     auto lock = _waitable_task.guard();
+    if (_stopped_at != 0)
+    {
+        const Duration stopped_time = _begin_run - _stopped_at;
+        std::multimap<Timestamp, Task *> task_map;
+        for (auto & [_, task] : _task_map)
+        {
+            if (task->run_in > 0)
+                task->run_at += stopped_time;
+            else if (_skip_missed_on_start)
+                skip_missed_slots(task, _begin_run);
+            task_map.emplace(task->run_at, task);
+        }
+        _task_map = std::move(task_map);
+        _stopped_at = Timestamp(0);
+    }
     for (Task *task : _tasks_to_add)
     {
         if (task->run_in > 0)
-        {
             task->run_at = _begin_run + task->run_in;
-        }
-        else if (_skip_missed_on_start && task->reschedule_time > 0 && task->run_at != 0 && task->run_at < _begin_run)
-        {
-            task->run_at += (((_begin_run - task->run_at) / task->reschedule_time) + 1) * task->reschedule_time;
-        }
+        else if (_skip_missed_on_start)
+            skip_missed_slots(task, _begin_run);
         _task_map.emplace(task->run_at, task);
     }
 
@@ -282,11 +305,14 @@ bool Scheduler::on_work_start()
 
     this->overruns = 0;
 
-    _begin_run = _clock_ptr->now();
+    Timestamp now = _clock_ptr->now();
+    {
+        // on_work_stop clears it under the same guard
+        auto lock = _waitable_task.guard();
+        _begin_run = now;
+    }
 
     this->_prepare_tasks();
-
-    Timestamp now = _begin_run;
 
     Task *task = nullptr;
     while (this->stop_requested == false)
@@ -302,6 +328,12 @@ bool Scheduler::on_work_start()
         }
     }
 
+    {
+        // read by the next run only, which starts after this one is joined; a paused run stopped when it paused
+        auto lock = _waitable_pause.guard();
+        _stopped_at = _paused_time_at != 0 ? _paused_time_at : this->now();
+        _paused_time_at = Timestamp(0);
+    }
     return true;
 }
 

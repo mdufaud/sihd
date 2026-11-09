@@ -42,7 +42,7 @@
 - `ThreadPool`: fixed-size pool; `add_job` returns a `std::future`, `complete_all_jobs`, `wait_all_jobs`, `remaining_jobs`, `stats`.
 - `IRunnable`, `Runnable`: interface and wrapper for a `bool run()` unit of work (from a function, a method, or another `IRunnable`).
 - `Task`, `TaskOptions`, `LatenessPolicy`: a runnable scheduled at `run_at` or `run_in`, rescheduled from the previous run by `reschedule_time`; `LatenessPolicy` selects `replay_missed`, `push_back` or `skip_missed` for late runs.
-- `Scheduler`: service that plays `Task`s in time order (`add_task`, `remove_task`, `clear_tasks`, `pause`, `resume`, `set_clock`, `set_idle_policy` with `IdlePolicy`, `set_spin_window`, `set_skip_missed_on_start`). Configurable.
+- `Scheduler`: service that plays `Task`s in time order (`add_task`, `remove_task`, `clear_tasks`, `pause`, `resume`, `set_clock`, `set_idle_policy` with `IdlePolicy`, `set_spin_window`, `set_skip_missed_on_start`). Configurable. A `stop` then `start` resumes like `pause` then `resume`: `run_in` tasks wait out the stopped time instead of replaying it.
 - `Timer`: one-shot callback run after a `Duration` unless `cancel()` is called first.
 - `TimedHandler`: wraps an `IHandler` and records how long each call takes (`stat`, `last`, `set_active`).
 - `RateLimiter`: allows at most N events per window (`allow`, `retry_after`, `full`, `reset`).
