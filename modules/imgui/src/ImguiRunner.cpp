@@ -115,7 +115,17 @@ void ImguiRunner::_loop_once()
     if constexpr (util::build::is_emscripten)
     {
         if (!_running || !_gui_running)
+        {
             this->_shutdown();
+            {
+                std::lock_guard guard(_mutex);
+                _running = false;
+            }
+            // the browser calls this frame until the loop is cancelled: a shut down gui must not run again
+#if defined(__SIHD_EMSCRIPTEN__)
+            emscripten_cancel_main_loop();
+#endif
+        }
     }
 }
 
