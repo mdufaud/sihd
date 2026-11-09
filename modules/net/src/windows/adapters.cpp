@@ -53,6 +53,16 @@ std::string alias_of(const NET_LUID & luid)
     return str::to_str(std::wstring_view(alias.data()));
 }
 
+std::optional<NET_IFINDEX> index_of(const std::string & alias)
+{
+    NET_LUID luid;
+    NET_IFINDEX index = 0;
+    if (ConvertInterfaceAliasToLuid(str::to_wstr(alias).c_str(), &luid) != NO_ERROR
+        || ConvertInterfaceLuidToIndex(&luid, &index) != NO_ERROR)
+        return std::nullopt;
+    return index;
+}
+
 IpAddr to_ip(const SOCKADDR_INET & address)
 {
     if (address.si_family == AF_INET && address.Ipv4.sin_addr.s_addr != 0)

@@ -8,6 +8,7 @@
 #include <iphlpapi.h>
 // clang-format on
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,7 @@ sihd::util::Result<AdapterList> list(unsigned long flags);
 std::vector<const IP_ADAPTER_ADDRESSES *> named(const AdapterList & list);
 std::string friendly_name(const IP_ADAPTER_ADDRESSES & adapter);
 std::string alias_of(const NET_LUID & luid);
+std::optional<NET_IFINDEX> index_of(const std::string & alias);
 IpAddr to_ip(const SOCKADDR_INET & address);
 
 } // namespace sihd::net::adapters

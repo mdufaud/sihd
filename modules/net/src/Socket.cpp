@@ -20,6 +20,7 @@
 # include <afunix.h>
 # include <ws2tcpip.h>
 
+# include "windows/adapters.hpp"
 #endif
 
 using namespace sihd::util;
@@ -1120,14 +1121,16 @@ Result<void> Socket::_multicast_membership(const IpAddr & group, const std::stri
         mreq.ipv6mr_multiaddr = group.addr6().sin6_addr;
         mreq.ipv6mr_interface = 0;
 
-#if !defined(__SIHD_WINDOWS__)
         if (!iface.empty())
         {
+#if defined(__SIHD_WINDOWS__)
+            mreq.ipv6mr_interface = adapters::index_of(iface).value_or(0);
+#else
             mreq.ipv6mr_interface = if_nametoindex(iface.c_str());
+#endif
             if (mreq.ipv6mr_interface == 0)
                 return std::unexpected(Error(ErrorCode::not_found, "no interface named: {}", iface));
         }
-#endif
 
         return opt_result("multicast membership",
                           sihd::sys::os::setsockopt(_socket, IPPROTO_IPV6, ipv6_opt, &mreq, sizeof(mreq)));
