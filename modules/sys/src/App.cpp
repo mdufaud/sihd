@@ -206,11 +206,37 @@ bool App::_apply_sihd_conf(const sihd::json::Json & conf)
             SIHD_LOG(error, "App: conf 'daemon.run' must be a boolean");
             return false;
         }
+
         // a requested privilege drop that cannot happen must stop the app, never leave it running as root
-        if (daemon.contains("user") && !_daemon.set_user(daemon["user"].get_or<std::string>("")))
+        std::optional<user::UserId> user_id;
+        std::optional<user::GroupId> group_id;
+        if (daemon.contains("user"))
+        {
+            const std::string user_name = daemon["user"].get_or<std::string>("");
+            user_id = user::user_id_of(user_name);
+            if (!user_id)
+            {
+                SIHD_LOG(error, "App: conf 'daemon.user' names an unknown user '{}'", user_name);
+                return false;
+            }
+        }
+        if (daemon.contains("group"))
+        {
+            const std::string group_name = daemon["group"].get_or<std::string>("");
+            group_id = user::group_id_of(group_name);
+            if (!group_id)
+            {
+                SIHD_LOG(error, "App: conf 'daemon.group' names an unknown group '{}'", group_name);
+                return false;
+            }
+        }
+
+        // both resolved before either is set: a refused one leaves the daemon as it was
+        if (group_id && !_daemon.set_group(*group_id))
             return false;
-        if (daemon.contains("group") && !_daemon.set_group(daemon["group"].get_or<std::string>("")))
+        if (user_id && !_daemon.set_user(*user_id))
             return false;
+
         if (daemon.contains("pid_file"))
             _daemon.set_pid_file_path(daemon["pid_file"].get_or<std::string>(""));
         if (daemon.contains("working_dir"))

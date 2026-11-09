@@ -12,6 +12,7 @@
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/signal.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/AService.hpp>
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/Defer.hpp>
@@ -485,6 +486,27 @@ TEST_F(TestApp, test_daemon_unknown_user)
 
     EXPECT_EQ(run_app(app, {"--conf", path, "run"}), EXIT_FAILURE);
     EXPECT_FALSE(ran);
+    (void)fs::remove_file(path);
+}
+
+TEST_F(TestApp, test_daemon_unknown_group_keeps_the_user)
+{
+    if constexpr (build::is_statically_linked)
+        GTEST_SKIP() << "the daemon user/group conf resolves through NSS, unavailable in static binaries";
+
+    const std::string user_name = sihd::sys::user::name().value_or("");
+    ASSERT_FALSE(user_name.empty());
+    std::string path = tmp_path("badgroup.json");
+    ASSERT_TRUE(fs::write(path,
+                          fmt::format(R"({{"sihd": {{"daemon": {{"user": "{}", "group": "sihd_no_such_group"}}}}}})",
+                                      user_name))
+                    .has_value());
+    sihd::sys::App app({.name = "badgroup", .setup_logging = false});
+    app.root().add_command("run", "run").on_run([] {});
+
+    EXPECT_EQ(run_app(app, {"--conf", path, "run"}), EXIT_FAILURE);
+
+    EXPECT_FALSE(app.daemon().user_id().valid());
     (void)fs::remove_file(path);
 }
 

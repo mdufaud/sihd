@@ -43,15 +43,18 @@ bool Daemon::_set_drop_target(const user::UserId & user_id)
         SIHD_LOG(error, "Daemon: cannot drop to an invalid user");
         return false;
     }
-    _user = user_id;
     if (_group_explicit)
+    {
+        _user = user_id;
         return true;
+    }
     const auto group_id = user::primary_group_of(user_id);
     if (!group_id.has_value())
     {
         SIHD_LOG(error, "Daemon: no primary group for user {}", user_id.to_string());
         return false;
     }
+    _user = user_id;
     _group = *group_id;
     return true;
 }
