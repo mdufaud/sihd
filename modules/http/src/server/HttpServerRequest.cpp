@@ -901,12 +901,20 @@ std::vector<std::string> HttpServer::Impl::get_uri_args(struct lws *wsi)
     if (wsi == nullptr)
         return {};
     std::vector<std::string> ret;
-    char buf[SIHD_HTTP_URI_BUFSIZE + 1];
-    int i = 0;
-    while (lws_hdr_copy_fragment(wsi, buf, SIHD_HTTP_URI_BUFSIZE, WSI_TOKEN_HTTP_URI_ARGS, i) > 0)
+    std::string buf;
+    for (int i = 0;; ++i)
     {
-        ret.push_back(buf);
-        ++i;
+        // an empty fragment ("a=1&&b=2") copies 0 bytes, only a missing one is negative
+        buf.resize(static_cast<size_t>(lws_hdr_fragment_length(wsi, WSI_TOKEN_HTTP_URI_ARGS, i)) + 1);
+        const int copied = lws_hdr_copy_fragment(wsi,
+                                                 buf.data(),
+                                                 static_cast<int>(buf.size()),
+                                                 WSI_TOKEN_HTTP_URI_ARGS,
+                                                 i);
+        if (copied < 0)
+            break;
+        if (copied > 0)
+            ret.emplace_back(buf.data(), static_cast<size_t>(copied));
     }
     return ret;
 }

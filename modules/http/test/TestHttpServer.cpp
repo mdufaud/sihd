@@ -198,6 +198,24 @@ TEST_F(TestHttpServer, test_routing_params)
     EXPECT_EQ(captured_action, "edit");
 }
 
+TEST_F(TestHttpServer, test_query_args_past_empty_and_long_ones)
+{
+    ServerScope scope;
+    std::vector<std::string> captured_args;
+    scope.server._webservice->set_entry_point("args", [&](const HttpRequest & req, HttpResponse & resp) {
+        captured_args = req.uri_args();
+        resp.set_plain_content("ok");
+    });
+    scope.start();
+    const std::string long_arg = "long=" + std::string(600, 'x');
+
+    auto resp = sihd::http::get(loopback_url("localhost:3001/api/args?a=1&&b=2&" + long_arg + "&c=3"));
+
+    ASSERT_TRUE(resp.has_value());
+    EXPECT_EQ(resp->status(), HttpStatus::Ok);
+    EXPECT_EQ(captured_args, (std::vector<std::string> {"a=1", "b=2", long_arg, "c=3"}));
+}
+
 TEST_F(TestHttpServer, test_routing_catchall)
 {
     ServerScope scope;
