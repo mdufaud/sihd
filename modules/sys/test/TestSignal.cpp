@@ -437,6 +437,8 @@ TEST_F(TestSignal, test_signal_exit_config_exits_with_sig_number)
 
     if (os::is_run_by_valgrind())
         GTEST_SKIP() << "fork under valgrind";
+    if constexpr (build::is_run_with_tsan)
+        GTEST_SKIP() << "tsan never delivers a signal raised in a forked child, pause and sigsuspend included";
 
     signal::set_exit_config({.on_termination = true, .exit_with_sig_number = true});
     Defer reset_config([] { signal::set_exit_config(signal::SigExitConfig {}); });
