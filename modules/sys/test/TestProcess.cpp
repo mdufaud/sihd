@@ -734,6 +734,23 @@ TEST_F(TestProcess, test_process_terminate_stopped_child)
 }
 #endif
 
+TEST_F(TestProcess, test_process_terminate_does_not_wait_behind_a_blocking_wait)
+{
+    Process proc {cmd_sleep()};
+    ASSERT_TRUE(proc.execute());
+
+    std::jthread waiter([&proc] { (void)proc.wait_exit(); });
+    // the waiter has no event to signal once it sits in the blocking wait: give it the time to get there
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    Stopwatch watch;
+    const bool terminated = proc.terminate();
+    const Duration terminate_time = watch.time();
+    waiter.join();
+
+    EXPECT_TRUE(terminated);
+    EXPECT_LT(terminate_time, Duration(time::sec(1)));
+}
+
 TEST_F(TestProcess, test_process_bad_cmd)
 {
     if (os::is_run_by_valgrind())

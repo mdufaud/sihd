@@ -352,12 +352,26 @@ struct ProcessWatcher
 
 bool ProcessWatcher::check_status(int options)
 {
-    std::lock_guard lock(this->mutex);
+    std::unique_lock lock(this->mutex);
     // race: a concurrent waiter already reaped it, waitid(P_PID, -1) is EINVAL
     if (this->pid <= 0)
         return true;
     // zeroed: WNOHANG with a live child leaves si_pid untouched, which means "no state change", not an error
     siginfo_t info {};
+    if ((options & WNOHANG) == 0)
+    {
+        // the blocking wait runs unlocked and reaps nothing: the zombie keeps its pid until the locked reap below
+        const pid_t waited_pid = this->pid;
+        lock.unlock();
+        const int waited = waitid(P_PID, waited_pid, &info, options | WNOWAIT);
+        lock.lock();
+        if (this->pid != waited_pid)
+            return true;
+        if (waited < 0 && errno != ECHILD)
+            return false;
+        options |= WNOHANG;
+        info = {};
+    }
     int ret = waitid(P_PID, this->pid, &info, options);
     if (ret >= 0)
     {
