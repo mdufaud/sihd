@@ -216,6 +216,27 @@ TEST_F(TestSftp, test_sftp_jail_blocks_traversal)
     EXPECT_FALSE(fs::is_file(fs::combine(base.path(), "escape.txt")));
 }
 
+TEST_F(TestSftp, test_sftp_sessions_in_a_row_on_one_connection)
+{
+    TmpDir base;
+    ASSERT_TRUE(fs::write(fs::combine(base.path(), "ok.txt"), "hello"));
+    auto test_server = make_test_server_with_sftp("test-sftp-in-a-row", base.path());
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+
+    // the next channel may reuse the address of the sftp channel the server just freed
+    for (int i = 0; i < 5; ++i)
+    {
+        Sftp sftp = session.make_sftp();
+        ASSERT_TRUE(sftp.open().has_value()) << "sftp session " << i;
+        EXPECT_EQ(sftp.list_dir_filenames("/").value_or(std::vector<std::string> {}),
+                  std::vector<std::string> {"ok.txt"})
+            << "sftp session " << i;
+    }
+}
+
 TEST_F(TestSftp, test_sftp_get_missing_file_keeps_local_file)
 {
     TmpDir base;

@@ -502,6 +502,9 @@ int SshSubsystemSftp::on_close()
     {
         sftp_free(_impl_ptr->sftp);
         _impl_ptr->sftp = nullptr;
+        // sftp_free freed the libssh channel: a next channel may get its address
+        if (_impl_ptr->channel)
+            _impl_ptr->channel->detach();
     }
     return 0;
 }
