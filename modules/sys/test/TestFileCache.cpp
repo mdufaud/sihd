@@ -77,6 +77,9 @@ TEST_F(TestFileCache, test_filecache_unknown_or_deleted_file)
 
 TEST_F(TestFileCache, test_filecache_unreadable_file_is_read_once_readable)
 {
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "a watched directory stays until its handle closes: no file can take its path";
+
     TmpDir tmp_dir;
     const std::string file_path = fs::combine(tmp_dir.path(), "test.txt");
     ASSERT_TRUE(fs::make_directory(file_path).has_value());

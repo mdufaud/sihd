@@ -16,7 +16,7 @@
 #include <sihd/util/ansi.hpp>
 #include <sihd/util/build.hpp>
 
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <fcntl.h>
 # include <sys/prctl.h>
 # include <unistd.h>
@@ -115,7 +115,7 @@ TEST_F(TestProcessInfo, test_processinfo_pids)
     EXPECT_NE(std::find(pids.begin(), pids.end(), getpid()), pids.end());
 }
 
-#if defined(__SIHD_LINUX__)
+#if defined(__SIHD_LINUX__) && !defined(__SIHD_EMSCRIPTEN__)
 TEST_F(TestProcessInfo, test_processinfo_creation_time_with_spaced_name)
 {
     // PR_GET_NAME fills TASK_COMM_LEN bytes
