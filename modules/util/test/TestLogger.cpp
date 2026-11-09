@@ -696,6 +696,20 @@ TEST_F(TestLogger, test_logger_async_drop_report_unfiltered)
     ASSERT_NE(drop_reports.find("messages dropped"), std::string::npos);
 }
 
+TEST_F(TestLogger, test_logger_bad_filter_installs_nothing)
+{
+    const LoggerFilter::Options bad_filter {.message_regex = "("};
+    SharedStateSink::State state;
+
+    EXPECT_THROW(LoggerManager::stream(stderr, "", bad_filter), std::invalid_argument);
+    EXPECT_THROW(LoggerManager::console(bad_filter), std::invalid_argument);
+    EXPECT_THROW(LoggerManager::thrower(bad_filter), std::invalid_argument);
+    EXPECT_THROW(LoggerManager::async(new SharedStateSink(&state), 8192, bad_filter), std::invalid_argument);
+
+    SIHD_LOG(info, "after the refused installs");
+    EXPECT_EQ(log_counter->info, 1);
+}
+
 TEST_F(TestLogger, test_logger_reentrant_dropped)
 {
     LoggingBackSink *sink = new LoggingBackSink();

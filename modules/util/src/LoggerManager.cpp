@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <memory>
 
 #include <sihd/util/LoggerAsync.hpp>
 #include <sihd/util/LoggerConsole.hpp>
@@ -15,11 +16,12 @@ LoggerManager LoggerManager::_g_singleton;
 namespace
 {
 
-void install(ALogger *logger, std::optional<LoggerFilter::Options> options)
+void install(std::unique_ptr<ALogger> logger, std::optional<LoggerFilter::Options> options)
 {
     if (options.has_value())
         logger->add_filter(new LoggerFilter(*options));
-    LoggerManager::add(logger);
+    if (LoggerManager::add(logger.get()))
+        (void)logger.release();
 }
 
 } // namespace
@@ -236,17 +238,17 @@ void LoggerManager::clear_filters()
 
 void LoggerManager::stream(FILE *output, std::string pattern, std::optional<LoggerFilter::Options> options)
 {
-    install(new LoggerStream(output, std::move(pattern)), options);
+    install(std::make_unique<LoggerStream>(output, std::move(pattern)), options);
 }
 
 void LoggerManager::console(std::optional<LoggerFilter::Options> options)
 {
-    install(new LoggerConsole(), options);
+    install(std::make_unique<LoggerConsole>(), options);
 }
 
 void LoggerManager::thrower(std::optional<LoggerFilter::Options> options)
 {
-    install(new LoggerThrow(), options);
+    install(std::make_unique<LoggerThrow>(), options);
 }
 
 void LoggerManager::async(ALogger *target,
@@ -254,7 +256,7 @@ void LoggerManager::async(ALogger *target,
                           std::optional<LoggerFilter::Options> options,
                           std::string source)
 {
-    install(new LoggerAsync(target, max_queue_size, std::move(source)), options);
+    install(std::make_unique<LoggerAsync>(target, max_queue_size, std::move(source)), options);
 }
 
 } // namespace sihd::util
