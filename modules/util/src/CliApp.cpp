@@ -278,8 +278,17 @@ bool CliApp::reload()
         return false;
     }
 
+    // a conf refused midway must not leave the keys before the faulty one applied
+    const std::function<void()> restore_bindings = this->root().save_bindings();
+    const bool default_logger = _options.default_logger;
+    const std::string log_level = this->log_level_conf();
+    const sihd::json::Json log_sinks = _log_sinks_conf;
     if (this->apply_conf(*parsed) == false)
     {
+        restore_bindings();
+        _options.default_logger = default_logger;
+        this->set_log_level_conf(log_level);
+        _log_sinks_conf = log_sinks;
         SIHD_LOG(error, "CliApp: conf reload failed");
         return false;
     }

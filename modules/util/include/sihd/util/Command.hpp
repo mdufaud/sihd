@@ -9,6 +9,7 @@
 #include <memory>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 #include <sihd/json/Json.hpp>
@@ -46,6 +47,8 @@ class Command
                 std::function<void(const std::string &)> apply_cli;
                 std::function<void()> snapshot_cli;
                 std::function<void()> restore_cli;
+                // copies the bound value; the returned call writes the copy back
+                std::function<std::function<void()>()> save;
         };
 
         // what can be typed at this node: the child names and the option words
@@ -87,6 +90,8 @@ class Command
         bool expects_value(const std::string & token) const;
         // takes or restores the values given on the command line over the whole subtree
         void snapshot_cli_bindings(bool restore);
+        // copies every bound value of the subtree; the returned call writes them all back
+        std::function<void()> save_bindings() const;
 
         // binds a long option --name (or a flag for bool) to target, fed by the cli and the conf
         template <typename T>
@@ -162,6 +167,25 @@ class Command
             binding.apply_json = [&target](const sihd::json::Json & j) {
                 try
                 {
+                    if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+                    {
+                        // Json::get narrows with a cast: 300 would land in a uint8_t as 44
+                        if (j.is_number_unsigned())
+                        {
+                            const uint64_t value = j.template get<uint64_t>();
+                            if (std::in_range<T>(value) == false)
+                                return false;
+                            target = static_cast<T>(value);
+                            return true;
+                        }
+                        if (j.is_number_integer() == false)
+                            return false;
+                        const int64_t value = j.template get<int64_t>();
+                        if (std::in_range<T>(value) == false)
+                            return false;
+                        target = static_cast<T>(value);
+                        return true;
+                    }
                     target = j.template get<T>();
                     return true;
                 }
@@ -226,6 +250,11 @@ class Command
             };
             binding.restore_cli = [&target, snapshot]() {
                 target = *snapshot;
+            };
+            binding.save = [&target]() -> std::function<void()> {
+                return [&target, value = target]() {
+                    target = value;
+                };
             };
             this->_add_binding(std::move(binding));
             return *this;

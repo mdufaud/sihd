@@ -730,6 +730,67 @@ TEST_F(TestCliApp, test_reload)
     EXPECT_EQ(reloads, 2);
 }
 
+TEST_F(TestCliApp, test_failed_reload_keeps_values)
+{
+    struct
+    {
+            int port = 8080;
+            int other = 3;
+    } opts;
+
+    CliApp app({.name = "reload-failed", .setup_logging = false});
+    std::string conf = R"({"serve": {"port": 9}})";
+    app.root().add_command("serve", "serve").bind("port", opts.port, "").bind("other", opts.other, "").on_run([] {});
+    app.set_conf_loader([&conf] { return conf; });
+    ASSERT_EQ(run_app(app, {"serve", "--port", "5"}), 0);
+
+    conf = R"({"serve": {"other": 77, "port": 11, "zzz": 1}})";
+    EXPECT_FALSE(app.reload());
+
+    EXPECT_EQ(opts.port, 5);
+    EXPECT_EQ(opts.other, 3);
+}
+
+TEST_F(TestCliApp, test_failed_reload_keeps_log_sinks)
+{
+    TestLogApp app({.name = "reload-sinks", .setup_logging = true});
+    std::string conf = "{}";
+    app.set_conf_loader([&conf] { return conf; });
+    app.root().add_command("emit", "emit").on_run([] {});
+    ASSERT_EQ(run_app(app, {"emit"}), 0);
+
+    conf = R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "errors"}]}}, "zzz": 1})";
+    EXPECT_FALSE(app.reload());
+
+    conf = "{}";
+    EXPECT_TRUE(app.reload());
+
+    EXPECT_NE(app.logger(), nullptr);
+    EXPECT_EQ(app.sinks().get_child<ALogger>("errors"), nullptr);
+}
+
+TEST_F(TestCliApp, test_conf_out_of_range_integer_refused)
+{
+    struct
+    {
+            uint8_t level = 1;
+            uint32_t count = 2;
+    } opts;
+
+    for (const std::string conf : {R"({"serve": {"level": 300}})", R"({"serve": {"count": -1}})"})
+    {
+        CliApp app({.name = "range", .setup_logging = false});
+        Command & serve = app.root().add_command("serve", "serve");
+        serve.bind("level", opts.level, "").bind("count", opts.count, "").on_run([] {});
+        app.set_conf_loader([&conf] { return conf; });
+
+        EXPECT_EQ(run_app(app, {"serve"}), EXIT_FAILURE) << conf;
+    }
+
+    EXPECT_EQ(opts.level, 1);
+    EXPECT_EQ(opts.count, 2u);
+}
+
 TEST_F(TestCliApp, test_json_conf_over_cli_after_reload_without_cli)
 {
     struct

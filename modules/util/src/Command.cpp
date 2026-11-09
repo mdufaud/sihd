@@ -300,4 +300,17 @@ void Command::snapshot_cli_bindings(bool restore)
         child->snapshot_cli_bindings(restore);
 }
 
+std::function<void()> Command::save_bindings() const
+{
+    std::vector<std::function<void()>> restores;
+    for (const Binding & binding : _bindings)
+        restores.push_back(binding.save());
+    for (const auto & [name, child] : _children)
+        restores.push_back(child->save_bindings());
+    return [restores = std::move(restores)]() {
+        for (const std::function<void()> & restore : restores)
+            restore();
+    };
+}
+
 } // namespace sihd::util
