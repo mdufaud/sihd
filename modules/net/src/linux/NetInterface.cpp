@@ -112,6 +112,16 @@ Kind link_kind(const std::string & sysfs_dir)
     return Kind::unknown;
 }
 
+uint64_t link_speed_bps(const std::string & sysfs_dir)
+{
+    const auto content = linux_::sysfs::read(sysfs_dir + "speed");
+    if (!content)
+        return 0;
+    // an unknown speed reads -1, which read_uint would wrap around
+    const int64_t speed_mbps = str::convert_from_string<int64_t>(*content).value_or(0);
+    return speed_mbps > 0 ? static_cast<uint64_t>(speed_mbps) * 1'000'000 : 0;
+}
+
 // sysfs shows the network namespace it was mounted in: a mismatching ifindex is another link
 std::optional<SysfsLink> read_sysfs_link(const std::string & name, uint32_t index)
 {
@@ -122,7 +132,7 @@ std::optional<SysfsLink> read_sysfs_link(const std::string & name, uint32_t inde
         .kind = link_kind(sysfs_dir),
         .hardware = fs::exists(sysfs_dir + "device"),
         .mtu = static_cast<uint32_t>(linux_::sysfs::read_uint(sysfs_dir + "mtu").value_or(0)),
-        .link_speed_bps = linux_::sysfs::read_uint(sysfs_dir + "speed").value_or(0) * 1'000'000,
+        .link_speed_bps = link_speed_bps(sysfs_dir),
     };
 }
 

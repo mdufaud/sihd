@@ -177,7 +177,8 @@ int check_virtual_link_kinds()
     auto control = open_control();
     std::string bridge = "sihdbr0";
     if (!control || !os::ioctl(control->socket(), SIOCBRADDBR, bridge.data())
-        || !set_hwaddr(*control, "sihdtap0", {0x02, 0, 0, 0, 0, 0x01}) || !set_up(*control, "sihdtun0", true))
+        || !set_hwaddr(*control, "sihdtap0", {0x02, 0, 0, 0, 0, 0x01}) || !set_up(*control, "sihdtun0", true)
+        || !set_up(*control, "sihdbr0", true))
         return child_failed;
 
     auto interfaces = NetInterface::get_all_interfaces();
@@ -205,6 +206,9 @@ int check_virtual_link_kinds()
     EXPECT_TRUE(speed_mbps.has_value());
     EXPECT_EQ(tun_link->link_speed_bps(), std::stoull(speed_mbps.value_or("0")) * 1'000'000);
     EXPECT_GT(tun_link->link_speed_bps(), 0u);
+    // a bridge without ports reports an unknown speed
+    EXPECT_EQ(fs::read_all("/sys/class/net/sihdbr0/speed").value_or(""), "-1\n");
+    EXPECT_EQ(bridge_link->link_speed_bps(), 0u);
 
     EXPECT_EQ(tap_link->mac_addr(), "02:00:00:00:00:01");
     EXPECT_GT(tun_link->index(), 0u);
