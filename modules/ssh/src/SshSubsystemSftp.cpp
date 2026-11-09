@@ -64,6 +64,8 @@ namespace
 
 // a READ asks for any length: answer at most what OpenSSH's sftp-server does, short reads are legal
 constexpr uint32_t max_read_length = 256 * 1024 - 1024;
+// a whole directory in one NAME packet outgrows the 256 KiB an OpenSSH client accepts
+constexpr size_t max_readdir_entries = 100;
 
 constexpr std::array<std::pair<mode_t, char>, 9> permission_bits {{
     {S_IRUSR, 'r'},
@@ -662,13 +664,6 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     std::string path = it->second;
     SIHD_LOG(debug, "SshSubsystemSftp: READDIR '{}'", path);
 
-    auto pos_it = dir_positions.find(handle);
-    if (pos_it != dir_positions.end() && pos_it->second > 0)
-    {
-        reply_status(msg, SSH_FX_EOF);
-        return;
-    }
-
     const auto resolved = resolve_path(path);
     if (reply_if_refused(msg, resolved))
         return;
@@ -679,10 +674,15 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
         return;
     }
 
+    // the position counts directory entries read by the previous pages, listed or not
+    const size_t first = dir_positions[handle];
+    size_t position = 0;
     std::vector<SftpAttributes> entries;
     struct dirent *entry;
-    while ((entry = readdir(dir)) != nullptr)
+    while (entries.size() < max_readdir_entries && (entry = readdir(dir)) != nullptr)
     {
+        if (position++ < first)
+            continue;
         std::string full_path = *resolved + "/" + entry->d_name;
         FileStat st;
         if (stat_file(full_path, st, false) == 0)
@@ -691,6 +691,7 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
         }
     }
     closedir(dir);
+    dir_positions[handle] = position;
 
     if (entries.empty())
     {
@@ -709,8 +710,6 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     }
 
     sftp_reply_names(msg);
-
-    dir_positions[handle] = 1;
 }
 
 void SshSubsystemSftp::Impl::handle_close(sftp_client_message_struct *msg)

@@ -355,6 +355,37 @@ TEST_F(TestSftp, test_sftp_read_length_capped)
     EXPECT_EQ(reply->string_at(0).size(), 255u * 1024);
 }
 
+TEST_F(TestSftp, test_sftp_readdir_pages_a_big_directory)
+{
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-readdir-pages"));
+    const std::string big_dir = fs::combine(_jail, "big");
+    ASSERT_TRUE(fs::make_directories(big_dir));
+    constexpr uint32_t file_count = 3000;
+    for (uint32_t i = 0; i < file_count; ++i)
+        ASSERT_TRUE(fs::write(fs::combine(big_dir, "file_with_a_rather_long_name_" + std::to_string(i)), ""));
+    auto opened = _client->request_path(SSH_FXP_OPENDIR, "/big");
+    ASSERT_TRUE(opened.has_value());
+    ASSERT_EQ(opened->type, SSH_FXP_HANDLE);
+    const std::string handle = opened->string_at(0);
+
+    uint32_t listed = 0;
+    size_t biggest_reply = 0;
+    auto reply = _client->request(SSH_FXP_READDIR, SftpPacketClient::str(handle));
+    while (reply.has_value() && reply->type == SSH_FXP_NAME)
+    {
+        listed += SftpPacketClient::read_u32(reply->body, 0);
+        biggest_reply = std::max(biggest_reply, reply->body.size());
+        reply = _client->request(SSH_FXP_READDIR, SftpPacketClient::str(handle));
+    }
+
+    ASSERT_TRUE(reply.has_value());
+    EXPECT_EQ(reply->status(), SSH_FX_EOF);
+    // the entries plus "." and ".."
+    EXPECT_EQ(listed, file_count + 2);
+    // an OpenSSH client refuses a packet over 256 KiB
+    EXPECT_LT(biggest_reply, 256u * 1024);
+}
+
 TEST_F(TestSftp, test_sftp_open_flags_keep_data)
 {
     if constexpr (build::is_windows)

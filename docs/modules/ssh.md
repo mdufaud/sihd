@@ -56,7 +56,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 - `ISshSubsystemHandler`: interface for a channel's handler (`on_start`, `on_data`, `on_resize`, `on_eof`, `on_close`).
 - `SshSubsystemExec`: runs a command as a process, in fork mode (streamed) or synchronous mode. Shell or direct parse mode.
 - `SshSubsystemPty`: spawns a shell in a pseudo-terminal bridged to the channel. `is_supported` tells whether PTY is available.
-- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection.
+- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection. `READDIR` answers at most 100 entries per reply.
 - `SshSubsystemFunction`: runs a `std::function` on the command string and returns output and exit code, without spawning a process.
 
 ## Example
