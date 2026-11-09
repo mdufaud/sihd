@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <array>
+#include <map>
 #include <optional>
+#include <ranges>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -67,7 +69,7 @@ class Keymap
 
         ~Keymap()
         {
-            for (const int code : _remapped)
+            for (const int code : _remapped | std::views::values)
             {
                 XChangeKeyboardMapping(_display, code, _per_keycode, original(code), 1);
             }
@@ -100,9 +102,12 @@ class Keymap
         {
             if (_syms == nullptr)
                 return std::nullopt;
+            // a character typed again reuses its keycode: the free ones would run out
+            if (const auto it = _remapped.find(keysym); it != _remapped.end())
+                return static_cast<KeyCode>(it->second);
             for (int code = _min; code <= _max; ++code)
             {
-                if (std::ranges::contains(_remapped, code))
+                if (std::ranges::contains(_remapped | std::views::values, code))
                     continue;
                 bool free = true;
                 for (int col = 0; free && col < _per_keycode; ++col)
@@ -112,7 +117,7 @@ class Keymap
                 KeySym pair[2] = {keysym, NoSymbol};
                 XChangeKeyboardMapping(_display, code, 2, pair, 1);
                 XSync(_display, False);
-                _remapped.push_back(code);
+                _remapped.emplace(keysym, code);
                 return static_cast<KeyCode>(code);
             }
             return std::nullopt;
@@ -126,7 +131,7 @@ class Keymap
         int _min = 0;
         int _max = 0;
         int _per_keycode = 0;
-        std::vector<int> _remapped;
+        std::map<KeySym, int> _remapped;
 };
 
 bool fake_key(Display *display, KeyCode code, bool down)
