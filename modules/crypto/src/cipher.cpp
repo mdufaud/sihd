@@ -69,7 +69,8 @@ Result<std::vector<uint8_t>> do_cipher(bool encrypt,
         return std::unexpected(
             Error(invalid_argument, "cipher '{}' needs a {} bytes iv, got {}", algorithm, iv_size, iv_len));
 
-    if (data_len > static_cast<size_t>(INT_MAX))
+    // the padding adds up to one block: the output length must still fit an int
+    if (data_len > static_cast<size_t>(INT_MAX - EVP_CIPHER_get_block_size(ciph.get())))
         return std::unexpected(Error(invalid_argument, "cipher input is too large: {} bytes", data_len));
 
     std::unique_ptr<EVP_CIPHER_CTX, CtxFree> ctx(EVP_CIPHER_CTX_new());

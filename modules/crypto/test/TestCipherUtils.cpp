@@ -234,6 +234,18 @@ TEST_F(TestCipherUtils, key_and_iv_lengths_are_checked)
     EXPECT_TRUE(ok.has_value());
 }
 
+TEST_F(TestCipherUtils, input_too_large_for_the_padding_is_refused)
+{
+    const std::array<uint8_t, 16> buf {};
+
+    // refused before any read: the buffer behind the length is never touched
+    auto res = sihd::crypto::cipher::encrypt("AES-128-CBC", buf.data(), 16, buf.data(), 16, buf.data(), INT_MAX - 15);
+
+    ASSERT_FALSE(res.has_value());
+    EXPECT_EQ(res.error().code, invalid_argument);
+    EXPECT_EQ(res.error().message, "cipher input is too large: 2147483632 bytes");
+}
+
 TEST_F(TestCipherUtils, null_cipher_is_refused)
 {
     const std::array<uint8_t, 16> buf {};
