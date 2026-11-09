@@ -554,6 +554,44 @@ TEST_F(TestSshServer, test_pty_output_left_at_shell_exit_reaches_the_client)
     EXPECT_TRUE(output == expected);
 }
 
+TEST_F(TestSshServer, test_pty_eof_follows_the_input_the_pty_has_not_taken_yet)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the pty shell is /bin/sh";
+
+    SshServerHelper test_server("test-ssh-server-pty-pending-eof");
+    test_server.handler.set_shell_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *pty = new SshSubsystemPty();
+            pty->set_shell("/bin/sh");
+            pty->set_args({"-c", "stty -echo; wc -c"});
+            return pty;
+        });
+    ASSERT_TRUE(test_server.start());
+
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_pty().has_value());
+    ASSERT_TRUE(channel.request_shell().has_value());
+
+    std::string input;
+    for (int line = 0; line < 2000; ++line)
+        input += std::string(99, 'x') + "\n";
+
+    // far more than the pty buffers: the server keeps the rest pending when the eof arrives
+    ASSERT_EQ(channel.write(ArrCharView(input.data(), input.size())), (int)input.size());
+    ASSERT_TRUE(channel.send_eof().has_value());
+    const std::string output = read_until_closed(channel);
+
+    // what was echoed before stty ran varies: the count is the last line
+    EXPECT_TRUE(output.ends_with("200000\r\n")) << output.substr(output.size() > 64 ? output.size() - 64 : 0);
+}
+
 TEST_F(TestSshServer, test_pty_shell_runs_input_sent_before_eof)
 {
     if constexpr (!build::is_linux)

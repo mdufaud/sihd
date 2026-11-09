@@ -59,6 +59,8 @@ class SshSubsystemPty: public ISshSubsystemHandler
         std::string _pending_in;
         std::string _unsent_out;
         bool _output_drained;
+        // a VEOF only ends the input at the start of a line: it waits behind _pending_in
+        bool _eof_pending;
         // Reused read buffer for forward_output (avoids per-tick alloc)
         sihd::util::ArrChar _read_buf;
 };

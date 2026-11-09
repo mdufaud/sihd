@@ -13,7 +13,7 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-SshSubsystemPty::SshSubsystemPty(): _channel(nullptr), _output_drained(false)
+SshSubsystemPty::SshSubsystemPty(): _channel(nullptr), _output_drained(false), _eof_pending(false)
 {
     SIHD_UNEXPECTED_LOG(utils::init());
 }
@@ -116,6 +116,11 @@ void SshSubsystemPty::drain_pending_input()
     ssize_t written = _pty->write(_pending_in.data(), _pending_in.size());
     if (written > 0)
         _pending_in.erase(0, static_cast<size_t>(written));
+    if (_pending_in.empty() && _eof_pending)
+    {
+        _eof_pending = false;
+        _pty->send_eof();
+    }
 }
 
 int SshSubsystemPty::on_data(const void *data, size_t len)
@@ -176,10 +181,12 @@ void SshSubsystemPty::on_eof()
 {
     SIHD_LOG(debug, "SshSubsystemPty: EOF from client");
 
-    if (_pty)
-    {
+    if (!_pty)
+        return;
+    if (_pending_in.empty())
         _pty->send_eof();
-    }
+    else
+        _eof_pending = true;
 }
 
 int SshSubsystemPty::on_close()
