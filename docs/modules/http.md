@@ -14,7 +14,7 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 
 ### Server
 
-- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop. `get_port` returns the bound port once ready, the system-picked one when the port is 0.
+- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_max_message_size` (a WebSocket message past it closes its connection with status 1009; 1 MiB by default, 0 for no limit), `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop. `get_port` returns the bound port once ready, the system-picked one when the port is 0.
 - `HttpServer::set_http_filter`, `set_authenticator`: install one connection filter and one authenticator.
 - `HttpServer::add_websocket`, `add_websocket_origin`: register a WebSocket protocol handler and the origins allowed to open it.
 - `HttpServer::get_resource_path`: virtual hook that resolves a request path to a file.
@@ -25,7 +25,7 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 - `IHttpFilter`, `HttpFilterInfo`: connection-level accept or reject, decided from URI, client IP and headers.
 - `RateLimitFilter`: `IHttpFilter` limiting events per client over a window. `set_max_entries`, `set_clock`.
 - `IHttpAuthenticator`: override `on_basic_auth` and `on_token_auth` to validate credentials.
-- `IWebsocketHandler`, `WebsocketHandler`: WebSocket callbacks (`on_open`, `on_read`, `on_write`, `on_close`, `on_peer_close`). `WebsocketHandler` exposes them as `std::function` members. `WriteProtocol` selects the frame type on write.
+- `IWebsocketHandler`, `WebsocketHandler`: WebSocket callbacks (`on_open`, `on_read`, `on_write`, `on_close`, `on_peer_close`). `on_read` gets each message whole, whatever its fragments and the receive buffer. `WebsocketHandler` exposes them as `std::function` members. `WriteProtocol` selects the frame type on write.
 
 ### Messages
 
@@ -47,14 +47,14 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 ### Navigator
 
 - `Navigator`: stateful client, non-copyable. Verbs `get`, `post`, `put`, `patch`, `del`, `head`, `options`, `post_multipart`, `download`, `put_file`.
-- `Navigator` session state: `set_header`, `set_cookie`, `cookies`, `save_cookies`, `load_cookies`, `set_basic_auth`, `set_digest_auth`, `set_token_auth`, `form_login` (`FormLoginParams`).
+- `Navigator` session state: `set_header`, `set_cookie` (the domain is required: curl never sends a domain-less cookie to a named host), `cookies`, `save_cookies`, `load_cookies`, `set_basic_auth`, `set_digest_auth`, `set_token_auth`, `form_login` (`FormLoginParams`).
 - `Navigator` transport: `set_timeout`, `set_connect_timeout`, `set_ssl_verify`, `set_http2`, `set_max_response_size`, `set_proxy`, `add_proxy`, `set_proxy_rotation` (`ProxyRotation`), `set_retry`, `set_domain_delay_ms`, `set_user_agent_rotation`.
 - `Navigator` redirects and safety: `set_follow_redirects`, `set_max_redirects`, `set_redirect_policy` (`RedirectPolicy`), `set_ssrf_guard`, `set_cross_origin_headers`.
 - `Navigator` hooks: `on_before_request` (may edit `RequestInfo`), `on_after_response`, `on_auth_required`.
 - `Navigator` WebSocket client: `ws_connect` (replaces the current connection), `ws_send`, `ws_send_binary`, `ws_close`, `ws_is_connected`, with `on_ws_open`, `on_ws_text`, `on_ws_binary`, `on_ws_close`, `on_ws_peer_close`.
 - `NavigatorResponse`: `HttpResponse` plus `final_url`, `redirect_history`, `cookies`, `was_method_downgraded`, `redirect_refusal`, `truncated`.
 - `RobotsTxt`: fetch and parse a `robots.txt`; `is_allowed(user_agent, path)`, `crawl_delay`, TTL with `set_ttl`.
-- `extract_links`: links from HTML with optional base URL resolution (`ExtractedLink`).
+- `extract_links`: links from HTML with optional base URL resolution (`ExtractedLink`). Attribute values are decoded: numeric character references and `&amp;`, `&lt;`, `&gt;`, `&quot;`, `&apos;`; any other reference stays as written, as in `csrf_extract_from_html`.
 - `csrf_extract_from_html`: finds a CSRF token field in HTML (`CsrfResult`), optionally guided by a hint.
 
 ## Example
