@@ -236,6 +236,7 @@ bool DevMessage::on_reset()
     _msg_ptr = nullptr;
     _msg_fields.clear();
     _channels_in_to_field.clear();
+    _fields_to_channel_out.clear();
     _channel_msg_in = nullptr;
     _channel_msg_out = nullptr;
     _channel_trigger = nullptr;

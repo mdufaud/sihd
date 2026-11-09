@@ -171,6 +171,38 @@ TEST_F(TestDevMessage, test_devmessage_trigger_notifies_only_changed_fields)
     ASSERT_TRUE(core.stop());
 }
 
+TEST_F(TestDevMessage, test_devmessage_reset_then_other_message)
+{
+    Core core;
+    DevMessage *dev = core.add_child<DevMessage>("dev");
+    Message *first = core.add_child<Message>("first");
+    first->add_field("a", TYPE_INT, 1);
+    ASSERT_TRUE(first->finish());
+    Message *second = core.add_child<Message>("second");
+    second->add_field("b", TYPE_INT, 1);
+    second->add_field("c", TYPE_INT, 1);
+    ASSERT_TRUE(second->finish());
+
+    dev->set_trigger_mode(false);
+    (void)dev->set_conf_str("message", "..first");
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+    ASSERT_TRUE(dev->stop());
+    ASSERT_TRUE(dev->reset());
+
+    (void)dev->set_conf_str("message", "..second");
+    ASSERT_TRUE(dev->init());
+    ASSERT_TRUE(dev->start());
+    auto [ch_buffer_in, ch_b_out, ch_c_out] = dev->get_all_child<Channel>("buffer_in", "b_out", "c_out");
+    const std::array<int, 2> raw = {7, 8};
+
+    EXPECT_TRUE(ch_buffer_in->write(ArrByteView((const uint8_t *)raw.data(), sizeof(raw))));
+
+    EXPECT_EQ(ch_b_out->read<int>(0), 7);
+    EXPECT_EQ(ch_c_out->read<int>(0), 8);
+    ASSERT_TRUE(dev->stop());
+}
+
 TEST_F(TestDevMessage, test_devmessage_init_unknown_message)
 {
     Core core;
