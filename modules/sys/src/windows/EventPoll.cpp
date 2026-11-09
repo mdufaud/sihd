@@ -36,7 +36,13 @@ struct EventPoll::Impl
 
         Result<void> open()
         {
-            wake_socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            // a spawned child must not inherit it
+            wake_socket = ::WSASocketW(AF_INET,
+                                       SOCK_DGRAM,
+                                       IPPROTO_UDP,
+                                       nullptr,
+                                       0,
+                                       WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT);
             if (wake_socket == INVALID_SOCKET)
                 return std::unexpected(socket_error("could not create the wake up socket"));
 
