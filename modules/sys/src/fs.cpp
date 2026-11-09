@@ -253,8 +253,10 @@ Result<void> remove_directories(const std::string & path)
     Result<void> res = {};
     for (auto it = children.rbegin(); it != children.rend(); ++it)
     {
-        auto removed = is_dir(*it) ? remove_directory(*it) : remove_file(*it);
-        if (!removed && !res)
+        // posix rmdir refuses a link to a directory, windows removes that link as a directory
+        const bool as_directory = is_dir(*it) && (build::is_windows || !is_symlink(*it));
+        auto removed = as_directory ? remove_directory(*it) : remove_file(*it);
+        if (!removed && res)
             res = std::move(removed);
     }
     return res;

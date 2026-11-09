@@ -482,6 +482,13 @@ Result<void> copy_file(const std::string & from,
     }
     const uint64_t total = s.st_size > 0 ? static_cast<uint64_t>(s.st_size) : 0;
 
+    // refused before the destination is truncated, as CopyFile2 does
+    if (S_ISDIR(s.st_mode))
+    {
+        ::close(in_fd);
+        return std::unexpected(Error(invalid_argument, "could not copy '{}': is a directory", from));
+    }
+
     // opening the destination would truncate the source itself
     struct stat dst;
     if (::stat(to.c_str(), &dst) == 0 && dst.st_dev == s.st_dev && dst.st_ino == s.st_ino)

@@ -9,6 +9,7 @@
 #include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
+#include <sihd/sys/user.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
@@ -271,6 +272,48 @@ TEST_F(TestFS, test_fs_creation)
     EXPECT_TRUE(fs::remove_directories(sandbox_path).has_value());
     EXPECT_FALSE(fs::is_dir(path_to_test));
     EXPECT_TRUE(fs::is_dir(sandbox_path));
+}
+
+TEST_F(TestFS, test_fs_remove_directories_keeps_link_target)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "making a link needs a privilege on windows";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string target = fs::combine(tmp_dir.path(), "target");
+    const std::string removed = fs::combine(tmp_dir.path(), "removed");
+    ASSERT_TRUE(std::filesystem::create_directories(fs::combine(target, "kept")));
+    ASSERT_TRUE(std::filesystem::create_directory(removed));
+    ASSERT_TRUE(fs::make_dir_link(target, fs::combine(removed, "link")).has_value());
+
+    EXPECT_TRUE(fs::remove_directories(removed).has_value());
+
+    EXPECT_EQ(fs::children(removed), std::vector<std::string> {});
+    EXPECT_EQ(fs::children(target), std::vector<std::string> {"kept/"});
+}
+
+TEST_F(TestFS, test_fs_remove_directories_reports_failure)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "windows has no directory write permission";
+    if (user::is_root())
+        GTEST_SKIP() << "root removes regardless of permissions";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string locked = fs::combine(tmp_dir.path(), "locked");
+    const std::string locked_file = fs::combine(locked, "file");
+    ASSERT_TRUE(std::filesystem::create_directory(locked));
+    ASSERT_TRUE(fs::write(locked_file, "content").has_value());
+    ASSERT_TRUE(fs::permission_set(locked, 0500).has_value());
+    Defer restore([&] { (void)fs::permission_set(locked, 0700); });
+
+    const auto removed = fs::remove_directories(tmp_dir.path());
+
+    ASSERT_FALSE(removed.has_value());
+    EXPECT_EQ(removed.error().code, ErrorCode::permission_denied);
+    EXPECT_EQ(removed.error().message, fmt::format("could not remove file '{}': Permission denied", locked_file));
 }
 
 TEST_F(TestFS, test_fs_fast_io)
@@ -539,6 +582,17 @@ TEST_F(TestFS, test_fs_copy_file)
     EXPECT_TRUE(fs::are_equals(empty_src, empty_dst));
 
     EXPECT_FALSE(fs::copy_file(fs::combine({tmp_path.path(), "nope.bin"}), dst).has_value());
+}
+
+TEST_F(TestFS, test_fs_copy_file_refused_keeps_destination)
+{
+    TmpDir tmp_path;
+    const std::string dst = fs::combine(tmp_path.path(), "dst.txt");
+    ASSERT_TRUE(fs::write(dst, "existing data").has_value());
+
+    EXPECT_FALSE(fs::copy_file(tmp_path.path(), dst).has_value());
+
+    EXPECT_EQ(fs::read_all(dst).value_or(""), "existing data");
 }
 
 TEST_F(TestFS, test_fs_platform_paths)
