@@ -236,6 +236,21 @@ TEST_F(TestSocket, test_socket_multicast)
     EXPECT_TRUE(sender.close().has_value());
 }
 
+TEST_F(TestSocket, test_socket_multicast_unknown_interface_refused)
+{
+    Socket sock;
+    ASSERT_TRUE(sock.open(AF_INET, SOCK_DGRAM, IPPROTO_UDP).has_value());
+    const IpAddr group("239.0.0.1");
+
+    const auto joined = sock.join_multicast(group, "no-such-interface");
+    const auto left = sock.leave_multicast(group, "no-such-interface");
+
+    ASSERT_FALSE(joined.has_value());
+    EXPECT_EQ(joined.error().code, ErrorCode::not_found);
+    ASSERT_FALSE(left.has_value());
+    EXPECT_EQ(left.error().code, ErrorCode::not_found);
+}
+
 TEST_F(TestSocket, test_socket_unix_cleanup)
 {
     if (sihd::sys::os::is_run_by_wine())

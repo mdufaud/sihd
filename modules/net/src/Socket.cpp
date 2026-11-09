@@ -1096,7 +1096,10 @@ Result<void> Socket::_multicast_membership(const IpAddr & group, const std::stri
             mreq.imr_interface.s_addr = htonl(INADDR_ANY);
         else
         {
+            // an unparsable address would read as 0.0.0.0, the any interface
             IpAddr iface_addr(iface);
+            if (!iface_addr.is_ipv4())
+                return std::unexpected(Error(ErrorCode::not_found, "no interface address: {}", iface));
             mreq.imr_interface = iface_addr.addr4().sin_addr;
         }
 
