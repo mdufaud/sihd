@@ -1,7 +1,6 @@
 #ifndef __SIHD_BT_SCANNER_HPP__
 #define __SIHD_BT_SCANNER_HPP__
 
-#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -82,7 +81,6 @@ class Scanner: public sihd::util::Named,
         std::optional<sihd::util::Duration> _next_wait(sihd::util::Duration period) const;
 
         sihd::util::Waitable _waitable;
-        std::atomic<bool> _stop_requested;
         // set by a platform loop blocked outside _waitable, guarded by it
         std::function<void()> _wake_scan;
         size_t _adapter_index;

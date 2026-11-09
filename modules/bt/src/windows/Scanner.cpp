@@ -336,13 +336,13 @@ bool Scanner::_scan()
         std::vector<ScanResult> received;
         {
             auto lock = _waitable.wait_for_guard(*wait, [this, &pending] {
-                return _stop_requested.load() || !pending.empty();
+                return this->service_stop_requested() || !pending.empty();
             });
             received.swap(pending);
         }
         for (ScanResult & result : received)
             this->_publish(std::move(result));
-        if (_stop_requested)
+        if (this->service_stop_requested())
             break;
     }
 

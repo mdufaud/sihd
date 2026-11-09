@@ -294,7 +294,7 @@ bool Scanner::_scan()
     }
 
     bool scanned = true;
-    while (!_stop_requested)
+    while (!this->service_stop_requested())
     {
         auto wait = this->_next_wait(max_wait);
         if (!wait.has_value())

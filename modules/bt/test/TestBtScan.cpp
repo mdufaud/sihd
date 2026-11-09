@@ -7,6 +7,8 @@
 #include <sihd/sys/env.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Stopwatch.hpp>
+#include <sihd/util/Synchronizer.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
@@ -16,6 +18,37 @@ SIHD_NEW_LOGGER("test");
 using namespace sihd::bt;
 using namespace sihd::util;
 using namespace sihd::sys;
+
+// its first scan is stopped once its loop ended, before start() returns: where a late stop() lands
+class LateStopScanner: public Scanner
+{
+    public:
+        LateStopScanner(const std::string & name): Scanner(name) { _stop_reached.init_sync(2); }
+
+        std::jthread stopper;
+
+    protected:
+        bool on_start() override
+        {
+            const bool scanned = Scanner::on_start();
+            if (!stopper.joinable())
+            {
+                stopper = std::jthread([this] { this->stop(); });
+                _stop_reached.sync(Duration(time::sec(5)));
+            }
+            return scanned;
+        }
+
+        bool on_stop() override
+        {
+            const bool stopped = Scanner::on_stop();
+            _stop_reached.sync();
+            return stopped;
+        }
+
+    private:
+        Synchronizer _stop_reached;
+};
 
 class TestBtScan: public ::testing::Test
 {
@@ -121,6 +154,22 @@ TEST_F(TestBtScan, test_scan_twice)
 
     EXPECT_TRUE(first);
     EXPECT_TRUE(second);
+}
+
+TEST_F(TestBtScan, test_stop_after_the_scan_ended_spares_the_next_scan)
+{
+    if (!has_powered_adapter())
+        GTEST_SKIP() << "no powered bluetooth adapter";
+    LateStopScanner scanner("scanner");
+    ASSERT_TRUE(scanner.scan_for(Duration(time::milli(100))));
+    scanner.stopper.join();
+
+    Stopwatch stopwatch;
+    const bool scanned = scanner.scan_for(Duration(time::milli(600)));
+    const Duration elapsed = stopwatch.time();
+
+    EXPECT_TRUE(scanned);
+    EXPECT_GE(elapsed, Duration(time::milli(600)));
 }
 
 TEST_F(TestBtScan, test_unknown_adapter)

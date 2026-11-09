@@ -26,7 +26,7 @@ bool same_advertisement(const ScanResult & lhs, const ScanResult & rhs)
 
 } // namespace
 
-Scanner::Scanner(const std::string & name, Node *parent): Named(name, parent), _stop_requested(false)
+Scanner::Scanner(const std::string & name, Node *parent): Named(name, parent)
 {
     this->set_adapter(0);
     this->add_conf("adapter", &Scanner::set_adapter);
@@ -66,17 +66,14 @@ std::optional<ScanResult> Scanner::last_result() const
 
 bool Scanner::on_start()
 {
-    const bool scanned = this->_scan();
-    // reset once the loop ended: a stop() landing before the loop started is not lost
-    _stop_requested = false;
-    return scanned;
+    return this->_scan();
 }
 
 bool Scanner::on_stop()
 {
     {
+        // the service flag is already set: waking under the guard cannot slip between a check and a wait
         auto lock = _waitable.guard();
-        _stop_requested = true;
         if (_wake_scan)
             _wake_scan();
     }
