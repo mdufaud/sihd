@@ -67,7 +67,7 @@ bool image_to_bitmap(Bitmap & bm, size_t width, size_t height, XImage *image)
                 const uint8_t green = extract_channel(pixel, green_mask);
                 const uint8_t blue = extract_channel(pixel, blue_mask);
 
-                bm.set(x, height - y - 1, Color::rgb(red, green, blue));
+                bm.set(x, y, Color::rgb(red, green, blue));
             }
         }
         return true;
