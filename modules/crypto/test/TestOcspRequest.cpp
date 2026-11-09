@@ -117,6 +117,17 @@ TEST_F(TestOcspRequest, empty_request_refused)
     EXPECT_EQ(built.error().message, "cannot build an ocsp request without certificate and issuer");
 }
 
+TEST_F(TestOcspRequest, refused_build_keeps_the_built_request)
+{
+    auto built = _request.build(_leaf, Certificate());
+
+    ASSERT_FALSE(built);
+    ASSERT_TRUE(_request);
+    auto der = _request.to_der();
+    ASSERT_TRUE(der.has_value());
+    EXPECT_EQ(*der, _request_der);
+}
+
 TEST_F(TestOcspRequest, verify_reports_each_status)
 {
     const std::vector<std::pair<int, RevocationStatus>> cases {

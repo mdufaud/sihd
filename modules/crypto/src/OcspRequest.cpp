@@ -61,7 +61,6 @@ void OcspRequest::RequestFree::operator()(void *request) const
 Result<void> OcspRequest::build(const Certificate & cert, const Certificate & issuer)
 {
     ERR_clear_error();
-    this->clear();
     if (!cert || !issuer)
         return std::unexpected(Error(not_initialized, "cannot build an ocsp request without certificate and issuer"));
     OCSP_CERTID *id = OCSP_cert_to_id(nullptr,

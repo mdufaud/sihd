@@ -190,4 +190,16 @@ TEST_F(TestCrl, garbage_refused)
     EXPECT_FALSE(crl);
 }
 
+TEST_F(TestCrl, refused_load_keeps_the_loaded_crl)
+{
+    const std::vector<uint8_t> garbage {0x30, 0x03, 0x01, 0x02, 0x03};
+    Crl crl = this->load({.revoked = {&_revoked}});
+
+    auto loaded = crl.load_der(garbage.data(), garbage.size());
+
+    ASSERT_FALSE(loaded.has_value());
+    ASSERT_TRUE(crl);
+    this->expect_status(crl, _revoked, RevocationStatus::revoked);
+}
+
 } // namespace test

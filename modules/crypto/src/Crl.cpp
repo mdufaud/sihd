@@ -59,7 +59,6 @@ bool partition_covers(const ISSUING_DIST_POINT *idp, const Certificate & cert)
 Result<void> Crl::load_der(const uint8_t *data, size_t len)
 {
     ERR_clear_error();
-    this->clear();
     const unsigned char *in = data;
     std::unique_ptr<X509_CRL, X509CrlFree> crl(d2i_X509_CRL(nullptr, &in, static_cast<long>(len)));
     if (crl == nullptr)
