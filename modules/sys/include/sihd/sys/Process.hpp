@@ -73,6 +73,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         sihd::util::Result<bool> wait(int options = 0);
         sihd::util::Result<bool> wait_no_hang();
 
+        // a captured output pipe is not at its end of file, or input is queued
         bool can_read_pipes() const;
         bool read_pipes(int milliseconds_timeout = 1);
         /**
@@ -88,6 +89,7 @@ class Process: public sihd::util::IHandler<Poll *>,
          * Setup pipes
          */
         Process & stdin_close();
+        // queued before or after execute(), written as the child reads: read_pipes() or the service loop pumps it
         Process & stdin_from(const std::string & input);
         bool stdin_from_file(const std::string & path);
         Process & stdin_from(FileDescType fd);

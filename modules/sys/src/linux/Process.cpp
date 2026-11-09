@@ -29,6 +29,7 @@
 #endif
 
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/SigThreadBlocker.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/platform.hpp>
@@ -130,12 +131,6 @@ bool read_pipe_into_callback(int fd, std::function<void(std::string_view)> fun)
     return ret > 0;
 }
 
-bool write_into_pipe(int fd, const std::string & str)
-{
-    ssize_t ret = write(fd, str.c_str(), str.size());
-    return ret >= 0 && ret == (ssize_t)str.size();
-}
-
 bool read_pipe_into_file(int fd, const std::string & path, bool append)
 {
     File file(path, append ? "a" : "w");
@@ -148,12 +143,13 @@ bool read_pipe_into_file(int fd, const std::string & path, bool append)
     });
 }
 
-void init_poller(sihd::sys::Poll & poll, int stdout_fd, int stderr_fd)
+void init_poller(sihd::sys::Poll & poll, int stdin_fd, int stdout_fd, int stderr_fd)
 {
     poll.stop();
     poll.clear_fds();
+    // stdin is only polled while input is queued: a pipe with room is always writable
+    poll.set_limit((int)(stdin_fd >= 0) + (int)(stdout_fd >= 0) + (int)(stderr_fd >= 0));
     int fds = (int)(stdout_fd >= 0) + (int)(stderr_fd >= 0);
-    poll.set_limit(fds);
     if (fds > 0)
     {
         poll.set_read_fd(stdout_fd);
@@ -185,9 +181,13 @@ struct StdFdWrapper
         FileDescAction action = None;
         std::function<void(std::string_view)> fun;
         std::string path;
+        // stdin only: input the child has not read yet, the write end closes once it is written
+        std::string pending;
+        bool close_after_flush = false;
 
         void add_pipe();
         bool process_read_pipe();
+        bool flush_pending();
 
         void close();
         void redirect_to(std::function<void(std::string_view)> && fun);
@@ -223,11 +223,36 @@ bool StdFdWrapper::process_read_pipe()
     return true;
 }
 
+// false when the reader is gone, the input is dropped
+bool StdFdWrapper::flush_pending()
+{
+#if !defined(__SIHD_EMSCRIPTEN__)
+    // EPIPE instead of a SIGPIPE killing the process
+    SigThreadBlocker blocker {SIGPIPE};
+#endif
+    while (!this->pending.empty())
+    {
+        const ssize_t written = write(this->fd_write, this->pending.data(), this->pending.size());
+        if (written > 0)
+            this->pending.erase(0, static_cast<size_t>(written));
+        else if (written < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+            return true;
+        else if (written >= 0 || errno != EINTR)
+        {
+            this->pending.clear();
+            return false;
+        }
+    }
+    return true;
+}
+
 void StdFdWrapper::reset()
 {
     this->action = None;
     this->fun = nullptr;
     this->path.clear();
+    this->pending.clear();
+    this->close_after_flush = false;
 }
 
 void StdFdWrapper::close()
@@ -285,6 +310,21 @@ void PipeWrapper::reset()
     std_in.reset();
     std_out.reset();
     std_err.reset();
+}
+
+void flush_stdin(StdFdWrapper & std_in, sihd::sys::Poll & poll)
+{
+    if (std_in.fd_write < 0)
+        return;
+    const bool reader_alive = std_in.flush_pending();
+    if (reader_alive && !std_in.pending.empty())
+    {
+        poll.set_write_fd(std_in.fd_write);
+        return;
+    }
+    poll.clear_fd(std_in.fd_write);
+    if (!reader_alive || std_in.close_after_flush)
+        safe_close(std_in.fd_write);
 }
 
 struct ProcessWatcher
@@ -358,6 +398,8 @@ struct Process::Impl
 {
         PipeWrapper pipe;
         ProcessWatcher process_watcher;
+        // stdin is fed from the caller's thread while the poll service flushes it
+        std::mutex stdin_mutex;
 };
 
 Process::Process()
@@ -433,15 +475,31 @@ void Process::clear()
 
 Process & Process::stdin_close()
 {
-    _impl->pipe.std_in.close();
+    std::lock_guard lock(_impl->stdin_mutex);
+    StdFdWrapper & std_in = _impl->pipe.std_in;
+    if (this->is_process_running() && !std_in.pending.empty())
+        std_in.close_after_flush = true;
+    else
+        std_in.close();
     return *this;
 }
 
 Process & Process::stdin_from(const std::string & input)
 {
-    _impl->pipe.std_in.add_pipe();
-    if (write_into_pipe(_impl->pipe.std_in.fd_write, input) == false)
-        SIHD_LOG(error, "Process: could not write stdin ({} bytes)", input.size());
+    std::lock_guard lock(_impl->stdin_mutex);
+    StdFdWrapper & std_in = _impl->pipe.std_in;
+    // a running child whose stdin is closed never reads again
+    if (std_in.fd_write < 0 && this->is_process_running())
+        return *this;
+    if (std_in.fd_write < 0)
+    {
+        std_in.add_pipe();
+        // the parent end only, the child reads a blocking pipe
+        fcntl(std_in.fd_write, F_SETFL, fcntl(std_in.fd_write, F_GETFL) | O_NONBLOCK);
+    }
+    std_in.pending += input;
+    if (this->is_process_running())
+        flush_stdin(std_in, _poll);
     return *this;
 }
 
@@ -684,7 +742,7 @@ Result<void> Process::_do_child_process(const std::vector<const char *> &)
 
 Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
-    init_poller(_poll, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
+    init_poller(_poll, _impl->pipe.std_in.fd_write, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
     if (_fun_to_execute || _force_fork)
         return this->_do_fork(argv);
@@ -724,9 +782,14 @@ Result<void> Process::execute()
         this->_apply_child_policy();
     }
 
-    if (_close_stdin_after_exec)
     {
-        safe_close(_impl->pipe.std_in.fd_write);
+        std::lock_guard lock(_impl->stdin_mutex);
+        StdFdWrapper & std_in = _impl->pipe.std_in;
+        std_in.close_after_flush = _close_stdin_after_exec;
+        if (executed)
+            flush_stdin(std_in, _poll);
+        else if (_close_stdin_after_exec)
+            safe_close(std_in.fd_write);
     }
 
     _started.store(executed.has_value());
@@ -757,7 +820,13 @@ bool Process::wait_process_end(Duration nano_duration)
 
 bool Process::can_read_pipes() const
 {
-    return _poll.is_running() == false && _poll.fds_size() > 0;
+    if (_poll.is_running())
+        return false;
+    // the poll keeps its slots: what counts is a captured pipe not at its end of file, or queued input
+    if (_impl->pipe.std_out.fd_read >= 0 || _impl->pipe.std_err.fd_read >= 0)
+        return true;
+    std::lock_guard lock(_impl->stdin_mutex);
+    return !_impl->pipe.std_in.pending.empty();
 }
 
 bool Process::read_pipes(int milliseconds_timeout)
@@ -767,9 +836,16 @@ bool Process::read_pipes(int milliseconds_timeout)
 
 bool Process::terminate()
 {
-    this->read_pipes();
+    // a read takes one chunk per pipe: drain the default 64 KiB pipe a finished child may have filled
+    int polls = 65536 / SIHD_PROCESS_READ_BUFFER_SIZE;
+    while (polls-- > 0 && this->read_pipes())
+        ;
 
-    safe_close(_impl->pipe.std_in.fd_write);
+    {
+        std::lock_guard lock(_impl->stdin_mutex);
+        _impl->pipe.std_in.pending.clear();
+        safe_close(_impl->pipe.std_in.fd_write);
+    }
     safe_close(_impl->pipe.std_out.fd_read);
     safe_close(_impl->pipe.std_err.fd_read);
 
@@ -828,6 +904,13 @@ void Process::handle(Poll *poll)
                 poll->clear_fd(fd);
                 safe_close(_impl->pipe.std_err.fd_read);
             }
+        }
+        else
+        {
+            // writable, or the reader closed its end: both end in flush_stdin
+            std::lock_guard lock(_impl->stdin_mutex);
+            if (fd == _impl->pipe.std_in.fd_write)
+                flush_stdin(_impl->pipe.std_in, *poll);
         }
     }
     if (poll->polling_timeout())

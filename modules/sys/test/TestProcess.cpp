@@ -721,6 +721,77 @@ TEST_F(TestProcess, test_process_exec_stdin)
     EXPECT_EQ(printed, "hello world");
 }
 
+TEST_F(TestProcess, test_process_stdin_larger_than_pipe)
+{
+    const std::string input(1024 * 1024, 'x');
+    std::string output;
+    Process proc({helper_path(), "count-stdin"});
+    proc.stdin_from(input).stdin_close_after_exec(true).stdout_to(output);
+
+    EXPECT_TRUE(proc.start());
+
+    EXPECT_EQ(output, build::is_windows ? "1048576\r\n" : "1048576\n");
+    EXPECT_EQ((int)proc.return_code(), 0);
+}
+
+TEST_F(TestProcess, test_process_stdin_write_never_blocks)
+{
+    const std::string input(1024 * 1024, 'x');
+    Process proc({helper_path(), "sleep", "5"});
+    proc.stdin_from(std::string());
+    ASSERT_TRUE(proc.execute());
+
+    Stopwatch watch;
+    proc.stdin_from(input);
+    const Duration write_time = watch.time();
+
+    EXPECT_TRUE(proc.terminate());
+    EXPECT_LT(write_time, Duration(time::sec(1)));
+}
+
+TEST_F(TestProcess, test_process_stdin_closed_drops_input)
+{
+    Process proc({helper_path(), "sleep", "5"});
+    proc.stdin_from(std::string());
+    ASSERT_TRUE(proc.execute());
+    proc.stdin_close();
+
+    proc.stdin_from(std::string(1024 * 1024, 'x'));
+
+    EXPECT_FALSE(proc.can_read_pipes());
+    EXPECT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_pipes_end_at_eof)
+{
+    std::string output;
+    Process proc({helper_path(), "print-bytes", "10"});
+    proc.stdout_to(output);
+    ASSERT_TRUE(proc.execute());
+    EXPECT_TRUE(proc.can_read_pipes());
+
+    while (proc.read_pipes(1000))
+        ;
+
+    EXPECT_EQ(output.size(), 10u);
+    EXPECT_FALSE(proc.can_read_pipes());
+    EXPECT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_terminate_drains_output)
+{
+    std::string output;
+    // two read chunks, within the 4 KiB default windows pipe the finished child must fit in
+    Process proc({helper_path(), "print-bytes", "4096"});
+    proc.stdout_to(output);
+    ASSERT_TRUE(proc.execute());
+    ASSERT_TRUE(proc.wait_exit().value_or(false));
+
+    EXPECT_TRUE(proc.terminate());
+
+    EXPECT_EQ(output.size(), 4096u);
+}
+
 TEST_F(TestProcess, test_process_exec_timeout)
 {
     if (os::is_run_by_valgrind())

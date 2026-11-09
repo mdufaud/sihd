@@ -1,5 +1,6 @@
 #include <winsock2.h>
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <stdexcept>
@@ -94,6 +95,12 @@ void make_read_inheritable(HANDLE fd_read)
     SetHandleInformation(fd_read, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
 }
 
+void make_write_nonblocking(HANDLE fd_write)
+{
+    DWORD mode = PIPE_NOWAIT;
+    SetNamedPipeHandleState(fd_write, &mode, NULL, NULL);
+}
+
 void make_write_inheritable(HANDLE fd_write)
 {
     SetHandleInformation(fd_write, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
@@ -118,13 +125,6 @@ bool read_pipe_into_callback(HANDLE fd, std::function<void(std::string_view)> fu
         fun(std::string_view {buffer, (size_t)read});
     }
     return success;
-}
-
-bool write_into_pipe(HANDLE fd, const std::string & str)
-{
-    DWORD written;
-    BOOL success = WriteFile(fd, str.c_str(), str.size(), &written, NULL);
-    return success && written == (ssize_t)str.size();
 }
 
 bool read_pipe_into_file(HANDLE fd, const std::string & path, bool append)
@@ -163,6 +163,9 @@ struct StdFdWrapper
         FileDescAction action = None;
         std::function<void(std::string_view)> fun;
         std::string path;
+        // stdin only: input the child has not read yet, the write end closes once it is written
+        std::string pending;
+        bool close_after_flush = false;
 
         void add_pipe();
         bool has_reader() const
@@ -170,6 +173,7 @@ struct StdFdWrapper
             return this->fd_read != nullptr && (this->action == File || this->action == FileAppend || this->fun);
         }
         bool process_read_pipe();
+        bool flush_pending();
 
         void close();
         void redirect_to(std::function<void(std::string_view)> && fun);
@@ -198,10 +202,38 @@ bool StdFdWrapper::process_read_pipe()
 {
     if (this->fd_read == nullptr)
         return true;
+    DWORD available = 0;
+    // an emptied pipe whose writers are all closed: end of file
+    if (!PeekNamedPipe(this->fd_read, NULL, 0, NULL, &available, NULL) && GetLastError() == ERROR_BROKEN_PIPE)
+    {
+        safe_close(this->fd_read);
+        return false;
+    }
     if (this->action == File || this->action == FileAppend)
         return read_pipe_into_file(this->fd_read, this->path, this->action == FileAppend);
     else if (this->fun)
         return read_pipe_into_callback(this->fd_read, this->fun);
+    return true;
+}
+
+// false when the reader is gone, the input is dropped
+bool StdFdWrapper::flush_pending()
+{
+    // a non-blocking write larger than the free pipe space may take nothing: stay below the default buffer
+    constexpr size_t chunk_size = 4096;
+    while (!this->pending.empty())
+    {
+        DWORD written = 0;
+        const DWORD size = static_cast<DWORD>(std::min(this->pending.size(), chunk_size));
+        if (!WriteFile(this->fd_write, this->pending.data(), size, &written, NULL))
+        {
+            this->pending.clear();
+            return false;
+        }
+        if (written == 0)
+            return true;
+        this->pending.erase(0, written);
+    }
     return true;
 }
 
@@ -210,6 +242,8 @@ void StdFdWrapper::reset()
     this->action = None;
     this->fun = nullptr;
     this->path.clear();
+    this->pending.clear();
+    this->close_after_flush = false;
 }
 
 void StdFdWrapper::close()
@@ -291,6 +325,15 @@ void PipeWrapper::reset()
     std_err.reset();
 }
 
+void flush_stdin(StdFdWrapper & std_in)
+{
+    if (std_in.fd_write == nullptr)
+        return;
+    const bool reader_alive = std_in.flush_pending();
+    if (!reader_alive || (std_in.pending.empty() && std_in.close_after_flush))
+        safe_close(std_in.fd_write);
+}
+
 struct ProcessWatcher
 {
         std::mutex mutex;
@@ -369,6 +412,8 @@ struct Process::Impl
 {
         PipeWrapper pipe;
         ProcessWatcher process_watcher;
+        // stdin is fed from the caller's thread while the service loop flushes it
+        std::mutex stdin_mutex;
 };
 
 Process::Process()
@@ -444,17 +489,33 @@ void Process::clear()
 
 Process & Process::stdin_close()
 {
-    _impl->pipe.std_in.close();
+    std::lock_guard lock(_impl->stdin_mutex);
+    StdFdWrapper & std_in = _impl->pipe.std_in;
+    if (this->is_process_running() && !std_in.pending.empty())
+        std_in.close_after_flush = true;
+    else
+        std_in.close();
     return *this;
 }
 
 Process & Process::stdin_from(const std::string & input)
 {
-    _impl->pipe.std_in.add_pipe();
-    // child reads this end as its stdin: it must be inherited and blocking (the parent keeps the write end)
-    make_read_inheritable(_impl->pipe.std_in.fd_read);
-    make_read_blocking(_impl->pipe.std_in.fd_read);
-    write_into_pipe(_impl->pipe.std_in.fd_write, input);
+    std::lock_guard lock(_impl->stdin_mutex);
+    StdFdWrapper & std_in = _impl->pipe.std_in;
+    // a running child whose stdin is closed never reads again
+    if (std_in.fd_write == nullptr && this->is_process_running())
+        return *this;
+    if (std_in.fd_write == nullptr)
+    {
+        std_in.add_pipe();
+        // child reads this end as its stdin: it must be inherited and blocking (the parent keeps the write end)
+        make_read_inheritable(std_in.fd_read);
+        make_read_blocking(std_in.fd_read);
+        make_write_nonblocking(std_in.fd_write);
+    }
+    std_in.pending += input;
+    if (this->is_process_running())
+        flush_stdin(std_in);
     return *this;
 }
 
@@ -669,9 +730,14 @@ Result<void> Process::execute()
         this->_apply_child_policy();
     }
 
-    if (_close_stdin_after_exec)
     {
-        safe_close(_impl->pipe.std_in.fd_write);
+        std::lock_guard lock(_impl->stdin_mutex);
+        StdFdWrapper & std_in = _impl->pipe.std_in;
+        std_in.close_after_flush = _close_stdin_after_exec;
+        if (executed)
+            flush_stdin(std_in);
+        else if (_close_stdin_after_exec)
+            safe_close(std_in.fd_write);
     }
 
     _started.store(executed.has_value());
@@ -697,8 +763,11 @@ bool Process::wait_process_end(Duration nano_duration)
 
 bool Process::can_read_pipes() const
 {
-    return _impl->pipe.std_in.fd_read != nullptr || _impl->pipe.std_out.fd_read != nullptr
-           || _impl->pipe.std_err.fd_read != nullptr;
+    if (_impl->pipe.std_in.fd_read != nullptr || _impl->pipe.std_out.fd_read != nullptr
+        || _impl->pipe.std_err.fd_read != nullptr)
+        return true;
+    std::lock_guard lock(_impl->stdin_mutex);
+    return !_impl->pipe.std_in.pending.empty();
 }
 
 bool Process::read_pipes(int milliseconds_timeout)
@@ -711,6 +780,10 @@ bool Process::read_pipes(int milliseconds_timeout)
     bool timed_out = false;
     while (!timed_out)
     {
+        {
+            std::lock_guard lock(_impl->stdin_mutex);
+            flush_stdin(_impl->pipe.std_in);
+        }
         if (_impl->pipe.read_output())
             return true;
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -724,9 +797,16 @@ bool Process::read_pipes(int milliseconds_timeout)
 
 bool Process::terminate()
 {
-    this->read_pipes();
+    // a read takes one chunk per pipe: drain the default 64 KiB pipe a finished child may have filled
+    int polls = 65536 / SIHD_PROCESS_READ_BUFFER_SIZE;
+    while (polls-- > 0 && this->read_pipes())
+        ;
 
-    safe_close(_impl->pipe.std_in.fd_write);
+    {
+        std::lock_guard lock(_impl->stdin_mutex);
+        _impl->pipe.std_in.pending.clear();
+        safe_close(_impl->pipe.std_in.fd_write);
+    }
     safe_close(_impl->pipe.std_out.fd_read);
     safe_close(_impl->pipe.std_err.fd_read);
 

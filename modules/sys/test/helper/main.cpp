@@ -434,6 +434,22 @@ int main(int argc, char **argv)
             printf("%s\n", argv[i]);
         return 0;
     }
+    if (argc >= 2 && strcmp(argv[1], "count-stdin") == 0)
+    {
+        size_t total = 0;
+        std::array<char, 4096> buffer;
+        size_t got;
+        while ((got = fread(buffer.data(), 1, buffer.size(), stdin)) > 0)
+            total += got;
+        printf("%zu\n", total);
+        return 0;
+    }
+    if (argc >= 3 && strcmp(argv[1], "print-bytes") == 0)
+    {
+        const std::string bytes(std::stoul(argv[2]), 'x');
+        fwrite(bytes.data(), 1, bytes.size(), stdout);
+        return 0;
+    }
     if (argc >= 3 && strcmp(argv[1], "sleep") == 0)
         return do_sleep(argv[2]);
     if (argc >= 3 && strcmp(argv[1], "shm") == 0)
