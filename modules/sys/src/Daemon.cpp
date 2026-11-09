@@ -143,6 +143,9 @@ bool Daemon::_write_pid_file()
 
     if (file.is_open() == false)
         return false;
+    // opened in append mode so a file locked by another daemon is never emptied: drop a stale pid once the lock is ours
+    if (SIHD_UNEXPECTED_LOG(fs::truncate(file.path(), 0)))
+        return false;
 
     std::string towrite = str::to_dec(os::pid()) + "\n";
     auto wrote = file.write(towrite);

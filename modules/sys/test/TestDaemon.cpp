@@ -12,6 +12,7 @@
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
+#include <sihd/util/str.hpp>
 
 #include "test_helper.hpp"
 
@@ -86,6 +87,37 @@ TEST_F(TestDaemon, test_daemon_pid_file_lifecycle)
     }));
     EXPECT_EQ(::kill(daemon_pid, 0), 0);
 
+    EXPECT_TRUE(wait_for([&] { return fs::exists(pid_file) == false; }, std::chrono::seconds(5)));
+}
+
+TEST_F(TestDaemon, test_daemon_replaces_stale_pid_file)
+{
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no process spawn";
+
+    if (os::is_run_by_valgrind())
+        GTEST_SKIP() << "fork under valgrind";
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string pid_file = tmp_dir.path() + "/daemon.pid";
+    const std::string work_dir = tmp_dir.path() + "/work";
+    ASSERT_TRUE(std::filesystem::create_directory(work_dir));
+    ASSERT_TRUE(fs::write(pid_file, "99999\n").has_value());
+
+    Process daemon_proc({helper_path(), "daemonize", pid_file, work_dir, "1"});
+    ASSERT_TRUE(daemon_proc.execute().has_value());
+    ASSERT_TRUE(daemon_proc.wait_any().value_or(false));
+    std::string content;
+    const bool replaced = wait_for([&] {
+        content = fs::read_all(pid_file).value_or("");
+        return !content.empty() && content != "99999\n" && content.back() == '\n';
+    });
+
+    ASSERT_TRUE(replaced);
+    // the daemon pid is not known here: one line, not the stale one
+    const std::string pid_line(str::trim(content));
+    EXPECT_EQ(str::split(content, '\n'), std::vector<std::string> {pid_line});
+    EXPECT_NE(pid_line, "99999");
     EXPECT_TRUE(wait_for([&] { return fs::exists(pid_file) == false; }, std::chrono::seconds(5)));
 }
 #endif
