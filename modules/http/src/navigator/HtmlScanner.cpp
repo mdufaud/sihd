@@ -1,6 +1,11 @@
 #include "HtmlScanner.hpp"
 
+#include <algorithm>
+#include <array>
 #include <cctype>
+#include <charconv>
+#include <cstdint>
+#include <utility>
 
 #include <sihd/util/str.hpp>
 
@@ -33,6 +38,80 @@ size_t or_end(std::string_view markup, size_t found)
     return found == std::string_view::npos ? markup.size() : found;
 }
 
+constexpr std::array<std::pair<std::string_view, std::string_view>, 5> named_references = {{
+    {"amp", "&"},
+    {"lt", "<"},
+    {"gt", ">"},
+    {"quot", "\""},
+    {"apos", "'"},
+}};
+
+// "#x10FFFF" is the longest reference body decoded
+constexpr size_t max_reference_size = 8;
+
+std::string to_utf8(uint32_t codepoint)
+{
+    if (codepoint < 0x80)
+        return std::string(1, static_cast<char>(codepoint));
+    // the lead byte marks the length, each continuation byte carries 6 bits
+    constexpr std::array<uint32_t, 4> lead_marks {0x00, 0xC0, 0xE0, 0xF0};
+    const int continuations = codepoint < 0x800 ? 1 : (codepoint < 0x10000 ? 2 : 3);
+    std::string out(1, static_cast<char>(lead_marks[continuations] | (codepoint >> (6 * continuations))));
+    for (int shift = 6 * (continuations - 1); shift >= 0; shift -= 6)
+        out += static_cast<char>(0x80 | ((codepoint >> shift) & 0x3F));
+    return out;
+}
+
+// the character of a "#123" or "#x7B" body, nullopt for NUL, a surrogate or past unicode
+std::optional<uint32_t> numeric_reference(std::string_view body)
+{
+    if (body.size() < 2 || body[0] != '#')
+        return std::nullopt;
+    const bool hex = body[1] == 'x' || body[1] == 'X';
+    const std::string_view digits = body.substr(hex ? 2 : 1);
+    uint32_t codepoint = 0;
+    const auto [end, ec] = std::from_chars(digits.data(), digits.data() + digits.size(), codepoint, hex ? 16 : 10);
+    if (digits.empty() || ec != std::errc() || end != digits.data() + digits.size())
+        return std::nullopt;
+    if (codepoint == 0 || codepoint > 0x10FFFF || (codepoint >= 0xD800 && codepoint <= 0xDFFF))
+        return std::nullopt;
+    return codepoint;
+}
+
+// numeric references and the five xml named ones: nullopt for any other, which stays as written
+std::optional<std::string> reference_text(std::string_view body)
+{
+    const auto named = std::ranges::find(named_references, body, [](const auto & ref) { return ref.first; });
+    if (named != named_references.end())
+        return std::string(named->second);
+    const std::optional<uint32_t> codepoint = numeric_reference(body);
+    if (!codepoint)
+        return std::nullopt;
+    return to_utf8(*codepoint);
+}
+
+std::string decode_references(std::string_view value)
+{
+    std::string decoded;
+    decoded.reserve(value.size());
+    size_t cursor = 0;
+    while (cursor < value.size())
+    {
+        const size_t ampersand = value.find('&', cursor);
+        decoded.append(value.substr(cursor, ampersand - cursor));
+        if (ampersand == std::string_view::npos)
+            break;
+
+        const size_t semicolon = value.substr(ampersand + 1, max_reference_size + 1).find(';');
+        const std::optional<std::string> text = semicolon == std::string_view::npos
+                                                    ? std::nullopt
+                                                    : reference_text(value.substr(ampersand + 1, semicolon));
+        decoded.append(text.value_or("&"));
+        cursor = text ? ampersand + semicolon + 2 : ampersand + 1;
+    }
+    return decoded;
+}
+
 // reads the value following an attribute name, nullopt when a quote never closes
 std::optional<ValueRead> read_value(std::string_view markup, size_t cursor)
 {
@@ -63,7 +142,7 @@ std::optional<AttributeRead> read_attribute(std::string_view markup, size_t curs
     const std::optional<ValueRead> value = read_value(markup, name_end);
     if (!value)
         return std::nullopt;
-    read.attribute.value = value->value;
+    read.attribute.value = decode_references(value->value);
     read.cursor = value->cursor;
     return read;
 }

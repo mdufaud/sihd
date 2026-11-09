@@ -54,6 +54,26 @@ TEST_F(TestNavigatorExtractors, test_link_extractor_markup_variants)
     EXPECT_EQ(links[1].text, "Bare");
 }
 
+TEST_F(TestNavigatorExtractors, test_link_extractor_decodes_attribute_entities)
+{
+    const std::string html = R"(<a href="/search?q=1&amp;page=2&#38;x=&#x33;">Next</a>)";
+
+    const auto links = extract_links(html, "https://mysite.com");
+
+    ASSERT_EQ(links.size(), 1u);
+    EXPECT_EQ(links[0].url, "https://mysite.com/search?q=1&page=2&x=3");
+}
+
+TEST_F(TestNavigatorExtractors, test_csrf_extractor_decodes_attribute_entities)
+{
+    const std::string html =
+        R"(<input type="hidden" name="_csrf" value="a&amp;b&#43;c&lt;&gt;&quot;&apos;&#233;&#x20AC;&#x1F600;&nbsp;&#xZZ;&#0;&amp">)";
+
+    const CsrfResult result = csrf_extract_from_html(html);
+
+    EXPECT_EQ(result.value, "a&b+c<>\"'\xC3\xA9\xE2\x82\xAC\xF0\x9F\x98\x80&nbsp;&#xZZ;&#0;&amp");
+}
+
 TEST_F(TestNavigatorExtractors, test_csrf_extractor_hostile_html)
 {
     std::string html = "<input ";

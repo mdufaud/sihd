@@ -13,7 +13,8 @@ namespace sihd::http::htmlscan
 struct Attribute
 {
         std::string name;
-        std::string_view value;
+        // character references decoded
+        std::string value;
 };
 
 struct Tag
