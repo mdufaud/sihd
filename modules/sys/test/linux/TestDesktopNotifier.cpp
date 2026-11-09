@@ -238,6 +238,20 @@ TEST_F(TestDesktopNotifier, test_notify_low_urgency_and_clamped_timeout)
     EXPECT_EQ(return_code, 0) << _client_error;
 }
 
+TEST_F(TestDesktopNotifier, test_notify_sub_millisecond_timeout_still_expires)
+{
+    this->own_notifications_name();
+
+    this->start_client({"notify", "timeout_us=500", "summary=Summary"});
+    this->answer_capabilities({"body"});
+    auto call = this->answer_notify(4);
+    const int return_code = this->finish_client();
+
+    ASSERT_TRUE(call.has_value());
+    EXPECT_EQ(call->timeout, 1);
+    EXPECT_EQ(return_code, 0) << _client_error;
+}
+
 TEST_F(TestDesktopNotifier, test_notify_rejects_negative_timeout)
 {
     this->start_client({"notify", "timeout_ms=-5", "summary=Summary"});

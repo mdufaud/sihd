@@ -47,6 +47,9 @@ struct Appender::Impl
         bool constrained = false;
         bool repeat = false;
         std::string expected;
+        // a struct takes at least one field
+        bool is_struct = false;
+        bool has_values = false;
 
         ~Impl()
         {
@@ -107,6 +110,7 @@ struct Appender::Impl
 
         void consume(const std::string & type)
         {
+            has_values = true;
             if (!repeat)
                 expected.erase(0, type.size());
         }
@@ -257,6 +261,7 @@ Result<Appender> Appender::open_struct()
 
     auto container = next->empty() ? std::make_unique<Impl>()
                                    : Impl::constrained_to(next->substr(1, next->size() - 2), false);
+    container->is_struct = true;
     return _impl->open_child(DBUS_TYPE_STRUCT, nullptr, *next, std::move(container));
 }
 
@@ -285,6 +290,8 @@ Result<void> Appender::close(Appender && container)
     SIHD_UNEXPECTED_RETURN(writable);
     if (!container._impl->repeat && !container._impl->expected.empty())
         return std::unexpected(Error(invalid_argument, "dbus container misses '{}'", container._impl->expected));
+    if (container._impl->is_struct && !container._impl->has_values)
+        return std::unexpected(Error(invalid_argument, "dbus struct has no field"));
 
     std::unique_ptr<Impl> closed = std::move(container._impl);
     closed->parent = nullptr;

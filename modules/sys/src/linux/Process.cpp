@@ -342,6 +342,7 @@ struct ProcessWatcher
         bool reaped_elsewhere;
 
         void reset();
+        void watch(pid_t child);
         bool has_terminated();
         bool check_status(int options);
         Process::ReturnCodeType return_code();
@@ -389,6 +390,13 @@ void ProcessWatcher::reset()
     this->status = -1;
     this->code = -1;
     this->reaped_elsewhere = false;
+}
+
+void ProcessWatcher::watch(pid_t child)
+{
+    std::lock_guard lock(this->mutex);
+    this->reset();
+    this->pid = child;
 }
 
 Process::ReturnCodeType ProcessWatcher::return_code()
@@ -676,7 +684,7 @@ Result<void> Process::_do_fork(const std::vector<const char *> & argv)
                              const_cast<char *const *>(&(exec_env.array[0])));
         _exit(status);
     }
-    _impl->process_watcher.pid = pid;
+    _impl->process_watcher.watch(pid);
     return {};
 }
 
@@ -734,7 +742,7 @@ Result<void> Process::_do_spawn(const std::vector<const char *> & argv)
     // posix_spawnp returns the error itself: errno is unrelated
     if (err != 0)
         return std::unexpected(Error(error_errno(err), "could not spawn '{}'", argv[0]));
-    _impl->process_watcher.pid = pid;
+    _impl->process_watcher.watch(pid);
     return {};
 }
 

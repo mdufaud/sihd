@@ -283,7 +283,7 @@ int last_received()
 
 std::optional<SigStatus> status(int sig)
 {
-    if (sig < FIRST_SIG || sig >= signal::max_signal)
+    if (sig < FIRST_SIG || sig > signal::max_signal)
         return std::nullopt;
     return SigStatus(g_signals_status[sig - FIRST_SIG]);
 }

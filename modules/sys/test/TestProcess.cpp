@@ -191,6 +191,22 @@ TEST_F(TestProcess, test_process_service_runs_to_exit)
     EXPECT_EQ((int)proc.return_code(), 0);
 }
 
+TEST_F(TestProcess, test_process_execute_again_forgets_the_previous_child)
+{
+    Process proc({helper_path(), "sleep", "0"});
+    ASSERT_TRUE(proc.execute());
+    ASSERT_TRUE(proc.wait_exit().value_or(false));
+    ASSERT_TRUE(proc.has_exited());
+    proc.clear_argv();
+    proc.add_argv({helper_path(), "sleep", "5"});
+
+    ASSERT_TRUE(proc.execute());
+
+    EXPECT_FALSE(proc.has_exited());
+    EXPECT_FALSE(proc.has_terminated());
+    proc.terminate();
+}
+
 TEST_F(TestProcess, test_process_service_stop_kills_child)
 {
     Process proc({helper_path(), "sleep", "60"});

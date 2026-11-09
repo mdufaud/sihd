@@ -188,6 +188,21 @@ TEST_F(TestDBusMessage, test_append_follows_container_order)
     EXPECT_EQ(close_by_stranger.error().message, "dbus container was not opened by this appender");
 }
 
+TEST_F(TestDBusMessage, test_append_refuses_an_empty_struct)
+{
+    Appender body(*_message);
+    auto record = body.open_struct();
+    ASSERT_TRUE(record.has_value()) << record.error().message;
+
+    auto empty_close = body.close(std::move(*record));
+    ASSERT_TRUE(record->add(true).has_value());
+    auto filled_close = body.close(std::move(*record));
+
+    ASSERT_FALSE(empty_close.has_value());
+    EXPECT_EQ(empty_close.error().message, "dbus struct has no field");
+    EXPECT_TRUE(filled_close.has_value()) << filled_close.error().message;
+}
+
 TEST_F(TestDBusMessage, test_append_after_dropped_container)
 {
     Appender body(*_message);

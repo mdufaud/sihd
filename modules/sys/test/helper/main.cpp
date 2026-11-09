@@ -189,6 +189,8 @@ int do_notify(int argc, char **argv)
         notification.urgency = static_cast<sihd::sys::DesktopNotifier::Urgency>(std::stoi(args["urgency"]));
     if (!args["timeout_ms"].empty())
         notification.timeout = Duration(time::milli(std::stoll(args["timeout_ms"])));
+    if (!args["timeout_us"].empty())
+        notification.timeout = Duration(time::micro(std::stoll(args["timeout_us"])));
     const int attempts = args["attempts"].empty() ? 1 : std::stoi(args["attempts"]);
 
     bool last_succeeded = false;

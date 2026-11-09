@@ -320,7 +320,14 @@ bool read_ppm_into(const std::string & path, Bitmap & bm)
         SIHD_LOG(error, "wayland: unsupported ppm maxval '{}' in {}", token, path);
         return false;
     }
-    if (width == 0 || height == 0 || width > (std::numeric_limits<size_t>::max)() / (height * 3))
+    if (width == 0 || height == 0 || width > (std::numeric_limits<size_t>::max)() / 4 / height)
+        return false;
+    // a size the body cannot hold allocates nothing
+    const auto body_start = in.tellg();
+    in.seekg(0, std::ios::end);
+    const auto body_size = static_cast<size_t>(in.tellg() - body_start);
+    in.seekg(body_start);
+    if (body_size < width * height * 3)
         return false;
 
     std::vector<uint8_t> rgb(width * height * 3);

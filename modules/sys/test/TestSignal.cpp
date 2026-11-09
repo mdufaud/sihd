@@ -67,6 +67,15 @@ class TestSignal: public ::testing::Test
         virtual void TearDown() {}
 };
 
+TEST_F(TestSignal, test_signal_status_covers_the_last_signal)
+{
+    signal::reset_all_received();
+
+    EXPECT_TRUE(signal::status(signal::max_signal).has_value());
+    EXPECT_FALSE(signal::status(signal::max_signal + 1).has_value());
+    EXPECT_EQ(signal::status_str(), "");
+}
+
 TEST_F(TestSignal, test_signal_handle)
 {
     if (os::is_run_by_valgrind())
