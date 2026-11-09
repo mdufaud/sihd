@@ -16,7 +16,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 - `sihd::ssh::utils`: `init`, `is_initialized`, `finalize` manage the libssh library lifetime. Called internally by the module.
 - `WinSize`: terminal size (rows, columns, pixel sizes) for PTY requests and resizes.
-- `KeyType`, `SshKey::type_from_name`, `SshKey::type_str`: key algorithm enumeration and conversion.
+- `KeyType`, `SshKey::type_from_name`, `SshKey::type_str`: key algorithm enumeration and conversion. An ECDSA key reports its curve (`EcdsaP256`, `EcdsaP384`, `EcdsaP521`); `Ecdsa` is the value libssh deprecated.
 
 ### Client session
 
@@ -47,17 +47,17 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 ### Server
 
-- `SshServer`: service that listens for connections. Configure with `set_port`, `set_bind_address`, `set_rsa_key`, `set_ecdsa_key`, `set_authorized_keys_file`, `set_banner`, `set_kex_timeout`, `set_verbosity`, then set a handler with `set_server_handler`. `get_port` returns the bound port. A session gets 3 authentication attempts.
+- `SshServer`: service that listens for connections. Configure with `set_port`, `set_bind_address`, `set_rsa_key`, `set_ecdsa_key`, `set_authorized_keys_file`, `set_banner`, `set_kex_timeout`, `set_verbosity`, then set a handler with `set_server_handler`. `get_port` returns the bound port. A session gets 3 authentication attempts. The authorized keys file is read at each public key attempt, like sshd: comments, blank lines and option prefixes are skipped, and an edit applies to the next client. The key exchange runs across loop ticks: a client still in it after `set_kex_timeout` seconds is dropped, and stalled clients do not hold the others.
 - `ISshServerHandler`: interface for auth decisions, session and channel events, channel data and PTY resize.
 - `BasicSshServerHandler`: ready-to-use handler. `add_allowed_user`, `add_allowed_pubkey`, optional password and pubkey callbacks, shell, exec and subsystem factory callbacks, `counters`.
 
 ### Server subsystems
 
 - `ISshSubsystemHandler`: interface for a channel's handler (`on_start`, `on_data`, `on_resize`, `on_eof`, `on_close`).
-- Exec, PTY and function subsystems keep what a full client window refuses and send it on the next polls: the channel closes once all output is written.
+- Exec, PTY and function subsystems keep what a full client window refuses and send it on the next polls: the channel closes once all output is written. Each poll forwards a channel's output until its handler has none left, 256 forwards at most.
 - `SshSubsystemExec`: runs a command as a process, in fork mode (streamed) or synchronous mode. Shell or direct parse mode. Client data goes to the process stdin; output the client window refuses waits, and the process is no longer read until it is taken.
-- `SshSubsystemPty`: spawns a shell in a pseudo-terminal bridged to the channel. `is_supported` tells whether PTY is available.
-- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection. `READDIR` answers at most 100 entries per reply, `READ` at most 255 KiB. `OPEN` honours create without truncate, exclusive create and append; `FSETSTAT` applies to the file of a handle; `REALPATH` answers paths inside the root.
+- `SshSubsystemPty`: spawns a shell in a pseudo-terminal bridged to the channel. `is_supported` tells whether PTY is available. A client end of file reaches the shell after the input the pty has not taken yet.
+- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection. `READDIR` answers at most 100 entries per reply, `READ` at most 255 KiB. `OPEN` honours create without truncate, exclusive create and append; `FSETSTAT` applies to the file of a handle; `REALPATH` answers paths inside the root. Only complete packets are read: a client idle or cut in the middle of a packet does not hold the server.
 - `SshSubsystemFunction`: runs a `std::function` on the command string and returns output and exit code, without spawning a process.
 
 ## Example
