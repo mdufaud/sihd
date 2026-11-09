@@ -47,7 +47,6 @@ std::shared_ptr<void> make_handle(EVP_PKEY *key)
 Result<void> PrivateKey::generate_rsa(int bits)
 {
     ERR_clear_error();
-    this->clear();
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr));
     if (ctx == nullptr)
         return make_error("EVP_PKEY_CTX_new_id");
@@ -64,7 +63,6 @@ Result<void> PrivateKey::generate_rsa(int bits)
 Result<void> PrivateKey::generate_ec(std::string_view curve_name)
 {
     ERR_clear_error();
-    this->clear();
     std::unique_ptr<EVP_PKEY_CTX, PkeyCtxFree> ctx(EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr));
     if (ctx == nullptr)
         return make_error("EVP_PKEY_CTX_new_from_name");
@@ -86,7 +84,6 @@ Result<void> PrivateKey::generate_ec(std::string_view curve_name)
 Result<void> PrivateKey::load_pem(ZStringView path)
 {
     ERR_clear_error();
-    this->clear();
     FILE *fp = fopen(path.c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
@@ -134,7 +131,6 @@ Result<void> PrivateKey::save_pem(const std::string & path) const
 Result<void> PrivateKey::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
-    this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
         return make_error("BIO_new_mem_buf");

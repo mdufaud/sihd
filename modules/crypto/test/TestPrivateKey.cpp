@@ -69,6 +69,20 @@ TEST_F(TestPrivateKey, pem_file_roundtrip)
     EXPECT_EQ(key2.to_pem_string(), key.to_pem_string());
 }
 
+TEST_F(TestPrivateKey, failed_loads_keep_the_key)
+{
+    sihd::sys::TmpDir dir;
+    PrivateKey key = rsa_key();
+    const std::string pem = key.to_pem_string();
+
+    EXPECT_FALSE(key.load_pem(sihd::sys::fs::combine(dir.path(), "missing.pem")).has_value());
+    EXPECT_FALSE(key.load_pem_string("not a pem").has_value());
+    EXPECT_FALSE(key.generate_ec("no-such-curve").has_value());
+    EXPECT_FALSE(key.generate_rsa(-1).has_value());
+
+    EXPECT_EQ(key.to_pem_string(), pem);
+}
+
 TEST_F(TestPrivateKey, load_pem_not_found)
 {
     PrivateKey key;

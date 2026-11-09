@@ -236,7 +236,6 @@ Result<void> Certificate::generate_self_signed(const PrivateKey & key, const std
 Result<void> Certificate::generate_self_signed(const PrivateKey & key, const CertOptions & opts)
 {
     ERR_clear_error();
-    this->clear();
     if (!key)
         return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
     auto cert = build_certificate(key, opts, nullptr, key);
@@ -251,7 +250,6 @@ Result<void> Certificate::generate_signed(const PrivateKey & key,
                                           const PrivateKey & issuer_key)
 {
     ERR_clear_error();
-    this->clear();
     if (!key || !issuer_key)
         return std::unexpected(Error(not_initialized, "cannot generate a certificate with an empty private key"));
     if (!issuer)
@@ -271,7 +269,6 @@ Result<void> Certificate::generate_signed(const PrivateKey & key,
 Result<void> Certificate::load_pem(ZStringView path)
 {
     ERR_clear_error();
-    this->clear();
     FILE *fp = fopen(path.c_str(), "r");
     if (!fp)
         return std::unexpected(Error::from_errno("could not open '{}'", path));
@@ -297,7 +294,6 @@ Result<void> Certificate::save_pem(const std::string & path) const
 Result<void> Certificate::load_der(const uint8_t *data, size_t len)
 {
     ERR_clear_error();
-    this->clear();
     const unsigned char *p = data;
     std::unique_ptr<X509, X509Free> cert(d2i_X509(nullptr, &p, static_cast<long>(len)));
     if (cert == nullptr)
@@ -309,7 +305,6 @@ Result<void> Certificate::load_der(const uint8_t *data, size_t len)
 Result<void> Certificate::load_pem_string(std::string_view pem)
 {
     ERR_clear_error();
-    this->clear();
     BIO *bio = BIO_new_mem_buf(pem.data(), static_cast<int>(pem.size()));
     if (!bio)
         return make_error("BIO_new_mem_buf");

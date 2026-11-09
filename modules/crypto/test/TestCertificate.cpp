@@ -1,3 +1,4 @@
+#include <array>
 #include <limits>
 
 #include <gtest/gtest.h>
@@ -42,6 +43,25 @@ TEST_F(TestCertificate, generate_self_signed)
     EXPECT_EQ(cert.issuer_common_name(), "test.local");
     EXPECT_FALSE(cert.serial_hex().empty());
     EXPECT_FALSE(cert.is_ca());
+}
+
+TEST_F(TestCertificate, failed_loads_keep_the_certificate)
+{
+    sihd::sys::TmpDir dir;
+    Certificate cert;
+    ASSERT_TRUE(cert.generate_self_signed(_key, "kept.local"));
+    const std::string pem = cert.to_pem_string();
+    const std::array<uint8_t, 3> garbage = {0x01, 0x02, 0x03};
+    CertOptions leaf_options;
+    leaf_options.common_name = "leaf";
+
+    EXPECT_FALSE(cert.load_pem(sihd::sys::fs::combine(dir.path(), "missing.pem")).has_value());
+    EXPECT_FALSE(cert.load_pem_string("not a pem").has_value());
+    EXPECT_FALSE(cert.load_der(garbage.data(), garbage.size()).has_value());
+    EXPECT_FALSE(cert.generate_self_signed(_key, "bad.local", 0).has_value());
+    EXPECT_FALSE(cert.generate_signed(_key, leaf_options, cert, other_rsa_key()).has_value());
+
+    EXPECT_EQ(cert.to_pem_string(), pem);
 }
 
 TEST_F(TestCertificate, generate_self_signed_with_options)
