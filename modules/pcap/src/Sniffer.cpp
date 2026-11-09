@@ -65,6 +65,7 @@ Sniffer::~Sniffer()
 
 Result<void> Sniffer::open(ZStringView source)
 {
+    this->close();
     char errbuf[PCAP_ERRBUF_SIZE];
     _impl_ptr->pcap_ptr = pcap_create(source.c_str(), errbuf);
     if (_impl_ptr->pcap_ptr == nullptr)
@@ -96,6 +97,8 @@ bool Sniffer::is_active() const
 
 Result<void> Sniffer::activate()
 {
+    if (this->is_open() == false)
+        return std::unexpected(Error(not_initialized, "not open"));
     int ret = pcap_activate(_impl_ptr->pcap_ptr);
     if (ret == PCAP_ERROR)
     {
@@ -117,17 +120,16 @@ Result<void> Sniffer::activate()
 
 bool Sniffer::on_start()
 {
+    if (this->is_open() == false)
+        return false;
     this->service_set_ready();
     int ret = pcap_loop(_impl_ptr->pcap_ptr, _max_sniff, Sniffer::Impl::callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {
         SIHD_LOG(error, "Sniffer: {}", this->error());
     }
-    else if (ret == PCAP_ERROR_BREAK)
-    {
-        SIHD_LOG(warning, "Sniffer: broke loop before the total packet count was read");
-    }
-    return ret == 0;
+    // only interrupt() breaks the loop: a requested end
+    return ret == 0 || ret == PCAP_ERROR_BREAK;
 }
 
 bool Sniffer::on_stop()
@@ -138,11 +140,14 @@ bool Sniffer::on_stop()
 
 void Sniffer::interrupt()
 {
-    pcap_breakloop(_impl_ptr->pcap_ptr);
+    if (this->is_open())
+        pcap_breakloop(_impl_ptr->pcap_ptr);
 }
 
 bool Sniffer::sniff()
 {
+    if (this->is_open() == false)
+        return false;
     int ret = pcap_dispatch(_impl_ptr->pcap_ptr, _max_sniff, Sniffer::Impl::callback, (u_char *)this);
     if (ret == PCAP_ERROR)
     {

@@ -116,11 +116,15 @@ bool PcapWriter::close()
 
 FILE *PcapWriter::file()
 {
+    if (_impl_ptr->dumper_ptr == nullptr)
+        return nullptr;
     return pcap_dump_file(_impl_ptr->dumper_ptr);
 }
 
 ssize_t PcapWriter::write(ArrCharView view, Timestamp timestamp)
 {
+    if (_impl_ptr->dumper_ptr == nullptr)
+        return -1;
     pcap_pkthdr hdr;
     hdr.caplen = view.size();
     hdr.len = view.size();
@@ -136,6 +140,8 @@ ssize_t PcapWriter::write(ArrCharView view)
 
 ssize_t PcapWriter::write(ArrCharView view, time::UnixTime sec, time::UnixTime usec)
 {
+    if (_impl_ptr->dumper_ptr == nullptr)
+        return -1;
     pcap_pkthdr hdr;
     hdr.caplen = view.size();
     hdr.len = view.size();
@@ -147,11 +153,15 @@ ssize_t PcapWriter::write(ArrCharView view, time::UnixTime sec, time::UnixTime u
 
 int64_t PcapWriter::pos()
 {
+    if (_impl_ptr->dumper_ptr == nullptr)
+        return -1;
     return pcap_dump_ftell64(_impl_ptr->dumper_ptr);
 }
 
 bool PcapWriter::flush()
 {
+    if (_impl_ptr->dumper_ptr == nullptr)
+        return false;
     return pcap_dump_flush(_impl_ptr->dumper_ptr) == 0;
 }
 

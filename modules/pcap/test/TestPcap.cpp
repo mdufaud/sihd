@@ -127,4 +127,19 @@ TEST_F(TestPcap, test_pcap_writer_timestamp_round_trip)
     ASSERT_TRUE(timestamp.has_value());
     EXPECT_EQ(timestamp.value().get(), 1700000000123456000);
 }
+
+TEST_F(TestPcap, test_pcap_writer_not_open)
+{
+    TmpDir tmp_dir;
+    const std::array<char, 4> data {'a', 'b', 'c', 'd'};
+    PcapWriter writer("pcap-writer");
+
+    EXPECT_FALSE(writer.open(fs::combine({tmp_dir.path(), "missing", "x.pcap"}), DLT_RAW).has_value());
+
+    EXPECT_EQ(writer.write({data.data(), data.size()}), -1);
+    EXPECT_EQ(writer.write({data.data(), data.size()}, 1, 2), -1);
+    EXPECT_EQ(writer.pos(), -1);
+    EXPECT_FALSE(writer.flush());
+    EXPECT_EQ(writer.file(), nullptr);
+}
 } // namespace test

@@ -54,4 +54,17 @@ TEST_F(TestSniffer, test_sniffer_inject_not_open)
     EXPECT_EQ(injected.error().code, ErrorCode::not_initialized);
 }
 
+TEST_F(TestSniffer, test_sniffer_not_open)
+{
+    Sniffer sniffer("sniffer");
+
+    sniffer.interrupt();
+
+    auto activated = sniffer.activate();
+    ASSERT_FALSE(activated.has_value());
+    EXPECT_EQ(activated.error().code, ErrorCode::not_initialized);
+    EXPECT_FALSE(sniffer.sniff());
+    EXPECT_FALSE(sniffer.start());
+}
+
 } // namespace test

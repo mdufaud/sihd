@@ -1,5 +1,6 @@
 #include <array>
 #include <string>
+#include <thread>
 #include <userns_child.hpp>
 
 #include <gtest/gtest.h>
@@ -8,6 +9,7 @@
 #include <sihd/sys/linux/ns.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 
 #include "loopback.hpp"
 
@@ -30,6 +32,7 @@ constexpr int child_inject_failed = 4;
 constexpr int child_wrong_inject_size = 5;
 constexpr int child_no_packet = 6;
 constexpr int child_wrong_frame = 7;
+constexpr int child_loop_failed = 8;
 
 int inject_on_loopback(int snaplen, size_t expected_size)
 {
@@ -73,6 +76,23 @@ int inject_truncated_frame()
     return inject_on_loopback(16, 16);
 }
 
+int stop_capture_loop()
+{
+    if (!set_loopback_up())
+        return child_loopback_down;
+
+    Sniffer capture("capture");
+    if (!capture.open("lo") || !capture.activate())
+        return child_capture_failed;
+
+    bool looped = false;
+    std::thread loop([&] { looped = capture.start(); });
+    const bool ready = capture.wait_ready(std::chrono::seconds(5));
+    capture.stop();
+    loop.join();
+    return ready && looped ? child_ok : child_loop_failed;
+}
+
 } // namespace
 
 class TestSnifferInject: public ::testing::Test
@@ -96,6 +116,29 @@ TEST_F(TestSnifferInject, test_inject_not_activated)
 
     ASSERT_FALSE(injected.has_value());
     EXPECT_EQ(injected.error().code, ErrorCode::not_initialized);
+}
+
+TEST_F(TestSnifferInject, test_reopen_closes_previous_capture)
+{
+    if (os::is_run_by_qemu())
+        GTEST_SKIP() << "qemu-user has no SIOCETHTOOL: pcap_create fails on ENOTTY";
+
+    Sniffer sniffer("sniffer");
+    ASSERT_TRUE(sniffer.open("lo").has_value());
+
+    EXPECT_TRUE(sniffer.open("lo").has_value());
+
+    EXPECT_TRUE(sniffer.is_open());
+}
+
+TEST_F(TestSnifferInject, test_stop_ends_capture_loop)
+{
+    if constexpr (build::is_run_with_tsan)
+        GTEST_SKIP_("tsan kills a thread started in the forked child");
+
+    constexpr std::array<ns::Type, 1> types = {ns::Type::net};
+
+    expect_in_userns(types, stop_capture_loop);
 }
 
 TEST_F(TestSnifferInject, test_inject_loopback)
