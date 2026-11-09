@@ -35,7 +35,7 @@ class SshServer: public sihd::util::Named,
         // Pre-auth issue banner (MOTD) sent to clients before authentication
         sihd::util::Result<void> set_banner(std::string_view banner);
         sihd::util::Result<void> set_verbosity(int level);
-        // Bound the blocking key exchange (seconds) to defuse connect-and-stall DoS
+        // a client still in its key exchange past these seconds is dropped
         sihd::util::Result<void> set_kex_timeout(int seconds);
 
         void set_server_handler(ISshServerHandler *handler);

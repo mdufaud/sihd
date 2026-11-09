@@ -10,6 +10,7 @@
 #endif
 
 #include <algorithm>
+#include <chrono>
 #include <unordered_map>
 #include <vector>
 
@@ -389,6 +390,14 @@ int callback_channel_data([[maybe_unused]] ssh_session session,
     return len;
 }
 
+// a session still in its key exchange, run across loop ticks so a stalled client cannot hold the loop
+struct Handshake
+{
+        std::unique_ptr<SessionData> data;
+        std::unique_ptr<SshSession> session;
+        std::chrono::steady_clock::time_point deadline;
+};
+
 } // namespace
 
 struct SshServer::Impl
@@ -396,6 +405,7 @@ struct SshServer::Impl
         ssh_bind bind;
         ssh_event event;
         sihd::sys::Poll poll;
+        std::vector<Handshake> handshakes;
         std::vector<std::unique_ptr<SshSession>> sessions;
         std::unordered_map<ssh_session, std::unique_ptr<SessionData>> session_data;
 
@@ -424,6 +434,7 @@ struct SshServer::Impl
 
         void cleanup()
         {
+            handshakes.clear();
             for (auto & [ssh_session_ptr, data] : session_data)
             {
                 if (event)
@@ -556,25 +567,19 @@ struct SshServer::Impl
             SIHD_LOG(info, "SshServer: accepted new connection");
 
             auto session_wrapper = std::make_unique<SshSession>(session);
+            session_wrapper->set_blocking(false);
 
-            // Bound the blocking key exchange so a connect-and-stall client cannot hang the single-threaded
-            // loop (pre-auth DoS): libssh applies this timeout to the blocking handshake read below
-            SIHD_UNEXPECTED_LOG(session_wrapper->set_timeout(kex_timeout_sec));
-
-            auto data_holder = std::make_unique<SessionData>(SessionData {.server = server,
-                                                                          .session = session_wrapper.get(),
-                                                                          .channels = {},
-                                                                          .auth_attempts = 0,
-                                                                          .authenticated = false,
-                                                                          .authorized_keys = authorized_keys,
-                                                                          .server_callbacks = {}});
-            SessionData *data = data_holder.get();
-
-            session_wrapper->set_userdata(data);
-            session_data[session] = std::move(data_holder);
+            auto data = std::make_unique<SessionData>(SessionData {.server = server,
+                                                                   .session = session_wrapper.get(),
+                                                                   .channels = {},
+                                                                   .auth_attempts = 0,
+                                                                   .authenticated = false,
+                                                                   .authorized_keys = authorized_keys,
+                                                                   .server_callbacks = {}});
+            session_wrapper->set_userdata(data.get());
 
             ssh_callbacks_init(&data->server_callbacks);
-            data->server_callbacks.userdata = data;
+            data->server_callbacks.userdata = data.get();
             data->server_callbacks.auth_password_function = callback_auth_password;
             data->server_callbacks.auth_pubkey_function = callback_auth_pubkey;
             data->server_callbacks.channel_open_request_session_function = callback_channel_open;
@@ -586,16 +591,41 @@ struct SshServer::Impl
 
             ssh_set_server_callbacks(session, &data->server_callbacks);
 
-            if (ssh_handle_key_exchange(session) != SSH_OK)
-            {
-                SIHD_LOG(error, "SshServer: key exchange failed: {}", ssh_get_error(session));
-                session_data.erase(session);
-                return false;
-            }
+            handshakes.push_back(
+                {.data = std::move(data),
+                 .session = std::move(session_wrapper),
+                 .deadline = std::chrono::steady_clock::now() + std::chrono::seconds(kex_timeout_sec)});
+            return true;
+        }
 
+        void continue_key_exchanges(SshServer *server)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            for (auto it = handshakes.begin(); it != handshakes.end();)
+            {
+                ssh_session session = static_cast<ssh_session>(it->session->session());
+                const int rc = ssh_handle_key_exchange(session);
+                if (rc == SSH_AGAIN && now < it->deadline)
+                {
+                    ++it;
+                    continue;
+                }
+                if (rc == SSH_OK)
+                    this->open_session(server, std::move(*it));
+                else if (rc == SSH_AGAIN)
+                    SIHD_LOG(error, "SshServer: key exchange timed out");
+                else
+                    SIHD_LOG(error, "SshServer: key exchange failed: {}", ssh_get_error(session));
+                it = handshakes.erase(it);
+            }
+        }
+
+        void open_session(SshServer *server, Handshake handshake)
+        {
+            ssh_session session = static_cast<ssh_session>(handshake.session->session());
             SIHD_LOG(debug, "SshServer: key exchange completed");
 
-            // Send the pre-auth issue banner (MOTD) while still blocking, before auth
+            // Send the pre-auth issue banner (MOTD) before auth
             if (!banner.empty())
             {
                 ssh_string banner_str = ssh_string_from_char(banner.c_str());
@@ -606,19 +636,17 @@ struct SshServer::Impl
                 }
             }
 
-            session_wrapper->set_blocking(false);
-
+            session_data[session] = std::move(handshake.data);
             ssh_event_add_session(event, session);
 
             SIHD_LOG(debug, "SshServer: session added to event loop");
 
             if (server->server_handler())
             {
-                server->server_handler()->on_session_opened(server, session_wrapper.get());
+                server->server_handler()->on_session_opened(server, handshake.session.get());
             }
 
-            sessions.push_back(std::move(session_wrapper));
-            return true;
+            sessions.push_back(std::move(handshake.session));
         }
 
         void cleanup_session(ssh_session session)
@@ -678,6 +706,13 @@ struct SshServer::Impl
             }
         }
 
+        void watch_session(const SshSession & session_wrapper)
+        {
+            int sfd = static_cast<int>(ssh_get_fd(static_cast<ssh_session>(session_wrapper.session())));
+            if (sfd >= 0)
+                poll.set_read_fd(sfd);
+        }
+
         bool run_event_loop(SshServer *server)
         {
             event = ssh_event_new();
@@ -705,11 +740,9 @@ struct SshServer::Impl
                 poll.clear_fds();
                 poll.set_read_fd(bind_fd);
                 for (auto & session_wrapper : sessions)
-                {
-                    int sfd = static_cast<int>(ssh_get_fd(static_cast<ssh_session>(session_wrapper->session())));
-                    if (sfd >= 0)
-                        poll.set_read_fd(sfd);
-                }
+                    this->watch_session(*session_wrapper);
+                for (auto & handshake : handshakes)
+                    this->watch_session(*handshake.session);
 
                 poll.poll(wait_timeout_ms);
 
@@ -724,8 +757,10 @@ struct SshServer::Impl
                 }
                 if (bind_readable)
                     this->accept_session(server);
+                this->continue_key_exchanges(server);
 
-                if (ssh_event_dopoll(event, 0) == SSH_ERROR)
+                // an event without session fails its dopoll
+                if (!sessions.empty() && ssh_event_dopoll(event, 0) == SSH_ERROR)
                     SIHD_LOG(error, "SshServer: session dispatch failed");
 
                 if (server->server_handler())

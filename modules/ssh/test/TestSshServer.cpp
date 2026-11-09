@@ -1,3 +1,4 @@
+#include <array>
 #include <atomic>
 #include <chrono>
 
@@ -19,6 +20,7 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Worker.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
@@ -305,6 +307,33 @@ TEST_F(TestSshServer, test_multiple_sessions)
     EXPECT_EQ(handler.counters().auth_password_success, 2u);
     EXPECT_EQ(handler.counters().sessions_opened, 2u);
     EXPECT_EQ(handler.counters().sessions_closed, 2u);
+}
+
+TEST_F(TestSshServer, test_clients_stalled_in_key_exchange_leave_the_server_serving)
+{
+    auto server = make_test_server();
+    ASSERT_NE(server, nullptr);
+    std::array<SilentTcpClient, 3> silent_clients;
+    for (auto & silent : silent_clients)
+        ASSERT_TRUE(silent.connect(server->port));
+
+    Stopwatch stopwatch;
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*server, client));
+
+    EXPECT_LT(stopwatch.time(), Duration(time::sec(2)));
+}
+
+TEST_F(TestSshServer, test_client_stalled_past_the_kex_timeout_is_dropped)
+{
+    SshServerHelper server;
+    ASSERT_TRUE(server.server.set_kex_timeout(1));
+    ASSERT_TRUE(server.start());
+
+    SilentTcpClient silent;
+    ASSERT_TRUE(silent.connect(server.port));
+
+    EXPECT_TRUE(silent.closed_by_server(Duration(time::sec(3))));
 }
 
 TEST_F(TestSshServer, test_custom_auth_callback)

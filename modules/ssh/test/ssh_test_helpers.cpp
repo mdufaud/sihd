@@ -1,7 +1,20 @@
 #include "ssh_test_helpers.hpp"
 
+#include <array>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <arpa/inet.h>
+# include <netinet/in.h>
+# include <unistd.h>
+#else
+# include <winsock2.h>
+
+# include <ws2tcpip.h>
+#endif
+
 #include <libssh/sftp.h>
 
+#include <sihd/sys/Poll.hpp>
 #include <sihd/util/Array.hpp>
 #include <sihd/util/endian.hpp>
 
@@ -156,6 +169,47 @@ bool SftpPacketClient::read_exact(std::string & out, size_t size)
         out.append(chunk.data(), chunk.size());
     }
     return true;
+}
+
+SilentTcpClient::SilentTcpClient(): _fd(SSH_INVALID_SOCKET) {}
+
+SilentTcpClient::~SilentTcpClient()
+{
+    if (_fd == SSH_INVALID_SOCKET)
+        return;
+#if !defined(__SIHD_WINDOWS__)
+    ::close(_fd);
+#else
+    ::closesocket(_fd);
+#endif
+}
+
+bool SilentTcpClient::connect(int port)
+{
+    _fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    if (_fd == SSH_INVALID_SOCKET)
+        return false;
+
+    sockaddr_in addr {};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(static_cast<uint16_t>(port));
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    return ::connect(_fd, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)) == 0;
+}
+
+bool SilentTcpClient::closed_by_server(Duration timeout)
+{
+    sihd::sys::Poll poll;
+    poll.set_limit(1);
+    poll.set_read_fd(static_cast<int>(_fd));
+    std::array<char, 256> buf;
+    while (poll.poll(timeout.milliseconds_int()) > 0)
+    {
+        const auto received = ::recv(_fd, buf.data(), buf.size(), 0);
+        if (received <= 0)
+            return received == 0;
+    }
+    return false;
 }
 
 } // namespace test

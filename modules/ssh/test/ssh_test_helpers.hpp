@@ -9,6 +9,8 @@
 #include <string_view>
 #include <thread>
 
+#include <libssh/libssh.h>
+
 #include <sihd/ssh/BasicSshServerHandler.hpp>
 #include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshServer.hpp>
@@ -16,6 +18,7 @@
 #include <sihd/ssh/SshSubsystemExec.hpp>
 #include <sihd/ssh/SshSubsystemSftp.hpp>
 #include <sihd/ssh/WinSize.hpp>
+#include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
 
@@ -168,6 +171,24 @@ class SftpPacketClient
         sihd::ssh::SshSession & _session;
         sihd::ssh::SshChannel _channel;
         uint32_t _next_id = 1;
+};
+
+// a tcp client that never speaks ssh: the server stays in its key exchange with it
+class SilentTcpClient
+{
+    public:
+        SilentTcpClient();
+        ~SilentTcpClient();
+
+        SilentTcpClient(const SilentTcpClient &) = delete;
+        SilentTcpClient & operator=(const SilentTcpClient &) = delete;
+
+        bool connect(int port);
+        // reads what the server sends until it closes the connection
+        bool closed_by_server(sihd::util::Duration timeout);
+
+    private:
+        socket_t _fd;
 };
 
 } // namespace test
