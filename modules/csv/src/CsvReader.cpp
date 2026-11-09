@@ -140,7 +140,8 @@ Result<bool> CsvReader::read_next()
 
         if (quotes_are_even)
         {
-            if (!_line.empty())
+            // the last line of a file may end without its line feed
+            if (!_line.empty() && _line.back() == '\n')
                 _line.resize(_line.size() - 1);
             _has_data = true;
             return true;

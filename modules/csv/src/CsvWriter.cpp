@@ -187,7 +187,7 @@ ssize_t CsvWriter::write(const std::vector<std::string> & values)
     {
         wrote = this->write(value);
         if (wrote < 0)
-            break;
+            return wrote;
         ret += wrote;
     }
     return ret;

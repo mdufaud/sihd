@@ -6,6 +6,7 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/build.hpp>
 
 namespace
 {
@@ -382,6 +383,30 @@ TEST_F(TestCsv, test_csv_empty_file)
     auto csv_data = utils::read_csv(path, false);
     ASSERT_TRUE(csv_data);
     EXPECT_TRUE(csv_data->empty());
+}
+
+TEST_F(TestCsv, test_csv_last_line_without_line_feed)
+{
+    TmpDir tmp_dir;
+    std::string path = fs::combine(tmp_dir.path(), "no_line_feed.csv");
+    ASSERT_TRUE(fs::write(path, "a,b\nc,d").has_value());
+
+    auto csv_data = utils::read_csv(path, false);
+
+    ASSERT_TRUE(csv_data);
+    EXPECT_EQ(*csv_data, (utils::CsvData {{"a", "b"}, {"c", "d"}}));
+}
+
+TEST_F(TestCsv, test_csv_writer_row_with_failed_column)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "no /dev/full on windows";
+    CsvWriter writer;
+    ASSERT_TRUE(writer.open("/dev/full"));
+
+    const ssize_t wrote = writer.write({"a", std::string(9000, 'x'), "c"});
+
+    EXPECT_LT(wrote, 0);
 }
 
 TEST_F(TestCsv, test_csv_only_comments)
