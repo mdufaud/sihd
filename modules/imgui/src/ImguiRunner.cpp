@@ -46,6 +46,12 @@ bool ImguiRunner::run()
         SIHD_LOG(error, "ImguiRunner: backend and renderer must be set before run()");
         return false;
     }
+    // the shutdown of a previous run destroyed the imgui context
+    if (ImGui::GetCurrentContext() == nullptr)
+    {
+        SIHD_LOG(error, "ImguiRunner: init_imgui() must be called before run()");
+        return false;
+    }
     {
         std::lock_guard guard(_mutex);
         if (_running)
@@ -63,8 +69,10 @@ bool ImguiRunner::run()
     else
     {
         this->_loop();
+        std::lock_guard guard(_mutex);
+        _running = false;
     }
-    return _running;
+    return true;
 }
 
 bool ImguiRunner::stop()

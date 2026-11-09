@@ -12,6 +12,7 @@ build_ncurses = builder.build_platform == "linux"
 sihd_imgui_srcs = ["src/ImguiRunner.cpp"]
 sihd_imgui_tests = [
     "test/main.cpp",
+    "test/TestImguiRunner.cpp",
     "test/TestOpenGL3_GLFW.cpp",
     "test/TestOpenGL3_SDL.cpp",
 ]
