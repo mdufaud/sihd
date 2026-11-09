@@ -403,12 +403,13 @@ bool PosixPty::resize(const PtySize & size)
 
 void PosixPty::send_eof()
 {
-    if (_master_fd >= 0)
-    {
-        // Closing the master fd signals EOF to the slave
-        ::close(_master_fd);
-        _master_fd = -1;
-    }
+    if (_master_fd < 0)
+        return;
+    // closing the master hangs the child up (SIGHUP, unread output lost): EOF is the line discipline VEOF char
+    struct termios attributes {};
+    const char eof = tcgetattr(_master_fd, &attributes) == 0 ? static_cast<char>(attributes.c_cc[VEOF]) : '\x04';
+    if (::write(_master_fd, &eof, 1) != 1)
+        SIHD_LOG(error, "PosixPty: could not send end of file: {}", strerror(errno));
 }
 
 bool Pty::is_supported()
