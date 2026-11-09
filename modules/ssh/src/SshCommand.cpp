@@ -212,7 +212,10 @@ Result<void> SshCommand::wait(Duration timeout_nano, time::UnixTime milliseconds
     {
         if (timeout_nano > 0 && std::chrono::steady_clock::now() >= deadline)
             break;
-        _impl->waitable.wait_for(Duration(time::milliseconds(milliseconds_poll_time)), [this] { return _impl->stop; });
+        // a command ended by a signal has no exit status to wait for
+        if (_impl->waitable.wait_for(Duration(time::milliseconds(milliseconds_poll_time)),
+                                     [this] { return _impl->stop || _impl->command_status.exit_error.has_value(); }))
+            break;
     }
     if (exit_status == -1 && !_impl->command_status.exit_error)
         return std::unexpected(

@@ -36,7 +36,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 ### Commands and shells
 
-- `SshCommand`: runs one remote command. `execute`, `execute_async`, `input`, `wait`, `exit_status`, `core_dumped`, `exit_signal_str`. Output is delivered to `output_handler`, with `is_stderr` set for stderr.
+- `SshCommand`: runs one remote command. `execute`, `execute_async`, `input`, `wait` (returns the signal error as soon as a signal ends the command), `exit_status`, `core_dumped`, `exit_signal_str`. Output is delivered to `output_handler`, with `is_stderr` set for stderr.
 - `SshShell`: interactive shell. `open(x11)`, `read_loop`, `close`.
 
 ### SFTP client
