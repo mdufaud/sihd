@@ -258,6 +258,12 @@ Result<Appender> Appender::open_struct()
         return std::unexpected(empty_message());
     auto next = _impl->expect_opening('(');
     SIHD_UNEXPECTED_RETURN(next);
+    int depth = 1;
+    for (const Impl *ancestor = _impl.get(); ancestor != nullptr; ancestor = ancestor->parent)
+        depth += ancestor->is_struct ? 1 : 0;
+    if (depth > DBUS_MAXIMUM_TYPE_RECURSION_DEPTH)
+        return std::unexpected(
+            Error(invalid_argument, "dbus structs nest at most {} deep", DBUS_MAXIMUM_TYPE_RECURSION_DEPTH));
 
     auto container = next->empty() ? std::make_unique<Impl>()
                                    : Impl::constrained_to(next->substr(1, next->size() - 2), false);

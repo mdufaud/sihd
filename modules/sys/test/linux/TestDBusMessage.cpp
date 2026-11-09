@@ -203,6 +203,26 @@ TEST_F(TestDBusMessage, test_append_refuses_an_empty_struct)
     EXPECT_TRUE(filled_close.has_value()) << filled_close.error().message;
 }
 
+TEST_F(TestDBusMessage, test_append_struct_nesting_is_bounded)
+{
+    Appender body(*_message);
+    std::vector<Appender> structs;
+    structs.reserve(32);
+    Appender *parent = &body;
+    for (int depth = 0; depth < 32; ++depth)
+    {
+        auto opened = parent->open_struct();
+        ASSERT_TRUE(opened.has_value()) << depth << ": " << opened.error().message;
+        structs.push_back(std::move(*opened));
+        parent = &structs.back();
+    }
+
+    auto too_deep = parent->open_struct();
+
+    ASSERT_FALSE(too_deep.has_value());
+    EXPECT_EQ(too_deep.error().message, "dbus structs nest at most 32 deep");
+}
+
 TEST_F(TestDBusMessage, test_append_after_dropped_container)
 {
     Appender body(*_message);
