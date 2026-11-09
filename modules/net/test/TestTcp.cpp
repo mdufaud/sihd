@@ -411,6 +411,17 @@ TEST_F(TestTcp, test_tcp_server_default_poll_limit_follows_max_clients)
     EXPECT_EQ(server_handler.client_count(), default_max_clients);
 }
 
+TEST_F(TestTcp, test_tcp_server_refused_bind_closes_the_socket)
+{
+    TcpServer server("tcp-server");
+
+    // documentation range: no local interface holds it
+    const auto bound = server.open_and_bind(IpAddr("192.0.2.1", 0));
+
+    ASSERT_FALSE(bound.has_value());
+    EXPECT_FALSE(server.socket().is_open());
+}
+
 TEST_F(TestTcp, test_tcp_server_clients_use_keepalive)
 {
     IpAddr localhost = IpAddr::localhost(0);

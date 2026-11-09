@@ -102,16 +102,16 @@ Result<void> TcpServer::open_and_bind(const IpAddr & ip)
     auto opened = this->open_socket(ip.is_ipv6());
     if (!opened)
         return opened;
-    return this->bind(ip);
+    auto bound = this->bind(ip);
+    // a refused address leaves no unbound socket behind
+    if (!bound)
+        (void)this->close();
+    return bound;
 }
 
 Result<void> TcpServer::open_and_bind(std::string_view ip, int port)
 {
-    IpAddr addr(ip, port);
-    auto opened = this->open_socket(addr.is_ipv6());
-    if (!opened)
-        return opened;
-    return this->bind(addr);
+    return this->open_and_bind(IpAddr(ip, port));
 }
 
 Result<void> TcpServer::open_unix_and_bind(std::string_view path)
@@ -119,7 +119,10 @@ Result<void> TcpServer::open_unix_and_bind(std::string_view path)
     auto opened = this->open_socket_unix();
     if (!opened)
         return opened;
-    return this->bind_unix(path);
+    auto bound = this->bind_unix(path);
+    if (!bound)
+        (void)this->close();
+    return bound;
 }
 
 Result<void> TcpServer::close()

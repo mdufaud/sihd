@@ -65,6 +65,17 @@ TEST_F(TestUdp, test_udp_receiver_run)
     EXPECT_TRUE(worker.stop_worker());
 }
 
+TEST_F(TestUdp, test_udp_receiver_refused_bind_closes_the_socket)
+{
+    UdpReceiver receiver("udp-receiver");
+
+    // documentation range: no local interface holds it
+    const auto bound = receiver.open_and_bind(IpAddr("192.0.2.1", 0));
+
+    ASSERT_FALSE(bound.has_value());
+    EXPECT_FALSE(receiver.socket().is_open());
+}
+
 TEST_F(TestUdp, test_udp_sendrcv_connect)
 {
     ArrChar array_rcv(40);
