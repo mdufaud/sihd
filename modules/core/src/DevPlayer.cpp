@@ -200,11 +200,16 @@ bool DevPlayer::_main_loop()
     _first_timestamp.reset();
     _last_record = false;
     _end_notified = false;
-    const bool collector_started = _collector.start();
+    // collected here rather than by the collector service: a stop() landing before its start would be lost
+    while (_running && _collector.can_collect())
+    {
+        if (!_collector.collect())
+            _waitable.wait_for(_collector.timeout_duration(), [this] { return _running == false; });
+    }
     // last record to be played in scheduler thread can have no next record
     _last_record = true;
     this->_provider_ended();
-    return collector_started;
+    return true;
 }
 
 void DevPlayer::_provider_ended()
@@ -226,7 +231,6 @@ bool DevPlayer::on_stop()
         SIHD_LOG(error, "DevPlayer: could not stop worker");
     _channel_play_ptr = nullptr;
     _channel_end_ptr = nullptr;
-    _collector.stop();
     _collector.set_provider(nullptr);
     _map_channels.clear();
     return true;

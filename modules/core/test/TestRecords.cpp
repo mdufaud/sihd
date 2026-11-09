@@ -1,4 +1,5 @@
 #include <chrono>
+#include <future>
 #include <memory>
 #include <thread>
 #include <wait_for.hpp>
@@ -340,6 +341,30 @@ TEST_F(TestRecords, test_records_player_stops_with_empty_provider)
     ASSERT_TRUE(core.start());
 
     // the collector keeps waiting for records: the stop must end it
+    EXPECT_TRUE(core.stop());
+}
+
+TEST_F(TestRecords, test_records_player_stops_before_its_provider)
+{
+    Core core;
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+    DevPlayer dev_player("dev_player", &core);
+    dev_player.set_parent_ownership(false);
+    EXPECT_TRUE(dev_player.set_conf({{"provider", "..mem_recorder"}, {"provider_wait_time", 1}}));
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    // the provider still provides: the player stop alone must end its collection
+    auto stopped = std::async(std::launch::async, [&dev_player] { return dev_player.stop(); });
+    const bool in_time = stopped.wait_for(std::chrono::seconds(2)) == std::future_status::ready;
+    if (!in_time)
+    {
+        EXPECT_TRUE(mem_recorder.stop());
+    }
+
+    EXPECT_TRUE(in_time);
+    EXPECT_TRUE(stopped.get());
     EXPECT_TRUE(core.stop());
 }
 
