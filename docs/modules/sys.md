@@ -19,14 +19,14 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 - `FileMutex`: inter-process lock on a file: `lock`, `try_lock`, `try_lock_for`, `lock_shared`, `unlock`.
 - `MappedFile`: memory-mapped file: `create`, `open_read_only`, `open_read_write`, `data`, `size`, `sync`, `clear`.
 - `TmpDir`: temporary directory removed on destruction; `path()`.
-- `PathManager`: ordered search path list: `push_front`, `push_back`, `find`, `find_all`, `remove`.
+- `PathManager`: ordered search path list, safe to share between threads: `push_front`, `push_back`, `find`, `find_all`, `remove`.
 - `fs` (namespace): path helpers (`combine`, `parent`, `filename`, `extension`, `normalize`, `realpath`, `jail`); queries (`exists`, `is_file`, `is_dir`, `is_symlink`, `file_size`, `times`, `free_space`, `total_space`, `mounts`, `mount_type`, `storage_medium`); permissions (`permission_get`, `permission_set`, `permission_add`, `permission_rm`, `permission_to_str`); operations (`make_directories`, `remove_directories`, `copy_file` with progress callback, `rename`, `truncate`, `make_file_link`, `make_dir_link`, `make_hard_link`, `read_link`, `chdir`); content (`read_all`, `read`, `read_line`, `read_lines`, `write` and `write_binary` with append).
 
 ### File watching
 
 - `FileWatcher`: observable runnable reporting `FileWatcherEvent` values for watched paths: `watch`, `unwatch`, `is_watching`, `run`, `events`. The `opened`, `accessed` and `closed` event types are Unix-only.
 - `FilePoller`: polling alternative that reports files created, removed or changed under a tree: `watch`, `unwatch`, `run`, `created`, `removed`, `changed`.
-- `FileCache`: in-memory cache of file contents, kept coherent through a `FileWatcher`: `add`, `get`, `remove`, `clear`.
+- `FileCache`: in-memory cache of file contents, kept coherent through a `FileWatcher`, including a file replaced by a rename: `add`, `get` (empty for an unknown or unreadable file), `remove`, `clear`.
 
 ### Processes
 

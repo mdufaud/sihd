@@ -62,7 +62,8 @@ FileCache::OptionalCachedValue FileCache::get(const std::string & file_path)
     {
         return _cache.get(file_path);
     }
-    catch (const std::bad_optional_access & e)
+    // unknown key and a failed read both throw
+    catch (const std::exception & e)
     {
         SIHD_LOG(error, "Failed to access cached file: {}", file_path);
         return std::nullopt;
@@ -99,6 +100,9 @@ void FileCache::handle(FileWatcher *file_watcher)
             {
                 _cache.invalidate(event.watch_path);
                 SIHD_LOG(debug, "File watcher terminated for file: {}", event.watch_path);
+                // a file replaced by a rename is a new inode: watch it again
+                if (fs::exists(event.watch_path))
+                    SIHD_UNEXPECTED_LOG(_file_watcher.watch(event.watch_path));
                 break;
             }
         }
