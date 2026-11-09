@@ -14,7 +14,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Files and filesystem
 
-- `File`: buffered wrapper over a `FILE *` or a file descriptor, with `open`, `read`, `write`, `read_line`, `seek`, `tell`, `flush`, `set_buffer_size` and `lock`/`trylock`. `open(path, mode)` takes a fopen mode; `open(path, OpenOptions)` (`read`, `write`, `create`, `truncate`, `exclusive`, `append`, `permissions` of a created file) also creates without truncating or refuses an existing file (`already_exists`); truncate or append without write, exclusive without create, or neither read nor write is `invalid_argument`. A refused open (`open`, `open_fd`, `open_tmp`, `open_tmpfile`) keeps the file already open.
+- `File`: buffered wrapper over a `FILE *` or a file descriptor, with `open`, `read`, `write`, `read_line`, `seek`, `tell`, `flush`, `set_buffer_size` and `lock`/`trylock`. `open(path, mode)` takes a fopen mode; `open(path, OpenOptions)` (`read`, `write`, `create`, `truncate`, `exclusive`, `append`, `permissions` of a created file) also creates without truncating or refuses an existing file (`already_exists`); truncate or append without write, exclusive without create, or neither read nor write is `invalid_argument`. A refused open (`open`, `open_fd`, `open_tmp`, `open_tmpfile`) keeps the file already open. A closed `File` refuses reads, writes, seeks, `tell` and `flush` with `not_initialized`; `eof` is true and the locks do nothing.
 - `LineReader`: buffered line reader over a `File` or a path: `open`, `read_next`, `get_read_data`. `fast_read_line` reads one line from a `FILE *` (default `stdin`).
 - `FileMutex`: inter-process lock on a file: `lock`, `try_lock`, `try_lock_for`, `lock_shared`, `unlock`.
 - `MappedFile`: memory-mapped file: `create`, `open_read_only`, `open_read_write`, `data`, `size`, `sync`, `clear`.
@@ -45,7 +45,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### Applications and daemons
 
-- `App`: CLI application built on `util::CliApp`. Maps signals to actions (`SigAction`: `stop`, `ignore`, `reload`, `callback`), exposes `daemon()` and `on_signal`. A `daemon.user` or `daemon.group` conf that does not resolve fails the app.
+- `App`: CLI application built on `util::CliApp`. Maps signals to actions (`SigAction`: `stop`, `ignore`, `reload`, `callback`), exposes `daemon()` and `on_signal`. A `daemon.user` or `daemon.group` conf that does not resolve fails the app: both are resolved before either is set, so a refused one leaves the daemon as it was.
 - `Daemon`: runs the process as a daemon with user, group, pid file and working directory: `set_user`, `set_group`, `set_pid_file_path`, `set_working_dir_path`, `run`. Not available on Windows.
 - `CrashHandler`: installs a handler for fatal signals that writes a backtrace to `Options::dump_path`: `install`, `uninstall`, `is_installed`.
 

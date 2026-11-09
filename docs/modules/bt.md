@@ -14,7 +14,7 @@ Bluetooth Low Energy scanning. On Linux, it discovers devices through BlueZ over
 
 ### Scanning
 
-- `Scanner`: BLE discovery service and observable. `set_adapter(index)` selects the adapter, `scan_for(duration)` scans for a fixed time, `start` and `stop` scan until stopped. Observers are notified each time a device is new or changed.
+- `Scanner`: BLE discovery service and observable. `set_adapter(index)` selects the adapter, `scan_for(duration)` scans for a fixed time, `start` and `stop` scan until stopped; a `stop` landing as a scan ends never stops the next one. Observers are notified each time a device is new or changed.
 - `Scanner::results`: map of address to `ScanResult`, valid once the scan stopped or from an observer. `last_result` returns the most recent one.
 - `ScanResult`: device data. `identifier` (name), `address`, `address_type`, `rssi`, `tx_power`, `manufacturer_data`, `service_data`, `uuids`, `timestamp`. `connectable` is always false on Linux.
 
