@@ -68,6 +68,7 @@ HttpServer::HttpServer(const std::string & name, Node *parent): Node(name, paren
     this->add_conf("cors_origin", &HttpServer::set_cors_origin);
     this->add_conf("interface", &HttpServer::set_interface);
     this->add_conf("max_request_size", &HttpServer::set_max_request_size);
+    this->add_conf("max_message_size", &HttpServer::set_max_message_size);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
     this->add_conf("websocket_origin", &HttpServer::add_websocket_origin);
     this->add_conf("service_thread_count", &HttpServer::set_service_thread_count);
@@ -172,6 +173,12 @@ bool HttpServer::set_interface(std::string_view iface)
 bool HttpServer::set_max_request_size(size_t size)
 {
     _impl->max_request_size = size;
+    return true;
+}
+
+bool HttpServer::set_max_message_size(size_t size)
+{
+    _impl->max_message_size = size;
     return true;
 }
 

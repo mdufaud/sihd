@@ -164,6 +164,65 @@ TEST_F(TestHttpServer, test_httpserver_websockets_auto)
     EXPECT_GE(server._nclosed, 1);
 }
 
+TEST_F(TestHttpServer, test_httpserver_websocket_reads_a_message_larger_than_the_rx_buffer)
+{
+    BasicServerScope<SimpleHttpServer> scope;
+    scope.server.set_root_dir("test/resources/mount_point");
+    scope.start(3002);
+    SimpleWsClient client;
+    ASSERT_TRUE(client.connect(loopback_port(3002)));
+    ASSERT_TRUE(client.handshake("proto-two"));
+    ASSERT_TRUE(scope.server.wait_for_open());
+    const std::string message(10000, 'x');
+
+    ASSERT_TRUE(client.send_text(message));
+    client.send_close();
+    ASSERT_TRUE(scope.server.wait_for_close());
+
+    EXPECT_EQ(scope.server._nread, 1);
+    EXPECT_TRUE(scope.server._last_read == message);
+}
+
+TEST_F(TestHttpServer, test_httpserver_websocket_reads_a_fragmented_message_whole)
+{
+    BasicServerScope<SimpleHttpServer> scope;
+    scope.server.set_root_dir("test/resources/mount_point");
+    scope.start(3002);
+    SimpleWsClient client;
+    ASSERT_TRUE(client.connect(loopback_port(3002)));
+    ASSERT_TRUE(client.handshake("proto-two"));
+    ASSERT_TRUE(scope.server.wait_for_open());
+
+    ASSERT_TRUE(client.send_frame(0x01, "hello "));
+    ASSERT_TRUE(client.send_frame(0x80, "world"));
+    client.send_close();
+    ASSERT_TRUE(scope.server.wait_for_close());
+
+    EXPECT_EQ(scope.server._nread, 1);
+    EXPECT_EQ(scope.server._last_read, "hello world");
+}
+
+TEST_F(TestHttpServer, test_httpserver_websocket_message_past_the_max_size_closes)
+{
+    BasicServerScope<SimpleHttpServer> scope;
+    scope.server.set_root_dir("test/resources/mount_point");
+    scope.server.set_max_message_size(5000);
+    scope.start(3002);
+    SimpleWsClient client;
+    ASSERT_TRUE(client.connect(loopback_port(3002)));
+    ASSERT_TRUE(client.handshake("proto-two"));
+    ASSERT_TRUE(scope.server.wait_for_open());
+
+    ASSERT_TRUE(client.send_text(std::string(10000, 'x')));
+    const std::optional<uint16_t> close_code = client.recv_close_code();
+    client.send_close();
+    const bool closed = scope.server.wait_for_close();
+
+    EXPECT_EQ(close_code, std::optional<uint16_t>(1009));
+    EXPECT_TRUE(closed);
+    EXPECT_EQ(scope.server._nread, 0);
+}
+
 TEST_F(TestHttpServer, test_routing_params)
 {
     ServerScope scope;

@@ -366,6 +366,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 auto lock = _ws_waitable.guard();
                 _client_wrote = true;
                 ++_nread;
+                _last_read.assign(arr.data(), arr.size());
             }
             _ws_waitable.notify_all();
             return true;
@@ -409,6 +410,7 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         sihd::util::Waitable _ws_waitable;
         int _nopen = 0;
         int _nread = 0;
+        std::string _last_read;
         int _nwrite = 0;
         int _nclosed = 0;
         bool _client_wrote = false;
@@ -809,15 +811,31 @@ class SimpleWsClient
 
         static constexpr std::string_view switching_protocols = "HTTP/1.1 101 Switching Protocols";
 
-        bool send_text(std::string_view text)
+        bool send_text(std::string_view text) { return this->send_frame(0x81, text); }
+
+        // first_byte: FIN bit + opcode, 0x01 text, 0x00 continuation
+        bool send_frame(uint8_t first_byte, std::string_view payload)
         {
             std::vector<uint8_t> frame;
-            frame.push_back(0x81);                        // FIN + opcode=text
-            frame.push_back(0x80 | (uint8_t)text.size()); // MASK + len
+            frame.push_back(first_byte);
+            if (payload.size() < 126)
+                frame.push_back(0x80 | (uint8_t)payload.size()); // MASK + len
+            else if (payload.size() <= 0xFFFF)
+            {
+                frame.push_back(0x80 | 126);
+                frame.push_back((uint8_t)(payload.size() >> 8));
+                frame.push_back((uint8_t)payload.size());
+            }
+            else
+            {
+                frame.push_back(0x80 | 127);
+                for (int shift = 56; shift >= 0; shift -= 8)
+                    frame.push_back((uint8_t)(payload.size() >> shift));
+            }
             constexpr std::array<uint8_t, 4> mask {0x11, 0x22, 0x33, 0x44};
             frame.insert(frame.end(), mask.begin(), mask.end());
-            for (size_t i = 0; i < text.size(); ++i)
-                frame.push_back((uint8_t)text[i] ^ mask[i % 4]);
+            for (size_t i = 0; i < payload.size(); ++i)
+                frame.push_back((uint8_t)payload[i] ^ mask[i % 4]);
             return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size())).has_value();
         }
 
@@ -844,6 +862,19 @@ class SimpleWsClient
             if (len > 0 && _recv_exact((uint8_t *)payload.data(), len) == false)
                 return {};
             return payload;
+        }
+
+        // the status code of the close frame the server sent, nullopt for any other frame
+        std::optional<uint16_t> recv_close_code()
+        {
+            std::array<uint8_t, 2> header;
+            if (_recv_exact(header.data(), header.size()) == false || (header[0] & 0x0F) != 0x08)
+                return {};
+            const size_t len = header[1] & 0x7F;
+            std::string payload(len, '\0');
+            if (len < 2 || _recv_exact((uint8_t *)payload.data(), len) == false)
+                return {};
+            return (uint16_t)(((uint8_t)payload[0] << 8) | (uint8_t)payload[1]);
         }
 
         void send_close()

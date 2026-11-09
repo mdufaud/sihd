@@ -68,16 +68,33 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
         {
             if (handler != nullptr && session != nullptr)
             {
-                ArrChar arr;
-                arr.assign_bytes((uint8_t *)session->in, session->len);
-                rc = handler->on_read(arr) ? 0 : -1;
-                if (rc == 0)
-                    lws_callback_on_writable(session->wsi);
+                std::string message;
+                const MessagePiece piece = this->gather_websocket_message(wsi,
+                                                                          (const char *)session->in,
+                                                                          session->len,
+                                                                          message);
+                if (piece == MessagePiece::too_large)
+                {
+                    lws_close_reason(wsi, LWS_CLOSE_STATUS_MESSAGE_TOO_LARGE, nullptr, 0);
+                    rc = -1;
+                }
+                else if (piece == MessagePiece::complete)
+                {
+                    ArrChar arr;
+                    arr.assign_bytes((uint8_t *)message.data(), message.size());
+                    rc = handler->on_read(arr) ? 0 : -1;
+                    if (rc == 0)
+                        lws_callback_on_writable(session->wsi);
+                }
             }
             break;
         }
         case LWS_CALLBACK_CLOSED:
         {
+            {
+                std::lock_guard lock(websocket_messages_mutex);
+                websocket_messages.erase(wsi);
+            }
             if (handler != nullptr)
                 handler->on_close();
             break;
@@ -174,6 +191,25 @@ bool HttpServer::Impl::is_websocket_origin_allowed(struct lws *wsi)
     // a domain can be rebound to this server: only a literal address or localhost proves the page is ours
     const bool literal_host = sihd::net::ip::is_valid_ip(host_url.host) || str::iequals(host_url.host, "localhost");
     return literal_host && str::iequals(origin_url.host, host_url.host) && origin_url.port == host_url.port;
+}
+
+HttpServer::Impl::MessagePiece
+    HttpServer::Impl::gather_websocket_message(struct lws *wsi, const char *in, size_t len, std::string & message)
+{
+    std::lock_guard lock(websocket_messages_mutex);
+    std::string & gathered = websocket_messages[wsi];
+    if (max_message_size > 0 && gathered.size() + len > max_message_size)
+    {
+        websocket_messages.erase(wsi);
+        return MessagePiece::too_large;
+    }
+    gathered.append(in, len);
+
+    if (!lws_is_final_fragment(wsi) || lws_remaining_packet_payload(wsi) > 0)
+        return MessagePiece::partial;
+    message = std::move(gathered);
+    websocket_messages.erase(wsi);
+    return MessagePiece::complete;
 }
 
 int HttpServer::Impl::on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)

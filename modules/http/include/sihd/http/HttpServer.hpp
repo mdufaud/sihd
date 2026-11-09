@@ -41,6 +41,8 @@ class HttpServer: public sihd::util::Node,
         bool set_interface(std::string_view iface);
         // 0 means no limit
         bool set_max_request_size(size_t size);
+        // a websocket message past it closes its connection, 0 means no limit
+        bool set_max_message_size(size_t size);
 
         void set_http_filter(IHttpFilter *filter);
         void set_authenticator(IHttpAuthenticator *authenticator);

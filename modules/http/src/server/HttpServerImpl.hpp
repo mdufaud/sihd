@@ -2,6 +2,7 @@
 #define __SIHD_HTTP_SRC_SERVER_HTTPSERVERIMPL_HPP__
 
 #include <atomic>
+#include <map>
 #include <mutex>
 #include <optional>
 #include <set>
@@ -177,6 +178,15 @@ struct HttpServer::Impl
                                     void *in,
                                     size_t len);
         int on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session);
+
+        enum class MessagePiece
+        {
+            partial,
+            complete,
+            too_large,
+        };
+        // lws hands a message over in rx buffer sized pieces and per fragment: the handler reads it whole
+        MessagePiece gather_websocket_message(struct lws *wsi, const char *in, size_t len, std::string & message);
         // an upgrade skips the http callbacks: the checks of a plain request are redone here
         bool allow_websocket_upgrade(struct lws *wsi);
         bool is_websocket_origin_allowed(struct lws *wsi);
@@ -213,6 +223,9 @@ struct HttpServer::Impl
         std::string page_404_path;
 
         size_t max_request_size = 0;
+        size_t max_message_size = 1024 * 1024;
+        std::mutex websocket_messages_mutex;
+        std::map<struct lws *, std::string> websocket_messages;
         // a buffered body is read fully in memory: streaming is the path for bigger payloads
         size_t max_buffered_request_size = 16 * 1024 * 1024;
 
