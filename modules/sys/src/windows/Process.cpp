@@ -44,6 +44,8 @@ SIHD_LOGGER;
 namespace
 {
 
+constexpr int default_pipe_capacity = 65536;
+
 void safe_close(HANDLE & fd)
 {
     if (fd == nullptr)
@@ -163,7 +165,6 @@ struct StdFdWrapper
         FileDescAction action = None;
         std::function<void(std::string_view)> fun;
         std::string path;
-        // stdin only: input the child has not read yet, the write end closes once it is written
         std::string pending;
         bool close_after_flush = false;
 
@@ -797,7 +798,7 @@ bool Process::read_pipes(int milliseconds_timeout)
 bool Process::terminate()
 {
     // a read takes one chunk per pipe: drain the default 64 KiB pipe a finished child may have filled
-    int polls = 65536 / SIHD_PROCESS_READ_BUFFER_SIZE;
+    int polls = default_pipe_capacity / SIHD_PROCESS_READ_BUFFER_SIZE;
     while (polls-- > 0 && this->read_pipes())
         ;
 

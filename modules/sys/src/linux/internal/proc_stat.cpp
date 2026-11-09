@@ -26,6 +26,7 @@ constexpr size_t stat_ppid = 1;
 constexpr size_t stat_utime = 11;
 constexpr size_t stat_stime = 12;
 constexpr size_t stat_threads = 17;
+// clock ticks since boot (USER_HZ since linux 2.6, not jiffies)
 constexpr size_t stat_starttime = 19;
 constexpr size_t stat_vsize = 20;
 constexpr size_t stat_rss = 21;
@@ -154,12 +155,12 @@ std::optional<ProcIo> read_proc_io(int pid)
     return io;
 }
 
-std::optional<uint64_t> read_proc_start_ticks(int pid)
+std::optional<Duration> read_proc_start_time(int pid)
 {
     auto fields = read_stat_fields(pid, nullptr);
     if (fields.has_value() == false)
         return std::nullopt;
-    return to_u64((*fields)[stat_starttime]);
+    return ticks_to_duration(to_u64((*fields)[stat_starttime]), static_cast<uint64_t>(sysconf(_SC_CLK_TCK)));
 }
 
 } // namespace sihd::sys::internal

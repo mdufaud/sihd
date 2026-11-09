@@ -110,12 +110,9 @@ int ProcessInfo::Impl::find_from_pid(std::string_view name)
 
 void ProcessInfo::Impl::load_time()
 {
-    const auto start_ticks = internal::read_proc_start_ticks(this->pid);
-    if (start_ticks.has_value())
-    {
-        const int64_t start_seconds = static_cast<int64_t>(*start_ticks) / sysconf(_SC_CLK_TCK);
-        this->creation_time = Duration(std::chrono::seconds(start_seconds)) + os::boot_time();
-    }
+    const auto start_time = internal::read_proc_start_time(this->pid);
+    if (start_time.has_value())
+        this->creation_time = *start_time + os::boot_time();
 }
 
 void ProcessInfo::Impl::load_specific_process_infos()

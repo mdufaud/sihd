@@ -23,6 +23,17 @@ SIHD_LOGGER;
 namespace
 {
 
+#if !defined(__SIHD_WINDOWS__)
+void flock_retry(int fd, int operation)
+{
+    while (flock(fd, operation) != 0)
+    {
+        if (errno != EINTR)
+            throw std::runtime_error(os::last_error_str());
+    }
+}
+#endif
+
 bool filemutex_try_lock_for_ex_sh(FileMutex & mutex, Duration duration, bool shared)
 {
     const Duration retry_in_ms(time::milliseconds(10));
@@ -79,11 +90,7 @@ void FileMutex::lock()
     if (!_file.is_open())
         throw std::runtime_error("File is not opened");
 #if !defined(__SIHD_WINDOWS__)
-    while (flock(_file.fd(), LOCK_EX) != 0)
-    {
-        if (errno != EINTR)
-            throw std::runtime_error(os::last_error_str());
-    }
+    flock_retry(_file.fd(), LOCK_EX);
 #else
     // https://stackoverflow.com/questions/70812957/what-is-the-windows-equivalent-of-unixs-flockh-lock-sh
 
@@ -143,11 +150,7 @@ void FileMutex::lock_shared()
     if (!_file.is_open())
         throw std::runtime_error("File is not opened");
 #if !defined(__SIHD_WINDOWS__)
-    while (flock(_file.fd(), LOCK_SH) != 0)
-    {
-        if (errno != EINTR)
-            throw std::runtime_error(os::last_error_str());
-    }
+    flock_retry(_file.fd(), LOCK_SH);
 #else
     HANDLE handle = (HANDLE)_get_osfhandle(_file.fd());
     const DWORD allBitsSet = ~DWORD(0);

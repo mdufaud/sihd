@@ -58,6 +58,8 @@ SIHD_LOGGER;
 namespace
 {
 
+constexpr int default_pipe_capacity = 65536;
+
 void safe_close(int & fd)
 {
     if (fd == -1)
@@ -101,7 +103,8 @@ void dup_close(int fd_from, int fd_to)
     // dup2 onto itself keeps close-on-exec, which would close the std fd at exec
     if (fd_from == fd_to)
     {
-        fcntl(fd_to, F_SETFD, 0);
+        if (fcntl(fd_to, F_SETFD, 0) == -1)
+            SIHD_LOG(error, "Process: could not clear close-on-exec: {}", os::last_error_str());
         return;
     }
     if (dup2(fd_from, fd_to) == -1)
@@ -154,9 +157,9 @@ void init_poller(sihd::sys::Poll & poll, int stdin_fd, int stdout_fd, int stderr
     poll.stop();
     poll.clear_fds();
     // stdin is only polled while input is queued: a pipe with room is always writable
-    poll.set_limit((int)(stdin_fd >= 0) + (int)(stdout_fd >= 0) + (int)(stderr_fd >= 0));
-    int fds = (int)(stdout_fd >= 0) + (int)(stderr_fd >= 0);
-    if (fds > 0)
+    const int output_fds = static_cast<int>(stdout_fd >= 0) + static_cast<int>(stderr_fd >= 0);
+    poll.set_limit(static_cast<int>(stdin_fd >= 0) + output_fds);
+    if (output_fds > 0)
     {
         poll.set_read_fd(stdout_fd);
         poll.set_read_fd(stderr_fd);
@@ -187,7 +190,6 @@ struct StdFdWrapper
         FileDescAction action = None;
         std::function<void(std::string_view)> fun;
         std::string path;
-        // stdin only: input the child has not read yet, the write end closes once it is written
         std::string pending;
         bool close_after_flush = false;
 
@@ -509,7 +511,7 @@ Process & Process::stdin_from(const std::string & input)
     {
         std_in.add_pipe();
         // the parent end only, the child reads a blocking pipe
-        fcntl(std_in.fd_write, F_SETFL, fcntl(std_in.fd_write, F_GETFL) | O_NONBLOCK);
+        SIHD_UNEXPECTED_LOG(os::set_nonblocking(std_in.fd_write));
     }
     std_in.pending += input;
     if (this->is_process_running())
@@ -866,7 +868,7 @@ bool Process::read_pipes(int milliseconds_timeout)
 bool Process::terminate()
 {
     // a read takes one chunk per pipe: drain the default 64 KiB pipe a finished child may have filled
-    int polls = 65536 / SIHD_PROCESS_READ_BUFFER_SIZE;
+    int polls = default_pipe_capacity / SIHD_PROCESS_READ_BUFFER_SIZE;
     while (polls-- > 0 && this->read_pipes())
         ;
 

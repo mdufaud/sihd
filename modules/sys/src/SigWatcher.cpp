@@ -122,9 +122,10 @@ bool SigWatcher::rm_signal(int sig)
 #if defined(SIHD_HAS_SIGSET)
     sigdelset(&_sigset, sig);
 #endif
-    return _sig_controllers.remove_if([sig](const auto & sig_controller) {
+    const bool removed = _sig_controllers.remove_if([sig](const auto & sig_controller) {
         return sig_controller.sig_handler.sig() == sig;
-    }) > 0 && container::erase(_signals, sig);
+    }) != 0;
+    return removed && container::erase(_signals, sig);
 }
 
 bool SigWatcher::rm_signals(std::span<const int> signals)

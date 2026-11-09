@@ -122,11 +122,11 @@ TEST_F(TestProcessInfo, test_processinfo_creation_time_with_spaced_name)
     constexpr size_t comm_size = 16;
     std::array<char, comm_size> previous_name {};
     ASSERT_EQ(prctl(PR_GET_NAME, previous_name.data()), 0);
-    const Timestamp expected = ProcessInfo(getpid()).creation_time();
+    const Timestamp expected = ProcessInfo(os::pid()).creation_time();
     ASSERT_EQ(prctl(PR_SET_NAME, "with space"), 0);
     Defer restore([&] { prctl(PR_SET_NAME, previous_name.data()); });
 
-    const Timestamp creation_time = ProcessInfo(getpid()).creation_time();
+    const Timestamp creation_time = ProcessInfo(os::pid()).creation_time();
 
     EXPECT_EQ(creation_time.get(), expected.get());
 }

@@ -39,6 +39,20 @@ constexpr int sig_term = SIGUSR1;
 constexpr int sig_alt = SIGWINCH;
 #endif
 
+#if !defined(__SIHD_WINDOWS__)
+std::vector<bool> handled(std::initializer_list<int> sigs)
+{
+    std::vector<bool> ret;
+    for (int sig : sigs)
+    {
+        struct sigaction action {};
+        sigaction(sig, nullptr, &action);
+        ret.push_back(action.sa_handler != SIG_DFL);
+    }
+    return ret;
+}
+#endif
+
 void send_self(int sig)
 {
 #if defined(__SIHD_WINDOWS__)
@@ -185,16 +199,6 @@ TEST_F(TestSignal, test_signal_watcher_add_after_start_refused)
 #if !defined(__SIHD_WINDOWS__)
 TEST_F(TestSignal, test_signal_watcher_keeps_every_handler)
 {
-    const auto handled = [](std::initializer_list<int> sigs) {
-        std::vector<bool> ret;
-        for (int sig : sigs)
-        {
-            struct sigaction action {};
-            sigaction(sig, nullptr, &action);
-            ret.push_back(action.sa_handler != SIG_DFL);
-        }
-        return ret;
-    };
     SigWatcher watcher("keeps-handlers-test");
     ASSERT_TRUE(watcher.add_signal(sig_term));
     ASSERT_TRUE(watcher.add_signal(sig_alt));
@@ -280,7 +284,7 @@ TEST_F(TestSignal, test_signal_tmp)
 
 TEST_F(TestSignal, test_signal_handler_skips_ignored_previous)
 {
-    ::signal(sig_alt, SIG_IGN);
+    ASSERT_TRUE(signal::ignore(sig_alt));
 
     SigHandler handler(sig_alt);
 

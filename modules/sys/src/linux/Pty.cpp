@@ -406,8 +406,11 @@ void PosixPty::send_eof()
     if (_master_fd < 0)
         return;
     // closing the master hangs the child up (SIGHUP, unread output lost): EOF is the line discipline VEOF char
+    constexpr char default_eof = '\x04';
     struct termios attributes {};
-    const char eof = tcgetattr(_master_fd, &attributes) == 0 ? static_cast<char>(attributes.c_cc[VEOF]) : '\x04';
+    char eof = default_eof;
+    if (tcgetattr(_master_fd, &attributes) == 0)
+        eof = static_cast<char>(attributes.c_cc[VEOF]);
     if (::write(_master_fd, &eof, 1) != 1)
         SIHD_LOG(error, "PosixPty: could not send end of file: {}", strerror(errno));
 }

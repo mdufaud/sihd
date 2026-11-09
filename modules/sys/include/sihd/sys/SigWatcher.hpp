@@ -53,7 +53,6 @@ class SigWatcher: public sihd::util::Named,
 
         bool set_polling_frequency(double frequency);
 
-        // false once started: the watcher waits only on the signals it started with
         bool add_signal(int sig);
         bool rm_signal(int sig);
 

@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <cstdlib>
-#include <filesystem>
 #include <thread>
 
 #include <gtest/gtest.h>
 
 #include <sihd/sys/Process.hpp>
+#include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/console.hpp>
 #include <sihd/sys/env.hpp>
@@ -1022,12 +1022,11 @@ TEST_F(TestProcess, test_process_failed_execute_closes_its_pipes)
 {
     if (os::is_run_by_valgrind() || os::is_run_by_qemu())
         GTEST_SKIP() << "exec failure is not reported by posix_spawn";
-    const auto count_fds = [] {
-        return std::distance(std::filesystem::directory_iterator("/proc/self/fd"), {});
-    };
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the open fds are counted in /proc";
     std::string out;
     std::string err;
-    const auto fds_before = count_fds();
+    const auto fds_before = ProcessInfo(os::pid()).metrics().fd_count;
 
     {
         Process proc {"sihd_no_such_binary"};
@@ -1035,7 +1034,7 @@ TEST_F(TestProcess, test_process_failed_execute_closes_its_pipes)
         EXPECT_FALSE(proc.execute().has_value());
     }
 
-    EXPECT_EQ(count_fds(), fds_before);
+    EXPECT_EQ(ProcessInfo(os::pid()).metrics().fd_count, fds_before);
 }
 #endif
 
