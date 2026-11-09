@@ -407,4 +407,39 @@ TEST_F(TestSshServer, test_pty_output_larger_than_the_window)
     EXPECT_TRUE(output == expected);
 }
 
+TEST_F(TestSshServer, test_pty_shell_runs_input_sent_before_eof)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the pty shell is /bin/sh";
+
+    SshServerHelper test_server("test-ssh-server-pty-eof");
+    test_server.handler.set_shell_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *pty = new SshSubsystemPty();
+            pty->set_shell("/bin/sh");
+            return pty;
+        });
+    ASSERT_TRUE(test_server.start());
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_pty().has_value());
+    ASSERT_TRUE(channel.request_shell().has_value());
+
+    // the eof follows the script at once: the shell must still run its last commands
+    const std::string script = "sleep 1\nexit 5\n";
+    ASSERT_EQ(channel.write(ArrCharView(script.data(), script.size())), (int)script.size());
+    ASSERT_TRUE(channel.send_eof().has_value());
+    ArrChar chunk;
+    chunk.reserve(4096);
+    while (channel.read_timeout(chunk, 5000) > 0)
+        ;
+
+    EXPECT_EQ(channel.exit_status(), 5);
+}
+
 } // namespace test
