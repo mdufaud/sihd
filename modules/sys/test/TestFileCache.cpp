@@ -94,9 +94,6 @@ TEST_F(TestFileCache, test_filecache_unreadable_file_is_read_once_readable)
 
 TEST_F(TestFileCache, test_filecache_follows_atomic_replace)
 {
-    if constexpr (build::is_windows)
-        GTEST_SKIP() << "the windows watcher hands one batch per run: the temp file batch delays the rename by one get";
-
     TmpDir tmp_dir;
     const std::string file_path = fs::combine(tmp_dir.path(), "test.txt");
     const std::string tmp_path = fs::combine(tmp_dir.path(), "test.txt.tmp");

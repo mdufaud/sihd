@@ -25,6 +25,8 @@ using namespace sihd::util;
 SIHD_LOGGER;
 
 constexpr DWORD cancel_timeout_ms = 1000;
+// a directory written without pause would otherwise keep run() from returning
+constexpr size_t max_batches_per_run = 64;
 
 struct FileWatcher::Impl
 {
@@ -82,6 +84,7 @@ struct FileWatcher::Impl
         bool rm_watch(const std::string & path);
         bool is_watching(const std::string & path);
         void terminate();
+        void read_batch(Watcher & watcher, DWORD bytes_transferred);
         bool poll_new_events(int milliseconds_timeout);
 };
 
@@ -166,87 +169,94 @@ Result<void> FileWatcher::Impl::add_watch(const std::string & path)
     return {};
 }
 
+void FileWatcher::Impl::read_batch(Watcher & watcher, DWORD bytes_transferred)
+{
+    if (bytes_transferred == 0)
+        _events.emplace_back(FileWatcherEvent {.type = FileWatcherEventType::overflow, .watch_path = watcher.path});
+
+    std::string & old_filename = watcher.old_filename;
+    FILE_NOTIFY_INFORMATION *event = bytes_transferred == 0 ? nullptr
+                                                            : (FILE_NOTIFY_INFORMATION *)watcher.buffer.data();
+    while (event != nullptr)
+    {
+        FileWatcherEvent fw_event;
+        fw_event.watch_path = watcher.path;
+
+        fw_event.filename = str::to_str(std::wstring_view(event->FileName, event->FileNameLength / sizeof(wchar_t)));
+        bool add_event = true;
+        switch (event->Action)
+        {
+            case FILE_ACTION_ADDED:
+                fw_event.type = FileWatcherEventType::created;
+                break;
+            case FILE_ACTION_REMOVED:
+                fw_event.type = FileWatcherEventType::deleted;
+                break;
+            case FILE_ACTION_MODIFIED:
+                fw_event.type = FileWatcherEventType::modified;
+                break;
+            case FILE_ACTION_RENAMED_OLD_NAME:
+                old_filename = fw_event.filename;
+                add_event = false;
+                break;
+            case FILE_ACTION_RENAMED_NEW_NAME:
+                fw_event.type = FileWatcherEventType::renamed;
+                fw_event.old_filename = std::move(old_filename);
+                old_filename.clear();
+                break;
+            default:
+                add_event = false;
+                break;
+        }
+
+        if (!watcher.filename_filter.empty() && !str::iequals(fw_event.filename, watcher.filename_filter)
+            && !str::iequals(fw_event.old_filename, watcher.filename_filter))
+            add_event = false;
+
+        if (add_event)
+        {
+            _events.emplace_back(std::move(fw_event));
+        }
+
+        if (event->NextEntryOffset == 0)
+        {
+            break;
+        }
+        event = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(reinterpret_cast<uint8_t *>(event)
+                                                            + event->NextEntryOffset);
+    }
+}
+
 bool FileWatcher::Impl::poll_new_events(int milliseconds_timeout)
 {
     std::list<std::string> watchers_to_remove;
 
     for (auto & watcher : _watchers)
     {
-        DWORD result = WaitForSingleObject(watcher.overlapped.hEvent, milliseconds_timeout);
-        if (result != WAIT_OBJECT_0)
+        // a restarted read completes at once when changes queued meanwhile: drain them in this run, bounded
+        DWORD timeout = milliseconds_timeout;
+        for (size_t batch = 0; batch < max_batches_per_run; ++batch)
         {
-            continue;
-        }
+            if (WaitForSingleObject(watcher.overlapped.hEvent, timeout) != WAIT_OBJECT_0)
+                break;
+            timeout = 0;
 
-        DWORD bytes_transferred = 0;
-        if (GetOverlappedResult(watcher.handle, &watcher.overlapped, &bytes_transferred, FALSE) == 0)
-        {
-            SIHD_LOG(error, "FileWatcher: could not get overlapped result: {}", os::last_error_str());
-            continue;
-        }
-        watcher.pending = false;
-        if (bytes_transferred == 0)
-            _events.emplace_back(FileWatcherEvent {.type = FileWatcherEventType::overflow, .watch_path = watcher.path});
-
-        std::string & old_filename = watcher.old_filename;
-        FILE_NOTIFY_INFORMATION *event = bytes_transferred == 0 ? nullptr
-                                                                : (FILE_NOTIFY_INFORMATION *)watcher.buffer.data();
-        while (event != nullptr)
-        {
-            FileWatcherEvent fw_event;
-            fw_event.watch_path = watcher.path;
-
-            fw_event.filename = str::to_str(
-                std::wstring_view(event->FileName, event->FileNameLength / sizeof(wchar_t)));
-            bool add_event = true;
-            switch (event->Action)
+            DWORD bytes_transferred = 0;
+            if (GetOverlappedResult(watcher.handle, &watcher.overlapped, &bytes_transferred, FALSE) == 0)
             {
-                case FILE_ACTION_ADDED:
-                    fw_event.type = FileWatcherEventType::created;
-                    break;
-                case FILE_ACTION_REMOVED:
-                    fw_event.type = FileWatcherEventType::deleted;
-                    break;
-                case FILE_ACTION_MODIFIED:
-                    fw_event.type = FileWatcherEventType::modified;
-                    break;
-                case FILE_ACTION_RENAMED_OLD_NAME:
-                    old_filename = fw_event.filename;
-                    add_event = false;
-                    break;
-                case FILE_ACTION_RENAMED_NEW_NAME:
-                    fw_event.type = FileWatcherEventType::renamed;
-                    fw_event.old_filename = std::move(old_filename);
-                    old_filename.clear();
-                    break;
-                default:
-                    add_event = false;
-                    break;
-            }
-
-            if (!watcher.filename_filter.empty() && !str::iequals(fw_event.filename, watcher.filename_filter)
-                && !str::iequals(fw_event.old_filename, watcher.filename_filter))
-                add_event = false;
-
-            if (add_event)
-            {
-                _events.emplace_back(std::move(fw_event));
-            }
-
-            if (event->NextEntryOffset == 0)
-            {
+                SIHD_LOG(error, "FileWatcher: could not get overlapped result: {}", os::last_error_str());
                 break;
             }
-            event = reinterpret_cast<FILE_NOTIFY_INFORMATION *>(reinterpret_cast<uint8_t *>(event)
-                                                                + event->NextEntryOffset);
-        }
+            watcher.pending = false;
+            this->read_batch(watcher, bytes_transferred);
 
-        if (!watcher.start())
-        {
-            _events.emplace_back(
-                FileWatcherEvent {.type = FileWatcherEventType::terminated, .watch_path = watcher.path});
-            watchers_to_remove.emplace_back(watcher.path);
-            continue;
+            if (!watcher.start())
+            {
+                _events.emplace_back(
+                    FileWatcherEvent {.type = FileWatcherEventType::terminated, .watch_path = watcher.path});
+                watchers_to_remove.emplace_back(watcher.path);
+                break;
+            }
         }
     }
 

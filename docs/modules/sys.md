@@ -24,7 +24,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 ### File watching
 
-- `FileWatcher`: observable runnable reporting `FileWatcherEvent` values for watched paths: `watch`, `unwatch`, `is_watching`, `run`, `events`. The `opened`, `accessed` and `closed` event types are Unix-only.
+- `FileWatcher`: observable runnable reporting `FileWatcherEvent` values for watched paths: `watch`, `unwatch`, `is_watching`, `run` (reports every change queued since the previous run, up to 64 change batches per watched path on Windows), `events`. The `opened`, `accessed` and `closed` event types are Unix-only.
 - `FilePoller`: polling alternative that reports files created, removed or changed under a tree: `watch`, `unwatch`, `run`, `created`, `removed`, `changed`.
 - `FileCache`: in-memory cache of file contents, kept coherent through a `FileWatcher`, including a file replaced by a rename: `add`, `get` (empty for an unknown or unreadable file), `remove`, `clear`. A file unreadable at `add` stays watched: `get` reads it once it can.
 

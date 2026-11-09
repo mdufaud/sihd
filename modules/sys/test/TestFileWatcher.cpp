@@ -67,6 +67,26 @@ TEST_F(TestFileWatcher, test_watch_renamed_file)
     }
 }
 
+TEST_F(TestFileWatcher, test_watch_file_after_a_sibling_change)
+{
+    TmpDir directory;
+    ASSERT_TRUE(directory);
+    const std::string path = fs::combine(directory.path(), "file.txt");
+    const std::string sibling = fs::combine(directory.path(), "sibling.txt");
+    ASSERT_TRUE(fs::write(path, "old"));
+    ASSERT_TRUE(fs::write(sibling, "old"));
+    FileWatcher watcher(path, std::chrono::seconds(1));
+
+    ASSERT_TRUE(fs::write(sibling, "new"));
+    ASSERT_TRUE(fs::write(path, "new"));
+
+    EXPECT_TRUE(watcher.run());
+    const auto modified = std::ranges::find_if(watcher.events(), [](const FileWatcherEvent & event) {
+        return event.type == FileWatcherEventType::modified;
+    });
+    EXPECT_NE(modified, watcher.events().end());
+}
+
 TEST_F(TestFileWatcher, test_watch_separate_buffers)
 {
     if (!FileWatcher::supported)
