@@ -170,6 +170,18 @@ TEST_F(TestNavigator, test_navigator_cookies_lists_empty_values)
     EXPECT_EQ(jar, (std::map<std::string, std::string> {{"empty", ""}, {"full", "1"}}));
 }
 
+TEST_F(TestNavigator, test_navigator_set_cookie_needs_a_domain)
+{
+    Navigator navigator;
+
+    const auto set = navigator.set_cookie("session", "abc", "");
+
+    ASSERT_FALSE(set.has_value());
+    EXPECT_EQ(set.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(set.error().message, "a navigator cookie needs a domain");
+    EXPECT_TRUE(navigator.cookies().empty());
+}
+
 TEST_F(TestNavigator, test_navigator_redirect)
 {
     ServerScope scope;

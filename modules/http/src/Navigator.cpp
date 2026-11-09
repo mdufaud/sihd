@@ -255,8 +255,10 @@ std::map<std::string, std::string> Navigator::cookies() const
 
 Result<void> Navigator::set_cookie(std::string_view name, std::string_view value, std::string_view domain)
 {
-    const std::string_view domain_str = domain.empty() ? std::string_view(".") : domain;
-    std::string cookie_line = fmt::format("{}\tTRUE\t/\tFALSE\t0\t{}\t{}", domain_str, name, value);
+    // curl files a domain-less cookie where only a request to an ip address looks
+    if (domain.empty())
+        return std::unexpected(Error(invalid_argument, "a navigator cookie needs a domain"));
+    std::string cookie_line = fmt::format("{}\tTRUE\t/\tFALSE\t0\t{}\t{}", domain, name, value);
     return _impl->client.add_cookie(cookie_line);
 }
 

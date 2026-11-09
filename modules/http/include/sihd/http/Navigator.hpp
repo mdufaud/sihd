@@ -105,8 +105,7 @@ class Navigator
         void set_cross_origin_headers(std::vector<std::string> names);
 
         std::map<std::string, std::string> cookies() const;
-        sihd::util::Result<void>
-            set_cookie(std::string_view name, std::string_view value, std::string_view domain = "");
+        sihd::util::Result<void> set_cookie(std::string_view name, std::string_view value, std::string_view domain);
         sihd::util::Result<void> clear_cookies();
         sihd::util::Result<void> save_cookies(const std::string & path);
         sihd::util::Result<void> load_cookies(const std::string & path);

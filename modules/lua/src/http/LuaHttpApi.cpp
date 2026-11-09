@@ -251,8 +251,8 @@ void LuaHttpApi::load_base(Vm & vm)
             })
         .addFunction(
             "set_cookie",
-            +[](Navigator *self, const std::string & name, const std::string & value, luabridge::LuaRef domain) {
-                return self->set_cookie(name, value, domain.isNil() ? "" : domain.tostring()).has_value();
+            +[](Navigator *self, const std::string & name, const std::string & value, const std::string & domain) {
+                return self->set_cookie(name, value, domain).has_value();
             })
         .addFunction(
             "clear_cookies",

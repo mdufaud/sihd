@@ -284,7 +284,7 @@ void PyHttpApi::add_http_api(PyApi::PyModule & pymodule)
              &Navigator::set_cookie,
              pybind11::arg("name"),
              pybind11::arg("value"),
-             pybind11::arg("domain") = std::string_view {})
+             pybind11::arg("domain"))
         .def("clear_cookies", &Navigator::clear_cookies)
         .def("save_cookies", &Navigator::save_cookies)
         .def("load_cookies", &Navigator::load_cookies)
