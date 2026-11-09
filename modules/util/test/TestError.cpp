@@ -85,6 +85,18 @@ TEST(TestError, test_error_from_errc_classification)
     EXPECT_EQ(error_from(std::errc::owner_dead), unknown);
 }
 
+TEST(TestError, test_error_errc_and_errno_agree)
+{
+    for (const std::errc ec : {std::errc::not_a_socket,
+                               std::errc::too_many_files_open_in_system,
+                               std::errc::no_protocol_option,
+                               std::errc::operation_not_supported})
+        EXPECT_EQ(error_from(ec), error_errno(static_cast<int>(ec))) << static_cast<int>(ec);
+#if defined(ETIME)
+    EXPECT_EQ(error_errno(ETIME), timeout);
+#endif
+}
+
 TEST(TestError, test_error_errc_socket_classification)
 {
     EXPECT_EQ(error_from(std::errc::connection_refused), closed);

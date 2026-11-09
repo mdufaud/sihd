@@ -272,6 +272,28 @@ TEST_F(TestMessage, test_message_bytes)
     EXPECT_THROW(msg.get_bytes("nothing"), std::invalid_argument);
 }
 
+TEST_F(TestMessage, test_message_refuses_fields_once_finished)
+{
+    Message msg("message");
+    ASSERT_TRUE(msg.add_field<uint32_t>("first"));
+    ASSERT_TRUE(msg.finish());
+
+    EXPECT_FALSE(msg.add_field<uint32_t>("second"));
+
+    EXPECT_EQ(msg.field_byte_size(), 4u);
+    EXPECT_EQ(msg.to_bytes().size(), 4u);
+}
+
+TEST_F(TestMessage, test_message_bytes_of_an_unfinished_field_are_empty)
+{
+    Message msg("message");
+    ASSERT_TRUE(msg.add_field<uint32_t>("pair", 2));
+
+    const ArrUByteView bytes = msg.get_bytes("pair");
+
+    EXPECT_EQ(bytes.size(), 0u);
+}
+
 TEST_F(TestMessage, test_message_for_each_record)
 {
     Message msg("record");

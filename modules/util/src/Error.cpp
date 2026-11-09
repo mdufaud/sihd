@@ -12,82 +12,6 @@ namespace sihd::util
 namespace
 {
 
-ErrorCode errc_to_error_code(std::errc ec)
-{
-    switch (ec)
-    {
-        case std::errc::invalid_argument:
-        case std::errc::address_not_available:
-        case std::errc::destination_address_required:
-            return ErrorCode::invalid_argument;
-        case std::errc::no_such_file_or_directory:
-        case std::errc::no_such_device:
-        case std::errc::no_such_process:
-        case std::errc::not_a_directory:
-        case std::errc::too_many_symbolic_link_levels:
-            return ErrorCode::not_found;
-        case std::errc::permission_denied:
-        case std::errc::operation_not_permitted:
-        case std::errc::read_only_file_system:
-            return ErrorCode::permission_denied;
-        case std::errc::timed_out:
-#if !defined(_LIBCPP_VERSION) // libc++ deprecates errc::stream_timeout (ETIME has no winsuck mapping)
-        case std::errc::stream_timeout:
-#endif
-            return ErrorCode::timeout;
-        case std::errc::resource_unavailable_try_again:
-#if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN // mingw: own errno, posix aliases EAGAIN
-        case std::errc::operation_would_block:
-#endif
-        case std::errc::operation_in_progress:
-        case std::errc::connection_already_in_progress:
-            return ErrorCode::would_block;
-        case std::errc::interrupted:
-            return ErrorCode::interrupted;
-        case std::errc::not_enough_memory:
-        case std::errc::no_buffer_space:
-        case std::errc::too_many_files_open:
-            return ErrorCode::out_of_memory;
-        case std::errc::io_error:
-        case std::errc::bad_message:
-        case std::errc::illegal_byte_sequence:
-        case std::errc::already_connected:
-        case std::errc::protocol_error:
-            return ErrorCode::io_error;
-#if defined(ENOTSUP) && ENOTSUP != EOPNOTSUPP // mingw: own errno, posix aliases EOPNOTSUPP
-        case std::errc::operation_not_supported:
-#endif
-        case std::errc::not_supported:
-        case std::errc::function_not_supported:
-        case std::errc::address_family_not_supported:
-        case std::errc::protocol_not_supported:
-            return ErrorCode::not_supported;
-        case std::errc::file_exists:
-        case std::errc::address_in_use:
-            return ErrorCode::already_exists;
-        case std::errc::result_out_of_range:
-        case std::errc::file_too_large:
-        case std::errc::filename_too_long:
-        case std::errc::argument_list_too_long:
-        case std::errc::message_size:
-        case std::errc::value_too_large:
-            return ErrorCode::overflow;
-        case std::errc::broken_pipe:
-        case std::errc::connection_aborted:
-        case std::errc::connection_reset:
-        case std::errc::connection_refused:
-        case std::errc::network_down:
-        case std::errc::network_reset:
-        case std::errc::network_unreachable:
-        case std::errc::host_unreachable:
-        case std::errc::not_connected:
-        case std::errc::bad_file_descriptor:
-            return ErrorCode::closed;
-        default:
-            return ErrorCode::unknown;
-    }
-}
-
 ErrorCode errno_to_error_code(int errno_value)
 {
     switch (errno_value)
@@ -108,6 +32,9 @@ ErrorCode errno_to_error_code(int errno_value)
         case EROFS:
             return ErrorCode::permission_denied;
         case ETIMEDOUT:
+#if defined(ETIME)
+        case ETIME:
+#endif
             return ErrorCode::timeout;
         case EAGAIN:
 #if defined(EWOULDBLOCK) && EWOULDBLOCK != EAGAIN
@@ -129,6 +56,9 @@ ErrorCode errno_to_error_code(int errno_value)
         case ENOSYS:
 #if defined(ENOTSUP)
         case ENOTSUP:
+#endif
+#if defined(EOPNOTSUPP) && EOPNOTSUPP != ENOTSUP // mingw: own errno, posix aliases ENOTSUP
+        case EOPNOTSUPP:
 #endif
             return ErrorCode::not_supported;
         case EEXIST:
@@ -262,7 +192,8 @@ ErrorCode error_errno(int errno_value)
 
 ErrorCode ErrorResolver<std::errc>::code(std::errc ec)
 {
-    return errc_to_error_code(ec);
+    // std::errc values are the errno ones: one table decides both
+    return errno_to_error_code(static_cast<int>(ec));
 }
 
 ErrorCode ErrorResolver<std::error_code>::code(std::error_code ec)

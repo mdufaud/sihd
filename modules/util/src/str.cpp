@@ -1474,7 +1474,7 @@ int find_char_not_escaped(std::string_view view, int char_to_find, int escape)
 
 int stopping_enclose_index(std::string_view view, int index, const char *authorized_start_enclose, int escape)
 {
-    if (index >= (int)view.size())
+    if (index < 0 || index >= (int)view.size())
         return -1;
 
     const int open_esc = view[index];

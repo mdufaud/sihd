@@ -116,7 +116,8 @@ std::string LogFormatter::format(const LogInfo & info, std::string_view msg) con
                 const char *
                     nsec_end = std::to_chars(nsec_digits, nsec_digits + sizeof(nsec_digits), info.timespec.tv_nsec).ptr;
                 const size_t digits = nsec_end - nsec_digits;
-                for (size_t zeros = 9 - digits; zeros > 0; --zeros)
+                // a tv_nsec past one second has no leading zero to pad
+                for (size_t zeros = digits < 9 ? 9 - digits : 0; zeros > 0; --zeros)
                     *end++ = '0';
                 std::memcpy(end, nsec_digits, digits);
                 TokenPattern::append(out, std::string_view(buf, end - buf + digits), token.options);

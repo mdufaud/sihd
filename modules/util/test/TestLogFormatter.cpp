@@ -65,6 +65,17 @@ TEST_F(TestLogFormatter, test_logformatter_placeholders)
     EXPECT_EQ(parts[5], "hello");
 }
 
+TEST_F(TestLogFormatter, test_logformatter_epoch_of_an_unnormalised_timespec)
+{
+    LogInfo info("test::format", LogLevel::info);
+    info.timespec.tv_sec = 12;
+    info.timespec.tv_nsec = 1000000000;
+    LogFormatter formatter;
+    ASSERT_TRUE(formatter.set_pattern("{epoch}").has_value());
+
+    EXPECT_EQ(formatter.format(info, "hello"), "12.1000000000");
+}
+
 TEST_F(TestLogFormatter, test_logformatter_time)
 {
     const std::string source = "test::format";

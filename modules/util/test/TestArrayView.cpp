@@ -344,4 +344,12 @@ TEST_F(TestArrayView, test_arrayview_equality_requires_same_size)
     EXPECT_FALSE(view == ArrayView<int>(diff));
 }
 
+TEST_F(TestArrayView, test_arrayview_null_reverse_range_is_empty)
+{
+    const ArrayView<int> view;
+
+    // ubsan reports pointer arithmetic on the null data
+    EXPECT_EQ(std::distance(view.rbegin(), view.rend()), 0);
+}
+
 } // namespace test

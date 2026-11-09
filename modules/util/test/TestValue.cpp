@@ -273,6 +273,17 @@ TEST_F(TestValue, test_value_compare_mixed_float)
     EXPECT_TRUE(Value(5.0) < vf);
 }
 
+TEST_F(TestValue, test_value_compare_at_the_epsilon)
+{
+    constexpr float float_epsilon = std::numeric_limits<float>::epsilon();
+    constexpr double double_epsilon = std::numeric_limits<double>::epsilon();
+
+    EXPECT_EQ(Value(0.0f).compare_float(float_epsilon), -1);
+    EXPECT_EQ(Value(float_epsilon).compare_float(0.0f), 1);
+    EXPECT_EQ(Value(0.0).compare_double(double_epsilon), -1);
+    EXPECT_EQ(Value(0.0f).compare_float_epsilon(0.5f, 0.5f), -1);
+}
+
 TEST_F(TestValue, test_value_from_bool_char_float_strings)
 {
     Value val = Value::from_bool_string("true");

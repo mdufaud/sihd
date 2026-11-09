@@ -220,43 +220,40 @@ class Array: public IArray,
             return this->push_back(data);
         }
 
+        // a token that does not parse keeps the old content
         bool from_str(std::string_view data, std::string_view delimiters)
         {
+            Splitter splitter(delimiters);
+            const std::vector<std::string> splits = splitter.split(data);
             if constexpr (std::is_fundamental_v<T>)
             {
-                Splitter splitter(delimiters);
-                const std::vector<std::string> splits = splitter.split(data);
-                this->reserve(splits.size());
-                this->resize(0);
+                Array<T> values;
+                values.reserve(splits.size());
                 for (const std::string & split : splits)
                 {
                     const auto value = str::convert_from_string<T>(split);
                     if (value.has_value() == false)
                         return false;
-                    this->push_back(*value);
+                    values.push_back(*value);
                 }
+                return this->from(values.data(), values.size());
             }
             else
             {
-                Splitter splitter(delimiters);
-                const std::vector<std::string> splits = splitter.split(data);
-                this->resize(0);
                 if (splits.size() % sizeof(T) != 0)
                     return false;
-                uint32_t idx = 0;
+                std::vector<uint8_t> bytes;
+                bytes.reserve(splits.size());
                 for (const std::string & split : splits)
                 {
                     constexpr uint16_t base = 16;
                     const auto byte = str::convert_from_string<uint8_t>(split, base);
                     if (byte.has_value() == false)
                         return false;
-                    if (this->resize((idx / sizeof(T)) + 1) == false)
-                        return false;
-                    this->buf()[idx] = *byte;
-                    ++idx;
+                    bytes.push_back(*byte);
                 }
+                return this->from(reinterpret_cast<const T *>(bytes.data()), bytes.size() / sizeof(T));
             }
-            return true;
         }
 
         // throws std::invalid_argument if byte size is not aligned with type size

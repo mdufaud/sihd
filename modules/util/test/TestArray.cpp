@@ -72,7 +72,9 @@ TEST_F(TestArray, test_array_from_string)
     SIHD_LOG(debug, "{}", arr2.str(','));
 
     EXPECT_FALSE(arr_int.from_str("a,b,c", ","));
-    EXPECT_EQ(arr_int.size(), 0u);
+    EXPECT_EQ(arr_int.str(','), "10,20,30");
+    EXPECT_FALSE(arr_int.from_str("1,2,zzz", ","));
+    EXPECT_EQ(arr_int.str(','), "10,20,30");
 
     ArrFloat arr_float;
     EXPECT_TRUE(arr_float.from_str("123.456,22.1,33.2,44.3", ","));

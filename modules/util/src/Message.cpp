@@ -23,6 +23,9 @@ bool Message::on_check_link(const std::string & name, Named *child)
 
 bool Message::on_add_child(const std::string & name, Named *child)
 {
+    // the buffers of a finished message are laid out: a new field would have none
+    if (_finished)
+        return false;
     IMessageField *field = dynamic_cast<IMessageField *>(child);
     if (field != nullptr)
     {
@@ -205,6 +208,9 @@ bool Message::from_bytes(std::span<const uint8_t> data)
 ArrUByteView Message::get_bytes(const std::string & name) const
 {
     const MessageField *field = this->_require_field(name);
+    // finish() gives the field its buffer
+    if (field->array()->buf() == nullptr)
+        return {};
     return ArrUByteView(field->array()->buf(), field->field_byte_size());
 }
 

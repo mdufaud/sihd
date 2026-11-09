@@ -596,6 +596,11 @@ TEST_F(TestStr, test_str_nul_is_not_an_enclose)
     EXPECT_EQ(str::find_str_not_enclosed(std::string_view("a\0bx", 4), "x"), 3);
 }
 
+TEST_F(TestStr, test_str_enclose_index_before_the_view)
+{
+    EXPECT_EQ(str::stopping_enclose_index("'hello'", -1), -1);
+}
+
 TEST_F(TestStr, test_str_find_escape)
 {
     EXPECT_EQ(str::find_char_not_escaped("hello ?", '?'), 6);

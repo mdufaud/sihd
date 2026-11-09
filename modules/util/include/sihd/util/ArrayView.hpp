@@ -345,6 +345,8 @@ class ArrayView: public IArrayView
         }
         reverse_iterator rend() const
         {
+            if (this->data() == nullptr)
+                return reverse_iterator();
             return reverse_iterator(this->data(), this->data() - 1, this->data() + this->size());
         }
 
