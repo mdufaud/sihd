@@ -173,6 +173,19 @@ double Value::to_double() const
     return static_cast<double>(this->data.n);
 }
 
+Value Value::cast(Type type) const
+{
+    if (type == TYPE_FLOAT)
+        return Value(static_cast<float>(this->to_double()));
+    if (type == TYPE_DOUBLE)
+        return Value(this->to_double());
+    Value cast_value = *this;
+    if (this->is_float())
+        cast_value.data.n = static_cast<int64_t>(this->to_double());
+    cast_value.type = type;
+    return cast_value;
+}
+
 int Value::compare_mixed(uint64_t uint_val, int64_t int_val)
 {
     if (int_val < 0)

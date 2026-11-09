@@ -192,6 +192,27 @@ TEST_F(TestDevFilter, test_devfilter_float)
     EXPECT_EQ(out_channel->read<int>(0), 0b101);
 }
 
+TEST_F(TestDevFilter, test_devfilter_converts_value_to_floating_output)
+{
+    Core core;
+    DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..float_out;trigger=1;write=2"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..double_out;trigger=1"));
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..from_float;trigger=1;write=2.5f"));
+    Channel *in_channel = core.add_channel("in_channel", "int", 1);
+    Channel *float_out = core.add_channel("float_out", "float", 1);
+    Channel *double_out = core.add_channel("double_out", "double", 1);
+    Channel *from_float = core.add_channel("from_float", "double", 1);
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    in_channel->write<int>(0, 1);
+
+    EXPECT_EQ(float_out->read<float>(0), 2.0f);
+    EXPECT_EQ(double_out->read<double>(0), 1.0);
+    EXPECT_EQ(from_float->read<double>(0), 2.5);
+}
+
 TEST_F(TestDevFilter, test_devfilter_byte)
 {
     Core core;

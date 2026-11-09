@@ -41,6 +41,8 @@ class Value
         std::string str() const;
         bool is_float() const;
         double to_double() const;
+        // the same number held as type: integers truncate a floating value
+        Value cast(Type type) const;
 
         template <typename T>
         int compare(const T & cmp_val) const

@@ -104,6 +104,24 @@ TEST_F(TestValue, test_value_float)
     EXPECT_TRUE(val > 6);
 }
 
+TEST_F(TestValue, test_value_cast)
+{
+    const Value integer = 2;
+    const Value floating = 2.5f;
+    const Value truncated = 2.7;
+
+    const Value integer_as_float = integer.cast(TYPE_FLOAT);
+    const Value float_as_double = floating.cast(TYPE_DOUBLE);
+    const Value double_as_int = truncated.cast(TYPE_INT);
+
+    EXPECT_EQ(integer_as_float.type, TYPE_FLOAT);
+    EXPECT_EQ(integer_as_float.data.f, 2.0f);
+    EXPECT_EQ(float_as_double.type, TYPE_DOUBLE);
+    EXPECT_EQ(float_as_double.data.d, 2.5);
+    EXPECT_EQ(double_as_int.type, TYPE_INT);
+    EXPECT_EQ(double_as_int.data.i, 2);
+}
+
 TEST_F(TestValue, test_value_max)
 {
     uint8_t test8 = 255;

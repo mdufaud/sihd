@@ -198,7 +198,9 @@ void DevFilter::_apply_rule(const sihd::core::Channel *channel_in,
     const Value in_value = channel_in->value_at(rule_ptr->channel_match.idx);
     if (in_value.empty() || rule_ptr->channel_match.match(in_value) == false)
         return;
-    const int64_t out_val = rule_ptr->write_same_value ? in_value.data.n : rule_ptr->write_value.data.n;
+    const Value & value = rule_ptr->write_same_value ? in_value : rule_ptr->write_value;
+    // the output reads the first bytes of the value: they must hold the output type
+    const int64_t out_val = value.cast(channel_out->array()->data_type()).data.n;
     if (rule_ptr->nano_delay > 0 && _scheduler_ptr != nullptr)
         _scheduler_ptr->add_task(new DelayWriter(this, channel_out, rule_ptr, out_val));
     else
