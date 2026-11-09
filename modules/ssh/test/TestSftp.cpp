@@ -389,8 +389,7 @@ TEST_F(TestSftp, test_sftp_readdir_pages_a_big_directory)
 
     ASSERT_TRUE(reply.has_value());
     EXPECT_EQ(reply->status(), SSH_FX_EOF);
-    // the entries plus "." and ".."
-    EXPECT_EQ(listed, file_count + 2);
+    EXPECT_EQ(listed, file_count);
     // an OpenSSH client refuses a packet over 256 KiB
     EXPECT_LT(biggest_reply, 256u * 1024);
 }

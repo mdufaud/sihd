@@ -3,7 +3,6 @@
  * @brief SFTP subsystem handler implementation using libssh's SFTP server API.
  */
 
-#include <dirent.h>
 #include <sys/stat.h>
 
 #include <sihd/sys/platform.hpp>
@@ -633,14 +632,11 @@ void SshSubsystemSftp::Impl::handle_opendir(sftp_client_message_struct *msg)
     const auto resolved = resolve_path(path);
     if (reply_if_refused(msg, resolved))
         return;
-    DIR *dir = opendir(resolved->c_str());
-    if (!dir)
+    if (!sihd::sys::fs::is_dir(*resolved))
     {
-        auto err = Error::from_errno("could not open directory '{}'", *resolved);
-        reply_status(msg, sftp_status_from_error(err), err.message);
+        reply_status(msg, SSH_FX_NO_SUCH_FILE, fmt::format("'{}' is not a directory", *resolved));
         return;
     }
-    closedir(dir);
 
     std::string handle = generate_handle();
     handle_to_path[handle] = path;
@@ -681,30 +677,28 @@ void SshSubsystemSftp::Impl::handle_readdir(sftp_client_message_struct *msg)
     const auto resolved = resolve_path(path);
     if (reply_if_refused(msg, resolved))
         return;
-    DIR *dir = opendir(resolved->c_str());
-    if (!dir)
+    if (!sihd::sys::fs::is_dir(*resolved))
     {
         reply_status(msg, SSH_FX_NO_SUCH_FILE);
         return;
     }
 
     // the position counts directory entries read by the previous pages, listed or not
-    const size_t first = dir_positions[handle];
-    size_t position = 0;
+    const std::vector<std::string> children = sihd::sys::fs::children(*resolved);
+    size_t position = dir_positions[handle];
     std::vector<SftpAttributes> entries;
-    struct dirent *entry;
-    while (entries.size() < max_readdir_entries && (entry = readdir(dir)) != nullptr)
+    while (entries.size() < max_readdir_entries && position < children.size())
     {
-        if (position++ < first)
-            continue;
-        std::string full_path = *resolved + "/" + entry->d_name;
+        std::string name = children[position++];
+        // children ends a directory with a separator
+        if (name.ends_with(sihd::sys::fs::sep()))
+            name.pop_back();
         FileStat st;
-        if (stat_file(full_path, st, false) == 0)
+        if (stat_file(sihd::sys::fs::combine(*resolved, name), st, false) == 0)
         {
-            entries.push_back(attributes_from_stat(entry->d_name, st));
+            entries.push_back(attributes_from_stat(name, st));
         }
     }
-    closedir(dir);
     dir_positions[handle] = position;
 
     if (entries.empty())
