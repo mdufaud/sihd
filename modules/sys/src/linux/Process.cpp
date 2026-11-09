@@ -929,6 +929,8 @@ Result<void> Process::kill(int sig)
 
 void Process::handle(Poll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     auto events = poll->events();
     for (auto & event : events)
     {

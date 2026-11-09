@@ -272,12 +272,12 @@ bool Poll::on_start()
         return false;
     }
 
-    // a stop landing after set_ready must not be erased here
+    // clears a request_stop of the last run: a stop() is read from the controller flag, never erased here
     _stop = false;
 
     this->service_set_ready();
     int ret = 0;
-    while (_stop == false && ret >= 0)
+    while (_stop == false && !this->service_stop_requested() && ret >= 0)
         ret = this->poll(_timeout_milliseconds);
     return ret >= 0;
 }

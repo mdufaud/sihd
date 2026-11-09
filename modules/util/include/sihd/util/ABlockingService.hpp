@@ -36,6 +36,17 @@ class ABlockingService: public sihd::util::AService
 
         void service_wait_stop() const;
         void service_set_ready();
+        bool service_stop_requested() const;
+
+        // a stop landing before an inner poll ran found it stopped: the poll ends on its next tick instead
+        template <typename PollType>
+        bool service_relay_stop(PollType *poll) const
+        {
+            const bool relayed = this->is_running() && this->service_stop_requested();
+            if (relayed)
+                poll->request_stop();
+            return relayed;
+        }
 
         BlockingServiceController _service_controller;
 

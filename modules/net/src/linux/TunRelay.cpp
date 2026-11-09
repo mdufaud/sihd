@@ -719,6 +719,8 @@ TunRelay::Direction TunRelay::direction() const
 
 void TunRelay::handle(EventPoll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     const Timestamp now = _impl->clock.now();
     _impl->erased_fds.clear();
     for (const PollEvent & event : poll->events())

@@ -209,6 +209,7 @@ bool HttpServer::on_stop()
 
 bool HttpServer::on_start()
 {
+    // clears a request_stop of the last run: a stop() is read from the controller flag, never erased here
     _impl->stop = false;
 
     struct lws_context_creation_info lws_info;
@@ -266,14 +267,14 @@ bool HttpServer::on_start()
     for (int tsi = 1; tsi < effective_thread_count; ++tsi)
     {
         _impl->service_threads.emplace_back([this, tsi] {
-            while (!_impl->stop)
+            while (!_impl->stop && !this->service_stop_requested())
                 lws_service_tsi(_impl->lws_context_ptr, 0, tsi);
         });
     }
 
     this->service_set_ready();
 
-    while (!_impl->stop)
+    while (!_impl->stop && !this->service_stop_requested())
         lws_service_tsi(_impl->lws_context_ptr, 0, 0);
 
     for (std::thread & t : _impl->service_threads)

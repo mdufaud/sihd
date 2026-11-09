@@ -53,14 +53,16 @@ class Collector: public Observable<Collector<T>>,
     protected:
         bool on_start() override
         {
+            // a stop() is read from the controller flag: this reset never erases it
             _running = true;
             this->service_set_ready();
-            while (_running && _provider_ptr->providing())
+            while (_running && !this->service_stop_requested() && _provider_ptr->providing())
             {
                 if (_provider_ptr->provide(&_data))
                     this->notify_observers(this);
                 else
-                    _waitable.wait_for(_wait_duration, [this] { return _running == false; });
+                    _waitable.wait_for(_wait_duration,
+                                       [this] { return _running == false || this->service_stop_requested(); });
             }
             return true;
         }

@@ -93,6 +93,29 @@ class FakeBlockingService: public ABlockingService
         bool _stop_requested = false;
 };
 
+// its loop starts only once a stop ran: what a reset of a stop flag at the top of on_start would erase
+class StopBeforeLoopService: public ABlockingService
+{
+    public:
+        bool on_start() override
+        {
+            entered.sync();
+            stop_ran.sync();
+            stop_seen = this->service_stop_requested();
+            return true;
+        }
+
+        bool on_stop() override
+        {
+            stop_ran.sync();
+            return true;
+        }
+
+        Synchronizer entered {2};
+        Synchronizer stop_ran {2};
+        bool stop_seen = false;
+};
+
 class FakeService: public AService
 {
     public:
@@ -443,6 +466,19 @@ TEST_F(TestService, test_service_blocking)
         EXPECT_FALSE(service.is_ready());
         EXPECT_TRUE(service.stop());
     }
+}
+
+TEST_F(TestService, test_service_blocking_sees_a_stop_landing_before_its_loop)
+{
+    StopBeforeLoopService service;
+    std::jthread runner([&service] { (void)service.start(); });
+    service.entered.sync();
+
+    const bool stopped = service.stop();
+    runner.join();
+
+    EXPECT_TRUE(stopped);
+    EXPECT_TRUE(service.stop_seen);
 }
 
 TEST_F(TestService, test_service_blocking_ends_by_itself)

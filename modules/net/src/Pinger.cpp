@@ -135,6 +135,11 @@ bool Pinger::set_interval(time::UnixTime milliseconds_interval)
     return true;
 }
 
+bool Pinger::_should_stop() const
+{
+    return _stop || this->service_stop_requested();
+}
+
 bool Pinger::on_stop()
 {
     auto lock = _waitable.guard();
@@ -151,7 +156,7 @@ bool Pinger::on_start()
         return false;
     }
 
-    // a stop landing after set_ready must not be erased here
+    // clears a request_stop of the last run: a stop() is read from the controller flag, never erased here
     _stop = false;
     this->service_set_ready();
 
@@ -167,14 +172,14 @@ bool Pinger::on_start()
 
     bool ret = true;
     size_t i = 0;
-    while (_stop == false && (_ping_count == 0 || i < _ping_count))
+    while (!this->_should_stop() && (_ping_count == 0 || i < _ping_count))
     {
         if (i > 0)
         {
             const Duration time_spent_sending_last_ping = Timestamp(_clock_ptr->now()) - _result.last_time_sent;
             _waitable.wait_for(Duration(time::milliseconds(_ping_ms_interval)) - time_spent_sending_last_ping,
-                               [this] { return _stop.load(); });
-            if (_stop)
+                               [this] { return this->_should_stop(); });
+            if (this->_should_stop())
                 break;
         }
 
@@ -200,7 +205,7 @@ bool Pinger::on_start()
         _received_icmp_response = false;
         // foreign icmp traffic wakes the poll: the reply timeout is a deadline, not a quiet period
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(_sender.poll_timeout());
-        while (_stop == false && _received_icmp_response == false)
+        while (!this->_should_stop() && _received_icmp_response == false)
         {
             const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
                 deadline - std::chrono::steady_clock::now());

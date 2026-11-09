@@ -19,6 +19,11 @@ void ABlockingService::service_set_ready()
     _waitable.notify_all();
 }
 
+bool ABlockingService::service_stop_requested() const
+{
+    return _service_controller.stop_requested();
+}
+
 bool ABlockingService::is_ready() const
 {
     return _ready;

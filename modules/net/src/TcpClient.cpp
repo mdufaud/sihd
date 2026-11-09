@@ -237,6 +237,8 @@ const IpAddr & TcpClient::client_addr() const
 
 void TcpClient::handle(sihd::sys::Poll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     const auto & events = poll->events();
     if (events.empty() || events[0].fd != _socket.socket())
         return;

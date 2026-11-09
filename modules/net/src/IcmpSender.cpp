@@ -386,6 +386,8 @@ const IcmpResponse & IcmpSender::response() const
 
 void IcmpSender::handle(sihd::sys::Poll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     auto events = poll->events();
     if (events.size() > 0)
     {

@@ -215,6 +215,8 @@ bool TcpServer::on_stop()
 
 void TcpServer::handle(sihd::sys::EventPoll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     if (poll->polling_timeout())
         _server_handler_ptr->handle_no_activity(this, poll->polling_time());
     else

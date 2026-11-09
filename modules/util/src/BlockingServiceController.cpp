@@ -5,9 +5,14 @@ namespace sihd::util
 
 using Transition = AService::Transition;
 
-BlockingServiceController::BlockingServiceController()
+BlockingServiceController::BlockingServiceController(): _stop_requested(false)
 {
     current_state = Stopped;
+}
+
+bool BlockingServiceController::stop_requested() const
+{
+    return _stop_requested;
 }
 
 Transition BlockingServiceController::op_start(AService::Operation op)
@@ -19,6 +24,8 @@ Transition BlockingServiceController::op_start(AService::Operation op)
             if (current_state == Stopped || current_state == StartFailure)
             {
                 current_state = Running;
+                // set and cleared under the state lock: a stop right after this start is never erased
+                _stop_requested = false;
                 return Transition::proceed;
             }
             return Transition::refused;
@@ -26,6 +33,7 @@ Transition BlockingServiceController::op_start(AService::Operation op)
             if (current_state == Running || current_state == StopFailure)
             {
                 current_state = Stopped;
+                _stop_requested = true;
                 return Transition::proceed;
             }
             return current_state == Stopped ? Transition::done : Transition::refused;

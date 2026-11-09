@@ -78,6 +78,7 @@ class Pinger: public sihd::util::Named,
         void _notify_send();
         void _notify_timeout();
         void _clear_event();
+        bool _should_stop() const;
 
         IpAddr _client;
         size_t _ping_count;

@@ -158,6 +158,8 @@ const Socket & UdpReceiver::socket() const
 
 void UdpReceiver::handle(sihd::sys::Poll *poll)
 {
+    if (this->service_relay_stop(poll))
+        return;
     auto events = poll->events();
     if (events.size() > 0)
     {

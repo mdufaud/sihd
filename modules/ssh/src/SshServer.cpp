@@ -797,6 +797,7 @@ int SshServer::get_port() const
 
 bool SshServer::on_start()
 {
+    // clears a request_stop of the last run: a stop() is read from the controller flag, never erased here
     _stop = false;
 
     Defer defer_finalize([this] { _impl_ptr->cleanup(); });
@@ -817,7 +818,7 @@ ISshServerHandler *SshServer::server_handler() const
 
 bool SshServer::should_stop() const
 {
-    return _stop.load();
+    return _stop.load() || this->service_stop_requested();
 }
 
 } // namespace sihd::ssh
