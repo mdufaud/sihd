@@ -47,7 +47,7 @@ TEST_F(TestDesktopNotifier, test_negative_timeout)
 
     ASSERT_FALSE(notified.has_value());
     EXPECT_EQ(notified.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(notified.error().message, "a desktop notification timeout cannot be negative");
+    EXPECT_EQ(notified.error().message, "a desktop notification timeout must be positive");
 }
 
 } // namespace test

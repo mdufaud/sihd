@@ -258,7 +258,16 @@ TEST_F(TestDesktopNotifier, test_notify_rejects_negative_timeout)
     const int return_code = this->finish_client();
 
     EXPECT_EQ(return_code, 1);
-    EXPECT_EQ(_client_output, "error: a desktop notification timeout cannot be negative\n");
+    EXPECT_EQ(_client_output, "error: a desktop notification timeout must be positive\n");
+}
+
+TEST_F(TestDesktopNotifier, test_notify_rejects_zero_timeout)
+{
+    this->start_client({"notify", "timeout_ms=0", "summary=Summary"});
+    const int return_code = this->finish_client();
+
+    EXPECT_EQ(return_code, 1);
+    EXPECT_EQ(_client_output, "error: a desktop notification timeout must be positive\n");
 }
 
 TEST_F(TestDesktopNotifier, test_close_sends_id)

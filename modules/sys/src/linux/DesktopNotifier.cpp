@@ -52,9 +52,7 @@ int32_t expire_timeout(const std::optional<Duration> & timeout)
     if (!timeout.has_value())
         return -1;
     // 0 means never expire: a sub-millisecond timeout rounds up
-    if (*timeout > Duration(0))
-        return std::max<int32_t>(timeout->milliseconds_int(), 1);
-    return timeout->milliseconds_int();
+    return std::max<int32_t>(timeout->milliseconds_int(), 1);
 }
 
 Result<void> append_hint_array(dbus::Appender & body, const std::string & app_id, DesktopNotifier::Urgency urgency)
