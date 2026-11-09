@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 #include <sihd/util/Stat.hpp>
@@ -50,6 +52,19 @@ TEST_F(TestStat, test_stat_variance)
     EXPECT_DOUBLE_EQ(stat.average(), 5.0);
     EXPECT_DOUBLE_EQ(stat.variance(), 4.0);
     EXPECT_DOUBLE_EQ(stat.standard_deviation(), 2.0);
+}
+
+TEST_F(TestStat, test_stat_variance_constant_samples)
+{
+    Stat<double> stat;
+
+    stat.add_sample(0.1);
+    stat.add_sample(0.1);
+    stat.add_sample(0.1);
+
+    EXPECT_GE(stat.variance(), 0.0);
+    EXPECT_FALSE(std::isnan(stat.standard_deviation()));
+    EXPECT_FALSE(std::isnan(stat.p95()));
 }
 
 TEST_F(TestStat, test_stat_clear)

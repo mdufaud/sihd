@@ -59,7 +59,9 @@ struct Stat
             if (samples == 0)
                 return SampleType {};
             const SampleType average = this->average();
-            return (square / samples) - (average * average);
+            // constant floating samples cancel to a tiny negative, whose square root is NaN
+            const SampleType value = (square / samples) - (average * average);
+            return std::max(SampleType {}, value);
         }
 
         SampleType standard_deviation() const { return static_cast<SampleType>(::sqrt(this->variance())); }
