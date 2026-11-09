@@ -28,6 +28,7 @@
 # include <afunix.h>
 #else
 # include <sys/socket.h>
+# include <sys/un.h>
 #endif
 
 namespace test
@@ -747,6 +748,37 @@ TEST_F(TestSocket, test_socket_unix_datagram_roundtrip)
     ArrChar recv2(64);
     EXPECT_EQ(receiver.receive_from_unix(from, recv2), (ssize_t)payload.size());
     EXPECT_EQ(strncmp(recv2.data(), payload.data(), payload.size()), 0);
+}
+
+TEST_F(TestSocket, test_socket_unix_peer_path_fills_sun_path)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "AF_UNIX datagram is not supported by winsock";
+
+    sihd::sys::TmpDir dir;
+    const std::string path = sihd::sys::fs::combine({dir.path(), "dgram.sock"});
+    Socket receiver;
+    ASSERT_TRUE(receiver.open(AF_UNIX, SOCK_DGRAM, 0).has_value());
+    ASSERT_TRUE(receiver.bind_unix(path).has_value());
+
+    // the kernel binds a path filling sun_path with no terminator, which bind_unix refuses to build
+    sockaddr_un addr {};
+    addr.sun_family = AF_UNIX;
+    const std::string sender_name(sizeof(addr.sun_path) - dir.path().size() - 1, 's');
+    const std::string sender_path = sihd::sys::fs::combine({dir.path(), sender_name});
+    ASSERT_EQ(sender_path.size(), sizeof(addr.sun_path));
+    memcpy(addr.sun_path, sender_path.data(), sender_path.size());
+    Socket sender;
+    ASSERT_TRUE(sender.open(AF_UNIX, SOCK_DGRAM, 0).has_value());
+    ASSERT_EQ(::bind(sender.socket(), (sockaddr *)&addr, sizeof(addr)), 0);
+
+    const char msg[] = "full path";
+    ASSERT_EQ(sender.send_to_unix(path, msg), (ssize_t)strlen(msg));
+
+    std::string from;
+    ArrChar recv(64);
+    EXPECT_EQ(receiver.receive_from_unix(from, recv), (ssize_t)strlen(msg));
+    EXPECT_EQ(from, sender_path);
 }
 
 TEST_F(TestSocket, test_socket_shutdown_send_keeps_receiving)

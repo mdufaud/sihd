@@ -1,5 +1,6 @@
 #include <unistd.h>
 
+#include <algorithm>
 #include <cstring>
 #include <expected>
 
@@ -201,10 +202,13 @@ std::optional<socklen_t> unix_path_to_sockaddr(sockaddr_un *addr, std::string_vi
 
 std::string unix_path_from_addr(const sockaddr_un & addr, socklen_t addr_len)
 {
+    const size_t offset = offsetof(sockaddr_un, sun_path);
+    // a path may fill sun_path with no terminator, and a truncated address reports its full length
+    const size_t len = std::min((size_t)addr_len > offset ? addr_len - offset : 0, sizeof(addr.sun_path));
     // an abstract name starts with the null byte a C string would stop at
-    if (addr_len > (socklen_t)offsetof(sockaddr_un, sun_path) && addr.sun_path[0] == '\0')
-        return std::string(addr.sun_path, addr_len - offsetof(sockaddr_un, sun_path));
-    return std::string(addr.sun_path);
+    if (len > 0 && addr.sun_path[0] == '\0')
+        return std::string(addr.sun_path, len);
+    return std::string(addr.sun_path, strnlen(addr.sun_path, len));
 }
 
 } // namespace
