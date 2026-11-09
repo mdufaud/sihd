@@ -22,6 +22,13 @@ std::string read_file(const std::string & file_path)
     return file_content.value();
 }
 
+auto file_reader(const std::string & file_path)
+{
+    return [file_path]() {
+        return read_file(file_path);
+    };
+}
+
 } // namespace
 
 FileCache::FileCache()
@@ -38,7 +45,15 @@ void FileCache::add(const std::string & file_path, bool lazy)
     auto watched = _file_watcher.watch(file_path);
     if (SIHD_UNEXPECTED_LOG(watched))
         return;
-    _cache.set(file_path, [internal_file_path = file_path]() { return read_file(internal_file_path); }, max_age, lazy);
+    try
+    {
+        _cache.set(file_path, file_reader(file_path), max_age, lazy);
+    }
+    // an unreadable file stays watched: get reads it once it can
+    catch (const std::exception &)
+    {
+        _cache.set(file_path, file_reader(file_path), max_age, true);
+    }
 }
 
 void FileCache::remove(const std::string & file_path)

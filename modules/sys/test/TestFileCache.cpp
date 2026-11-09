@@ -75,6 +75,23 @@ TEST_F(TestFileCache, test_filecache_unknown_or_deleted_file)
     EXPECT_EQ(cached_content(file_cache, file_path), "<none>");
 }
 
+TEST_F(TestFileCache, test_filecache_unreadable_file_is_read_once_readable)
+{
+    TmpDir tmp_dir;
+    const std::string file_path = fs::combine(tmp_dir.path(), "test.txt");
+    ASSERT_TRUE(fs::make_directory(file_path).has_value());
+    FileCache file_cache;
+
+    EXPECT_NO_THROW(file_cache.add(file_path));
+    const std::string unreadable = cached_content(file_cache, file_path);
+    ASSERT_TRUE(std::filesystem::remove(file_path));
+    ASSERT_TRUE(fs::write(file_path, "content").has_value());
+    const std::string readable = cached_content(file_cache, file_path);
+
+    EXPECT_EQ(unreadable, "<none>");
+    EXPECT_EQ(readable, "content");
+}
+
 TEST_F(TestFileCache, test_filecache_follows_atomic_replace)
 {
     if constexpr (build::is_windows)
