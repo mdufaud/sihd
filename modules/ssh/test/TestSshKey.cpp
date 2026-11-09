@@ -45,4 +45,15 @@ TEST_F(TestSshKey, test_sshkey_public_is_equal)
     EXPECT_FALSE(client_public.is_equal(host_public));
 }
 
+TEST_F(TestSshKey, test_sshkey_ecdsa_type_names_its_curve)
+{
+    SshKey key;
+    ASSERT_TRUE(key.generate(KeyType::EcdsaP384, 384).has_value());
+
+    EXPECT_EQ(key.type(), KeyType::EcdsaP384);
+    EXPECT_STREQ(SshKey::type_str(KeyType::EcdsaP384), "ecdsa-sha2-nistp384");
+    EXPECT_EQ(SshKey::type_from_name("ecdsa-sha2-nistp256"), KeyType::EcdsaP256);
+    EXPECT_EQ(SshKey::type_from_name("ecdsa-sha2-nistp521"), KeyType::EcdsaP521);
+}
+
 } // namespace test

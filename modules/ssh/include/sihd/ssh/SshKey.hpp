@@ -18,10 +18,14 @@ enum class KeyType : int
     Dss = 1,
     Rsa = 2,
     Rsa1 = 3,
+    // deprecated by libssh: a loaded ecdsa key reports its curve below
     Ecdsa = 4,
     Ed25519 = 5,
     DssCert01 = 6,
     RsaCert01 = 7,
+    EcdsaP256 = 8,
+    EcdsaP384 = 9,
+    EcdsaP521 = 10,
 };
 
 class SshKey
