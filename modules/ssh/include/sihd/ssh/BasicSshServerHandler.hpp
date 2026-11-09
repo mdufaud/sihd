@@ -136,6 +136,7 @@ class BasicSshServerHandler: public ISshServerHandler
                 std::unique_ptr<ISshSubsystemHandler> handler;
                 bool has_pty;
                 WinSize winsize;
+                bool eof_notified = false;
         };
 
         struct SessionState
@@ -145,7 +146,7 @@ class BasicSshServerHandler: public ISshServerHandler
         };
 
         ChannelState *get_channel_state(SshSession *session, SshChannel *channel);
-        void poll_handler(SshChannel *channel, ISshSubsystemHandler *handler);
+        void poll_handler(SshChannel *channel, ChannelState & state);
 
         void inc_counter(size_t EventCounters::*field);
 

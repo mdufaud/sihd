@@ -1,3 +1,6 @@
+#include <atomic>
+#include <chrono>
+
 #include <gtest/gtest.h>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
@@ -28,6 +31,34 @@ SIHD_LOGGER;
 using namespace sihd::ssh;
 using namespace sihd::util;
 using namespace sihd::sys;
+
+namespace
+{
+
+// stays open a while after the client end of file, counting its notifications
+class EofCountingFunction: public SshSubsystemFunction
+{
+    public:
+        EofCountingFunction(std::string_view command, std::atomic<int> & eofs):
+            SshSubsystemFunction(command),
+            _eofs(eofs)
+        {
+        }
+
+        void on_eof() override
+        {
+            if (++_eofs == 1)
+                _close_at = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
+        }
+
+        bool is_running() const override { return _eofs == 0 || std::chrono::steady_clock::now() < _close_at; }
+
+    private:
+        std::atomic<int> & _eofs;
+        std::chrono::steady_clock::time_point _close_at;
+};
+
+} // namespace
 
 class TestSshServer: public ::testing::Test
 {
@@ -309,6 +340,35 @@ TEST_F(TestSshServer, test_exec_forwards_stdin)
     EXPECT_TRUE(output == input);
 }
 
+TEST_F(TestSshServer, test_handler_gets_the_client_eof_once)
+{
+    auto test_server = make_test_server("test-ssh-server-eof-once");
+    ASSERT_NE(test_server, nullptr);
+    std::atomic<int> eofs = 0;
+    test_server->handler.set_exec_handler_callback(
+        [&eofs]([[maybe_unused]] SshSession *session,
+                [[maybe_unused]] SshChannel *channel,
+                std::string_view command,
+                [[maybe_unused]] bool has_pty,
+                [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *function = new EofCountingFunction(command, eofs);
+            function->set_callback([](const std::string &) {
+                return SshSubsystemFunction::Result {.output = {}, .error_output = {}, .exit_code = 0};
+            });
+            return function;
+        });
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_exec("eof").has_value());
+
+    ASSERT_TRUE(channel.send_eof().has_value());
+    (void)read_until_closed(channel);
+
+    EXPECT_EQ(eofs, 1);
+}
+
 TEST_F(TestSshServer, test_function_output_larger_than_the_window)
 {
     auto test_server = make_test_server("test-ssh-server-function-window");
@@ -383,7 +443,7 @@ TEST_F(TestSshServer, test_pty_output_larger_than_the_window)
            [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
             auto *pty = new SshSubsystemPty();
             pty->set_shell("/bin/sh");
-            // the shell outlives its output: what it leaves in the pty at exit is another matter
+            // the shell outlives its output
             pty->set_args({"-c", "seq 1 15000; sleep 1"});
             return pty;
         });
@@ -401,6 +461,41 @@ TEST_F(TestSshServer, test_pty_output_larger_than_the_window)
 
     // the server reads the pty 4 KiB per 100 ms poll: in 3 s the output outgrows a window nobody reads
     std::this_thread::sleep_for(std::chrono::seconds(3));
+    const std::string output = read_until_closed(channel);
+
+    EXPECT_EQ(output.size(), expected.size());
+    EXPECT_TRUE(output == expected);
+}
+
+TEST_F(TestSshServer, test_pty_output_left_at_shell_exit_reaches_the_client)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the pty shell is /bin/sh";
+
+    SshServerHelper test_server("test-ssh-server-pty-exit");
+    test_server.handler.set_shell_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *pty = new SshSubsystemPty();
+            pty->set_shell("/bin/sh");
+            pty->set_args({"-c", "seq 1 15000"});
+            return pty;
+        });
+    ASSERT_TRUE(test_server.start());
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_pty().has_value());
+    ASSERT_TRUE(channel.request_shell().has_value());
+
+    std::string expected;
+    for (int i = 1; i <= 15000; ++i)
+        expected += std::to_string(i) + "\r\n";
+
+    // the shell exits with its last lines still in the pty
     const std::string output = read_until_closed(channel);
 
     EXPECT_EQ(output.size(), expected.size());

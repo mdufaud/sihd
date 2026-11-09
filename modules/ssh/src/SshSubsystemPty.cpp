@@ -13,7 +13,7 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
-SshSubsystemPty::SshSubsystemPty(): _channel(nullptr)
+SshSubsystemPty::SshSubsystemPty(): _channel(nullptr), _output_drained(false)
 {
     SIHD_UNEXPECTED_LOG(utils::init());
 }
@@ -213,7 +213,7 @@ bool SshSubsystemPty::is_running() const
     if (!_pty)
         return false;
 
-    return _pty->is_running() || !_unsent_out.empty();
+    return _pty->is_running() || !_unsent_out.empty() || !_output_drained;
 }
 
 bool SshSubsystemPty::forward_output()
@@ -231,6 +231,8 @@ bool SshSubsystemPty::forward_output()
     if (_read_buf.byte_capacity() < 4096 && !_read_buf.reserve(4096))
         return false;
 
+    // output outlives the shell: drained once a read after its exit finds nothing
+    const bool shell_running = _pty->is_running();
     ssize_t nread = _pty->read(_read_buf.buf(), _read_buf.byte_capacity());
     if (nread > 0)
     {
@@ -238,6 +240,7 @@ bool SshSubsystemPty::forward_output()
         write_unsent(*_channel, _unsent_out);
         return true;
     }
+    _output_drained = !shell_running;
     return false;
 }
 

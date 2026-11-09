@@ -207,9 +207,14 @@ Result<void> SshCommand::wait(Duration timeout_nano, time::UnixTime milliseconds
     if (_impl->channel.is_open() == false)
         return {};
     int exit_status = 0;
+    bool closed = false;
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(timeout_nano);
     while (_impl->stop == false && (exit_status = _impl->channel.exit_status()) == -1)
     {
+        // a channel the server closed brings no exit status anymore
+        closed = !_impl->channel.is_open();
+        if (closed)
+            break;
         if (timeout_nano > 0 && std::chrono::steady_clock::now() >= deadline)
             break;
         // a command ended by a signal has no exit status to wait for
@@ -218,8 +223,14 @@ Result<void> SshCommand::wait(Duration timeout_nano, time::UnixTime milliseconds
             break;
     }
     if (exit_status == -1 && !_impl->command_status.exit_error)
-        return std::unexpected(
-            Error(_impl->stop ? interrupted : timeout, "could not wait for command: no exit status"));
+    {
+        ErrorCode code = timeout;
+        if (closed)
+            code = ErrorCode::closed;
+        else if (_impl->stop)
+            code = interrupted;
+        return std::unexpected(Error(code, "could not wait for command: no exit status"));
+    }
     _impl->channel.clear_channel();
     // a valid exit status wins over a signal packet from a non compliant server
     if (exit_status == -1)

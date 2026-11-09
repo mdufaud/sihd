@@ -465,7 +465,7 @@ void BasicSshServerHandler::on_poll([[maybe_unused]] SshServer *server)
                 continue;
             }
 
-            poll_handler(channel, ch_state.handler.get());
+            poll_handler(channel, ch_state);
         }
 
         if (!channels_to_cleanup.empty())
@@ -498,17 +498,15 @@ BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(Ss
     return &channel_it->second;
 }
 
-void BasicSshServerHandler::poll_handler(SshChannel *channel, ISshSubsystemHandler *handler)
+void BasicSshServerHandler::poll_handler(SshChannel *channel, ChannelState & state)
 {
-    // Check if channel is EOF - if so, flush any buffered output then notify handler to stop
-    if (channel->is_eof())
+    state.handler->forward_output();
+    // the channel stays at end of file: the handler hears it once
+    if (channel->is_eof() && !state.eof_notified)
     {
-        handler->forward_output();
-        handler->on_eof();
-        return;
+        state.eof_notified = true;
+        state.handler->on_eof();
     }
-
-    handler->forward_output();
 }
 
 } // namespace sihd::ssh

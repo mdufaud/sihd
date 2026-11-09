@@ -139,4 +139,36 @@ TEST_F(TestSshCommand, test_sshcommand_wait_returns_on_an_exit_signal)
     EXPECT_EQ(cmd.exit_signal_str(), "KILL");
     EXPECT_LT(elapsed, std::chrono::seconds(1));
 }
+
+TEST_F(TestSshCommand, test_sshcommand_wait_returns_on_a_close_without_status)
+{
+    auto test_server = make_test_server("test-sshcommand-no-status");
+    ASSERT_NE(test_server, nullptr);
+    test_server->handler.set_exec_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           std::string_view command,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *function = new SshSubsystemFunction(command);
+            // a negative exit code closes the channel without any exit status
+            function->set_callback([](const std::string &) {
+                return SshSubsystemFunction::Result {.output = {}, .error_output = {}, .exit_code = -1};
+            });
+            return function;
+        });
+    SshSession session;
+    ASSERT_TRUE(connect_to_test_server(*test_server, session));
+    SshCommand cmd = session.make_command();
+    ASSERT_TRUE(cmd.execute_async("no-status").has_value());
+
+    const auto begin = std::chrono::steady_clock::now();
+    const auto waited = cmd.wait(Duration(time::seconds(3)));
+    const auto elapsed = std::chrono::steady_clock::now() - begin;
+
+    ASSERT_FALSE(waited.has_value());
+    EXPECT_EQ(waited.error().code, ErrorCode::closed);
+    EXPECT_EQ(waited.error().message, "could not wait for command: no exit status");
+    EXPECT_LT(elapsed, std::chrono::seconds(1));
+}
 } // namespace test
