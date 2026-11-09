@@ -268,6 +268,14 @@ sihd::util::Result<T> convert_from_string(std::string_view str, uint16_t base = 
             if (std::in_range<T>(*parsed))
                 return static_cast<T>(*parsed);
         }
+        else if (str.starts_with('-'))
+        {
+            // to_unsigned wraps a negative value like strtoul: only -0 fits an unsigned type
+            auto negative = to_signed(str, base);
+            SIHD_UNEXPECTED_RETURN(negative);
+            if (std::in_range<T>(*negative))
+                return static_cast<T>(*negative);
+        }
         else
         {
             auto parsed_2 = to_unsigned(str, base);

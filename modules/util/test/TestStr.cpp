@@ -822,6 +822,7 @@ TEST_F(TestStr, test_str_from_string)
     // trailing data is ignored
     EXPECT_EQ(str::convert_from_string<uint32_t>("1000,hello world"), 1000u);
     EXPECT_FALSE(str::convert_from_string<uint32_t>("-1").has_value());
+    EXPECT_FALSE(str::convert_from_string<uint64_t>("-1").has_value());
 
     EXPECT_EQ(str::convert_from_string<int64_t>("100"), 100);
     EXPECT_EQ(str::convert_from_string<int64_t>("-1"), -1);
@@ -900,15 +901,9 @@ TEST_F(TestStr, test_str_tonumber)
 
     EXPECT_TRUE(this->test_ulong("1234"));
     EXPECT_EQ(_uval, 1234u);
-    if constexpr (sizeof(unsigned long) == sizeof(unsigned long long))
-    {
-        EXPECT_TRUE(this->test_ulong("-1"));
-        EXPECT_EQ(_uval, ULONG_MAX);
-    }
-    else
-    {
-        EXPECT_FALSE(this->test_ulong("-1"));
-    }
+    EXPECT_FALSE(this->test_ulong("-1"));
+    EXPECT_TRUE(this->test_ulong("-0"));
+    EXPECT_EQ(_uval, 0u);
 
     EXPECT_FALSE(this->test_ulong("toto"));
     EXPECT_FALSE(this->test_ulong("toto1234"));
