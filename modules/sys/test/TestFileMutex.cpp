@@ -1,5 +1,7 @@
+#include <functional>
 #include <iostream>
 #include <shared_mutex>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -8,8 +10,15 @@
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/platform.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ansi.hpp>
+#include <sihd/util/build.hpp>
+#include <sihd/util/time.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <signal.h>
+#endif
 
 namespace test
 {
@@ -26,6 +35,44 @@ class TestFileMutex: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+#if !defined(__SIHD_WINDOWS__)
+        // what a blocked waiter throws when a signal without SA_RESTART interrupts it
+        static std::string interrupted_lock_error(const std::function<void(FileMutex &)> & lock)
+        {
+            TmpDir tmpdir;
+            const std::string path = fs::combine(tmpdir.path(), "filemutex");
+            FileMutex holder(path);
+            FileMutex waiter(path);
+            struct sigaction action {};
+            action.sa_handler = +[](int) {
+                                 };
+            struct sigaction previous {};
+            if (sigaction(SIGUSR1, &action, &previous) != 0)
+                return "sigaction failed";
+            Defer restore([&] { sigaction(SIGUSR1, &previous, nullptr); });
+            holder.lock();
+
+            std::string error;
+            std::thread locker([&] {
+                try
+                {
+                    lock(waiter);
+                }
+                catch (const std::exception & e)
+                {
+                    error = e.what();
+                }
+            });
+            // nothing signals that flock blocks: give it time, a late signal only hides the bug
+            time::msleep(100);
+            pthread_kill(locker.native_handle(), SIGUSR1);
+            time::msleep(50);
+            holder.unlock();
+            locker.join();
+            return error;
+        }
+#endif
 };
 
 TEST_F(TestFileMutex, test_filemutex_guard)
@@ -89,6 +136,26 @@ TEST_F(TestFileMutex, test_filemutex_unique)
     EXPECT_FALSE(other_lock.try_lock_until(std::chrono::system_clock::now() + std::chrono::milliseconds(5)));
 #endif
 }
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestFileMutex, test_filemutex_lock_survives_signal)
+{
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten has no signal to interrupt flock";
+
+    const std::string lock_error = interrupted_lock_error([](FileMutex & mutex) {
+        mutex.lock();
+        mutex.unlock();
+    });
+    const std::string lock_shared_error = interrupted_lock_error([](FileMutex & mutex) {
+        mutex.lock_shared();
+        mutex.unlock_shared();
+    });
+
+    EXPECT_EQ(lock_error, "");
+    EXPECT_EQ(lock_shared_error, "");
+}
+#endif
 
 TEST_F(TestFileMutex, test_filemutex_shared)
 {
