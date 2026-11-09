@@ -40,7 +40,7 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revoca
 
 ### Ciphers and digests
 
-- `cipher::encrypt(algorithm, key, iv, data)` and `cipher::decrypt(...)`: symmetric encryption by algorithm name (for example AES-256-CBC), with raw pointer or `ArrByteView` arguments.
+- `cipher::encrypt(algorithm, key, iv, data)` and `cipher::decrypt(...)`: symmetric encryption by algorithm name (for example AES-256-CBC), with raw pointer or `ArrByteView` arguments. AEAD ciphers (GCM, CCM, OCB, ChaCha20-Poly1305) are refused with `not_supported`: their authentication tag is not handled.
 - `digest::compute(algorithm, data)`: hash by algorithm name (for example `SHA-256`), raw pointer or `ArrByteView` arguments.
 
 ### Signatures

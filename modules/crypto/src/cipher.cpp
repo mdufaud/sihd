@@ -47,6 +47,10 @@ Result<std::vector<uint8_t>> do_cipher(bool encrypt,
     std::unique_ptr<const EVP_CIPHER, CiphFree> ciph(EVP_CIPHER_fetch(nullptr, algorithm.c_str(), nullptr));
     if (ciph == nullptr)
         return unknown_algorithm(algorithm);
+    // without its tag an AEAD cipher encrypts unauthenticated and decrypts unverified
+    if (EVP_CIPHER_get_flags(ciph.get()) & EVP_CIPH_FLAG_AEAD_CIPHER)
+        return std::unexpected(
+            Error(not_supported, "cipher '{}' needs an authentication tag, which is not supported", algorithm));
 
     const int key_size = EVP_CIPHER_get_key_length(ciph.get());
     const int iv_size = EVP_CIPHER_get_iv_length(ciph.get());

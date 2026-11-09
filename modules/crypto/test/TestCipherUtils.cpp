@@ -158,6 +158,34 @@ TEST_F(TestCipherUtils, unknown_algorithm)
     EXPECT_EQ(encrypted.error().message, "unknown cipher 'UNKNOWN-CIPHER'");
 }
 
+TEST_F(TestCipherUtils, aead_cipher_refused)
+{
+    const std::array<uint8_t, 32> key {};
+    const std::array<uint8_t, 12> iv {};
+    const std::array<uint8_t, 16> data {};
+
+    const auto encrypted = sihd::crypto::cipher::encrypt("AES-256-GCM",
+                                                         key.data(),
+                                                         key.size(),
+                                                         iv.data(),
+                                                         iv.size(),
+                                                         data.data(),
+                                                         data.size());
+    const auto decrypted = sihd::crypto::cipher::decrypt("AES-256-GCM",
+                                                         key.data(),
+                                                         key.size(),
+                                                         iv.data(),
+                                                         iv.size(),
+                                                         data.data(),
+                                                         data.size());
+
+    ASSERT_FALSE(encrypted.has_value());
+    EXPECT_EQ(encrypted.error().code, not_supported);
+    EXPECT_EQ(encrypted.error().message, "cipher 'AES-256-GCM' needs an authentication tag, which is not supported");
+    ASSERT_FALSE(decrypted.has_value());
+    EXPECT_EQ(decrypted.error().code, not_supported);
+}
+
 TEST_F(TestCipherUtils, key_and_iv_lengths_are_checked)
 {
     const std::array<uint8_t, 32> buf {};
