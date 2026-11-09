@@ -204,7 +204,8 @@ std::string unix_path_from_addr(const sockaddr_un & addr, socklen_t addr_len)
 {
     const size_t offset = offsetof(sockaddr_un, sun_path);
     // a path may fill sun_path with no terminator, and a truncated address reports its full length
-    const size_t len = std::min((size_t)addr_len > offset ? addr_len - offset : 0, sizeof(addr.sun_path));
+    const size_t payload_len = static_cast<size_t>(addr_len) > offset ? static_cast<size_t>(addr_len) - offset : 0;
+    const size_t len = std::min(payload_len, sizeof(addr.sun_path));
     // an abstract name starts with the null byte a C string would stop at
     if (len > 0 && addr.sun_path[0] == '\0')
         return std::string(addr.sun_path, len);
@@ -634,7 +635,6 @@ Result<void> Socket::open(int domain, int type, int protocol)
     if (this->is_open())
         return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
 
-    // a spawned child must not keep the socket alive
 #if defined(__SIHD_WINDOWS__)
     _socket = static_cast<int>(
         ::WSASocketW(domain, type, protocol, nullptr, 0, WSA_FLAG_OVERLAPPED | WSA_FLAG_NO_HANDLE_INHERIT));
