@@ -30,6 +30,17 @@ class TestRecords: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+        static void play_until_end(DevPlayer & player)
+        {
+            Channel *end = player.get_channel("end").value_or(nullptr);
+            Channel *play = player.get_channel("play").value_or(nullptr);
+            ASSERT_NE(end, nullptr);
+            ASSERT_NE(play, nullptr);
+            ChannelWaiter waiter(end);
+            play->write(0, true);
+            EXPECT_TRUE(waiter.wait_for_nb(Duration(time::milli(150)), 1));
+        }
 };
 
 TEST_F(TestRecords, test_records_dev_player)
@@ -111,21 +122,11 @@ TEST_F(TestRecords, test_records_dev_player_keeps_alias_across_reset)
     EXPECT_TRUE(dev_replayer.set_conf(
         {{"provider", "..mem_recorder"}, {"provider_wait_time", 1}, {"alias", {"int=..int_channel"}}}));
 
-    const auto play_until_end = [&dev_replayer] {
-        Channel *end = dev_replayer.get_channel("end").value_or(nullptr);
-        Channel *play = dev_replayer.get_channel("play").value_or(nullptr);
-        ASSERT_NE(end, nullptr);
-        ASSERT_NE(play, nullptr);
-        ChannelWaiter waiter(end);
-        play->write(0, true);
-        EXPECT_TRUE(waiter.wait_for_nb(Duration(time::milli(150)), 1));
-    };
-
     ArrInt first = {10, 20};
     mem_recorder.add_record("int", Timestamp(time::milli(5)), &first);
     ASSERT_TRUE(core.init());
     ASSERT_TRUE(core.start());
-    play_until_end();
+    ASSERT_NO_FATAL_FAILURE(play_until_end(dev_replayer));
     ASSERT_TRUE(dev_replayer.stop());
     ASSERT_TRUE(dev_replayer.reset());
     ASSERT_TRUE(mem_recorder.stop());
@@ -135,7 +136,7 @@ TEST_F(TestRecords, test_records_dev_player_keeps_alias_across_reset)
     ASSERT_TRUE(mem_recorder.start());
     ASSERT_TRUE(dev_replayer.init());
     ASSERT_TRUE(dev_replayer.start());
-    play_until_end();
+    ASSERT_NO_FATAL_FAILURE(play_until_end(dev_replayer));
 
     EXPECT_TRUE(core.stop());
     EXPECT_EQ(int_channel->read<int>(0), 30);

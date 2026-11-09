@@ -187,13 +187,13 @@ TEST_F(TestDevMessage, test_devmessage_reset_then_other_message)
     ASSERT_TRUE(second->finish());
 
     dev->set_trigger_mode(false);
-    (void)dev->set_conf_str("message", "..first");
+    ASSERT_TRUE(dev->set_conf_str("message", "..first"));
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
     ASSERT_TRUE(dev->stop());
     ASSERT_TRUE(dev->reset());
 
-    (void)dev->set_conf_str("message", "..second");
+    ASSERT_TRUE(dev->set_conf_str("message", "..second"));
     ASSERT_TRUE(dev->init());
     ASSERT_TRUE(dev->start());
     auto [ch_buffer_in, ch_b_out, ch_c_out] = dev->get_all_child<Channel>("buffer_in", "b_out", "c_out");

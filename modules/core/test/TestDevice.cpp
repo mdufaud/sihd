@@ -161,7 +161,7 @@ class CountingDevice: public Device
 
         size_t count() const { return _count; }
 
-        bool fail_start = false;
+        void set_fail_start(bool fail) { _fail_start = fail; }
 
     protected:
         void handle(Channel *) override { ++_count; }
@@ -174,7 +174,7 @@ class CountingDevice: public Device
 
         bool on_start() override
         {
-            _running = this->observe_channel("in").has_value() && !fail_start;
+            _running = this->observe_channel("in").has_value() && !_fail_start;
             return _running;
         }
 
@@ -187,6 +187,7 @@ class CountingDevice: public Device
     private:
         std::atomic<size_t> _count = 0;
         bool _running = false;
+        bool _fail_start = false;
 };
 
 class PortDevice: public Device
@@ -353,7 +354,7 @@ TEST_F(TestDevice, test_device_failed_start_drops_its_observations)
 {
     Core core;
     auto *device = core.add_child<CountingDevice>("counting");
-    device->fail_start = true;
+    device->set_fail_start(true);
     ASSERT_TRUE(core.init());
     Channel *in = device->find_channel("in").value_or(nullptr);
     ASSERT_NE(in, nullptr);
