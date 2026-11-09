@@ -438,6 +438,57 @@ TEST_F(TestZipFile, test_zip_dump_entry_to_fs)
     }
 }
 
+TEST_F(TestZipFile, test_zip_dump_after_a_partial_read)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "test.zip");
+    const std::string out_path = fs::combine(tmp_dir.path(), "out.txt");
+    const std::string data = str::generate_random(1000);
+
+    {
+        ZipFile zip(zip_path);
+        ASSERT_TRUE(zip.is_open());
+        EXPECT_TRUE(zip.add_file("big_file.txt", data).has_value());
+        ASSERT_TRUE(zip.close().has_value());
+    }
+
+    ZipFile zip(zip_path, true);
+    ASSERT_TRUE(zip.is_open());
+    ASSERT_TRUE(zip.load_entry("big_file.txt").has_value());
+    (void)zip.set_buffer_size(128);
+    ASSERT_TRUE(zip.read_entry().has_value());
+
+    ASSERT_TRUE(zip.dump_entry_to_fs(out_path).has_value());
+
+    const auto dumped = fs::read_all(out_path);
+    ASSERT_TRUE(dumped.has_value());
+    EXPECT_EQ(dumped.value(), data);
+}
+
+TEST_F(TestZipFile, test_zip_next_entry_skips_a_removed_entry)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "test.zip");
+
+    ZipFile zip(zip_path);
+    ASSERT_TRUE(zip.is_open());
+    EXPECT_TRUE(zip.add_file("a", "a").has_value());
+    EXPECT_TRUE(zip.add_file("b", "b").has_value());
+    EXPECT_TRUE(zip.add_file("c", "c").has_value());
+    ASSERT_TRUE(zip.close().has_value());
+
+    ASSERT_TRUE(zip.open(zip_path).has_value());
+    ASSERT_TRUE(zip.load_entry("b").has_value());
+    ASSERT_TRUE(zip.remove_entry().has_value());
+    ASSERT_TRUE(zip.load_entry("a").has_value());
+
+    const auto next = zip.read_next_entry();
+
+    ASSERT_TRUE(next.has_value()) << next.error().message;
+    EXPECT_TRUE(*next);
+    EXPECT_EQ(zip.entry_name(), "c");
+}
+
 TEST_F(TestZipFile, test_zip_dump_wrong_password_keeps_destination)
 {
     const TmpDir tmp_dir;

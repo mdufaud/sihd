@@ -400,10 +400,17 @@ Result<bool> ZipFile::read_next_entry()
 {
     if (_zip_handle->archive == nullptr)
         return std::unexpected(not_open_error());
+    zip_t *archive = _zip_handle->archive.get();
     const ssize_t total_entries = this->count_original_entries();
-    if (_current_zip_entry.index + 1 >= total_entries)
+    ssize_t next = _current_zip_entry.index + 1;
+    // a removed entry keeps its index until the archive is written: the iteration steps over it
+    zip_stat_t zip_entry;
+    while (next < total_entries && zip_stat_index(archive, next, 0, &zip_entry) != 0
+           && zip_error_code_zip(zip_get_error(archive)) == ZIP_ER_DELETED)
+        ++next;
+    if (next >= total_entries)
         return false;
-    auto entry = this->load_entry(_current_zip_entry.index + 1);
+    auto entry = this->load_entry(next);
     SIHD_UNEXPECTED_RETURN(entry);
     return true;
 }
@@ -680,6 +687,8 @@ Result<void> ZipFile::dump_entry_to_fs(const std::string & path, const std::stri
         return {};
     }
 
+    // a previous partial read_entry left the entry midway: the dump starts it over
+    _zip_handle->file.reset();
     // the entry opens on its first read: a refused entry leaves the destination untouched
     auto read = this->read_entry(password);
     SIHD_UNEXPECTED_RETURN(read);
