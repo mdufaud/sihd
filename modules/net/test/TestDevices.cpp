@@ -209,6 +209,28 @@ TEST_F(TestDevices, test_tcp_client_device_starts_after_failed_start)
     ASSERT_TRUE(client->stop());
 }
 
+TEST_F(TestDevices, test_tcp_server_device_starts_after_failed_start)
+{
+    const int port = free_loopback_port();
+    Socket blocker;
+    make_listener(blocker, IpAddr::localhost(port));
+    Core core;
+    auto *srv = core.add_child<DevTcpServer>("server");
+    srv->set_host("127.0.0.1");
+    srv->set_port(port);
+    srv->set_poll_timeout(1);
+    ASSERT_TRUE(core.init());
+    ASSERT_FALSE(srv->start());
+
+    (void)blocker.close();
+
+    ASSERT_TRUE(srv->start());
+    Socket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, 0).has_value());
+    EXPECT_TRUE(client.connect(IpAddr::localhost(port)).has_value());
+    ASSERT_TRUE(srv->stop());
+}
+
 TEST_F(TestDevices, test_tcp_server_device)
 {
     Core core;

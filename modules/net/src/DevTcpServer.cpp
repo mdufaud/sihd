@@ -145,7 +145,11 @@ bool DevTcpServer::on_start()
     auto bound = !_unix_path.empty() ? _tcp_server.open_unix_and_bind(_unix_path) //
                                      : _tcp_server.open_and_bind(_host, _port);
     if (SIHD_UNEXPECTED_LOG(bound))
+    {
+        // the socket opened before the bind failed: a next start must open it again
+        (void)_tcp_server.close();
         return false;
+    }
 
     this->observe_channel(_channel_tx);
     this->observe_channel(_channel_tx_to);
