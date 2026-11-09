@@ -7,6 +7,8 @@
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
+#include <sihd/ssh/SshSubsystemFunction.hpp>
+#include <sihd/ssh/SshSubsystemPty.hpp>
 #include <sihd/sys/File.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
@@ -37,6 +39,16 @@ class TestSshServer: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+        static std::string read_until_closed(SshChannel & channel)
+        {
+            std::string output;
+            ArrChar chunk;
+            chunk.reserve(64 * 1024);
+            while (channel.read_timeout(chunk, 5000) > 0)
+                output.append(chunk.data(), chunk.size());
+            return output;
+        }
 };
 
 TEST_F(TestSshServer, test_password_auth_failure)
@@ -291,14 +303,108 @@ TEST_F(TestSshServer, test_exec_forwards_stdin)
     // a slow client: the output outgrows its window before it reads
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-    std::string output;
-    ArrChar chunk;
-    chunk.reserve(64 * 1024);
-    while (channel.read_timeout(chunk, 5000) > 0)
-        output.append(chunk.data(), chunk.size());
+    const std::string output = read_until_closed(channel);
 
     EXPECT_EQ(output.size(), input.size());
     EXPECT_TRUE(output == input);
+}
+
+TEST_F(TestSshServer, test_function_output_larger_than_the_window)
+{
+    auto test_server = make_test_server("test-ssh-server-function-window");
+    ASSERT_NE(test_server, nullptr);
+    // far more than the client window: the server session never blocks on a full window
+    const std::string expected(8 * 1024 * 1024, 'x');
+    test_server->handler.set_exec_handler_callback(
+        [&expected]([[maybe_unused]] SshSession *session,
+                    [[maybe_unused]] SshChannel *channel,
+                    std::string_view command,
+                    [[maybe_unused]] bool has_pty,
+                    [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *function = new SshSubsystemFunction(command);
+            function->set_callback([&expected](const std::string &) {
+                return SshSubsystemFunction::Result {.output = expected, .error_output = {}, .exit_code = 0};
+            });
+            return function;
+        });
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+
+    ASSERT_TRUE(channel.request_exec("big").has_value());
+    const std::string output = read_until_closed(channel);
+
+    EXPECT_EQ(output.size(), expected.size());
+    EXPECT_TRUE(output == expected);
+}
+
+TEST_F(TestSshServer, test_buffered_exec_output_larger_than_the_window)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the command reads /dev/zero";
+
+    auto test_server = make_test_server("test-ssh-server-buffered-exec-window");
+    ASSERT_NE(test_server, nullptr);
+    test_server->handler.set_exec_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           std::string_view command,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *exec = new SshSubsystemExec(command);
+            exec->set_fork_mode(false);
+            return exec;
+        });
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+
+    // sent at once when the child ends, to a client that does not read yet: far more than its window
+    ASSERT_TRUE(channel.request_exec("head -c 262144 /dev/zero").has_value());
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    const std::string output = read_until_closed(channel);
+
+    EXPECT_EQ(output.size(), 256u * 1024);
+    EXPECT_TRUE(output == std::string(256 * 1024, 0));
+}
+
+TEST_F(TestSshServer, test_pty_output_larger_than_the_window)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the pty shell is /bin/sh";
+
+    SshServerHelper test_server("test-ssh-server-pty-window");
+    test_server.handler.set_shell_handler_callback(
+        []([[maybe_unused]] SshSession *session,
+           [[maybe_unused]] SshChannel *channel,
+           [[maybe_unused]] bool has_pty,
+           [[maybe_unused]] const WinSize & winsize) -> ISshSubsystemHandler * {
+            auto *pty = new SshSubsystemPty();
+            pty->set_shell("/bin/sh");
+            // the shell outlives its output: what it leaves in the pty at exit is another matter
+            pty->set_args({"-c", "seq 1 15000; sleep 1"});
+            return pty;
+        });
+    ASSERT_TRUE(test_server.start());
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_pty().has_value());
+    ASSERT_TRUE(channel.request_shell().has_value());
+
+    std::string expected;
+    for (int i = 1; i <= 15000; ++i)
+        expected += std::to_string(i) + "\r\n";
+
+    // the server reads the pty 4 KiB per 100 ms poll: in 3 s the output outgrows a window nobody reads
+    std::this_thread::sleep_for(std::chrono::seconds(3));
+    const std::string output = read_until_closed(channel);
+
+    EXPECT_EQ(output.size(), expected.size());
+    EXPECT_TRUE(output == expected);
 }
 
 } // namespace test

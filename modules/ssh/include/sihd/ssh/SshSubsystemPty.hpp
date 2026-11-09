@@ -57,6 +57,7 @@ class SshSubsystemPty: public ISshSubsystemHandler
 
         // Buffered client input not yet accepted by the PTY (partial write)
         std::string _pending_in;
+        std::string _unsent_out;
         // Reused read buffer for forward_output (avoids per-tick alloc)
         sihd::util::ArrChar _read_buf;
 };

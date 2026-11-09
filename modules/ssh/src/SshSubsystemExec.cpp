@@ -7,28 +7,14 @@
 #include <sihd/util/Splitter.hpp>
 #include <sihd/util/build.hpp>
 
+#include "channel_output.hpp"
+
 using namespace sihd::util;
 
 namespace sihd::ssh
 {
 
 SIHD_LOGGER;
-
-namespace
-{
-
-void consume_written(std::string & unsent, int wrote)
-{
-    if (wrote < 0)
-    {
-        SIHD_LOG(error, "SshSubsystemExec: could not write to channel");
-        unsent.clear();
-    }
-    else
-        unsent.erase(0, wrote);
-}
-
-} // namespace
 
 SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _channel(nullptr),
@@ -191,7 +177,8 @@ bool SshSubsystemExec::is_running() const
     if (!_started)
         return false;
 
-    return _process.is_process_running() || _process.can_read_pipes() || !_unsent_out.empty() || !_unsent_err.empty();
+    return _process.is_process_running() || _process.can_read_pipes() || !_unsent_out.empty() || !_unsent_err.empty()
+           || !_sync_out.empty() || !_sync_err.empty();
 }
 
 bool SshSubsystemExec::forward_output()
@@ -208,15 +195,25 @@ bool SshSubsystemExec::forward_output()
     // with its pipes at end of file, nothing polls the child anymore: reap it here
     if (!_process.can_read_pipes())
         (void)_process.wait_no_hang();
+    // a buffered exec sends its output once the child is done
+    if (!_fork_mode && !_process.can_read_pipes() && !_process.is_process_running())
+    {
+        _unsent_out += _sync_out;
+        _unsent_err += _sync_err;
+        _sync_out.clear();
+        _sync_err.clear();
+        this->flush_unsent();
+    }
     return forwarded;
 }
 
 bool SshSubsystemExec::flush_unsent()
 {
-    if (_channel != nullptr && !_unsent_out.empty())
-        consume_written(_unsent_out, _channel->write(ArrCharView(_unsent_out.data(), _unsent_out.size())));
-    if (_channel != nullptr && !_unsent_err.empty())
-        consume_written(_unsent_err, _channel->write_stderr(ArrCharView(_unsent_err.data(), _unsent_err.size())));
+    if (_channel != nullptr)
+    {
+        write_unsent(*_channel, _unsent_out);
+        write_unsent_stderr(*_channel, _unsent_err);
+    }
     return _unsent_out.empty() && _unsent_err.empty();
 }
 

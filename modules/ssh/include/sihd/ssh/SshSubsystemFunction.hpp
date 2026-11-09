@@ -49,12 +49,15 @@ class SshSubsystemFunction: public ISshSubsystemHandler
         int stderr_fd() const override;
         SshChannel *channel() const override;
         bool is_running() const override;
+        bool forward_output() override;
 
     private:
         SshChannel *_channel;
         std::string _command;
         int _exit_code;
         Callback _callback;
+        std::string _unsent_out;
+        std::string _unsent_err;
 };
 
 } // namespace sihd::ssh

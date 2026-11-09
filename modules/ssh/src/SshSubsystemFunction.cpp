@@ -3,6 +3,8 @@
 #include <sihd/ssh/utils.hpp>
 #include <sihd/util/Logger.hpp>
 
+#include "channel_output.hpp"
+
 using namespace sihd::util;
 
 namespace sihd::ssh
@@ -45,19 +47,10 @@ bool SshSubsystemFunction::on_start(SshChannel *channel,
     Result result = _callback(_command);
     _exit_code = result.exit_code;
 
-    if (_channel)
-    {
-        if (!result.output.empty())
-        {
-            _channel->write(ArrCharView(result.output.data(), result.output.size()));
-        }
-        if (!result.error_output.empty())
-        {
-            _channel->write_stderr(ArrCharView(result.error_output.data(), result.error_output.size()));
-        }
-        // exit_status + eof + close are handled by BasicSshServerHandler::on_poll()
-        // via on_close() return value, since manages_channel_io() is false.
-    }
+    // BasicSshServerHandler::on_poll sends exit status, eof and close once all of it is written
+    _unsent_out = std::move(result.output);
+    _unsent_err = std::move(result.error_output);
+    this->forward_output();
 
     return true;
 }
@@ -103,7 +96,17 @@ SshChannel *SshSubsystemFunction::channel() const
 
 bool SshSubsystemFunction::is_running() const
 {
-    return false;
+    return !_unsent_out.empty() || !_unsent_err.empty();
+}
+
+bool SshSubsystemFunction::forward_output()
+{
+    if (_channel == nullptr)
+        return false;
+    const size_t unsent = _unsent_out.size() + _unsent_err.size();
+    write_unsent(*_channel, _unsent_out);
+    write_unsent_stderr(*_channel, _unsent_err);
+    return _unsent_out.size() + _unsent_err.size() < unsent;
 }
 
 } // namespace sihd::ssh

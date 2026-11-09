@@ -4,6 +4,8 @@
 #include <sihd/util/Array.hpp>
 #include <sihd/util/Logger.hpp>
 
+#include "channel_output.hpp"
+
 using namespace sihd::util;
 
 namespace sihd::ssh
@@ -211,7 +213,7 @@ bool SshSubsystemPty::is_running() const
     if (!_pty)
         return false;
 
-    return _pty->is_running();
+    return _pty->is_running() || !_unsent_out.empty();
 }
 
 bool SshSubsystemPty::forward_output()
@@ -221,13 +223,19 @@ bool SshSubsystemPty::forward_output()
 
     this->drain_pending_input();
 
+    // a full client window stops reading: the shell blocks on its own output
+    write_unsent(*_channel, _unsent_out);
+    if (!_unsent_out.empty())
+        return false;
+
     if (_read_buf.byte_capacity() < 4096 && !_read_buf.reserve(4096))
         return false;
 
     ssize_t nread = _pty->read(_read_buf.buf(), _read_buf.byte_capacity());
     if (nread > 0)
     {
-        _channel->write(ArrCharView(reinterpret_cast<const char *>(_read_buf.buf()), static_cast<size_t>(nread)));
+        _unsent_out.assign(reinterpret_cast<const char *>(_read_buf.buf()), static_cast<size_t>(nread));
+        write_unsent(*_channel, _unsent_out);
         return true;
     }
     return false;
