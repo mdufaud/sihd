@@ -39,6 +39,12 @@ class TestFile: public ::testing::Test
             return path;
         }
 
+        template <typename T>
+        static ErrorCode refusal(const Result<T> & result)
+        {
+            return result ? ErrorCode::none : result.error().code;
+        }
+
         static std::string read_kept(File & file)
         {
             std::string read;
@@ -324,6 +330,35 @@ TEST_F(TestFile, test_file_failed_open_tmp_keeps_previous_file)
 
     EXPECT_EQ(file.path(), path);
     EXPECT_EQ(read_kept(file), "kept");
+}
+
+TEST_F(TestFile, test_file_closed_refuses_access)
+{
+    File file;
+    std::string read;
+    char *line = nullptr;
+    size_t line_size = 0;
+
+    const ErrorCode read_refused = refusal(file.read(read, 4));
+    const ErrorCode write_refused = refusal(file.write("a", 1));
+    const ErrorCode char_refused = refusal(file.write_char('a'));
+    const ErrorCode tell_refused = refusal(file.tell());
+    const ErrorCode seek_refused = refusal(file.seek_begin(0));
+    const ErrorCode line_refused = refusal(file.read_line(&line, &line_size));
+    file.clear_errors();
+    file.lock();
+    const bool locked = file.trylock();
+    file.unlock();
+
+    EXPECT_EQ(read_refused, ErrorCode::not_initialized);
+    EXPECT_EQ(write_refused, ErrorCode::not_initialized);
+    EXPECT_EQ(char_refused, ErrorCode::not_initialized);
+    EXPECT_EQ(tell_refused, ErrorCode::not_initialized);
+    EXPECT_EQ(seek_refused, ErrorCode::not_initialized);
+    EXPECT_EQ(line_refused, ErrorCode::not_initialized);
+    EXPECT_TRUE(file.eof());
+    EXPECT_EQ(file.error(), 0);
+    EXPECT_FALSE(locked);
 }
 
 TEST_F(TestFile, test_file_reopen_truncates_after_previous_writes)

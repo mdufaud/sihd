@@ -100,6 +100,16 @@ ssize_t win_getdelim(char **line, size_t *size, int delim, FILE *stream)
 
 #endif
 
+namespace
+{
+
+std::unexpected<Error> no_file_open()
+{
+    return std::unexpected(Error(not_initialized, "no file open"));
+}
+
+} // namespace
+
 File::File()
 {
     _file_ptr = nullptr;
@@ -375,12 +385,12 @@ bool File::is_open() const
 
 bool File::eof() const
 {
-    return feof(_file_ptr) != 0;
+    return _file_ptr == nullptr || feof(_file_ptr) != 0;
 }
 
 bool File::eof_unlocked() const
 {
-    return feof_unlocked(_file_ptr) != 0;
+    return _file_ptr == nullptr || feof_unlocked(_file_ptr) != 0;
 }
 
 int File::fd() const
@@ -395,23 +405,24 @@ int File::fd_unlocked() const
 
 int File::error() const
 {
-    return ferror(_file_ptr);
+    return _file_ptr == nullptr ? 0 : ferror(_file_ptr);
 }
 
 int File::error_unlocked() const
 {
-    return ferror_unlocked(_file_ptr);
+    return _file_ptr == nullptr ? 0 : ferror_unlocked(_file_ptr);
 }
 
 void File::clear_errors()
 {
-    clearerr(_file_ptr);
+    if (_file_ptr != nullptr)
+        clearerr(_file_ptr);
 }
 
 Result<void> File::flush()
 {
     if (_file_ptr == nullptr)
-        return std::unexpected(Error(not_initialized, "no file open"));
+        return no_file_open();
     if (fflush(_file_ptr) != 0)
         return std::unexpected(Error::from_errno("could not flush file"));
     return {};
@@ -420,7 +431,7 @@ Result<void> File::flush()
 Result<void> File::flush_unlocked()
 {
     if (_file_ptr == nullptr)
-        return std::unexpected(Error(not_initialized, "no file open"));
+        return no_file_open();
     if (fflush_unlocked(_file_ptr) != 0)
         return std::unexpected(Error::from_errno("could not flush file"));
     return {};
@@ -456,6 +467,8 @@ Result<int64_t> File::file_size()
 
 void File::lock()
 {
+    if (_file_ptr == nullptr)
+        return;
 #if !defined(__SIHD_WINDOWS__)
     flockfile(_file_ptr);
 #else
@@ -465,6 +478,8 @@ void File::lock()
 
 bool File::trylock()
 {
+    if (_file_ptr == nullptr)
+        return false;
 #if !defined(__SIHD_WINDOWS__)
     return ftrylockfile(_file_ptr) == 0;
 #else
@@ -475,6 +490,8 @@ bool File::trylock()
 
 void File::unlock()
 {
+    if (_file_ptr == nullptr)
+        return;
 #if !defined(__SIHD_WINDOWS__)
     funlockfile(_file_ptr);
 #else
@@ -554,6 +571,8 @@ Result<void> File::open_mem(const std::string & mode, std::string_view put_in_bu
 
 Result<int64_t> File::tell()
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     const int64_t ret = file_tell(_file_ptr);
     if (ret < 0)
         return std::unexpected(Error::from_errno("could not tell position of '{}'", _path));
@@ -577,6 +596,8 @@ Result<void> File::seek_end(int64_t offset)
 
 Result<void> File::_seek(int64_t offset, int origin)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     int ret = file_seek(_file_ptr, offset, origin);
     if (ret < 0)
         return std::unexpected(Error::from_errno("could not seek in '{}'", _path));
@@ -585,6 +606,8 @@ Result<void> File::_seek(int64_t offset, int origin)
 
 Result<size_t> File::read(void *buf, size_t size)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     if (this->eof())
         return 0;
     size_t ret = fread(buf, sizeof(char), size, _file_ptr);
@@ -621,6 +644,8 @@ Result<size_t> File::read(IArray & array)
 
 Result<size_t> File::write(const void *data, size_t size)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     size_t ret = fwrite(data, sizeof(char), size, _file_ptr);
     if (this->error())
         return std::unexpected(Error(io_error, "could not write into '{}'", _path));
@@ -634,6 +659,8 @@ Result<size_t> File::write(ArrCharView view)
 
 Result<void> File::write_char(int c)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     if (fputc(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
@@ -641,6 +668,8 @@ Result<void> File::write_char(int c)
 
 Result<size_t> File::write_unlocked(const void *data, size_t size)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     size_t ret = fwrite_unlocked(data, sizeof(char), size, _file_ptr);
     if (this->error())
         return std::unexpected(Error(io_error, "could not write into '{}'", _path));
@@ -654,6 +683,8 @@ Result<size_t> File::write_unlocked(ArrCharView view)
 
 Result<void> File::write_char_unlocked(int c)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
     if (fputc_unlocked(c, _file_ptr) != c)
         return std::unexpected(Error::from_errno("could not write char into '{}'", _path));
     return {};
@@ -666,6 +697,8 @@ Result<size_t> File::read_line(char **line, size_t *size)
 
 Result<size_t> File::read_line_delim(char **line, size_t *size, int delim)
 {
+    if (_file_ptr == nullptr)
+        return no_file_open();
 #if defined(__SIHD_WINDOWS__)
     ssize_t ret = win_getdelim(line, size, delim, _file_ptr);
 #else
