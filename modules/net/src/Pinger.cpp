@@ -231,7 +231,8 @@ void Pinger::handle(IcmpSender *sender)
 
     // the raw socket sees every icmp packet of the host: only the target's echo reply to our request counts
     const bool echo_reply = response.type == icmp_echo_reply || response.type == icmp6_echo_reply;
-    if (!echo_reply || response.client != _client)
+    // icmp has no port: a client built with one still matches its replies
+    if (!echo_reply || response.client.bytes() != _client.bytes())
         return;
 
     if (static_cast<uint16_t>(_current_seq) != response.seq)

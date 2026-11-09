@@ -118,6 +118,25 @@ TEST_F(TestPinger, test_pinger_ignores_forged_reply)
     EXPECT_LT(result.rtt.max, time::sec(1));
 }
 
+TEST_F(TestPinger, test_pinger_ignores_the_client_port)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+
+    Pinger pinger("pinger");
+    if (pinger.open(false).has_value() == false)
+        GTEST_SKIP() << raw_socket_skip_reason();
+    pinger.set_interval(100);
+    pinger.set_ping_count(1);
+    pinger.set_client(IpAddr("127.0.0.1", 80));
+
+    ASSERT_TRUE(pinger.start());
+    ASSERT_TRUE(pinger.stop());
+
+    EXPECT_EQ(pinger.result().transmitted, 1);
+    EXPECT_EQ(pinger.result().received, 1);
+}
+
 TEST_F(TestPinger, test_pinger_reply_timeout_is_a_deadline)
 {
     if constexpr (build::is_windows)
