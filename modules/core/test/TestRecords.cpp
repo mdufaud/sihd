@@ -327,6 +327,21 @@ TEST_F(TestRecords, test_records_player_provider_not_found)
     EXPECT_FALSE(core.start());
 }
 
+TEST_F(TestRecords, test_records_player_stops_with_empty_provider)
+{
+    Core core;
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+    DevPlayer dev_player("dev_player", &core);
+    dev_player.set_parent_ownership(false);
+    EXPECT_TRUE(dev_player.set_conf({{"provider", "..mem_recorder"}, {"provider_wait_time", 1}}));
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+
+    // the collector keeps waiting for records: the stop must end it
+    EXPECT_TRUE(core.stop());
+}
+
 TEST_F(TestRecords, test_records_player_pause_resume)
 {
     Core core;
