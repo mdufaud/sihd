@@ -77,6 +77,23 @@ TEST_F(TestJson, test_json_integers)
     EXPECT_EQ(j_uint64.get<uint64_t>(), 18000000000000000000ULL);
 }
 
+TEST_F(TestJson, test_json_integer_out_of_range_throws)
+{
+    EXPECT_EQ(Json(127).get<int8_t>(), 127);
+    EXPECT_THROW(Json(300).get<int8_t>(), std::runtime_error);
+    EXPECT_THROW(Json(-1).get<uint32_t>(), std::runtime_error);
+    EXPECT_THROW(Json(-1).get<uint64_t>(), std::runtime_error);
+    EXPECT_THROW(Json(uint64_t(18000000000000000000ULL)).get<int64_t>(), std::runtime_error);
+    EXPECT_THROW(Json(1e300).get<int64_t>(), std::runtime_error);
+
+    auto parsed = Json::parse("[300, -1, 18000000000000000000, 1e300]");
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_THROW((*parsed)[0].get<int8_t>(), std::runtime_error);
+    EXPECT_THROW((*parsed)[1].get<uint64_t>(), std::runtime_error);
+    EXPECT_THROW((*parsed)[2].get<int64_t>(), std::runtime_error);
+    EXPECT_THROW((*parsed)[3].get<uint64_t>(), std::runtime_error);
+}
+
 TEST_F(TestJson, test_json_float)
 {
     Json j_float(3.14f);
@@ -316,6 +333,25 @@ TEST_F(TestJson, test_json_equality)
     ASSERT_TRUE(parsed.has_value());
     Json built = {{"x", {1, 2}}};
     EXPECT_EQ(*parsed, built);
+}
+
+TEST_F(TestJson, test_json_equality_compares_values)
+{
+    EXPECT_EQ(Json(1), Json(1u));
+    EXPECT_EQ(Json(1), Json(1.0));
+    EXPECT_EQ(Json(uint64_t(18000000000000000000ULL)), Json(1.8e19));
+    EXPECT_FALSE(Json(-1) == Json(uint64_t(18446744073709551615ULL)));
+    EXPECT_FALSE(Json(1) == Json(1.5));
+
+    Json obj1 = {{"a", 1}, {"b", 2}};
+    Json obj2 = {{"b", 2}, {"a", 1}};
+    Json obj3 = {{"a", 1}, {"c", 2}};
+    EXPECT_EQ(obj1, obj2);
+    EXPECT_FALSE(obj1 == obj3);
+
+    auto parsed = Json::parse(R"({"b": 2, "a": 1.0})");
+    ASSERT_TRUE(parsed.has_value());
+    EXPECT_EQ(*parsed, obj1);
 }
 
 TEST_F(TestJson, test_json_iteration_object)

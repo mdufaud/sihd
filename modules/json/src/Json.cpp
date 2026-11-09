@@ -2,6 +2,8 @@
 
 #include <bit>
 #include <cmath>
+#include <limits>
+#include <utility>
 
 #include <sihd/json/Json.hpp>
 
@@ -31,6 +33,55 @@ detail::DomSlot to_slot(T value)
 simdjson::dom::element as_element(detail::DomSlot slot)
 {
     return from_slot<simdjson::dom::element>(slot);
+}
+
+template <typename T>
+bool double_fits(double value)
+{
+    // a 64 bits max() rounds up to a power of two as a double: the bound is exclusive
+    return value >= static_cast<double>(std::numeric_limits<T>::min())
+           && value < static_cast<double>(std::numeric_limits<T>::max());
+}
+
+template <typename T, typename V>
+T checked_integer(V value)
+{
+    if constexpr (std::is_floating_point_v<V>)
+    {
+        if (!double_fits<T>(value))
+            throw std::runtime_error("Json: number out of range");
+    }
+    else if (!std::in_range<T>(value))
+        throw std::runtime_error("Json: number out of range");
+    return static_cast<T>(value);
+}
+
+bool double_equals_integer(double real, const Json & integer)
+{
+    if (real != std::trunc(real))
+        return false;
+    if (integer.type() == Json::Type::Uint)
+        return double_fits<uint64_t>(real) && static_cast<uint64_t>(real) == integer.get<uint64_t>();
+    return double_fits<int64_t>(real) && static_cast<int64_t>(real) == integer.get<int64_t>();
+}
+
+bool numbers_equal(const Json & a, const Json & b)
+{
+    const bool a_float = a.type() == Json::Type::Float;
+    const bool b_float = b.type() == Json::Type::Float;
+    if (a_float && b_float)
+        return a.get<double>() == b.get<double>();
+    if (a_float)
+        return double_equals_integer(a.get<double>(), b);
+    if (b_float)
+        return double_equals_integer(b.get<double>(), a);
+    if (a.type() == Json::Type::Uint && b.type() == Json::Type::Uint)
+        return a.get<uint64_t>() == b.get<uint64_t>();
+    if (a.type() == Json::Type::Uint)
+        return std::cmp_equal(a.get<uint64_t>(), b.get<int64_t>());
+    if (b.type() == Json::Type::Uint)
+        return std::cmp_equal(a.get<int64_t>(), b.get<uint64_t>());
+    return a.get<int64_t>() == b.get<int64_t>();
 }
 
 constexpr size_t idx_null = 0;
@@ -443,17 +494,17 @@ int64_t Json::get<int64_t>() const
         if (dom_type == simdjson::dom::element_type::INT64)
             return int64_t(elem);
         if (dom_type == simdjson::dom::element_type::UINT64)
-            return static_cast<int64_t>(uint64_t(elem));
+            return checked_integer<int64_t>(uint64_t(elem));
         if (dom_type == simdjson::dom::element_type::DOUBLE)
-            return static_cast<int64_t>(double(elem));
+            return checked_integer<int64_t>(double(elem));
         throw std::runtime_error("Json: not a number");
     }
     if (is_number_integer())
         return std::get<int64_t>(_value);
     if (is_number_unsigned())
-        return static_cast<int64_t>(std::get<uint64_t>(_value));
+        return checked_integer<int64_t>(std::get<uint64_t>(_value));
     if (is_number_float())
-        return static_cast<int64_t>(std::get<double>(_value));
+        return checked_integer<int64_t>(std::get<double>(_value));
     throw std::runtime_error("Json: not a number");
 }
 
@@ -467,54 +518,54 @@ uint64_t Json::get<uint64_t>() const
         if (dom_type == simdjson::dom::element_type::UINT64)
             return uint64_t(elem);
         if (dom_type == simdjson::dom::element_type::INT64)
-            return static_cast<uint64_t>(int64_t(elem));
+            return checked_integer<uint64_t>(int64_t(elem));
         if (dom_type == simdjson::dom::element_type::DOUBLE)
-            return static_cast<uint64_t>(double(elem));
+            return checked_integer<uint64_t>(double(elem));
         throw std::runtime_error("Json: not a number");
     }
     if (is_number_unsigned())
         return std::get<uint64_t>(_value);
     if (is_number_integer())
-        return static_cast<uint64_t>(std::get<int64_t>(_value));
+        return checked_integer<uint64_t>(std::get<int64_t>(_value));
     if (is_number_float())
-        return static_cast<uint64_t>(std::get<double>(_value));
+        return checked_integer<uint64_t>(std::get<double>(_value));
     throw std::runtime_error("Json: not a number");
 }
 
 template <>
 int32_t Json::get<int32_t>() const
 {
-    return static_cast<int32_t>(get<int64_t>());
+    return checked_integer<int32_t>(get<int64_t>());
 }
 
 template <>
 uint32_t Json::get<uint32_t>() const
 {
-    return static_cast<uint32_t>(get<uint64_t>());
+    return checked_integer<uint32_t>(get<uint64_t>());
 }
 
 template <>
 int16_t Json::get<int16_t>() const
 {
-    return static_cast<int16_t>(get<int64_t>());
+    return checked_integer<int16_t>(get<int64_t>());
 }
 
 template <>
 uint16_t Json::get<uint16_t>() const
 {
-    return static_cast<uint16_t>(get<uint64_t>());
+    return checked_integer<uint16_t>(get<uint64_t>());
 }
 
 template <>
 int8_t Json::get<int8_t>() const
 {
-    return static_cast<int8_t>(get<int64_t>());
+    return checked_integer<int8_t>(get<int64_t>());
 }
 
 template <>
 uint8_t Json::get<uint8_t>() const
 {
-    return static_cast<uint8_t>(get<uint64_t>());
+    return checked_integer<uint8_t>(get<uint64_t>());
 }
 
 template <>
@@ -613,6 +664,9 @@ std::expected<Json, std::string> Json::parse(const char *begin, const char *end)
 
 bool Json::operator==(const Json & other) const
 {
+    // numbers compare by value whatever their storage: 1, 1u and 1.0 are equal
+    if (is_number() && other.is_number())
+        return numbers_equal(*this, other);
     Type this_type = type();
     if (this_type != other.type())
         return false;
@@ -624,11 +678,9 @@ bool Json::operator==(const Json & other) const
         case Type::Bool:
             return get<bool>() == other.get<bool>();
         case Type::Int:
-            return get<int64_t>() == other.get<int64_t>();
         case Type::Uint:
-            return get<uint64_t>() == other.get<uint64_t>();
         case Type::Float:
-            return get<double>() == other.get<double>();
+            return false;
         case Type::String:
             return get<std::string>() == other.get<std::string>();
         case Type::Array:
@@ -648,11 +700,13 @@ bool Json::operator==(const Json & other) const
         {
             if (size() != other.size())
                 return false;
-            auto it_a = begin();
-            auto it_b = other.begin();
-            for (; it_a != end(); ++it_a, ++it_b)
+            // json objects are unordered: each key is looked up in the other object
+            for (auto it_a = begin(); it_a != end(); ++it_a)
             {
-                if (it_a.key() != it_b.key() || !(*it_a == *it_b))
+                auto it_b = other.begin();
+                while (it_b != other.end() && it_b.key() != it_a.key())
+                    ++it_b;
+                if (it_b == other.end() || !(*it_a == *it_b))
                     return false;
             }
             return true;
