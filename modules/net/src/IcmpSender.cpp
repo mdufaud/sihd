@@ -153,10 +153,8 @@ bool IcmpSender::_set_conf_data_size(int byte_size)
 
 Result<void> IcmpSender::open_socket_unix()
 {
-    if (_socket.is_open())
-        return std::unexpected(Error(ErrorCode::already_exists, "socket already open"));
-    _config_applied = false;
-    return _socket.open(AF_UNIX, SOCK_RAW, IPPROTO_ICMP);
+    // a unix socket carries no icmp: it could never set a ttl nor reach a host
+    return std::unexpected(Error(ErrorCode::not_supported, "icmp has no unix socket"));
 }
 
 Result<void> IcmpSender::open_socket(bool ipv6)

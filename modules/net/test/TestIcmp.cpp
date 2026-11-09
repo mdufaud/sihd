@@ -170,4 +170,15 @@ TEST_F(TestIcmp, test_icmp_ipv6)
     ASSERT_TRUE(sender.open_socket(true).has_value());
     this->test_icmp(sender);
 }
+
+TEST_F(TestIcmp, test_icmp_unix_socket_refused)
+{
+    IcmpSender sender("icmp-sender");
+
+    const auto opened = sender.open_socket_unix();
+
+    ASSERT_FALSE(opened.has_value());
+    EXPECT_EQ(opened.error().code, ErrorCode::not_supported);
+    EXPECT_FALSE(sender.socket_opened());
+}
 } // namespace test

@@ -1,4 +1,6 @@
+#include <chrono>
 #include <future>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -114,6 +116,52 @@ TEST_F(TestPinger, test_pinger_ignores_forged_reply)
     EXPECT_EQ(result.transmitted, 1);
     EXPECT_EQ(result.received, 1);
     EXPECT_LT(result.rtt.max, time::sec(1));
+}
+
+TEST_F(TestPinger, test_pinger_reply_timeout_is_a_deadline)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "raw ICMPv4 sockets not functional under wine/mingw";
+
+    Pinger pinger("pinger");
+    if (pinger.open(false).has_value() == false)
+        GTEST_SKIP() << raw_socket_skip_reason();
+    pinger.set_ping_count(1);
+    pinger.set_timeout(200);
+    // documentation range: no host ever answers
+    pinger.set_client({"192.0.2.1"});
+
+    // every echo on the loopback wakes the pinger socket, for over a second
+    IcmpSender chatter("chatter");
+    ASSERT_TRUE(chatter.open_socket(false).has_value());
+    chatter.set_echo();
+    std::thread chat([&chatter] {
+        for (int i = 0; i < 60; ++i)
+        {
+            (void)chatter.send_to(IpAddr("127.0.0.1"));
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+    });
+
+    const auto begin = std::chrono::steady_clock::now();
+    const bool started = pinger.start();
+    const auto elapsed = std::chrono::steady_clock::now() - begin;
+    chat.join();
+
+    ASSERT_TRUE(started);
+    EXPECT_EQ(pinger.result().transmitted, 1);
+    EXPECT_EQ(pinger.result().received, 0);
+    EXPECT_LT(elapsed, std::chrono::seconds(1));
+}
+
+TEST_F(TestPinger, test_pinger_unix_socket_refused)
+{
+    Pinger pinger("pinger");
+
+    const auto opened = pinger.open_unix();
+
+    ASSERT_FALSE(opened.has_value());
+    EXPECT_EQ(opened.error().code, ErrorCode::not_supported);
 }
 
 TEST_F(TestPinger, test_pinger_stops_right_after_ready)

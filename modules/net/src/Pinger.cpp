@@ -198,8 +198,15 @@ bool Pinger::on_start()
         SIHD_LOG(debug, "Pinger: sent ICMP echo request seq={} to {}", _current_seq, _client.str());
 
         _received_icmp_response = false;
-        while (_stop == false && _received_icmp_response == false && _sender.poll())
-            ;
+        // foreign icmp traffic wakes the poll: the reply timeout is a deadline, not a quiet period
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(_sender.poll_timeout());
+        while (_stop == false && _received_icmp_response == false)
+        {
+            const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+                deadline - std::chrono::steady_clock::now());
+            if (remaining.count() <= 0 || _sender.poll(static_cast<int>(remaining.count())) == false)
+                break;
+        }
         if (_received_icmp_response == false)
         {
             SIHD_LOG(debug, "Pinger: timeout waiting for ICMP echo reply seq={} from {}", _current_seq, _client.str());

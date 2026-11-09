@@ -37,7 +37,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 ### ICMP
 
-- `IcmpSender`: raw ICMP echo sender. `open_socket` (IPv4/IPv6) or `open_socket_unix`, then `set_type`, `set_code`, `set_ttl`, `set_id`, `set_seq`, `set_data_size`, `send_to`, `poll`. `response()` returns the last `IcmpResponse`.
+- `IcmpSender`: raw ICMP echo sender. `open_socket` (IPv4/IPv6; `open_socket_unix` is `not_supported`), then `set_type`, `set_code`, `set_ttl`, `set_id`, `set_seq`, `set_data_size`, `send_to`, `poll`. `response()` returns the last `IcmpResponse`.
 - `Pinger`: observable ping driver on top of `IcmpSender`. Configure with `set_timeout`, `set_interval`, `set_ping_count`, `set_ttl`, `set_client`. Results in `event()` (`PingEvent`) and `result()` (`PingResult`, with `packet_loss` and `str`).
 
 ### DNS
