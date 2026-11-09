@@ -297,6 +297,9 @@ void Navigator::Impl::ws_disconnect()
     ws.connected = false;
     ws.handshake_done = false;
     ws.stop_requested = false;
+    // the unsent messages belong to the closed connection
+    auto lock = ws.waitable.guard();
+    ws.send_queue = {};
 }
 
 bool Navigator::Impl::ws_queue_message(const void *data, size_t len, bool binary)

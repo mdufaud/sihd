@@ -598,6 +598,56 @@ TEST_F(TestNavigator, test_navigator_ws_connect_twice_replaces_the_connection)
     EXPECT_EQ(scope.server._nread, 1);
 }
 
+TEST_F(TestNavigator, test_navigator_ws_close_drops_the_send_queue)
+{
+    if constexpr (build::is_run_with_tsan)
+        GTEST_SKIP_("has weird interaction with lws and tsan");
+
+    BasicServerScope<SimpleHttpServer> scope;
+    scope.server.set_root_dir("test/resources/mount_point");
+    scope.start(3003);
+    Navigator navigator;
+    allow_local_targets(navigator);
+
+    std::optional<std::string> ws_reply;
+    Waitable reply_waitable;
+    navigator.on_ws_text = [&](std::string_view msg) {
+        auto reply_lock = reply_waitable.guard();
+        ws_reply = std::string(msg);
+        reply_waitable.notify_all();
+    };
+
+    SimpleHttpServer & server = scope.server;
+    const auto closed = [&server](int count) {
+        return server._ws_waitable.wait_for(Duration(time::sec(2)),
+                                            [&server, count] { return server._nclosed >= count; });
+    };
+    const auto reads = [&server] {
+        auto lock = server._ws_waitable.guard();
+        return server._nread;
+    };
+
+    // closed with most of the queue unsent: none of it may reach the next connection
+    ASSERT_TRUE(navigator.ws_connect(loopback_url("ws://localhost:3003"), "proto-two"));
+    for (int i = 0; i < 3000; ++i)
+        ASSERT_TRUE(navigator.ws_send("stale"));
+    navigator.ws_close();
+    ASSERT_TRUE(closed(1));
+    const int stale_reads = reads();
+    {
+        auto reply_lock = reply_waitable.guard();
+        ws_reply.reset();
+    }
+
+    ASSERT_TRUE(navigator.ws_connect(loopback_url("ws://localhost:3003"), "proto-two"));
+    ASSERT_TRUE(navigator.ws_send("fresh"));
+    reply_waitable.wait_for(Duration(time::sec(2)), [&] { return ws_reply.has_value(); });
+    navigator.ws_close();
+    ASSERT_TRUE(closed(2));
+
+    EXPECT_EQ(reads() - stale_reads, 1);
+}
+
 TEST_F(TestNavigator, test_navigator_download)
 {
     ServerScope scope;
