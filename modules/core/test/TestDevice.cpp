@@ -161,6 +161,8 @@ class CountingDevice: public Device
 
         size_t count() const { return _count; }
 
+        bool fail_start = false;
+
     protected:
         void handle(Channel *) override { ++_count; }
 
@@ -172,7 +174,7 @@ class CountingDevice: public Device
 
         bool on_start() override
         {
-            _running = this->observe_channel("in").has_value();
+            _running = this->observe_channel("in").has_value() && !fail_start;
             return _running;
         }
 
@@ -345,6 +347,22 @@ TEST_F(TestDevice, test_core_destroyed_after_a_failed_start_warns_nothing)
     LoggerManager::rm(&logger);
 
     EXPECT_EQ(logger.warnings, std::vector<std::string> {});
+}
+
+TEST_F(TestDevice, test_device_failed_start_drops_its_observations)
+{
+    Core core;
+    auto *device = core.add_child<CountingDevice>("counting");
+    device->fail_start = true;
+    ASSERT_TRUE(core.init());
+    Channel *in = device->find_channel("in").value_or(nullptr);
+    ASSERT_NE(in, nullptr);
+
+    EXPECT_FALSE(device->start());
+
+    EXPECT_EQ(in->observers_count(), 0u);
+    EXPECT_TRUE(in->write(0, 1));
+    EXPECT_EQ(device->count(), 0u);
 }
 
 TEST_F(TestDevice, test_device_state_transitions)

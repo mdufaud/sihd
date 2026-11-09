@@ -112,6 +112,8 @@ bool Device::do_start()
 
     if (ret == false)
     {
+        // a refused start never reaches do_stop: what on_start observed must go now
+        this->remove_channels_observation();
         for (AService *service : started_services)
         {
             service->stop();
