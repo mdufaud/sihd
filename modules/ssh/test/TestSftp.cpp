@@ -1,6 +1,7 @@
 #include <filesystem>
 
 #include <gtest/gtest.h>
+#include <libssh/sftp.h>
 
 #include <sihd/ssh/Sftp.hpp>
 #include <sihd/ssh/SshSession.hpp>
@@ -30,6 +31,39 @@ class TestSftp: public ::testing::Test
         virtual void SetUp() {}
 
         virtual void TearDown() {}
+
+        void open_jail(std::string_view name)
+        {
+            _jail = fs::combine(_base.path(), "jail");
+            ASSERT_TRUE(fs::make_directories(_jail));
+            _server = make_test_server_with_sftp(name, _jail);
+            ASSERT_NE(_server, nullptr);
+            ASSERT_TRUE(connect_to_test_server(*_server, _session));
+            _client = std::make_unique<SftpPacketClient>(_session);
+            ASSERT_TRUE(_client->open());
+        }
+
+        int write_at(const std::string & handle, uint64_t offset, std::string_view data)
+        {
+            auto reply = _client->request(
+                SSH_FXP_WRITE,
+                SftpPacketClient::str(handle) + SftpPacketClient::u64(offset) + SftpPacketClient::str(data));
+            return reply.has_value() ? reply->status() : -1;
+        }
+
+        std::string realpath(std::string_view path)
+        {
+            auto reply = _client->request_path(SSH_FXP_REALPATH, path);
+            if (!reply.has_value() || reply->type != SSH_FXP_NAME)
+                return "<refused>";
+            return reply->string_at(4);
+        }
+
+        TmpDir _base;
+        std::string _jail;
+        std::unique_ptr<SshServerHelper> _server;
+        SshSession _session;
+        std::unique_ptr<SftpPacketClient> _client;
 };
 
 TEST_F(TestSftp, test_sftp)
@@ -266,5 +300,111 @@ TEST_F(TestSftp, test_sftp_link_operations_keep_target)
     EXPECT_TRUE(fs::is_file(target));
     EXPECT_FALSE(std::filesystem::is_symlink(std::filesystem::symlink_status(fs::combine(jail.path(), "removed.txt"))));
     EXPECT_TRUE(std::filesystem::is_symlink(fs::combine(jail.path(), "moved.txt")));
+}
+
+TEST_F(TestSftp, test_sftp_read_length_capped)
+{
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-read-cap"));
+    ASSERT_TRUE(fs::write(fs::combine(_jail, "big.bin"), std::string(1024 * 1024, 'x')));
+
+    const std::string handle = _client->open_file("/big.bin", SSH_FXF_READ);
+    ASSERT_FALSE(handle.empty());
+
+    auto reply = _client->request(
+        SSH_FXP_READ,
+        SftpPacketClient::str(handle) + SftpPacketClient::u64(0) + SftpPacketClient::u32(1024 * 1024));
+    ASSERT_TRUE(reply.has_value());
+    ASSERT_EQ(reply->type, SSH_FXP_DATA);
+    EXPECT_EQ(reply->string_at(0).size(), 255u * 1024);
+}
+
+TEST_F(TestSftp, test_sftp_open_flags_keep_data)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "the sftp server needs a jail root";
+
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-open-flags"));
+    const std::string file = fs::combine(_jail, "data.txt");
+    ASSERT_TRUE(fs::write(file, "0123456789"));
+
+    std::string handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_CREAT);
+    ASSERT_FALSE(handle.empty());
+    EXPECT_EQ(write_at(handle, 2, "ab"), SSH_FX_OK);
+    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(fs::read_all(file).value(), "01ab456789");
+
+    auto excl = _client->request(SSH_FXP_OPEN,
+                                 SftpPacketClient::str("/data.txt")
+                                     + SftpPacketClient::u32(SSH_FXF_WRITE | SSH_FXF_CREAT | SSH_FXF_EXCL)
+                                     + SftpPacketClient::u32(0));
+    ASSERT_TRUE(excl.has_value());
+    EXPECT_EQ(excl->status(), SSH_FX_FILE_ALREADY_EXISTS);
+    EXPECT_EQ(fs::read_all(file).value(), "01ab456789");
+
+    handle = _client->open_file("/data.txt", SSH_FXF_READ | SSH_FXF_WRITE | SSH_FXF_CREAT);
+    ASSERT_FALSE(handle.empty());
+    EXPECT_EQ(write_at(handle, 0, "cd"), SSH_FX_OK);
+    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(fs::read_all(file).value(), "cdab456789");
+
+    handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_APPEND);
+    ASSERT_FALSE(handle.empty());
+    EXPECT_EQ(write_at(handle, 0, "!"), SSH_FX_OK);
+    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(fs::read_all(file).value(), "cdab456789!");
+
+    handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_CREAT | SSH_FXF_TRUNC);
+    ASSERT_FALSE(handle.empty());
+    EXPECT_EQ(write_at(handle, 0, "z"), SSH_FX_OK);
+    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(fs::read_all(file).value(), "z");
+}
+
+TEST_F(TestSftp, test_sftp_fsetstat_targets_handle)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "permission bits are not posix on windows";
+
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-fsetstat"));
+    const std::string file = fs::combine(_jail, "a.txt");
+    ASSERT_TRUE(fs::write(file, "hello"));
+    ASSERT_TRUE(fs::permission_set(file, 0644));
+    const unsigned int jail_mode = fs::permission_get(_jail);
+
+    const std::string handle = _client->open_file("/a.txt", SSH_FXF_READ | SSH_FXF_WRITE);
+    ASSERT_FALSE(handle.empty());
+    auto reply = _client->request(SSH_FXP_FSETSTAT,
+                                  SftpPacketClient::str(handle) + SftpPacketClient::u32(SSH_FILEXFER_ATTR_PERMISSIONS)
+                                      + SftpPacketClient::u32(0600));
+    ASSERT_TRUE(reply.has_value());
+    EXPECT_EQ(reply->status(), SSH_FX_OK);
+
+    EXPECT_EQ(fs::permission_get(file), 0600u);
+    EXPECT_EQ(fs::permission_get(_jail), jail_mode);
+}
+
+TEST_F(TestSftp, test_sftp_realpath_stays_in_jail)
+{
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-realpath"));
+    ASSERT_TRUE(fs::make_directories(fs::combine(_jail, "sub")));
+
+    EXPECT_EQ(realpath("."), "/");
+    EXPECT_EQ(realpath("/"), "/");
+    EXPECT_EQ(realpath("/sub/.."), "/");
+    EXPECT_EQ(realpath("sub"), "/sub");
+    EXPECT_EQ(realpath("/sub/./"), "/sub");
+}
+
+TEST_F(TestSftp, test_sftp_lstat_jail_root)
+{
+    ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-lstat-root"));
+
+    auto root = _client->request_path(SSH_FXP_LSTAT, "/");
+    ASSERT_TRUE(root.has_value());
+    EXPECT_EQ(root->type, SSH_FXP_ATTRS);
+
+    auto dot = _client->request_path(SSH_FXP_LSTAT, ".");
+    ASSERT_TRUE(dot.has_value());
+    EXPECT_EQ(dot->type, SSH_FXP_ATTRS);
 }
 } // namespace test

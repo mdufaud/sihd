@@ -308,10 +308,8 @@ SshSession::AuthState SshSession::auth_interactive_keyboard()
             else
             {
 #if !defined(__SIHD_WINDOWS__)
-                char *ptr = getpass(prompt);
+                const char *ptr = getpass(prompt);
                 bool error = ptr == nullptr || ssh_userauth_kbdint_setanswer(_impl_ptr->ssh_session_ptr, i, ptr) < 0;
-                if (ptr != nullptr)
-                    free(ptr);
                 if (error)
                     return AuthState(SSH_AUTH_ERROR);
 #else

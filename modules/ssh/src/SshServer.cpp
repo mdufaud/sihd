@@ -95,9 +95,9 @@ int callback_auth_password(ssh_session session, const char *user, const char *pa
         return SSH_AUTH_DENIED;
     }
 
-    data->auth_attempts++;
     if (data->auth_attempts >= 3)
         return SSH_AUTH_DENIED;
+    data->auth_attempts++;
 
     bool allowed = data->server->server_handler()->on_auth_password(data->server,
                                                                     data->session,
@@ -129,9 +129,9 @@ int callback_auth_pubkey(ssh_session session,
     if (data->server->server_handler() == nullptr)
         return SSH_AUTH_DENIED;
 
-    data->auth_attempts++;
     if (data->auth_attempts >= 3)
         return SSH_AUTH_DENIED;
+    data->auth_attempts++;
 
     // Duplicate the key since libssh owns the original and will free it
     ssh_key key_dup = ssh_key_dup(pubkey);

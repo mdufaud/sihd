@@ -4,6 +4,7 @@
  */
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <sihd/sys/platform.hpp>
@@ -12,8 +13,11 @@
 
 #if !defined(__SIHD_WINDOWS__)
 # include <unistd.h>
+#else
+# include <io.h>
 #endif
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 
@@ -57,6 +61,9 @@ SIHD_LOGGER;
 
 namespace
 {
+
+// a READ asks for any length: answer at most what OpenSSH's sftp-server does, short reads are legal
+constexpr uint32_t max_read_length = 256 * 1024 - 1024;
 
 constexpr std::array<std::pair<mode_t, char>, 9> permission_bits {{
     {S_IRUSR, 'r'},
@@ -509,7 +516,7 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
     std::string resolved;
     if (path.empty() || path == ".")
     {
-        resolved = root_path.empty() ? "/" : root_path;
+        resolved = "/";
     }
     else
     {
@@ -517,22 +524,29 @@ void SshSubsystemSftp::Impl::handle_realpath(sftp_client_message_struct *msg)
         if (reply_if_refused(msg, full))
             return;
         std::string real_result = sihd::sys::fs::realpath(*full);
-        if (!real_result.empty())
+        if (real_result.empty() || root_path.empty())
         {
-            if (!root_path.empty() && real_result.find(root_path) == 0)
-            {
-                resolved = real_result.substr(root_path.length());
-                if (resolved.empty() || resolved[0] != '/')
-                    resolved = "/" + resolved;
-            }
-            else
-            {
-                resolved = real_result;
-            }
+            resolved = real_result.empty() ? path : real_result;
         }
         else
         {
-            resolved = path.empty() ? "/" : path;
+            // answer in the client view where the jail root is "/": host paths never leave the server
+            const std::string root = resolve_path("").value_or(root_path);
+            const std::string sep = sihd::sys::fs::sep_str();
+            if (real_result == root)
+                resolved = "/";
+            else if (root == sep)
+                resolved = real_result;
+            else if (real_result.starts_with(root + sep))
+            {
+                resolved = real_result.substr(root.size());
+                std::replace(resolved.begin(), resolved.end(), sihd::sys::fs::sep(), '/');
+            }
+            else
+            {
+                reply_status(msg, SSH_FX_PERMISSION_DENIED);
+                return;
+            }
         }
     }
 
@@ -561,7 +575,10 @@ void SshSubsystemSftp::Impl::handle_stat(sftp_client_message_struct *msg, bool f
 
     SIHD_LOG(debug, "SshSubsystemSftp: {} '{}'", follow_links ? "STAT" : "LSTAT", path);
 
-    const auto resolved = follow_links ? resolve_path(path) : resolve_entry_path(path);
+    // windows has no links and the jail root no last component: nothing to keep unfollowed
+    const bool names_root = sihd::sys::fs::normalize("/" + path) == "/";
+    const bool follow = follow_links || names_root || build::is_windows;
+    const auto resolved = follow ? resolve_path(path) : resolve_entry_path(path);
     if (reply_if_refused(msg, resolved))
         return;
     FileStat st;
@@ -769,45 +786,46 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
 
     SIHD_LOG(debug, "SshSubsystemSftp: OPEN '{}' flags={:#x} mode={:o}", path, flags, mode);
 
-    std::string open_mode;
     bool has_read = (flags & SSH_FXF_READ) != 0;
     bool has_write = (flags & SSH_FXF_WRITE) != 0;
     bool has_append = (flags & SSH_FXF_APPEND) != 0;
     bool has_trunc = (flags & SSH_FXF_TRUNC) != 0;
     bool has_creat = (flags & SSH_FXF_CREAT) != 0;
+    bool has_excl = (flags & SSH_FXF_EXCL) != 0;
 
-    if (has_read && has_write)
-    {
-        if (has_trunc)
-            open_mode = "w+b";
-        else if (has_append)
-            open_mode = "a+b";
-        else if (has_creat)
-            open_mode = "a+b";
-        else
-            open_mode = "r+b";
-    }
-    else if (has_write)
-    {
-        if (has_append)
-            open_mode = "ab";
-        else if (has_trunc || has_creat)
-            open_mode = "wb";
-        else
-            open_mode = "r+b";
-    }
-    else
-    {
-        open_mode = "rb";
-    }
+    // fopen modes cannot create without truncating nor honour EXCL: open(2) flags map one to one
+    int open_flags = has_write ? (has_read ? O_RDWR : O_WRONLY) : O_RDONLY;
+    if (has_creat)
+        open_flags |= O_CREAT;
+    if (has_trunc)
+        open_flags |= O_TRUNC;
+    if (has_excl)
+        open_flags |= O_EXCL;
+    if (has_append)
+        open_flags |= O_APPEND;
+#if defined(O_BINARY)
+    open_flags |= O_BINARY;
+#endif
+    // fdopen never truncates, its mode only matches the descriptor access
+    std::string open_mode = "rb";
+    if (has_write)
+        open_mode = has_append ? (has_read ? "a+b" : "ab") : (has_read ? "r+b" : "wb");
 
     const auto resolved = resolve_path(path);
     if (reply_if_refused(msg, resolved))
         return;
+    const int fd = ::open(resolved->c_str(), open_flags, mode);
+    if (fd < 0)
+    {
+        const auto err = Error::from_errno("could not open '{}'", *resolved);
+        reply_status(msg, sftp_status_from_error(err), err.message);
+        return;
+    }
     sihd::sys::File file;
-    auto opened = file.open(*resolved, open_mode);
+    auto opened = file.open_fd(fd, open_mode);
     if (!opened)
     {
+        ::close(fd);
         reply_status(msg, sftp_status_from_error(opened.error()), opened.error().message);
         return;
     }
@@ -851,7 +869,7 @@ void SshSubsystemSftp::Impl::handle_read(sftp_client_message_struct *msg)
     }
 
     uint64_t offset = msg->offset;
-    uint32_t len = msg->len;
+    uint32_t len = std::min(msg->len, max_read_length);
     sihd::sys::File & file = fd_it->second;
 
     auto path_it = handle_to_path.find(handle);
@@ -981,8 +999,23 @@ void SshSubsystemSftp::Impl::handle_rename(sftp_client_message_struct *msg)
 
 void SshSubsystemSftp::Impl::handle_setstat(sftp_client_message_struct *msg)
 {
-    const char *filename = sftp_client_message_get_filename(msg);
-    std::string path = filename ? filename : "";
+    std::string path;
+    if (sftp_client_message_get_type(msg) == SSH_FXP_FSETSTAT)
+    {
+        // a handle, not a filename: an empty path would resolve to the jail root
+        auto path_it = msg->handle ? handle_to_path.find(ssh_string_get_char(msg->handle)) : handle_to_path.end();
+        if (path_it == handle_to_path.end())
+        {
+            reply_status(msg, SSH_FX_INVALID_HANDLE);
+            return;
+        }
+        path = path_it->second;
+    }
+    else
+    {
+        const char *filename = sftp_client_message_get_filename(msg);
+        path = filename ? filename : "";
+    }
     sftp_attributes attrs = msg->attr;
 
     SIHD_LOG(debug, "SshSubsystemSftp: SETSTAT '{}'", path);

@@ -109,9 +109,9 @@ bool SshKey::is_equal(const SshKey & sshkey)
 {
     auto *other_key = static_cast<ssh_key_struct *>(sshkey.key());
     if (this->is_private() && sshkey.is_private())
-        return ssh_key_cmp(_impl_ptr->ssh_key_ptr, other_key, SSH_KEY_CMP_PRIVATE);
+        return ssh_key_cmp(_impl_ptr->ssh_key_ptr, other_key, SSH_KEY_CMP_PRIVATE) == 0;
     else if (this->is_public() && sshkey.is_public())
-        return ssh_key_cmp(_impl_ptr->ssh_key_ptr, other_key, SSH_KEY_CMP_PUBLIC);
+        return ssh_key_cmp(_impl_ptr->ssh_key_ptr, other_key, SSH_KEY_CMP_PUBLIC) == 0;
     return false;
 }
 

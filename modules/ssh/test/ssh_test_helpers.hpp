@@ -4,9 +4,13 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
 
 #include <sihd/ssh/BasicSshServerHandler.hpp>
+#include <sihd/ssh/SshChannel.hpp>
 #include <sihd/ssh/SshServer.hpp>
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/SshSubsystemExec.hpp>
@@ -126,6 +130,42 @@ bool connect_to_test_server(const SshServerHelper & server,
                             sihd::ssh::SshSession & session,
                             const char *user = "testuser",
                             const char *password = "testpass");
+
+// raw SFTP v3 packets over a session channel: reaches requests the libssh client api does not send (FSETSTAT)
+class SftpPacketClient
+{
+    public:
+        struct Packet
+        {
+                uint8_t type = 0;
+                // payload after the request id
+                std::string body;
+
+                int status() const;
+                std::string string_at(size_t offset) const;
+        };
+
+        explicit SftpPacketClient(sihd::ssh::SshSession & session);
+
+        bool open();
+        std::optional<Packet> request(uint8_t type, const std::string & payload);
+        std::optional<Packet> request_path(uint8_t type, std::string_view path);
+        std::string open_file(std::string_view path, uint32_t pflags);
+
+        static std::string u32(uint32_t value);
+        static std::string u64(uint64_t value);
+        static std::string str(std::string_view value);
+        static uint32_t read_u32(std::string_view data, size_t offset);
+
+    private:
+        bool send(uint8_t type, const std::string & payload);
+        std::optional<Packet> receive();
+        bool read_exact(std::string & out, size_t size);
+
+        sihd::ssh::SshSession & _session;
+        sihd::ssh::SshChannel _channel;
+        uint32_t _next_id = 1;
+};
 
 } // namespace test
 

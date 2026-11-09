@@ -14,6 +14,22 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
+namespace
+{
+
+void consume_written(std::string & unsent, int wrote)
+{
+    if (wrote < 0)
+    {
+        SIHD_LOG(error, "SshSubsystemExec: could not write to channel");
+        unsent.clear();
+    }
+    else
+        unsent.erase(0, wrote);
+}
+
+} // namespace
+
 SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _channel(nullptr),
     _command(command),
@@ -105,6 +121,8 @@ void SshSubsystemExec::configure_process_command()
     {
         _process.set_chdir(_working_dir);
     }
+    // the child stdin is a pipe fed by on_data, never the server's own stdin
+    _process.stdin_from(std::string());
 }
 
 bool SshSubsystemExec::start_sync_mode()
@@ -130,23 +148,11 @@ bool SshSubsystemExec::start_process_mode()
 {
     configure_process_command();
 
-    _process.stdout_to([this](std::string_view data) {
-        if (_channel)
-        {
-            const int wrote = _channel->write(ArrCharView(data.data(), data.size()));
-            if (wrote < 0)
-                SIHD_LOG(error, "SshSubsystemExec: could not write stdout to channel");
-        }
-    });
-
-    _process.stderr_to([this](std::string_view data) {
-        if (_channel)
-        {
-            const int wrote = _channel->write_stderr(ArrCharView(data.data(), data.size()));
-            if (wrote < 0)
-                SIHD_LOG(error, "SshSubsystemExec: could not write stderr to channel");
-        }
-    });
+    // the server session never blocks: what the client window refuses waits here
+    _unsent_out.clear();
+    _unsent_err.clear();
+    _process.stdout_to(_unsent_out);
+    _process.stderr_to(_unsent_err);
 
     auto executed = _process.execute();
     if (SIHD_UNEXPECTED_LOG(executed))
@@ -185,7 +191,7 @@ bool SshSubsystemExec::is_running() const
     if (!_started)
         return false;
 
-    return _process.is_process_running();
+    return _process.is_process_running() || _process.can_read_pipes() || !_unsent_out.empty() || !_unsent_err.empty();
 }
 
 bool SshSubsystemExec::forward_output()
@@ -193,10 +199,25 @@ bool SshSubsystemExec::forward_output()
     if (!_started)
         return false;
 
+    // a poll reads one small chunk per pipe; a full client window stops reading so the child blocks
+    constexpr int max_polls = 32;
+    bool forwarded = false;
+    for (int i = 0; i < max_polls && this->flush_unsent() && _process.read_pipes(0); ++i)
+        forwarded = true;
+    this->flush_unsent();
+    // with its pipes at end of file, nothing polls the child anymore: reap it here
     if (!_process.can_read_pipes())
-        return false;
+        (void)_process.wait_no_hang();
+    return forwarded;
+}
 
-    return _process.read_pipes(0);
+bool SshSubsystemExec::flush_unsent()
+{
+    if (_channel != nullptr && !_unsent_out.empty())
+        consume_written(_unsent_out, _channel->write(ArrCharView(_unsent_out.data(), _unsent_out.size())));
+    if (_channel != nullptr && !_unsent_err.empty())
+        consume_written(_unsent_err, _channel->write_stderr(ArrCharView(_unsent_err.data(), _unsent_err.size())));
+    return _unsent_out.empty() && _unsent_err.empty();
 }
 
 int SshSubsystemExec::on_close()

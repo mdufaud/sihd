@@ -15,6 +15,7 @@
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Worker.hpp>
+#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
 #include "ssh_test_helpers.hpp"
@@ -246,6 +247,58 @@ TEST_F(TestSshServer, test_custom_auth_callback)
     worker.stop_worker();
 
     EXPECT_EQ(handler.counters().auth_password_success, 1u);
+}
+
+TEST_F(TestSshServer, test_password_auth_third_attempt)
+{
+    auto test_server = make_test_server("test-ssh-server-attempts");
+    ASSERT_NE(test_server, nullptr);
+
+    SshSession client;
+    ASSERT_TRUE(
+        client
+            .fast_connect({.user = "testuser", .host = "127.0.0.1", .port = test_server->port, .process_config = false})
+            .has_value());
+
+    EXPECT_TRUE(client.auth_password("wrong1").denied());
+    EXPECT_TRUE(client.auth_password("wrong2").denied());
+    EXPECT_TRUE(client.auth_password("testpass").success());
+
+    client.disconnect();
+    test_server->stop();
+
+    EXPECT_EQ(test_server->handler.counters().auth_password_fail, 2u);
+    EXPECT_EQ(test_server->handler.counters().auth_password_success, 1u);
+}
+
+TEST_F(TestSshServer, test_exec_forwards_stdin)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "no cat on windows";
+
+    auto test_server = make_test_server("test-ssh-server-exec-stdin");
+    ASSERT_NE(test_server, nullptr);
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+    ASSERT_TRUE(channel.request_exec("cat").has_value());
+
+    // larger than a pipe: the server feeds the child while it forwards its output
+    const std::string input(300 * 1024, 'x');
+    ASSERT_EQ(channel.write(ArrCharView(input.data(), input.size())), (int)input.size());
+    ASSERT_TRUE(channel.send_eof().has_value());
+    // a slow client: the output outgrows its window before it reads
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+    std::string output;
+    ArrChar chunk;
+    chunk.reserve(64 * 1024);
+    while (channel.read_timeout(chunk, 5000) > 0)
+        output.append(chunk.data(), chunk.size());
+
+    EXPECT_EQ(output.size(), input.size());
+    EXPECT_TRUE(output == input);
 }
 
 } // namespace test

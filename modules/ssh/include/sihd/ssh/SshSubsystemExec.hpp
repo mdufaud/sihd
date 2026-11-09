@@ -57,6 +57,7 @@ class SshSubsystemExec: public ISshSubsystemHandler
         void configure_process_command();
         bool start_process_mode();
         bool start_sync_mode();
+        bool flush_unsent();
 
         SshChannel *_channel;
         std::string _command;
@@ -74,6 +75,9 @@ class SshSubsystemExec: public ISshSubsystemHandler
         // Buffered output for sync (non-fork) mode, flushed on completion
         std::string _sync_out;
         std::string _sync_err;
+        // process mode output the client window has not taken yet
+        std::string _unsent_out;
+        std::string _unsent_err;
 
         sihd::sys::Process _process;
 };
