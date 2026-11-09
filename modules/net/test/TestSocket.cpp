@@ -319,7 +319,17 @@ TEST_F(TestSocket, test_socket_unix_abstract)
     EXPECT_FALSE(empty_path.bind_unix(std::string_view {}).has_value());
 }
 
-#if !defined(__SIHD_WINDOWS__)
+bool inheritable(int socket)
+{
+#if defined(__SIHD_WINDOWS__)
+    DWORD flags = 0;
+    return GetHandleInformation(reinterpret_cast<HANDLE>(static_cast<uintptr_t>(socket)), &flags) == 0
+           || (flags & HANDLE_FLAG_INHERIT) != 0;
+#else
+    return (fcntl(socket, F_GETFD) & FD_CLOEXEC) == 0;
+#endif
+}
+
 TEST_F(TestSocket, test_socket_closed_on_exec)
 {
     Socket server;
@@ -328,11 +338,10 @@ TEST_F(TestSocket, test_socket_closed_on_exec)
 
     connect_tcp(server, client, accepted);
 
-    EXPECT_NE(fcntl(server.socket(), F_GETFD) & FD_CLOEXEC, 0);
-    EXPECT_NE(fcntl(client.socket(), F_GETFD) & FD_CLOEXEC, 0);
-    EXPECT_NE(fcntl(accepted.socket(), F_GETFD) & FD_CLOEXEC, 0);
+    EXPECT_FALSE(inheritable(server.socket()));
+    EXPECT_FALSE(inheritable(client.socket()));
+    EXPECT_FALSE(inheritable(accepted.socket()));
 }
-#endif
 
 TEST_F(TestSocket, test_socket_move_construct_transfers_descriptor)
 {
