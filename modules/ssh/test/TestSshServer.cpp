@@ -203,6 +203,58 @@ TEST_F(TestSshServer, test_pubkey_auth_success)
     EXPECT_EQ(handler.counters().auth_pubkey_fail, 0u);
 }
 
+TEST_F(TestSshServer, test_pubkey_auth_refuses_a_key_missing_from_authorized_keys)
+{
+    SshKey client_pubkey;
+    ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
+    SshKey host_pubkey;
+    ASSERT_TRUE(host_pubkey.import_pubkey_file(HOST_PUBKEY_PATH).has_value());
+    sihd::sys::TmpDir tmp_dir;
+    const std::string authorized_keys = sihd::sys::fs::combine(tmp_dir.path(), "authorized_keys");
+    ASSERT_TRUE(sihd::sys::fs::write(authorized_keys, "ssh-rsa " + host_pubkey.base64() + " host\n").has_value());
+
+    SshServerHelper test_server("test-ssh-server-authorized-keys-refused");
+    test_server.handler.add_allowed_pubkey("testuser", client_pubkey.base64());
+    ASSERT_TRUE(test_server.server.set_authorized_keys_file(authorized_keys).has_value());
+    ASSERT_TRUE(test_server.start());
+    SshSession client;
+    ASSERT_TRUE(
+        client
+            .fast_connect({.user = "testuser", .host = "127.0.0.1", .port = test_server.port, .process_config = false})
+            .has_value());
+
+    const auto auth = client.auth_key_file(CLIENT_KEY_PATH);
+
+    EXPECT_FALSE(auth.success());
+    EXPECT_EQ(test_server.handler.counters().auth_pubkey_success, 0u);
+}
+
+TEST_F(TestSshServer, test_pubkey_auth_accepts_a_key_listed_in_authorized_keys)
+{
+    SshKey client_pubkey;
+    ASSERT_TRUE(client_pubkey.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
+    sihd::sys::TmpDir tmp_dir;
+    const std::string authorized_keys = sihd::sys::fs::combine(tmp_dir.path(), "authorized_keys");
+    const std::string listing = "# keys\n\nno-pty,no-agent-forwarding ssh-ed25519 " + client_pubkey.base64()
+                                + " client\n";
+    ASSERT_TRUE(sihd::sys::fs::write(authorized_keys, listing).has_value());
+
+    SshServerHelper test_server("test-ssh-server-authorized-keys-listed");
+    test_server.handler.add_allowed_pubkey("testuser", client_pubkey.base64());
+    ASSERT_TRUE(test_server.server.set_authorized_keys_file(authorized_keys).has_value());
+    ASSERT_TRUE(test_server.start());
+    SshSession client;
+    ASSERT_TRUE(
+        client
+            .fast_connect({.user = "testuser", .host = "127.0.0.1", .port = test_server.port, .process_config = false})
+            .has_value());
+
+    const auto auth = client.auth_key_file(CLIENT_KEY_PATH);
+
+    EXPECT_TRUE(auth.success());
+    EXPECT_EQ(test_server.handler.counters().auth_pubkey_success, 1u);
+}
+
 TEST_F(TestSshServer, test_multiple_sessions)
 {
     SshServer server("test-ssh-server");

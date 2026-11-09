@@ -9,6 +9,7 @@
 # include <ws2tcpip.h>
 #endif
 
+#include <algorithm>
 #include <unordered_map>
 #include <vector>
 
@@ -22,11 +23,13 @@
 #include <sihd/ssh/SshSession.hpp>
 #include <sihd/ssh/utils.hpp>
 #include <sihd/sys/Poll.hpp>
+#include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/str.hpp>
 
 using namespace sihd::util;
 
@@ -55,6 +58,8 @@ struct SessionData
         std::vector<std::unique_ptr<ChannelData>> channels;
         int auth_attempts;
         bool authenticated;
+        // path of the file, read at each attempt like sshd: an edit applies to the next client
+        std::string authorized_keys;
 
         // Callback structs must persist for the lifetime of the session
         struct ssh_server_callbacks_struct server_callbacks;
@@ -113,6 +118,37 @@ int callback_auth_password(ssh_session session, const char *user, const char *pa
     return SSH_AUTH_DENIED;
 }
 
+// a line is [options] keytype base64 [comment]: the first key type name starts the key
+bool is_authorized_key(const std::string & authorized_keys_path, ssh_key pubkey)
+{
+    const auto lines = sihd::sys::fs::read_lines(authorized_keys_path);
+    if (!lines)
+        return false;
+    for (const std::string & line : *lines)
+    {
+        const std::vector<std::string> tokens = str::split(line);
+        if (tokens.empty() || tokens[0].starts_with('#'))
+            continue;
+
+        const auto type_it = std::ranges::find_if(tokens, [](const std::string & token) {
+            return ssh_key_type_from_name(token.c_str()) != SSH_KEYTYPE_UNKNOWN;
+        });
+        if (type_it == tokens.end() || type_it + 1 == tokens.end())
+            continue;
+
+        ssh_key listed = nullptr;
+        if (ssh_pki_import_pubkey_base64((type_it + 1)->c_str(), ssh_key_type_from_name(type_it->c_str()), &listed)
+            != SSH_OK)
+            continue;
+
+        const bool same = ssh_key_cmp(listed, pubkey, SSH_KEY_CMP_PUBLIC) == 0;
+        ssh_key_free(listed);
+        if (same)
+            return true;
+    }
+    return false;
+}
+
 int callback_auth_pubkey(ssh_session session,
                          const char *user,
                          struct ssh_key_struct *pubkey,
@@ -121,6 +157,9 @@ int callback_auth_pubkey(ssh_session session,
 {
     auto *data = static_cast<SessionData *>(userdata);
     (void)session;
+
+    if (!data->authorized_keys.empty() && !is_authorized_key(data->authorized_keys, pubkey))
+        return SSH_AUTH_DENIED;
 
     if (signature_state == SSH_PUBLICKEY_STATE_NONE)
         return SSH_AUTH_SUCCESS;
@@ -531,6 +570,7 @@ struct SshServer::Impl
                                                                           .channels = {},
                                                                           .auth_attempts = 0,
                                                                           .authenticated = false,
+                                                                          .authorized_keys = authorized_keys,
                                                                           .server_callbacks = {}});
             SessionData *data = data_holder.get();
 
