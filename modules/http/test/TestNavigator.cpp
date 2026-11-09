@@ -556,6 +556,37 @@ TEST_F(TestNavigator, test_navigator_ws_send_receive)
     EXPECT_GE(server._nclosed, 1);
 }
 
+TEST_F(TestNavigator, test_navigator_ws_connect_twice_replaces_the_connection)
+{
+    if constexpr (build::is_run_with_tsan)
+        GTEST_SKIP_("has weird interaction with lws and tsan");
+
+    BasicServerScope<SimpleHttpServer> scope;
+    scope.server.set_root_dir("test/resources/mount_point");
+    scope.start(3003);
+    Navigator navigator;
+    allow_local_targets(navigator);
+    std::optional<std::string> ws_reply;
+    Waitable reply_waitable;
+    navigator.on_ws_text = [&](std::string_view msg) {
+        auto reply_lock = reply_waitable.guard();
+        ws_reply = std::string(msg);
+        reply_waitable.notify_all();
+    };
+
+    ASSERT_TRUE(navigator.ws_connect(loopback_url("ws://localhost:3003"), "proto-two"));
+    ASSERT_TRUE(navigator.ws_connect(loopback_url("ws://localhost:3003"), "proto-two"));
+    ASSERT_TRUE(navigator.ws_send("hello from navigator"));
+
+    reply_waitable.wait_for(Duration(time::sec(2)), [&] { return ws_reply.has_value(); });
+    ASSERT_TRUE(ws_reply.has_value());
+    EXPECT_EQ(*ws_reply, "hello world");
+    navigator.ws_close();
+    scope.stop();
+    EXPECT_EQ(scope.server._nopen, 2);
+    EXPECT_EQ(scope.server._nread, 1);
+}
+
 TEST_F(TestNavigator, test_navigator_download)
 {
     ServerScope scope;

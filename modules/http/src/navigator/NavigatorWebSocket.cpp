@@ -196,6 +196,9 @@ Result<void> Navigator::Impl::ws_do_connect(std::string_view url, ZStringView pr
     if (const size_t query_start = without_fragment.find('?'); query_start != std::string_view::npos)
         request_path += without_fragment.substr(query_start);
 
+    // the service thread still runs the current context: a new connection replaces it
+    ws_disconnect();
+
     struct lws_protocols protocols[] = {
         {protocol.c_str(), ws_lws_callback, 0, 4096, 0, this, 0},
         LWS_PROTOCOL_LIST_TERM,
