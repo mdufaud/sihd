@@ -13,6 +13,14 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
+namespace
+{
+
+// the server poll only wakes on client traffic: output left for the next tick waits its timeout
+constexpr int max_forwards_per_poll = 256;
+
+} // namespace
+
 BasicSshServerHandler::BasicSshServerHandler(): _default_exec_fork_mode(false), _next_session_id(1)
 {
     SIHD_UNEXPECTED_LOG(utils::init());
@@ -502,7 +510,9 @@ BasicSshServerHandler::ChannelState *BasicSshServerHandler::get_channel_state(Ss
 
 void BasicSshServerHandler::poll_handler(SshChannel *channel, ChannelState & state)
 {
-    state.handler->forward_output();
+    int forwards = 0;
+    while (forwards < max_forwards_per_poll && state.handler->forward_output())
+        ++forwards;
     // the channel stays at end of file: the handler hears it once
     if (channel->is_eof() && !state.eof_notified)
     {

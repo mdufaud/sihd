@@ -511,6 +511,30 @@ TEST_F(TestSshServer, test_buffered_exec_output_larger_than_the_window)
     EXPECT_TRUE(output == std::string(256 * 1024, 0));
 }
 
+TEST_F(TestSshServer, test_exec_output_streams_without_waiting_the_poll_timeout)
+{
+    if constexpr (!build::is_linux)
+        GTEST_SKIP() << "the command reads /dev/zero";
+
+    auto test_server = make_test_server("test-ssh-server-exec-stream");
+    ASSERT_NE(test_server, nullptr);
+    SshSession client;
+    ASSERT_TRUE(connect_to_test_server(*test_server, client));
+    SshChannel channel;
+    ASSERT_TRUE(client.make_channel_session(channel).has_value());
+
+    Stopwatch stopwatch;
+    ASSERT_TRUE(channel.request_exec("head -c 8388608 /dev/zero").has_value());
+    const std::string output = read_until_closed(channel);
+    const Duration elapsed = stopwatch.time();
+
+    EXPECT_EQ(output.size(), 8u * 1024 * 1024);
+    if constexpr (build::is_run_with_sanitizer == false)
+    {
+        EXPECT_LT(elapsed, Duration(time::sec(2)));
+    }
+}
+
 TEST_F(TestSshServer, test_pty_output_larger_than_the_window)
 {
     if constexpr (!build::is_linux)
