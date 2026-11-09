@@ -156,6 +156,59 @@ TEST_F(TestDevices, test_tcp_client_device)
     (void)server.close();
 }
 
+TEST_F(TestDevices, test_udp_receiver_device_starts_after_failed_start)
+{
+    const int port = free_loopback_port();
+    Socket blocker;
+    ASSERT_TRUE(blocker.open(AF_INET, SOCK_DGRAM, 0).has_value());
+    ASSERT_TRUE(blocker.bind(IpAddr("127.0.0.1", port)).has_value());
+    Core core;
+    auto *receiver = core.add_child<DevUdpReceiver>("receiver");
+    receiver->set_host("127.0.0.1");
+    receiver->set_port(port);
+    receiver->set_poll_timeout(1);
+    ASSERT_TRUE(core.init());
+    ASSERT_FALSE(receiver->start());
+
+    (void)blocker.close();
+
+    ASSERT_TRUE(receiver->start());
+    Channel *rx = receiver->find_channel("rx").value_or(nullptr);
+    ASSERT_NE(rx, nullptr);
+    ChannelWaiter waiter(rx);
+    Socket sender;
+    ASSERT_TRUE(sender.open(AF_INET, SOCK_DGRAM, 0).has_value());
+    const char hello[] = "after restart";
+    ASSERT_TRUE(sender.send_to(IpAddr("127.0.0.1", port), ArrCharView(hello, strlen(hello))).has_value());
+
+    // prev: the datagram may be delivered before this call
+    ASSERT_TRUE(waiter.prev_wait_for(std::chrono::seconds(5)));
+    EXPECT_EQ(std::string((const char *)rx->data(), rx->byte_size()), "after restart");
+    ASSERT_TRUE(receiver->stop());
+}
+
+TEST_F(TestDevices, test_tcp_client_device_starts_after_failed_start)
+{
+    const int port = free_port();
+    Core core;
+    auto *client = core.add_child<DevTcpClient>("client");
+    client->set_host("127.0.0.1");
+    client->set_port(port);
+    client->set_poll_timeout(1);
+    client->set_connect_timeout(200);
+    ASSERT_TRUE(core.init());
+    Channel *connected = client->find_channel("connected").value_or(nullptr);
+    ASSERT_NE(connected, nullptr);
+    ASSERT_FALSE(client->start());
+
+    Socket server;
+    make_listener(server, IpAddr::localhost(port));
+
+    ASSERT_TRUE(client->start());
+    EXPECT_EQ(connected->read<bool>(0), true);
+    ASSERT_TRUE(client->stop());
+}
+
 TEST_F(TestDevices, test_tcp_server_device)
 {
     Core core;

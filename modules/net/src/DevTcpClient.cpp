@@ -132,6 +132,12 @@ bool DevTcpClient::on_start()
         return false;
 
     _start_sync.sync();
+    if (!_start_ok)
+    {
+        // the worker ended on its failure: a next start must find it stopped
+        _worker.stop_worker();
+        (void)_tcp_client.close();
+    }
     return _start_ok;
 }
 
