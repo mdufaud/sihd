@@ -217,7 +217,7 @@ void get_recursive_children(const std::string & path,
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue;
             std::string childpath = combine(path, dirent->d_name);
-            if (dirent->d_type & DT_DIR)
+            if (dirent->d_type == DT_DIR)
             {
                 children.push_back(childpath + sep_str());
                 get_recursive_children(childpath, children, current_depth + 1, max_depth);
@@ -445,7 +445,7 @@ std::vector<std::string> children(const std::string & path)
         {
             if (strcmp(dirent->d_name, ".") == 0 || strcmp(dirent->d_name, "..") == 0)
                 continue;
-            if (dirent->d_type & DT_DIR)
+            if (dirent->d_type == DT_DIR)
                 ret.push_back(std::string(dirent->d_name) + sep_str());
             else
                 ret.push_back(dirent->d_name);

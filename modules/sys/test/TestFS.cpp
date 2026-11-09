@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 
@@ -16,6 +17,12 @@
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
+
+#if !defined(__SIHD_WINDOWS__)
+# include <sys/socket.h>
+# include <sys/un.h>
+# include <unistd.h>
+#endif
 
 #include "test_helper.hpp"
 
@@ -126,6 +133,9 @@ TEST_F(TestFS, test_fs_path)
     EXPECT_EQ(fs::normalize("/path/.."), "/");
     EXPECT_EQ(fs::normalize(".."), "..");
     EXPECT_EQ(fs::normalize("path/..hidden/test"), "path/..hidden/test");
+    EXPECT_EQ(fs::normalize("../../a"), "../../a");
+    EXPECT_EQ(fs::normalize("a/./../b"), "b");
+    EXPECT_EQ(fs::normalize("./../x"), "../x");
     EXPECT_EQ(fs::normalize(""), "");
 
     fs::set_sep('\\');
@@ -174,6 +184,8 @@ TEST_F(TestFS, test_fs_jail)
     ASSERT_TRUE(fs::make_file_link("/nonexistent/target", fs::combine(root, "dangling")).has_value());
     EXPECT_EQ(jailed(root, "dangling"), "refused: path 'dangling' goes through a dangling link");
     EXPECT_EQ(jailed(root, "dangling/file.txt"), "refused: path 'dangling/file.txt' goes through a dangling link");
+
+    EXPECT_EQ(jailed("/", "sihd_nonexistent_top/child"), "/sihd_nonexistent_top/child");
 #endif
 }
 
@@ -316,6 +328,31 @@ TEST_F(TestFS, test_fs_remove_directories_reports_failure)
     EXPECT_EQ(removed.error().message, fmt::format("could not remove file '{}': Permission denied", locked_file));
 }
 
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestFS, test_fs_children_socket_is_not_a_directory)
+{
+    if constexpr (build::is_emscripten)
+        GTEST_SKIP() << "emscripten cannot bind a unix socket";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string sock_path = fs::combine(tmp_dir.path(), "sock");
+    const int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    ASSERT_GE(fd, 0);
+    Defer close_fd([fd] { ::close(fd); });
+    sockaddr_un addr {};
+    addr.sun_family = AF_UNIX;
+    ASSERT_LT(sock_path.size(), sizeof(addr.sun_path));
+    std::memcpy(addr.sun_path, sock_path.c_str(), sock_path.size() + 1);
+    ASSERT_EQ(::bind(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)), 0);
+
+    EXPECT_EQ(fs::children(tmp_dir.path()), std::vector<std::string> {"sock"});
+    EXPECT_EQ(fs::recursive_children(tmp_dir.path()), std::vector<std::string> {sock_path});
+    EXPECT_TRUE(fs::remove_directories(tmp_dir.path()).has_value());
+    EXPECT_FALSE(fs::exists(sock_path));
+}
+#endif
+
 TEST_F(TestFS, test_fs_fast_io)
 {
     TmpDir tmp_path;
@@ -359,6 +396,18 @@ TEST_F(TestFS, test_fs_read_lines)
     ASSERT_EQ(lines->size(), 2u);
     EXPECT_EQ((*lines)[0], "first");
     EXPECT_EQ((*lines)[1], "second");
+}
+
+TEST_F(TestFS, test_fs_read_all_directory_refused)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+
+    const auto content = fs::read_all(tmp_dir.path());
+
+    ASSERT_FALSE(content.has_value());
+    EXPECT_EQ(content.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(content.error().message, fmt::format("could not read '{}': is a directory", tmp_dir.path()));
 }
 
 TEST_F(TestFS, test_fs_permission)

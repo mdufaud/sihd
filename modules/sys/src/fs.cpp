@@ -313,7 +313,9 @@ std::string normalize(std::string_view path)
 
     for (const std::string & split : splits)
     {
-        if (split == ".." && lst.size() > 0)
+        if (split == ".")
+            continue;
+        if (split == ".." && !lst.empty() && lst.back() != "..")
             lst.pop_back();
         else
             lst.push_back(split);
@@ -548,6 +550,9 @@ Result<std::string> jail(std::string_view root_view, std::string_view path_view)
             return std::unexpected(Error(permission_denied, "path '{}' goes through a dangling link", path_view));
         missing = missing.empty() ? filename(existing) : combine(filename(existing), missing);
         existing = parent(existing);
+        // parent("/a") is "": the parent of a top component is the root itself
+        if (existing.empty())
+            existing = root;
         real_str = with_one_separator(realpath(existing));
     }
     if (real_str.empty())
@@ -622,6 +627,9 @@ Result<std::vector<std::string>> read_lines(const std::string & path)
 
 Result<std::string> read_all(ZStringView path, bool binary)
 {
+    // linux opens a directory and reads it as empty
+    if (is_dir(path))
+        return std::unexpected(Error(invalid_argument, "could not read '{}': is a directory", path));
     const std::ios_base::openmode mode = binary ? (std::ifstream::in | std::ifstream::binary) : std::ifstream::in;
     std::ifstream file(path.c_str(), mode);
     if (!file.is_open() || !file.good())
