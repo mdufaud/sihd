@@ -307,7 +307,7 @@ bool Scheduler::on_work_start()
 
     Timestamp now = _clock_ptr->now();
     {
-        // on_work_stop clears it under the same guard
+        // on_work_stop clears _begin_run under the same guard
         auto lock = _waitable_task.guard();
         _begin_run = now;
     }

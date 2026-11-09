@@ -171,20 +171,10 @@ class Command
                     {
                         // Json::get narrows with a cast: 300 would land in a uint8_t as 44
                         if (j.is_number_unsigned())
-                        {
-                            const uint64_t value = j.template get<uint64_t>();
-                            if (std::in_range<T>(value) == false)
-                                return false;
-                            target = static_cast<T>(value);
-                            return true;
-                        }
+                            return _assign_in_range(target, j.template get<uint64_t>());
                         if (j.is_number_integer() == false)
                             return false;
-                        const int64_t value = j.template get<int64_t>();
-                        if (std::in_range<T>(value) == false)
-                            return false;
-                        target = static_cast<T>(value);
-                        return true;
+                        return _assign_in_range(target, j.template get<int64_t>());
                     }
                     target = j.template get<T>();
                     return true;
@@ -258,6 +248,15 @@ class Command
             };
             this->_add_binding(std::move(binding));
             return *this;
+        }
+
+        template <typename T, typename V>
+        static bool _assign_in_range(T & target, V value)
+        {
+            if (std::in_range<T>(value) == false)
+                return false;
+            target = static_cast<T>(value);
+            return true;
         }
 
         void _add_binding(Binding && binding);
