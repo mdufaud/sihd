@@ -162,7 +162,6 @@ bool DevSampler::on_stop()
 
 bool DevSampler::on_reset()
 {
-    _conf_map.clear();
     return true;
 }
 

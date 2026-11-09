@@ -99,6 +99,49 @@ TEST_F(TestRecords, test_records_dev_player)
     EXPECT_EQ(bool_channel->read<bool>(3), true);
 }
 
+TEST_F(TestRecords, test_records_dev_player_keeps_alias_across_reset)
+{
+    Core core;
+    Channel *int_channel = core.add_channel("int_channel", TYPE_INT, 2);
+    MemRecorder mem_recorder("mem_recorder", &core);
+    mem_recorder.set_parent_ownership(false);
+    EXPECT_TRUE(mem_recorder.set_stop_providing_when_empty(true));
+    DevPlayer dev_replayer("dev_replayer", &core);
+    dev_replayer.set_parent_ownership(false);
+    EXPECT_TRUE(dev_replayer.set_conf(
+        {{"provider", "..mem_recorder"}, {"provider_wait_time", 1}, {"alias", {"int=..int_channel"}}}));
+
+    const auto play_until_end = [&dev_replayer] {
+        Channel *end = dev_replayer.get_channel("end").value_or(nullptr);
+        Channel *play = dev_replayer.get_channel("play").value_or(nullptr);
+        ASSERT_NE(end, nullptr);
+        ASSERT_NE(play, nullptr);
+        ChannelWaiter waiter(end);
+        play->write(0, true);
+        EXPECT_TRUE(waiter.wait_for_nb(Duration(time::milli(150)), 1));
+    };
+
+    ArrInt first = {10, 20};
+    mem_recorder.add_record("int", Timestamp(time::milli(5)), &first);
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+    play_until_end();
+    ASSERT_TRUE(dev_replayer.stop());
+    ASSERT_TRUE(dev_replayer.reset());
+    ASSERT_TRUE(mem_recorder.stop());
+
+    ArrInt second = {30, 40};
+    mem_recorder.add_record("int", Timestamp(time::milli(5)), &second);
+    ASSERT_TRUE(mem_recorder.start());
+    ASSERT_TRUE(dev_replayer.init());
+    ASSERT_TRUE(dev_replayer.start());
+    play_until_end();
+
+    EXPECT_TRUE(core.stop());
+    EXPECT_EQ(int_channel->read<int>(0), 30);
+    EXPECT_EQ(int_channel->read<int>(1), 40);
+}
+
 TEST_F(TestRecords, test_records_dev_recorder)
 {
 #if defined(__SIHD_EMSCRIPTEN__)

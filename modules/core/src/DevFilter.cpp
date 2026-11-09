@@ -285,8 +285,6 @@ bool DevFilter::on_stop()
 
 bool DevFilter::on_reset()
 {
-    _rules_lst.clear();
-    _rule_with_delay = false;
     _scheduler_ptr = nullptr;
     return true;
 }

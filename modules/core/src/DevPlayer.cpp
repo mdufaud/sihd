@@ -238,7 +238,6 @@ bool DevPlayer::on_reset()
     _channel_play_ptr = nullptr;
     _channel_end_ptr = nullptr;
     _scheduler_ptr = nullptr;
-    _map_channels_alias.clear();
     return true;
 }
 

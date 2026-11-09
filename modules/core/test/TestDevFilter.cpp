@@ -51,6 +51,29 @@ TEST_F(TestDevFilter, test_devfilter_equal)
     EXPECT_EQ(out_channel->read<int>(2), 15);
 }
 
+TEST_F(TestDevFilter, test_devfilter_keeps_rules_across_reset)
+{
+    Core core;
+    DevFilter *dev_ptr = core.add_child<DevFilter>("filter");
+    ASSERT_TRUE(dev_ptr->set_conf_str("filter_equal", "in=..in_channel;out=..out_channel;trigger=1:10;write=2:15"));
+    core.add_channel("in_channel", "int", 3);
+    core.add_channel("out_channel", "int", 3);
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+    ASSERT_TRUE(dev_ptr->stop());
+    ASSERT_TRUE(dev_ptr->reset());
+
+    ASSERT_TRUE(dev_ptr->init());
+    ASSERT_TRUE(dev_ptr->start());
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
+    ASSERT_NE(in_channel, nullptr);
+    ASSERT_NE(out_channel, nullptr);
+    in_channel->write<int>(1, 10);
+
+    EXPECT_EQ(out_channel->read<int>(2), 15);
+}
+
 TEST_F(TestDevFilter, test_devfilter_superior)
 {
     Core core;

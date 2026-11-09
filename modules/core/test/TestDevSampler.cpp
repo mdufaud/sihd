@@ -92,6 +92,33 @@ TEST_F(TestDevSampler, test_devsampler)
     ASSERT_TRUE(core.stop());
 }
 
+TEST_F(TestDevSampler, test_devsampler_keeps_mappings_across_reset)
+{
+    Core core;
+    DevSampler *dev_ptr = core.add_child<DevSampler>("sampler");
+    ASSERT_TRUE(dev_ptr->set_conf("frequency", 100.0));
+    ASSERT_TRUE(dev_ptr->set_conf_str("sample", "..out_channel=..in_channel"));
+    core.add_channel("in_channel", "int", 3);
+    core.add_channel("out_channel", "int", 3);
+    ASSERT_TRUE(core.init());
+    ASSERT_TRUE(core.start());
+    ASSERT_TRUE(dev_ptr->stop());
+    ASSERT_TRUE(dev_ptr->reset());
+
+    ASSERT_TRUE(dev_ptr->init());
+    ASSERT_TRUE(dev_ptr->start());
+    Channel *in_channel = core.get_channel("in_channel").value_or(nullptr);
+    Channel *out_channel = core.get_channel("out_channel").value_or(nullptr);
+    ASSERT_NE(in_channel, nullptr);
+    ASSERT_NE(out_channel, nullptr);
+    ChannelWaiter out_channel_waiter(out_channel);
+    ASSERT_TRUE(in_channel->write(ArrInt({0, 0, 1})));
+
+    EXPECT_TRUE(out_channel_waiter.prev_wait_for(Duration(time::sec(1))));
+    EXPECT_EQ(out_channel->array()->str(','), "0,0,1");
+    ASSERT_TRUE(dev_ptr->stop());
+}
+
 TEST_F(TestDevSampler, test_devsampler_wrong_conf)
 {
     Core core;
