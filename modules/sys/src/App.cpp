@@ -196,10 +196,11 @@ bool App::apply_sihd_conf(const sihd::json::Json & conf)
             SIHD_LOG(error, "App: conf 'daemon.run' must be a boolean");
             return false;
         }
-        if (daemon.contains("user"))
-            _daemon.set_user(daemon["user"].get_or<std::string>(""));
-        if (daemon.contains("group"))
-            _daemon.set_group(daemon["group"].get_or<std::string>(""));
+        // a requested privilege drop that cannot happen must stop the app, never leave it running as root
+        if (daemon.contains("user") && !_daemon.set_user(daemon["user"].get_or<std::string>("")))
+            return false;
+        if (daemon.contains("group") && !_daemon.set_group(daemon["group"].get_or<std::string>("")))
+            return false;
         if (daemon.contains("pid_file"))
             _daemon.set_pid_file_path(daemon["pid_file"].get_or<std::string>(""));
         if (daemon.contains("working_dir"))

@@ -133,7 +133,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         bool set_affinity(const std::vector<bool> & cpu_mask);
 
 #if !defined(__SIHD_WINDOWS__)
-        // need admin rights and work only with forks
+        // need admin rights, runs the child through fork
         void set_chroot(std::string_view path);
 
         void set_force_fork(bool active);

@@ -455,6 +455,20 @@ TEST_F(TestApp, test_daemon_keys)
     (void)fs::remove_file(path);
 }
 
+TEST_F(TestApp, test_daemon_unknown_user)
+{
+    std::string path = tmp_path("baduser.json");
+    ASSERT_TRUE(fs::write(path, R"({"sihd": {"daemon": {"user": "sihd_no_such_user"}}})").has_value());
+
+    sihd::sys::App app({.name = "baduser", .setup_logging = false});
+    bool ran = false;
+    app.root().add_command("run", "run").on_run([&] { ran = true; });
+
+    EXPECT_EQ(run_app(app, {"--conf", path, "run"}), EXIT_FAILURE);
+    EXPECT_FALSE(ran);
+    (void)fs::remove_file(path);
+}
+
 TEST_F(TestApp, test_service_loop)
 {
     sihd::sys::App app({.name = "loop", .setup_logging = false});

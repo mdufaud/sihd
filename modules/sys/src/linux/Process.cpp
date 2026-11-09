@@ -98,12 +98,17 @@ void dup_close(int fd_from, int fd_to)
 {
     if (fd_from < 0)
         return;
+    // dup2 onto itself keeps close-on-exec, which would close the std fd at exec
+    if (fd_from == fd_to)
+    {
+        fcntl(fd_to, F_SETFD, 0);
+        return;
+    }
     if (dup2(fd_from, fd_to) == -1)
     {
         SIHD_LOG(error, "Process: could not duplicate fd: {}", os::last_error_str());
     }
-    if (fd_from != fd_to)
-        safe_close(fd_from);
+    safe_close(fd_from);
 }
 
 #endif // ENABLE_FORK
@@ -112,7 +117,8 @@ std::pair<int, int> make_pipe()
 {
     std::array<int, 2> fd;
 
-    if (pipe(fd.data()) < 0)
+    // other children must not inherit a pipe end: dup2 onto a std fd clears the flag
+    if (pipe2(fd.data(), O_CLOEXEC) < 0)
         throw std::runtime_error("Cannot make pipe");
     return std::make_pair(fd[0], fd[1]);
 }
@@ -287,7 +293,7 @@ bool StdFdWrapper::redirect_to_file(const std::string & path, bool append, mode_
 {
     this->fun = nullptr;
     bool success = false;
-    this->fd_write = open(path.c_str(), O_WRONLY | O_CREAT | (append ? O_APPEND : 0), open_mode);
+    this->fd_write = open(path.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (append ? O_APPEND : 0), open_mode);
     success = this->fd_write >= 0;
     if (success)
         this->action = append ? FileAppend : File;
@@ -511,7 +517,7 @@ Process & Process::stdin_from(FileDescType fd)
 
 bool Process::stdin_from_file(const std::string & path)
 {
-    _impl->pipe.std_in.fd_read = open(path.c_str(), O_RDONLY);
+    _impl->pipe.std_in.fd_read = open(path.c_str(), O_RDONLY | O_CLOEXEC);
     const bool success = _impl->pipe.std_in.fd_read >= 0;
     if (!success)
         SIHD_LOG(error, "Process: could not open file input: {}", path);
@@ -608,6 +614,12 @@ Result<void> Process::_do_fork(const std::vector<const char *> & argv)
             if (chroot(_chroot.c_str()) != 0)
             {
                 SIHD_LOG(error, "Process: chroot failed: {}", os::last_error_str());
+                _exit(2);
+            }
+            // a cwd kept outside the new root reaches the real filesystem through ..
+            if (!fs::chdir("/"))
+            {
+                SIHD_LOG(error, "Process: chdir to the new root failed: {}", os::last_error_str());
                 _exit(2);
             }
         }
@@ -744,7 +756,8 @@ Result<void> Process::_do_execute(const std::vector<const char *> & argv)
 {
     init_poller(_poll, _impl->pipe.std_in.fd_write, _impl->pipe.std_out.fd_read, _impl->pipe.std_err.fd_read);
 #if defined(ENABLE_SPAWN)
-    if (_fun_to_execute || _force_fork)
+    // posix_spawn cannot chroot
+    if (_fun_to_execute || _force_fork || !_chroot.empty())
         return this->_do_fork(argv);
     return this->_do_spawn(argv);
 #else
@@ -774,13 +787,12 @@ Result<void> Process::execute()
     c_argv.emplace_back(nullptr);
 
     auto executed = this->_do_execute(c_argv);
+    // the child ends belong to the child, whether it started or not
+    safe_close(_impl->pipe.std_in.fd_read);
+    safe_close(_impl->pipe.std_out.fd_write);
+    safe_close(_impl->pipe.std_err.fd_write);
     if (executed)
-    {
-        safe_close(_impl->pipe.std_in.fd_read);
-        safe_close(_impl->pipe.std_out.fd_write);
-        safe_close(_impl->pipe.std_err.fd_write);
         this->_apply_child_policy();
-    }
 
     {
         std::lock_guard lock(_impl->stdin_mutex);

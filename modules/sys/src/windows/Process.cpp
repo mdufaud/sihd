@@ -722,13 +722,12 @@ Result<void> Process::execute()
     c_argv.emplace_back(nullptr);
 
     auto executed = this->_do_execute(c_argv);
+    // the child ends belong to the child, whether it started or not
+    safe_close(_impl->pipe.std_in.fd_read);
+    safe_close(_impl->pipe.std_out.fd_write);
+    safe_close(_impl->pipe.std_err.fd_write);
     if (executed)
-    {
-        safe_close(_impl->pipe.std_in.fd_read);
-        safe_close(_impl->pipe.std_out.fd_write);
-        safe_close(_impl->pipe.std_err.fd_write);
         this->_apply_child_policy();
-    }
 
     {
         std::lock_guard lock(_impl->stdin_mutex);

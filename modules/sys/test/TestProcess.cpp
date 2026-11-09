@@ -22,6 +22,9 @@
 #endif
 
 #include "test_helper.hpp"
+#if !defined(__SIHD_WINDOWS__)
+# include "linux/userns_child.hpp"
+#endif
 
 namespace test
 {
@@ -881,5 +884,71 @@ TEST_F(TestProcess, test_process_exec_policy_options)
     ASSERT_EQ(exit_code.wait_for(std::chrono::milliseconds(500)), std::future_status::ready);
     ASSERT_EQ(exit_code.get(), 0);
 }
+
+TEST_F(TestProcess, test_process_pipes_stay_out_of_other_children)
+{
+    std::string output;
+    Process reader({helper_path(), "count-stdin"});
+    reader.stdin_from("data").stdout_to(output);
+    ASSERT_TRUE(reader.execute());
+    Process sibling(cmd_sleep());
+    ASSERT_TRUE(sibling.execute());
+
+    Stopwatch watch;
+    reader.stdin_close();
+
+    // a sibling holding the stdin write end delays the reader's end of file until the sibling dies
+    EXPECT_TRUE(reader.wait_exit().value_or(false));
+    EXPECT_LT(watch.time(), Duration(time::sec(5)));
+    EXPECT_EQ((int)reader.return_code(), 0);
+    EXPECT_TRUE(sibling.terminate());
+}
+
+#if !defined(__SIHD_WINDOWS__)
+
+TEST_F(TestProcess, test_process_chroot_without_force_fork)
+{
+    Process proc({helper_path(), "print-bytes", "0"});
+    proc.set_chroot("/sihd_no_such_jail");
+
+    ASSERT_TRUE(proc.execute());
+
+    ASSERT_TRUE(proc.wait_exit().value_or(false));
+    EXPECT_EQ((int)proc.return_code(), 2);
+}
+
+TEST_F(TestProcess, test_process_chroot_starts_at_the_jail_root)
+{
+    expect_in_userns({}, [] {
+        TmpDir jail;
+        // the test cwd lies outside the jail: a kept cwd climbs back to the real root
+        Process proc([] { return fs::exists("../../../../../../../../../../etc/passwd") ? 1 : 0; });
+        proc.set_chroot(jail.path());
+        if (!proc.execute() || !proc.wait_exit().value_or(false))
+            return 2;
+        return static_cast<int>(proc.return_code());
+    });
+}
+
+TEST_F(TestProcess, test_process_failed_execute_closes_its_pipes)
+{
+    if (os::is_run_by_valgrind() || os::is_run_by_qemu())
+        GTEST_SKIP() << "exec failure is not reported by posix_spawn";
+    const auto count_fds = [] {
+        return std::distance(std::filesystem::directory_iterator("/proc/self/fd"), {});
+    };
+    std::string out;
+    std::string err;
+    const auto fds_before = count_fds();
+
+    {
+        Process proc {"sihd_no_such_binary"};
+        proc.stdout_to(out).stderr_to(err).stdin_from("x");
+        EXPECT_FALSE(proc.execute().has_value());
+    }
+
+    EXPECT_EQ(count_fds(), fds_before);
+}
+#endif
 
 } // namespace test
