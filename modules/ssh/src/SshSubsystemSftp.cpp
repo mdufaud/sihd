@@ -4,7 +4,6 @@
  */
 
 #include <dirent.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 
 #include <sihd/sys/platform.hpp>
@@ -13,8 +12,6 @@
 
 #if !defined(__SIHD_WINDOWS__)
 # include <unistd.h>
-#else
-# include <io.h>
 #endif
 
 #include <algorithm>
@@ -795,39 +792,21 @@ void SshSubsystemSftp::Impl::handle_open(sftp_client_message_struct *msg)
     bool has_creat = (flags & SSH_FXF_CREAT) != 0;
     bool has_excl = (flags & SSH_FXF_EXCL) != 0;
 
-    // fopen modes cannot create without truncating nor honour EXCL: open(2) flags map one to one
-    int open_flags = has_write ? (has_read ? O_RDWR : O_WRONLY) : O_RDONLY;
-    if (has_creat)
-        open_flags |= O_CREAT;
-    if (has_trunc)
-        open_flags |= O_TRUNC;
-    if (has_excl)
-        open_flags |= O_EXCL;
-    if (has_append)
-        open_flags |= O_APPEND;
-#if defined(O_BINARY)
-    open_flags |= O_BINARY;
-#endif
-    // fdopen never truncates, its mode only matches the descriptor access
-    std::string open_mode = "rb";
-    if (has_write)
-        open_mode = has_append ? (has_read ? "a+b" : "ab") : (has_read ? "r+b" : "wb");
-
     const auto resolved = resolve_path(path);
     if (reply_if_refused(msg, resolved))
         return;
-    const int fd = ::open(resolved->c_str(), open_flags, mode);
-    if (fd < 0)
-    {
-        const auto err = Error::from_errno("could not open '{}'", *resolved);
-        reply_status(msg, sftp_status_from_error(err), err.message);
-        return;
-    }
+    // a request with neither access flag reads, as open(2) O_RDONLY did
     sihd::sys::File file;
-    auto opened = file.open_fd(fd, open_mode);
+    auto opened = file.open(*resolved,
+                            {.read = has_read || !has_write,
+                             .write = has_write,
+                             .create = has_creat,
+                             .truncate = has_trunc,
+                             .exclusive = has_excl,
+                             .append = has_append,
+                             .permissions = mode});
     if (!opened)
     {
-        ::close(fd);
         reply_status(msg, sftp_status_from_error(opened.error()), opened.error().message);
         return;
     }
