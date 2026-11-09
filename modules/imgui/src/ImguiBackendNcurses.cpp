@@ -194,7 +194,8 @@ bool open_screen()
         if (newterm(direct.c_str(), stdout, stdin) != nullptr)
             return true;
     }
-    return initscr() != nullptr;
+    // initscr() exits the process on an unknown terminal, newterm() returns null
+    return newterm(nullptr, stdout, stdin) != nullptr;
 }
 
 // tigetstr answers (char *)-1 for a name this terminfo does not hold as a string

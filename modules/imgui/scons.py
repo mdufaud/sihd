@@ -57,6 +57,7 @@ else:
             "src/ImguiRendererNcurses.cpp",
         ])
         sihd_imgui_tests.extend([
+            "test/TestImguiBackendNcurses.cpp",
             "test/TestNcursesRenderer.cpp",
             "test/TestNcursesScene.cpp",
             "test/TestNcursesWidgets.cpp",
