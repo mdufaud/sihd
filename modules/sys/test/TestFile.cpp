@@ -238,6 +238,53 @@ TEST_F(TestFile, test_file_buffer_size_kept_while_open)
     EXPECT_EQ(read, "hello");
 }
 
+TEST_F(TestFile, test_file_open_mem_keeps_bytes_after_nul)
+{
+    const std::string content("ab\0cde", 6);
+    File file;
+    ASSERT_TRUE(file.set_buffer_size(16).has_value());
+    ASSERT_TRUE(file.open_mem("r", content).has_value());
+
+    std::string read;
+    ASSERT_TRUE(file.read(read, content.size()).has_value());
+
+    EXPECT_EQ(read, content);
+}
+
+TEST_F(TestFile, test_file_failed_open_keeps_previous_file)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine(tmp_dir.path(), "kept.txt");
+    ASSERT_TRUE(fs::write(path, "kept").has_value());
+    File file;
+    ASSERT_TRUE(file.open(path, "r").has_value());
+
+    EXPECT_FALSE(file.open(fs::combine(tmp_dir.path(), "missing/nope.txt"), "r").has_value());
+
+    ASSERT_TRUE(file.is_open());
+    EXPECT_EQ(file.path(), path);
+    std::string read;
+    ASSERT_TRUE(file.read(read, 4).has_value());
+    EXPECT_EQ(read, "kept");
+}
+
+TEST_F(TestFile, test_file_reopen_truncates_after_previous_writes)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string path = fs::combine(tmp_dir.path(), "reopened.txt");
+    File file;
+    ASSERT_TRUE(file.open(path, "w").has_value());
+    ASSERT_TRUE(file.write("abc", 3).has_value());
+
+    ASSERT_TRUE(file.open(path, "w").has_value());
+    ASSERT_TRUE(file.write("z", 1).has_value());
+    ASSERT_TRUE(file.close().has_value());
+
+    EXPECT_EQ(fs::read_all(path).value_or(""), "z");
+}
+
 TEST_F(TestFile, test_file_open_tmp)
 {
     File file;

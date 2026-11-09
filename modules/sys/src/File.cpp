@@ -305,12 +305,19 @@ Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const
 
 Result<void> File::open(const std::string & path, const std::string & mode)
 {
+    // a refused path keeps the open file; flushed first so its close cannot write into a file the new open truncated
+    if (_file_ptr != nullptr)
+        fflush(_file_ptr);
+    FILE *opened = fopen(path.c_str(), mode.c_str());
+    if (opened == nullptr)
+        return std::unexpected(Error::from_errno("could not open '{}'", path));
     auto closed = this->close();
     if (!closed)
+    {
+        fclose(opened);
         return closed;
-    _file_ptr = fopen(path.c_str(), mode.c_str());
-    if (_file_ptr == nullptr)
-        return std::unexpected(Error::from_errno("could not open '{}'", path));
+    }
+    _file_ptr = opened;
     _path = path;
     _stream_ownership = true;
     return {};
@@ -441,8 +448,7 @@ Result<void> File::open_mem(const std::string & mode, std::string_view put_in_bu
     {
         const size_t max_len = std::min(_buf_size, put_in_buffer.size());
 
-        _buf_ptr[0] = 0;
-        strncpy(_buf_ptr, put_in_buffer.data(), max_len);
+        memcpy(_buf_ptr, put_in_buffer.data(), max_len);
 
         if (max_len < _buf_size)
             memset(_buf_ptr + max_len, 0, _buf_size - max_len);
