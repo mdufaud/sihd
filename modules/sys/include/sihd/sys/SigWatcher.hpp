@@ -2,6 +2,7 @@
 #define __SIHD_SYS_SIGWATCHER_HPP__
 
 #include <functional>
+#include <list>
 #include <mutex>
 #include <span>
 
@@ -52,6 +53,7 @@ class SigWatcher: public sihd::util::Named,
 
         bool set_polling_frequency(double frequency);
 
+        // false once started: the watcher waits only on the signals it started with
         bool add_signal(int sig);
         bool rm_signal(int sig);
 
@@ -89,7 +91,8 @@ class SigWatcher: public sihd::util::Named,
 #endif
 
         std::mutex _mutex;
-        std::vector<SigControl> _sig_controllers;
+        // a SigHandler restores the previous disposition when destroyed: its node never moves
+        std::list<SigControl> _sig_controllers;
 
         std::vector<int> _signals;
         std::vector<int> _signals_to_handle;

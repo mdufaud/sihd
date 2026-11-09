@@ -162,6 +162,43 @@ TEST_F(TestSignal, test_signal_watcher)
     EXPECT_EQ(sig.load(), sig_term);
 }
 
+TEST_F(TestSignal, test_signal_watcher_add_after_start_refused)
+{
+    SigWatcher watcher("add-after-start-test");
+    ASSERT_TRUE(watcher.start());
+
+    const bool added = watcher.add_signal(sig_term);
+
+    EXPECT_TRUE(watcher.stop());
+    EXPECT_FALSE(added);
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestSignal, test_signal_watcher_keeps_every_handler)
+{
+    const auto handled = [](std::initializer_list<int> sigs) {
+        std::vector<bool> ret;
+        for (int sig : sigs)
+        {
+            struct sigaction action {};
+            sigaction(sig, nullptr, &action);
+            ret.push_back(action.sa_handler != SIG_DFL);
+        }
+        return ret;
+    };
+    SigWatcher watcher("keeps-handlers-test");
+    ASSERT_TRUE(watcher.add_signal(sig_term));
+    ASSERT_TRUE(watcher.add_signal(sig_alt));
+    ASSERT_TRUE(watcher.add_signal(SIGUSR2));
+    const std::vector<bool> after_adds = handled({sig_term, sig_alt, SIGUSR2});
+
+    ASSERT_TRUE(watcher.rm_signal(sig_term));
+
+    EXPECT_EQ(after_adds, (std::vector<bool> {true, true, true}));
+    EXPECT_EQ(handled({sig_term, sig_alt, SIGUSR2}), (std::vector<bool> {false, true, true}));
+}
+#endif
+
 TEST_F(TestSignal, test_signal_watcher_stop_skips_the_polling_interval)
 {
     if constexpr (!build::is_linux || build::is_android || build::is_emscripten)

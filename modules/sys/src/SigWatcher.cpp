@@ -79,6 +79,9 @@ bool SigWatcher::is_running() const
 
 bool SigWatcher::add_signal(int sig)
 {
+    // start blocks the signals and builds the wait mask: a signal added later would never be seen
+    if (this->is_running())
+        return false;
     std::lock_guard lock(_mutex);
     auto & sig_controller = _sig_controllers.emplace_back();
 
@@ -119,9 +122,9 @@ bool SigWatcher::rm_signal(int sig)
 #if defined(SIHD_HAS_SIGSET)
     sigdelset(&_sigset, sig);
 #endif
-    return container::erase_if(_sig_controllers,
-                               [sig](const auto & sig_controller) { return sig_controller.sig_handler.sig() == sig; })
-           && container::erase(_signals, sig);
+    return _sig_controllers.remove_if([sig](const auto & sig_controller) {
+        return sig_controller.sig_handler.sig() == sig;
+    }) > 0 && container::erase(_signals, sig);
 }
 
 bool SigWatcher::rm_signals(std::span<const int> signals)

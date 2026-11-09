@@ -34,7 +34,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 - `proc::execute`: runs a command asynchronously and returns `std::future<int>`. Configured by `proc::Options` (timeout, stdin, stdout and stderr callbacks, environment, nice, scheduler, affinity). Not available on Emscripten (`proc::supported`).
 - `Environment`: environment variable set used by `Process`: `from_current`, `load`, `set`, `get`, `rm`, `clear`, `expand`.
 - `program`: `path()` of the running executable and `find_symbol` in the loaded binaries.
-- `ProcessInfo`: inspects one process by pid or name: `pids`, `get_all_process_from_name` (regex), `name`, `cmd_line`, `exe_path`, `cwd`, `env`, `creation_time`, `metrics`, `write_into_stdin`.
+- `ProcessInfo`: inspects one process by pid or name: `pids`, `get_all_process_from_name` (regex), `name`, `cmd_line`, `exe_path`, `cwd`, `env`, `creation_time`, `metrics`, `write_into_stdin` (refused when that stdin is a regular file).
 - `ProcessMonitor`: observable periodic sampler of matching processes: `set_frequency`, `set_name_filter`, `start`, `stop`, `samples`, `sample(pid)`.
 - `sched` (namespace): per-process nice value, scheduling policy and priority, and CPU affinity: `nice`, `set_nice`, `scheduler`, `set_scheduler`, `scheduler_priority`, `affinity`, `set_affinity`.
 
@@ -48,7 +48,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 
 - `signal` (namespace): process-wide signal handling: `handle`, `unhandle`, `ignore`, `set_exit_config`, `status`, `last_received`, `stop_received`, `termination_received`, `dump_received`, `should_stop`, `reset_received`, `kill`, `name`. `block_thread` and `unblock_thread` return `not_supported` on Windows.
 - `SigHandler`: RAII handler for one signal: `handle`, `unhandle`, `call_previous_handler`, `is_handling`.
-- `SigWatcher`: observable watcher that runs a worker thread and calls a callback when watched signals arrive: `add_signal`, `rm_signal`, `set_polling_frequency`, `start`, `stop`, `is_running`. Uses `signalfd` on Linux (no polling interval: `stop` wakes it) and `sigwait` on other POSIX systems.
+- `SigWatcher`: observable watcher that runs a worker thread and calls a callback when watched signals arrive: `add_signal` (before `start` only), `rm_signal`, `set_polling_frequency`, `start`, `stop`, `is_running`. Uses `signalfd` on Linux (no polling interval: `stop` wakes it) and `sigwait` on other POSIX systems.
 - `SigWaiter`: waits for one configured signal up to a timeout (`Conf`): `received_signal`.
 - `SigThreadBlocker`: RAII guard that blocks signals on the calling thread (POSIX-only).
 
@@ -60,7 +60,7 @@ The `sys` module wraps operating-system facilities behind typed C++ APIs: files 
 - `MemLock`: RAII page lock for a memory range (wraps `os::mem_lock`).
 - `Poll`: observable blocking service that waits for file descriptor readiness: `set_read_fd`, `set_write_fd`, `rm_read_fd`, `rm_write_fd`, `set_timeout`, `poll`, `events`.
 - `EventPoll`: the `Poll` api where the fds can change during the wait and `stop()` / `request_stop()` end the wait at once. `epoll` with an eventfd wake up on Linux (a pipe on emscripten 6+, from a pthread), `WSAPoll` with a loopback wake up socket on Windows. The constructor throws when the platform poller cannot be created; only the service loop (`start()`) logs. `set_read_fd` returns false for a fd the platform cannot watch (a regular file with epoll), or a new fd past `set_limit` (no limit by default). Used by `TcpServer` (clients added from sender threads) and the Linux `SigWatcher` (waits without a timeout).
-- `Pty`: pseudo-terminal abstraction; `create` returns the platform implementation: `set_shell`, `set_args`, `set_env`, `set_size`, `spawn`, `read`, `write`, `resize`, `send_eof`, `wait`, `terminate`. Check `Pty::is_supported()` first.
+- `Pty`: pseudo-terminal abstraction; `create` returns the platform implementation: `set_shell`, `set_args`, `set_env`, `set_size`, `spawn`, `read`, `write`, `resize`, `send_eof` (the terminal EOF character, the child keeps its output), `wait`, `terminate`. Check `Pty::is_supported()` first.
 - `StreamCapture`: captures everything written to a `FILE *` (for example stdout) and returns it with `str()`.
 
 ### Dynamic loading
