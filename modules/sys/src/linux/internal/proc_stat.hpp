@@ -26,6 +26,9 @@ std::optional<ProcessMetrics> read_proc_metrics(int pid, std::string *name = nul
 // nullopt when the io file is unreadable (permission denied or old kernel)
 std::optional<ProcIo> read_proc_io(int pid);
 
+// clock ticks between boot and the process start; nullopt when the stat is unreadable
+std::optional<uint64_t> read_proc_start_ticks(int pid);
+
 } // namespace sihd::sys::internal
 
 #endif

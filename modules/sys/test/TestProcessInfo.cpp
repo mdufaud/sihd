@@ -1,17 +1,28 @@
 #include <algorithm>
+#include <array>
 #include <iostream>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include <sihd/sys/Process.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/program.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/ansi.hpp>
 #include <sihd/util/build.hpp>
+
+#if defined(__SIHD_LINUX__)
+# include <fcntl.h>
+# include <sys/prctl.h>
+# include <unistd.h>
+#endif
+
+#include "test_helper.hpp"
 
 namespace test
 {
@@ -103,5 +114,58 @@ TEST_F(TestProcessInfo, test_processinfo_pids)
     EXPECT_FALSE(pids.empty());
     EXPECT_NE(std::find(pids.begin(), pids.end(), getpid()), pids.end());
 }
+
+#if defined(__SIHD_LINUX__)
+TEST_F(TestProcessInfo, test_processinfo_creation_time_with_spaced_name)
+{
+    // PR_GET_NAME fills TASK_COMM_LEN bytes
+    constexpr size_t comm_size = 16;
+    std::array<char, comm_size> previous_name {};
+    ASSERT_EQ(prctl(PR_GET_NAME, previous_name.data()), 0);
+    const Timestamp expected = ProcessInfo(getpid()).creation_time();
+    ASSERT_EQ(prctl(PR_SET_NAME, "with space"), 0);
+    Defer restore([&] { prctl(PR_SET_NAME, previous_name.data()); });
+
+    const Timestamp creation_time = ProcessInfo(getpid()).creation_time();
+
+    EXPECT_EQ(creation_time.get(), expected.get());
+}
+
+TEST_F(TestProcessInfo, test_processinfo_write_into_file_stdin_refused)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    const std::string input = fs::combine(tmp_dir.path(), "input.txt");
+    ASSERT_TRUE(fs::write(input, "child input file").has_value());
+    Process proc({helper_path(), "sleep", "10"});
+    ASSERT_TRUE(proc.stdin_from_file(input));
+    ASSERT_TRUE(proc.execute());
+
+    const bool written = ProcessInfo(proc.pid()).write_into_stdin(std::string_view("X"));
+
+    EXPECT_TRUE(proc.terminate());
+    EXPECT_FALSE(written);
+    EXPECT_EQ(fs::read_all(input).value_or(""), "child input file");
+}
+
+TEST_F(TestProcessInfo, test_processinfo_write_into_pipe_stdin)
+{
+    std::array<int, 2> fds {};
+    ASSERT_EQ(pipe2(fds.data(), O_CLOEXEC), 0);
+    std::string output;
+    Process proc({"cat"});
+    proc.stdin_from(fds[0]);
+    proc.stdout_to(output);
+    ASSERT_TRUE(proc.execute());
+
+    const bool written = ProcessInfo(proc.pid()).write_into_stdin(std::string_view("hello"));
+    close(fds[1]);
+    ASSERT_TRUE(proc.wait_exit().value_or(false));
+    EXPECT_TRUE(proc.terminate());
+
+    EXPECT_TRUE(written);
+    EXPECT_EQ(output, "hello");
+}
+#endif
 
 } // namespace test

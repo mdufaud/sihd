@@ -26,6 +26,7 @@ constexpr size_t stat_ppid = 1;
 constexpr size_t stat_utime = 11;
 constexpr size_t stat_stime = 12;
 constexpr size_t stat_threads = 17;
+constexpr size_t stat_starttime = 19;
 constexpr size_t stat_vsize = 20;
 constexpr size_t stat_rss = 21;
 
@@ -151,6 +152,14 @@ std::optional<ProcIo> read_proc_io(int pid)
             io.write_ops = to_u64(value);
     }
     return io;
+}
+
+std::optional<uint64_t> read_proc_start_ticks(int pid)
+{
+    auto fields = read_stat_fields(pid, nullptr);
+    if (fields.has_value() == false)
+        return std::nullopt;
+    return to_u64((*fields)[stat_starttime]);
 }
 
 } // namespace sihd::sys::internal

@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 
+#include <sihd/sys/File.hpp>
 #include <sihd/sys/ProcessInfo.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
@@ -109,22 +110,11 @@ int ProcessInfo::Impl::find_from_pid(std::string_view name)
 
 void ProcessInfo::Impl::load_time()
 {
-    Timestamp boot_time = os::boot_time();
-    auto line_opt = fs::read_all(fmt::format("/proc/{}/stat", this->pid));
-    auto status = line_opt.has_value() ? str::split(*line_opt, ' ') : std::vector<std::string> {};
-    /**
-     * From man stat:
-     *           (22) starttime  %llu
-                    The time the process started after system boot.  In
-                    kernels before Linux 2.6, this value was expressed
-                    in jiffies.  Since Linux 2.6, the value is expressed
-                    in clock ticks (divide by sysconf(_SC_CLK_TCK)).
-     */
-    constexpr size_t starttime_field = 21;
-    if (status.size() > starttime_field)
+    const auto start_ticks = internal::read_proc_start_ticks(this->pid);
+    if (start_ticks.has_value())
     {
-        this->creation_time = Duration(std::chrono::seconds(std::stoll(status[starttime_field]) / sysconf(_SC_CLK_TCK)))
-                              + boot_time;
+        const int64_t start_seconds = static_cast<int64_t>(*start_ticks) / sysconf(_SC_CLK_TCK);
+        this->creation_time = Duration(std::chrono::seconds(start_seconds)) + os::boot_time();
     }
 }
 
@@ -168,7 +158,12 @@ bool ProcessInfo::Impl::load(int pid)
 
 bool ProcessInfo::Impl::write_into_stdin(ArrCharView view) const
 {
-    return fs::write(fmt::format("/proc/{}/fd/0", this->pid), view).has_value();
+    // append, never truncate; a stdin read from a file is the other process's input file, not a stream
+    File file;
+    if (!file.open(fmt::format("/proc/{}/fd/0", this->pid), "a") || os::is_regular(file.fd()))
+        return false;
+    const auto written = file.write(view);
+    return written.has_value() && *written == view.size();
 }
 
 std::vector<ProcessInfo> ProcessInfo::get_all_process_from_name(std::string_view regex)
