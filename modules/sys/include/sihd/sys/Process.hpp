@@ -155,7 +155,7 @@ class Process: public sihd::util::IHandler<Poll *>,
         void *process() const;
 #endif
 
-        // options = timeout ms, 0 = block; false means not terminated
+        // options: waitid flags on linux (WNOHANG...), a timeout in ms on windows; 0 blocks; false means not terminated
         sihd::util::Result<bool> wait_exit(int options = 0);
         sihd::util::Result<bool> wait_any(int options = 0);
         // windows processes always terminate by exit (no signal/stop semantics)

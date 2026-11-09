@@ -1,5 +1,7 @@
 #include "internal/environment.hpp"
 
+#include <cstdlib>
+
 #include <fmt/format.h>
 
 #include <sihd/sys/env.hpp>
@@ -27,6 +29,9 @@ ExecEnviron to_exec_environ(const Environment & env)
 
 Result<void> apply(const Environment & env)
 {
+    // replaces the whole environment: a removed or cleared variable must not survive from the parent
+    if (clearenv() != 0)
+        return std::unexpected(Error(ErrorCode::unknown, "could not clear the environment"));
     Result<void> ret;
     for (const auto & [key, value] : env.entries())
     {

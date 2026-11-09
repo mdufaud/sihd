@@ -8,9 +8,11 @@
 #include <sihd/sys/Process.hpp>
 #include <sihd/sys/TmpDir.hpp>
 #include <sihd/sys/console.hpp>
+#include <sihd/sys/env.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/sys/os.hpp>
 #include <sihd/sys/proc.hpp>
+#include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Worker.hpp>
@@ -18,6 +20,7 @@
 #include <sihd/util/time.hpp>
 
 #if !defined(__SIHD_WINDOWS__)
+# include <fcntl.h>
 # include <sys/wait.h>
 #endif
 
@@ -376,6 +379,42 @@ TEST_F(TestProcess, test_process_file_out)
     EXPECT_EQ((int)proc.return_code(), 0);
 }
 
+TEST_F(TestProcess, test_process_file_out_replaces_content)
+{
+    const std::string path = fs::combine(_tmp_dir.path(), "file_out_replaced.txt");
+    ASSERT_TRUE(fs::write(path, "previous content, longer than the new one\n").has_value());
+    Process proc(cmd_echo_hello_world());
+    ASSERT_TRUE(proc.stdout_to_file(path));
+
+    ASSERT_TRUE(proc.execute());
+    ASSERT_TRUE(proc.wait_any().value_or(false));
+    EXPECT_TRUE(proc.terminate());
+
+    EXPECT_EQ(fs::read_all(path).value_or(""), "hello world\n");
+}
+
+#if !defined(__SIHD_WINDOWS__)
+TEST_F(TestProcess, test_process_stdout_and_stderr_to_same_fd)
+{
+    for (const bool force_fork : {false, true})
+    {
+        const std::string path = fs::combine(_tmp_dir.path(), fmt::format("same_fd_{}.txt", force_fork));
+        const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644);
+        ASSERT_GE(fd, 0);
+        Process proc({"sh", "-c", "echo out; echo err >&2"});
+        proc.set_force_fork(force_fork);
+        proc.stdout_to(fd);
+        proc.stderr_to(fd);
+
+        ASSERT_TRUE(proc.execute());
+        ASSERT_TRUE(proc.wait_exit().value_or(false));
+        EXPECT_TRUE(proc.terminate());
+
+        EXPECT_EQ(fs::read_all(path).value_or(""), "out\nerr\n") << "force_fork=" << force_fork;
+    }
+}
+#endif
+
 #if !defined(__SIHD_WINDOWS__)
 // windows CreateProcess cannot run an in-process function child (no fork): function-based Process is unix-only
 TEST_F(TestProcess, test_process_file_out_err)
@@ -589,6 +628,27 @@ TEST_F(TestProcess, test_process_fun)
     EXPECT_EQ(err, "nope");
 }
 
+TEST_F(TestProcess, test_process_fun_env_rm_and_clear)
+{
+    ASSERT_TRUE(env::set("SIHD_TEST_PARENT_VAR", "parent").has_value());
+    Defer unset([] { (void)env::unset("SIHD_TEST_PARENT_VAR"); });
+    const auto child = []() -> int {
+        return getenv("SIHD_TEST_PARENT_VAR") == nullptr ? 0 : 1;
+    };
+    Process removed(child);
+    removed.env_rm("SIHD_TEST_PARENT_VAR");
+    Process cleared(child);
+    cleared.env_clear();
+
+    ASSERT_TRUE(removed.execute());
+    ASSERT_TRUE(removed.wait_exit().value_or(false));
+    ASSERT_TRUE(cleared.execute());
+    ASSERT_TRUE(cleared.wait_exit().value_or(false));
+
+    EXPECT_EQ(removed.return_code(), 0);
+    EXPECT_EQ(cleared.return_code(), 0);
+}
+
 TEST_F(TestProcess, test_process_fun_throw_stays_in_child)
 {
     Process proc([]() -> int { throw std::runtime_error("child failure"); });
@@ -612,6 +672,18 @@ TEST_F(TestProcess, test_process_core_dump_terminates)
     EXPECT_TRUE(proc.has_terminated());
     EXPECT_FALSE(proc.is_process_running());
     EXPECT_FALSE(proc.kill(SIGKILL).has_value());
+    EXPECT_TRUE(proc.terminate());
+}
+
+TEST_F(TestProcess, test_process_wait_no_hang_on_running_child)
+{
+    Process proc(cmd_sleep());
+    ASSERT_TRUE(proc.execute());
+
+    const auto waited = proc.wait_no_hang();
+
+    ASSERT_TRUE(waited.has_value());
+    EXPECT_FALSE(*waited);
     EXPECT_TRUE(proc.terminate());
 }
 

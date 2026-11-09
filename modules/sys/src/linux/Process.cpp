@@ -293,7 +293,7 @@ bool StdFdWrapper::redirect_to_file(const std::string & path, bool append, mode_
 {
     this->fun = nullptr;
     bool success = false;
-    this->fd_write = open(path.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (append ? O_APPEND : 0), open_mode);
+    this->fd_write = open(path.c_str(), O_WRONLY | O_CREAT | O_CLOEXEC | (append ? O_APPEND : O_TRUNC), open_mode);
     success = this->fd_write >= 0;
     if (success)
         this->action = append ? FileAppend : File;
@@ -353,13 +353,13 @@ bool ProcessWatcher::check_status(int options)
     // race: a concurrent waiter already reaped it, waitid(P_PID, -1) is EINVAL
     if (this->pid <= 0)
         return true;
-    siginfo_t info;
+    // zeroed: WNOHANG with a live child leaves si_pid untouched, which means "no state change", not an error
+    siginfo_t info {};
     int ret = waitid(P_PID, this->pid, &info, options);
     if (ret >= 0)
     {
-        // WNOHANG with a live child leaves the siginfo unspecified
         if (info.si_pid == 0)
-            return false;
+            return true;
 
         this->code = info.si_code;
         this->status = info.si_status;
@@ -785,6 +785,15 @@ Result<void> Process::execute()
         c_argv.emplace_back(arg.c_str());
     }
     c_argv.emplace_back(nullptr);
+
+    // the child closes each source after its dup2: one fd shared by stdout and stderr needs a copy per stream
+    StdFdWrapper & std_err = _impl->pipe.std_err;
+    if (std_err.fd_write >= 0 && std_err.fd_write == _impl->pipe.std_out.fd_write)
+    {
+        std_err.fd_write = fcntl(std_err.fd_write, F_DUPFD_CLOEXEC, 0);
+        if (std_err.fd_write < 0)
+            return std::unexpected(Error::from_errno("could not duplicate the descriptor shared by stdout and stderr"));
+    }
 
     auto executed = this->_do_execute(c_argv);
     // the child ends belong to the child, whether it started or not
