@@ -212,6 +212,32 @@ TEST_F(TestFile, test_file_open_nonexistent)
     EXPECT_FALSE(file.is_open());
 }
 
+TEST_F(TestFile, test_file_open_mem_needs_buffer_size)
+{
+    File file;
+
+    auto opened = file.open_mem("r", "data");
+
+    ASSERT_FALSE(opened.has_value());
+    EXPECT_EQ(opened.error().code, ErrorCode::not_initialized);
+    EXPECT_FALSE(file.is_open());
+}
+
+TEST_F(TestFile, test_file_buffer_size_kept_while_open)
+{
+    File file;
+    ASSERT_TRUE(file.set_buffer_size(16).has_value());
+    ASSERT_TRUE(file.open_mem("r", "hello").has_value());
+
+    auto resized = file.set_buffer_size(4096);
+
+    ASSERT_FALSE(resized.has_value());
+    EXPECT_EQ(resized.error().code, ErrorCode::invalid_argument);
+    std::string read;
+    ASSERT_TRUE(file.read(read, 5).has_value());
+    EXPECT_EQ(read, "hello");
+}
+
 TEST_F(TestFile, test_file_open_tmp)
 {
     File file;

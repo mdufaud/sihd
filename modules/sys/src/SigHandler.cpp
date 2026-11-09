@@ -74,7 +74,7 @@ bool SigHandler::is_handling() const
 
 bool SigHandler::call_previous_handler() const
 {
-    const bool can_call = this->is_handling() && _previous_handler != SIG_DFL;
+    const bool can_call = this->is_handling() && _previous_handler != SIG_DFL && _previous_handler != SIG_IGN;
     if (can_call)
         _previous_handler(_sig);
     return can_call;

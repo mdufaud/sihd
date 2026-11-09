@@ -232,6 +232,15 @@ TEST_F(TestSignal, test_signal_tmp)
     EXPECT_EQ(sig_status->received, 3u);
 }
 
+TEST_F(TestSignal, test_signal_handler_skips_ignored_previous)
+{
+    ::signal(sig_alt, SIG_IGN);
+
+    SigHandler handler(sig_alt);
+
+    EXPECT_FALSE(handler.call_previous_handler());
+}
+
 TEST_F(TestSignal, test_block_thread_set)
 {
     const std::array sigs = {sig_term, sig_alt};

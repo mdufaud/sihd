@@ -158,6 +158,9 @@ Result<void> File::set_buffer_size(size_t size)
         return {};
     if (size == 0)
         return std::unexpected(Error(invalid_argument, "cannot set buffer size to 0"));
+    // an open stream may still write into the current buffer
+    if (_file_ptr != nullptr)
+        return std::unexpected(Error(invalid_argument, "cannot resize the buffer of an open file"));
     this->_delete_buffer();
     _buf_size = size;
     if (this->_allocate_buffer_if_not_exists() == false)
@@ -429,6 +432,8 @@ void File::unlock()
 
 Result<void> File::open_mem(const std::string & mode, std::string_view put_in_buffer)
 {
+    if (_buf_size == 0)
+        return std::unexpected(Error(not_initialized, "set_buffer_size before open_mem"));
     if (this->_allocate_buffer_if_not_exists() == false)
         return std::unexpected(Error(out_of_memory, "could not allocate buffer of {} bytes", _buf_size));
 
