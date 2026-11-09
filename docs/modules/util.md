@@ -30,7 +30,7 @@
 - `AService`: lifecycle `setup`, `init`, `start`, `stop`, `reset`, each with a `do_*` hook; `service_state()` is an `Observable` of state changes.
 - `ServiceController`: state machine behind a service (`state`, `last_event`, `state_str`); `ThreadedServiceController` and `BlockingServiceController` are the threaded and blocking variants.
 - `AThreadedService`: runs `on_start` and `on_stop` on a service thread (`set_service_nb_thread`, `set_start_synchronised`, `thread_name`).
-- `ABlockingService`: blocking service with `wait_ready`, `is_ready`, `set_service_wait_stop`.
+- `ABlockingService`: blocking service with `wait_ready`, `is_ready`, `set_service_wait_stop`. Its controller flags a `stop` before `on_stop` runs and clears the flag at the next `start`: a loop that reads `service_stop_requested()` never loses a stop landing before it begins. A service running an inner poll relays it with `service_relay_stop(poll)` from its poll handler.
 - `AWorkerService`: threaded service whose `run` loop calls `on_work_start` and `on_work_stop`.
 - `AStepWorkerService`: threaded service stepped at a fixed rate (`set_step_frequency`) with `on_work_setup`, `on_work_start`, `on_work_stop`, `on_work_teardown` hooks.
 - `IServiceController`-based state transitions are driven by `StateMachine` and `IStateMachine` (`transition`, `state`, `state_name`, `set_transitions_map`).
@@ -58,13 +58,13 @@
 - `IObserverWatcher`, `ObserverWatcher`: hooks around each notification and each observer call.
 - `ObserverWaiter<T>`: blocks until observed notifications arrive (`observe`, `wait`, `wait_for`, `wait_nb`, `wait_for_nb`, `prev_wait`, `prev_wait_for`, `clear`). `prev_wait` variants are for a write and a wait on the same thread.
 - `IHandler<Args...>`, `Handler<Args...>`: handler interface and std-function-backed implementation (`set_method`, `set_handler`).
-- `CallbackManager`: named callbacks with typed signatures (`set`, `call`, `remove`, `check_call_type`); throws `std::out_of_range` for an unknown name and `std::invalid_argument` on a signature mismatch.
+- `CallbackManager`: named callbacks with typed signatures (`set`, `call`, `remove`, `check_call_type`); `set` replaces the callback of a name; throws `std::out_of_range` for an unknown name and `std::invalid_argument` on a signature mismatch.
 - `MoveOnlyFunction<R(Args...)>`: move-only `std::function`-like wrapper.
 - `Collector<T>`: service that polls an `IProvider<T>` and notifies observers with each item (`collect`, `set_provider`, `set_timeout`, `data`).
 
 ### Command line
 
-- `CliApp`: application framework with `Options` (name, description, version, logging setup), `run(argc, argv)`, `loop`, `wait_for_termination`, `stop`, `reload`, `set_conf_loader`, and overridable `on_boot`, `on_configure`, `on_run`, `on_terminate`, `on_halt`, `on_fail` hooks.
+- `CliApp`: application framework with `Options` (name, description, version, logging setup), `run(argc, argv)`, `loop`, `wait_for_termination`, `stop`, `reload`, `set_conf_loader`, and overridable `on_boot`, `on_configure`, `on_run`, `on_terminate`, `on_halt`, `on_fail` hooks. A refused `reload` restores the bound values, the log level and the log sinks; what an `apply_sihd_conf` override sets is that override's to restore.
 - `CliInterpreter`: command tree evaluator (`evaluate` on argument lists or raw lines), with generated help and `bash_completion`.
 - `Command`: a node of the command tree (`add_command`, `path`, `command_names`, `bind`, `bind_positional`, `on_run`) that binds C++ variables to options.
 - `TokenPattern`: compiles a `{token}` template (`compile`) and renders it from a provider (`render`).

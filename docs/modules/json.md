@@ -31,10 +31,10 @@ JSON document parsing, typed access and serialization. Parsed documents are back
 
 - `operator[](std::string_view key)` and `operator[](size_t index)`: child lookup; a missing key or index, or a wrong container type, yields a null `Json`.
 - `contains(key)`, `size()`, `empty()`: object membership and element count.
-- `get<T>()`: typed value for `bool`, `int8_t` to `int64_t`, `uint8_t` to `uint64_t`, `float`, `double`, `std::string` and `std::vector<std::string>`; throws `std::runtime_error` on a type mismatch.
+- `get<T>()`: typed value for `bool`, `int8_t` to `int64_t`, `uint8_t` to `uint64_t`, `float`, `double`, `std::string` and `std::vector<std::string>`; throws `std::runtime_error` on a type mismatch or a number out of the range of `T` (a float is truncated toward zero first).
 - `get_or<T>(default)`: same as `get<T>()`, returns `default` instead of throwing.
 - `begin()` / `end()` and `Json::iterator`: iterate array elements or object members (`key()`, `value()`).
-- `operator==`: structural comparison.
+- `operator==`: compares values: numbers whatever their storage (`1`, `1u` and `1.0` are equal), objects whatever their key order.
 
 ### Lazy search
 
