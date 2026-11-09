@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <deque>
 
 #include <sihd/tui/channel_view.hpp>
@@ -81,7 +82,8 @@ Component ChannelSparkline(const Channel & channel, size_t samples)
     auto history = std::make_shared<std::deque<double>>();
     return Renderer([&channel, samples, history] {
         const Value value = channel.value_at(0);
-        if (value.empty() == false)
+        // a NaN or infinite sample has no bar and would poison the low and high of the history
+        if (value.empty() == false && std::isfinite(value.to_double()))
         {
             history->push_back(value.to_double());
             if (history->size() > samples)

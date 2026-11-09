@@ -1,3 +1,5 @@
+#include <cmath>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -55,6 +57,20 @@ TEST_F(TestChannelView, test_channel_sparkline_samples_each_frame)
     for (int value : {0, 7, 3, 7})
     {
         ASSERT_TRUE(rate.write<int>(0, value));
+        sparkline->Render();
+    }
+
+    EXPECT_EQ(render_lines(sparkline->Render(), 10, 1)[0], "▁██");
+}
+
+TEST_F(TestChannelView, test_channel_sparkline_skips_non_finite_samples)
+{
+    Channel rate("rate", "double");
+    ftxui::Component sparkline = ChannelSparkline(rate, 3);
+
+    for (double value : {0.0, std::nan(""), std::numeric_limits<double>::infinity(), 7.0})
+    {
+        ASSERT_TRUE(rate.write<double>(0, value));
         sparkline->Render();
     }
 

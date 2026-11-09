@@ -35,7 +35,7 @@ Terminal user interface components built on FTXUI. `CliComponent` is an interact
 
 - `Refresher(post)`: coalesces redraw requests from any thread. `request()` calls `post` (for a screen, `screen.PostEvent(ftxui::Event::Custom)`) only when no frame is pending; `rendered()` marks a frame drawn. `RefreshOnRender(component, refresher)` calls `rendered()` each time `component` is drawn.
 - `DevScreen`: a `core` device whose linked channels are all inputs, whatever their name; a write of any of them calls `request()` on the refresher given by `set_refresher`. Link a heartbeat (`DevPulsation`) for a steady rate, or the data channels for a redraw on change.
-- `channel_str(channel)` / `channel_text(channel)`: every element separated by a space, a `char` channel as text up to its first NUL, read under the channel lock. `array_str(array)`: the same text from a copy, such as the data of a `TreeMonitorEvent`. `channel_gauge(channel, min, max)`: the first element as a gauge. `ChannelSparkline(channel, samples)`: the first element sampled at each frame, the last `samples` drawn as bars.
+- `channel_str(channel)` / `channel_text(channel)`: every element separated by a space, a `char` channel as text up to its first NUL, read under the channel lock. `array_str(array)`: the same text from a copy, such as the data of a `TreeMonitorEvent`. `channel_gauge(channel, min, max)`: the first element as a gauge. `ChannelSparkline(channel, samples)`: the first element sampled at each frame, the last `samples` drawn as bars; a NaN or infinite value is not sampled.
 
 ### Device tree on screen
 
