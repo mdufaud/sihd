@@ -64,4 +64,13 @@ TEST_F(TestSharedMemory, test_sharedmemory)
     EXPECT_TRUE(mem.clear());
 }
 
+TEST_F(TestSharedMemory, test_sharedmemory_failed_create_leaves_no_object)
+{
+    SharedMemory failed;
+    ASSERT_FALSE(failed.create("/sihd_failed_create", 0).has_value());
+
+    SharedMemory created;
+    EXPECT_TRUE(created.create("/sihd_failed_create", sizeof(shmbuf)).has_value());
+}
+
 } // namespace test

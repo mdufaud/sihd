@@ -54,12 +54,16 @@ Result<Shm> create_shm(const std::string & id, size_t size, mode_t mode, int shm
     {
         auto error = Error::from_errno("could not truncate '{}' to {} bytes", id, size);
         close(shm->fd);
+        shm_unlink(id.c_str());
         return std::unexpected(std::move(error));
     }
 
     auto mapped = __mmap(*shm, size, mmap_flags);
     if (!mapped)
+    {
         close(shm->fd);
+        shm_unlink(id.c_str());
+    }
     return mapped;
 }
 
