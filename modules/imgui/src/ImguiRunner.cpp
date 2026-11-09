@@ -27,6 +27,10 @@ ImguiRunner::ImguiRunner(const std::string & name, Node *parent):
 
 ImguiRunner::~ImguiRunner()
 {
+#if defined(__SIHD_EMSCRIPTEN__)
+    // no frame may run on a destroyed runner
+    emscripten_cancel_main_loop();
+#endif
     this->stop();
 }
 
@@ -77,17 +81,10 @@ bool ImguiRunner::run()
 
 bool ImguiRunner::stop()
 {
-    {
-        std::lock_guard guard(_mutex);
-        if (_running == false)
-            return true;
-        _running = false;
-    }
-#if defined(__SIHD_EMSCRIPTEN__)
-    if constexpr (util::build::is_emscripten)
-        emscripten_cancel_main_loop();
-#endif
-    return _running == false;
+    std::lock_guard guard(_mutex);
+    // on the web the next frame sees it, shuts the gui down and cancels the browser loop
+    _running = false;
+    return true;
 }
 
 bool ImguiRunner::is_running() const

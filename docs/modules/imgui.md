@@ -14,7 +14,7 @@ Dear ImGui application loop. `ImguiRunner` drives one platform backend (window a
 
 ### Loop
 
-- `ImguiRunner`: owns the frame loop. `set_backend`, `set_renderer`, `set_build_frame(std::function<bool()>)` configure it, `init_imgui` initializes ImGui, `run` starts the loop (false without a backend, a renderer or an imgui context: a finished run destroyed it, `init_imgui` comes again first), `stop` ends it, `is_running` reports the state. Protected virtual hooks (`_new_frame`, `_build_frame`, `_render`, `_loop`, `_shutdown`) can be overridden by a subclass. On emscripten, `run` hands the loop to the browser main loop instead of blocking.
+- `ImguiRunner`: owns the frame loop. `set_backend`, `set_renderer`, `set_build_frame(std::function<bool()>)` configure it, `init_imgui` initializes ImGui, `run` starts the loop (false without a backend, a renderer or an imgui context: a finished run destroyed it, `init_imgui` comes again first), `stop` ends it (on emscripten the next browser frame shuts the gui down), `is_running` reports the state. Protected virtual hooks (`_new_frame`, `_build_frame`, `_render`, `_loop`, `_shutdown`) can be overridden by a subclass. On emscripten, `run` hands the loop to the browser main loop instead of blocking.
 
 ### Backend interface
 
