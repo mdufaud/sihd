@@ -25,6 +25,7 @@ namespace test
 {
 
 inline constexpr const char *HOST_KEY_PATH = "test/resources/test_host_key_pem";
+inline constexpr const char *HOST_PUBKEY_PATH = "test/resources/test_host_key_pem.pub";
 inline constexpr const char *CLIENT_KEY_PATH = "test/resources/test_client_key";
 inline constexpr const char *CLIENT_PUBKEY_PATH = "test/resources/test_client_key.pub";
 

@@ -51,12 +51,19 @@ class TestSftp: public ::testing::Test
             return reply.has_value() ? reply->status() : -1;
         }
 
-        std::string realpath(std::string_view path)
+        int close_handle(const std::string & handle)
         {
+            auto reply = _client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle));
+            return reply.has_value() ? reply->status() : -1;
+        }
+
+        std::string client_realpath(std::string_view path)
+        {
+            constexpr size_t name_count_size = sizeof(uint32_t);
             auto reply = _client->request_path(SSH_FXP_REALPATH, path);
             if (!reply.has_value() || reply->type != SSH_FXP_NAME)
                 return "<refused>";
-            return reply->string_at(4);
+            return reply->string_at(name_count_size);
         }
 
         TmpDir _base;
@@ -398,7 +405,7 @@ TEST_F(TestSftp, test_sftp_open_flags_keep_data)
     std::string handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_CREAT);
     ASSERT_FALSE(handle.empty());
     EXPECT_EQ(write_at(handle, 2, "ab"), SSH_FX_OK);
-    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(close_handle(handle), SSH_FX_OK);
     EXPECT_EQ(fs::read_all(file).value(), "01ab456789");
 
     auto excl = _client->request(SSH_FXP_OPEN,
@@ -412,19 +419,19 @@ TEST_F(TestSftp, test_sftp_open_flags_keep_data)
     handle = _client->open_file("/data.txt", SSH_FXF_READ | SSH_FXF_WRITE | SSH_FXF_CREAT);
     ASSERT_FALSE(handle.empty());
     EXPECT_EQ(write_at(handle, 0, "cd"), SSH_FX_OK);
-    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(close_handle(handle), SSH_FX_OK);
     EXPECT_EQ(fs::read_all(file).value(), "cdab456789");
 
     handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_APPEND);
     ASSERT_FALSE(handle.empty());
     EXPECT_EQ(write_at(handle, 0, "!"), SSH_FX_OK);
-    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(close_handle(handle), SSH_FX_OK);
     EXPECT_EQ(fs::read_all(file).value(), "cdab456789!");
 
     handle = _client->open_file("/data.txt", SSH_FXF_WRITE | SSH_FXF_CREAT | SSH_FXF_TRUNC);
     ASSERT_FALSE(handle.empty());
     EXPECT_EQ(write_at(handle, 0, "z"), SSH_FX_OK);
-    EXPECT_EQ(_client->request(SSH_FXP_CLOSE, SftpPacketClient::str(handle))->status(), SSH_FX_OK);
+    EXPECT_EQ(close_handle(handle), SSH_FX_OK);
     EXPECT_EQ(fs::read_all(file).value(), "z");
 }
 
@@ -456,11 +463,11 @@ TEST_F(TestSftp, test_sftp_realpath_stays_in_jail)
     ASSERT_NO_FATAL_FAILURE(open_jail("test-sftp-realpath"));
     ASSERT_TRUE(fs::make_directories(fs::combine(_jail, "sub")));
 
-    EXPECT_EQ(realpath("."), "/");
-    EXPECT_EQ(realpath("/"), "/");
-    EXPECT_EQ(realpath("/sub/.."), "/");
-    EXPECT_EQ(realpath("sub"), "/sub");
-    EXPECT_EQ(realpath("/sub/./"), "/sub");
+    EXPECT_EQ(client_realpath("."), "/");
+    EXPECT_EQ(client_realpath("/"), "/");
+    EXPECT_EQ(client_realpath("/sub/.."), "/");
+    EXPECT_EQ(client_realpath("sub"), "/sub");
+    EXPECT_EQ(client_realpath("/sub/./"), "/sub");
 }
 
 TEST_F(TestSftp, test_sftp_lstat_jail_root)

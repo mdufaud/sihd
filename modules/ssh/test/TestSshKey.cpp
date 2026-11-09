@@ -19,7 +19,7 @@ class TestSshKey: public ::testing::Test
         virtual ~TestSshKey() { LoggerManager::clear_loggers(); }
 };
 
-TEST_F(TestSshKey, test_sshkey_is_equal)
+TEST_F(TestSshKey, test_sshkey_private_is_equal)
 {
     SshKey client_private;
     SshKey client_private_copy;
@@ -30,13 +30,16 @@ TEST_F(TestSshKey, test_sshkey_is_equal)
 
     EXPECT_TRUE(client_private.is_equal(client_private_copy));
     EXPECT_FALSE(client_private.is_equal(host_private));
+}
 
+TEST_F(TestSshKey, test_sshkey_public_is_equal)
+{
     SshKey client_public;
     SshKey client_public_copy;
     SshKey host_public;
     ASSERT_TRUE(client_public.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
     ASSERT_TRUE(client_public_copy.import_pubkey_file(CLIENT_PUBKEY_PATH).has_value());
-    ASSERT_TRUE(host_public.import_pubkey_file("test/resources/test_host_key_pem.pub").has_value());
+    ASSERT_TRUE(host_public.import_pubkey_file(HOST_PUBKEY_PATH).has_value());
 
     EXPECT_TRUE(client_public.is_equal(client_public_copy));
     EXPECT_FALSE(client_public.is_equal(host_public));

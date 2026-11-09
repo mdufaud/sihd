@@ -3,6 +3,7 @@
 #include <libssh/sftp.h>
 
 #include <sihd/util/Array.hpp>
+#include <sihd/util/endian.hpp>
 
 using namespace sihd::util;
 
@@ -10,6 +11,19 @@ namespace test
 {
 
 SIHD_LOGGER;
+
+namespace
+{
+
+template <typename T>
+std::string big_endian(T value)
+{
+    std::string bytes(sizeof(T), '\0');
+    endian::write_be(value, reinterpret_cast<uint8_t *>(bytes.data()), sizeof(T));
+    return bytes;
+}
+
+} // namespace
 
 bool connect_to_test_server(const SshServerHelper & server,
                             sihd::ssh::SshSession & session,
@@ -79,15 +93,12 @@ std::string SftpPacketClient::open_file(std::string_view path, uint32_t pflags)
 
 std::string SftpPacketClient::u32(uint32_t value)
 {
-    return {static_cast<char>(value >> 24),
-            static_cast<char>(value >> 16),
-            static_cast<char>(value >> 8),
-            static_cast<char>(value)};
+    return big_endian(value);
 }
 
 std::string SftpPacketClient::u64(uint64_t value)
 {
-    return u32(static_cast<uint32_t>(value >> 32)) + u32(static_cast<uint32_t>(value));
+    return big_endian(value);
 }
 
 std::string SftpPacketClient::str(std::string_view value)
@@ -99,10 +110,7 @@ uint32_t SftpPacketClient::read_u32(std::string_view data, size_t offset)
 {
     if (data.size() < offset + 4)
         return UINT32_MAX;
-    const auto byte = [&](size_t i) {
-        return static_cast<uint32_t>(static_cast<uint8_t>(data[offset + i]));
-    };
-    return (byte(0) << 24) | (byte(1) << 16) | (byte(2) << 8) | byte(3);
+    return endian::read_be<uint32_t>(reinterpret_cast<const uint8_t *>(data.data() + offset), sizeof(uint32_t));
 }
 
 bool SftpPacketClient::send(uint8_t type, const std::string & payload)

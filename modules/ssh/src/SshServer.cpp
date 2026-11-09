@@ -38,6 +38,8 @@ SIHD_LOGGER;
 namespace
 {
 
+constexpr int max_auth_attempts = 3;
+
 struct ChannelData
 {
         SshChannel *wrapper;
@@ -95,7 +97,7 @@ int callback_auth_password(ssh_session session, const char *user, const char *pa
         return SSH_AUTH_DENIED;
     }
 
-    if (data->auth_attempts >= 3)
+    if (data->auth_attempts >= max_auth_attempts)
         return SSH_AUTH_DENIED;
     data->auth_attempts++;
 
@@ -129,7 +131,7 @@ int callback_auth_pubkey(ssh_session session,
     if (data->server->server_handler() == nullptr)
         return SSH_AUTH_DENIED;
 
-    if (data->auth_attempts >= 3)
+    if (data->auth_attempts >= max_auth_attempts)
         return SSH_AUTH_DENIED;
     data->auth_attempts++;
 

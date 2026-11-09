@@ -16,6 +16,14 @@ namespace sihd::ssh
 
 SIHD_LOGGER;
 
+namespace
+{
+
+// a poll reads one small chunk per pipe; a full client window stops reading so the child blocks
+constexpr int max_reads_per_poll = 32;
+
+} // namespace
+
 SshSubsystemExec::SshSubsystemExec(std::string_view command):
     _channel(nullptr),
     _command(command),
@@ -186,11 +194,14 @@ bool SshSubsystemExec::forward_output()
     if (!_started)
         return false;
 
-    // a poll reads one small chunk per pipe; a full client window stops reading so the child blocks
-    constexpr int max_polls = 32;
     bool forwarded = false;
-    for (int i = 0; i < max_polls && this->flush_unsent() && _process.read_pipes(0); ++i)
+    for (int i = 0; i < max_reads_per_poll; ++i)
+    {
+        this->flush_unsent();
+        if (!this->all_sent() || !_process.read_pipes(0))
+            break;
         forwarded = true;
+    }
     this->flush_unsent();
     // with its pipes at end of file, nothing polls the child anymore: reap it here
     if (!_process.can_read_pipes())
@@ -207,13 +218,16 @@ bool SshSubsystemExec::forward_output()
     return forwarded;
 }
 
-bool SshSubsystemExec::flush_unsent()
+void SshSubsystemExec::flush_unsent()
 {
-    if (_channel != nullptr)
-    {
-        write_unsent(*_channel, _unsent_out);
-        write_unsent_stderr(*_channel, _unsent_err);
-    }
+    if (_channel == nullptr)
+        return;
+    write_unsent(*_channel, _unsent_out);
+    write_unsent_stderr(*_channel, _unsent_err);
+}
+
+bool SshSubsystemExec::all_sent() const
+{
     return _unsent_out.empty() && _unsent_err.empty();
 }
 

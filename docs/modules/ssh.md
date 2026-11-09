@@ -47,7 +47,7 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 ### Server
 
-- `SshServer`: service that listens for connections. Configure with `set_port`, `set_bind_address`, `set_rsa_key`, `set_ecdsa_key`, `set_authorized_keys_file`, `set_banner`, `set_kex_timeout`, `set_verbosity`, then set a handler with `set_server_handler`. `get_port` returns the bound port.
+- `SshServer`: service that listens for connections. Configure with `set_port`, `set_bind_address`, `set_rsa_key`, `set_ecdsa_key`, `set_authorized_keys_file`, `set_banner`, `set_kex_timeout`, `set_verbosity`, then set a handler with `set_server_handler`. `get_port` returns the bound port. A session gets 3 authentication attempts.
 - `ISshServerHandler`: interface for auth decisions, session and channel events, channel data and PTY resize.
 - `BasicSshServerHandler`: ready-to-use handler. `add_allowed_user`, `add_allowed_pubkey`, optional password and pubkey callbacks, shell, exec and subsystem factory callbacks, `counters`.
 
@@ -55,9 +55,9 @@ SSH client and server built on libssh. The client side covers sessions, authenti
 
 - `ISshSubsystemHandler`: interface for a channel's handler (`on_start`, `on_data`, `on_resize`, `on_eof`, `on_close`).
 - Exec, PTY and function subsystems keep what a full client window refuses and send it on the next polls: the channel closes once all output is written.
-- `SshSubsystemExec`: runs a command as a process, in fork mode (streamed) or synchronous mode. Shell or direct parse mode.
+- `SshSubsystemExec`: runs a command as a process, in fork mode (streamed) or synchronous mode. Shell or direct parse mode. Client data goes to the process stdin; output the client window refuses waits, and the process is no longer read until it is taken.
 - `SshSubsystemPty`: spawns a shell in a pseudo-terminal bridged to the channel. `is_supported` tells whether PTY is available.
-- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection. `READDIR` answers at most 100 entries per reply.
+- `SshSubsystemSftp`: SFTP server over a local directory set with `set_root_path`, with path traversal protection. `READDIR` answers at most 100 entries per reply, `READ` at most 255 KiB. `OPEN` honours create without truncate, exclusive create and append; `FSETSTAT` applies to the file of a handle; `REALPATH` answers paths inside the root.
 - `SshSubsystemFunction`: runs a `std::function` on the command string and returns output and exit code, without spawning a process.
 
 ## Example
