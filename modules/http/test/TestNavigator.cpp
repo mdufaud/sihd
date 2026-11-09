@@ -159,6 +159,17 @@ TEST_F(TestNavigator, test_navigator_cookies)
     EXPECT_EQ(jar["session"], "abc123");
 }
 
+TEST_F(TestNavigator, test_navigator_cookies_lists_empty_values)
+{
+    Navigator navigator;
+    ASSERT_TRUE(navigator.set_cookie("empty", "", "example.com").has_value());
+    ASSERT_TRUE(navigator.set_cookie("full", "1", "example.com").has_value());
+
+    const auto jar = navigator.cookies();
+
+    EXPECT_EQ(jar, (std::map<std::string, std::string> {{"empty", ""}, {"full", "1"}}));
+}
+
 TEST_F(TestNavigator, test_navigator_redirect)
 {
     ServerScope scope;

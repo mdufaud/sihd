@@ -5,6 +5,7 @@
 #include <sihd/http/scheme.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/util/Result.hpp>
+#include <sihd/util/Splitter.hpp>
 #include <sihd/util/Timestamp.hpp>
 #include <sihd/util/Url.hpp>
 #include <sihd/util/str.hpp>
@@ -602,9 +603,12 @@ Result<NavigatorResponse> Navigator::Impl::perform(const Navigation & navigation
 std::map<std::string, std::string> Navigator::Impl::extract_cookies()
 {
     std::map<std::string, std::string> cookies;
+    // an empty value is the last field: str::split would drop it
+    Splitter splitter("\t");
+    splitter.set_empty_delimitations(true);
     for (const auto & line : extract_raw_cookies())
     {
-        auto parts = str::split(line, "\t");
+        auto parts = splitter.split(line);
         if (parts.size() >= 7)
             cookies[std::string(parts[5])] = std::string(parts[6]);
     }
