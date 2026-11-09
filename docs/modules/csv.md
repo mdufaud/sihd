@@ -18,7 +18,7 @@ Delimited text reading and writing. The reader skips comment lines, splits each 
 - `open(path)`, `is_open()`, `close()`: file lifecycle.
 - `set_delimiter(c)`, `set_commentary(c)`: delimiter (default `,`) and comment character (default `#`).
 - `set_timestamp_col(n)`, `set_timestamp_format(format)`: column holding the timestamp of each line, and its format.
-- `read_next()`: reads the next data line, returns `Result<bool>` (`false` at end of file); comment lines are skipped.
+- `read_next()`: reads the next data line, returns `Result<bool>` (`false` at end of file); comment lines are skipped; a quoted field still open at the end of the file is an `invalid_argument` error.
 - `columns()`: columns of the last line read; the reference is overwritten by the next read.
 - `get_read_timestamp()`, `get_read_data(view)`: `IReaderTimestamp` accessors for the current line.
 

@@ -397,6 +397,21 @@ TEST_F(TestCsv, test_csv_last_line_without_line_feed)
     EXPECT_EQ(*csv_data, (utils::CsvData {{"a", "b"}, {"c", "d"}}));
 }
 
+TEST_F(TestCsv, test_csv_unterminated_quote_at_end_of_file)
+{
+    TmpDir tmp_dir;
+    std::string path = fs::combine(tmp_dir.path(), "unterminated.csv");
+    ASSERT_TRUE(fs::write(path, "a,b\nc,\"d\ne,f\n").has_value());
+
+    CsvReader reader;
+    ASSERT_TRUE(reader.open(path));
+    ASSERT_TRUE(read_next_ok(reader));
+    const auto unterminated = reader.read_next();
+
+    ASSERT_FALSE(unterminated.has_value());
+    EXPECT_EQ(unterminated.error().code, ErrorCode::invalid_argument);
+}
+
 TEST_F(TestCsv, test_csv_writer_row_with_failed_column)
 {
     if constexpr (build::is_windows)

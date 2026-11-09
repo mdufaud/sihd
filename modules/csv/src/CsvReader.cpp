@@ -147,6 +147,8 @@ Result<bool> CsvReader::read_next()
             return true;
         }
     }
+    if (!_line.empty())
+        return std::unexpected(Error(invalid_argument, "unterminated quoted field at the end of the file"));
     return false;
 }
 
