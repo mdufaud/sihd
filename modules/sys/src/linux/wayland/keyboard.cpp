@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <array>
+#include <cctype>
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
@@ -63,34 +64,35 @@ std::string_view key_name(Key key)
     return key_names[std::to_underlying(key) - 1];
 }
 
-// ascii literals; else xkbcommon's unicode keysym 0x1000000 + codepoint; empty when untypeable
+// alnum ascii is its keysym name, other ascii its keysym value, else unicode keysym 0x1000000 + cp; empty if untypeable
 std::string codepoint_name(char32_t cp)
 {
     if (cp == U'\n')
         return "Return";
     if (cp == U'\t')
         return "Tab";
-    if (cp <= 0x1F)
+    if (cp <= 0x1F || cp == 0x7F)
         return {};
-    if (cp <= 0x7F)
+    if (cp < 0x7F && std::isalnum(static_cast<unsigned char>(cp)))
         return std::string(1, static_cast<char>(cp));
     char buf[16];
-    snprintf(buf, sizeof(buf), "0x%x", 0x1000000u | static_cast<uint32_t>(cp));
+    snprintf(buf, sizeof(buf), "0x%x", cp < 0x7F ? static_cast<uint32_t>(cp) : 0x1000000u | static_cast<uint32_t>(cp));
     return buf;
 }
 
 class Keymap
 {
     public:
+        // the wl_keyboard key is an evdev code: the keymap's xkb keycode minus 8
         uint32_t keycode_of(std::string_view keysym_name)
         {
             for (size_t i = 0; i < _entries.size(); ++i)
             {
                 if (_entries[i] == keysym_name)
-                    return first_keycode + static_cast<uint32_t>(i);
+                    return first_keycode + static_cast<uint32_t>(i) - evdev_offset;
             }
             _entries.emplace_back(keysym_name);
-            return first_keycode + static_cast<uint32_t>(_entries.size()) - 1;
+            return first_keycode + static_cast<uint32_t>(_entries.size()) - 1 - evdev_offset;
         }
 
         std::string text() const
@@ -121,6 +123,7 @@ class Keymap
     private:
         // The first custom keycode, below it xkb holds its minimum keycode 8.
         static constexpr uint32_t first_keycode = 9;
+        static constexpr uint32_t evdev_offset = 8;
 
         std::vector<std::string> _entries;
 };
