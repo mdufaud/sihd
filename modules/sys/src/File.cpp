@@ -3,6 +3,7 @@
 
 #include <cerrno>
 #include <climits>
+#include <cstdio>
 #include <cstring>
 #include <new>
 #include <random>
@@ -223,14 +224,10 @@ void File::_delete_buffer()
 
 Result<void> File::open_fd(int fd, const std::string & mode)
 {
-    auto closed = this->close();
-    if (!closed)
-        return closed;
-    _file_ptr = fdopen(fd, mode.c_str());
-    if (_file_ptr == nullptr)
+    FILE *opened = fdopen(fd, mode.c_str());
+    if (opened == nullptr)
         return std::unexpected(Error::from_errno("could not open file descriptor {}", fd));
-    _stream_ownership = true;
-    return {};
+    return this->_replace_stream(opened, "");
 }
 
 Result<void> File::set_stream(FILE *stream, bool ownership)
@@ -245,21 +242,14 @@ Result<void> File::set_stream(FILE *stream, bool ownership)
 
 Result<void> File::open_tmpfile()
 {
-    auto closed = this->close();
-    if (!closed)
-        return closed;
-    _file_ptr = tmpfile();
-    if (_file_ptr == nullptr)
+    FILE *opened = tmpfile();
+    if (opened == nullptr)
         return std::unexpected(Error::from_errno("could not open temporary file"));
-    _stream_ownership = true;
-    return {};
+    return this->_replace_stream(opened, "");
 }
 
 Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const std::string & suffix)
 {
-    auto closed = this->close();
-    if (!closed)
-        return closed;
     const size_t path_size = prefix.size() + 6 + suffix.size();
     if (path_size >= PATH_MAX)
         return std::unexpected(Error(invalid_argument, "path too long: {}", path_size));
@@ -271,15 +261,18 @@ Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const
     int fd = mkstemps(path, (int)suffix.size());
     if (fd < 0)
         return std::unexpected(Error::from_errno("could not open temporary file"));
-    auto opened = this->open_fd(fd, write_binary ? "wb" : "w");
-    if (opened)
-        _path = path;
-    else
+    FILE *opened = fdopen(fd, write_binary ? "wb" : "w");
+    if (opened == nullptr)
     {
+        auto error = Error::from_errno("could not open temporary file");
         ::close(fd);
         ::unlink(path);
+        return std::unexpected(std::move(error));
     }
-    return opened;
+    auto replaced = this->_replace_stream(opened, path);
+    if (!replaced)
+        ::unlink(path);
+    return replaced;
 #else
     // _mktemp_s derives 5 digits from the PID plus one letter (26 names max) and is broken under wine
     // (EEXIST on first call): generate the XXXXXX part ourselves, create with "x", retry on collision
@@ -290,12 +283,13 @@ Result<void> File::open_tmp(const std::string & prefix, bool write_binary, const
     {
         for (size_t i = 0; i < 6; ++i)
             path[prefix.size() + i] = charset[dist(gen)];
-        _file_ptr = fopen(path, write_binary ? "wbx" : "wx");
-        if (_file_ptr != nullptr)
+        FILE *opened = fopen(path, write_binary ? "wbx" : "wx");
+        if (opened != nullptr)
         {
-            _path = path;
-            _stream_ownership = true;
-            return {};
+            auto replaced = this->_replace_stream(opened, path);
+            if (!replaced)
+                std::remove(path);
+            return replaced;
         }
         if (errno != EEXIST)
             break;

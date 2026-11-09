@@ -30,6 +30,22 @@ class TestFile: public ::testing::Test
                 return "<failed>";
             return fs::read_all(path).value_or("<unreadable>");
         }
+
+        static std::string open_kept_file(const TmpDir & tmp_dir, File & file)
+        {
+            const std::string path = fs::combine(tmp_dir.path(), "kept.txt");
+            if (!fs::write(path, "kept").has_value() || !file.open(path, "r").has_value())
+                return "";
+            return path;
+        }
+
+        static std::string read_kept(File & file)
+        {
+            std::string read;
+            if (!file.read(read, 4).has_value())
+                return "<unreadable>";
+            return read;
+        }
 };
 
 TEST_F(TestFile, test_file_write_read)
@@ -277,6 +293,37 @@ TEST_F(TestFile, test_file_failed_open_keeps_previous_file)
     std::string read;
     ASSERT_TRUE(file.read(read, 4).has_value());
     EXPECT_EQ(read, "kept");
+}
+
+TEST_F(TestFile, test_file_failed_open_fd_keeps_previous_file)
+{
+    if constexpr (build::is_windows)
+        GTEST_SKIP() << "the windows crt treats an invalid descriptor as a fatal invalid parameter";
+
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    File file;
+    const std::string path = open_kept_file(tmp_dir, file);
+    ASSERT_FALSE(path.empty());
+
+    EXPECT_FALSE(file.open_fd(-1, "r").has_value());
+
+    EXPECT_EQ(file.path(), path);
+    EXPECT_EQ(read_kept(file), "kept");
+}
+
+TEST_F(TestFile, test_file_failed_open_tmp_keeps_previous_file)
+{
+    TmpDir tmp_dir;
+    ASSERT_TRUE(tmp_dir);
+    File file;
+    const std::string path = open_kept_file(tmp_dir, file);
+    ASSERT_FALSE(path.empty());
+
+    EXPECT_FALSE(file.open_tmp(fs::combine(tmp_dir.path(), "missing/tmp_"), false).has_value());
+
+    EXPECT_EQ(file.path(), path);
+    EXPECT_EQ(read_kept(file), "kept");
 }
 
 TEST_F(TestFile, test_file_reopen_truncates_after_previous_writes)
