@@ -1,5 +1,8 @@
 #include <array>
+#include <atomic>
 #include <cstring>
+#include <string>
+#include <thread>
 
 #include <gtest/gtest.h>
 
@@ -224,5 +227,39 @@ TEST_F(TestDevMessage, test_devmessage_init_unfinished)
     EXPECT_FALSE(core.init());
     (void)msg->finish();
     EXPECT_FALSE(core.init());
+}
+
+TEST_F(TestDevMessage, test_devmessage_ignores_writes_during_start)
+{
+    Core core;
+    DevMessage *dev = core.add_child<DevMessage>("dev");
+    Message *msg = core.add_child<Message>("msg");
+    // many fields keep on_start long enough for the writer to land inside it
+    for (int i = 0; i < 3000; ++i)
+        ASSERT_TRUE(msg->add_field("f" + std::to_string(i), TYPE_INT, 1));
+    ASSERT_TRUE(msg->finish());
+    ASSERT_TRUE(dev->set_message_path("..msg"));
+    ASSERT_TRUE(dev->init());
+
+    Channel *first_in = dev->find<Channel>("f0_in");
+    Channel *first_out = dev->find<Channel>("f0_out");
+    ASSERT_NE(first_in, nullptr);
+    ASSERT_NE(first_out, nullptr);
+
+    std::atomic<bool> started = false;
+    std::thread writer([first_in, &started] {
+        int value = 0;
+        while (started == false)
+            first_in->write<int>(0, ++value);
+    });
+
+    const bool start = dev->start();
+    started = true;
+    writer.join();
+    first_in->write<int>(0, -1);
+
+    EXPECT_TRUE(start);
+    EXPECT_EQ(first_out->read<int>(0), -1);
+    EXPECT_TRUE(dev->stop());
 }
 } // namespace test

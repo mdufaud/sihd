@@ -72,6 +72,9 @@ void DevMessage::_fill_channels_out()
 
 void DevMessage::handle(sihd::core::Channel *channel)
 {
+    std::lock_guard lock(_run_mutex);
+    if (_running == false)
+        return;
     if (channel == _channel_trigger)
     {
         if (_trigger_mode)
@@ -221,12 +224,14 @@ bool DevMessage::on_start()
         ret = false;
     }
 
+    std::lock_guard lock(_run_mutex);
     _running = ret;
     return ret;
 }
 
 bool DevMessage::on_stop()
 {
+    std::lock_guard lock(_run_mutex);
     _running = false;
     return true;
 }

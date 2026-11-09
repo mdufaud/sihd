@@ -1,8 +1,10 @@
 #ifndef __SIHD_CORE_DEVMESSAGE_HPP__
 #define __SIHD_CORE_DEVMESSAGE_HPP__
 
+#include <atomic>
 #include <cstdint>
 #include <map>
+#include <mutex>
 #include <vector>
 
 #include <sihd/core/Device.hpp>
@@ -38,7 +40,9 @@ class DevMessage: public sihd::core::Device
         void _fill_channels_out();
         void _compute_output();
 
-        bool _running;
+        std::atomic<bool> _running;
+        // handle runs on the writer threads: it must not see the channel maps while on_start fills them
+        std::mutex _run_mutex;
         bool _trigger_mode;
         std::string _msg_path;
 
