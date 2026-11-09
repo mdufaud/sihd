@@ -480,6 +480,23 @@ int check_monitor_events()
     return child_result();
 }
 
+// a link down before the monitor started: its unlabeled ipv6 address goes before its removal, named by no event
+int check_monitor_names_a_removed_interface()
+{
+    auto tun = create_tun("sihdtun0", IFF_TUN);
+    if (!tun)
+        return tun_failure(tun.error());
+    if (!set_ipv6("sihdtun0", "2001:db8::1"))
+        return child_failed;
+    NetMonitor monitor(std::chrono::milliseconds(100));
+
+    *tun = File();
+    EXPECT_TRUE(monitor.run());
+
+    EXPECT_TRUE(has_event(monitor.events(), NetMonitorEventType::address, true, "sihdtun0", "2001:db8::1"));
+    return child_result();
+}
+
 int check_monitor_overflow()
 {
     auto tun = create_tun("sihdtun0", IFF_TUN);
@@ -570,6 +587,11 @@ TEST_F(TestNetNamespace, test_resolved_servers)
 TEST_F(TestNetNamespace, test_monitor_events)
 {
     expect_in_userns(network_namespace, check_monitor_events, skipped_child_codes);
+}
+
+TEST_F(TestNetNamespace, test_monitor_names_a_removed_interface)
+{
+    expect_in_userns(network_namespace, check_monitor_names_a_removed_interface, skipped_child_codes);
 }
 
 TEST_F(TestNetNamespace, test_monitor_overflow)

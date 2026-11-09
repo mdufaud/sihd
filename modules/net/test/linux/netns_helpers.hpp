@@ -21,6 +21,7 @@
 #include <sihd/util/Error.hpp>
 #include <sihd/util/Result.hpp>
 
+#include <linux/ipv6.h>
 #include <net/if.h>
 
 namespace test
@@ -89,6 +90,23 @@ inline sihd::util::Result<void>
     const sockaddr_in netmask = sihd::net::IpAddr("255.255.255.0").addr4();
     std::memcpy(&request.ifr_netmask, &netmask, sizeof(netmask));
     return sihd::sys::os::ioctl(control.socket(), SIOCSIFNETMASK, &request);
+}
+
+// a /64: the kernel takes ipv6 addresses by interface index through an AF_INET6 socket
+inline sihd::util::Result<void> set_ipv6(const std::string & name, const std::string & address)
+{
+    sihd::net::Socket control;
+    auto opened = control.open(AF_INET6, SOCK_DGRAM, 0);
+    SIHD_UNEXPECTED_RETURN(opened);
+    ifreq index_request = make_ifreq(name);
+    auto indexed = sihd::sys::os::ioctl(control.socket(), SIOCGIFINDEX, &index_request);
+    SIHD_UNEXPECTED_RETURN(indexed);
+
+    in6_ifreq request {};
+    request.ifr6_addr = sihd::net::IpAddr(address).addr6().sin6_addr;
+    request.ifr6_prefixlen = 64;
+    request.ifr6_ifindex = index_request.ifr_ifindex;
+    return sihd::sys::os::ioctl(control.socket(), SIOCSIFADDR, &request);
 }
 
 inline sihd::util::Result<void> configure_tun(const std::string & name, const std::string & address)

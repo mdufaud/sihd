@@ -7,6 +7,7 @@
 # include <optional>
 # include <stdexcept>
 # include <string>
+# include <unordered_map>
 
 # include <sihd/net/NetMonitor.hpp>
 # include <sihd/net/linux/netlink.hpp>
@@ -28,23 +29,71 @@ namespace
 constexpr uint32_t monitored_groups = RTMGRP_LINK | RTMGRP_IPV4_IFADDR | RTMGRP_IPV6_IFADDR | RTMGRP_IPV4_ROUTE
                                       | RTMGRP_IPV6_ROUTE;
 
-NetMonitorEvent link_event(const netlink::Message & message)
+// a removed interface no longer resolves: the names of the links seen so far still name its last events
+using InterfaceNames = std::unordered_map<uint32_t, std::string>;
+
+uint32_t link_index(const netlink::Message & message)
 {
-    const ifinfomsg header = netlink::header<ifinfomsg>(message);
-    NetMonitorEvent event;
-    event.type = NetMonitorEventType::link;
-    event.removed = message.type == RTM_DELLINK;
+    return static_cast<uint32_t>(netlink::header<ifinfomsg>(message).ifi_index);
+}
+
+std::string link_name(const netlink::Message & message)
+{
     for (const netlink::Attribute & attribute : netlink::attributes(message, sizeof(ifinfomsg)))
     {
         if (attribute.type == IFLA_IFNAME)
-            event.interface_name = netlink::str(attribute);
+            return netlink::str(attribute);
     }
+    return "";
+}
+
+std::string name_of(const InterfaceNames & names, uint32_t index)
+{
+    const auto it = names.find(index);
+    if (it != names.end())
+        return it->second;
+    return interfaces::name_of(index).value_or("");
+}
+
+// a refused dump (android apps) leaves the names to the link events
+InterfaceNames dump_link_names()
+{
+    InterfaceNames names;
+    netlink::Netlink channel;
+    if (!channel.open(NETLINK_ROUTE))
+        return names;
+    netlink::Request request(RTM_GETLINK, NLM_F_REQUEST | NLM_F_DUMP);
+    request.set_header(ifinfomsg {});
+    auto replies = channel.request(request);
+    if (!replies)
+        return names;
+    for (const netlink::Message & message : *replies)
+    {
+        std::string name = link_name(message);
+        if (message.type == RTM_NEWLINK && !name.empty())
+            names[link_index(message)] = std::move(name);
+    }
+    return names;
+}
+
+NetMonitorEvent link_event(const netlink::Message & message, InterfaceNames & names)
+{
+    NetMonitorEvent event;
+    event.type = NetMonitorEventType::link;
+    event.removed = message.type == RTM_DELLINK;
+    const uint32_t index = link_index(message);
+    event.interface_name = link_name(message);
     if (event.interface_name.empty())
-        event.interface_name = interfaces::name_of(static_cast<uint32_t>(header.ifi_index)).value_or("");
+        event.interface_name = name_of(names, index);
+    // the kernel sends the addresses and routes of a removed link before its removal
+    if (event.removed)
+        names.erase(index);
+    else if (!event.interface_name.empty())
+        names[index] = event.interface_name;
     return event;
 }
 
-NetMonitorEvent address_event(const netlink::Message & message)
+NetMonitorEvent address_event(const netlink::Message & message, const InterfaceNames & names)
 {
     const ifaddrmsg header = netlink::header<ifaddrmsg>(message);
     NetMonitorEvent event;
@@ -69,11 +118,11 @@ NetMonitorEvent address_event(const netlink::Message & message)
     if (!event.address.has_ip())
         event.address = std::move(peer);
     if (event.interface_name.empty())
-        event.interface_name = interfaces::name_of(header.ifa_index).value_or("");
+        event.interface_name = name_of(names, header.ifa_index);
     return event;
 }
 
-NetMonitorEvent route_event(const netlink::Message & message)
+NetMonitorEvent route_event(const netlink::Message & message, const InterfaceNames & names)
 {
     NetMonitorEvent event;
     event.type = NetMonitorEventType::route;
@@ -81,30 +130,30 @@ NetMonitorEvent route_event(const netlink::Message & message)
     for (const netlink::Attribute & attribute : netlink::attributes(message, sizeof(rtmsg)))
     {
         if (attribute.type == RTA_OIF)
-            event.interface_name = interfaces::name_of(netlink::u32(attribute)).value_or("");
+            event.interface_name = name_of(names, netlink::u32(attribute));
     }
     return event;
 }
 
-std::optional<NetMonitorEvent> to_event(const netlink::Message & message)
+std::optional<NetMonitorEvent> to_event(const netlink::Message & message, InterfaceNames & names)
 {
     switch (message.type)
     {
         case RTM_NEWLINK:
         case RTM_DELLINK:
-            return link_event(message);
+            return link_event(message, names);
         case RTM_NEWADDR:
         case RTM_DELADDR:
-            return address_event(message);
+            return address_event(message, names);
         case RTM_NEWROUTE:
         case RTM_DELROUTE:
-            return route_event(message);
+            return route_event(message, names);
         default:
             return std::nullopt;
     }
 }
 
-bool drain_events(netlink::Netlink & channel, std::vector<NetMonitorEvent> & events)
+bool drain_events(netlink::Netlink & channel, InterfaceNames & names, std::vector<NetMonitorEvent> & events)
 {
     while (true)
     {
@@ -123,7 +172,7 @@ bool drain_events(netlink::Netlink & channel, std::vector<NetMonitorEvent> & eve
             return false;
         for (const netlink::Message & message : *messages)
         {
-            if (auto event = to_event(message))
+            if (auto event = to_event(message, names))
                 events.push_back(std::move(*event));
         }
     }
@@ -135,6 +184,7 @@ struct NetMonitor::Impl
 {
         netlink::Netlink channel;
         sihd::sys::Poll poll {1};
+        InterfaceNames names;
 };
 
 NetMonitor::NetMonitor(): _impl(std::make_unique<Impl>())
@@ -149,6 +199,8 @@ NetMonitor::NetMonitor(): _impl(std::make_unique<Impl>())
     if (!nonblocking)
         throw std::runtime_error(nonblocking.error().message);
     _impl->poll.set_read_fd(_impl->channel.fd());
+    // dumped once subscribed: a link created in between is in the dump or in the events
+    _impl->names = dump_link_names();
 }
 
 NetMonitor::~NetMonitor() = default;
@@ -159,7 +211,7 @@ bool NetMonitor::run()
     const int ready = _impl->poll.poll(_run_timeout.milliseconds_int());
     if (ready < 0)
         return false;
-    if (ready > 0 && !drain_events(_impl->channel, _events))
+    if (ready > 0 && !drain_events(_impl->channel, _impl->names, _events))
         return false;
 
     if (!_events.empty())
