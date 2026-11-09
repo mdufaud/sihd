@@ -415,47 +415,18 @@ TEST_F(TestSignal, test_signal_waiter_timeout)
     EXPECT_FALSE(wait.received_signal());
 }
 
-TEST_F(TestSignal, test_signal_watcher_rm_signal)
+TEST_F(TestSignal, test_signal_watcher_rm_after_start_refused)
 {
-    if constexpr (build::is_emscripten)
-        GTEST_SKIP() << "emscripten delivers a signal on its sender thread";
-
-    if (os::is_run_by_valgrind())
-        GTEST_SKIP() << "Buggy with valgrind";
-
-    std::atomic<int> sig = -1;
-    Synchronizer sync(2);
-    Handler<SigWatcher *> handler([&sig, &sync](SigWatcher *watcher) {
-        auto & catched_signals = watcher->catched_signals();
-        if (catched_signals.empty())
-            return;
-        sig = catched_signals[0];
-        (void)sync.sync(std::chrono::milliseconds(100));
-    });
-
-    SigWatcher watcher("sig-watcher-rm-test");
-    watcher.set_polling_frequency(400);
-    watcher.add_observer(&handler);
+    SigWatcher watcher("rm-after-start-test");
     ASSERT_TRUE(watcher.add_signal(sig_term));
-    watcher.start();
-    Defer stop_watcher([&] {
-        watcher.stop();
-#if !defined(__SIHD_WINDOWS__)
-        (void)signal::unblock_thread(sig_term);
-#endif
-    });
+    ASSERT_TRUE(watcher.start());
 
-    send_self(sig_term);
-    ASSERT_TRUE(sync.sync(std::chrono::milliseconds(200)));
-    ASSERT_EQ(sig.load(), sig_term);
+    const bool removed_running = watcher.rm_signal(sig_term);
+    EXPECT_TRUE(watcher.stop());
+    const bool removed_stopped = watcher.rm_signal(sig_term);
 
-    ASSERT_TRUE(watcher.rm_signal(sig_term));
-#if !defined(__SIHD_WINDOWS__)
-    sig = -1;
-    send_self(sig_term);
-    std::this_thread::sleep_for(std::chrono::milliseconds(150));
-    EXPECT_EQ(sig.load(), -1);
-#endif
+    EXPECT_FALSE(removed_running);
+    EXPECT_TRUE(removed_stopped);
 }
 
 #if !defined(__SIHD_WINDOWS__)

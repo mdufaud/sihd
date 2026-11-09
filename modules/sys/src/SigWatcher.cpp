@@ -118,6 +118,9 @@ bool SigWatcher::add_signals(std::span<const int> signals)
 
 bool SigWatcher::rm_signal(int sig)
 {
+    // stop unblocks the signals it blocked at start: a signal removed earlier would stay blocked
+    if (this->is_running())
+        return false;
     std::lock_guard lock(_mutex);
 #if defined(SIHD_HAS_SIGSET)
     sigdelset(&_sigset, sig);
