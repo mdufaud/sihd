@@ -354,7 +354,8 @@ class Array: public IArray,
         bool is_bytes_equal(const void *buf, size_t buf_byte_size, Slice byte_slice = {}) const
         {
             auto range = byte_slice.resolve(this->byte_size());
-            if ((range.from + buf_byte_size) > this->byte_size())
+            // an offset at or past the end resolves to an empty range starting at 0
+            if ((range.empty() && buf_byte_size > 0) || (range.from + buf_byte_size) > this->byte_size())
                 return false;
             return memcmp(this->buf() + range.from, buf, buf_byte_size) == 0;
         }
@@ -554,10 +555,10 @@ class Array: public IArray,
             {
                 this->delete_buffer();
                 _buf_ptr = arr;
-                _size = size;
-                _capacity = capacity;
                 _has_ownership = false;
             }
+            _size = size;
+            _capacity = capacity;
             return true;
         }
 
@@ -790,6 +791,9 @@ class Array: public IArray,
             size_t copy_idx = 0;
             for (const IArray *array : arrays)
             {
+                // copy_from_bytes refuses an empty range: an empty array has nothing to copy anyway
+                if (array->byte_size() == 0)
+                    continue;
                 if (ret->copy_from_bytes(*array, {(ssize_t)copy_idx}) == false)
                 {
                     delete ret;
@@ -887,7 +891,7 @@ static_assert(std::output_iterator<Array<int>::reverse_iterator, int>, "failed o
 static_assert(std::forward_iterator<Array<int>::reverse_iterator>, "failed forward iterator");
 static_assert(std::input_iterator<Array<int>::reverse_iterator>, "failed input iterator");
 static_assert(std::bidirectional_iterator<Array<int>::reverse_iterator>, "failed bidirectional iterator");
-static_assert(std::contiguous_iterator<Array<int>::reverse_iterator>, "failed random access iterator");
+static_assert(std::random_access_iterator<Array<int>::reverse_iterator>, "failed random access iterator");
 static_assert(std::weakly_incrementable<Array<int>::reverse_iterator>, "Failed the weakly incrementable test");
 static_assert(std::movable<Array<int>::reverse_iterator>, "Failed the moveable test");
 static_assert(std::default_initializable<Array<int>::reverse_iterator>, "Failed the default initializable test");

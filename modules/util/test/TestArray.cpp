@@ -1,3 +1,5 @@
+#include <array>
+#include <cstring>
 #include <memory>
 
 #include <gtest/gtest.h>
@@ -856,6 +858,73 @@ TEST_F(TestArray, test_array_merge)
     std::unique_ptr<Array<int>> merged(Array<int>::merge_to_array<int>({&first, &second}));
     ASSERT_NE(merged, nullptr);
     EXPECT_TRUE(merged->is_equal({1, 2, 3, 4}));
+}
+
+TEST_F(TestArray, test_array_merge_with_empty)
+{
+    Array<int> first = {1, 2};
+    Array<int> empty;
+
+    std::unique_ptr<Array<int>> trailing(Array<int>::merge_to_array<int>({&first, &empty}));
+    std::unique_ptr<Array<int>> only_empty(Array<int>::merge_to_array<int>({&empty}));
+
+    ASSERT_NE(trailing, nullptr);
+    EXPECT_TRUE(trailing->is_equal({1, 2}));
+    ASSERT_NE(only_empty, nullptr);
+    EXPECT_EQ(only_empty->size(), 0u);
+}
+
+TEST_F(TestArray, test_array_equal_offset_out_of_range)
+{
+    Array<int> arr = {1, 2, 3, 4};
+
+    EXPECT_FALSE(arr.is_equal({1}, 4));
+    EXPECT_FALSE(arr.is_equal({1}, 100));
+    EXPECT_TRUE(arr.is_equal({4}, 3));
+}
+
+TEST_F(TestArray, test_array_resize_inside_capacity_keeps_written_bytes)
+{
+    // sockets receive into the capacity then resize to the received size
+    const std::string received = "pong";
+    Array<char> arr;
+    ASSERT_TRUE(arr.reserve(16));
+
+    memcpy(arr.buf(), received.data(), received.size());
+    ASSERT_TRUE(arr.byte_resize(received.size()));
+
+    EXPECT_EQ(arr.str(), received);
+}
+
+TEST_F(TestArray, test_array_assign_same_pointer_new_size)
+{
+    std::array<uint8_t, 10> buffer {};
+    Array<uint8_t> arr;
+    ASSERT_TRUE(arr.assign(buffer.data(), 4));
+
+    ASSERT_TRUE(arr.assign(buffer.data(), 10));
+
+    EXPECT_EQ(arr.size(), 10u);
+    EXPECT_EQ(arr.capacity(), 10u);
+}
+
+TEST_F(TestArray, test_array_read_partial_refused)
+{
+    Array<int> arr = {1, 2};
+    int64_t value = 0;
+
+    EXPECT_FALSE(array_utils::read_into<int64_t>(arr, 1, value));
+    EXPECT_THROW((void)array_utils::read<int64_t>(arr, 1), std::invalid_argument);
+    EXPECT_TRUE(array_utils::read_into<int64_t>(arr, 0, value));
+}
+
+TEST_F(TestArray, test_array_reverse_iterator_index)
+{
+    Array<int> arr = {10, 20, 30, 40};
+    const auto it = arr.rbegin();
+
+    EXPECT_EQ(it[1], 30);
+    EXPECT_EQ(it[3], 10);
 }
 
 TEST_F(TestArray, test_array_mult_resize_capacity)

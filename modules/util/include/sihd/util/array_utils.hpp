@@ -39,6 +39,9 @@ IArray *create_from_type(Type dt, size_t size = 0);
 template <traits::TriviallyCopyable T>
 bool read_into(const IArray & arr, size_t idx, T & val)
 {
+    // the slice is clamped to the array end: a short read would leave part of val unset
+    if (arr.byte_index(idx) + sizeof(T) > arr.byte_size())
+        return false;
     return arr.copy_to_bytes(&val, Slice::from_size(arr.byte_index(idx), sizeof(T)));
 }
 

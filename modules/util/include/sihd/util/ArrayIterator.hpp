@@ -129,7 +129,8 @@ template <typename IteratorType>
 class ReverseArrayIterator
 {
     public:
-        using iterator_category = std::contiguous_iterator_tag;
+        // not contiguous: the next element sits at a lower address
+        using iterator_category = std::random_access_iterator_tag;
         using difference_type = std::ptrdiff_t;
         using value_type = IteratorType;
         using pointer = IteratorType *;
@@ -230,7 +231,7 @@ class ReverseArrayIterator
 
         pointer operator->() const { return this->array_curr; }
 
-        reference operator[](difference_type n) const { return *(this->array_curr + n); }
+        reference operator[](difference_type n) const { return *(this->array_curr - n); }
 
         size_t idx() const
         {
