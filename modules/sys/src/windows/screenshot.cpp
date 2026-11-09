@@ -75,7 +75,8 @@ bool take_screen_from_window(Bitmap & bm, HWND window)
     memset(&bi, 0, sizeof(bi));
     bi.biSize = sizeof(BITMAPINFOHEADER);
     bi.biWidth = width;
-    bi.biHeight = height; // positive = bottom-up DIB (matches our Bitmap storage)
+    // negative = top-down DIB: the Bitmap stores its top row first
+    bi.biHeight = -height;
     bi.biPlanes = 1;
     bi.biBitCount = 32;
     bi.biCompression = BI_RGB;
@@ -172,7 +173,7 @@ bool take_screen(Bitmap & bm)
     memset(&bi, 0, sizeof(bi));
     bi.biSize = sizeof(BITMAPINFOHEADER);
     bi.biWidth = width;
-    bi.biHeight = height;
+    bi.biHeight = -height;
     bi.biPlanes = 1;
     bi.biBitCount = 32;
     bi.biCompression = BI_RGB;
