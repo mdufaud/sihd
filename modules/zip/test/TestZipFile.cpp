@@ -418,4 +418,51 @@ TEST_F(TestZipFile, test_zip_dump_entry_to_fs)
     }
 }
 
+TEST_F(TestZipFile, test_zip_dump_wrong_password_keeps_destination)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "secret.zip");
+    {
+        ZipFile zip(zip_path);
+        ASSERT_TRUE(zip.add_file("a.txt", "hello world").has_value());
+        ASSERT_TRUE(zip.close().has_value());
+    }
+    {
+        ZipFile zip(zip_path);
+        zip.encrypt_in_aes_256();
+        ASSERT_TRUE(zip.load_entry("a.txt").has_value());
+        ASSERT_TRUE(zip.encrypt_entry("pw").has_value());
+        ASSERT_TRUE(zip.close().has_value());
+    }
+
+    const std::string out = fs::combine(tmp_dir.path(), "out.txt");
+    ASSERT_TRUE(fs::write(out, "existing data").has_value());
+    ZipFile zip(zip_path, true);
+    ASSERT_TRUE(zip.load_entry("a.txt").has_value());
+
+    EXPECT_FALSE(zip.dump_entry_to_fs(out, "wrong").has_value());
+
+    EXPECT_EQ(fs::read_all(out, true).value_or(""), "existing data");
+}
+
+TEST_F(TestZipFile, test_zip_dump_entry_keeps_line_feeds)
+{
+    const TmpDir tmp_dir;
+    const std::string zip_path = fs::combine(tmp_dir.path(), "binary.zip");
+    const std::string content = "line1\nline2\n";
+    {
+        ZipFile zip(zip_path);
+        ASSERT_TRUE(zip.add_file("lines.bin", content).has_value());
+        ASSERT_TRUE(zip.close().has_value());
+    }
+
+    const std::string out = fs::combine(tmp_dir.path(), "lines.bin");
+    ZipFile zip(zip_path, true);
+    ASSERT_TRUE(zip.load_entry("lines.bin").has_value());
+
+    ASSERT_TRUE(zip.dump_entry_to_fs(out).has_value());
+
+    EXPECT_EQ(fs::read_all(out, true).value_or(""), content);
+}
+
 } // namespace test

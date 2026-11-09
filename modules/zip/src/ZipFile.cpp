@@ -680,20 +680,21 @@ Result<void> ZipFile::dump_entry_to_fs(const std::string & path, const std::stri
         return {};
     }
 
-    File file(path, "w");
+    // the entry opens on its first read: a refused entry leaves the destination untouched
+    auto read = this->read_entry(password);
+    SIHD_UNEXPECTED_RETURN(read);
+
+    File file(path, "wb");
 
     if (!file.is_open())
     {
+        _zip_handle->file.reset();
         // File::open already logged the errno detail: reading it back may yield a clobbered value
         return std::unexpected(Error(io_error, "could not write entry '{}' to '{}'", _current_zip_entry.name, path));
     }
 
-    while (true)
+    while (*read > 0)
     {
-        auto read = this->read_entry(password);
-        SIHD_UNEXPECTED_RETURN(read);
-        if (*read == 0)
-            break;
         auto wrote = file.write(_buf.data(), (size_t)*read);
         // a failed write leaves the entry half-read: drop the handle so a retry restarts it
         if (!wrote)
@@ -705,6 +706,8 @@ Result<void> ZipFile::dump_entry_to_fs(const std::string & path, const std::stri
                                    path);
         if (*wrote == 0)
             break;
+        read = this->read_entry(password);
+        SIHD_UNEXPECTED_RETURN(read);
     }
     return {};
 }

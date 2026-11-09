@@ -32,7 +32,7 @@ ZIP archive creation, extraction, inspection and editing on libzip. `ZipFile` is
 - `read_entry(password = "")`: reads a chunk of the selected entry into the internal buffer, returns the byte count, `0` at end; `get_read_data(view)` gives access to that chunk.
 - `read_next()`: `IReader` variant of `read_entry`, returns `Result<bool>`.
 - `set_buffer_size(size)`: size of the internal read buffer.
-- `dump_entry_to_fs(path, password = "")`: writes the selected entry to disk, or creates a directory for a directory entry.
+- `dump_entry_to_fs(path, password = "")`: writes the selected entry to disk, or creates a directory for a directory entry. A refused entry (wrong password) leaves an existing destination untouched.
 
 ### Editing entries
 
