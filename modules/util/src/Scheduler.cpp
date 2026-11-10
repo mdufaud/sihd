@@ -263,7 +263,9 @@ void Scheduler::_play_task(Task *task, Timestamp now)
 
 void Scheduler::_prepare_tasks()
 {
+    // set under the guard that computes run_at: a concurrent on_work_stop clears it
     auto lock = _waitable_task.guard();
+    _begin_run = _clock_ptr->now();
     if (_stopped_at != 0)
     {
         const Duration stopped_time = _begin_run - _stopped_at;
@@ -305,15 +307,9 @@ bool Scheduler::on_work_start()
 
     this->overruns = 0;
 
-    Timestamp now = _clock_ptr->now();
-    {
-        // on_work_stop clears _begin_run under the same guard
-        auto lock = _waitable_task.guard();
-        _begin_run = now;
-    }
-
     this->_prepare_tasks();
 
+    Timestamp now;
     Task *task = nullptr;
     while (this->stop_requested == false)
     {
