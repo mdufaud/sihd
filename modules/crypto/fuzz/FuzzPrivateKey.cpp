@@ -58,7 +58,8 @@ void fuzz_generated(FuzzedDataProvider & provider)
 
     const std::string unknown = "zz" + test::consume_word(provider, 1, 8);
     test::fuzz_check(!key.generate_ec(unknown).has_value(), "an unknown curve does not generate a key");
-    test::fuzz_check(!key && key.to_pem_string().empty(), "a failed generation drops the previous key");
+    test::fuzz_check(static_cast<bool>(key) && key.to_pem_string() == encoded,
+                     "a failed generation keeps the previous key");
 }
 } // namespace
 
