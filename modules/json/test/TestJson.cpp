@@ -352,6 +352,16 @@ TEST_F(TestJson, test_json_equality_compares_values)
     auto parsed = Json::parse(R"({"b": 2, "a": 1.0})");
     ASSERT_TRUE(parsed.has_value());
     EXPECT_EQ(*parsed, obj1);
+
+    auto duplicated = Json::parse(R"({"a": {}, "b": 1, "a": null})");
+    auto reordered = Json::parse(R"({"b": 1, "a": {}, "a": null})");
+    auto swapped = Json::parse(R"({"a": null, "b": 1, "a": {}})");
+    ASSERT_TRUE(duplicated.has_value());
+    ASSERT_TRUE(reordered.has_value());
+    ASSERT_TRUE(swapped.has_value());
+    EXPECT_EQ(*duplicated, *duplicated);
+    EXPECT_EQ(*duplicated, *reordered);
+    EXPECT_FALSE(*duplicated == *swapped);
 }
 
 TEST_F(TestJson, test_json_iteration_object)

@@ -1,9 +1,11 @@
 #include <simdjson.h>
 
+#include <algorithm>
 #include <bit>
 #include <cmath>
 #include <limits>
 #include <utility>
+#include <vector>
 
 #include <sihd/json/Json.hpp>
 
@@ -114,6 +116,17 @@ struct CopyVisitor
             return std::make_unique<Json::Object>(*v);
         }
 };
+
+// must stay stable: duplicate keys keep their rank, the n-th "k" of two objects end up side by side
+std::vector<std::pair<std::string, Json::iterator>> sorted_members(const Json & json)
+{
+    std::vector<std::pair<std::string, Json::iterator>> members;
+    members.reserve(json.size());
+    for (auto it = json.begin(); it != json.end(); ++it)
+        members.emplace_back(it.key(), it);
+    std::stable_sort(members.begin(), members.end(), [](const auto & a, const auto & b) { return a.first < b.first; });
+    return members;
+}
 
 } // namespace
 
@@ -700,13 +713,20 @@ bool Json::operator==(const Json & other) const
         {
             if (size() != other.size())
                 return false;
-            // json objects are unordered: each key is looked up in the other object
-            for (auto it_a = begin(); it_a != end(); ++it_a)
+            auto it_a = begin();
+            auto it_b = other.begin();
+            for (; it_a != end() && it_a.key() == it_b.key(); ++it_a, ++it_b)
             {
-                auto it_b = other.begin();
-                while (it_b != other.end() && it_b.key() != it_a.key())
-                    ++it_b;
-                if (it_b == other.end() || !(*it_a == *it_b))
+                if (!(*it_a == *it_b))
+                    return false;
+            }
+            if (it_a == end())
+                return true;
+            const auto members = sorted_members(*this);
+            const auto other_members = sorted_members(other);
+            for (size_t i = 0; i < members.size(); ++i)
+            {
+                if (members[i].first != other_members[i].first || !(*members[i].second == *other_members[i].second))
                     return false;
             }
             return true;
