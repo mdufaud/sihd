@@ -234,6 +234,11 @@ void File::_delete_buffer()
 
 Result<void> File::open_fd(int fd, const std::string & mode)
 {
+#if !defined(__SIHD_WINDOWS__)
+    // musl fdopen does not check the descriptor of a read mode
+    if (fcntl(fd, F_GETFL) == -1)
+        return std::unexpected(Error::from_errno("could not open file descriptor {}", fd));
+#endif
     FILE *opened = fdopen(fd, mode.c_str());
     if (opened == nullptr)
         return std::unexpected(Error::from_errno("could not open file descriptor {}", fd));
