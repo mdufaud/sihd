@@ -343,6 +343,7 @@ struct ProcessWatcher
         PROCESS_INFORMATION procinfo;
 
         void reset();
+        void watch(const PROCESS_INFORMATION & child);
         bool has_terminated();
         bool check_status(int options);
         Process::ReturnCodeType return_code();
@@ -400,6 +401,13 @@ void ProcessWatcher::reset()
     if (this->procinfo.hThread != nullptr)
         CloseHandle(this->procinfo.hThread);
     ZeroMemory(&this->procinfo, sizeof(PROCESS_INFORMATION));
+}
+
+void ProcessWatcher::watch(const PROCESS_INFORMATION & child)
+{
+    std::lock_guard lock(this->mutex);
+    this->reset();
+    this->procinfo = child;
 }
 
 Process::ReturnCodeType ProcessWatcher::return_code()
@@ -680,6 +688,8 @@ Result<void> Process::_do_child_process(const std::vector<const char *> & argv)
 
     const DWORD creation_flags = 0;
 
+    PROCESS_INFORMATION procinfo;
+    ZeroMemory(&procinfo, sizeof(PROCESS_INFORMATION));
     success = CreateProcess(NULL,
                             cmd_line.data(),
                             NULL,
@@ -689,10 +699,11 @@ Result<void> Process::_do_child_process(const std::vector<const char *> & argv)
                             env_block.empty() ? NULL : (LPVOID)env_block.data(),
                             _chdir.empty() ? NULL : _chdir.data(),
                             &start_info,
-                            &_impl->process_watcher.procinfo);
+                            &procinfo);
 
     if (!success)
         return std::unexpected(Error(ErrorCode::io_error, "{}", os::last_error_str()));
+    _impl->process_watcher.watch(procinfo);
     return {};
 }
 
