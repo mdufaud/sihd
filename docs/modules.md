@@ -18,7 +18,7 @@ SIHD is split into modules. Each module is a library `libsihd_<module>` with hea
 | [`zlib`](modules/zlib.md) | Deflate/inflate byte streams (zlib, gzip), compression devices | core, zlib |
 | [`tui`](modules/tui.md) | Terminal UI components (ftxui) | sys, ftxui |
 | [`ssh`](modules/ssh.md) | SSH client and server, SFTP | sys, libssh |
-| [`usb`](modules/usb.md) | USB device enumeration, udev hardware names | sys, libusb |
+| [`usb`](modules/usb.md) | USB enumeration with descriptors, control/bulk/interrupt transfers, hotplug, Android file descriptors, udev hardware names | sys, libusb |
 | [`bt`](modules/bt.md) | Bluetooth LE scanning | sys |
 | [`wifi`](modules/wifi.md) | Wifi link, access points, scans and connections through NetworkManager, iwd, wpa_supplicant or the Windows WLAN service; passive decoding of captured 802.11 frames | net |
 | [`imgui`](modules/imgui.md) | Dear ImGui runner (GLFW, SDL3, Win32, Android, ncurses / OpenGL3, DirectX11, ncurses) | sys, imgui, opengl |

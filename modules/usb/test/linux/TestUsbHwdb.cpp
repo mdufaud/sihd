@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include <sihd/usb/UsbContext.hpp>
+#include <sihd/usb/UsbDevice.hpp>
 #include <sihd/usb/linux/hwdb.hpp>
 #include <sihd/util/Logger.hpp>
 
@@ -25,7 +25,7 @@ class TestUsbHwdb: public ::testing::Test
 
 TEST_F(TestUsbHwdb, test_enrich)
 {
-    auto scanned = UsbContext().scan();
+    auto scanned = scan();
     if (!scanned.has_value())
         GTEST_SKIP() << "no usb subsystem: " << scanned.error().message;
     std::vector<UsbDevice> devices = *scanned;

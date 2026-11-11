@@ -2,7 +2,7 @@
 #include <fmt/ranges.h>
 
 #include <sihd/sys/App.hpp>
-#include <sihd/usb/UsbContext.hpp>
+#include <sihd/usb/UsbDevice.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/build.hpp>
 #if defined(__SIHD_LINUX__)
@@ -69,8 +69,7 @@ int main(int argc, char **argv)
     });
 
     app.root().on_run([&] {
-        UsbContext context;
-        auto devices = context.scan();
+        auto devices = scan();
         if (SIHD_UNEXPECTED_LOG(devices))
         {
             app.exit(EXIT_FAILURE);

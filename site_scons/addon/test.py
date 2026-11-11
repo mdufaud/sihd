@@ -1,5 +1,5 @@
 def generate_test_env(builder):
-    return {
+    env = {
         # Python bindings load the interpreter from the vcpkg extlib dir.
         "PYTHONHOME": builder.build_extlib_path,
         # libcurl resolves its proxy from the environment on every handle: tests
@@ -9,3 +9,8 @@ def generate_test_env(builder):
         # the line test::TestWatchdog prints before killing a hung binary: names the test in brief runs
         "TEST_INTERRUPT_PATTERN": r"^(\S+) timed out after \d+s$",
     }
+    # sanitizer runtimes must come first in the preload list: umockdev would abort them
+    sanitized = builder.build_asan or builder.build_lsan or builder.build_tsan or builder.build_msan
+    if builder.build_platform == "linux" and not builder.is_cross_building() and not sanitized:
+        env["TEST_WRAPPER_MODULE_usb"] = "umockdev-wrapper"
+    return env

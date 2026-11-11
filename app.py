@@ -246,10 +246,10 @@ modules = {
         ],
     },
     "usb": {
-        "exclude-platforms": ["android", "web"],
+        "exclude-platforms": ["web"],
         "depends": ['sys'],
         "extlibs": ['libusb'],
-        # cross linux + windows: vcpkg libusb
+        # cross linux + windows + android: vcpkg libusb
         "cross-libs": ['usb-1.0'],
         "parse-configs": [
             "pkg-config libusb-1.0 --cflags --libs",

@@ -92,7 +92,6 @@ extlibs_skip_android = [
     "libwebsockets",
     "curl",
     "libssh",
-    "libusb",
     "libxcrypt",
     "ftxui",
     "opengl",
