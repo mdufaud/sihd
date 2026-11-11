@@ -96,7 +96,7 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 - `user` (namespace): `UserId` and `GroupId` (`BasicId`), `effective_user`, `real_user`, `effective_group`, `groups`, `name`, `name_of`, `user_id_of`, `group_id_of`, `primary_group_of`, `is_root`. `drop_privileges` is POSIX-only.
 - `Impersonation`: runs code as another user: `impersonate_with_credentials` (Windows), `impersonate_as` (Linux, privileged), `revert`, `impersonating`.
 - `cap` (namespace) and `CapabilitySet`: capability names and state (`all`, `from_name`, `to_name`, `available`, `has`, `set_ambient`, `drop_bounding`), and per-process raise, drop and apply through `CapabilitySet`. Linux exposes the full capability list (`cap::count` is 41); other platforms expose the common subset.
-- `session::sessions`: logged-in sessions with user, device, host and state.
+- `session::sessions`: logged-in sessions with user, device, host and state. The device is empty for a session without a terminal, the host for a local one.
 - `power`: `batteries` and `ac_lines` with charge, state and time estimates.
 
 ### System information

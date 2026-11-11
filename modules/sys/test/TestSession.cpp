@@ -27,7 +27,6 @@ TEST_F(TestSession, test_session_list)
     for (const auto & session : sessions)
     {
         EXPECT_FALSE(session.username.empty());
-        EXPECT_FALSE(session.device.empty());
         SIHD_LOG(debug,
                  "session {}: '{}' on '{}' from '{}'",
                  session.id,
