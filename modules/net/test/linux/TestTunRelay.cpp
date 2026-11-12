@@ -260,9 +260,9 @@ class TestTunRelay: public ::testing::Test
             ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, pair.data()), 0);
             ASSERT_TRUE(sihd::sys::os::set_nonblocking(pair[0]).has_value());
             _peer = Socket(pair[1]);
-            auto tun = Tun::adopt(pair[0]);
-            ASSERT_TRUE(tun.has_value());
-            ASSERT_TRUE(_relay.set_tun(std::move(*tun)));
+            Tun tun;
+            ASSERT_TRUE(tun.adopt(pair[0]).has_value());
+            ASSERT_TRUE(_relay.set_tun(std::move(tun)));
         }
 
         void TearDown() override

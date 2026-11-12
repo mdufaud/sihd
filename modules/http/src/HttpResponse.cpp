@@ -132,7 +132,7 @@ void HttpResponse::set_cookie(std::string_view name, std::string_view value, std
     _cookies.emplace_back(std::move(cookie_str));
 }
 
-Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
+Result<void> HttpResponse::from_string(std::string_view raw)
 {
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
@@ -156,7 +156,7 @@ Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
     if (status.has_value() == false)
         return std::unexpected(Error(invalid_argument, "invalid status '{}'", status_parts[1]));
 
-    HttpResponse resp;
+    HttpResponse resp(_mime_ptr);
     resp.set_status(*status);
 
     for (size_t i = 1; i < lines.size(); ++i)
@@ -179,7 +179,8 @@ Result<HttpResponse> HttpResponse::from_string(std::string_view raw)
         resp._array.copy_from_bytes(body.data(), body.size());
     }
 
-    return resp;
+    *this = std::move(resp);
+    return {};
 }
 
 std::string HttpResponse::to_string() const

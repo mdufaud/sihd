@@ -75,13 +75,14 @@ Result<std::vector<DnsServer>> resolved_servers(Duration timeout)
     dbus::Connection connection;
     auto opened = connection.open(dbus::Bus::system);
     SIHD_UNEXPECTED_RETURN(opened);
-    auto request = dbus::Message::method_call(resolved_service, resolved_path, properties_interface, "Get");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto added_interface = request->add(resolved_manager_interface);
+    dbus::Message request;
+    auto built = request.method_call(resolved_service, resolved_path, properties_interface, "Get");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto added_interface = request.add(resolved_manager_interface);
     SIHD_UNEXPECTED_RETURN(added_interface);
-    auto added_property = request->add("DNS");
+    auto added_property = request.add("DNS");
     SIHD_UNEXPECTED_RETURN(added_property);
-    auto reply = request->call(connection, timeout);
+    auto reply = request.call(connection, timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
     auto array = dbus::Iter(*reply).recurse();

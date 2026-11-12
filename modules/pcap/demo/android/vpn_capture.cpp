@@ -190,10 +190,11 @@ void relay(sihd::sys::App & app, int tun_fd, const std::string & output)
     });
 
     TunRelay relay("vpn-relay");
-    auto tun = Tun::adopt(tun_fd);
-    if (!tun)
+    Tun tun;
+    auto adopted = tun.adopt(tun_fd);
+    if (!adopted)
     {
-        fmt::print(stderr, "{}\n", tun.error().message);
+        fmt::print(stderr, "{}\n", adopted.error().message);
         app.exit(EXIT_FAILURE);
         return;
     }
@@ -201,7 +202,7 @@ void relay(sihd::sys::App & app, int tun_fd, const std::string & output)
 
     sihd::sys::EventPoll input;
     // unbuffered: a second line of one read stays in the fd and wakes the poll again
-    if (!relay.set_tun(std::move(*tun)) || !input.set_read_fd(STDIN_FILENO)
+    if (!relay.set_tun(std::move(tun)) || !input.set_read_fd(STDIN_FILENO)
         || std::setvbuf(stdin, nullptr, _IONBF, 0) != 0)
     {
         app.exit(EXIT_FAILURE);

@@ -42,6 +42,7 @@ class Monitor: public sihd::util::Observable<Monitor>,
 
         // subscribes to the backend of the interface, failing like backend() for the same interface
         sihd::util::Result<void> open(const std::string & interface_name);
+        bool is_open() const;
 
         // a negative timeout waits for an event
         void set_run_timeout(sihd::util::Duration timeout);

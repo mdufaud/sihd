@@ -5,7 +5,6 @@
 # include <sys/socket.h>
 
 # include <optional>
-# include <stdexcept>
 # include <string>
 # include <unordered_map>
 
@@ -186,35 +185,41 @@ struct NetMonitor::Impl
         sihd::sys::Poll poll {1};
         InterfaceNames names;
 
-        static Result<std::unique_ptr<Impl>> open()
+        Result<void> open()
         {
-            auto impl = std::make_unique<Impl>();
-            auto opened = impl->channel.open(NETLINK_ROUTE);
+            auto opened = channel.open(NETLINK_ROUTE);
             SIHD_UNEXPECTED_RETURN(opened);
-            auto subscribed = impl->channel.subscribe(monitored_groups);
+            auto subscribed = channel.subscribe(monitored_groups);
             SIHD_UNEXPECTED_RETURN(subscribed);
-            auto nonblocking = impl->channel.set_nonblocking();
+            auto nonblocking = channel.set_nonblocking();
             SIHD_UNEXPECTED_RETURN(nonblocking);
-            impl->poll.set_read_fd(impl->channel.fd());
+            poll.set_read_fd(channel.fd());
             // dumped once subscribed: a link created in between is in the dump or in the events
-            impl->names = dump_link_names();
-            return impl;
+            names = dump_link_names();
+            return {};
         }
 };
 
-NetMonitor::NetMonitor()
-{
-    auto impl = Impl::open();
-    if (!impl)
-        throw std::runtime_error(impl.error().message);
-    _impl = std::move(*impl);
-}
+NetMonitor::NetMonitor() = default;
 
 NetMonitor::~NetMonitor() = default;
+
+Result<void> NetMonitor::open()
+{
+    if (this->is_open())
+        return std::unexpected(Error(ErrorCode::already_exists, "net monitor already open"));
+    auto impl = std::make_unique<Impl>();
+    auto opened = impl->open();
+    SIHD_UNEXPECTED_RETURN(opened);
+    _impl = std::move(impl);
+    return {};
+}
 
 bool NetMonitor::run()
 {
     _events.clear();
+    if (!this->is_open())
+        return false;
     const int ready = _impl->poll.poll(_run_timeout.milliseconds_int());
     if (ready < 0)
         return false;

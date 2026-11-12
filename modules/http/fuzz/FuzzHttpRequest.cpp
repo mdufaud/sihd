@@ -50,13 +50,13 @@ std::string flip_case(std::string_view text, bool upper)
 void fuzz_parse(FuzzedDataProvider & provider)
 {
     const test::ExactText raw(provider.ConsumeRemainingBytesAsString());
-    auto parsed = HttpRequest::from_string(raw);
-    if (!parsed.has_value())
+    HttpRequest parsed;
+    if (!parsed.from_string(raw))
         return;
-    const std::string serialized = parsed->to_string();
-    const auto reparsed = HttpRequest::from_string(serialized);
-    test::fuzz_check(reparsed.has_value(), "a parsed request serializes to a parsable request");
-    test::fuzz_check(same_request(*reparsed, *parsed),
+    const std::string serialized = parsed.to_string();
+    HttpRequest reparsed;
+    test::fuzz_check(reparsed.from_string(serialized).has_value(), "a parsed request serializes to a parsable request");
+    test::fuzz_check(same_request(reparsed, parsed),
                      "type, url, query parameters, headers and body survive serialization");
 }
 
@@ -80,14 +80,14 @@ void fuzz_round_trip(FuzzedDataProvider & provider)
     original.set_content({body.data(), body.size()});
     original.set_query_params(Params(query));
 
-    const auto parsed = HttpRequest::from_string(original.to_string());
-    test::fuzz_check(parsed.has_value(), "a built request parses");
-    test::fuzz_check(parsed->request_type() == type, "the request type round trips");
-    test::fuzz_check(parsed->url() == url, "the url round trips");
-    test::fuzz_check(parsed->content().cpp_str() == body, "the body round trips");
-    test::fuzz_check(parsed->http_header().find(header_name) == header_value, "a header round trips");
-    test::fuzz_check(parsed->query_params() == query, "the query parameters round trip");
-    test::fuzz_check(same_request(*parsed, original), "a built request survives serialization");
+    HttpRequest parsed;
+    test::fuzz_check(parsed.from_string(original.to_string()).has_value(), "a built request parses");
+    test::fuzz_check(parsed.request_type() == type, "the request type round trips");
+    test::fuzz_check(parsed.url() == url, "the url round trips");
+    test::fuzz_check(parsed.content().cpp_str() == body, "the body round trips");
+    test::fuzz_check(parsed.http_header().find(header_name) == header_value, "a header round trips");
+    test::fuzz_check(parsed.query_params() == query, "the query parameters round trip");
+    test::fuzz_check(same_request(parsed, original), "a built request survives serialization");
 }
 
 void fuzz_generated(FuzzedDataProvider & provider)
@@ -130,19 +130,19 @@ void fuzz_generated(FuzzedDataProvider & provider)
     raw += "\r\n" + body;
 
     const test::ExactText exact(raw);
-    const auto parsed = HttpRequest::from_string(exact);
-    test::fuzz_check(parsed.has_value(), "a well formed request parses");
-    test::fuzz_check(parsed->request_type() == type, "the method is read, whatever its case");
-    test::fuzz_check(parsed->url() == path, "the url is the target without its query");
-    test::fuzz_check(parsed->query_params() == query, "the query parameters are read, last value wins");
+    HttpRequest parsed;
+    test::fuzz_check(parsed.from_string(exact).has_value(), "a well formed request parses");
+    test::fuzz_check(parsed.request_type() == type, "the method is read, whatever its case");
+    test::fuzz_check(parsed.url() == path, "the url is the target without its query");
+    test::fuzz_check(parsed.query_params() == query, "the query parameters are read, last value wins");
     for (const auto & [name, value] : headers)
-        test::fuzz_check(parsed->http_header().find(name) == value, "a header line is read with its value");
-    test::fuzz_check(parsed->http_header().headers().size() == headers.size(), "no header is invented");
-    test::fuzz_check(parsed->content().cpp_str() == body && parsed->has_content() == !body.empty(),
+        test::fuzz_check(parsed.http_header().find(name) == value, "a header line is read with its value");
+    test::fuzz_check(parsed.http_header().headers().size() == headers.size(), "no header is invented");
+    test::fuzz_check(parsed.content().cpp_str() == body && parsed.has_content() == !body.empty(),
                      "the body is whatever follows the blank line");
 
-    const auto reparsed = HttpRequest::from_string(parsed->to_string());
-    test::fuzz_check(reparsed.has_value() && same_request(*reparsed, *parsed),
+    HttpRequest reparsed;
+    test::fuzz_check(reparsed.from_string(parsed.to_string()).has_value() && same_request(reparsed, parsed),
                      "a generated request survives serialization");
 }
 
@@ -161,9 +161,12 @@ void fuzz_refused()
         "\r\n\r\nGET / HTTP/1.1",
         std::string(),
     };
+    HttpRequest kept("/kept", HttpRequest::Put);
     for (const std::string & text : refused)
-        test::fuzz_check(!HttpRequest::from_string(test::ExactText(text)).has_value(),
+        test::fuzz_check(!kept.from_string(test::ExactText(text)).has_value(),
                          "a malformed request line or a block without blank line is refused");
+    test::fuzz_check(kept.url() == "/kept" && kept.request_type() == HttpRequest::Put,
+                     "a refused request keeps the parsed one");
 }
 } // namespace
 

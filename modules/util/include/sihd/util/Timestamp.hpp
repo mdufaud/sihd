@@ -57,12 +57,14 @@ class Timestamp: public TimeBase<Timestamp>
 
         Timestamp(Calendar calendar);
         Timestamp(Calendar calendar, Clocktime clocktime);
+        explicit Timestamp(const std::string & date_str, const std::string & format = default_format);
+        Timestamp(const std::string & date_str, const std::string & format, const std::locale & loc);
 
         static Timestamp now();
-        static sihd::util::Result<Timestamp> from_str(const std::string & date_str,
-                                                      const std::string & format = default_format);
-        // Parse with explicit locale (default: C locale for deterministic behavior)
-        static sihd::util::Result<Timestamp>
+
+        // the C locale by default, for a deterministic parse; a failed parse keeps the timestamp
+        sihd::util::Result<void> from_str(const std::string & date_str, const std::string & format = default_format);
+        sihd::util::Result<void>
             from_str(const std::string & date_str, const std::string & format, const std::locale & loc);
 
         // this >= from && this <= (from + offset)

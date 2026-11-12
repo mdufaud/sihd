@@ -604,13 +604,14 @@ Result<std::vector<std::string>> regex_filter_impl(std::span<T> input, const std
         Result<void> subject = check_regex_subject(std::string_view(entry).size(), max_size);
         SIHD_UNEXPECTED_RETURN(subject);
     }
-    Result<Regex> regex_pattern = Regex::compile(pattern);
-    SIHD_UNEXPECTED_RETURN(regex_pattern);
+    Regex regex_pattern;
+    Result<void> compiled = regex_pattern.compile(pattern);
+    SIHD_UNEXPECTED_RETURN(compiled);
     std::vector<std::string> output;
     for (const auto & entry : input)
     {
         const std::string_view view(entry);
-        Result<bool> found = regex_pattern->matches(view);
+        Result<bool> found = regex_pattern.matches(view);
         SIHD_UNEXPECTED_RETURN(found);
         if (*found)
         {
@@ -695,18 +696,20 @@ Result<bool> regex_match(std::string_view str, std::string_view pattern, size_t 
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<Regex> regex_pattern = Regex::compile(pattern, Regex::Mode::full);
-    SIHD_UNEXPECTED_RETURN(regex_pattern);
-    return regex_pattern->matches(str);
+    Regex regex_pattern;
+    Result<void> compiled = regex_pattern.compile(pattern, Regex::Mode::full);
+    SIHD_UNEXPECTED_RETURN(compiled);
+    return regex_pattern.matches(str);
 }
 
 Result<std::vector<std::string>> regex_search(std::string_view str, std::string_view pattern, size_t max_size)
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<Regex> regex_pattern = Regex::compile(pattern);
-    SIHD_UNEXPECTED_RETURN(regex_pattern);
-    return regex_pattern->find_all(str);
+    Regex regex_pattern;
+    Result<void> compiled = regex_pattern.compile(pattern);
+    SIHD_UNEXPECTED_RETURN(compiled);
+    return regex_pattern.find_all(str);
 }
 
 Result<std::string>
@@ -714,9 +717,10 @@ Result<std::string>
 {
     Result<void> subject = check_regex_subject(str.size(), max_size);
     SIHD_UNEXPECTED_RETURN(subject);
-    Result<Regex> regex_pattern = Regex::compile(pattern);
-    SIHD_UNEXPECTED_RETURN(regex_pattern);
-    return regex_pattern->replace_all(str, replace);
+    Regex regex_pattern;
+    Result<void> compiled = regex_pattern.compile(pattern);
+    SIHD_UNEXPECTED_RETURN(compiled);
+    return regex_pattern.replace_all(str, replace);
 }
 
 Result<std::vector<std::string>>

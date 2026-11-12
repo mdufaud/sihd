@@ -41,37 +41,40 @@ class TestPasswordHash: public ::testing::Test
 
         static void expect_vector(std::string_view phc, PasswordHash::Algorithm algorithm)
         {
-            auto decoded = PasswordHash::decode(phc);
-            ASSERT_TRUE(decoded.has_value()) << decoded.error().message;
+            PasswordHash decoded;
+            auto read = decoded.decode(phc);
+            ASSERT_TRUE(read.has_value()) << read.error().message;
 
-            EXPECT_EQ(decoded->algorithm(), algorithm);
-            EXPECT_EQ(decoded->encode(), phc);
-            EXPECT_EQ(decoded->verify("password"), true);
-            EXPECT_EQ(decoded->verify("Password"), false);
+            EXPECT_EQ(decoded.algorithm(), algorithm);
+            EXPECT_EQ(decoded.encode(), phc);
+            EXPECT_EQ(decoded.verify("password"), true);
+            EXPECT_EQ(decoded.verify("Password"), false);
         }
 
-        static void expect_round_trip(const Result<PasswordHash> & generated, size_t hash_size)
+        static void expect_round_trip(const Result<void> & generated, const PasswordHash & hash, size_t hash_size)
         {
             ASSERT_TRUE(generated.has_value()) << generated.error().message;
-            EXPECT_EQ(generated->salt().size(), 16u);
-            EXPECT_EQ(generated->hash().size(), hash_size);
+            EXPECT_EQ(hash.salt().size(), 16u);
+            EXPECT_EQ(hash.hash().size(), hash_size);
 
-            auto decoded = PasswordHash::decode(generated->encode());
-            ASSERT_TRUE(decoded.has_value()) << decoded.error().message;
+            PasswordHash decoded;
+            auto read = decoded.decode(hash.encode());
+            ASSERT_TRUE(read.has_value()) << read.error().message;
 
-            EXPECT_EQ(decoded->algorithm(), generated->algorithm());
-            EXPECT_EQ(decoded->encode(), generated->encode());
-            EXPECT_EQ(decoded->verify("secret"), true);
-            EXPECT_EQ(decoded->verify("Secret"), false);
+            EXPECT_EQ(decoded.algorithm(), hash.algorithm());
+            EXPECT_EQ(decoded.encode(), hash.encode());
+            EXPECT_EQ(decoded.verify("secret"), true);
+            EXPECT_EQ(decoded.verify("Secret"), false);
         }
 
         static void expect_decode_error(std::string_view phc, ErrorCode code, std::string_view message)
         {
-            auto decoded = PasswordHash::decode(phc);
-            ASSERT_FALSE(decoded.has_value()) << phc;
+            PasswordHash decoded;
+            auto read = decoded.decode(phc);
+            ASSERT_FALSE(read.has_value()) << phc;
 
-            EXPECT_EQ(decoded.error().code, code) << phc;
-            EXPECT_EQ(decoded.error().message, message);
+            EXPECT_EQ(read.error().code, code) << phc;
+            EXPECT_EQ(read.error().message, message);
         }
 };
 
@@ -99,95 +102,139 @@ TEST_F(TestPasswordHash, test_pbkdf2_reads_its_length_parameter)
 {
     const std::string phc = fmt::format("$pbkdf2-sha256$i=1000,l=32$c2loZC1zYWx0LTE2Ynl0ZQ${}", vector_hash_b64);
 
-    auto decoded = PasswordHash::decode(phc);
-    ASSERT_TRUE(decoded.has_value()) << decoded.error().message;
+    PasswordHash decoded;
+    auto read = decoded.decode(phc);
+    ASSERT_TRUE(read.has_value()) << read.error().message;
 
-    EXPECT_EQ(decoded->verify("password"), true);
-    EXPECT_EQ(decoded->encode(), pbkdf2_sha256_vector);
+    EXPECT_EQ(decoded.verify("password"), true);
+    EXPECT_EQ(decoded.encode(), pbkdf2_sha256_vector);
 }
 
 TEST_F(TestPasswordHash, test_decode_reads_params_and_salt)
 {
-    auto decoded = PasswordHash::decode(argon2id_vector);
-    ASSERT_TRUE(decoded.has_value()) << decoded.error().message;
+    PasswordHash decoded;
+    auto read = decoded.decode(argon2id_vector);
+    ASSERT_TRUE(read.has_value()) << read.error().message;
 
-    const auto *params = std::get_if<Argon2Params>(&decoded->params());
+    const auto *params = std::get_if<Argon2Params>(&decoded.params());
     ASSERT_NE(params, nullptr);
     EXPECT_EQ(params->memory_kib, 64u);
     EXPECT_EQ(params->iterations, 1u);
     EXPECT_EQ(params->parallelism, 2u);
-    EXPECT_EQ(std::string(decoded->salt().begin(), decoded->salt().end()), vector_salt);
-    EXPECT_EQ(decoded->hash().size(), 32u);
+    EXPECT_EQ(std::string(decoded.salt().begin(), decoded.salt().end()), vector_salt);
+    EXPECT_EQ(decoded.hash().size(), 32u);
 }
 
 TEST_F(TestPasswordHash, test_generated_hashes_round_trip)
 {
-    expect_round_trip(PasswordHash::argon2id("secret", {.memory_kib = 64, .iterations = 1, .parallelism = 1}), 32);
-    expect_round_trip(PasswordHash::scrypt("secret", {.log2_n = 4, .block_size = 8, .parallelism = 1}), 32);
-    expect_round_trip(PasswordHash::pbkdf2_sha256("secret", {.iterations = 1000}), 32);
-    expect_round_trip(PasswordHash::pbkdf2_sha512("secret", {.iterations = 1000}), 64);
+    PasswordHash argon2id_hash;
+    PasswordHash scrypt_hash;
+    PasswordHash pbkdf2_sha256_hash;
+    PasswordHash pbkdf2_sha512_hash;
+
+    expect_round_trip(argon2id_hash.argon2id("secret", {.memory_kib = 64, .iterations = 1, .parallelism = 1}),
+                      argon2id_hash,
+                      32);
+    expect_round_trip(scrypt_hash.scrypt("secret", {.log2_n = 4, .block_size = 8, .parallelism = 1}), scrypt_hash, 32);
+    expect_round_trip(pbkdf2_sha256_hash.pbkdf2_sha256("secret", {.iterations = 1000}), pbkdf2_sha256_hash, 32);
+    expect_round_trip(pbkdf2_sha512_hash.pbkdf2_sha512("secret", {.iterations = 1000}), pbkdf2_sha512_hash, 64);
 }
 
 TEST_F(TestPasswordHash, test_empty_password_round_trips)
 {
-    auto generated = PasswordHash::pbkdf2_sha256("", {.iterations = 1000});
-    ASSERT_TRUE(generated.has_value()) << generated.error().message;
+    PasswordHash generated;
+    auto made = generated.pbkdf2_sha256("", {.iterations = 1000});
+    ASSERT_TRUE(made.has_value()) << made.error().message;
 
-    EXPECT_EQ(generated->verify(""), true);
-    EXPECT_EQ(generated->verify("secret"), false);
+    EXPECT_EQ(generated.verify(""), true);
+    EXPECT_EQ(generated.verify("secret"), false);
 }
 
 TEST_F(TestPasswordHash, test_default_params)
 {
-    auto argon2id = PasswordHash::argon2id("secret");
-    auto scrypt = PasswordHash::scrypt("secret");
-    auto pbkdf2 = PasswordHash::pbkdf2_sha256("secret");
-    ASSERT_TRUE(argon2id.has_value()) << argon2id.error().message;
-    ASSERT_TRUE(scrypt.has_value()) << scrypt.error().message;
-    ASSERT_TRUE(pbkdf2.has_value()) << pbkdf2.error().message;
+    PasswordHash argon2id_hash;
+    PasswordHash scrypt_hash;
+    PasswordHash pbkdf2_hash;
 
-    EXPECT_EQ(argon2id->encode().substr(0, 31), "$argon2id$v=19$m=19456,t=2,p=1$");
-    EXPECT_EQ(scrypt->encode().substr(0, 22), "$scrypt$ln=17,r=8,p=1$");
-    EXPECT_EQ(pbkdf2->encode().substr(0, 24), "$pbkdf2-sha256$i=600000$");
-    EXPECT_EQ(argon2id->verify("secret"), true);
+    auto argon2id_made = argon2id_hash.argon2id("secret");
+    auto scrypt_made = scrypt_hash.scrypt("secret");
+    auto pbkdf2_made = pbkdf2_hash.pbkdf2_sha256("secret");
+
+    ASSERT_TRUE(argon2id_made.has_value()) << argon2id_made.error().message;
+    ASSERT_TRUE(scrypt_made.has_value()) << scrypt_made.error().message;
+    ASSERT_TRUE(pbkdf2_made.has_value()) << pbkdf2_made.error().message;
+    EXPECT_EQ(argon2id_hash.encode().substr(0, 31), "$argon2id$v=19$m=19456,t=2,p=1$");
+    EXPECT_EQ(scrypt_hash.encode().substr(0, 22), "$scrypt$ln=17,r=8,p=1$");
+    EXPECT_EQ(pbkdf2_hash.encode().substr(0, 24), "$pbkdf2-sha256$i=600000$");
+    EXPECT_EQ(argon2id_hash.verify("secret"), true);
 }
 
 TEST_F(TestPasswordHash, test_salt_is_random)
 {
     const Argon2Params params {.memory_kib = 64, .iterations = 1, .parallelism = 1};
 
-    auto first = PasswordHash::argon2id("secret", params);
-    auto second = PasswordHash::argon2id("secret", params);
-    ASSERT_TRUE(first.has_value() && second.has_value());
+    PasswordHash first;
+    PasswordHash second;
 
-    EXPECT_NE(first->salt(), second->salt());
-    EXPECT_NE(first->hash(), second->hash());
+    ASSERT_TRUE(first.argon2id("secret", params).has_value() && second.argon2id("secret", params).has_value());
+    EXPECT_NE(first.salt(), second.salt());
+    EXPECT_NE(first.hash(), second.hash());
 }
 
 TEST_F(TestPasswordHash, test_invalid_costs_are_refused)
 {
-    auto argon2id = PasswordHash::argon2id("secret", {.memory_kib = 4, .iterations = 1, .parallelism = 1});
-    auto scrypt = PasswordHash::scrypt("secret", {.log2_n = 64, .block_size = 8, .parallelism = 1});
-    auto pbkdf2 = PasswordHash::pbkdf2_sha512("secret", {.iterations = 0});
-    ASSERT_FALSE(argon2id.has_value());
-    ASSERT_FALSE(scrypt.has_value());
-    ASSERT_FALSE(pbkdf2.has_value());
+    PasswordHash hash;
 
-    EXPECT_EQ(argon2id.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(argon2id.error().message, "invalid argon2id params 'm=4,t=1,p=1'");
-    EXPECT_EQ(scrypt.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(scrypt.error().message, "invalid scrypt params 'ln=64,r=8,p=1'");
-    EXPECT_EQ(pbkdf2.error().code, ErrorCode::invalid_argument);
-    EXPECT_EQ(pbkdf2.error().message, "invalid pbkdf2 params 'i=0'");
+    auto argon2id_refused = hash.argon2id("secret", {.memory_kib = 4, .iterations = 1, .parallelism = 1});
+    auto scrypt_refused = hash.scrypt("secret", {.log2_n = 64, .block_size = 8, .parallelism = 1});
+    auto pbkdf2_refused = hash.pbkdf2_sha512("secret", {.iterations = 0});
+    ASSERT_FALSE(argon2id_refused.has_value());
+    ASSERT_FALSE(scrypt_refused.has_value());
+    ASSERT_FALSE(pbkdf2_refused.has_value());
+
+    EXPECT_EQ(argon2id_refused.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(argon2id_refused.error().message, "invalid argon2id params 'm=4,t=1,p=1'");
+    EXPECT_EQ(scrypt_refused.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(scrypt_refused.error().message, "invalid scrypt params 'ln=64,r=8,p=1'");
+    EXPECT_EQ(pbkdf2_refused.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(pbkdf2_refused.error().message, "invalid pbkdf2 params 'i=0'");
+}
+
+TEST_F(TestPasswordHash, test_empty_hash)
+{
+    const PasswordHash hash;
+
+    auto verified = hash.verify("");
+
+    EXPECT_EQ(hash.encode(), "");
+    EXPECT_TRUE(hash.hash().empty());
+    ASSERT_FALSE(verified.has_value());
+    EXPECT_EQ(verified.error().code, ErrorCode::not_initialized);
+    EXPECT_EQ(verified.error().message, "password hash is empty");
+}
+
+TEST_F(TestPasswordHash, test_failure_keeps_the_hash)
+{
+    PasswordHash hash;
+    ASSERT_TRUE(hash.decode(pbkdf2_sha256_vector).has_value());
+
+    auto refused_decode = hash.decode("scrypt");
+    auto refused_generate = hash.pbkdf2_sha512("secret", {.iterations = 0});
+
+    EXPECT_FALSE(refused_decode.has_value());
+    EXPECT_FALSE(refused_generate.has_value());
+    EXPECT_EQ(hash.encode(), pbkdf2_sha256_vector);
+    EXPECT_EQ(hash.verify("password"), true);
 }
 
 TEST_F(TestPasswordHash, test_verify_reports_a_failed_derivation)
 {
-    auto decoded = PasswordHash::decode(
+    PasswordHash decoded;
+    auto read = decoded.decode(
         "$scrypt$ln=63,r=8,p=1$c2loZC1zYWx0LTE2Ynl0ZQ$nJ6E3o2+iZeJ+yfRCtmzcKp6im8asRm3pu8VkG/8rcg");
-    ASSERT_TRUE(decoded.has_value()) << decoded.error().message;
+    ASSERT_TRUE(read.has_value()) << read.error().message;
 
-    auto verified = decoded->verify("password");
+    auto verified = decoded.verify("password");
 
     ASSERT_FALSE(verified.has_value());
     EXPECT_EQ(verified.error().code, ErrorCode::io_error);

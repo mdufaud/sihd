@@ -1,4 +1,5 @@
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -120,7 +121,14 @@ std::optional<std::string> Multipart::boundary(std::string_view content_type)
     return header_param(content_type, "boundary");
 }
 
-Result<Multipart> Multipart::parse(std::string_view body, std::string_view content_type)
+Multipart::Multipart(std::string_view body, std::string_view content_type)
+{
+    auto parsed = this->parse(body, content_type);
+    if (!parsed)
+        throw std::runtime_error(parsed.error().message);
+}
+
+Result<void> Multipart::parse(std::string_view body, std::string_view content_type)
 {
     const std::optional<std::string> boundary = Multipart::boundary(content_type);
     if (boundary.has_value() == false)
@@ -136,18 +144,21 @@ Result<Multipart> Multipart::parse(std::string_view body, std::string_view conte
         return std::unexpected(Error(invalid_argument, "boundary '{}' not found in body", delimiter));
     pos += delimiter.size();
 
-    Multipart multipart;
     if (str::starts_with(body.substr(pos), "--"))
-        return multipart;
+    {
+        _parts.clear();
+        return {};
+    }
 
     const std::optional<size_t> headers_pos = skip_delimiter_end(body, pos);
     if (headers_pos.has_value() == false)
         return std::unexpected(Error(invalid_argument, "malformed part headers"));
     pos = *headers_pos;
 
+    std::vector<Part> parts;
     while (true)
     {
-        if (multipart._parts.size() >= max_parts)
+        if (parts.size() >= max_parts)
             return std::unexpected(Error(overflow, "more than {} parts", max_parts));
         Multipart::Part part;
         const std::optional<size_t> data_pos = parse_part_headers(body, pos, part);
@@ -159,9 +170,12 @@ Result<Multipart> Multipart::parse(std::string_view body, std::string_view conte
         if (next.has_value() == false)
             return std::unexpected(Error(invalid_argument, "no closing delimiter found"));
         part.data.assign(body.substr(pos, next->data_end - pos));
-        multipart._parts.push_back(std::move(part));
+        parts.push_back(std::move(part));
         if (next->closing)
-            return multipart;
+        {
+            _parts = std::move(parts);
+            return {};
+        }
         pos = next->after_line;
     }
 }

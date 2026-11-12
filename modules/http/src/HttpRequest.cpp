@@ -56,6 +56,8 @@ HttpRequest::RequestType HttpRequest::type_from_str(std::string_view type)
     return None;
 }
 
+HttpRequest::HttpRequest(): _request_type(None) {}
+
 HttpRequest::HttpRequest(const std::string & url, RequestType request_type)
 {
     _url = url;
@@ -171,7 +173,7 @@ bool HttpRequest::has_content() const
     return _array;
 }
 
-Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
+Result<void> HttpRequest::from_string(std::string_view raw)
 {
     const auto header_end = raw.find("\r\n\r\n");
     if (header_end == std::string_view::npos)
@@ -225,7 +227,8 @@ Result<HttpRequest> HttpRequest::from_string(std::string_view raw)
     if (!body.empty())
         req.set_content({body.data(), body.size()});
 
-    return req;
+    *this = std::move(req);
+    return {};
 }
 
 std::string HttpRequest::to_string() const

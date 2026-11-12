@@ -21,7 +21,26 @@ class TestNetMonitor: public ::testing::Test
 TEST_F(TestNetMonitor, test_netmonitor_run_returns_true_when_idle)
 {
     NetMonitor monitor(std::chrono::milliseconds(10));
+    ASSERT_TRUE(monitor.open());
 
+    EXPECT_TRUE(monitor.run());
+}
+
+TEST_F(TestNetMonitor, test_netmonitor_open_once)
+{
+    NetMonitor monitor;
+    monitor.set_run_timeout(std::chrono::milliseconds(10));
+
+    EXPECT_FALSE(monitor.is_open());
+    EXPECT_FALSE(monitor.run());
+
+    ASSERT_TRUE(monitor.open());
+    auto reopened = monitor.open();
+
+    EXPECT_TRUE(monitor.is_open());
+    ASSERT_FALSE(reopened.has_value());
+    EXPECT_EQ(reopened.error().code, ErrorCode::already_exists);
+    EXPECT_EQ(reopened.error().message, "net monitor already open");
     EXPECT_TRUE(monitor.run());
 }
 

@@ -10,6 +10,7 @@
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Result.hpp>
 
 namespace sihd::net
 {
@@ -39,14 +40,17 @@ class NetMonitor: public sihd::util::Observable<NetMonitor>,
                   public sihd::util::IRunnable
 {
     public:
-        // subscribes to the system notifications, throws when refused
         NetMonitor();
         explicit NetMonitor(sihd::util::Duration run_timeout);
         virtual ~NetMonitor();
 
+        sihd::util::Result<void> open();
+        bool is_open() const;
+
         // a negative timeout waits for a change
         void set_run_timeout(sihd::util::Duration timeout);
 
+        // false until opened
         bool run() override;
 
         const std::vector<NetMonitorEvent> & events() const;

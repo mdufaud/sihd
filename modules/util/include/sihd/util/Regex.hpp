@@ -11,7 +11,7 @@
 namespace sihd::util
 {
 
-// PCRE2 (bytes, no UTF) compiled once, immutable and safe to share between threads
+// PCRE2 (bytes, no UTF), safe to share between threads once compiled
 class Regex
 {
     public:
@@ -21,13 +21,17 @@ class Regex
             full,
         };
 
-        static Result<Regex> compile(std::string_view pattern, Mode mode = Mode::search);
-
+        Regex();
+        explicit Regex(std::string_view pattern, Mode mode = Mode::search);
         Regex(Regex && other) noexcept;
         Regex & operator=(Regex && other) noexcept;
         ~Regex();
 
-        // a hit match/depth/heap limit is an overflow error, never a crash
+        // a failed compile keeps the previous pattern
+        Result<void> compile(std::string_view pattern, Mode mode = Mode::search);
+        bool is_compiled() const;
+
+        // not_initialized before compile, a hit match/depth/heap limit is an overflow error, never a crash
         Result<bool> matches(std::string_view subject) const;
         Result<std::vector<std::string>> find_all(std::string_view subject) const;
         // replacement references groups with $1 ${1} and the whole match with $0
@@ -35,8 +39,6 @@ class Regex
 
     private:
         struct Impl;
-
-        explicit Regex(std::unique_ptr<Impl> impl);
 
         std::unique_ptr<Impl> _impl;
 };

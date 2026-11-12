@@ -58,14 +58,12 @@ class TestIwd: public ::testing::Test
 
         Result<std::string> request_passphrase(dbus::Connection & sender, const dbus::Message & connect_call)
         {
-            auto request = dbus::Message::method_call(connect_call.sender(),
-                                                      "/agent",
-                                                      agent_interface,
-                                                      "RequestPassphrase");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto added = request->add_object_path(connect_call.path());
+            dbus::Message request;
+            auto built = request.method_call(connect_call.sender(), "/agent", agent_interface, "RequestPassphrase");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto added = request.add_object_path(connect_call.path());
             SIHD_UNEXPECTED_RETURN(added);
-            auto answer = request->call(sender, fake_timeout);
+            auto answer = request.call(sender, fake_timeout);
             SIHD_UNEXPECTED_RETURN(answer);
             return dbus::Iter(*answer).get<std::string>();
         }

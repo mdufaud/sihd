@@ -396,10 +396,10 @@ TEST_F(TestDevices, test_tcp_server_device_addresses_one_client)
     const char from_a[] = "from a";
     EXPECT_EQ(client_a.send(from_a), (ssize_t)strlen(from_a));
     ASSERT_TRUE(rx_from_waiter.prev_wait_for(std::chrono::seconds(5)));
-    auto frame = ClientFrame::decode(ArrByteView(*rx_from->array()));
-    ASSERT_TRUE(frame.has_value());
-    EXPECT_EQ(frame->client_id(), id_a);
-    EXPECT_EQ(frame->payload().str(), "from a");
+    ClientFrame frame;
+    ASSERT_TRUE(frame.decode(ArrByteView(*rx_from->array())).has_value());
+    EXPECT_EQ(frame.client_id(), id_a);
+    EXPECT_EQ(frame.payload().str(), "from a");
 
     ASSERT_TRUE(tx_to->write(ClientFrame(id_b, "to b").encode()));
     EXPECT_EQ(this->receive_text(client_b), "to b");

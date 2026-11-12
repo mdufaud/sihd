@@ -1,4 +1,5 @@
 #include <limits>
+#include <stdexcept>
 
 #include <gtest/gtest.h>
 
@@ -72,24 +73,28 @@ TEST_F(TestTimestamp, test_timestamp_calendar_milliseconds)
 
 TEST_F(TestTimestamp, test_timestamp_from_str)
 {
-    EXPECT_FALSE(Timestamp::from_str("3000-01-01", "%Y-%m-%d").has_value());
+    Timestamp out_of_range(time::sec(5));
+    auto refused = out_of_range.from_str("3000-01-01", "%Y-%m-%d");
+    ASSERT_FALSE(refused.has_value());
+    EXPECT_EQ(refused.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(refused.error().message, "could not parse date '3000-01-01' with format '%Y-%m-%d'");
+    EXPECT_EQ(out_of_range.get(), time::sec(5));
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
-    const auto fractional = Timestamp::from_str("2022-02-01 00:00:00.123456789", "%Y-%m-%d %H:%M:%S");
-    ASSERT_TRUE(fractional.has_value());
-    EXPECT_EQ(fractional->get() % time::seconds(1), 123456789);
-    const auto minimum = Timestamp::from_str("1677-09-21 00:12:43.145224192", "%Y-%m-%d %H:%M:%S");
-    const auto maximum = Timestamp::from_str("2262-04-11 23:47:16.854775807", "%Y-%m-%d %H:%M:%S");
-    ASSERT_TRUE(minimum.has_value());
-    ASSERT_TRUE(maximum.has_value());
-    EXPECT_EQ(minimum->get(), std::numeric_limits<int64_t>::min());
-    EXPECT_EQ(maximum->get(), std::numeric_limits<int64_t>::max());
-    EXPECT_FALSE(Timestamp::from_str("1677-09-21 00:12:43.145224191", "%Y-%m-%d %H:%M:%S").has_value());
-    EXPECT_FALSE(Timestamp::from_str("2262-04-11 23:47:16.854775808", "%Y-%m-%d %H:%M:%S").has_value());
+    Timestamp fractional;
+    ASSERT_TRUE(fractional.from_str("2022-02-01 00:00:00.123456789", "%Y-%m-%d %H:%M:%S").has_value());
+    EXPECT_EQ(fractional.get() % time::seconds(1), 123456789);
+    Timestamp minimum;
+    Timestamp maximum;
+    ASSERT_TRUE(minimum.from_str("1677-09-21 00:12:43.145224192", "%Y-%m-%d %H:%M:%S").has_value());
+    ASSERT_TRUE(maximum.from_str("2262-04-11 23:47:16.854775807", "%Y-%m-%d %H:%M:%S").has_value());
+    EXPECT_EQ(minimum.get(), std::numeric_limits<int64_t>::min());
+    EXPECT_EQ(maximum.get(), std::numeric_limits<int64_t>::max());
+    Timestamp past_edge;
+    EXPECT_FALSE(past_edge.from_str("1677-09-21 00:12:43.145224191", "%Y-%m-%d %H:%M:%S").has_value());
+    EXPECT_FALSE(past_edge.from_str("2262-04-11 23:47:16.854775808", "%Y-%m-%d %H:%M:%S").has_value());
 #endif
-    auto conversion = Timestamp::from_str("2022-02-01", "%Y-%m-%d");
-    ASSERT_TRUE(conversion.has_value());
 
-    Timestamp ts_conv = *conversion;
+    Timestamp ts_conv("2022-02-01", "%Y-%m-%d");
     auto conv_calendar = ts_conv.calendar();
     EXPECT_EQ(conv_calendar.year, 2022);
     EXPECT_EQ(conv_calendar.month, 2);
@@ -99,10 +104,7 @@ TEST_F(TestTimestamp, test_timestamp_from_str)
     EXPECT_EQ(conv_clocktime.minute, 0);
     EXPECT_EQ(conv_clocktime.second, 0);
 
-    conversion = Timestamp::from_str("2000-12-31 10-09-08", "%Y-%m-%d %H-%M-%S");
-    ASSERT_TRUE(conversion.has_value());
-
-    ts_conv = *conversion;
+    ASSERT_TRUE(ts_conv.from_str("2000-12-31 10-09-08", "%Y-%m-%d %H-%M-%S").has_value());
     conv_calendar = ts_conv.calendar();
     EXPECT_EQ(conv_calendar.year, 2000);
     EXPECT_EQ(conv_calendar.month, 12);
@@ -112,12 +114,12 @@ TEST_F(TestTimestamp, test_timestamp_from_str)
     EXPECT_EQ(conv_clocktime.minute, 9);
     EXPECT_EQ(conv_clocktime.second, 8);
 
-    conversion = Timestamp::from_str("2024-06-15", "%Y-%m-%d", std::locale::classic());
-    ASSERT_TRUE(conversion.has_value());
-    conv_calendar = conversion->calendar();
+    const Timestamp localized("2024-06-15", "%Y-%m-%d", std::locale::classic());
+    conv_calendar = localized.calendar();
     EXPECT_EQ(conv_calendar.year, 2024);
     EXPECT_EQ(conv_calendar.month, 6);
     EXPECT_EQ(conv_calendar.day, 15);
+    EXPECT_THROW({ Timestamp invalid("2024-13-45", "%Y-%m-%d"); }, std::runtime_error);
 }
 
 TEST_F(TestTimestamp, test_timestamp_strings)

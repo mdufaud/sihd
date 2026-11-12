@@ -228,18 +228,19 @@ void DevTcpServer::handle(sihd::core::Channel *c)
 
 void DevTcpServer::_send_to_one(const sihd::core::Channel *c)
 {
-    auto frame = ClientFrame::decode(ArrByteView(*c->array()));
-    if (SIHD_UNEXPECTED_LOG(frame))
+    ClientFrame frame;
+    auto decoded = frame.decode(ArrByteView(*c->array()));
+    if (SIHD_UNEXPECTED_LOG(decoded))
         return;
     // a write for a client that left is dropped: a new client never gets an id twice
-    auto client = _server_handler.client_by_id(frame->client_id());
+    auto client = _server_handler.client_by_id(frame.client_id());
     if (client == nullptr)
     {
-        SIHD_LOG(warning, "DevTcpServer: client {} is gone, its write is dropped", frame->client_id());
+        SIHD_LOG(warning, "DevTcpServer: client {} is gone, its write is dropped", frame.client_id());
         return;
     }
-    if (_server_handler.send_to_client(client, frame->payload()) == false)
-        SIHD_LOG(warning, "DevTcpServer: could not send to client {}", frame->client_id());
+    if (_server_handler.send_to_client(client, frame.payload()) == false)
+        SIHD_LOG(warning, "DevTcpServer: could not send to client {}", frame.client_id());
 }
 
 void DevTcpServer::handle(BasicServerHandler *handler)

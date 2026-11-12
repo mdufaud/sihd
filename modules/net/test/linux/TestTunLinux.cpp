@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <sys/socket.h>
 
 #include <array>
@@ -99,18 +100,17 @@ TEST_F(TestTunLinux, test_tun_adopts_a_packet_descriptor)
 {
     std::array<int, 2> pair {};
     ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, pair.data()), 0);
-    auto tun = Tun::adopt(pair[0]);
-    ASSERT_TRUE(tun.has_value());
+    Tun tun(pair[0]);
     Socket peer(pair[1]);
     std::array<char, 16> packet {};
 
     ASSERT_TRUE(peer.send_all("first").has_value());
     ASSERT_TRUE(peer.send_all("second").has_value());
-    auto first = tun->read(packet.data(), packet.size());
-    auto second = tun->read(packet.data(), packet.size());
-    auto drained = tun->read(packet.data(), packet.size());
+    auto first = tun.read(packet.data(), packet.size());
+    auto second = tun.read(packet.data(), packet.size());
+    auto drained = tun.read(packet.data(), packet.size());
 
-    EXPECT_EQ(tun->fd().value_or(-1), pair[0]);
+    EXPECT_EQ(tun.fd().value_or(-1), pair[0]);
 
     EXPECT_EQ(first.value_or(0), 5u);
     EXPECT_EQ(second.value_or(0), 6u);
@@ -119,17 +119,49 @@ TEST_F(TestTunLinux, test_tun_adopts_a_packet_descriptor)
     EXPECT_EQ(drained.error().code, ErrorCode::would_block);
 }
 
+TEST_F(TestTunLinux, test_tun_adopt_replaces_the_open_descriptor)
+{
+    std::array<int, 2> first {};
+    std::array<int, 2> second {};
+    ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, first.data()), 0);
+    ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, second.data()), 0);
+    Socket first_peer(first[1]);
+    Socket second_peer(second[1]);
+    Tun tun(first[0]);
+
+    auto adopted = tun.adopt(second[0]);
+
+    ASSERT_TRUE(adopted.has_value()) << adopted.error().message;
+    EXPECT_EQ(tun.fd().value_or(-1), second[0]);
+    EXPECT_EQ(::fcntl(first[0], F_GETFD), -1);
+}
+
+TEST_F(TestTunLinux, test_tun_failed_open_keeps_the_descriptor)
+{
+    std::array<int, 2> pair {};
+    ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, pair.data()), 0);
+    Socket peer(pair[1]);
+    Tun tun(pair[0]);
+
+    auto reopened = tun.open("sihdtun0");
+
+    if (reopened)
+        GTEST_SKIP() << "the test runs with the rights to create interfaces";
+    EXPECT_EQ(tun.fd().value_or(-1), pair[0]);
+    EXPECT_NE(::fcntl(pair[0], F_GETFD), -1);
+}
+
 TEST_F(TestTunLinux, test_tun_waits_for_a_packet)
 {
     std::array<int, 2> pair {};
     ASSERT_EQ(::socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_NONBLOCK, 0, pair.data()), 0);
-    auto tun = Tun::adopt(pair[0]);
-    ASSERT_TRUE(tun.has_value());
+    Tun tun;
+    ASSERT_TRUE(tun.adopt(pair[0]).has_value());
     Socket peer(pair[1]);
 
-    auto idle = tun->wait_readable(Duration(time::milli(10)));
+    auto idle = tun.wait_readable(Duration(time::milli(10)));
     ASSERT_TRUE(peer.send_all("packet").has_value());
-    auto pending = tun->wait_readable(Duration(time::seconds(2)));
+    auto pending = tun.wait_readable(Duration(time::seconds(2)));
 
     EXPECT_EQ(idle.value_or(true), false);
     EXPECT_EQ(pending.value_or(false), true);

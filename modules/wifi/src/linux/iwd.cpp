@@ -125,9 +125,10 @@ Result<void> read_interface(Objects & objects,
 
 Result<Objects> managed_objects(dbus::Connection & connection)
 {
-    auto request = dbus::Message::method_call(service, "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto reply = request->call(connection, call_timeout);
+    dbus::Message request;
+    auto built = request.method_call(service, "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
     Objects objects;
@@ -160,9 +161,10 @@ Security type_security(const std::string & type)
 
 Result<void> call_simple(dbus::Connection & connection, ZStringView path, ZStringView interface, ZStringView member)
 {
-    auto request = dbus::Message::method_call(service, path, interface, member);
-    SIHD_UNEXPECTED_RETURN(request);
-    auto reply = request->call(connection, call_timeout);
+    dbus::Message request;
+    auto built = request.method_call(service, path, interface, member);
+    SIHD_UNEXPECTED_RETURN(built);
+    auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return {};
 }
@@ -170,11 +172,12 @@ Result<void> call_simple(dbus::Connection & connection, ZStringView path, ZStrin
 // the reply, for its sender: the unique name iwd answers from
 Result<dbus::Message> call_agent_manager(dbus::Connection & connection, ZStringView member)
 {
-    auto request = dbus::Message::method_call(service, manager_path, agent_manager_interface, member);
-    SIHD_UNEXPECTED_RETURN(request);
-    auto path_added = request->add_object_path(agent_path);
+    dbus::Message request;
+    auto built = request.method_call(service, manager_path, agent_manager_interface, member);
+    SIHD_UNEXPECTED_RETURN(built);
+    auto path_added = request.add_object_path(agent_path);
     SIHD_UNEXPECTED_RETURN(path_added);
-    return request->call(connection, call_timeout);
+    return request.call(connection, call_timeout);
 }
 
 // the passphrase must go to iwd only: any other connection may call the agent too
@@ -232,11 +235,13 @@ Result<void> connect_network(dbus::Connection & connection,
         owner = registered->sender();
     }
 
-    auto request = dbus::Message::method_call(service, network.path, network_interface, "Connect");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto sent = request->send(connection);
+    dbus::Message request;
+    auto built = request.method_call(service, network.path, network_interface, "Connect");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto sent = request.send(connection);
     SIHD_UNEXPECTED_RETURN(sent);
-    auto connected = dbus::Message::receive_until(
+    dbus::Message outcome;
+    auto connected = outcome.receive_until(
         connection,
         timeout,
         [&connection, &owner, &passphrase](const dbus::Message & message) -> Result<bool> {
@@ -301,15 +306,14 @@ Result<void> scan(dbus::Connection & connection, const std::string & station, Du
     if (!already_scanning)
         SIHD_UNEXPECTED_RETURN(requested);
 
-    auto scanned = dbus::Message::receive_until(connection,
-                                                timeout,
-                                                [&station](const dbus::Message & message) -> Result<bool> {
-                                                    if (message.path() != station)
-                                                        return false;
-                                                    auto over = scan_over(message);
-                                                    SIHD_UNEXPECTED_RETURN(over);
-                                                    return over->value_or(false);
-                                                });
+    dbus::Message update;
+    auto scanned = update.receive_until(connection, timeout, [&station](const dbus::Message & message) -> Result<bool> {
+        if (message.path() != station)
+            return false;
+        auto over = scan_over(message);
+        SIHD_UNEXPECTED_RETURN(over);
+        return over->value_or(false);
+    });
     SIHD_UNEXPECTED_RETURN_CTX(scanned, "iwd scan");
     return {};
 }

@@ -771,14 +771,15 @@ bool HttpServer::Impl::serve_webservice(HttpSession *session, WebService *webser
         const std::optional<std::string_view> content_type = request.http_header().content_type();
         if (content_type.has_value() && Multipart::is_content_type(*content_type))
         {
-            auto multipart = Multipart::parse(request.content().cpp_str_view(), *content_type);
-            if (multipart.has_value() == false)
+            Multipart multipart;
+            auto parsed = multipart.parse(request.content().cpp_str_view(), *content_type);
+            if (parsed.has_value() == false)
             {
-                SIHD_LOG(warning, "HttpServer: malformed multipart body: {}", multipart.error().message);
+                SIHD_LOG(warning, "HttpServer: malformed multipart body: {}", parsed.error().message);
                 this->send_http_error(session, HttpStatus::BadRequest);
                 return true;
             }
-            request.set_multipart(std::move(*multipart));
+            request.set_multipart(std::move(multipart));
         }
     }
 

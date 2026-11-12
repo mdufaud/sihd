@@ -115,21 +115,21 @@ TEST_F(TestHttpResponse, test_from_string)
                       "\r\n"
                       "hello";
 
-    auto resp = HttpResponse::from_string(raw);
-    ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(resp->status(), HttpStatus::Ok);
-    EXPECT_EQ(resp->content().cpp_str(), "hello");
-    EXPECT_EQ(resp->http_header().content_type(), "text/plain");
+    HttpResponse resp;
+    ASSERT_TRUE(resp.from_string(raw).has_value());
+    EXPECT_EQ(resp.status(), HttpStatus::Ok);
+    EXPECT_EQ(resp.content().cpp_str(), "hello");
+    EXPECT_EQ(resp.http_header().content_type(), "text/plain");
 }
 
 TEST_F(TestHttpResponse, test_from_string_no_body)
 {
     std::string raw = "HTTP/1.1 204 No Content\r\n\r\n";
 
-    auto resp = HttpResponse::from_string(raw);
-    ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(resp->status(), HttpStatus::NoContent);
-    EXPECT_EQ(resp->content().size(), 0u);
+    HttpResponse resp;
+    ASSERT_TRUE(resp.from_string(raw).has_value());
+    EXPECT_EQ(resp.status(), HttpStatus::NoContent);
+    EXPECT_EQ(resp.content().size(), 0u);
 }
 
 TEST_F(TestHttpResponse, test_from_string_with_cookies)
@@ -139,39 +139,44 @@ TEST_F(TestHttpResponse, test_from_string_with_cookies)
                       "Set-Cookie: token=xyz; HttpOnly\r\n"
                       "\r\n";
 
-    auto resp = HttpResponse::from_string(raw);
-    ASSERT_TRUE(resp.has_value());
-    ASSERT_EQ(resp->set_cookie_headers().size(), 2u);
-    EXPECT_EQ(resp->set_cookie_headers()[0], "session=abc");
-    EXPECT_EQ(resp->set_cookie_headers()[1], "token=xyz; HttpOnly");
+    HttpResponse resp;
+    ASSERT_TRUE(resp.from_string(raw).has_value());
+    ASSERT_EQ(resp.set_cookie_headers().size(), 2u);
+    EXPECT_EQ(resp.set_cookie_headers()[0], "session=abc");
+    EXPECT_EQ(resp.set_cookie_headers()[1], "token=xyz; HttpOnly");
 }
 
 TEST_F(TestHttpResponse, test_from_string_cookie_header_case)
 {
-    auto resp = HttpResponse::from_string("HTTP/1.1 200 OK\r\nSET-COOKIE: upper=1\r\nset-Cookie: mixed=2\r\n"
-                                          "Set-Cookie:nospace=3\r\n\r\n");
+    HttpResponse resp;
 
-    ASSERT_TRUE(resp.has_value());
-    ASSERT_EQ(resp->set_cookie_headers().size(), 3u);
-    EXPECT_EQ(resp->set_cookie_headers()[0], "upper=1");
-    EXPECT_EQ(resp->set_cookie_headers()[1], "mixed=2");
-    EXPECT_EQ(resp->set_cookie_headers()[2], "nospace=3");
-    EXPECT_EQ(resp->http_header().find("set-cookie"), "");
+    ASSERT_TRUE(resp.from_string("HTTP/1.1 200 OK\r\nSET-COOKIE: upper=1\r\nset-Cookie: mixed=2\r\n"
+                                 "Set-Cookie:nospace=3\r\n\r\n")
+                    .has_value());
+    ASSERT_EQ(resp.set_cookie_headers().size(), 3u);
+    EXPECT_EQ(resp.set_cookie_headers()[0], "upper=1");
+    EXPECT_EQ(resp.set_cookie_headers()[1], "mixed=2");
+    EXPECT_EQ(resp.set_cookie_headers()[2], "nospace=3");
+    EXPECT_EQ(resp.http_header().find("set-cookie"), "");
 }
 
 TEST_F(TestHttpResponse, test_from_string_http10)
 {
     std::string raw = "HTTP/1.0 301 Moved Permanently\r\n\r\n";
-    auto resp = HttpResponse::from_string(raw);
-    ASSERT_TRUE(resp.has_value());
-    EXPECT_EQ(resp->status(), HttpStatus::MovedPermanently);
+    HttpResponse resp;
+    ASSERT_TRUE(resp.from_string(raw).has_value());
+    EXPECT_EQ(resp.status(), HttpStatus::MovedPermanently);
 }
 
 TEST_F(TestHttpResponse, test_from_string_malformed)
 {
-    EXPECT_FALSE(HttpResponse::from_string("garbage").has_value());
-    EXPECT_FALSE(HttpResponse::from_string("HTTP/2.0 200 OK\r\n\r\n").has_value());
-    EXPECT_FALSE(HttpResponse::from_string("HTTP/1.1\r\n\r\n").has_value());
+    HttpResponse resp;
+    resp.set_status(HttpStatus::Accepted);
+
+    EXPECT_FALSE(resp.from_string("garbage").has_value());
+    EXPECT_FALSE(resp.from_string("HTTP/2.0 200 OK\r\n\r\n").has_value());
+    EXPECT_FALSE(resp.from_string("HTTP/1.1\r\n\r\n").has_value());
+    EXPECT_EQ(resp.status(), HttpStatus::Accepted);
 }
 
 TEST_F(TestHttpResponse, test_roundtrip)
@@ -182,11 +187,11 @@ TEST_F(TestHttpResponse, test_roundtrip)
     original.set_plain_content("created");
 
     std::string serialized = original.to_string();
-    auto parsed = HttpResponse::from_string(serialized);
-    ASSERT_TRUE(parsed.has_value());
-    EXPECT_EQ(parsed->status(), HttpStatus::Created);
-    EXPECT_EQ(parsed->content().cpp_str(), "created");
-    EXPECT_EQ(parsed->http_header().find("x-request-id"), "abc-123");
+    HttpResponse parsed;
+    ASSERT_TRUE(parsed.from_string(serialized).has_value());
+    EXPECT_EQ(parsed.status(), HttpStatus::Created);
+    EXPECT_EQ(parsed.content().cpp_str(), "created");
+    EXPECT_EQ(parsed.http_header().find("x-request-id"), "abc-123");
 }
 
 TEST_F(TestHttpResponse, test_to_string)

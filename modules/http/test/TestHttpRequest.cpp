@@ -92,14 +92,14 @@ TEST_F(TestHttpRequest, test_from_string)
                       "Content-Type: text/plain\r\n"
                       "\r\n";
 
-    auto req = HttpRequest::from_string(raw);
-    ASSERT_TRUE(req.has_value());
-    EXPECT_EQ(req->request_type(), HttpRequest::Get);
-    EXPECT_EQ(req->url(), "/api/items");
-    EXPECT_EQ(req->query_param("page").value_or(""), "2");
-    EXPECT_EQ(req->query_param("q").value_or(""), "hello");
-    EXPECT_EQ(req->http_header().find("host"), "localhost");
-    EXPECT_FALSE(req->has_content());
+    HttpRequest req;
+    ASSERT_TRUE(req.from_string(raw).has_value());
+    EXPECT_EQ(req.request_type(), HttpRequest::Get);
+    EXPECT_EQ(req.url(), "/api/items");
+    EXPECT_EQ(req.query_param("page").value_or(""), "2");
+    EXPECT_EQ(req.query_param("q").value_or(""), "hello");
+    EXPECT_EQ(req.http_header().find("host"), "localhost");
+    EXPECT_FALSE(req.has_content());
 }
 
 TEST_F(TestHttpRequest, test_from_string_with_body)
@@ -109,31 +109,35 @@ TEST_F(TestHttpRequest, test_from_string_with_body)
                       "\r\n"
                       R"({"key":"val"})";
 
-    auto req = HttpRequest::from_string(raw);
-    ASSERT_TRUE(req.has_value());
-    EXPECT_EQ(req->request_type(), HttpRequest::Post);
-    EXPECT_EQ(req->url(), "/api/data");
-    EXPECT_TRUE(req->has_content());
-    EXPECT_EQ(req->content().cpp_str(), R"({"key":"val"})");
+    HttpRequest req;
+    ASSERT_TRUE(req.from_string(raw).has_value());
+    EXPECT_EQ(req.request_type(), HttpRequest::Post);
+    EXPECT_EQ(req.url(), "/api/data");
+    EXPECT_TRUE(req.has_content());
+    EXPECT_EQ(req.content().cpp_str(), R"({"key":"val"})");
 }
 
 TEST_F(TestHttpRequest, test_from_string_http10)
 {
     std::string raw = "GET /old HTTP/1.0\r\n\r\n";
 
-    auto req = HttpRequest::from_string(raw);
-    ASSERT_TRUE(req.has_value());
-    EXPECT_EQ(req->request_type(), HttpRequest::Get);
-    EXPECT_EQ(req->url(), "/old");
+    HttpRequest req;
+    ASSERT_TRUE(req.from_string(raw).has_value());
+    EXPECT_EQ(req.request_type(), HttpRequest::Get);
+    EXPECT_EQ(req.url(), "/old");
 }
 
 TEST_F(TestHttpRequest, test_from_string_malformed)
 {
-    EXPECT_FALSE(HttpRequest::from_string("garbage").has_value());
-    EXPECT_FALSE(HttpRequest::from_string("GET /path\r\n\r\n").has_value());
-    EXPECT_FALSE(HttpRequest::from_string("INVALID /path HTTP/1.1\r\n\r\n").has_value());
-    EXPECT_FALSE(HttpRequest::from_string("GET /path HTTP/2.0\r\n\r\n").has_value());
-    EXPECT_FALSE(HttpRequest::from_string("GET ?a=b HTTP/1.1\r\n\r\n").has_value());
+    HttpRequest req("/kept", HttpRequest::Put);
+
+    EXPECT_FALSE(req.from_string("garbage").has_value());
+    EXPECT_FALSE(req.from_string("GET /path\r\n\r\n").has_value());
+    EXPECT_FALSE(req.from_string("INVALID /path HTTP/1.1\r\n\r\n").has_value());
+    EXPECT_FALSE(req.from_string("GET /path HTTP/2.0\r\n\r\n").has_value());
+    EXPECT_FALSE(req.from_string("GET ?a=b HTTP/1.1\r\n\r\n").has_value());
+    EXPECT_EQ(req.url(), "/kept");
+    EXPECT_EQ(req.request_type(), HttpRequest::Put);
 }
 
 TEST_F(TestHttpRequest, test_to_string)
@@ -158,12 +162,12 @@ TEST_F(TestHttpRequest, test_roundtrip)
     original.set_content({body.data(), body.size()});
 
     std::string serialized = original.to_string();
-    auto parsed = HttpRequest::from_string(serialized);
-    ASSERT_TRUE(parsed.has_value());
-    EXPECT_EQ(parsed->request_type(), HttpRequest::Put);
-    EXPECT_EQ(parsed->url(), "/api/test");
-    EXPECT_EQ(parsed->content().cpp_str(), body);
-    EXPECT_EQ(parsed->http_header().find("x-custom"), "value");
+    HttpRequest parsed;
+    ASSERT_TRUE(parsed.from_string(serialized).has_value());
+    EXPECT_EQ(parsed.request_type(), HttpRequest::Put);
+    EXPECT_EQ(parsed.url(), "/api/test");
+    EXPECT_EQ(parsed.content().cpp_str(), body);
+    EXPECT_EQ(parsed.http_header().find("x-custom"), "value");
 }
 
 TEST_F(TestHttpRequest, test_auth)

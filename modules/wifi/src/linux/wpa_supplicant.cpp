@@ -107,9 +107,10 @@ Result<std::vector<NetworkObject>> networks(dbus::Connection & connection, const
     std::vector<dbus::Message> requests;
     for (const std::string & path : *paths)
     {
-        auto request = dbus::Message::properties_get(service, path, network_interface, "Properties");
-        SIHD_UNEXPECTED_RETURN(request);
-        requests.emplace_back(std::move(*request));
+        dbus::Message request;
+        auto built = request.properties_get(service, path, network_interface, "Properties");
+        SIHD_UNEXPECTED_RETURN(built);
+        requests.emplace_back(std::move(request));
     }
     auto replies = dbus::Message::call_all(connection, requests, call_timeout);
     SIHD_UNEXPECTED_RETURN(replies);
@@ -167,9 +168,10 @@ Result<std::optional<Security>>
     std::vector<dbus::Message> requests;
     for (const std::string & path : *paths)
     {
-        auto request = dbus::Message::properties_get_all(service, path, bss_interface);
-        SIHD_UNEXPECTED_RETURN(request);
-        requests.emplace_back(std::move(*request));
+        dbus::Message request;
+        auto built = request.properties_get_all(service, path, bss_interface);
+        SIHD_UNEXPECTED_RETURN(built);
+        requests.emplace_back(std::move(request));
     }
     auto replies = dbus::Message::call_all(connection, requests, call_timeout);
     SIHD_UNEXPECTED_RETURN(replies);
@@ -189,11 +191,12 @@ Result<std::optional<Security>>
 
 Result<void> call_with_path(dbus::Connection & connection, ZStringView interface, ZStringView member, ZStringView path)
 {
-    auto request = dbus::Message::method_call(service, interface, interface_interface, member);
-    SIHD_UNEXPECTED_RETURN(request);
-    auto path_added = request->add_object_path(path);
+    dbus::Message request;
+    auto built = request.method_call(service, interface, interface_interface, member);
+    SIHD_UNEXPECTED_RETURN(built);
+    auto path_added = request.add_object_path(path);
     SIHD_UNEXPECTED_RETURN(path_added);
-    auto reply = request->call(connection, call_timeout);
+    auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return {};
 }
@@ -242,16 +245,17 @@ Result<std::string> add_network(dbus::Connection & connection,
                                 Security security,
                                 const std::optional<std::string> & passphrase)
 {
-    auto request = dbus::Message::method_call(service, interface, interface_interface, "AddNetwork");
-    SIHD_UNEXPECTED_RETURN(request);
-    dbus::Appender body(*request);
+    dbus::Message request;
+    auto built = request.method_call(service, interface, interface_interface, "AddNetwork");
+    SIHD_UNEXPECTED_RETURN(built);
+    dbus::Appender body(request);
     auto dict = body.open_array("{sv}");
     SIHD_UNEXPECTED_RETURN(dict);
     auto filled = fill_network(*dict, ssid, security, passphrase);
     SIHD_UNEXPECTED_RETURN(filled);
     auto dict_closed = body.close(std::move(*dict));
     SIHD_UNEXPECTED_RETURN(dict_closed);
-    auto reply = request->call(connection, call_timeout);
+    auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return dbus::Iter(*reply).get<std::string>();
 }
@@ -272,7 +276,8 @@ Result<void> wait_completed(dbus::Connection & connection,
                             Duration timeout)
 {
     bool attempted = false;
-    auto completed = dbus::Message::receive_until(
+    dbus::Message update;
+    auto completed = update.receive_until(
         connection,
         timeout,
         [&interface, &attempted](const dbus::Message & message) -> Result<bool> {
@@ -307,11 +312,12 @@ Result<std::optional<std::string>> detect(dbus::Connection & connection, const s
     if (!*running)
         return std::nullopt;
 
-    auto request = dbus::Message::method_call(service, root_path, root_interface, "GetInterface");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto name_added = request->add(interface_name);
+    dbus::Message request;
+    auto built = request.method_call(service, root_path, root_interface, "GetInterface");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto name_added = request.add(interface_name);
     SIHD_UNEXPECTED_RETURN(name_added);
-    auto reply = request->call(connection, call_timeout);
+    auto reply = request.call(connection, call_timeout);
     if (!reply && dbus::has_error_name(reply.error(), "fi.w1.wpa_supplicant1.InterfaceUnknown"))
         return std::nullopt;
     SIHD_UNEXPECTED_RETURN(reply);
@@ -336,30 +342,29 @@ Result<void> scan(dbus::Connection & connection, const std::string & interface, 
 {
     auto matched = connection.add_match(dbus::signal_rule(service, interface, interface_interface, "ScanDone"));
     SIHD_UNEXPECTED_RETURN(matched);
-    auto request = dbus::Message::method_call(service, interface, interface_interface, "Scan");
-    SIHD_UNEXPECTED_RETURN(request);
-    dbus::Appender body(*request);
+    dbus::Message request;
+    auto built = request.method_call(service, interface, interface_interface, "Scan");
+    SIHD_UNEXPECTED_RETURN(built);
+    dbus::Appender body(request);
     auto options = body.open_array("{sv}");
     SIHD_UNEXPECTED_RETURN(options);
     auto type_added = add_text_entry(*options, "Type", "active");
     SIHD_UNEXPECTED_RETURN(type_added);
     auto options_closed = body.close(std::move(*options));
     SIHD_UNEXPECTED_RETURN(options_closed);
-    auto requested = request->call(connection, call_timeout);
+    auto requested = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(requested);
 
-    auto done = dbus::Message::receive_until(
-        connection,
-        timeout,
-        [&interface](const dbus::Message & message) -> Result<bool> {
-            if (!is_scan_done(message, interface))
-                return false;
-            auto success = dbus::Iter(message).get<bool>();
-            SIHD_UNEXPECTED_RETURN(success);
-            if (!*success)
-                return std::unexpected(Error(ErrorCode::io_error, "ScanDone reported a failure"));
-            return true;
-        });
+    dbus::Message update;
+    auto done = update.receive_until(connection, timeout, [&interface](const dbus::Message & message) -> Result<bool> {
+        if (!is_scan_done(message, interface))
+            return false;
+        auto success = dbus::Iter(message).get<bool>();
+        SIHD_UNEXPECTED_RETURN(success);
+        if (!*success)
+            return std::unexpected(Error(ErrorCode::io_error, "ScanDone reported a failure"));
+        return true;
+    });
     SIHD_UNEXPECTED_RETURN_CTX(done, "wpa_supplicant scan");
     return {};
 }
@@ -403,9 +408,10 @@ Result<void> connect(dbus::Connection & connection,
 
 Result<void> disconnect(dbus::Connection & connection, const std::string & interface)
 {
-    auto request = dbus::Message::method_call(service, interface, interface_interface, "Disconnect");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto reply = request->call(connection, call_timeout);
+    dbus::Message request;
+    auto built = request.method_call(service, interface, interface_interface, "Disconnect");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto reply = request.call(connection, call_timeout);
     if (!reply && dbus::has_error_name(reply.error(), "fi.w1.wpa_supplicant1.NotConnected"))
         return {};
     SIHD_UNEXPECTED_RETURN(reply);

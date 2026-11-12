@@ -27,7 +27,8 @@ class HttpResponse
         HttpResponse & operator=(HttpResponse &&) = default;
         virtual ~HttpResponse();
 
-        static sihd::util::Result<HttpResponse> from_string(std::string_view raw);
+        // a failure keeps the response, the mime types are kept either way
+        sihd::util::Result<void> from_string(std::string_view raw);
         std::string to_string() const;
 
         void set_status(uint32_t status);

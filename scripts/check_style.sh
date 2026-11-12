@@ -81,7 +81,7 @@ BEGIN {
     PUBLIC_IF = "#if in public header (same api everywhere, return ErrorCode::not_supported)"
     PLATFORM_IF = "platform #if in .cpp (if constexpr (build::is_windows) when both branches compile; #if only for symbols absent on the platform)"
     # owner-accepted statics (judge canon): the app-wide default channel clock, the retryable curl init flag
-    INTENDED_STATIC = "^(modules/core/(src/Channel\\.cpp|include/sihd/core/Channel\\.hpp):.*_default_channel_clock_ptr|modules/curl/src/Request\\.cpp:[[:space:]]*static bool initialized = false;|modules/wifi/test/linux/fake_daemon\\.hpp:[[:space:]]*static std::unique_ptr<PrivateDBus> bus;)"
+    INTENDED_STATIC = "^(modules/core/(src/Channel\\.cpp|include/sihd/core/Channel\\.hpp):.*_default_channel_clock_ptr|modules/curl/src/Request\\.cpp:[[:space:]]*static bool initialized = false;|modules/sys/test/linux/fake_dbus_daemon\\.hpp:[[:space:]]*static std::unique_ptr<PrivateDBus> bus;)"
 }
 function hit(rule) {
     printf "%s\t%s:%d: %s\n", rule, file, line, text
@@ -122,6 +122,15 @@ function enclosing_namespace(path, at_line,   source, row, depth, stack, ns, i, 
         if (stack[i] != "")
             full = full (full == "" ? "" : "::") stack[i]
     return full
+}
+# whether path declares the class or struct name (nested ones included)
+function declares_type(path, name,   source, found) {
+    found = 0
+    while ((getline source < path) > 0)
+        if (source ~ ("^[[:space:]]*(class|struct)[[:space:]]+([A-Za-z_][A-Za-z0-9_]*::)*" name "([[:space:]:{]|$)"))
+            found = 1
+    close(path)
+    return found
 }
 # constexpr (exempt like every constexpr body) or a const variable: no parenthesis before its initializer
 function is_inline_constant(decl,   head) {
@@ -407,6 +416,14 @@ function reset_hunk() {
         && (code ~ /(^|[^A-Za-z0-9_:.>])(std::|::)?(printf|puts|putchar)[[:space:]]*\(|std::(cout|cerr|clog|endl)/ \
             || code ~ /(fprintf|fputs|fputc|fwrite|fflush|fmt::print)[[:space:]]*\([^;]*(stdout|stderr)/ || code ~ /fmt::print[[:space:]]*\([[:space:]]*"/))
         hit("stdio output in library (SIHD_LOG)")
+    if ((is_cpp || is_hpp) && match(text, /(^|[[:space:]])static[[:space:]].*Result<(std::(unique_ptr|optional)<)?[A-Za-z_][A-Za-z0-9_:]*>/)) {
+        built = substr(text, RSTART, RLENGTH)
+        sub(/^.*Result<(std::(unique_ptr|optional)<)?/, "", built)
+        sub(/>$/, "", built)
+        sub(/^.*::/, "", built)
+        if (declares_type(file, built))
+            hit("static builder returning its own class in a Result (object form: empty ctor, member action, throwing ctor)")
+    }
     if (text ~ /(^|[^A-Za-z0-9_])typedef[[:space:]]/ && text !~ /^[[:space:]]*\/\//)
         hit("typedef (using X = ...)")
     if (text ~ /^namespace[[:space:]]+sihd[[:space:]]*(\{[[:space:]]*)?$/)

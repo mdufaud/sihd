@@ -168,18 +168,18 @@ void check_lookups(const Multipart & multipart, const std::vector<ExpectedPart> 
 void check_parsed(const Built & built)
 {
     const test::ExactText body(built.body);
-    const auto parsed = Multipart::parse(body, built.content_type);
-    test::fuzz_check(parsed.has_value(), "a multipart body built from known parts parses");
-    test::fuzz_check(parsed->parts().size() == built.parts.size(), "every part is parsed, none is invented");
-    test::fuzz_check(parsed->empty() == built.parts.empty(), "empty follows the part count");
-    for (size_t i = 0; i < built.parts.size() && i < parsed->parts().size(); ++i)
-        test::fuzz_check(same_part(parsed->parts()[i], built.parts[i]),
+    const Multipart parsed(body, built.content_type);
+    test::fuzz_check(parsed.parts().size() == built.parts.size(), "every part is parsed, none is invented");
+    test::fuzz_check(parsed.empty() == built.parts.empty(), "empty follows the part count");
+    for (size_t i = 0; i < built.parts.size() && i < parsed.parts().size(); ++i)
+        test::fuzz_check(same_part(parsed.parts()[i], built.parts[i]),
                          "a part keeps its name, filename, content type and data");
-    check_lookups(*parsed, built.parts);
+    check_lookups(parsed, built.parts);
 }
 
 void check_content_type(const Built & built)
 {
+    Multipart refused;
     test::fuzz_check(Multipart::is_content_type(built.content_type), "a multipart/form-data type is recognized");
     test::fuzz_check(Multipart::boundary(built.content_type) == std::optional<std::string>(built.boundary),
                      "the boundary is found back, quoted or not");
@@ -187,25 +187,29 @@ void check_content_type(const Built & built)
     const std::string other = "text/plain; boundary=" + built.boundary;
     test::fuzz_check(!Multipart::is_content_type(other) && !Multipart::boundary(other).has_value(),
                      "another media type has no multipart boundary");
-    test::fuzz_check(!Multipart::parse(built.body, other).has_value(), "a body is not parsed with another media type");
+    test::fuzz_check(!refused.parse(built.body, other).has_value(), "a body is not parsed with another media type");
 
     const std::string no_boundary = "multipart/form-data; charset=utf-8";
     test::fuzz_check(Multipart::is_content_type(no_boundary) && !Multipart::boundary(no_boundary).has_value(),
                      "a multipart type without boundary is still multipart but has none");
-    test::fuzz_check(!Multipart::parse(built.body, no_boundary).has_value(), "a body is not parsed without boundary");
+    test::fuzz_check(!refused.parse(built.body, no_boundary).has_value(), "a body is not parsed without boundary");
 }
 
 void check_truncated(FuzzedDataProvider & provider, const Built & built)
 {
     const size_t cut = provider.ConsumeIntegralInRange<size_t>(0, built.closing_end - 1);
     const test::ExactText cut_body(std::string_view(built.body).substr(0, cut));
-    test::fuzz_check(!Multipart::parse(cut_body, built.content_type).has_value(),
+    Multipart multipart;
+    test::fuzz_check(!multipart.parse(cut_body, built.content_type).has_value(),
                      "a body cut before its closing delimiter is refused");
 
     const test::ExactText exact_body(std::string_view(built.body).substr(0, built.closing_end));
-    const auto parsed = Multipart::parse(exact_body, built.content_type);
-    test::fuzz_check(parsed.has_value() && parsed->parts().size() == built.parts.size(),
-                     "a body ending exactly with its closing delimiter parses");
+    test::fuzz_check(
+        multipart.parse(exact_body, built.content_type).has_value() && multipart.parts().size() == built.parts.size(),
+        "a body ending exactly with its closing delimiter parses");
+    test::fuzz_check(
+        !multipart.parse(cut_body, built.content_type).has_value() && multipart.parts().size() == built.parts.size(),
+        "a refused body keeps the parsed parts");
 }
 
 void fuzz_generated(FuzzedDataProvider & provider)
@@ -267,12 +271,13 @@ void fuzz_raw(FuzzedDataProvider & provider)
     test::fuzz_check(!boundary.has_value() || is_multipart, "only a multipart type has a boundary");
     test::fuzz_check(!boundary.has_value() || !boundary->empty(), "a found boundary is never empty");
 
-    const auto parsed = Multipart::parse(body, content_type);
+    Multipart multipart;
+    const auto parsed = multipart.parse(body, content_type);
     test::fuzz_check(boundary.has_value() || !parsed.has_value(), "a body without boundary is never parsed");
     if (parsed.has_value())
         test::fuzz_check(body.view().find("--" + *boundary) != std::string_view::npos,
                          "a parsed body contains its delimiter");
-    (void)Multipart::parse(body, "multipart/form-data; boundary=b");
+    (void)multipart.parse(body, "multipart/form-data; boundary=b");
 }
 } // namespace
 

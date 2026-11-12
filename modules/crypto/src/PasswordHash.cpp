@@ -273,6 +273,8 @@ Result<PasswordHash::Params> decode_params(Algorithm algorithm, std::string_view
 
 } // namespace
 
+PasswordHash::PasswordHash(): _algorithm(Algorithm::argon2id) {}
+
 PasswordHash::PasswordHash(Algorithm algorithm, Params params, std::vector<uint8_t> salt, std::vector<uint8_t> hash):
     _algorithm(algorithm),
     _params(std::move(params)),
@@ -281,7 +283,7 @@ PasswordHash::PasswordHash(Algorithm algorithm, Params params, std::vector<uint8
 {
 }
 
-Result<PasswordHash> PasswordHash::_generate(Algorithm algorithm, Params params, std::string_view password)
+Result<void> PasswordHash::_generate(Algorithm algorithm, Params params, std::string_view password)
 {
     std::vector<uint8_t> salt(salt_size);
     ERR_clear_error();
@@ -290,30 +292,31 @@ Result<PasswordHash> PasswordHash::_generate(Algorithm algorithm, Params params,
     const size_t size = algorithm == Algorithm::pbkdf2_sha512 ? sha512_size : hash_size;
     auto hash = std::visit(Deriver {algorithm, password, salt, size}, params);
     SIHD_UNEXPECTED_RETURN(hash);
-    return PasswordHash(algorithm, std::move(params), std::move(salt), std::move(*hash));
+    *this = PasswordHash(algorithm, std::move(params), std::move(salt), std::move(*hash));
+    return {};
 }
 
-Result<PasswordHash> PasswordHash::argon2id(std::string_view password, const Argon2Params & params)
+Result<void> PasswordHash::argon2id(std::string_view password, const Argon2Params & params)
 {
-    return _generate(Algorithm::argon2id, params, password);
+    return this->_generate(Algorithm::argon2id, params, password);
 }
 
-Result<PasswordHash> PasswordHash::scrypt(std::string_view password, const ScryptParams & params)
+Result<void> PasswordHash::scrypt(std::string_view password, const ScryptParams & params)
 {
-    return _generate(Algorithm::scrypt, params, password);
+    return this->_generate(Algorithm::scrypt, params, password);
 }
 
-Result<PasswordHash> PasswordHash::pbkdf2_sha256(std::string_view password, const Pbkdf2Params & params)
+Result<void> PasswordHash::pbkdf2_sha256(std::string_view password, const Pbkdf2Params & params)
 {
-    return _generate(Algorithm::pbkdf2_sha256, params, password);
+    return this->_generate(Algorithm::pbkdf2_sha256, params, password);
 }
 
-Result<PasswordHash> PasswordHash::pbkdf2_sha512(std::string_view password, const Pbkdf2Params & params)
+Result<void> PasswordHash::pbkdf2_sha512(std::string_view password, const Pbkdf2Params & params)
 {
-    return _generate(Algorithm::pbkdf2_sha512, params, password);
+    return this->_generate(Algorithm::pbkdf2_sha512, params, password);
 }
 
-Result<PasswordHash> PasswordHash::decode(std::string_view phc)
+Result<void> PasswordHash::decode(std::string_view phc)
 {
     if (!phc.starts_with('$'))
         return std::unexpected(Error(invalid_argument, "PHC string '{}' does not start with '$'", phc));
@@ -355,11 +358,14 @@ Result<PasswordHash> PasswordHash::decode(std::string_view phc)
 
     auto params = decode_params(known->algorithm, params_field, hash->size());
     SIHD_UNEXPECTED_RETURN(params);
-    return PasswordHash(known->algorithm, std::move(*params), std::move(*salt), std::move(*hash));
+    *this = PasswordHash(known->algorithm, std::move(*params), std::move(*salt), std::move(*hash));
+    return {};
 }
 
 std::string PasswordHash::encode() const
 {
+    if (_hash.empty())
+        return "";
     const auto known = std::ranges::find(algorithm_ids, _algorithm, &AlgorithmId::algorithm);
     const std::string version = _algorithm == Algorithm::argon2id ? fmt::format("$v={}", argon2_version) : "";
     return fmt::format("${}{}${}${}${}",
@@ -372,6 +378,9 @@ std::string PasswordHash::encode() const
 
 Result<bool> PasswordHash::verify(std::string_view password) const
 {
+    // a zero byte comparison would accept any password
+    if (_hash.empty())
+        return std::unexpected(Error(not_initialized, "password hash is empty"));
     auto hash = std::visit(Deriver {_algorithm, password, _salt, _hash.size()}, _params);
     SIHD_UNEXPECTED_RETURN(hash);
     return CRYPTO_memcmp(hash->data(), _hash.data(), _hash.size()) == 0;

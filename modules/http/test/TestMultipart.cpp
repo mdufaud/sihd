@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <gtest/gtest.h>
 
 #include <sihd/http/Multipart.hpp>
@@ -29,11 +31,10 @@ TEST_F(TestMultipart, test_boundary)
     ASSERT_TRUE(boundary.has_value());
     EXPECT_EQ(*boundary, "quoted boundary");
 
-    auto multipart = Multipart::parse("--quoted boundary\r\n\r\nquoted\r\n--quoted boundary--",
-                                      "multipart/form-data; boundary=\"quoted boundary\"");
-    ASSERT_TRUE(multipart.has_value());
-    ASSERT_EQ(multipart->parts().size(), 1u);
-    EXPECT_EQ(multipart->parts()[0].data, "quoted");
+    const Multipart multipart("--quoted boundary\r\n\r\nquoted\r\n--quoted boundary--",
+                              "multipart/form-data; boundary=\"quoted boundary\"");
+    ASSERT_EQ(multipart.parts().size(), 1u);
+    EXPECT_EQ(multipart.parts()[0].data, "quoted");
 
     EXPECT_FALSE(Multipart::boundary("multipart/form-data").has_value());
     EXPECT_FALSE(Multipart::boundary("multipart/form-datax; boundary=xyz").has_value());
@@ -53,47 +54,44 @@ TEST_F(TestMultipart, test_parse)
                              "hello file\r\n"
                              "--boundary--\r\n";
 
-    auto multipart = Multipart::parse(body, "multipart/form-data; boundary=boundary");
-    ASSERT_TRUE(multipart.has_value());
-    ASSERT_EQ(multipart->parts().size(), 2u);
+    const Multipart multipart(body, "multipart/form-data; boundary=boundary");
+    ASSERT_EQ(multipart.parts().size(), 2u);
 
-    EXPECT_EQ(multipart->parts()[0].name, "username");
-    EXPECT_EQ(multipart->parts()[0].filename, "");
-    EXPECT_EQ(multipart->parts()[0].data, "testuser");
-    EXPECT_EQ(multipart->parts()[1].name, "avatar");
-    EXPECT_EQ(multipart->parts()[1].filename, "a.txt");
-    EXPECT_EQ(multipart->parts()[1].content_type, "text/plain");
-    EXPECT_EQ(multipart->parts()[1].data, "hello file");
+    EXPECT_EQ(multipart.parts()[0].name, "username");
+    EXPECT_EQ(multipart.parts()[0].filename, "");
+    EXPECT_EQ(multipart.parts()[0].data, "testuser");
+    EXPECT_EQ(multipart.parts()[1].name, "avatar");
+    EXPECT_EQ(multipart.parts()[1].filename, "a.txt");
+    EXPECT_EQ(multipart.parts()[1].content_type, "text/plain");
+    EXPECT_EQ(multipart.parts()[1].data, "hello file");
 
-    auto username = multipart->value("username");
+    auto username = multipart.value("username");
     ASSERT_TRUE(username.has_value());
     EXPECT_EQ(*username, "testuser");
-    EXPECT_FALSE(multipart->value("missing").has_value());
+    EXPECT_FALSE(multipart.value("missing").has_value());
 
-    const Multipart::Part *file = multipart->file("avatar");
+    const Multipart::Part *file = multipart.file("avatar");
     ASSERT_NE(file, nullptr);
     EXPECT_EQ(file->filename, "a.txt");
     EXPECT_EQ(file->data, "hello file");
-    EXPECT_EQ(multipart->file("username"), nullptr);
+    EXPECT_EQ(multipart.file("username"), nullptr);
 
-    auto empty = Multipart::parse("--boundary--\r\n", "multipart/form-data; boundary=boundary");
-    ASSERT_TRUE(empty.has_value());
-    EXPECT_TRUE(empty->parts().empty());
+    const Multipart empty("--boundary--\r\n", "multipart/form-data; boundary=boundary");
+    EXPECT_TRUE(empty.parts().empty());
 
     // duplicated name: the first part wins
-    auto duplicated = Multipart::parse("--b\r\n"
-                                       "Content-Disposition: form-data; name=\"field\"\r\n"
-                                       "\r\n"
-                                       "first\r\n"
-                                       "--b\r\n"
-                                       "Content-Disposition: form-data; name=\"field\"\r\n"
-                                       "\r\n"
-                                       "second\r\n"
-                                       "--b--",
-                                       "multipart/form-data; boundary=b");
-    ASSERT_TRUE(duplicated.has_value());
-    ASSERT_EQ(duplicated->parts().size(), 2u);
-    EXPECT_EQ(duplicated->value("field").value_or(""), "first");
+    const Multipart duplicated("--b\r\n"
+                               "Content-Disposition: form-data; name=\"field\"\r\n"
+                               "\r\n"
+                               "first\r\n"
+                               "--b\r\n"
+                               "Content-Disposition: form-data; name=\"field\"\r\n"
+                               "\r\n"
+                               "second\r\n"
+                               "--b--",
+                               "multipart/form-data; boundary=b");
+    ASSERT_EQ(duplicated.parts().size(), 2u);
+    EXPECT_EQ(duplicated.value("field").value_or(""), "first");
 }
 
 TEST_F(TestMultipart, test_build)
@@ -141,11 +139,10 @@ TEST_F(TestMultipart, test_parse_boundary_like_data)
                              "second\r\n"
                              "--b--";
 
-    auto multipart = Multipart::parse(body, "multipart/form-data; boundary=b");
-    ASSERT_TRUE(multipart.has_value());
-    ASSERT_EQ(multipart->parts().size(), 2u);
-    EXPECT_EQ(multipart->parts()[0].data, "before\r\n--bX after");
-    EXPECT_EQ(multipart->parts()[1].data, "second");
+    const Multipart multipart(body, "multipart/form-data; boundary=b");
+    ASSERT_EQ(multipart.parts().size(), 2u);
+    EXPECT_EQ(multipart.parts()[0].data, "before\r\n--bX after");
+    EXPECT_EQ(multipart.parts()[1].data, "second");
 }
 
 TEST_F(TestMultipart, test_parse_binary_and_preamble)
@@ -154,11 +151,10 @@ TEST_F(TestMultipart, test_parse_binary_and_preamble)
     body += std::string("\x00\x01\x02\xff", 4);
     body += "\r\n--b--";
 
-    auto multipart = Multipart::parse(body, "multipart/form-data; boundary=b");
-    ASSERT_TRUE(multipart.has_value());
-    ASSERT_EQ(multipart->parts().size(), 1u);
-    EXPECT_EQ(multipart->parts()[0].name, "");
-    EXPECT_EQ(multipart->parts()[0].data, "\x00\x01\x02\xff"sv);
+    const Multipart multipart(body, "multipart/form-data; boundary=b");
+    ASSERT_EQ(multipart.parts().size(), 1u);
+    EXPECT_EQ(multipart.parts()[0].name, "");
+    EXPECT_EQ(multipart.parts()[0].data, "\x00\x01\x02\xff"sv);
 }
 
 TEST_F(TestMultipart, test_parse_disposition_variants)
@@ -170,35 +166,38 @@ TEST_F(TestMultipart, test_parse_disposition_variants)
                              "content\r\n"
                              "--b--";
 
-    auto multipart = Multipart::parse(body, "multipart/form-data; boundary=b");
-    ASSERT_TRUE(multipart.has_value());
-    ASSERT_EQ(multipart->parts().size(), 1u);
-    EXPECT_EQ(multipart->parts()[0].name, "doc");
-    EXPECT_EQ(multipart->parts()[0].filename, "a=b.txt");
-    EXPECT_EQ(multipart->parts()[0].content_type, "text/plain");
+    const Multipart multipart(body, "multipart/form-data; boundary=b");
+    ASSERT_EQ(multipart.parts().size(), 1u);
+    EXPECT_EQ(multipart.parts()[0].name, "doc");
+    EXPECT_EQ(multipart.parts()[0].filename, "a=b.txt");
+    EXPECT_EQ(multipart.parts()[0].content_type, "text/plain");
 }
 
 TEST_F(TestMultipart, test_parse_malformed)
 {
     const std::string valid = "--b\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nvalue\r\n--b--";
 
-    EXPECT_FALSE(Multipart::parse("", "multipart/form-data; boundary=b").has_value());
-    EXPECT_FALSE(Multipart::parse(valid, "multipart/form-data").has_value());
-    EXPECT_FALSE(Multipart::parse(valid, "multipart/form-data; boundary=other").has_value());
-    EXPECT_FALSE(Multipart::parse(valid.substr(0, valid.size() - 2), "multipart/form-data; boundary=b").has_value());
+    Multipart kept;
+    kept.add_field("kept", "value");
+
+    EXPECT_FALSE(kept.parse("", "multipart/form-data; boundary=b").has_value());
+    EXPECT_FALSE(kept.parse(valid, "multipart/form-data").has_value());
+    EXPECT_FALSE(kept.parse(valid, "multipart/form-data; boundary=other").has_value());
+    EXPECT_FALSE(kept.parse(valid.substr(0, valid.size() - 2), "multipart/form-data; boundary=b").has_value());
     EXPECT_FALSE(
-        Multipart::parse("--b\r\nbroken header\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b").has_value());
-    EXPECT_FALSE(Multipart::parse("--b", "multipart/form-data; boundary=b").has_value());
+        kept.parse("--b\r\nbroken header\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b").has_value());
+    EXPECT_FALSE(kept.parse("--b", "multipart/form-data; boundary=b").has_value());
+    EXPECT_EQ(kept.value("kept").value_or(""), "value");
+    EXPECT_THROW(Multipart thrown(valid, "multipart/form-data"), std::runtime_error);
 }
 
 TEST_F(TestMultipart, test_first_delimiter_must_start_a_line)
 {
     // a delimiter inside the preamble line does not start the parts
-    EXPECT_FALSE(Multipart::parse("xx--b\r\nxx--b--", "multipart/form-data; boundary=b").has_value());
+    EXPECT_THROW(Multipart preamble("xx--b\r\nxx--b--", "multipart/form-data; boundary=b"), std::runtime_error);
 
-    auto at_start = Multipart::parse("--b\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b");
-    ASSERT_TRUE(at_start.has_value());
-    ASSERT_EQ(at_start->parts().size(), 1u);
+    const Multipart at_start("--b\r\n\r\nvalue\r\n--b--", "multipart/form-data; boundary=b");
+    ASSERT_EQ(at_start.parts().size(), 1u);
 }
 
 TEST_F(TestMultipart, test_is_content_type)
@@ -237,7 +236,9 @@ TEST_F(TestMultipart, test_parse_bounds_part_count)
         body += "--b\r\n\r\nx\r\n";
     body += "--b--";
 
-    EXPECT_FALSE(Multipart::parse(body, "multipart/form-data; boundary=b").has_value());
+    Multipart multipart;
+
+    EXPECT_FALSE(multipart.parse(body, "multipart/form-data; boundary=b").has_value());
 }
 
 } // namespace test

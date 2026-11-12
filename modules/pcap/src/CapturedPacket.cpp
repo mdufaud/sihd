@@ -1,4 +1,5 @@
 #include <cstring>
+#include <stdexcept>
 
 #include <sihd/pcap/CapturedPacket.hpp>
 
@@ -15,6 +16,8 @@ constexpr size_t datalink_offset = original_length_offset + sizeof(uint32_t);
 
 } // namespace
 
+CapturedPacket::CapturedPacket(): _timestamp(0), _original_length(0), _datalink(0) {}
+
 CapturedPacket::CapturedPacket(Timestamp timestamp, uint32_t original_length, int datalink, ArrUByteView data):
     _timestamp(timestamp),
     _original_length(original_length),
@@ -23,20 +26,26 @@ CapturedPacket::CapturedPacket(Timestamp timestamp, uint32_t original_length, in
 {
 }
 
-Result<CapturedPacket> CapturedPacket::decode(ArrUByteView packet)
+CapturedPacket::CapturedPacket(ArrUByteView packet): CapturedPacket()
+{
+    auto decoded = this->decode(packet);
+    if (!decoded)
+        throw std::runtime_error(decoded.error().message);
+}
+
+Result<void> CapturedPacket::decode(ArrUByteView packet)
 {
     if (packet.byte_size() < header_size)
         return std::unexpected(Error(ErrorCode::invalid_argument, "captured packet shorter than its header"));
     int64_t nanoseconds = 0;
-    uint32_t original_length = 0;
     int32_t datalink = 0;
     std::memcpy(&nanoseconds, packet.data(), sizeof(nanoseconds));
-    std::memcpy(&original_length, packet.data() + original_length_offset, sizeof(original_length));
+    std::memcpy(&_original_length, packet.data() + original_length_offset, sizeof(_original_length));
     std::memcpy(&datalink, packet.data() + datalink_offset, sizeof(datalink));
-    return CapturedPacket(Timestamp(nanoseconds),
-                          original_length,
-                          datalink,
-                          ArrUByteView(packet.data() + header_size, packet.byte_size() - header_size));
+    _timestamp = Timestamp(nanoseconds);
+    _datalink = datalink;
+    _data = ArrUByteView(packet.data() + header_size, packet.byte_size() - header_size);
+    return {};
 }
 
 ArrUByte CapturedPacket::encode() const

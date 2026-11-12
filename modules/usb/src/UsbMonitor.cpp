@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include <sihd/usb/UsbMonitor.hpp>
 #include <sihd/util/time.hpp>
 
@@ -37,39 +35,33 @@ struct UsbMonitor::Impl
                 libusb_hotplug_deregister_callback(context.get(), callback);
         }
 
-        static Result<std::unique_ptr<Impl>> open()
+        // the hotplug callback reaches the impl by address: it never moves once registered
+        Result<void> open()
         {
             if constexpr (!supported)
                 return std::unexpected(Error(not_supported, "usb hotplug is not supported on this platform"));
 
-            auto context = libusb::init_context();
-            SIHD_UNEXPECTED_RETURN(context);
-            auto impl = std::make_unique<Impl>();
-            impl->context = std::move(*context);
+            auto created = libusb::init_context();
+            SIHD_UNEXPECTED_RETURN(created);
+            context = std::move(*created);
 
             const int rc = libusb_hotplug_register_callback(
-                impl->context.get(),
+                context.get(),
                 LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED | LIBUSB_HOTPLUG_EVENT_DEVICE_LEFT,
                 LIBUSB_HOTPLUG_ENUMERATE,
                 LIBUSB_HOTPLUG_MATCH_ANY,
                 LIBUSB_HOTPLUG_MATCH_ANY,
                 LIBUSB_HOTPLUG_MATCH_ANY,
                 &on_hotplug,
-                impl.get(),
-                &impl->callback);
+                this,
+                &callback);
             if (rc != LIBUSB_SUCCESS)
                 return std::unexpected(libusb::to_error(rc, "register usb hotplug"));
-            return impl;
+            return {};
         }
 };
 
-UsbMonitor::UsbMonitor()
-{
-    auto impl = Impl::open();
-    if (!impl)
-        throw std::runtime_error(impl.error().message);
-    _impl = std::move(*impl);
-}
+UsbMonitor::UsbMonitor() = default;
 
 UsbMonitor::UsbMonitor(Duration run_timeout): UsbMonitor()
 {
@@ -77,6 +69,22 @@ UsbMonitor::UsbMonitor(Duration run_timeout): UsbMonitor()
 }
 
 UsbMonitor::~UsbMonitor() = default;
+
+Result<void> UsbMonitor::open()
+{
+    if (this->is_open())
+        return std::unexpected(Error(already_exists, "usb monitor already open"));
+    auto impl = std::make_unique<Impl>();
+    auto opened = impl->open();
+    SIHD_UNEXPECTED_RETURN(opened);
+    _impl = std::move(impl);
+    return {};
+}
+
+bool UsbMonitor::is_open() const
+{
+    return _impl != nullptr;
+}
 
 void UsbMonitor::set_run_timeout(Duration timeout)
 {
@@ -86,7 +94,9 @@ void UsbMonitor::set_run_timeout(Duration timeout)
 bool UsbMonitor::run()
 {
     _events.clear();
-    // the devices enumerated at construction are already queued: only poll for more
+    if (!this->is_open())
+        return false;
+    // the devices enumerated at open are already queued: only poll for more
     const bool queued = !_impl->pending.empty();
     int rc;
     if (_run_timeout.nanoseconds() < 0 && !queued)

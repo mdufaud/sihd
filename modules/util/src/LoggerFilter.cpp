@@ -12,10 +12,11 @@ std::optional<Regex> compile_filter(const std::string & pattern)
 {
     if (pattern.empty())
         return std::nullopt;
-    Result<Regex> regex = Regex::compile(pattern, Regex::Mode::full);
-    if (regex.has_value() == false)
-        throw std::invalid_argument(regex.error().message);
-    return std::move(*regex);
+    std::optional<Regex> regex(std::in_place);
+    Result<void> compiled = regex->compile(pattern, Regex::Mode::full);
+    if (!compiled)
+        throw std::invalid_argument(compiled.error().message);
+    return regex;
 }
 
 } // namespace

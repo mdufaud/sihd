@@ -91,15 +91,16 @@ void fuzz_raw(FuzzedDataProvider & provider)
                                         ? std::string(replacements[replacement_index])
                                         : std::string(subject.view());
 
-    const Result<Regex> regex = Regex::compile(pattern, mode);
-    if (!regex.has_value())
+    Regex regex;
+    const Result<void> compiled = regex.compile(pattern, mode);
+    if (!compiled.has_value())
     {
-        check_compile_error(regex.error(), pattern.view());
+        check_compile_error(compiled.error(), pattern.view());
         return;
     }
 
-    const Result<bool> matched = regex->matches(subject);
-    const Result<std::vector<std::string>> found = regex->find_all(subject);
+    const Result<bool> matched = regex.matches(subject);
+    const Result<std::vector<std::string>> found = regex.find_all(subject);
     if (matched.has_value() && found.has_value())
     {
         test::fuzz_check(*matched == !found->empty(), "matches agrees with find_all");
@@ -109,11 +110,11 @@ void fuzz_raw(FuzzedDataProvider & provider)
             test::fuzz_check(found->front() == subject.view(), "a full match covers the whole subject");
     }
 
-    const Result<std::string> replaced = regex->replace_all(subject, replacement);
+    const Result<std::string> replaced = regex.replace_all(subject, replacement);
     if (matched.has_value() && !*matched && replaced.has_value())
         test::fuzz_check(*replaced == subject.view(), "without a match the subject is left unchanged");
 
-    const Result<std::string> erased = regex->replace_all(subject, "");
+    const Result<std::string> erased = regex.replace_all(subject, "");
     if (erased.has_value())
         test::fuzz_check(erased->size() <= subject.view().size(), "erasing the matches never grows the subject");
 }
@@ -128,23 +129,24 @@ void fuzz_literal(FuzzedDataProvider & provider)
     const test::ExactText subject(subject_text);
     const std::string pattern = escape_literal(literal);
 
-    const Result<Regex> search = Regex::compile(pattern);
-    const Result<Regex> full = Regex::compile(pattern, Regex::Mode::full);
-    test::fuzz_check(search.has_value() && full.has_value(), "an escaped literal compiles");
+    Regex search;
+    Regex full;
+    test::fuzz_check(search.compile(pattern).has_value() && full.compile(pattern, Regex::Mode::full).has_value(),
+                     "an escaped literal compiles");
 
     const std::vector<size_t> positions = find_occurrences(subject, literal);
-    const Result<bool> matched = search->matches(subject);
+    const Result<bool> matched = search.matches(subject);
     test::fuzz_check(matched.has_value() && *matched == !positions.empty(), "matches finds a literal like find");
 
-    const Result<std::vector<std::string>> found = search->find_all(subject);
+    const Result<std::vector<std::string>> found = search.find_all(subject);
     test::fuzz_check(found.has_value() && *found == std::vector<std::string>(positions.size(), literal),
                      "find_all returns each non overlapping literal");
 
-    const Result<std::string> replaced = search->replace_all(subject, replacement);
+    const Result<std::string> replaced = search.replace_all(subject, replacement);
     test::fuzz_check(replaced.has_value() && *replaced == replace_occurrences(subject, literal, replacement, positions),
                      "replace_all of a literal equals a find and replace loop");
 
-    const Result<bool> full_matched = full->matches(subject);
+    const Result<bool> full_matched = full.matches(subject);
     test::fuzz_check(full_matched.has_value() && *full_matched == (subject.view() == literal),
                      "a full match is an equality");
 }

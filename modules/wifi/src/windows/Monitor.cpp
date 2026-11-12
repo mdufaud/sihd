@@ -53,7 +53,7 @@ Monitor::~Monitor() = default;
 
 Result<void> Monitor::open(const std::string & interface_name)
 {
-    if (_impl->listening)
+    if (this->is_open())
         return std::unexpected(Error(ErrorCode::already_exists, "the monitor is already open"));
     auto guid = _impl->session.open(interface_name);
     SIHD_UNEXPECTED_RETURN(guid);
@@ -64,9 +64,14 @@ Result<void> Monitor::open(const std::string & interface_name)
     return {};
 }
 
+bool Monitor::is_open() const
+{
+    return _impl->listening;
+}
+
 Result<std::optional<std::vector<Monitor::Event>>> Monitor::_receive(Duration timeout)
 {
-    if (!_impl->listening)
+    if (!this->is_open())
         return std::unexpected(Error(ErrorCode::not_initialized, "the monitor is not open"));
     const std::optional<wlanapi::Notification> notification = _impl->session.next(timeout);
     if (!notification.has_value())

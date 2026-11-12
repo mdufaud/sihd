@@ -17,14 +17,16 @@ class CapturedPacket
     public:
         static constexpr size_t header_size = sizeof(int64_t) + sizeof(uint32_t) + sizeof(int32_t);
 
+        CapturedPacket();
         CapturedPacket(sihd::util::Timestamp timestamp,
                        uint32_t original_length,
                        int datalink,
                        sihd::util::ArrUByteView data);
+        explicit CapturedPacket(sihd::util::ArrUByteView packet);
         ~CapturedPacket() = default;
 
-        // invalid_argument when shorter than the header, the data points into packet
-        static sihd::util::Result<CapturedPacket> decode(sihd::util::ArrUByteView packet);
+        // a failure keeps the packet; the data points into packet
+        sihd::util::Result<void> decode(sihd::util::ArrUByteView packet);
 
         sihd::util::ArrUByte encode() const;
 

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <sihd/http/HttpResponse.hpp>
+#include <sihd/http/HttpStatus.hpp>
 
 #include <fuzzer/FuzzedDataProvider.h>
 
@@ -32,12 +33,13 @@ void check_same_response(const HttpResponse & got, const HttpResponse & expected
 void fuzz_parse(FuzzedDataProvider & provider)
 {
     const test::ExactText raw(provider.ConsumeRemainingBytesAsString());
-    auto parsed = HttpResponse::from_string(raw);
-    if (!parsed.has_value())
+    HttpResponse parsed;
+    if (!parsed.from_string(raw))
         return;
-    const auto reparsed = HttpResponse::from_string(parsed->to_string());
-    test::fuzz_check(reparsed.has_value(), "a parsed response serializes to a parsable response");
-    check_same_response(*reparsed, *parsed, "status, headers, cookies and body survive serialization");
+    HttpResponse reparsed;
+    test::fuzz_check(reparsed.from_string(parsed.to_string()).has_value(),
+                     "a parsed response serializes to a parsable response");
+    check_same_response(reparsed, parsed, "status, headers, cookies and body survive serialization");
 }
 
 void fuzz_round_trip(FuzzedDataProvider & provider)
@@ -63,13 +65,13 @@ void fuzz_round_trip(FuzzedDataProvider & provider)
         cookies.push_back(name + "=" + value + (options.empty() ? "" : "; " + options));
     }
 
-    const auto parsed = HttpResponse::from_string(original.to_string());
-    test::fuzz_check(parsed.has_value(), "a built response parses");
-    test::fuzz_check(parsed->status() == status, "the status round trips");
-    test::fuzz_check(parsed->content().cpp_str() == body, "the body round trips");
-    test::fuzz_check(parsed->http_header().find(header_name) == header_value, "a header round trips");
-    test::fuzz_check(parsed->set_cookie_headers() == cookies, "the cookies round trip, in order");
-    check_same_response(*parsed, original, "a built response survives serialization");
+    HttpResponse parsed;
+    test::fuzz_check(parsed.from_string(original.to_string()).has_value(), "a built response parses");
+    test::fuzz_check(parsed.status() == status, "the status round trips");
+    test::fuzz_check(parsed.content().cpp_str() == body, "the body round trips");
+    test::fuzz_check(parsed.http_header().find(header_name) == header_value, "a header round trips");
+    test::fuzz_check(parsed.set_cookie_headers() == cookies, "the cookies round trip, in order");
+    check_same_response(parsed, original, "a built response survives serialization");
 }
 
 void fuzz_generated(FuzzedDataProvider & provider)
@@ -104,16 +106,17 @@ void fuzz_generated(FuzzedDataProvider & provider)
     raw += "\r\n" + body;
 
     const test::ExactText exact(raw);
-    const auto parsed = HttpResponse::from_string(exact);
-    test::fuzz_check(parsed.has_value(), "a status line with or without reason and a well formed block parse");
-    test::fuzz_check(parsed->status() == status, "the status is read");
-    test::fuzz_check(parsed->set_cookie_headers() == cookies, "every cookie line is kept, whatever its case");
+    HttpResponse parsed;
+    test::fuzz_check(parsed.from_string(exact).has_value(),
+                     "a status line with or without reason and a well formed block parse");
+    test::fuzz_check(parsed.status() == status, "the status is read");
+    test::fuzz_check(parsed.set_cookie_headers() == cookies, "every cookie line is kept, whatever its case");
     for (const auto & [name, value] : headers)
-        test::fuzz_check(parsed->http_header().find(name) == value, "a header line is read with its value");
+        test::fuzz_check(parsed.http_header().find(name) == value, "a header line is read with its value");
     // the response constructor always sets accept-charset
-    test::fuzz_check(parsed->http_header().headers().size() == headers.size() + 1,
+    test::fuzz_check(parsed.http_header().headers().size() == headers.size() + 1,
                      "cookies are not headers and no header is invented");
-    test::fuzz_check(parsed->content().cpp_str() == body, "the body is whatever follows the blank line");
+    test::fuzz_check(parsed.content().cpp_str() == body, "the body is whatever follows the blank line");
 }
 
 void fuzz_refused()
@@ -130,9 +133,12 @@ void fuzz_refused()
         "HTTP/1.1 200 OK\r\nA: b",
         std::string(),
     };
+    HttpResponse kept;
+    kept.set_status(HttpStatus::Accepted);
     for (const std::string & text : refused)
-        test::fuzz_check(!HttpResponse::from_string(test::ExactText(text)).has_value(),
+        test::fuzz_check(!kept.from_string(test::ExactText(text)).has_value(),
                          "a malformed status line or a block without blank line is refused");
+    test::fuzz_check(kept.status() == HttpStatus::Accepted, "a refused response keeps the parsed one");
 }
 
 void check_content_type(FuzzedDataProvider & provider)

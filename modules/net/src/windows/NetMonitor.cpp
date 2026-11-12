@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <map>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -50,7 +49,7 @@ struct NetMonitor::Impl
 
         ~Impl();
 
-        static Result<std::unique_ptr<Impl>> open();
+        Result<void> open();
 
         std::string interface_name(const NET_LUID & luid);
         void push(NetMonitorEventType type, MIB_NOTIFICATION_TYPE notification, const NET_LUID & luid, IpAddr address);
@@ -131,43 +130,48 @@ VOID WINAPI NetMonitor::Impl::on_route(PVOID context, PMIB_IPFORWARD_ROW2 row, M
         static_cast<Impl *>(context)->push(NetMonitorEventType::route, notification, row->InterfaceLuid, {});
 }
 
-Result<std::unique_ptr<NetMonitor::Impl>> NetMonitor::Impl::open()
+// the callbacks reach the impl by address: it never moves once subscribed
+Result<void> NetMonitor::Impl::open()
 {
     auto adapter_list = adapters::list(GAA_FLAG_SKIP_UNICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST
                                        | GAA_FLAG_SKIP_DNS_SERVER);
     SIHD_UNEXPECTED_RETURN(adapter_list);
-    auto impl = std::make_unique<Impl>();
     for (const IP_ADAPTER_ADDRESSES *adapter : adapters::named(*adapter_list))
-        impl->aliases[adapter->Luid.Value] = adapters::friendly_name(*adapter);
+        aliases[adapter->Luid.Value] = adapters::friendly_name(*adapter);
 
     auto interfaces = check_subscribed(
-        NotifyIpInterfaceChange(AF_UNSPEC, &on_interface, impl.get(), FALSE, &impl->interface_notification),
+        NotifyIpInterfaceChange(AF_UNSPEC, &on_interface, this, FALSE, &interface_notification),
         "interface");
     SIHD_UNEXPECTED_RETURN(interfaces);
     auto addresses = check_subscribed(
-        NotifyUnicastIpAddressChange(AF_UNSPEC, &on_address, impl.get(), FALSE, &impl->address_notification),
+        NotifyUnicastIpAddressChange(AF_UNSPEC, &on_address, this, FALSE, &address_notification),
         "address");
     SIHD_UNEXPECTED_RETURN(addresses);
-    auto routes = check_subscribed(
-        NotifyRouteChange2(AF_UNSPEC, &on_route, impl.get(), FALSE, &impl->route_notification),
-        "route");
+    auto routes = check_subscribed(NotifyRouteChange2(AF_UNSPEC, &on_route, this, FALSE, &route_notification), "route");
     SIHD_UNEXPECTED_RETURN(routes);
-    return impl;
+    return {};
 }
 
-NetMonitor::NetMonitor()
-{
-    auto impl = Impl::open();
-    if (!impl)
-        throw std::runtime_error(impl.error().message);
-    _impl = std::move(*impl);
-}
+NetMonitor::NetMonitor() = default;
 
 NetMonitor::~NetMonitor() = default;
+
+Result<void> NetMonitor::open()
+{
+    if (this->is_open())
+        return std::unexpected(Error(ErrorCode::already_exists, "net monitor already open"));
+    auto impl = std::make_unique<Impl>();
+    auto opened = impl->open();
+    SIHD_UNEXPECTED_RETURN(opened);
+    _impl = std::move(impl);
+    return {};
+}
 
 bool NetMonitor::run()
 {
     _events.clear();
+    if (!this->is_open())
+        return false;
     if (_run_timeout < 0)
     {
         auto lock = _impl->waitable.wait_guard([this] { return !_impl->pending.empty(); });

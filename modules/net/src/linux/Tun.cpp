@@ -51,13 +51,13 @@ Tun::~Tun()
     this->close();
 }
 
-Result<Tun> Tun::adopt(int fd)
+Result<void> Tun::adopt(int fd)
 {
     if (fd < 0)
         return std::unexpected(Error(invalid_argument, "not a descriptor: {}", fd));
-    Tun tun;
-    tun._impl->fd = fd;
-    return tun;
+    this->close();
+    _impl->fd = fd;
+    return {};
 }
 
 Result<void> Tun::open(const std::string & name)
@@ -65,7 +65,6 @@ Result<void> Tun::open(const std::string & name)
     if (name.empty() || name.size() > max_name_size)
         return std::unexpected(Error(invalid_argument, "tun name must hold 1 to {} characters", max_name_size));
 
-    this->close();
     const int fd = ::open("/dev/net/tun", O_RDWR | O_NONBLOCK | O_CLOEXEC);
     if (fd == -1)
         return std::unexpected(Error::from_errno("could not open /dev/net/tun"));
@@ -79,6 +78,7 @@ Result<void> Tun::open(const std::string & name)
         ::close(fd);
         SIHD_UNEXPECTED_RETURN_CTX(created, "creating tun {}", name);
     }
+    this->close();
     _impl->fd = fd;
     return {};
 }

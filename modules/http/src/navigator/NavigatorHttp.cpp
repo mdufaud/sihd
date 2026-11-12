@@ -43,9 +43,9 @@ long parse_retry_after(std::string_view value)
         return 0;
     if (const auto seconds = str::convert_from_string<long>(value))
         return *seconds;
-    if (auto ts = Timestamp::from_str(std::string(value), "%a, %d %b %Y %H:%M:%S GMT"))
+    if (Timestamp ts; ts.from_str(std::string(value), "%a, %d %b %Y %H:%M:%S GMT"))
     {
-        long delta = static_cast<long>((static_cast<int64_t>(*ts) - static_cast<int64_t>(Timestamp::now()))
+        long delta = static_cast<long>((static_cast<int64_t>(ts) - static_cast<int64_t>(Timestamp::now()))
                                        / 1'000'000'000LL);
         return delta > 0 ? delta : 0;
     }

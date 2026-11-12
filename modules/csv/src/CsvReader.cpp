@@ -180,11 +180,11 @@ Result<Timestamp> CsvReader::get_read_timestamp() const
         SIHD_UNEXPECTED_RETURN(value);
         return Timestamp(*value);
     }
-    auto timestamp = Timestamp::from_str(time_str, _timestamp_fmt);
-    if (!timestamp)
+    Timestamp timestamp;
+    if (!timestamp.from_str(time_str, _timestamp_fmt))
         return std::unexpected(
             Error(invalid_argument, "cannot process timestamp value '{}' with format '{}'", time_str, _timestamp_fmt));
-    return *timestamp;
+    return timestamp;
 }
 
 const std::vector<std::string> & CsvReader::columns() const

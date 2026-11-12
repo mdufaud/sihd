@@ -58,6 +58,7 @@ TEST_F(TestMonitor, test_monitor_refuses_an_unmanaged_interface)
     EXPECT_EQ(opened.error().message, "no wifi daemon manages wlan-test");
     ASSERT_FALSE(selected.has_value());
     EXPECT_EQ(selected.error().code, ErrorCode::not_found);
+    EXPECT_FALSE(monitor.is_open());
     EXPECT_FALSE(monitor.run());
 }
 
@@ -104,6 +105,7 @@ TEST_F(TestMonitor, test_network_manager_events)
 
     EXPECT_EQ(described(monitor.events()), (std::vector<std::string> {"connecting", "connected", "scan_done"}));
     EXPECT_EQ(notifications, 1);
+    EXPECT_TRUE(monitor.is_open());
     ASSERT_FALSE(reopened.has_value());
     EXPECT_EQ(reopened.error().code, ErrorCode::already_exists);
     EXPECT_EQ(reopened.error().message, "the monitor is already open");

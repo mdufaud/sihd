@@ -16,11 +16,13 @@ class ClientFrame
     public:
         static constexpr size_t header_size = sizeof(uint64_t);
 
+        ClientFrame();
         ClientFrame(uint64_t client_id, sihd::util::ArrCharView payload);
+        explicit ClientFrame(sihd::util::ArrByteView frame);
         ~ClientFrame() = default;
 
-        // invalid_argument when shorter than the header, the payload points into frame
-        static sihd::util::Result<ClientFrame> decode(sihd::util::ArrByteView frame);
+        // a failure keeps the frame; the payload points into frame
+        sihd::util::Result<void> decode(sihd::util::ArrByteView frame);
 
         sihd::util::ArrByte encode() const;
 

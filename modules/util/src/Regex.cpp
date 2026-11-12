@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <stdexcept>
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
@@ -107,7 +108,14 @@ struct Regex::Impl
         std::unique_ptr<pcre2_code, CodeDeleter> code;
 };
 
-Regex::Regex(std::unique_ptr<Impl> impl): _impl(std::move(impl)) {}
+Regex::Regex() = default;
+
+Regex::Regex(std::string_view pattern, Mode mode): Regex()
+{
+    auto compiled = this->compile(pattern, mode);
+    if (!compiled)
+        throw std::runtime_error(compiled.error().message);
+}
 
 Regex::Regex(Regex &&) noexcept = default;
 
@@ -115,7 +123,7 @@ Regex & Regex::operator=(Regex &&) noexcept = default;
 
 Regex::~Regex() = default;
 
-Result<Regex> Regex::compile(std::string_view pattern, Mode mode)
+Result<void> Regex::compile(std::string_view pattern, Mode mode)
 {
     const uint32_t options = mode == Mode::full ? (PCRE2_ANCHORED | PCRE2_ENDANCHORED) : 0;
     int error_code = 0;
@@ -133,11 +141,19 @@ Result<Regex> Regex::compile(std::string_view pattern, Mode mode)
     pcre2_jit_compile(code, PCRE2_JIT_COMPLETE);
     auto impl = std::make_unique<Impl>();
     impl->code.reset(code);
-    return Regex(std::move(impl));
+    _impl = std::move(impl);
+    return {};
+}
+
+bool Regex::is_compiled() const
+{
+    return _impl != nullptr;
 }
 
 Result<bool> Regex::matches(std::string_view subject) const
 {
+    if (!this->is_compiled())
+        return std::unexpected(Error(ErrorCode::not_initialized, "regex not compiled"));
     const MatchData data(pcre2_match_data_create_from_pattern(_impl->code.get(), nullptr));
     if (data == nullptr)
         return std::unexpected(Error(ErrorCode::out_of_memory, "regex out of memory"));
@@ -151,6 +167,8 @@ Result<bool> Regex::matches(std::string_view subject) const
 
 Result<std::vector<std::string>> Regex::find_all(std::string_view subject) const
 {
+    if (!this->is_compiled())
+        return std::unexpected(Error(ErrorCode::not_initialized, "regex not compiled"));
     const MatchData data(pcre2_match_data_create_from_pattern(_impl->code.get(), nullptr));
     if (data == nullptr)
         return std::unexpected(Error(ErrorCode::out_of_memory, "regex out of memory"));
@@ -182,6 +200,8 @@ Result<std::vector<std::string>> Regex::find_all(std::string_view subject) const
 
 Result<std::string> Regex::replace_all(std::string_view subject, std::string_view replacement) const
 {
+    if (!this->is_compiled())
+        return std::unexpected(Error(ErrorCode::not_initialized, "regex not compiled"));
     constexpr uint32_t options = PCRE2_SUBSTITUTE_GLOBAL | PCRE2_SUBSTITUTE_UNSET_EMPTY
                                  | PCRE2_SUBSTITUTE_OVERFLOW_LENGTH;
     std::vector<PCRE2_UCHAR> buffer(subject.size() + 16);

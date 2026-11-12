@@ -46,16 +46,17 @@ class PasswordHash
 
         using Params = std::variant<Argon2Params, ScryptParams, Pbkdf2Params>;
 
-        // random 16 bytes salt, 32 bytes hash (pbkdf2: the digest size)
-        static sihd::util::Result<PasswordHash> argon2id(std::string_view password, const Argon2Params & params = {});
-        static sihd::util::Result<PasswordHash> scrypt(std::string_view password, const ScryptParams & params = {});
-        static sihd::util::Result<PasswordHash> pbkdf2_sha256(std::string_view password,
-                                                              const Pbkdf2Params & params = {});
-        static sihd::util::Result<PasswordHash> pbkdf2_sha512(std::string_view password,
-                                                              const Pbkdf2Params & params = {});
+        // holds no hash: verify fails with not_initialized, encode is empty
+        PasswordHash();
+
+        // random 16 bytes salt, 32 bytes hash (pbkdf2: the digest size); a failure keeps the hash
+        sihd::util::Result<void> argon2id(std::string_view password, const Argon2Params & params = {});
+        sihd::util::Result<void> scrypt(std::string_view password, const ScryptParams & params = {});
+        sihd::util::Result<void> pbkdf2_sha256(std::string_view password, const Pbkdf2Params & params = {});
+        sihd::util::Result<void> pbkdf2_sha512(std::string_view password, const Pbkdf2Params & params = {});
 
         // not_supported for an unknown algorithm or argon2 version, invalid_argument for a malformed string
-        static sihd::util::Result<PasswordHash> decode(std::string_view phc);
+        sihd::util::Result<void> decode(std::string_view phc);
 
         std::string encode() const;
 
@@ -69,8 +70,7 @@ class PasswordHash
     private:
         PasswordHash(Algorithm algorithm, Params params, std::vector<uint8_t> salt, std::vector<uint8_t> hash);
 
-        static sihd::util::Result<PasswordHash>
-            _generate(Algorithm algorithm, Params params, std::string_view password);
+        sihd::util::Result<void> _generate(Algorithm algorithm, Params params, std::string_view password);
 
         Algorithm _algorithm;
         Params _params;

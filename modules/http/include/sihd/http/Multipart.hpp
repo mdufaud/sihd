@@ -27,10 +27,15 @@ class Multipart
                 bool is_file() const;
         };
 
+        Multipart() = default;
+        Multipart(std::string_view body, std::string_view content_type);
+
         // case-insensitive match of the multipart/form-data media type, parameters allowed
         static bool is_content_type(std::string_view content_type);
         static std::optional<std::string> boundary(std::string_view content_type);
-        static sihd::util::Result<Multipart> parse(std::string_view body, std::string_view content_type);
+
+        // a failure keeps the parts
+        sihd::util::Result<void> parse(std::string_view body, std::string_view content_type);
 
         void add_field(std::string name, std::string value, std::string content_type = {});
         void add_file(std::string name, std::string path, std::string filename = {}, std::string content_type = {});

@@ -446,6 +446,8 @@ int check_monitor_events()
         return child_failed;
 
     NetMonitor monitor(std::chrono::milliseconds(100));
+    if (!monitor.open())
+        return child_failed;
     size_t notifications = 0;
     Handler<NetMonitor *> counter([&notifications](NetMonitor *) { ++notifications; });
     monitor.add_observer(&counter);
@@ -489,6 +491,8 @@ int check_monitor_names_a_removed_interface()
     if (!set_ipv6("sihdtun0", "2001:db8::1"))
         return child_failed;
     NetMonitor monitor(std::chrono::milliseconds(100));
+    if (!monitor.open())
+        return child_failed;
 
     *tun = File();
     EXPECT_TRUE(monitor.run());
@@ -507,6 +511,8 @@ int check_monitor_overflow()
         return child_failed;
 
     NetMonitor monitor(std::chrono::milliseconds(100));
+    if (!monitor.open())
+        return child_failed;
     for (int alias = 0; alias < 500; ++alias)
     {
         const std::string address = fmt::format("10.{}.{}.1", 100 + alias / 250, alias % 250);

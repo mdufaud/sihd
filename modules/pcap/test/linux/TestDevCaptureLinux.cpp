@@ -47,8 +47,8 @@ int capture_injected_frame()
     std::atomic<bool> seen = false;
     Synchronizer received(2);
     Handler<Channel *> observer([&](Channel *channel) {
-        const Result<CapturedPacket> packet = CapturedPacket::decode(channel->arrview());
-        if (packet && std::string(packet->data().begin(), packet->data().end()) == frame
+        CapturedPacket packet;
+        if (packet.decode(channel->arrview()) && std::string(packet.data().begin(), packet.data().end()) == frame
             && seen.exchange(true) == false)
             received.sync();
     });

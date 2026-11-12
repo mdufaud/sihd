@@ -203,6 +203,12 @@ void watch_changes(sihd::sys::App & app)
         }
     });
     monitor.add_observer(&printer);
+    if (auto opened = monitor.open(); !opened)
+    {
+        fmt::print(stderr, "{}\n", opened.error().message);
+        app.exit(EXIT_FAILURE);
+        return;
+    }
     bool failed = false;
     app.loop(std::nullopt, [&monitor, &failed] {
         failed = !monitor.run();

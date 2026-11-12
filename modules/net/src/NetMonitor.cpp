@@ -27,6 +27,11 @@ NetMonitor::NetMonitor(Duration run_timeout): NetMonitor()
     this->set_run_timeout(run_timeout);
 }
 
+bool NetMonitor::is_open() const
+{
+    return _impl != nullptr;
+}
+
 void NetMonitor::set_run_timeout(Duration timeout)
 {
     _run_timeout = timeout;

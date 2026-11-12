@@ -1,4 +1,5 @@
 #include <array>
+#include <stdexcept>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -31,7 +32,9 @@ TEST_F(TestTun, test_tun_open_rejects_bad_names)
     EXPECT_EQ(empty.error().code, ErrorCode::invalid_argument);
     ASSERT_FALSE(too_long.has_value());
     EXPECT_EQ(too_long.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(too_long.error().message, "tun name must hold 1 to 15 characters");
     EXPECT_FALSE(tun.is_open());
+    EXPECT_THROW(Tun named("sixteen_chars_ab"), std::runtime_error);
 }
 
 TEST_F(TestTun, test_tun_closed_refuses_io)
@@ -69,7 +72,7 @@ TEST_F(TestTun, test_tun_adopt_and_fd_on_a_closed_tun)
 {
     Tun tun;
 
-    auto adopted = Tun::adopt(-1);
+    auto adopted = tun.adopt(-1);
     auto fd = tun.fd();
 
     ASSERT_FALSE(adopted.has_value());
@@ -84,6 +87,7 @@ TEST_F(TestTun, test_tun_adopt_and_fd_on_a_closed_tun)
         EXPECT_EQ(adopted.error().code, ErrorCode::invalid_argument);
         EXPECT_EQ(fd.error().code, ErrorCode::not_initialized);
     }
+    EXPECT_THROW(Tun adopting(-1), std::runtime_error);
 }
 
 TEST_F(TestTun, test_tun_moved_from_is_closed)

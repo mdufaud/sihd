@@ -32,8 +32,33 @@ TEST_F(TestUsbMonitor, test_unsupported)
 {
     if constexpr (UsbMonitor::supported)
         GTEST_SKIP() << "usb hotplug is supported";
+    UsbMonitor monitor;
 
-    EXPECT_THROW(UsbMonitor monitor, std::runtime_error);
+    auto opened = monitor.open();
+
+    ASSERT_FALSE(opened.has_value());
+    EXPECT_EQ(opened.error().code, ErrorCode::not_supported);
+    EXPECT_EQ(opened.error().message, "usb hotplug is not supported on this platform");
+    EXPECT_FALSE(monitor.is_open());
+    EXPECT_FALSE(monitor.run());
+}
+
+TEST_F(TestUsbMonitor, test_open_once)
+{
+    if constexpr (!UsbMonitor::supported)
+        GTEST_SKIP() << "no usb hotplug";
+    if (!usb_available())
+        GTEST_SKIP() << "no usb subsystem";
+    UsbMonitor monitor;
+
+    EXPECT_FALSE(monitor.run());
+    ASSERT_TRUE(monitor.open());
+    auto reopened = monitor.open();
+
+    EXPECT_TRUE(monitor.is_open());
+    ASSERT_FALSE(reopened.has_value());
+    EXPECT_EQ(reopened.error().code, ErrorCode::already_exists);
+    EXPECT_EQ(reopened.error().message, "usb monitor already open");
 }
 
 TEST_F(TestUsbMonitor, test_present_devices_arrive)
@@ -43,6 +68,7 @@ TEST_F(TestUsbMonitor, test_present_devices_arrive)
     if (!usb_available())
         GTEST_SKIP() << "no usb subsystem";
     UsbMonitor monitor(std::chrono::seconds(10));
+    ASSERT_TRUE(monitor.open());
     size_t notified = 0;
     Handler<UsbMonitor *> observer([&notified](UsbMonitor *) { ++notified; });
     monitor.add_observer(&observer);
@@ -55,7 +81,7 @@ TEST_F(TestUsbMonitor, test_present_devices_arrive)
     ASSERT_TRUE(monitor.run());
     const auto elapsed = std::chrono::steady_clock::now() - started;
 
-    // the devices already plugged are queued at construction: the first run does not wait its timeout
+    // the devices already plugged are queued at open: the first run does not wait its timeout
     EXPECT_LT(elapsed, std::chrono::seconds(5));
     EXPECT_EQ(notified, 1u);
     ASSERT_EQ(monitor.events().size(), devices->size());
@@ -76,6 +102,7 @@ TEST_F(TestUsbMonitor, test_quiet_run)
     if (!usb_available())
         GTEST_SKIP() << "no usb subsystem";
     UsbMonitor monitor(std::chrono::milliseconds(1));
+    ASSERT_TRUE(monitor.open());
     ASSERT_TRUE(monitor.run());
     size_t notified = 0;
     Handler<UsbMonitor *> observer([&notified](UsbMonitor *) { ++notified; });

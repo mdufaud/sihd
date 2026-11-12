@@ -635,11 +635,12 @@ class RawHttpClient
                 if (this->_read_more() == false)
                     break;
             }
-            auto response = sihd::http::HttpResponse::from_string(_buffer.substr(0, head_size + body_size));
+            sihd::http::HttpResponse response;
+            auto parsed = response.from_string(_buffer.substr(0, head_size + body_size));
             _buffer.erase(0, head_size + body_size);
-            if (!response)
+            if (!parsed)
                 return std::nullopt;
-            return std::move(*response);
+            return response;
         }
 
         bool wait_closed()

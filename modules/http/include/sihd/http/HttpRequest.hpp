@@ -31,13 +31,15 @@ class HttpRequest
             Head = 6,
         };
 
+        HttpRequest();
         HttpRequest(const std::string & url, RequestType request_type = Get);
         HttpRequest(const std::string & url, const std::vector<std::string> & uri_args, RequestType request_type = Get);
         HttpRequest(HttpRequest &&) = default;
         HttpRequest & operator=(HttpRequest &&) = default;
         virtual ~HttpRequest();
 
-        static sihd::util::Result<HttpRequest> from_string(std::string_view raw);
+        // a failure keeps the request
+        sihd::util::Result<void> from_string(std::string_view raw);
         std::string to_string() const;
 
         static RequestType type_from_str(std::string_view type);

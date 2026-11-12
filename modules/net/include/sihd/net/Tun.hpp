@@ -19,6 +19,8 @@ class Tun
         static constexpr size_t max_name_size = 15;
 
         Tun();
+        explicit Tun(int fd);
+        explicit Tun(const std::string & name);
         Tun(Tun && other);
         Tun & operator=(Tun && other);
         ~Tun();
@@ -26,9 +28,9 @@ class Tun
         Tun(const Tun &) = delete;
         Tun & operator=(const Tun &) = delete;
 
+        // both replace an open tun on success only
         // linux: a non-blocking descriptor, as android VpnService.Builder.establish() hands one
-        static sihd::util::Result<Tun> adopt(int fd);
-
+        sihd::util::Result<void> adopt(int fd);
         // creates the interface without address: the caller configures it - windows loads wintun.dll, admin only
         sihd::util::Result<void> open(const std::string & name);
         void close();

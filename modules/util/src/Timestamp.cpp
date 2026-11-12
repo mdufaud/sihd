@@ -3,6 +3,7 @@
 #include <limits>
 #include <locale>
 #include <sstream>
+#include <stdexcept>
 
 #include <sihd/util/Clocks.hpp>
 #include <sihd/util/Logger.hpp>
@@ -186,12 +187,27 @@ Calendar Timestamp::local_calendar() const
     return {.day = tm.tm_mday, .month = tm.tm_mon + 1, .year = tm.tm_year + 1900};
 }
 
-Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format)
+Timestamp::Timestamp(const std::string & date_str, const std::string & format): TimeBase<Timestamp>(0)
 {
-    return Timestamp::from_str(date_str, format, std::locale::classic());
+    auto parsed = this->from_str(date_str, format);
+    if (!parsed)
+        throw std::runtime_error(parsed.error().message);
 }
 
-Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
+Timestamp::Timestamp(const std::string & date_str, const std::string & format, const std::locale & loc):
+    TimeBase<Timestamp>(0)
+{
+    auto parsed = this->from_str(date_str, format, loc);
+    if (!parsed)
+        throw std::runtime_error(parsed.error().message);
+}
+
+Result<void> Timestamp::from_str(const std::string & date_str, const std::string & format)
+{
+    return this->from_str(date_str, format, std::locale::classic());
+}
+
+Result<void> Timestamp::from_str(const std::string & date_str, const std::string & format, const std::locale & loc)
 {
 #if defined(__cpp_lib_chrono) && __cpp_lib_chrono >= 201907L
     std::chrono::sys_seconds seconds;
@@ -215,7 +231,8 @@ Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::s
     if (ss.fail() || std::chrono::floor<std::chrono::seconds>(tp) != seconds)
         return date_parse_error(date_str, format);
 
-    return Timestamp {tp};
+    *this = Timestamp {tp};
+    return {};
 #else
     struct tm t = {};
     std::istringstream ss {date_str.data()};
@@ -228,7 +245,8 @@ Result<Timestamp> Timestamp::from_str(const std::string & date_str, const std::s
 
     try
     {
-        return Timestamp {time::tm(t)};
+        *this = Timestamp {time::tm(t)};
+        return {};
     }
     catch (const std::out_of_range &)
     {

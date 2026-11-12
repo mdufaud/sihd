@@ -9,6 +9,7 @@
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/IRunnable.hpp>
 #include <sihd/util/Observable.hpp>
+#include <sihd/util/Result.hpp>
 #include <sihd/util/build.hpp>
 
 namespace sihd::usb
@@ -33,14 +34,18 @@ class UsbMonitor: public sihd::util::Observable<UsbMonitor>,
         // libusb has no hotplug on windows, an android app cannot list devices
         static constexpr bool supported = sihd::util::build::is_linux && !sihd::util::build::is_android;
 
-        // subscribes to hotplug, throws when refused: the devices already plugged arrive at the first run
         UsbMonitor();
         explicit UsbMonitor(sihd::util::Duration run_timeout);
         virtual ~UsbMonitor();
 
+        // subscribes to hotplug: the devices already plugged arrive at the first run
+        sihd::util::Result<void> open();
+        bool is_open() const;
+
         // a negative timeout waits for a change
         void set_run_timeout(sihd::util::Duration timeout);
 
+        // false until opened
         bool run() override;
 
         const std::vector<UsbMonitorEvent> & events() const;

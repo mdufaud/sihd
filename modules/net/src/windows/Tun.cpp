@@ -56,6 +56,19 @@ struct Tun::Impl
         void *adapter = nullptr;
         void *session = nullptr;
         HANDLE read_event = nullptr;
+
+        ~Impl() { this->end(); }
+
+        void end()
+        {
+            if (session != nullptr)
+                end_session(session);
+            if (adapter != nullptr)
+                close_adapter(adapter);
+            session = nullptr;
+            adapter = nullptr;
+            read_event = nullptr;
+        }
 };
 
 Tun::Tun(): _impl(std::make_unique<Impl>()) {}
@@ -80,7 +93,7 @@ Tun::~Tun()
     this->close();
 }
 
-Result<Tun> Tun::adopt([[maybe_unused]] int fd)
+Result<void> Tun::adopt([[maybe_unused]] int fd)
 {
     return std::unexpected(Error(not_supported, "a windows tun is opened by name"));
 }
@@ -90,69 +103,55 @@ Result<void> Tun::open(const std::string & name)
     if (name.empty() || name.size() > max_name_size)
         return std::unexpected(Error(invalid_argument, "tun name must hold 1 to {} characters", max_name_size));
 
-    this->close();
-    Impl & impl = *_impl;
-    auto loaded = impl.wintun.open("wintun.dll");
+    auto impl = std::make_unique<Impl>();
+    auto loaded = impl->wintun.open("wintun.dll");
     SIHD_UNEXPECTED_RETURN_CTX(loaded, "loading wintun.dll");
 
-    auto create = impl.wintun.load_function<CreateAdapter>("WintunCreateAdapter");
+    auto create = impl->wintun.load_function<CreateAdapter>("WintunCreateAdapter");
     SIHD_UNEXPECTED_RETURN(create);
-    auto start = impl.wintun.load_function<StartSession>("WintunStartSession");
+    auto start = impl->wintun.load_function<StartSession>("WintunStartSession");
     SIHD_UNEXPECTED_RETURN(start);
-    auto close_adapter = impl.wintun.load_function<CloseAdapter>("WintunCloseAdapter");
+    auto close_adapter = impl->wintun.load_function<CloseAdapter>("WintunCloseAdapter");
     SIHD_UNEXPECTED_RETURN(close_adapter);
-    auto end_session = impl.wintun.load_function<EndSession>("WintunEndSession");
+    auto end_session = impl->wintun.load_function<EndSession>("WintunEndSession");
     SIHD_UNEXPECTED_RETURN(end_session);
 
-    auto receive = impl.wintun.load_function<ReceivePacket>("WintunReceivePacket");
+    auto receive = impl->wintun.load_function<ReceivePacket>("WintunReceivePacket");
     SIHD_UNEXPECTED_RETURN(receive);
-    auto release = impl.wintun.load_function<ReleaseReceivePacket>("WintunReleaseReceivePacket");
+    auto release = impl->wintun.load_function<ReleaseReceivePacket>("WintunReleaseReceivePacket");
     SIHD_UNEXPECTED_RETURN(release);
-    auto allocate = impl.wintun.load_function<AllocateSendPacket>("WintunAllocateSendPacket");
+    auto allocate = impl->wintun.load_function<AllocateSendPacket>("WintunAllocateSendPacket");
     SIHD_UNEXPECTED_RETURN(allocate);
-    auto send = impl.wintun.load_function<SendPacket>("WintunSendPacket");
+    auto send = impl->wintun.load_function<SendPacket>("WintunSendPacket");
     SIHD_UNEXPECTED_RETURN(send);
-    auto read_wait_event = impl.wintun.load_function<GetReadWaitEvent>("WintunGetReadWaitEvent");
+    auto read_wait_event = impl->wintun.load_function<GetReadWaitEvent>("WintunGetReadWaitEvent");
     SIHD_UNEXPECTED_RETURN(read_wait_event);
 
-    impl.close_adapter = *close_adapter;
-    impl.end_session = *end_session;
-    impl.receive = *receive;
-    impl.release = *release;
-    impl.allocate = *allocate;
-    impl.send = *send;
+    impl->close_adapter = *close_adapter;
+    impl->end_session = *end_session;
+    impl->receive = *receive;
+    impl->release = *release;
+    impl->allocate = *allocate;
+    impl->send = *send;
 
     // the adapter name doubles as its tunnel type, shown by windows
     const std::wstring wide_name = str::to_wstr(name);
-    impl.adapter = (*create)(wide_name.c_str(), wide_name.c_str(), nullptr);
-    if (impl.adapter == nullptr)
-    {
-        const Error error = wintun_error("creating wintun adapter", sihd::sys::os::last_error());
-        this->close();
-        return std::unexpected(error);
-    }
-    impl.session = (*start)(impl.adapter, ring_capacity);
-    if (impl.session == nullptr)
-    {
-        const Error error = wintun_error("starting wintun session", sihd::sys::os::last_error());
-        this->close();
-        return std::unexpected(error);
-    }
-    impl.read_event = (*read_wait_event)(impl.session);
+    impl->adapter = (*create)(wide_name.c_str(), wide_name.c_str(), nullptr);
+    if (impl->adapter == nullptr)
+        return std::unexpected(wintun_error("creating wintun adapter", sihd::sys::os::last_error()));
+    impl->session = (*start)(impl->adapter, ring_capacity);
+    if (impl->session == nullptr)
+        return std::unexpected(wintun_error("starting wintun session", sihd::sys::os::last_error()));
+    impl->read_event = (*read_wait_event)(impl->session);
+    this->close();
+    _impl = std::move(impl);
     return {};
 }
 
 void Tun::close()
 {
-    Impl & impl = *_impl;
-    if (impl.session != nullptr)
-        impl.end_session(impl.session);
-    if (impl.adapter != nullptr)
-        impl.close_adapter(impl.adapter);
-    impl.session = nullptr;
-    impl.adapter = nullptr;
-    impl.read_event = nullptr;
-    (void)impl.wintun.close();
+    _impl->end();
+    (void)_impl->wintun.close();
 }
 
 Result<size_t> Tun::read(void *data, size_t size)

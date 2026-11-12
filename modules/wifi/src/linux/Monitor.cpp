@@ -54,7 +54,7 @@ Monitor::~Monitor() = default;
 
 Result<void> Monitor::open(const std::string & interface_name)
 {
-    if (_impl->connection.is_open())
+    if (this->is_open())
         return std::unexpected(Error(ErrorCode::already_exists, "the monitor is already open"));
     dbus::Connection connection;
     connection.disable_auto_start();
@@ -72,13 +72,19 @@ Result<void> Monitor::open(const std::string & interface_name)
     return {};
 }
 
+bool Monitor::is_open() const
+{
+    return _impl->connection.is_open();
+}
+
 Result<std::optional<std::vector<Monitor::Event>>> Monitor::_receive(Duration timeout)
 {
-    auto received = dbus::Message::receive(_impl->connection, timeout);
+    dbus::Message message;
+    auto received = message.receive(_impl->connection, timeout);
     SIHD_UNEXPECTED_RETURN(received);
-    if (!received->has_value())
+    if (!*received)
         return std::nullopt;
-    return events_of(_impl->daemon, **received);
+    return events_of(_impl->daemon, message);
 }
 
 } // namespace sihd::wifi

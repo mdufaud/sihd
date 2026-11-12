@@ -54,16 +54,17 @@ void fuzz_raw(FuzzedDataProvider & provider)
     const std::string text = provider.ConsumeBytesAsString(max_text_size);
     const std::string format = formats[index];
 
-    const Result<Timestamp> parsed = Timestamp::from_str(text, format, std::locale::classic());
-    if (!parsed.has_value() || index >= round_trip_formats)
+    Timestamp parsed;
+    if (!parsed.from_str(text, format, std::locale::classic()).has_value() || index >= round_trip_formats)
         return;
     // the second below the minimum timestamp cannot be represented
-    if (parsed->get() < std::numeric_limits<int64_t>::min() + nanos_per_second)
+    if (parsed.get() < std::numeric_limits<int64_t>::min() + nanos_per_second)
         return;
 
-    const std::string printed = parsed->format(format, std::locale::classic());
-    const Result<Timestamp> reparsed = Timestamp::from_str(printed, format, std::locale::classic());
-    test::fuzz_check(reparsed.has_value() && reparsed->get() == floor_to_second(parsed->get()),
+    const std::string printed = parsed.format(format, std::locale::classic());
+    Timestamp reparsed;
+    test::fuzz_check(reparsed.from_str(printed, format, std::locale::classic()).has_value()
+                         && reparsed.get() == floor_to_second(parsed.get()),
                      "a parsed date prints to text that parses to the same second");
 }
 
@@ -84,19 +85,19 @@ void fuzz_calendar(FuzzedDataProvider & provider)
         std::snprintf(text, sizeof(text), "%04d-%02d-%02d", year, month, day);
     const std::string format = with_time ? Timestamp::default_format : Timestamp::default_day_format;
 
-    const Result<Timestamp> parsed = Timestamp::from_str(text, format, std::locale::classic());
-    test::fuzz_check(parsed.has_value(), "a canonical date parses");
+    Timestamp parsed;
+    test::fuzz_check(parsed.from_str(text, format, std::locale::classic()).has_value(), "a canonical date parses");
     const int64_t seconds = days_from_civil(year, month, day) * seconds_per_day + hour * 3600 + minute * 60 + second;
-    test::fuzz_check(parsed->get() == seconds * nanos_per_second, "a canonical date is the expected instant");
+    test::fuzz_check(parsed.get() == seconds * nanos_per_second, "a canonical date is the expected instant");
 
-    const Calendar calendar = parsed->calendar();
+    const Calendar calendar = parsed.calendar();
     test::fuzz_check(calendar.year == year && calendar.month == month && calendar.day == day,
                      "calendar gives back the parsed date");
-    const Clocktime clocktime = parsed->clocktime();
+    const Clocktime clocktime = parsed.clocktime();
     test::fuzz_check(clocktime.hour == hour && clocktime.minute == minute && clocktime.second == second
                          && clocktime.millisecond == 0,
                      "clocktime gives back the parsed time");
-    test::fuzz_check(parsed->format(format, std::locale::classic()) == text, "format gives back the canonical text");
+    test::fuzz_check(parsed.format(format, std::locale::classic()) == text, "format gives back the canonical text");
 }
 
 void fuzz_range_edge(FuzzedDataProvider & provider)
@@ -120,10 +121,11 @@ void fuzz_range_edge(FuzzedDataProvider & provider)
     const bool representable = nanos >= std::numeric_limits<int64_t>::min()
                                && nanos <= std::numeric_limits<int64_t>::max();
 
-    const Result<Timestamp> parsed = Timestamp::from_str(date, "%Y-%m-%d %H:%M:%S", std::locale::classic());
-    test::fuzz_check(parsed.has_value() == representable, "a date parses exactly when its nanoseconds fit");
+    Timestamp parsed;
+    const bool parses = parsed.from_str(date, "%Y-%m-%d %H:%M:%S", std::locale::classic()).has_value();
+    test::fuzz_check(parses == representable, "a date parses exactly when its nanoseconds fit");
     if (representable)
-        test::fuzz_check(parsed->get() == static_cast<int64_t>(nanos),
+        test::fuzz_check(parsed.get() == static_cast<int64_t>(nanos),
                          "a date at the range edge is the expected instant");
 }
 } // namespace

@@ -33,10 +33,10 @@ void check_frame(const ClientFrame & frame, uint64_t client_id, std::string_view
         payload.empty() || std::memcmp(encoded.buf() + ClientFrame::header_size, payload.data(), payload.size()) == 0,
         "the encoded payload follows the header");
 
-    const auto decoded = ClientFrame::decode(encoded);
-    test::fuzz_check(decoded.has_value(), "an encoded frame decodes");
-    test::fuzz_check(decoded->client_id() == client_id, "the client id survives a round trip");
-    test::fuzz_check(std::string_view(decoded->payload()) == payload, "the payload survives a round trip");
+    ClientFrame decoded;
+    test::fuzz_check(decoded.decode(encoded).has_value(), "an encoded frame decodes");
+    test::fuzz_check(decoded.client_id() == client_id, "the client id survives a round trip");
+    test::fuzz_check(std::string_view(decoded.payload()) == payload, "the payload survives a round trip");
 }
 
 // a view without storage: encoding must not copy from its null pointer
@@ -55,12 +55,13 @@ void check_empty_frame(uint64_t client_id)
 void fuzz_decode(FuzzedDataProvider & provider)
 {
     const std::vector<uint8_t> bytes = provider.ConsumeRemainingBytes<uint8_t>();
-    const auto decoded = ClientFrame::decode(ArrByteView(bytes));
-    test::fuzz_check(decoded.has_value() == (bytes.size() >= ClientFrame::header_size),
+    ClientFrame decoded;
+    const auto done = decoded.decode(ArrByteView(bytes));
+    test::fuzz_check(done.has_value() == (bytes.size() >= ClientFrame::header_size),
                      "a frame decodes exactly when it holds the header");
-    if (!decoded)
+    if (!done)
     {
-        test::fuzz_check(decoded.error().code == ErrorCode::invalid_argument, "a short frame is an invalid argument");
+        test::fuzz_check(done.error().code == ErrorCode::invalid_argument, "a short frame is an invalid argument");
         return;
     }
 
@@ -68,11 +69,11 @@ void fuzz_decode(FuzzedDataProvider & provider)
     std::memcpy(&client_id, bytes.data(), sizeof(client_id));
     const std::string_view payload(reinterpret_cast<const char *>(bytes.data()) + ClientFrame::header_size,
                                    bytes.size() - ClientFrame::header_size);
-    test::fuzz_check(decoded->payload().buf() == bytes.data() + ClientFrame::header_size,
+    test::fuzz_check(decoded.payload().buf() == bytes.data() + ClientFrame::header_size,
                      "the decoded payload points into the frame");
-    check_frame(*decoded, client_id, payload);
+    check_frame(decoded, client_id, payload);
 
-    const ArrByte encoded = decoded->encode();
+    const ArrByte encoded = decoded.encode();
     test::fuzz_check(encoded.byte_size() == bytes.size() && std::memcmp(encoded.buf(), bytes.data(), bytes.size()) == 0,
                      "decoding then encoding gives the frame back");
 }
