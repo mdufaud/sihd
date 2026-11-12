@@ -34,7 +34,8 @@ class TestRequest: public ::testing::Test
 
 TEST_F(TestRequest, test_http_get_external)
 {
-    auto resp = http::get("https://www.google.com");
+    // numeric host with an IP certificate: no name lookup, static glibc builds crash in the system NSS modules
+    auto resp = http::get("https://8.8.8.8/resolve?name=example.com");
     if (!resp.has_value())
         GTEST_SKIP() << "no external network connectivity";
     EXPECT_EQ(resp->status(), 200u);
