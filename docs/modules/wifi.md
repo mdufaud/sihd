@@ -68,7 +68,7 @@ Wifi interfaces: the current association, the access points the radio heard, sca
 
 ### Monitoring
 
-- `Monitor([run_timeout])` then `open(interface_name)`: subscribes to the backend of the interface, failing like `backend()` for the same interface, `already_exists` once open. `run()` waits up to the run timeout (a negative one waits for an event), drains what arrived, notifies its observers and returns false when reading failed or nothing is open. `events()` holds `Monitor::Event` items: `Type::scan_done`, or `Type::state_changed` with the new `state`. A state equal to the last one reported is dropped.
+- `Monitor([run_timeout])` then `open(interface_name)`, or `Monitor(interface_name[, run_timeout])`, which calls `open` and throws its error message: subscribes to the backend of the interface, failing like `backend()` for the same interface, `already_exists` once open. `run()` waits up to the run timeout (a negative one waits for an event), drains what arrived, notifies its observers and returns false when reading failed or nothing is open. `events()` holds `Monitor::Event` items: `Type::scan_done`, or `Type::state_changed` with the new `state`. A state equal to the last one reported is dropped.
 - The backend is chosen once: a daemon restarted later is not followed.
 
 ### Frame decoding

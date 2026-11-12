@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include <sihd/util/time.hpp>
 #include <sihd/wifi/Monitor.hpp>
 
@@ -14,6 +16,18 @@ const Duration blocking_slice(time::hours(1));
 } // namespace
 
 Monitor::Monitor(Duration run_timeout): Monitor()
+{
+    this->set_run_timeout(run_timeout);
+}
+
+Monitor::Monitor(const std::string & interface_name): Monitor()
+{
+    auto opened = this->open(interface_name);
+    if (!opened)
+        throw std::runtime_error(opened.error().message);
+}
+
+Monitor::Monitor(const std::string & interface_name, Duration run_timeout): Monitor(interface_name)
 {
     this->set_run_timeout(run_timeout);
 }

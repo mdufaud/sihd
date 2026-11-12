@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -60,6 +61,24 @@ TEST_F(TestMonitor, test_monitor_refuses_an_unmanaged_interface)
     EXPECT_FALSE(monitor.run());
 }
 
+TEST_F(TestMonitor, test_monitor_constructor_throws_the_open_error)
+{
+    ASSERT_TRUE(_daemon.start({}));
+    _daemon.serve();
+    std::string thrown;
+
+    try
+    {
+        wifi::Monitor monitor("wlan-test");
+    }
+    catch (const std::runtime_error & error)
+    {
+        thrown = error.what();
+    }
+
+    EXPECT_EQ(thrown, "no wifi daemon manages wlan-test");
+}
+
 TEST_F(TestMonitor, test_network_manager_events)
 {
     ASSERT_TRUE(_daemon.start({nm_service}));
@@ -103,8 +122,7 @@ TEST_F(TestMonitor, test_iwd_events)
                                         {{"State", text("connected")}, {"Scanning", boolean(false)}});
     });
     _daemon.serve();
-    wifi::Monitor monitor(Duration(time::sec(1)));
-    ASSERT_TRUE(monitor.open("wlan-test").has_value());
+    wifi::Monitor monitor("wlan-test", Duration(time::sec(1)));
 
     ASSERT_TRUE(wifi::scan("wlan-test", fake_timeout).has_value());
     ASSERT_TRUE(monitor.run());

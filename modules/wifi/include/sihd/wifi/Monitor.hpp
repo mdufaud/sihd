@@ -35,6 +35,9 @@ class Monitor: public sihd::util::Observable<Monitor>,
 
         Monitor();
         explicit Monitor(sihd::util::Duration run_timeout);
+        // opens the interface, throws when open() fails
+        explicit Monitor(const std::string & interface_name);
+        Monitor(const std::string & interface_name, sihd::util::Duration run_timeout);
         virtual ~Monitor();
 
         // subscribes to the backend of the interface, failing like backend() for the same interface
