@@ -625,6 +625,27 @@ Result<std::optional<Message>> ObjectServer::handle(Message && message)
     return std::nullopt;
 }
 
+Result<Message> ObjectServer::call(const Message & request, Duration timeout)
+{
+    auto sent = request.send(_connection);
+    SIHD_UNEXPECTED_RETURN(sent);
+    const uint32_t serial = request.serial();
+
+    auto answered = receive_matching(_connection, timeout, "call", [this, serial](Message & message) -> Result<bool> {
+        const Message::Type type = message.type();
+        const bool answer = type == Message::Type::method_return || type == Message::Type::error;
+        if (answer && message.reply_serial() == serial)
+            return true;
+        auto handled = this->handle(std::move(message));
+        SIHD_UNEXPECTED_RETURN(handled);
+        return false;
+    });
+    SIHD_UNEXPECTED_RETURN(answered);
+    if (answered->type() == Message::Type::error)
+        return std::unexpected(answered->to_error());
+    return answered;
+}
+
 Result<void> ObjectServer::emit_properties_changed(const std::string & path,
                                                    const std::string & interface,
                                                    const std::vector<std::string> & names)
@@ -637,9 +658,10 @@ Result<void> ObjectServer::emit_properties_changed(const std::string & path,
     if (found_interface == nullptr)
         return std::unexpected(Error(not_found, "no dbus interface {} on {}", interface, path));
 
-    auto signal = Message::signal(path, properties_interface, "PropertiesChanged");
-    SIHD_UNEXPECTED_RETURN(signal);
-    Appender body(*signal);
+    Message signal;
+    auto built = signal.signal(path, properties_interface, "PropertiesChanged");
+    SIHD_UNEXPECTED_RETURN(built);
+    Appender body(signal);
     auto interface_added = body.add(interface);
     SIHD_UNEXPECTED_RETURN(interface_added);
 
@@ -658,7 +680,7 @@ Result<void> ObjectServer::emit_properties_changed(const std::string & path,
 
     auto invalidated_added = body.add_array(std::vector<std::string> {});
     SIHD_UNEXPECTED_RETURN(invalidated_added);
-    return signal->send(_connection);
+    return signal.send(_connection);
 }
 
 Result<void> ObjectServer::_serve(Call & call)
@@ -822,14 +844,15 @@ Result<void> ObjectServer::_emit_interfaces_added(const std::string & path)
     const Defer reading = this->_read_scope();
     for (const std::string & manager : this->_managers_of(path))
     {
-        auto signal = Message::signal(manager, object_manager_interface, "InterfacesAdded");
-        SIHD_UNEXPECTED_RETURN(signal);
-        Appender body(*signal);
+        Message signal;
+        auto built = signal.signal(manager, object_manager_interface, "InterfacesAdded");
+        SIHD_UNEXPECTED_RETURN(built);
+        Appender body(signal);
         auto path_added = body.add_object_path(path);
         SIHD_UNEXPECTED_RETURN(path_added);
         auto interfaces_written = write_interfaces(body, _objects.at(path));
         SIHD_UNEXPECTED_RETURN(interfaces_written);
-        auto sent = signal->send(_connection);
+        auto sent = signal.send(_connection);
         SIHD_UNEXPECTED_RETURN(sent);
     }
     return {};
@@ -842,14 +865,15 @@ Result<void> ObjectServer::_emit_interfaces_removed(const std::string & path)
         names.emplace_back(interface.name);
     for (const std::string & manager : this->_managers_of(path))
     {
-        auto signal = Message::signal(manager, object_manager_interface, "InterfacesRemoved");
-        SIHD_UNEXPECTED_RETURN(signal);
-        Appender body(*signal);
+        Message signal;
+        auto built = signal.signal(manager, object_manager_interface, "InterfacesRemoved");
+        SIHD_UNEXPECTED_RETURN(built);
+        Appender body(signal);
         auto path_added = body.add_object_path(path);
         SIHD_UNEXPECTED_RETURN(path_added);
         auto names_added = body.add_array(names);
         SIHD_UNEXPECTED_RETURN(names_added);
-        auto sent = signal->send(_connection);
+        auto sent = signal.send(_connection);
         SIHD_UNEXPECTED_RETURN(sent);
     }
     return {};
@@ -924,6 +948,11 @@ Result<void> ObjectServer::remove_object_manager(const std::string &)
 }
 
 Result<std::optional<Message>> ObjectServer::handle(Message &&)
+{
+    return unsupported_platform();
+}
+
+Result<Message> ObjectServer::call(const Message &, Duration)
 {
     return unsupported_platform();
 }

@@ -1,7 +1,9 @@
 #ifndef __SIHD_SYS_LINUX_DBUS_APPENDER_HPP__
 #define __SIHD_SYS_LINUX_DBUS_APPENDER_HPP__
 
+#include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,7 +15,7 @@
 namespace sihd::sys::linux_::dbus
 {
 
-// valid while its message lives, no Message::add meanwhile
+// valid while its message lives, no Message::add nor builder meanwhile
 class Connection::Message::Appender
 {
     public:
@@ -34,6 +36,11 @@ class Connection::Message::Appender
         sihd::util::Result<void> add_unix_fd(int fd);
         template <BasicType T>
         sihd::util::Result<void> add_array(const std::vector<T> & values);
+        // a{Kv} holding an ay in every variant
+        template <BasicType Key>
+        sihd::util::Result<void> add_byte_map(const std::map<Key, std::vector<uint8_t>> & map);
+        // the a{sv} of no option
+        sihd::util::Result<void> add_empty_vardict();
         // one {sv} entry of an a{sv} array: fill writes the value, of that signature
         sihd::util::Result<void> add_entry(sihd::util::ZStringView key,
                                            const std::string & signature,

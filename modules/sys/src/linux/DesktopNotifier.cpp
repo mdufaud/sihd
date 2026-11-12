@@ -117,7 +117,10 @@ struct DesktopNotifier::Impl
                 auto opened = connection.open(dbus::Bus::session);
                 SIHD_UNEXPECTED_RETURN(opened);
             }
-            return dbus::Message::method_call(notifications_service, notifications_path, notifications_service, member);
+            dbus::Message request;
+            auto built = request.method_call(notifications_service, notifications_path, notifications_service, member);
+            SIHD_UNEXPECTED_RETURN(built);
+            return request;
         }
 
         // a failed call drops the connection: the next one reconnects to a restarted bus or server

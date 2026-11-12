@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <expected>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -32,6 +33,12 @@ inline constexpr sihd::util::ZStringView properties_interface = "org.freedesktop
 sihd::util::Error empty_message();
 sihd::util::Error connection_not_open();
 std::unexpected<sihd::util::Error> unsupported_platform();
+
+// the first message matches accepts, matches may consume the ones it refuses; what names the wait in the errors
+sihd::util::Result<Message> receive_matching(Connection & connection,
+                                             sihd::util::Duration timeout,
+                                             std::string_view what,
+                                             const std::function<sihd::util::Result<bool>(Message &)> & matches);
 
 // the dbus wire type codes, libdbus not being there on every platform
 template <typename T>
@@ -77,12 +84,13 @@ struct Connection::Impl
 
         ~Impl();
 
-        static sihd::util::Result<std::unique_ptr<Impl>> adopt(::DBusConnection *connection, ::DBusError & dbus_error);
+        sihd::util::Result<void> adopt(::DBusConnection *opened, ::DBusError & dbus_error);
 };
 
 struct Message::Impl
 {
-        ::DBusMessage *message = nullptr;
+        // never null
+        ::DBusMessage *message;
 
         explicit Impl(::DBusMessage *adopted);
         ~Impl();

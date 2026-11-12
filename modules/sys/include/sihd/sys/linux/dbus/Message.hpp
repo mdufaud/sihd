@@ -42,27 +42,29 @@ class Connection::Message
         class Iter;
         class Appender;
 
-        Message(Message && other);
-        Message & operator=(Message && other);
+        Message();
+        Message(Message && other) noexcept;
+        Message & operator=(Message && other) noexcept;
         ~Message();
 
         Message(const Message &) = delete;
         Message & operator=(const Message &) = delete;
 
-        static sihd::util::Result<Message> method_call(sihd::util::ZStringView destination,
-                                                       sihd::util::ZStringView path,
-                                                       sihd::util::ZStringView interface,
-                                                       sihd::util::ZStringView member);
-        static sihd::util::Result<Message>
+        // an empty message fails every action, a builder or receive fills it only on success
+        sihd::util::Result<void> method_call(sihd::util::ZStringView destination,
+                                             sihd::util::ZStringView path,
+                                             sihd::util::ZStringView interface,
+                                             sihd::util::ZStringView member);
+        sihd::util::Result<void>
             signal(sihd::util::ZStringView path, sihd::util::ZStringView interface, sihd::util::ZStringView member);
         // a Get reply holds one variant, a GetAll reply one a{sv}
-        static sihd::util::Result<Message> properties_get(sihd::util::ZStringView destination,
-                                                          sihd::util::ZStringView path,
-                                                          sihd::util::ZStringView interface,
-                                                          sihd::util::ZStringView name);
-        static sihd::util::Result<Message> properties_get_all(sihd::util::ZStringView destination,
-                                                              sihd::util::ZStringView path,
-                                                              sihd::util::ZStringView interface);
+        sihd::util::Result<void> properties_get(sihd::util::ZStringView destination,
+                                                sihd::util::ZStringView path,
+                                                sihd::util::ZStringView interface,
+                                                sihd::util::ZStringView name);
+        sihd::util::Result<void> properties_get_all(sihd::util::ZStringView destination,
+                                                    sihd::util::ZStringView path,
+                                                    sihd::util::ZStringView interface);
         sihd::util::Result<Message> method_return() const;
         sihd::util::Result<Message> error_return(sihd::util::ZStringView name, sihd::util::ZStringView text) const;
 
@@ -75,6 +77,9 @@ class Connection::Message
         std::string error_name() const;
         std::string signature() const;
         Type type() const;
+        // 0 until the message is sent, a reply_serial of 0 answers nothing
+        uint32_t serial() const;
+        uint32_t reply_serial() const;
         bool expects_reply() const;
         // the receiver of this call must not answer it, a sent or received message stays as it is
         sihd::util::Result<void> set_no_reply();
@@ -97,11 +102,10 @@ class Connection::Message
         static sihd::util::Result<std::vector<Message>>
             call_all(Connection & connection, const std::vector<Message> & requests, sihd::util::Duration timeout);
         sihd::util::Result<void> send(Connection & connection) const;
-        // waits for an incoming message: nullopt once the timeout elapsed or connection.interrupt() was called
-        static sihd::util::Result<std::optional<Message>> receive(Connection & connection,
-                                                                  sihd::util::Duration timeout);
+        // waits for an incoming message: false once the timeout elapsed or connection.interrupt() was called
+        sihd::util::Result<bool> receive(Connection & connection, sihd::util::Duration timeout);
         // the first incoming message accepted, else a timeout error or, on connection.interrupt(), an interrupted one
-        static sihd::util::Result<Message>
+        sihd::util::Result<void>
             receive_until(Connection & connection,
                           sihd::util::Duration timeout,
                           const std::function<sihd::util::Result<bool>(const Message &)> & accepted);
@@ -111,6 +115,7 @@ class Connection::Message
 
         explicit Message(std::unique_ptr<Impl> impl);
 
+        // null while empty: a moved-from message is an empty one
         std::unique_ptr<Impl> _impl;
 };
 

@@ -208,32 +208,36 @@ class TestDBusObjectServer: public ::testing::Test
         Result<Message>
             call_member(const std::string & object, const std::string & interface, const std::string & member)
         {
-            auto request = Message::method_call(service, object, interface, member);
-            SIHD_UNEXPECTED_RETURN(request);
-            return this->exchange(*request);
+            Message request;
+            auto built = request.method_call(service, object, interface, member);
+            SIHD_UNEXPECTED_RETURN(built);
+            return this->exchange(request);
         }
 
         Result<Message> call_echo(const std::string & interface)
         {
-            auto request = Message::method_call(service, path, interface, "Echo");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto added = request->add("hello");
+            Message request;
+            auto built = request.method_call(service, path, interface, "Echo");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto added = request.add("hello");
             SIHD_UNEXPECTED_RETURN(added);
-            return this->exchange(*request);
+            return this->exchange(request);
         }
 
         Result<Message> call_get(const std::string & name)
         {
-            auto request = Message::properties_get(service, path, interface_name, name);
-            SIHD_UNEXPECTED_RETURN(request);
-            return this->exchange(*request);
+            Message request;
+            auto built = request.properties_get(service, path, interface_name, name);
+            SIHD_UNEXPECTED_RETURN(built);
+            return this->exchange(request);
         }
 
         Result<Message> call_set_string(const std::string & name, const std::string & value)
         {
-            auto request = Message::method_call(service, path, properties, "Set");
-            SIHD_UNEXPECTED_RETURN(request);
-            Appender body(*request);
+            Message request;
+            auto built = request.method_call(service, path, properties, "Set");
+            SIHD_UNEXPECTED_RETURN(built);
+            Appender body(request);
             auto interface_added = body.add(interface_name);
             SIHD_UNEXPECTED_RETURN(interface_added);
             auto name_added = body.add(name);
@@ -245,7 +249,7 @@ class TestDBusObjectServer: public ::testing::Test
             SIHD_UNEXPECTED_RETURN(value_added);
             auto closed = body.close(std::move(*variant));
             SIHD_UNEXPECTED_RETURN(closed);
-            return this->exchange(*request);
+            return this->exchange(request);
         }
 
         ObjectServer::Property name_property()
@@ -363,10 +367,11 @@ TEST_F(TestDBusObjectServer, test_method_without_interface)
     ASSERT_TRUE(added.has_value()) << added.error().message;
 
     auto unique = this->call_echo("");
-    auto ambiguous_request = Message::method_call(service, "/org/sihd/Both", "", "Echo");
-    ASSERT_TRUE(ambiguous_request.has_value());
-    ASSERT_TRUE(ambiguous_request->add("hello").has_value());
-    auto ambiguous = this->exchange(*ambiguous_request);
+    Message ambiguous_request;
+    auto built = ambiguous_request.method_call(service, "/org/sihd/Both", "", "Echo");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(ambiguous_request.add("hello").has_value());
+    auto ambiguous = this->exchange(ambiguous_request);
 
     EXPECT_EQ(text_of(unique), "hello");
     EXPECT_EQ(error_of(ambiguous), "org.freedesktop.DBus.Error.UnknownMethod: no method Echo on /org/sihd/Both");
@@ -412,12 +417,13 @@ TEST_F(TestDBusObjectServer, test_handler_error_mapping)
 TEST_F(TestDBusObjectServer, test_no_reply_expected)
 {
     this->add_echo_object();
-    auto request = Message::method_call(service, path, interface_name, "Echo");
-    ASSERT_TRUE(request.has_value());
-    ASSERT_TRUE(request->add("hello").has_value());
-    ASSERT_TRUE(request->set_no_reply().has_value());
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Echo");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.add("hello").has_value());
+    ASSERT_TRUE(request.set_no_reply().has_value());
 
-    ASSERT_TRUE(request->send(_client).has_value());
+    ASSERT_TRUE(request.send(_client).has_value());
     auto served = this->serve_next();
     auto ping = this->call_member("/", peer, "Ping");
 
@@ -456,10 +462,11 @@ TEST_F(TestDBusObjectServer, test_handler_error_after_answer)
         return std::unexpected(Error(ErrorCode::io_error, "cleanup failed"));
     });
     this->add_test_object({late}, {});
-    auto request = Message::method_call(service, path, interface_name, "Late");
-    ASSERT_TRUE(request.has_value());
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Late");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
 
-    ASSERT_TRUE(request->send(_client).has_value());
+    ASSERT_TRUE(request.send(_client).has_value());
     auto served = this->serve_next();
     auto reply = receive_reply(_client);
 
@@ -477,9 +484,10 @@ TEST_F(TestDBusObjectServer, test_deferred_answer)
     });
     this->add_test_object({later}, {});
 
-    auto request = Message::method_call(service, path, interface_name, "Later");
-    ASSERT_TRUE(request.has_value());
-    ASSERT_TRUE(request->send(_client).has_value());
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Later");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.send(_client).has_value());
     auto served = this->serve_next();
     ASSERT_TRUE(served.has_value()) << served.error().message;
     ASSERT_TRUE(deferred.has_value());
@@ -492,14 +500,15 @@ TEST_F(TestDBusObjectServer, test_deferred_answer)
             answered = deferred->send(*reply);
         (void)_server.interrupt();
     });
-    auto interrupted = Message::receive(_server, Duration(time::sec(5)));
+    Message waited;
+    auto interrupted = waited.receive(_server, Duration(time::sec(5)));
     worker.join();
     auto reply = receive_reply(_client);
 
     EXPECT_TRUE(answered.has_value());
     EXPECT_FALSE(deferred->pending());
     ASSERT_TRUE(interrupted.has_value());
-    EXPECT_FALSE(interrupted->has_value());
+    EXPECT_FALSE(*interrupted);
     ASSERT_TRUE(reply.has_value());
     EXPECT_EQ(reply->type(), Message::Type::method_return);
 }
@@ -519,10 +528,11 @@ TEST_F(TestDBusObjectServer, test_dropped_call_answers_failed)
 
 TEST_F(TestDBusObjectServer, test_gives_back_other_messages)
 {
-    auto signal = Message::signal(path, interface_name, "Changed");
-    ASSERT_TRUE(signal.has_value()) << signal.error().message;
+    Message signal;
+    auto built = signal.signal(path, interface_name, "Changed");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
 
-    auto handled = _objects.handle(std::move(*signal));
+    auto handled = _objects.handle(std::move(signal));
 
     ASSERT_TRUE(handled.has_value()) << handled.error().message;
     ASSERT_TRUE(handled->has_value());
@@ -717,13 +727,15 @@ TEST_F(TestDBusObjectServer, test_property_get)
 TEST_F(TestDBusObjectServer, test_property_get_all)
 {
     this->add_property_object();
-    auto request = Message::properties_get_all(service, path, interface_name);
-    ASSERT_TRUE(request.has_value());
-    auto unknown_request = Message::properties_get_all(service, path, "org.sihd.Nothing");
-    ASSERT_TRUE(unknown_request.has_value());
+    Message request;
+    auto built = request.properties_get_all(service, path, interface_name);
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    Message unknown_request;
+    auto unknown_built = unknown_request.properties_get_all(service, path, "org.sihd.Nothing");
+    ASSERT_TRUE(unknown_built.has_value()) << unknown_built.error().message;
 
-    auto reply = this->exchange(*request);
-    auto unknown = this->exchange(*unknown_request);
+    auto reply = this->exchange(request);
+    auto unknown = this->exchange(unknown_request);
 
     ASSERT_TRUE(reply.has_value()) << reply.error().message;
     EXPECT_EQ(signatures_of(*reply), (std::map<std::string, std::string> {{"Name", "s"}, {"Version", "u"}}));
@@ -756,16 +768,17 @@ TEST_F(TestDBusObjectServer, test_property_set_refusals)
     auto unknown = this->call_set_string("Nothing", "1");
     auto refused = this->call_set_string("Name", "refused");
 
-    auto bad_type = Message::method_call(service, path, properties, "Set");
-    ASSERT_TRUE(bad_type.has_value());
-    Appender body(*bad_type);
+    Message bad_type;
+    auto built = bad_type.method_call(service, path, properties, "Set");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    Appender body(bad_type);
     ASSERT_TRUE(body.add(interface_name).has_value());
     ASSERT_TRUE(body.add("Name").has_value());
     auto variant = body.open_variant("u");
     ASSERT_TRUE(variant.has_value());
     ASSERT_TRUE(variant->add(uint32_t {1}).has_value());
     ASSERT_TRUE(body.close(std::move(*variant)).has_value());
-    auto mismatch = this->exchange(*bad_type);
+    auto mismatch = this->exchange(bad_type);
 
     EXPECT_EQ(error_of(read_only), "org.freedesktop.DBus.Error.PropertyReadOnly: property Version is read only");
     EXPECT_EQ(error_of(unknown),
@@ -802,11 +815,12 @@ TEST_F(TestDBusObjectServer, test_getter_cannot_change_objects)
         return _objects.add_object("/org/sihd/Other", {});
     };
     this->add_test_object({}, {std::move(leaving), std::move(growing)});
-    auto get_all = Message::properties_get_all(service, path, interface_name);
-    ASSERT_TRUE(get_all.has_value());
+    Message get_all;
+    auto built = get_all.properties_get_all(service, path, interface_name);
+    ASSERT_TRUE(built.has_value()) << built.error().message;
 
     auto version = this->call_get("Version");
-    auto all = this->exchange(*get_all);
+    auto all = this->exchange(get_all);
     auto growing_reply = this->call_get("Growing");
     auto removed = _objects.remove_object(path);
 
@@ -869,11 +883,12 @@ TEST_F(TestDBusObjectServer, test_write_only_property)
     };
     this->add_test_object({}, {std::move(secret), version_property()});
     ASSERT_TRUE(_client.add_match(properties_changed_rule(service, path, interface_name)).has_value());
-    auto get_all = Message::properties_get_all(service, path, interface_name);
-    ASSERT_TRUE(get_all.has_value());
+    Message get_all;
+    auto built = get_all.properties_get_all(service, path, interface_name);
+    ASSERT_TRUE(built.has_value()) << built.error().message;
 
     auto read = this->call_get("Secret");
-    auto all = this->exchange(*get_all);
+    auto all = this->exchange(get_all);
     auto written = this->call_set_string("Secret", "hidden");
     auto refused = _objects.emit_properties_changed(path, interface_name, {"Secret"});
     ASSERT_TRUE(_objects.emit_properties_changed(path, interface_name, {"Version"}).has_value());
@@ -976,6 +991,81 @@ TEST_F(TestDBusObjectServer, test_remove_object_manager)
     EXPECT_EQ(error_of(reply), "org.freedesktop.DBus.Error.UnknownObject: no object at /org/sihd");
 }
 
+TEST_F(TestDBusObjectServer, test_call_answers_the_peer_meanwhile)
+{
+    const Duration timeout(time::sec(5));
+    ObjectServer agent(_client);
+    auto added = agent.add_object(path,
+                                  {ObjectServer::Interface {
+                                      .name = interface_name,
+                                      .methods = {echo_method()},
+                                      .properties = {},
+                                      .signals = {},
+                                  }});
+    ASSERT_TRUE(added.has_value()) << added.error().message;
+
+    std::string asked;
+    std::jthread peer([this, &asked, &timeout] {
+        auto pair = receive_member(_server, "Pair");
+        ASSERT_TRUE(pair.has_value());
+
+        Message ask;
+        auto ask_built = ask.method_call(pair->sender(), path, interface_name, "Echo");
+        ASSERT_TRUE(ask_built.has_value()) << ask_built.error().message;
+        ASSERT_TRUE(ask.add("hello").has_value());
+        auto echoed = ask.call(_server, timeout);
+        asked = text_of(echoed);
+
+        auto reply = pair->method_return();
+        ASSERT_TRUE(reply.has_value()) << reply.error().message;
+        ASSERT_TRUE(reply->add(asked).has_value());
+        ASSERT_TRUE(reply->send(_server).has_value());
+    });
+
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Pair");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    auto paired = agent.call(request, timeout);
+    peer.join();
+
+    EXPECT_EQ(asked, "hello");
+    EXPECT_EQ(text_of(paired), "hello");
+}
+
+TEST_F(TestDBusObjectServer, test_call_fails_like_its_error_reply)
+{
+    std::jthread peer([this] {
+        auto pair = receive_member(_server, "Pair");
+        ASSERT_TRUE(pair.has_value());
+        auto refusal = pair->error_return("org.sihd.Error.Rejected", "no");
+        ASSERT_TRUE(refusal.has_value()) << refusal.error().message;
+        ASSERT_TRUE(refusal->send(_server).has_value());
+    });
+
+    ObjectServer agent(_client);
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Pair");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    auto reply = agent.call(request, Duration(time::sec(5)));
+    peer.join();
+
+    ASSERT_FALSE(reply.has_value());
+    EXPECT_EQ(reply.error().message, "org.sihd.Error.Rejected: no");
+}
+
+TEST_F(TestDBusObjectServer, test_call_times_out)
+{
+    ObjectServer agent(_client);
+    Message request;
+    auto built = request.method_call(service, path, interface_name, "Pair");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+
+    auto reply = agent.call(request, Duration(time::milli(50)));
+
+    ASSERT_FALSE(reply.has_value());
+    EXPECT_EQ(reply.error().code, ErrorCode::timeout);
+}
+
 TEST_F(TestDBusObjectServer, test_object_manager_signals)
 {
     ASSERT_TRUE(_objects.add_object_manager("/org/sihd").has_value());
@@ -1011,11 +1101,12 @@ TEST_F(TestDBusObjectServer, test_busctl_understands_the_service)
 
     std::atomic<bool> stop = false;
     std::jthread serving([this, &stop] {
+        Message message;
         while (!stop)
         {
-            auto received = Message::receive(_server, Duration(time::sec(5)));
-            if (received.has_value() && received->has_value())
-                (void)_objects.handle(std::move(**received));
+            auto received = message.receive(_server, Duration(time::sec(5)));
+            if (received.has_value() && *received)
+                (void)_objects.handle(std::move(message));
         }
     });
 

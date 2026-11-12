@@ -63,6 +63,7 @@ class Connection
         Connection(const Connection &) = delete;
         Connection & operator=(const Connection &) = delete;
 
+        // replaces an open connection on success only
         sihd::util::Result<void> open(Bus bus);
         sihd::util::Result<void> open(sihd::util::ZStringView address);
         bool is_open() const;

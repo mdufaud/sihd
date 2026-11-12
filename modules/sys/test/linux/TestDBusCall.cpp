@@ -47,11 +47,12 @@ class TestDBusCall: public ::testing::Test
             std::vector<Message> requests;
             for (size_t index = 0; index < count; ++index)
             {
-                auto request = Message::method_call(service, "/org/sihd/Test", service, "Ping");
-                EXPECT_TRUE(request.has_value());
-                auto added = request->add(static_cast<uint32_t>(index));
+                Message request;
+                auto built = request.method_call(service, "/org/sihd/Test", service, "Ping");
+                EXPECT_TRUE(built.has_value());
+                auto added = request.add(static_cast<uint32_t>(index));
                 EXPECT_TRUE(added.has_value());
-                requests.emplace_back(std::move(*request));
+                requests.emplace_back(std::move(request));
             }
             return requests;
         }
@@ -125,10 +126,11 @@ TEST_F(TestDBusCall, test_call_all_fails_on_an_error_reply)
 TEST_F(TestDBusCall, test_unanswered_calls_time_out)
 {
     const Duration short_timeout(time::ms(100));
-    auto request = Message::method_call(service, "/org/sihd/Test", service, "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
+    Message request;
+    auto built = request.method_call(service, "/org/sihd/Test", service, "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
 
-    auto reply = request->call(_client, short_timeout);
+    auto reply = request.call(_client, short_timeout);
     auto replies = Message::call_all(_client, pings(2), short_timeout);
 
     ASSERT_FALSE(reply.has_value());
@@ -159,21 +161,25 @@ TEST_F(TestDBusCall, test_receive_until)
     ASSERT_TRUE(requests[0].send(_client).has_value());
     ASSERT_TRUE(requests[1].send(_client).has_value());
 
-    auto second = Message::receive_until(_server, timeout, [](const Message & message) -> Result<bool> {
+    Message second;
+    Message nothing;
+    Message refusal;
+    auto accepted = second.receive_until(_server, timeout, [](const Message & message) -> Result<bool> {
         return message.member() == "Ping" && Iter(message).get<uint32_t>().value_or(99) == 1;
     });
-    auto nothing_more = Message::receive_until(_server, Duration(time::ms(50)), [](const Message &) -> Result<bool> {
+    auto nothing_more = nothing.receive_until(_server, Duration(time::ms(50)), [](const Message &) -> Result<bool> {
         return false;
     });
-    auto refused = Message::receive_until(_client, timeout, [](const Message &) -> Result<bool> {
+    auto refused = refusal.receive_until(_client, timeout, [](const Message &) -> Result<bool> {
         return std::unexpected(Error(ErrorCode::invalid_argument, "unexpected message"));
     });
 
-    ASSERT_TRUE(second.has_value()) << second.error().message;
-    EXPECT_EQ(Iter(*second).get<uint32_t>().value_or(99), 1u);
+    ASSERT_TRUE(accepted.has_value()) << accepted.error().message;
+    EXPECT_EQ(Iter(second).get<uint32_t>().value_or(99), 1u);
     ASSERT_FALSE(nothing_more.has_value());
     EXPECT_EQ(nothing_more.error().code, ErrorCode::timeout);
     EXPECT_EQ(nothing_more.error().message, "dbus receive timed out");
+    EXPECT_EQ(nothing.type(), Message::Type::invalid);
     ASSERT_FALSE(refused.has_value());
     EXPECT_EQ(refused.error().message, "unexpected message");
 }
@@ -182,7 +188,9 @@ TEST_F(TestDBusCall, test_receive_until_interrupted)
 {
     ASSERT_TRUE(_server.interrupt().has_value());
 
-    auto interrupted = Message::receive_until(_server, timeout, [](const Message &) -> Result<bool> { return false; });
+    Message message;
+
+    auto interrupted = message.receive_until(_server, timeout, [](const Message &) -> Result<bool> { return false; });
 
     EXPECT_EQ(code_of(interrupted), ErrorCode::interrupted);
     EXPECT_EQ(error_of(interrupted), "dbus receive interrupted");
@@ -215,18 +223,57 @@ TEST_F(TestDBusCall, test_to_error)
     EXPECT_EQ(call_error.message, "dbus message is no error reply");
 }
 
+TEST_F(TestDBusCall, test_empty_message_cannot_leave)
+{
+    Message empty;
+    std::vector<Message> requests;
+    requests.emplace_back();
+
+    auto sent = empty.send(_client);
+    auto reply = empty.call(_client, timeout);
+    auto replies = Message::call_all(_client, requests, timeout);
+
+    ASSERT_FALSE(sent.has_value());
+    EXPECT_EQ(sent.error().code, ErrorCode::not_initialized);
+    EXPECT_EQ(sent.error().message, "dbus message is empty");
+    ASSERT_FALSE(reply.has_value());
+    EXPECT_EQ(reply.error().message, "dbus message is empty");
+    ASSERT_FALSE(replies.has_value());
+    EXPECT_EQ(replies.error().message, "dbus message is empty");
+}
+
+TEST_F(TestDBusCall, test_failed_receive_keeps_the_message)
+{
+    Message message;
+    auto built = message.method_call(service, "/org/sihd/Test", service, "Kept");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+
+    auto nothing_accepted = message.receive_until(_server, Duration(time::ms(50)), [](const Message &) -> Result<bool> {
+        return false;
+    });
+    auto nothing_more = message.receive(_server, Duration(time::ms(50)));
+
+    ASSERT_FALSE(nothing_accepted.has_value());
+    EXPECT_EQ(nothing_accepted.error().code, ErrorCode::timeout);
+    ASSERT_TRUE(nothing_more.has_value()) << nothing_more.error().message;
+    EXPECT_FALSE(*nothing_more);
+    EXPECT_EQ(message.member(), "Kept");
+}
+
 TEST_F(TestDBusCall, test_disable_auto_start)
 {
     Connection no_auto_start;
     no_auto_start.disable_auto_start();
     ASSERT_TRUE(no_auto_start.open(_bus.address()).has_value());
-    auto started = Message::method_call("org.sihd.Nobody", "/org/sihd/Test", service, "Ping");
-    auto not_started = Message::method_call("org.sihd.Nobody", "/org/sihd/Test", service, "Ping");
-    ASSERT_TRUE(started.has_value()) << started.error().message;
-    ASSERT_TRUE(not_started.has_value()) << not_started.error().message;
+    Message started;
+    Message not_started;
+    auto started_built = started.method_call("org.sihd.Nobody", "/org/sihd/Test", service, "Ping");
+    auto not_started_built = not_started.method_call("org.sihd.Nobody", "/org/sihd/Test", service, "Ping");
+    ASSERT_TRUE(started_built.has_value()) << started_built.error().message;
+    ASSERT_TRUE(not_started_built.has_value()) << not_started_built.error().message;
 
-    auto activation = started->call(_client, timeout);
-    auto no_activation = not_started->call(no_auto_start, timeout);
+    auto activation = started.call(_client, timeout);
+    auto no_activation = not_started.call(no_auto_start, timeout);
 
     ASSERT_FALSE(activation.has_value());
     EXPECT_TRUE(has_error_name(activation.error(), "org.freedesktop.DBus.Error.ServiceUnknown"))

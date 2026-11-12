@@ -48,12 +48,11 @@ class TestSleepWatcher: public ::testing::Test
 
         void send_prepare_for_sleep(bool sleeping)
         {
-            auto signal = Message::signal("/org/freedesktop/login1",
-                                          "org.freedesktop.login1.Manager",
-                                          "PrepareForSleep");
-            ASSERT_TRUE(signal.has_value()) << signal.error().message;
-            ASSERT_TRUE(signal->add(sleeping).has_value());
-            ASSERT_TRUE(signal->send(_server).has_value());
+            Message signal;
+            auto built = signal.signal("/org/freedesktop/login1", "org.freedesktop.login1.Manager", "PrepareForSleep");
+            ASSERT_TRUE(built.has_value()) << built.error().message;
+            ASSERT_TRUE(signal.add(sleeping).has_value());
+            ASSERT_TRUE(signal.send(_server).has_value());
         }
 
         PrivateDBus _bus;

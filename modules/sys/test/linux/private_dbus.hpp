@@ -144,15 +144,16 @@ inline std::optional<sihd::sys::linux_::dbus::Message>
     receive_accepted(sihd::sys::linux_::dbus::Connection & connection,
                      const std::function<bool(const sihd::sys::linux_::dbus::Message &)> & accepted)
 {
-    auto received = sihd::sys::linux_::dbus::Message::receive_until(
+    sihd::sys::linux_::dbus::Message message;
+    auto received = message.receive_until(
         connection,
         sihd::util::Duration(sihd::util::time::sec(5)),
-        [&accepted](const sihd::sys::linux_::dbus::Message & message) -> sihd::util::Result<bool> {
-            return accepted(message);
+        [&accepted](const sihd::sys::linux_::dbus::Message & candidate) -> sihd::util::Result<bool> {
+            return accepted(candidate);
         });
     if (!received.has_value())
         return std::nullopt;
-    return std::move(*received);
+    return message;
 }
 
 template <typename T>

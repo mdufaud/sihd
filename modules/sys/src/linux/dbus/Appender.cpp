@@ -399,13 +399,46 @@ Result<void> Appender::add_entry(ZStringView key,
     return this->close(std::move(*entry));
 }
 
+template <BasicType Key>
+Result<void> Appender::add_byte_map(const std::map<Key, std::vector<uint8_t>> & map)
+{
+    auto array = this->open_array(std::string("{") + dbus_type_of<Key>() + "v}");
+    SIHD_UNEXPECTED_RETURN(array);
+    for (const auto & [key, bytes] : map)
+    {
+        auto entry = array->open_dict_entry();
+        SIHD_UNEXPECTED_RETURN(entry);
+        auto key_added = entry->add(key);
+        SIHD_UNEXPECTED_RETURN(key_added);
+
+        auto variant = entry->open_variant("ay");
+        SIHD_UNEXPECTED_RETURN(variant);
+        auto bytes_added = variant->add_array(bytes);
+        SIHD_UNEXPECTED_RETURN(bytes_added);
+        auto variant_closed = entry->close(std::move(*variant));
+        SIHD_UNEXPECTED_RETURN(variant_closed);
+        auto entry_closed = array->close(std::move(*entry));
+        SIHD_UNEXPECTED_RETURN(entry_closed);
+    }
+    return this->close(std::move(*array));
+}
+
+Result<void> Appender::add_empty_vardict()
+{
+    auto options = this->open_array("{sv}");
+    SIHD_UNEXPECTED_RETURN(options);
+    return this->close(std::move(*options));
+}
+
 # define SIHD_DBUS_INSTANTIATE_FIXED(T) template Result<void> Appender::add<T>(const T &);
 SIHD_DBUS_FOR_EACH_FIXED_TYPE(SIHD_DBUS_INSTANTIATE_FIXED)
 # undef SIHD_DBUS_INSTANTIATE_FIXED
 
-# define SIHD_DBUS_INSTANTIATE_ARRAY(T) template Result<void> Appender::add_array<T>(const std::vector<T> &);
-SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE_ARRAY)
-# undef SIHD_DBUS_INSTANTIATE_ARRAY
+# define SIHD_DBUS_INSTANTIATE_BASIC(T)                                                                                \
+     template Result<void> Appender::add_array<T>(const std::vector<T> &);                                             \
+     template Result<void> Appender::add_byte_map<T>(const std::map<T, std::vector<uint8_t>> &);
+SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE_BASIC)
+# undef SIHD_DBUS_INSTANTIATE_BASIC
 
 } // namespace sihd::sys::linux_::dbus
 

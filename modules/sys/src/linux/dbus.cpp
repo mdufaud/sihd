@@ -54,9 +54,10 @@ Result<Message> property_reply(Connection & connection,
                                ZStringView name,
                                Duration timeout)
 {
-    auto request = Message::properties_get(destination, path, interface, name);
-    SIHD_UNEXPECTED_RETURN(request);
-    return request->call(connection, timeout);
+    Message request;
+    auto built = request.properties_get(destination, path, interface, name);
+    SIHD_UNEXPECTED_RETURN(built);
+    return request.call(connection, timeout);
 }
 
 } // namespace
@@ -132,6 +133,36 @@ Result<std::vector<T>> get_array_property(Connection & connection,
     return value->get_array<T>();
 }
 
+template <BasicType T>
+Result<void> set_property(Connection & connection,
+                          ZStringView destination,
+                          ZStringView path,
+                          ZStringView interface,
+                          ZStringView name,
+                          const T & value,
+                          Duration timeout)
+{
+    Message request;
+    auto built = request.method_call(destination, path, properties_interface, "Set");
+    SIHD_UNEXPECTED_RETURN(built);
+    Appender body(request);
+    auto interface_added = body.add(interface);
+    SIHD_UNEXPECTED_RETURN(interface_added);
+    auto name_added = body.add(name);
+    SIHD_UNEXPECTED_RETURN(name_added);
+
+    auto variant = body.open_variant(std::string(1, dbus_type_of<T>()));
+    SIHD_UNEXPECTED_RETURN(variant);
+    auto value_added = variant->add(value);
+    SIHD_UNEXPECTED_RETURN(value_added);
+    auto variant_closed = body.close(std::move(*variant));
+    SIHD_UNEXPECTED_RETURN(variant_closed);
+
+    auto reply = request.call(connection, timeout);
+    SIHD_UNEXPECTED_RETURN(reply);
+    return {};
+}
+
 std::string
     signal_rule(std::string_view sender, std::string_view path, std::string_view interface, std::string_view member)
 {
@@ -159,7 +190,9 @@ bool has_error_name(const Error & error, std::string_view name)
                                                            ZStringView,                                                \
                                                            ZStringView,                                                \
                                                            ZStringView,                                                \
-                                                           Duration);
+                                                           Duration);                                                  \
+     template Result<void>                                                                                             \
+         set_property<T>(Connection &, ZStringView, ZStringView, ZStringView, ZStringView, const T &, Duration);
 SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE)
 # undef SIHD_DBUS_INSTANTIATE
 

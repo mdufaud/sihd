@@ -15,20 +15,21 @@ namespace dbus = sihd::sys::linux_::dbus;
 Result<dbus::UnixFd>
     login1_inhibit_sleep(dbus::Connection & connection, ZStringView who, ZStringView why, ZStringView mode)
 {
-    auto request = dbus::Message::method_call("org.freedesktop.login1",
-                                              "/org/freedesktop/login1",
-                                              "org.freedesktop.login1.Manager",
-                                              "Inhibit");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto added = request->add(ZStringView("sleep"));
+    dbus::Message request;
+    auto built = request.method_call("org.freedesktop.login1",
+                                     "/org/freedesktop/login1",
+                                     "org.freedesktop.login1.Manager",
+                                     "Inhibit");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto added = request.add(ZStringView("sleep"));
     SIHD_UNEXPECTED_RETURN(added);
-    added = request->add(who);
+    added = request.add(who);
     SIHD_UNEXPECTED_RETURN(added);
-    added = request->add(why);
+    added = request.add(why);
     SIHD_UNEXPECTED_RETURN(added);
-    added = request->add(mode);
+    added = request.add(mode);
     SIHD_UNEXPECTED_RETURN(added);
-    auto reply = request->call(connection, dbus_call_timeout);
+    auto reply = request.call(connection, dbus_call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return dbus::Iter(*reply).get_unix_fd();
 }

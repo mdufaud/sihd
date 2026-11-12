@@ -67,10 +67,11 @@ class TestDBusProperties: public ::testing::Test
 
         static Result<Message> properties_changed(ZStringView interface)
         {
-            auto signal = Message::signal(path, "org.freedesktop.DBus.Properties", "PropertiesChanged");
-            SIHD_UNEXPECTED_RETURN(signal);
+            Message signal;
+            auto built = signal.signal(path, "org.freedesktop.DBus.Properties", "PropertiesChanged");
+            SIHD_UNEXPECTED_RETURN(built);
 
-            Appender body(*signal);
+            Appender body(signal);
             auto interface_added = body.add(interface);
             SIHD_UNEXPECTED_RETURN(interface_added);
             auto changed = body.open_array("{sv}");
@@ -142,6 +143,47 @@ TEST_F(TestDBusProperties, test_get_array_property)
     EXPECT_EQ(*ssid, (std::vector<uint8_t> {'h', 'o', 'm', 'e'}));
 }
 
+TEST_F(TestDBusProperties, test_set_property)
+{
+    std::vector<std::string> asked;
+    std::optional<bool> written;
+    auto server = this->answer_next("Set", [this, &asked, &written](const Message & call) {
+        Iter arguments(call);
+        asked.emplace_back(arguments.get<std::string>().value_or(""));
+        arguments.next();
+        asked.emplace_back(arguments.get<std::string>().value_or(""));
+        arguments.next();
+        asked.emplace_back(arguments.signature());
+        auto value = arguments.recurse();
+        if (value.has_value())
+            written = value->get<bool>().value_or(false);
+        this->reply(call, [](Appender &) -> Result<void> { return {}; });
+    });
+
+    auto set = set_property(_client, service, path, interface, "Powered", true, timeout);
+    server.join();
+
+    ASSERT_TRUE(set.has_value()) << set.error().message;
+    EXPECT_EQ(asked, (std::vector<std::string> {"org.sihd.Device", "Powered", "v"}));
+    EXPECT_EQ(written, std::optional<bool>(true));
+}
+
+TEST_F(TestDBusProperties, test_set_property_error)
+{
+    auto server = this->answer_next("Set", [this](const Message & call) {
+        auto refusal = call.error_return("org.freedesktop.DBus.Error.PropertyReadOnly", "Address is read-only");
+        ASSERT_TRUE(refusal.has_value()) << refusal.error().message;
+        ASSERT_TRUE(refusal->send(_server).has_value());
+    });
+
+    auto set = set_property<std::string>(_client, service, path, interface, "Address", "00:11:22:33:44:55", timeout);
+    server.join();
+
+    ASSERT_FALSE(set.has_value());
+    EXPECT_EQ(set.error().code, ErrorCode::io_error);
+    EXPECT_EQ(set.error().message, "org.freedesktop.DBus.Error.PropertyReadOnly: Address is read-only");
+}
+
 TEST_F(TestDBusProperties, test_get_property_error)
 {
     auto server = this->answer_next("Get", [this](const Message & call) {
@@ -178,9 +220,10 @@ TEST_F(TestDBusProperties, test_get_all)
         });
     });
 
-    auto request = Message::properties_get_all(service, path, interface);
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    auto reply = request->call(_client, timeout);
+    Message request;
+    auto built = request.properties_get_all(service, path, interface);
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    auto reply = request.call(_client, timeout);
     server.join();
 
     ASSERT_TRUE(reply.has_value()) << reply.error().message;
@@ -200,14 +243,15 @@ TEST_F(TestDBusProperties, test_changed_property)
     ASSERT_TRUE(signal.has_value()) << signal.error().message;
     auto other_interface = properties_changed("org.sihd.Other");
     ASSERT_TRUE(other_interface.has_value()) << other_interface.error().message;
-    auto call = Message::method_call(service, path, "org.freedesktop.DBus.Properties", "PropertiesChanged");
-    ASSERT_TRUE(call.has_value()) << call.error().message;
-    ASSERT_TRUE(call->add(interface).has_value());
+    Message call;
+    auto call_built = call.method_call(service, path, "org.freedesktop.DBus.Properties", "PropertiesChanged");
+    ASSERT_TRUE(call_built.has_value()) << call_built.error().message;
+    ASSERT_TRUE(call.add(interface).has_value());
 
     auto state = signal->changed_property(interface, "State");
     auto strength = signal->changed_property(interface, "Strength");
     auto elsewhere = other_interface->changed_property(interface, "State");
-    auto not_a_signal = call->changed_property(interface, "State");
+    auto not_a_signal = call.changed_property(interface, "State");
 
     ASSERT_TRUE(state.has_value()) << state.error().message;
     ASSERT_TRUE(state->has_value());
@@ -245,15 +289,16 @@ TEST_F(TestDBusProperties, test_properties_changed_rule)
 
 TEST_F(TestDBusProperties, test_add_array)
 {
-    auto message = Message::method_call(service, path, interface, "Set");
-    ASSERT_TRUE(message.has_value()) << message.error().message;
-    Appender body(*message);
+    Message message;
+    auto built = message.method_call(service, path, interface, "Set");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    Appender body(message);
 
     ASSERT_TRUE(body.add_array(std::vector<std::string> {"first", "second"}).has_value());
     ASSERT_TRUE(body.add_array(std::vector<bool> {true, false}).has_value());
     ASSERT_TRUE(body.add_array(std::vector<int32_t> {}).has_value());
 
-    Iter arguments(*message);
+    Iter arguments(message);
     EXPECT_EQ(arguments.get_array<std::string>().value_or(std::vector<std::string> {}),
               (std::vector<std::string> {"first", "second"}));
     arguments.next();
@@ -265,16 +310,17 @@ TEST_F(TestDBusProperties, test_add_array)
 
 TEST_F(TestDBusProperties, test_for_each_entry_needs_a_dict)
 {
-    auto message = Message::method_call(service, path, interface, "Set");
-    ASSERT_TRUE(message.has_value()) << message.error().message;
-    ASSERT_TRUE(message->add("text").has_value());
-    Appender body(*message);
+    Message message;
+    auto built = message.method_call(service, path, interface, "Set");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(message.add("text").has_value());
+    Appender body(message);
     auto record = body.open_struct();
     ASSERT_TRUE(record.has_value()) << record.error().message;
     ASSERT_TRUE(record->add(uint32_t {1}).has_value());
     ASSERT_TRUE(body.close(std::move(*record)).has_value());
 
-    Iter arguments(*message);
+    Iter arguments(message);
     auto from_text = arguments.for_each_entry<std::string>([](const std::string &, Iter &) { return Result<void> {}; });
     arguments.next();
     auto from_struct = arguments.for_each_entry<std::string>(

@@ -2,6 +2,8 @@
 
 #if defined(__SIHD_LINUX__)
 
+# include <optional>
+
 # include <sihd/util/Clocks.hpp>
 
 # include "Impl.hpp"
@@ -98,29 +100,34 @@ Result<Message> Message::Impl::created(::DBusMessage *message, std::string_view 
     return wrap(message);
 }
 
-Result<Message>
-    Message::method_call(ZStringView destination, ZStringView path, ZStringView interface, ZStringView member)
+Result<void> Message::method_call(ZStringView destination, ZStringView path, ZStringView interface, ZStringView member)
 {
     if (!destination.empty() && !dbus_validate_bus_name(destination.c_str(), nullptr))
         return std::unexpected(Error(invalid_argument, "invalid dbus destination: {}", destination));
     auto valid = validate_names(path, interface, member);
     SIHD_UNEXPECTED_RETURN(valid);
 
-    return Impl::created(dbus_message_new_method_call(destination.empty() ? nullptr : destination.c_str(),
-                                                      path.c_str(),
-                                                      interface.empty() ? nullptr : interface.c_str(),
-                                                      member.c_str()),
-                         "method call");
+    auto created = Impl::created(dbus_message_new_method_call(destination.empty() ? nullptr : destination.c_str(),
+                                                              path.c_str(),
+                                                              interface.empty() ? nullptr : interface.c_str(),
+                                                              member.c_str()),
+                                 "method call");
+    SIHD_UNEXPECTED_RETURN(created);
+    *this = std::move(*created);
+    return {};
 }
 
-Result<Message> Message::signal(ZStringView path, ZStringView interface, ZStringView member)
+Result<void> Message::signal(ZStringView path, ZStringView interface, ZStringView member)
 {
     if (interface.empty())
         return std::unexpected(Error(invalid_argument, "a dbus signal needs an interface"));
     auto valid = validate_names(path, interface, member);
     SIHD_UNEXPECTED_RETURN(valid);
 
-    return Impl::created(dbus_message_new_signal(path.c_str(), interface.c_str(), member.c_str()), "signal");
+    auto created = Impl::created(dbus_message_new_signal(path.c_str(), interface.c_str(), member.c_str()), "signal");
+    SIHD_UNEXPECTED_RETURN(created);
+    *this = std::move(*created);
+    return {};
 }
 
 Result<Message> Message::method_return() const
@@ -197,6 +204,16 @@ Message::Type Message::type() const
     }
 }
 
+uint32_t Message::serial() const
+{
+    return _impl != nullptr ? dbus_message_get_serial(_impl->message) : 0;
+}
+
+uint32_t Message::reply_serial() const
+{
+    return _impl != nullptr ? dbus_message_get_reply_serial(_impl->message) : 0;
+}
+
 bool Message::expects_reply() const
 {
     return this->type() == Type::method_call && !dbus_message_get_no_reply(_impl->message);
@@ -215,6 +232,8 @@ Result<void> Message::set_no_reply()
 
 Error Message::to_error() const
 {
+    if (_impl == nullptr)
+        return empty_message();
     if (this->type() != Type::error)
         return Error(invalid_argument, "dbus message is no error reply");
     ::DBusError dbus_error;
@@ -301,7 +320,7 @@ Result<void> Message::send(Connection & connection) const
     return {};
 }
 
-Result<std::optional<Message>> Message::receive(Connection & connection, Duration timeout)
+Result<bool> Message::receive(Connection & connection, Duration timeout)
 {
     Connection::Impl *impl = connection._impl.get();
     if (impl == nullptr)
@@ -313,13 +332,16 @@ Result<std::optional<Message>> Message::receive(Connection & connection, Duratio
     {
         dbus_connection_read_write(impl->connection, 0);
         if (::DBusMessage *message = dbus_connection_pop_message(impl->connection))
-            return Impl::wrap(message);
+        {
+            *this = Impl::wrap(message);
+            return true;
+        }
         if (!dbus_connection_get_is_connected(impl->connection))
             return std::unexpected(Error(closed, "dbus connection lost"));
 
         const Timestamp now = clock.now();
         if (now >= deadline)
-            return std::nullopt;
+            return false;
         if (impl->poll.poll(Duration(deadline - now).milliseconds_int()) < 0)
             return std::unexpected(Error(io_error, "could not poll the dbus connection"));
         auto queued = impl->queued.read();
@@ -327,18 +349,18 @@ Result<std::optional<Message>> Message::receive(Connection & connection, Duratio
         auto woken = impl->wake.read();
         SIHD_UNEXPECTED_RETURN(woken);
         if (*woken > 0)
-            return std::nullopt;
+            return false;
     }
 }
 
 # else
 
-Result<Message> Message::method_call(ZStringView, ZStringView, ZStringView, ZStringView)
+Result<void> Message::method_call(ZStringView, ZStringView, ZStringView, ZStringView)
 {
     return unsupported_platform();
 }
 
-Result<Message> Message::signal(ZStringView, ZStringView, ZStringView)
+Result<void> Message::signal(ZStringView, ZStringView, ZStringView)
 {
     return unsupported_platform();
 }
@@ -393,6 +415,16 @@ Message::Type Message::type() const
     return Type::invalid;
 }
 
+uint32_t Message::serial() const
+{
+    return 0;
+}
+
+uint32_t Message::reply_serial() const
+{
+    return 0;
+}
+
 bool Message::expects_reply() const
 {
     return false;
@@ -423,18 +455,20 @@ Result<void> Message::send(Connection &) const
     return unsupported_platform();
 }
 
-Result<std::optional<Message>> Message::receive(Connection &, Duration)
+Result<bool> Message::receive(Connection &, Duration)
 {
     return unsupported_platform();
 }
 
 # endif
 
+Message::Message() = default;
+
 Message::Message(std::unique_ptr<Impl> impl): _impl(std::move(impl)) {}
 
-Message::Message(Message && other) = default;
+Message::Message(Message && other) noexcept = default;
 
-Message & Message::operator=(Message && other) = default;
+Message & Message::operator=(Message && other) noexcept = default;
 
 Message::~Message() = default;
 
@@ -464,29 +498,34 @@ Result<void> Message::add(const T & value)
     return Appender(*this).add(value);
 }
 
-Result<Message>
-    Message::properties_get(ZStringView destination, ZStringView path, ZStringView interface, ZStringView name)
+Result<void> Message::properties_get(ZStringView destination, ZStringView path, ZStringView interface, ZStringView name)
 {
-    auto request = Message::method_call(destination, path, properties_interface, "Get");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto interface_added = request->add(interface);
+    Message request;
+    auto built = request.method_call(destination, path, properties_interface, "Get");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto interface_added = request.add(interface);
     SIHD_UNEXPECTED_RETURN(interface_added);
-    auto name_added = request->add(name);
+    auto name_added = request.add(name);
     SIHD_UNEXPECTED_RETURN(name_added);
-    return request;
+    *this = std::move(request);
+    return {};
 }
 
-Result<Message> Message::properties_get_all(ZStringView destination, ZStringView path, ZStringView interface)
+Result<void> Message::properties_get_all(ZStringView destination, ZStringView path, ZStringView interface)
 {
-    auto request = Message::method_call(destination, path, properties_interface, "GetAll");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto interface_added = request->add(interface);
+    Message request;
+    auto built = request.method_call(destination, path, properties_interface, "GetAll");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto interface_added = request.add(interface);
     SIHD_UNEXPECTED_RETURN(interface_added);
-    return request;
+    *this = std::move(request);
+    return {};
 }
 
 Result<std::optional<Iter>> Message::changed_property(std::string_view interface, std::string_view name) const
 {
+    if (this->type() == Type::invalid)
+        return std::unexpected(empty_message());
     if (this->type() != Type::signal || this->interface() != properties_interface
         || this->member() != "PropertiesChanged")
         return std::nullopt;
@@ -508,9 +547,10 @@ Result<std::optional<Iter>> Message::changed_property(std::string_view interface
     return changed;
 }
 
-Result<Message> Message::receive_until(Connection & connection,
-                                       Duration timeout,
-                                       const std::function<Result<bool>(const Message &)> & accepted)
+Result<Message> receive_matching(Connection & connection,
+                                 Duration timeout,
+                                 std::string_view what,
+                                 const std::function<Result<bool>(Message &)> & matches)
 {
     SteadyClock clock;
     const Timestamp deadline = clock.now() + timeout;
@@ -518,20 +558,31 @@ Result<Message> Message::receive_until(Connection & connection,
     {
         const Timestamp now = clock.now();
         if (now >= deadline)
-            return std::unexpected(Error(ErrorCode::timeout, "dbus receive timed out"));
-        auto received = Message::receive(connection, Duration(deadline - now));
+            return std::unexpected(Error(ErrorCode::timeout, "dbus {} timed out", what));
+        Message incoming;
+        auto received = incoming.receive(connection, Duration(deadline - now));
         SIHD_UNEXPECTED_RETURN(received);
-        if (!received->has_value())
+        if (!*received)
         {
             if (clock.now() >= deadline)
                 continue;
-            return std::unexpected(Error(interrupted, "dbus receive interrupted"));
+            return std::unexpected(Error(interrupted, "dbus {} interrupted", what));
         }
-        auto taken = accepted(**received);
-        SIHD_UNEXPECTED_RETURN(taken);
-        if (*taken)
-            return std::move(**received);
+        auto matched = matches(incoming);
+        SIHD_UNEXPECTED_RETURN(matched);
+        if (*matched)
+            return incoming;
     }
+}
+
+Result<void> Message::receive_until(Connection & connection,
+                                    Duration timeout,
+                                    const std::function<Result<bool>(const Message &)> & accepted)
+{
+    auto received = receive_matching(connection, timeout, "receive", accepted);
+    SIHD_UNEXPECTED_RETURN(received);
+    *this = std::move(*received);
+    return {};
 }
 
 # define SIHD_DBUS_INSTANTIATE(T) template Result<void> Message::add<T>(const T &);

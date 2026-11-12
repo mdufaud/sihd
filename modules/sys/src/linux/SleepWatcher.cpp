@@ -68,16 +68,17 @@ struct SleepWatcher::Impl
 
         bool run()
         {
+            dbus::Message message;
             while (!stopping)
             {
-                auto received = dbus::Message::receive(connection, Duration(time::hours(1)));
+                auto received = message.receive(connection, Duration(time::hours(1)));
                 if (!received.has_value())
                 {
                     SIHD_LOG(error, "SleepWatcher: {}", received.error().message);
                     return false;
                 }
-                if (received->has_value() && (*received)->member() == "PrepareForSleep")
-                    this->handle(**received);
+                if (*received && message.member() == "PrepareForSleep")
+                    this->handle(message);
             }
             return true;
         }

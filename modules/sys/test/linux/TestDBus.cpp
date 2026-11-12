@@ -40,10 +40,13 @@ class TestDBus: public ::testing::Test
 
         Result<Message> new_bus_call(const std::string & member)
         {
-            return Message::method_call("org.freedesktop.DBus",
-                                        "/org/freedesktop/DBus",
-                                        "org.freedesktop.DBus",
-                                        member);
+            Message request;
+            auto built = request.method_call("org.freedesktop.DBus",
+                                             "/org/freedesktop/DBus",
+                                             "org.freedesktop.DBus",
+                                             member);
+            SIHD_UNEXPECTED_RETURN(built);
+            return request;
         }
 
         // skips what the bus sends unasked (NameAcquired...): nullopt on timeout or interrupt
@@ -52,9 +55,13 @@ class TestDBus: public ::testing::Test
         {
             while (true)
             {
-                auto received = Message::receive(connection, timeout);
-                if (!received.has_value() || !received->has_value() || (*received)->member() == member)
-                    return received;
+                Message message;
+                auto received = message.receive(connection, timeout);
+                SIHD_UNEXPECTED_RETURN(received);
+                if (!*received)
+                    return std::nullopt;
+                if (message.member() == member)
+                    return message;
             }
         }
 
@@ -157,7 +164,9 @@ TEST_F(TestDBus, test_type_mismatch)
 
 TEST_F(TestDBus, test_invalid_path)
 {
-    auto bad_path = Message::method_call("org.freedesktop.DBus", "no slash", "org.freedesktop.DBus", "Ping");
+    Message message;
+
+    auto bad_path = message.method_call("org.freedesktop.DBus", "no slash", "org.freedesktop.DBus", "Ping");
 
     ASSERT_FALSE(bad_path.has_value());
     EXPECT_EQ(bad_path.error().code, ErrorCode::invalid_argument);
@@ -178,16 +187,34 @@ TEST_F(TestDBus, test_call_on_closed_connection)
     EXPECT_EQ(reply.error().message, "dbus connection is not open");
 }
 
+TEST_F(TestDBus, test_failed_open_keeps_the_connection)
+{
+    auto reopened = _connection.open("unix:path=/nonexistent/sihd-bus");
+    auto request = this->new_bus_call("GetId");
+    ASSERT_TRUE(request.has_value()) << request.error().message;
+    auto reply = request->call(_connection, Duration(time::sec(5)));
+
+    ASSERT_FALSE(reopened.has_value());
+    EXPECT_EQ(reopened.error().code, ErrorCode::io_error);
+    EXPECT_EQ(
+        reopened.error().message,
+        "org.freedesktop.DBus.Error.FileNotFound: Failed to connect to socket /nonexistent/sihd-bus: No such file "
+        "or directory");
+    EXPECT_TRUE(_connection.is_open());
+    EXPECT_TRUE(reply.has_value()) << reply.error().message;
+}
+
 TEST_F(TestDBus, test_signal_roundtrip)
 {
     Connection listener;
     ASSERT_TRUE(listener.open(Bus::session).has_value());
     ASSERT_TRUE(listener.add_match("type='signal',interface='org.sihd.Test',member='Hello'").has_value());
-    auto signal = Message::signal("/org/sihd/Test", "org.sihd.Test", "Hello");
-    ASSERT_TRUE(signal.has_value()) << signal.error().message;
-    ASSERT_TRUE(signal->add("payload").has_value());
+    Message signal;
+    auto built = signal.signal("/org/sihd/Test", "org.sihd.Test", "Hello");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(signal.add("payload").has_value());
 
-    ASSERT_TRUE(signal->send(_connection).has_value());
+    ASSERT_TRUE(signal.send(_connection).has_value());
     auto received = receive_member(listener, "Hello", Duration(time::sec(5)));
 
     ASSERT_TRUE(received.has_value()) << received.error().message;
@@ -225,7 +252,8 @@ TEST_F(TestDBus, test_receive_timeout_and_interrupt)
 TEST_F(TestDBus, test_invalid_match_and_signal)
 {
     auto bad_rule = _connection.add_match("not a rule");
-    auto no_interface = Message::signal("/org/sihd/Test", "", "Hello");
+    Message signal;
+    auto no_interface = signal.signal("/org/sihd/Test", "", "Hello");
 
     ASSERT_FALSE(bad_rule.has_value());
     EXPECT_EQ(bad_rule.error().code, ErrorCode::io_error);

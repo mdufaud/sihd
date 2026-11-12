@@ -220,9 +220,24 @@ Result<void> Iter::for_each_entry(const std::function<Result<void>(const Key &, 
     return {};
 }
 
+template <BasicType Key>
+Result<std::map<Key, std::vector<uint8_t>>> Iter::get_byte_map() const
+{
+    std::map<Key, std::vector<uint8_t>> byte_map;
+    auto walked = this->for_each_entry<Key>([&byte_map](const Key & key, Iter & value) -> Result<void> {
+        auto bytes = value.get_array<uint8_t>();
+        SIHD_UNEXPECTED_RETURN(bytes);
+        byte_map.insert_or_assign(key, std::move(*bytes));
+        return {};
+    });
+    SIHD_UNEXPECTED_RETURN(walked);
+    return byte_map;
+}
+
 # define SIHD_DBUS_INSTANTIATE(T)                                                                                      \
      template Result<T> Iter::get<T>() const;                                                                          \
      template Result<std::vector<T>> Iter::get_array<T>() const;                                                       \
+     template Result<std::map<T, std::vector<uint8_t>>> Iter::get_byte_map<T>() const;                                 \
      template Result<void> Iter::for_each_entry<T>(const std::function<Result<void>(const T &, Iter &)> &) const;
 SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE)
 # undef SIHD_DBUS_INSTANTIATE

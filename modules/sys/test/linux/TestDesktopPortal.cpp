@@ -63,14 +63,14 @@ class TestDesktopPortal: public ::testing::Test
             ASSERT_TRUE(reply->add_object_path(portal_handle).has_value());
             ASSERT_TRUE(reply->send(_server).has_value());
 
-            auto signal = Message::signal(portal_handle, "org.freedesktop.portal.Request", "Response");
-            ASSERT_TRUE(signal.has_value());
-            Appender body(*signal);
+            Message signal;
+            ASSERT_TRUE(signal.signal(portal_handle, "org.freedesktop.portal.Request", "Response").has_value());
+            Appender body(signal);
             ASSERT_TRUE(body.add(response).has_value());
             auto results = body.open_array("{sv}");
             ASSERT_TRUE(results.has_value());
             ASSERT_TRUE(body.close(std::move(*results)).has_value());
-            ASSERT_TRUE(signal->send(_server).has_value());
+            ASSERT_TRUE(signal.send(_server).has_value());
         }
 
         void check_read_one_scheme(uint32_t scheme, const std::string & expected)

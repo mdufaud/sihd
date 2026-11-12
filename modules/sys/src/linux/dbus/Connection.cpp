@@ -82,11 +82,12 @@ void Connection::disable_auto_start()
 
 Result<Credentials> Connection::credentials(ZStringView bus_name, Duration timeout)
 {
-    auto request = Message::method_call(bus_driver, "/org/freedesktop/DBus", bus_driver, "GetConnectionCredentials");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto name_added = request->add(bus_name);
+    Message request;
+    auto built = request.method_call(bus_driver, "/org/freedesktop/DBus", bus_driver, "GetConnectionCredentials");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto name_added = request.add(bus_name);
     SIHD_UNEXPECTED_RETURN(name_added);
-    auto reply = request->call(*this, timeout);
+    auto reply = request.call(*this, timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
     Credentials credentials;
@@ -100,55 +101,56 @@ Result<Credentials> Connection::credentials(ZStringView bus_name, Duration timeo
 
 Connection::Impl::~Impl()
 {
+    if (connection == nullptr)
+        return;
     dbus_connection_close(connection);
     dbus_connection_unref(connection);
 }
 
-Result<std::unique_ptr<Connection::Impl>> Connection::Impl::adopt(::DBusConnection *connection,
-                                                                  ::DBusError & dbus_error)
+Result<void> Connection::Impl::adopt(::DBusConnection *opened, ::DBusError & dbus_error)
 {
-    if (connection == nullptr)
+    if (opened == nullptr)
         return std::unexpected(dbus_error_take(dbus_error));
     // libdbus calls _exit() on a lost bus otherwise
-    dbus_connection_set_exit_on_disconnect(connection, FALSE);
-    auto impl = std::make_unique<Impl>();
-    impl->connection = connection;
+    dbus_connection_set_exit_on_disconnect(opened, FALSE);
+    connection = opened;
 
     int fd = -1;
     if (!dbus_connection_get_unix_fd(connection, &fd))
         return std::unexpected(Error(io_error, "dbus connection has no unix socket"));
-    auto wake_opened = impl->wake.open();
+    auto wake_opened = wake.open();
     SIHD_UNEXPECTED_RETURN(wake_opened);
-    auto queued_opened = impl->queued.open();
+    auto queued_opened = queued.open();
     SIHD_UNEXPECTED_RETURN(queued_opened);
-    impl->poll.set_read_fd(fd);
-    impl->poll.set_read_fd(impl->wake.fd());
-    impl->poll.set_read_fd(impl->queued.fd());
-    return impl;
+    poll.set_read_fd(fd);
+    poll.set_read_fd(wake.fd());
+    poll.set_read_fd(queued.fd());
+    return {};
 }
 
 Result<void> Connection::open(Bus bus)
 {
-    this->close();
     ::DBusError dbus_error;
     dbus_error_init(&dbus_error);
-    auto impl = Impl::adopt(dbus_bus_get_private(bus == Bus::system ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION, &dbus_error),
-                            dbus_error);
-    SIHD_UNEXPECTED_RETURN(impl);
-    _impl = std::move(*impl);
+    auto impl = std::make_unique<Impl>();
+    auto adopted = impl->adopt(
+        dbus_bus_get_private(bus == Bus::system ? DBUS_BUS_SYSTEM : DBUS_BUS_SESSION, &dbus_error),
+        dbus_error);
+    SIHD_UNEXPECTED_RETURN(adopted);
+    _impl = std::move(impl);
     return {};
 }
 
 Result<void> Connection::open(ZStringView address)
 {
-    this->close();
     ::DBusError dbus_error;
     dbus_error_init(&dbus_error);
-    auto impl = Impl::adopt(dbus_connection_open_private(address.c_str(), &dbus_error), dbus_error);
-    SIHD_UNEXPECTED_RETURN(impl);
-    if (!dbus_bus_register((*impl)->connection, &dbus_error))
+    auto impl = std::make_unique<Impl>();
+    auto adopted = impl->adopt(dbus_connection_open_private(address.c_str(), &dbus_error), dbus_error);
+    SIHD_UNEXPECTED_RETURN(adopted);
+    if (!dbus_bus_register(impl->connection, &dbus_error))
         return std::unexpected(dbus_error_take(dbus_error));
-    _impl = std::move(*impl);
+    _impl = std::move(impl);
     return {};
 }
 

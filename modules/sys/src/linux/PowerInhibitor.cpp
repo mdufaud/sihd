@@ -31,12 +31,13 @@ constexpr uint32_t portal_inhibit_idle = 8;
 
 Result<dbus::Message> portal_inhibit_request(ZStringView reason)
 {
-    auto request = dbus::Message::method_call(internal::portal_service,
-                                              internal::portal_path,
-                                              "org.freedesktop.portal.Inhibit",
-                                              "Inhibit");
-    SIHD_UNEXPECTED_RETURN(request);
-    dbus::Appender body(*request);
+    dbus::Message request;
+    auto built = request.method_call(internal::portal_service,
+                                     internal::portal_path,
+                                     "org.freedesktop.portal.Inhibit",
+                                     "Inhibit");
+    SIHD_UNEXPECTED_RETURN(built);
+    dbus::Appender body(request);
     auto added = body.add(ZStringView(""));
     SIHD_UNEXPECTED_RETURN(added);
     added = body.add(portal_inhibit_idle);
@@ -62,12 +63,13 @@ struct PowerInhibitor::Impl
             if (display_handle.empty())
                 return {};
             const std::string handle = std::exchange(display_handle, "");
-            auto request = dbus::Message::method_call(internal::portal_service,
-                                                      handle,
-                                                      "org.freedesktop.portal.Request",
-                                                      "Close");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto reply = request->call(portal, internal::dbus_call_timeout);
+            dbus::Message request;
+            auto built = request.method_call(internal::portal_service,
+                                             handle,
+                                             "org.freedesktop.portal.Request",
+                                             "Close");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto reply = request.call(portal, internal::dbus_call_timeout);
             portal.close();
             SIHD_UNEXPECTED_RETURN(reply);
             return {};

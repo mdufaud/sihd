@@ -1,7 +1,9 @@
 #ifndef __SIHD_SYS_LINUX_DBUS_ITER_HPP__
 #define __SIHD_SYS_LINUX_DBUS_ITER_HPP__
 
+#include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -13,7 +15,7 @@
 namespace sihd::sys::linux_::dbus
 {
 
-// forward-only reader over a message body or container, valid while its message lives
+// forward-only reader over a message body or container, valid while its message lives unchanged
 class Connection::Message::Iter
 {
     public:
@@ -35,6 +37,9 @@ class Connection::Message::Iter
         sihd::util::Result<T> get() const;
         template <BasicType T>
         sihd::util::Result<std::vector<T>> get_array() const;
+        // a{Kv} holding an ay in every variant
+        template <BasicType Key>
+        sihd::util::Result<std::map<Key, std::vector<uint8_t>>> get_byte_map() const;
         sihd::util::Result<UnixFd> get_unix_fd() const;
         // the callback never sees a variant: its value comes unwrapped
         template <BasicType Key>

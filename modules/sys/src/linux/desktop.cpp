@@ -42,13 +42,6 @@ constexpr Duration response_timeout(time::sec(30));
 constexpr uint32_t response_success = 0;
 constexpr uint32_t response_cancelled = 1;
 
-Result<void> append_no_options(dbus::Appender & body)
-{
-    auto options = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(options);
-    return body.close(std::move(*options));
-}
-
 // the portal cancels the request of a client that disconnects: the connection stays until the response
 Result<void> call_and_wait_response(const dbus::Message & request)
 {
@@ -63,13 +56,14 @@ Result<void> call_and_wait_response(const dbus::Message & request)
     auto handle = dbus::Iter(*reply).get<std::string>();
     SIHD_UNEXPECTED_RETURN(handle);
 
-    auto response = dbus::Message::receive_until(connection,
-                                                 response_timeout,
-                                                 [&handle](const dbus::Message & message) -> Result<bool> {
-                                                     return message.member() == "Response" && message.path() == *handle;
-                                                 });
-    SIHD_UNEXPECTED_RETURN(response);
-    auto code = dbus::Iter(*response).get<uint32_t>();
+    dbus::Message response;
+    auto received = response.receive_until(connection,
+                                           response_timeout,
+                                           [&handle](const dbus::Message & message) -> Result<bool> {
+                                               return message.member() == "Response" && message.path() == *handle;
+                                           });
+    SIHD_UNEXPECTED_RETURN(received);
+    auto code = dbus::Iter(response).get<uint32_t>();
     SIHD_UNEXPECTED_RETURN(code);
     if (*code == response_success)
         return {};
@@ -84,33 +78,29 @@ Result<void> open_by_fd(ZStringView member, ZStringView path)
     auto file_opened = file.open(std::string(path), "r");
     SIHD_UNEXPECTED_RETURN(file_opened);
 
-    auto request = dbus::Message::method_call(internal::portal_service,
-                                              internal::portal_path,
-                                              open_uri_interface,
-                                              member);
-    SIHD_UNEXPECTED_RETURN(request);
-    dbus::Appender body(*request);
+    dbus::Message request;
+    auto built = request.method_call(internal::portal_service, internal::portal_path, open_uri_interface, member);
+    SIHD_UNEXPECTED_RETURN(built);
+    dbus::Appender body(request);
     auto added = body.add(ZStringView(""));
     SIHD_UNEXPECTED_RETURN(added);
     added = body.add_unix_fd(file.fd());
     SIHD_UNEXPECTED_RETURN(added);
-    added = append_no_options(body);
+    added = body.add_empty_vardict();
     SIHD_UNEXPECTED_RETURN(added);
-    return call_and_wait_response(*request);
+    return call_and_wait_response(request);
 }
 
 Result<dbus::Message> read_setting(dbus::Connection & connection, ZStringView member)
 {
-    auto request = dbus::Message::method_call(internal::portal_service,
-                                              internal::portal_path,
-                                              settings_interface,
-                                              member);
-    SIHD_UNEXPECTED_RETURN(request);
-    auto added = request->add(appearance_namespace);
+    dbus::Message request;
+    auto built = request.method_call(internal::portal_service, internal::portal_path, settings_interface, member);
+    SIHD_UNEXPECTED_RETURN(built);
+    auto added = request.add(appearance_namespace);
     SIHD_UNEXPECTED_RETURN(added);
-    added = request->add(color_scheme_key);
+    added = request.add(color_scheme_key);
     SIHD_UNEXPECTED_RETURN(added);
-    return request->call(connection, internal::dbus_call_timeout);
+    return request.call(connection, internal::dbus_call_timeout);
 }
 
 Result<uint32_t> unwrapped_uint32(const dbus::Message & message)
@@ -133,19 +123,17 @@ namespace internal
 
 Result<void> desktop_open_uri(ZStringView uri)
 {
-    auto request = dbus::Message::method_call(internal::portal_service,
-                                              internal::portal_path,
-                                              open_uri_interface,
-                                              "OpenURI");
-    SIHD_UNEXPECTED_RETURN(request);
-    dbus::Appender body(*request);
+    dbus::Message request;
+    auto built = request.method_call(internal::portal_service, internal::portal_path, open_uri_interface, "OpenURI");
+    SIHD_UNEXPECTED_RETURN(built);
+    dbus::Appender body(request);
     auto added = body.add(ZStringView(""));
     SIHD_UNEXPECTED_RETURN(added);
     added = body.add(uri);
     SIHD_UNEXPECTED_RETURN(added);
-    added = append_no_options(body);
+    added = body.add_empty_vardict();
     SIHD_UNEXPECTED_RETURN(added);
-    return call_and_wait_response(*request);
+    return call_and_wait_response(request);
 }
 
 Result<void> desktop_open_file(ZStringView path)

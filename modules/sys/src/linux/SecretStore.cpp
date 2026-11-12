@@ -101,9 +101,10 @@ struct SecretStore::Impl
             if (!session.empty())
                 return {};
 
-            auto request = dbus::Message::method_call(secrets_service, secrets_path, service_interface, "OpenSession");
-            SIHD_UNEXPECTED_RETURN(request);
-            dbus::Appender body(*request);
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, secrets_path, service_interface, "OpenSession");
+            SIHD_UNEXPECTED_RETURN(built);
+            dbus::Appender body(request);
             auto added = body.add(ZStringView("plain"));
             SIHD_UNEXPECTED_RETURN(added);
             auto input = body.open_variant("s");
@@ -113,7 +114,7 @@ struct SecretStore::Impl
             added = body.close(std::move(*input));
             SIHD_UNEXPECTED_RETURN(added);
 
-            auto reply = this->call(*request);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
             dbus::Iter output(*reply);
             output.next();
@@ -125,9 +126,10 @@ struct SecretStore::Impl
 
         Result<void> dismiss_prompt(ZStringView prompt)
         {
-            auto request = dbus::Message::method_call(secrets_service, prompt, prompt_interface, "Dismiss");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto reply = this->call(*request);
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, prompt, prompt_interface, "Dismiss");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
             return {};
         }
@@ -142,25 +144,27 @@ struct SecretStore::Impl
             const std::string rule = dbus::signal_rule(secrets_service, prompt, prompt_interface, "Completed");
             auto matched = connection.add_match(rule);
             SIHD_UNEXPECTED_RETURN(matched);
-            auto request = dbus::Message::method_call(secrets_service, prompt, prompt_interface, "Prompt");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto added = request->add(ZStringView(""));
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, prompt, prompt_interface, "Prompt");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto added = request.add(ZStringView(""));
             SIHD_UNEXPECTED_RETURN(added);
-            auto reply = this->call(*request);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
 
-            auto completed = dbus::Message::receive_until(connection,
-                                                          *prompt_timeout,
-                                                          [prompt](const dbus::Message & message) -> Result<bool> {
-                                                              return message.member() == "Completed"
-                                                                     && message.path() == prompt.view();
-                                                          });
+            dbus::Message completion;
+            auto completed = completion.receive_until(connection,
+                                                      *prompt_timeout,
+                                                      [prompt](const dbus::Message & message) -> Result<bool> {
+                                                          return message.member() == "Completed"
+                                                                 && message.path() == prompt.view();
+                                                      });
             (void)connection.remove_match(rule);
             if (!completed.has_value())
                 (void)this->dismiss_prompt(prompt);
             SIHD_UNEXPECTED_RETURN(completed);
 
-            auto dismissed = dbus::Iter(*completed).get<bool>();
+            auto dismissed = dbus::Iter(completion).get<bool>();
             SIHD_UNEXPECTED_RETURN(dismissed);
             if (*dismissed)
                 return std::unexpected(Error(permission_denied, "the keyring prompt was dismissed"));
@@ -169,12 +173,13 @@ struct SecretStore::Impl
 
         Result<void> unlock(const std::vector<std::string> & paths)
         {
-            auto request = dbus::Message::method_call(secrets_service, secrets_path, service_interface, "Unlock");
-            SIHD_UNEXPECTED_RETURN(request);
-            dbus::Appender body(*request);
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, secrets_path, service_interface, "Unlock");
+            SIHD_UNEXPECTED_RETURN(built);
+            dbus::Appender body(request);
             auto added = append_object_paths(body, paths);
             SIHD_UNEXPECTED_RETURN(added);
-            auto reply = this->call(*request);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
             dbus::Iter output(*reply);
             output.next();
@@ -185,13 +190,14 @@ struct SecretStore::Impl
 
         Result<ItemSearch> search(ZStringView service, ZStringView account)
         {
-            auto request = dbus::Message::method_call(secrets_service, secrets_path, service_interface, "SearchItems");
-            SIHD_UNEXPECTED_RETURN(request);
-            dbus::Appender body(*request);
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, secrets_path, service_interface, "SearchItems");
+            SIHD_UNEXPECTED_RETURN(built);
+            dbus::Appender body(request);
             auto added = append_attributes(body, service, account);
             SIHD_UNEXPECTED_RETURN(added);
 
-            auto reply = this->call(*request);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
             dbus::Iter output(*reply);
             auto unlocked = output.get_array<std::string>();
@@ -219,11 +225,12 @@ struct SecretStore::Impl
 
         Result<std::string> default_collection()
         {
-            auto request = dbus::Message::method_call(secrets_service, secrets_path, service_interface, "ReadAlias");
-            SIHD_UNEXPECTED_RETURN(request);
-            auto added = request->add(ZStringView("default"));
+            dbus::Message request;
+            auto built = request.method_call(secrets_service, secrets_path, service_interface, "ReadAlias");
+            SIHD_UNEXPECTED_RETURN(built);
+            auto added = request.add(ZStringView("default"));
             SIHD_UNEXPECTED_RETURN(added);
-            auto reply = this->call(*request);
+            auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
             auto path = dbus::Iter(*reply).get<std::string>();
             SIHD_UNEXPECTED_RETURN(path);
@@ -265,10 +272,11 @@ Result<void> SecretStore::store(ZStringView service, ZStringView account, std::s
     valid = _impl->unlock({*collection});
     SIHD_UNEXPECTED_RETURN(valid);
 
-    auto request = dbus::Message::method_call(secrets_service, *collection, collection_interface, "CreateItem");
-    SIHD_UNEXPECTED_RETURN(request);
+    dbus::Message request;
+    auto built = request.method_call(secrets_service, *collection, collection_interface, "CreateItem");
+    SIHD_UNEXPECTED_RETURN(built);
 
-    dbus::Appender body(*request);
+    dbus::Appender body(request);
     auto properties = body.open_array("{sv}");
     SIHD_UNEXPECTED_RETURN(properties);
     auto added = properties->add_entry("org.freedesktop.Secret.Item.Label",
@@ -290,7 +298,7 @@ Result<void> SecretStore::store(ZStringView service, ZStringView account, std::s
     added = body.add(true);
     SIHD_UNEXPECTED_RETURN(added);
 
-    auto reply = _impl->call(*request);
+    auto reply = _impl->call(request);
     SIHD_UNEXPECTED_RETURN(reply);
     dbus::Iter output(*reply);
     output.next();
@@ -308,11 +316,12 @@ Result<std::string> SecretStore::lookup(ZStringView service, ZStringView account
     if (items->empty())
         return std::unexpected(SecretStore::secret_not_found(service, account));
 
-    auto request = dbus::Message::method_call(secrets_service, items->front(), item_interface, "GetSecret");
-    SIHD_UNEXPECTED_RETURN(request);
-    auto added = request->add_object_path(_impl->session);
+    dbus::Message request;
+    auto built = request.method_call(secrets_service, items->front(), item_interface, "GetSecret");
+    SIHD_UNEXPECTED_RETURN(built);
+    auto added = request.add_object_path(_impl->session);
     SIHD_UNEXPECTED_RETURN(added);
-    auto reply = _impl->call(*request);
+    auto reply = _impl->call(request);
     SIHD_UNEXPECTED_RETURN(reply);
     // (session, parameters, value, content type)
     auto fields = dbus::Iter(*reply).recurse();
@@ -335,9 +344,10 @@ Result<void> SecretStore::remove(ZStringView service, ZStringView account)
 
     for (const std::string & item : *items)
     {
-        auto request = dbus::Message::method_call(secrets_service, item, item_interface, "Delete");
-        SIHD_UNEXPECTED_RETURN(request);
-        auto reply = _impl->call(*request);
+        dbus::Message request;
+        auto built = request.method_call(secrets_service, item, item_interface, "Delete");
+        SIHD_UNEXPECTED_RETURN(built);
+        auto reply = _impl->call(request);
         SIHD_UNEXPECTED_RETURN(reply);
         auto prompt = dbus::Iter(*reply).get<std::string>();
         SIHD_UNEXPECTED_RETURN(prompt);

@@ -194,15 +194,15 @@ class TestSecretService: public ::testing::Test
             Message reply = this->new_reply(call);
             this->send(reply);
 
-            auto signal = Message::signal(prompt_path, "org.freedesktop.Secret.Prompt", "Completed");
-            ASSERT_TRUE(signal.has_value());
-            Appender body(*signal);
+            Message signal;
+            ASSERT_TRUE(signal.signal(prompt_path, "org.freedesktop.Secret.Prompt", "Completed").has_value());
+            Appender body(signal);
             ASSERT_TRUE(body.add(dismissed).has_value());
             auto result = body.open_variant("s");
             ASSERT_TRUE(result.has_value());
             ASSERT_TRUE(result->add("").has_value());
             ASSERT_TRUE(body.close(std::move(*result)).has_value());
-            ASSERT_TRUE(signal->send(_server).has_value());
+            ASSERT_TRUE(signal.send(_server).has_value());
         }
 
         void answer_get_secret(const std::string & secret)

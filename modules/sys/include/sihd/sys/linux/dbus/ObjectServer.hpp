@@ -120,6 +120,8 @@ class ObjectServer
 
         // answers a method call, gives back any other message (signals, replies, NameLost...)
         sihd::util::Result<std::optional<Message>> handle(Message && message);
+        // sends request and answers the calls its peer makes meanwhile, other messages are dropped until the reply
+        sihd::util::Result<Message> call(const Message & request, sihd::util::Duration timeout);
 
         sihd::util::Result<void> emit_properties_changed(const std::string & path,
                                                          const std::string & interface,

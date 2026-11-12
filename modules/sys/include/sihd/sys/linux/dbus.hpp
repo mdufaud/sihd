@@ -32,6 +32,14 @@ sihd::util::Result<std::vector<T>> get_array_property(Connection & connection,
                                                       sihd::util::ZStringView interface,
                                                       sihd::util::ZStringView name,
                                                       sihd::util::Duration timeout);
+template <BasicType T>
+sihd::util::Result<void> set_property(Connection & connection,
+                                      sihd::util::ZStringView destination,
+                                      sihd::util::ZStringView path,
+                                      sihd::util::ZStringView interface,
+                                      sihd::util::ZStringView name,
+                                      const T & value,
+                                      sihd::util::Duration timeout);
 
 std::string
     signal_rule(std::string_view sender, std::string_view path, std::string_view interface, std::string_view member);

@@ -51,10 +51,11 @@ class TestDBusServer: public ::testing::Test
         // the client blocks in call() while the server answers with 'answer'
         Result<Message> call_answered_by(const std::function<void(const Message &)> & answer)
         {
-            auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-            SIHD_UNEXPECTED_RETURN(request);
+            Message request;
+            auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+            SIHD_UNEXPECTED_RETURN(built);
             Result<Message> reply = std::unexpected(Error(ErrorCode::none, "no reply"));
-            std::jthread client([this, &request, &reply] { reply = request->call(_client, Duration(time::sec(5))); });
+            std::jthread client([this, &request, &reply] { reply = request.call(_client, Duration(time::sec(5))); });
             auto call = receive_member(_server, "Ping");
             EXPECT_TRUE(call.has_value());
             if (call.has_value())
@@ -162,12 +163,14 @@ TEST_F(TestDBusServer, test_name_has_owner)
 TEST_F(TestDBusServer, test_sent_call_replies)
 {
     ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
-    auto succeeding = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    auto failing = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(succeeding.has_value()) << succeeding.error().message;
-    ASSERT_TRUE(failing.has_value()) << failing.error().message;
+    Message succeeding;
+    Message failing;
+    auto succeeding_built = succeeding.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    auto failing_built = failing.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(succeeding_built.has_value()) << succeeding_built.error().message;
+    ASSERT_TRUE(failing_built.has_value()) << failing_built.error().message;
 
-    ASSERT_TRUE(succeeding->send(_client).has_value());
+    ASSERT_TRUE(succeeding.send(_client).has_value());
     auto succeeding_call = receive_member(_server, "Ping");
     ASSERT_TRUE(succeeding_call.has_value());
     auto answer = succeeding_call->method_return();
@@ -175,7 +178,7 @@ TEST_F(TestDBusServer, test_sent_call_replies)
     ASSERT_TRUE(answer->send(_server).has_value());
     auto success = receive_reply(_client);
 
-    ASSERT_TRUE(failing->send(_client).has_value());
+    ASSERT_TRUE(failing.send(_client).has_value());
     auto failing_call = receive_member(_server, "Ping");
     ASSERT_TRUE(failing_call.has_value());
     auto refusal = failing_call->error_return("org.sihd.Error.Failed", "it failed");
@@ -196,12 +199,13 @@ TEST_F(TestDBusServer, test_sent_call_replies)
 TEST_F(TestDBusServer, test_object_path_argument)
 {
     ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
-    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    auto invalid = request->add_object_path("not a path");
-    ASSERT_TRUE(request->add_object_path("/org/sihd/Device/1").has_value());
+    Message request;
+    auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    auto invalid = request.add_object_path("not a path");
+    ASSERT_TRUE(request.add_object_path("/org/sihd/Device/1").has_value());
 
-    ASSERT_TRUE(request->send(_client).has_value());
+    ASSERT_TRUE(request.send(_client).has_value());
     auto call = receive_member(_server, "Ping");
 
     ASSERT_FALSE(invalid.has_value());
@@ -216,15 +220,16 @@ TEST_F(TestDBusServer, test_object_path_argument)
 TEST_F(TestDBusServer, test_received_call_metadata)
 {
     ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
-    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    ASSERT_TRUE(request->add("hello").has_value());
-    ASSERT_TRUE(request->add_signature("s").has_value());
-    ASSERT_TRUE(request->set_no_reply().has_value());
+    Message request;
+    auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.add("hello").has_value());
+    ASSERT_TRUE(request.add_signature("s").has_value());
+    ASSERT_TRUE(request.set_no_reply().has_value());
 
-    ASSERT_TRUE(request->send(_client).has_value());
+    ASSERT_TRUE(request.send(_client).has_value());
     auto call = receive_member(_server, "Ping");
-    auto locked = request->set_no_reply();
+    auto locked = request.set_no_reply();
 
     ASSERT_TRUE(call.has_value());
     EXPECT_EQ(call->destination(), "org.sihd.Test");
@@ -294,9 +299,10 @@ TEST_F(TestDBusServer, test_release_name_not_owned)
 TEST_F(TestDBusServer, test_caller_credentials)
 {
     ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
-    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    ASSERT_TRUE(request->send(_client).has_value());
+    Message request;
+    auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.send(_client).has_value());
     auto call = receive_member(_server, "Ping");
     ASSERT_TRUE(call.has_value());
 
@@ -318,15 +324,16 @@ TEST_F(TestDBusServer, test_unix_fd_argument)
     ASSERT_TRUE(_server.request_name("org.sihd.Test").has_value());
     EventFd event;
     ASSERT_TRUE(event.open().has_value());
-    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    ASSERT_TRUE(request->add_unix_fd(event.fd()).has_value());
+    Message request;
+    auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.add_unix_fd(event.fd()).has_value());
 
-    ASSERT_TRUE(request->send(_client).has_value());
+    ASSERT_TRUE(request.send(_client).has_value());
     auto call = receive_member(_server, "Ping");
     ASSERT_TRUE(call.has_value());
     auto received = Iter(*call).get_unix_fd();
-    auto not_a_fd = Iter(*request).get<int32_t>();
+    auto not_a_fd = Iter(request).get<int32_t>();
     ASSERT_TRUE(received.has_value()) << received.error().message;
     ASSERT_TRUE(event.notify(3).has_value());
 
@@ -342,12 +349,13 @@ TEST_F(TestDBusServer, test_unix_fd_argument)
 
 TEST_F(TestDBusServer, test_unix_fd_invalid)
 {
-    auto request = Message::method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
-    ASSERT_TRUE(request.has_value()) << request.error().message;
-    ASSERT_TRUE(request->add("not a fd").has_value());
+    Message request;
+    auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    ASSERT_TRUE(request.add("not a fd").has_value());
 
-    auto invalid = request->add_unix_fd(-1);
-    auto mismatch = Iter(*request).get_unix_fd();
+    auto invalid = request.add_unix_fd(-1);
+    auto mismatch = Iter(request).get_unix_fd();
 
     EXPECT_EQ(code_of(invalid), ErrorCode::invalid_argument);
     EXPECT_EQ(error_of(invalid), "cannot fstat a negative fd");
