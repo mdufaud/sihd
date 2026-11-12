@@ -4,5 +4,6 @@
 #include <sihd/usb/UsbDevice.hpp>
 #include <sihd/usb/UsbHandle.hpp>
 #include <sihd/usb/UsbMonitor.hpp>
+#include <sihd/usb/taxonomy.hpp>
 
 #endif

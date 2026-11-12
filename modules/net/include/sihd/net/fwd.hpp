@@ -18,6 +18,7 @@ class IcmpSender;
 class IpAddr;
 class NetInterface;
 class NetMonitor;
+class OuiRegistry;
 class Pinger;
 class Socket;
 class TcpClient;

@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include <sihd/util/Logger.hpp>
+#include <sihd/wifi/ies.hpp>
 #include <sihd/wifi/taxonomy.hpp>
 
 namespace test
@@ -139,6 +140,30 @@ TEST_F(TestTaxonomy, test_taxonomy_a_signature_needs_both_requests)
     EXPECT_EQ(without_assoc.error().code, ErrorCode::invalid_argument);
     ASSERT_FALSE(without_probe.has_value());
     EXPECT_EQ(without_probe.error().code, ErrorCode::invalid_argument);
+}
+
+TEST_F(TestTaxonomy, test_taxonomy_vendor_from_oui)
+{
+    static_assert(taxonomy::vendor_from_oui({0x00, 0x17, 0xf2}) == "Apple");
+    EXPECT_EQ(taxonomy::vendor_from_oui({0x00, 0xe0, 0x4c}), "Realtek");
+
+    // microsoft, the wi-fi alliance
+    EXPECT_EQ(taxonomy::vendor_from_oui(ies::microsoft_oui), std::nullopt);
+    EXPECT_EQ(taxonomy::vendor_from_oui({0x50, 0x6f, 0x9a}), std::nullopt);
+}
+
+TEST_F(TestTaxonomy, test_taxonomy_vendor_of_the_elements)
+{
+    // ssid, microsoft wps type 4, broadcom type 2, apple type 6
+    const std::vector<uint8_t> elements = join({element(0, {}),
+                                                element(221, {0x00, 0x50, 0xf2, 0x04}),
+                                                element(221, {0x00, 0x10, 0x18, 0x02, 0x00}),
+                                                element(221, {0x00, 0x17, 0xf2, 0x06, 0x01})});
+    // ssid, wi-fi alliance p2p type 9
+    const std::vector<uint8_t> standard = join({element(0, {}), element(221, {0x50, 0x6f, 0x9a, 0x09})});
+
+    EXPECT_EQ(taxonomy::vendor(ArrUByteView(elements)), "Broadcom");
+    EXPECT_EQ(taxonomy::vendor(ArrUByteView(standard)), std::nullopt);
 }
 
 } // namespace test

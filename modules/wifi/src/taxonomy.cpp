@@ -171,4 +171,17 @@ Result<std::string> signature(ArrUByteView probe_request_elements, ArrUByteView 
     return fmt::format("wifi4|probe:{}|assoc:{}", probe, assoc);
 }
 
+std::optional<std::string_view> vendor(ArrUByteView information_elements)
+{
+    for (const ies::Element & element : ies::readable_elements(information_elements))
+    {
+        const std::optional<ies::Vendor> found = ies::vendor_of(element);
+        if (!found)
+            continue;
+        if (const std::optional<std::string_view> name = vendor_from_oui(found->oui))
+            return name;
+    }
+    return std::nullopt;
+}
+
 } // namespace sihd::wifi::taxonomy

@@ -15,6 +15,7 @@
 #include <sihd/net/IpAddr.hpp>
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/NetMonitor.hpp>
+#include <sihd/net/OuiRegistry.hpp>
 #include <sihd/net/Pinger.hpp>
 #include <sihd/net/Socket.hpp>
 #include <sihd/net/TcpClient.hpp>
