@@ -29,13 +29,13 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 
 ### Messages
 
-- `HttpRequest`: parsed request. `RequestType` enum (`Get`, `Post`, `Put`, `Delete`, `Options`, `Patch`, `Head`). Accessors: `path_param`, `query_param`, `cookie`, `content`, `content_as_json`, `has_content`, `http_header`, `client_ip`, `auth_user`, `auth_token`, `is_authenticated`, `multipart`. `from_string` and `to_string` parse and serialize raw requests.
+- `HttpRequest`: parsed request. `RequestType` enum (`Get`, `Post`, `Put`, `Delete`, `Options`, `Patch`, `Head`). Accessors: `path_param`, `query_param`, `cookie`, `content`, `content_as_json`, `has_content`, `http_header`, `client_ip`, `auth_user`, `auth_token`, `is_authenticated`, `multipart`. `from_string` parses a raw request into the request (a failure keeps it) and `to_string` serializes it.
 - `HttpResponse`: response under construction. `set_status`, `set_plain_content`, `set_byte_content`, `set_json_content`, `set_file_content` (MIME type from extension), `set_content_type`, `set_cookie`, `set_stream_provider` (chunked producer), `http_header`, `status`, `content`.
 - `IBodyStream`, `BodyStreamFunc`, `BodyStreamFile`: receive a request body chunk by chunk instead of buffering it. `BodyStreamFile` writes to a path or a path provider. Attach through `WebService::set_body_stream`.
 - `HttpHeader`: header map with typed setters (`set_content_type`, `set_content_length`, `set_server`, `set_header`), `add_header_from_str`, `find`, `get`, `content_length`. `header_param` extracts a parameter from a header value.
 - `HttpStatus`: status code constants and helpers `to_string`, `is_redirect`, `is_post_downgrade`, `is_rate_limit`.
 - `MimeTypes`: extension to MIME type table; `get`, `add`.
-- `Multipart`: multipart body. `parse` from a body and content type, `add_field`, `add_file`, `value`, `file`, `parts`, `boundary`.
+- `Multipart`: multipart body. `parse(body, content_type)` (a failure keeps the parts) or the throwing `Multipart(body, content_type)`, `add_field`, `add_file`, `value`, `file`, `parts`, `boundary`.
 
 ### Client functions
 

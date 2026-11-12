@@ -63,6 +63,12 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
   - Windows: `IfType` (71 wifi, 6 ethernet, 243/244 cellular, 23 ppp, which also covers the built-in VPN, 131 and 53 tunnel, the latter declared by wintun, WireGuard-NT, TAP-Windows6 and ovpn-dco). `hardware` is `HardwareInterface` from `GetIfEntry2`. Not verified on a real Windows: Wine reports `HardwareInterface` for everything but loopback, and the IfType of Hyper-V vEthernet or AnyConnect adapters is unknown.
   - Android apps cannot read sysfs (AOSP sepolicy, not verified on a device): every kind but loopback is `unknown`, `hardware()` is false, mtu and speed are 0.
 
+### Vendor names
+
+- `OuiRegistry`: the IEEE MA-L registry, read at runtime and never embedded. `load(path)` reads an IEEE `oui.txt`: `/usr/share/hwdata/oui.txt` on most Linux systems, or the file the IEEE publishes at `https://standards-oui.ieee.org/oui/oui.txt`. A malformed `(hex)` line, or a file without any, is `invalid_argument` and keeps the registry loaded before. The constructor taking a path loads it or throws `std::runtime_error`.
+- `vendor(address)`: the organization owning the first 3 octets of 6 bytes, or of the `AA:BB:CC:DD:EE:FF` text in either case (`NetInterface::mac_addr()`, a bluetooth address). Empty for an unknown OUI, a malformed text, a locally administered address (bit 0x02 of the first octet: randomized addresses) or a group address (bit 0x01).
+- The 28 and 36 bits blocks (MA-M, MA-S) are not read.
+
 ### Routes
 
 - `route::find(destination)`: the `Route` the system picks for a destination: `interface_name`, `gateway` (empty for an on-link route), `source` (the local address used) and `metric`. Policy routing applies, so a wg-quick tunnel (fwmark rules) or an OpenVPN `def1` tunnel (0/1 + 128/1 routes) shows up here. A link-local IPv6 destination with a scope id is looked up on that link. `not_found` when the destination is unreachable.
@@ -72,10 +78,10 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 
 ### Monitoring
 
-- `NetMonitor`: `Observable<NetMonitor>` and `IRunnable`, shaped like `sys::FileWatcher`. The constructor subscribes to the system notifications through a private `Result`-returning open and throws its error message when refused.
+- `NetMonitor`: `Observable<NetMonitor>` and `IRunnable`, shaped like `sys::FileWatcher`. `open()` subscribes to the system notifications (`already_exists` once open) and `run()` returns false before it; the run-timeout constructor only sets the timeout.
 - `run()` waits up to the run timeout (`set_run_timeout`, 100 ms by default), drains every pending change into `events()` and, only when something changed, notifies the observers once, on the calling thread. `events()` holds the changes of the last run only. It returns false only when reading the notifications failed. Run it in a loop or a `StepWorker`.
 - `NetMonitorEvent`: `type` (`link`, `address`, `route`, `overflow`), `removed`, `interface_name` and the `address` of an address event. An `overflow` event means notifications were dropped: re-read everything. A connection change sends a burst of events, so re-query `route::find` on them instead of tracking each one. `interface_name` names the link. On Linux the monitor keeps the names of the links it knows, listed at construction then followed by the link events, so the addresses and routes a removed link takes along keep its name. Elsewhere it is the name the system still knows, empty when it can no longer be resolved.
-  - Linux: rtnetlink multicast groups (an Android app may not bind them: the constructor throws).
+  - Linux: rtnetlink multicast groups (an Android app may not bind them: `open()` fails).
   - Windows: `NotifyIpInterfaceChange`, `NotifyUnicastIpAddressChange` and `NotifyRouteChange2`. Wine accepts them but never notifies.
 
 ### Netlink (Linux)
@@ -87,7 +93,7 @@ Socket networking over IP and Unix domain sockets. It provides address handling,
 The way to capture packets on Android without root: libpcap needs `CAP_NET_RAW`, an app gets a tun from `VpnService` instead, and everything routed into the tun must be relayed or the phone loses its network.
 
 - `sihd/net/Tun.hpp`: `Tun`, one `read` or `write` = one IP packet, no link header; `read` gives `would_block` when no packet is pending, `wait_readable(timeout)` waits for one (false on timeout). `open(name)` (1 to 15 characters) creates the interface without address:
-  - Linux: `/dev/net/tun`, needs `CAP_NET_ADMIN`, the interface stays down; `Tun::adopt(fd)` and `fd()` (`not_supported` on Windows) adopt the non-blocking descriptor `VpnService.Builder.establish()` hands;
+  - Linux: `/dev/net/tun`, needs `CAP_NET_ADMIN`, the interface stays down; `adopt(fd)` (or the constructor taking the descriptor, which throws) and `fd()` (`not_supported` on Windows) adopt the non-blocking descriptor `VpnService.Builder.establish()` hands;
   - Windows: loads `wintun.dll` (shipped beside the program, from wintun.net) and needs admin rights; a missing DLL is `not_found`, a full ring `would_block`.
 - `sihd/net/linux/TunRelay.hpp`: `linux_::TunRelay`, a blocking service that takes a `Tun` (`set_tun`) and terminates the flows it reads on real sockets:
   - UDP: one connected socket per flow, dropped after `set_udp_timeout` (60 s) of silence;
@@ -126,7 +132,7 @@ The way to capture packets on Android without root: libpcap needs `CAP_NET_RAW`,
 
 - `DevTcpClient`, `DevTcpServer`, `DevUdpSender`, `DevUdpReceiver`: `core::Device` wrappers. They are configured with `set_host`, `set_port`, `set_unix_path`, `set_buffer_capacity`, `set_poll_timeout`, and connect to channels (`handle(Channel *)`) or to a `INetReceiver`/`BasicServerHandler`.
 - `DevTcpServer` channels: `rx` (the raw payloads of every client) and `tx` (a raw payload sent to every client) keep the data pure, to plug in anything. `rx_from` and `tx_to` carry an encoded `ClientFrame`: the client id then the payload, `rx_from` for each payload a client sends and `tx_to` to send to one client. A `tx_to` frame for a client that left is dropped and logged, never sent to a later client. `connected` and `disconnected` (`ULONG`) give the id of each client that comes or leaves, `client_count` the clients served.
-- `ClientFrame(client_id, payload).encode()` builds a frame and `ClientFrame::decode(frame)` reads one (`header_size` bytes of id in host byte order, then the payload), with `client_id()` and `payload()`: an `ArrCharView` into the decoded frame, so a frame builds from a plain string and `payload().str()` gives the text back. `decode` is `invalid_argument` for a frame shorter than its header.
+- `ClientFrame(client_id, payload).encode()` builds a frame and `decode(frame)` reads one into a `ClientFrame()`, keeping it on failure (the `ClientFrame(frame)` constructor throws instead) (`header_size` bytes of id in host byte order, then the payload), with `client_id()` and `payload()`: an `ArrCharView` into the decoded frame, so a frame builds from a plain string and `payload().str()` gives the text back. `decode` is `invalid_argument` for a frame shorter than its header.
 
 ## Example
 
@@ -179,4 +185,4 @@ Adapted from `modules/net/test/linux/TestNetNamespace.cpp` and `modules/net/demo
 
 ## Scripting
 
-Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers`, `ClientFrame` (`ClientFrame(client_id, array)` in Python, `ClientFrame.new(client_id, array)` in Lua, then `encode()`; static `decode(array)`; `payload()` gives a copy) and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, the refused `NetMonitor` constructor included. In Lua, failures raise a bound `Error` (`message`, `code`) that `pcall` catches, the kinds are `NetInterface.Kind`, the event types `NetMonitorEventType`, and the monitor is built with `NetMonitor.open([timeout])`, which raises when refused.
+Exposed to Lua (`LuaNetApi`) and Python (`PyNetApi`). Both bind `NetInterface`, `route`, `dns.servers`, `ClientFrame` (`ClientFrame(client_id, array)` in Python, `ClientFrame.new(client_id, array)` in Lua, then `encode()`; `decode(array)` on a `ClientFrame()`; `payload()` gives a copy) and `NetMonitor`, whose `run()` is read through `events()`: no observer crosses into the scripts. Both expose the same `NetInterface` accessors. Python raises `sihd.Error` (a `RuntimeError`) on failures, a refused `NetMonitor.open` included. In Lua, failures raise a bound `Error` (`message`, `code`) that `pcall` catches, the kinds are `NetInterface.Kind`, the event types `NetMonitorEventType`, and the monitor is `NetMonitor()`, then `set_run_timeout` and `open`, which raises when refused; both bind `is_open`.

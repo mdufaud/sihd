@@ -72,7 +72,7 @@
 
 ### Time
 
-- `Timestamp`: absolute time since the epoch. `now`, `from_str`, `str`, `local_str`, `format`, `local_format`, `calendar`, `clocktime`, `floor_day`, `modulo_min`, `in_interval`, `ts`, `tv`, `tm`.
+- `Timestamp`: absolute time since the epoch. `now`, `from_str` (parses into the timestamp, a failure keeps it; the constructor taking a date string throws), `str`, `local_str`, `format`, `local_format`, `calendar`, `clocktime`, `floor_day`, `modulo_min`, `in_interval`, `ts`, `tv`, `tm`.
 - `Duration`: signed time span with `str`; `TimeBase<T>`: shared arithmetic and conversions (`nanoseconds` to `days`, `floor`, `duration`).
 - `Clocktime`, `Calendar`: broken-down time structures.
 - `IClock`, `SteadyClock`, `SystemClock`, `Clock`: clock abstraction. `Scheduler`, `RateLimiter` and `TokenBucket` accept an injected clock through `set_clock`.
@@ -121,7 +121,7 @@
   - Search and output: `search` (matches a selection string against a list), `print`, `println`, `generate_random`, `generate_random_printable`.
 - `ZStringView`: a `std::string_view` guaranteed NUL-terminated, built from a literal, a `std::string` or a `const char *`, never from a `std::string_view` (`c_str`, `view`). C api wrappers (`sys::linux_::dbus`, `fs::read_all`) take it, and their string constants are `constexpr ZStringView`.
 - `Url`: parsed URL components (`scheme`, `userinfo`, and others) with `decode`, `encode`, `str_encode`, `str_decode`.
-- `Regex`: compiled PCRE2 pattern (`compile` with `Mode`, `matches`, `find_all`, `replace_all`) returning `Result`.
+- `Regex`: PCRE2 pattern compiled by `compile(pattern, Mode)` or the constructor taking them (it throws `std::runtime_error`), then `matches`, `find_all`, `replace_all` returning `Result` (`not_initialized` before a compile).
 - `mime.hpp`: MIME type constants and matching (`compatible`, `match_offered`, `best_match`).
 - `locale.hpp`: `create_locale` and `normalize_locale_name` for a `std::locale` from a name.
 - `LoadingBar`, `LoadingBarConfiguration`: terminal progress bar (`add_progress`, `print`).

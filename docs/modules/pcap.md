@@ -33,7 +33,7 @@ Packet capture, packet injection and capture-file I/O on top of libpcap. It offe
   - A channel timestamp is its write time: the capture time travels in the packet.
   - `realtime` conf: a file is replayed at the pace it was captured, the time between two packets is waited before the second one. Off by default, a file is read as fast as its consumers take it.
   - Live capture waits 100 ms at most per read, in immediate mode. A file ends with `end_of_file`, a read error with `failed`: the capture thread stops in both cases.
-- `CapturedPacket`: a packet and its capture metadata in one buffer. `CapturedPacket(timestamp, original_length, datalink, data).encode()` writes the capture time in nanoseconds, the length on the wire and the datalink, in host byte order, then the bytes; `CapturedPacket::decode(buffer)` reads them back (`invalid_argument` when shorter than `header_size`), its `data()` pointing into the buffer.
+- `CapturedPacket`: a packet and its capture metadata in one buffer. `CapturedPacket(timestamp, original_length, datalink, data).encode()` writes the capture time in nanoseconds, the length on the wire and the datalink, in host byte order, then the bytes; `decode(buffer)` reads them back (`invalid_argument` when shorter than `header_size`, the packet kept) and `CapturedPacket(buffer)` throws its error message, `data()` pointing into the buffer.
 
 ### Interfaces
 

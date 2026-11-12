@@ -19,6 +19,11 @@ USB devices through libusb: list the connected devices with their full descripto
 - `UsbConfiguration`: `value`, `attributes`, `max_power_ma` (bMaxPower in 8 mA units at SuperSpeed and above, 2 mA below), `interfaces`. `UsbInterface`: `number`, `alt_settings`. `UsbAltSetting`: `number`, `interface_class`, `interface_subclass`, `interface_protocol`, `endpoints`. `UsbEndpoint`: `address` (bit 7 set for in), `direction` (`UsbDirection`), `transfer_type` (`UsbTransferType`: control, isochronous, bulk, interrupt), `max_packet_size` (bits 10:0 of wMaxPacketSize: the extra transactions per microframe of a high-speed isochronous or interrupt endpoint are left out), `interval`.
 - A configuration the system refuses to read is left out: `configurations.size()` is then smaller than `configuration_count`, the rest of the scan is kept. Class-specific descriptors (HID report, CDC functional) are not decoded.
 
+### Device kind
+
+- `sihd::usb::taxonomy` (`taxonomy.hpp`): `kind_from_class(class_code, subclass, protocol)` (constexpr) follows the class codes the USB-IF defines, for a device or an interface descriptor. `Kind`: `audio`, `video`, `keyboard` and `mouse` (protocols 1 and 2 of the HID boot interface subclass), `hid`, `storage`, `hub`, `printer`, `image`, `serial` (CDC ACM), `network` (CDC ECM, ATM, EEM, NCM, MBIM, RNDIS), `bluetooth`, `smart_card`, `healthcare`, `billboard`, `firmware_update` (DFU), `diagnostic`, `vendor_specific`, `unknown`. `kind_str` names the values.
+- `kind(device)`: the device class, unless it is 0x00 (defined per interface) or 0xEF (interface association). Then the first known interface of its configurations decides, a keyboard or a mouse before anything else. Every configuration is read, since the active one is not known without opening the device: an adapter whose first configuration is vendor specific, like the RTL8153 ethernet one, is `vendor_specific`.
+
 ### Opened device
 
 - `UsbHandle`, move-only, starts closed. `is_open()`, `close()`; opening an open handle gives `already_exists` and keeps it open.
@@ -47,7 +52,7 @@ USB devices through libusb: list the connected devices with their full descripto
 ### Hotplug
 
 - `UsbMonitor` (`Observable<UsbMonitor>` + `IRunnable`, form of `NetMonitor`): each `run()` handles libusb events for up to `set_run_timeout` (100 ms by default, negative waits for a change), fills `events()` (`UsbMonitorEvent { type, device }`, `UsbMonitorEventType::arrived` or `left`) and notifies the observers when there are some. The devices already plugged arrive at the first `run()`, which then returns without waiting its timeout, so no device is missed between a scan and the monitor.
-- `UsbMonitor::supported` is true on Linux only. The constructor opens the subscription through a private `Result`-returning open and throws its error message: on Windows (libusb has no hotplug there), on Android (no device discovery) and when the subscription is refused. libusb is built without udev here: hotplug uses its netlink backend.
+- `UsbMonitor::supported` is true on Linux only. `open()` subscribes (`already_exists` once open) and `run()` returns false before it; the run-timeout constructor only sets the timeout. `open()` returns `not_supported` on Windows (libusb has no hotplug there) and on Android (no device discovery). libusb is built without udev here: hotplug uses its netlink backend.
 
 ### Hardware database names (Linux)
 

@@ -117,7 +117,7 @@ Linux backends (X11, Wayland) compile only when the `x11=1` or `wayland=1` build
 
 Every header in `sihd/sys/linux/` raises a compile error on other platforms.
 
-- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus, or to a bus address: `open`, `is_open`, `add_match`, `remove_match`, `request_name` (`NameOptions`: `allow_replacement`, `replace_existing`, `queue`), `release_name`, `name_has_owner`, `credentials` of a caller (user, pid, groups), `interrupt`, and `disable_auto_start` so its calls fail instead of starting an unowned activatable service. `Message` builds method calls, signals and replies (`method_call`, `signal`, `method_return`, `error_return`, `properties_get`, `properties_get_all`, `set_no_reply`, `add`, `add_object_path`, `add_signature`, `add_unix_fd`) and reads them (`type`, `path`, `interface`, `member`, `sender`, `destination`, `signature`, `expects_reply`, `error_name`, `to_error`, `changed_property` of a `PropertiesChanged` signal). `call` waits for one reply, `call_all` sends every request before awaiting the replies, in request order; `send`, `receive` and `receive_until` (the first accepted message, `timeout` otherwise) stay asynchronous. An error reply becomes `permission_denied` for `AccessDenied`, `timeout` for `NoReply`, `invalid_argument` for `InvalidArgs`, `not_supported` for `NotSupported`, `io_error` otherwise, its message starting with the error name (`has_error_name`). `Appender` writes values and containers (`add_array`, `add_entry` for an `a{sv}` entry, `open_array`, `open_variant`, `open_struct`, `open_dict_entry`, `close`) checked against their signature and their nesting order (a struct closes with at least one field), so libdbus never aborts; `Iter` reads them back (`get`, `get_array`, `get_unix_fd` as an owning `UnixFd`, `signature`, `for_each_entry` with the variants unwrapped). Fixed values cover `bool`, `uint8_t`, `int16_t`, `uint16_t`, `int32_t`, `uint32_t`, `int64_t`, `uint64_t` and `double`. `get_property` / `get_array_property` read one property, `signal_rule` / `properties_changed_rule` build match rules. A thread calling while another one receives needs its own `Connection`: `receive` can steal the reply `call` awaits. Not available on Android or Emscripten.
+- `linux_::dbus::Connection`: D-Bus connection to the `session` or `system` bus, or to a bus address: `open` (replaces an open connection on success only), `is_open`, `add_match`, `remove_match`, `request_name` (`NameOptions`: `allow_replacement`, `replace_existing`, `queue`), `release_name`, `name_has_owner`, `credentials` of a caller (user, pid, groups), `interrupt`, and `disable_auto_start` so its calls fail instead of starting an unowned activatable service. A `Message` starts empty and its members fill it: `method_call`, `signal`, `properties_get` and `properties_get_all` replace what it holds on success and keep it on failure, then `set_no_reply`, `add`, `add_object_path`, `add_signature` and `add_unix_fd` write it and `type`, `path`, `interface`, `member`, `sender`, `destination`, `signature`, `serial`, `reply_serial`, `expects_reply`, `error_name`, `to_error`, `changed_property` of a `PropertiesChanged` signal (the value of that property, `nullopt` when the signal does not carry it) read it. `method_return` and `error_return` return the reply to a received call. An empty message reads as empty, and every action on it fails with `not_initialized`. `call` waits for one reply, `call_all` sends every request before awaiting the replies, in request order; `send`, `receive` (fills the message, `false` once the timeout elapsed or `interrupt` ran) and `receive_until` (fills it with the first accepted message, `timeout` otherwise) stay asynchronous. An error reply becomes `permission_denied` for `AccessDenied`, `timeout` for `NoReply`, `invalid_argument` for `InvalidArgs`, `not_supported` for `NotSupported`, `io_error` otherwise, its message starting with the error name (`has_error_name`). `Appender` writes values and containers (`add_array`, `add_byte_map` for an `a{qv}` or `a{sv}` of byte arrays, `add_empty_vardict`, `add_entry` for an `a{sv}` entry, `open_array`, `open_variant`, `open_struct`, `open_dict_entry`, `close`) checked against their signature and their nesting order (a struct closes with at least one field), so libdbus never aborts; `Iter` reads them back (`get`, `get_array`, `get_byte_map`, `get_unix_fd` as an owning `UnixFd`, `signature`, `recurse` into a child `Iter`, `for_each_entry` with the variants unwrapped). Fixed values cover `bool`, `uint8_t`, `int16_t`, `uint16_t`, `int32_t`, `uint32_t`, `int64_t`, `uint64_t` and `double`. `get_property` / `get_array_property` read one property, `set_property` writes one, `signal_rule` / `properties_changed_rule` build match rules. A thread calling while another one receives needs its own `Connection`: `receive` can steal the reply `call` awaits. Not available on Android or Emscripten.
 - `linux_::dbus::ObjectServer`: answers the method calls of registered objects from your `receive` loop, see [D-Bus service](#d-bus-service).
 - `linux_::prctl`: process control flags: `set_pdeathsig`, `set_dumpable`, `set_no_new_privs`, `set_child_subreaper`, with matching getters.
 - `linux_::cgroup`: cgroup v2 state and limits: `is_container`, `current_group`, `memory_max`, `memory_current`, `cpu_max`, `write_memory_max`, `write_cpu_max`.
@@ -274,6 +274,8 @@ A method handler receives a `Call`:
 - Moving the `Call` out of the handler defers the answer: `Call::send` then works from any thread while the connection lives. A `Call` dropped unanswered answers `Failed`, so the client never waits for its timeout.
 - Nothing is sent when the caller set `set_no_reply`.
 
+A service that calls back while answering (an agent, a profile) needs its peer served during the call: `call(request, timeout)` sends the request and answers the method calls reaching the objects until its reply arrives, matched by `Message::serial` / `reply_serial`. Other messages received meanwhile are dropped, so the connection should carry nothing else.
+
 Everything else in `ObjectServer` stays on the loop thread.
 
 ```cpp
@@ -320,13 +322,14 @@ Result<void> serve(const std::atomic<bool> & stop)
     SIHD_UNEXPECTED_RETURN(owned);
 
     // another thread stops the loop with stop = true then connection.interrupt()
+    Message message;
     while (!stop)
     {
-        auto received = Message::receive(connection, Duration(time::sec(1)));
+        auto received = message.receive(connection, Duration(time::sec(1)));
         SIHD_UNEXPECTED_RETURN(received);
-        if (!received->has_value())
+        if (!*received)
             continue;
-        auto other = server.handle(std::move(**received));
+        auto other = server.handle(std::move(message));
         SIHD_UNEXPECTED_RETURN(other);
         if (other->has_value() && (*other)->member() == "NameLost")
             break;
