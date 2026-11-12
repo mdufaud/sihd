@@ -17,7 +17,7 @@ extlibs = {
     # http
     "libwebsockets": "4.5.2",
     "curl": "7.87.0",
-    "openssl": "3.1.0",
+    "openssl": "3.6.4",
     "libssh": "0.10.6",
     "libcap": "2.70",
     "libuv": "1.46.0",
