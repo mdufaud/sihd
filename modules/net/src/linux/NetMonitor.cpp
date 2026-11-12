@@ -185,22 +185,29 @@ struct NetMonitor::Impl
         netlink::Netlink channel;
         sihd::sys::Poll poll {1};
         InterfaceNames names;
+
+        static Result<std::unique_ptr<Impl>> open()
+        {
+            auto impl = std::make_unique<Impl>();
+            auto opened = impl->channel.open(NETLINK_ROUTE);
+            SIHD_UNEXPECTED_RETURN(opened);
+            auto subscribed = impl->channel.subscribe(monitored_groups);
+            SIHD_UNEXPECTED_RETURN(subscribed);
+            auto nonblocking = impl->channel.set_nonblocking();
+            SIHD_UNEXPECTED_RETURN(nonblocking);
+            impl->poll.set_read_fd(impl->channel.fd());
+            // dumped once subscribed: a link created in between is in the dump or in the events
+            impl->names = dump_link_names();
+            return impl;
+        }
 };
 
-NetMonitor::NetMonitor(): _impl(std::make_unique<Impl>())
+NetMonitor::NetMonitor()
 {
-    auto opened = _impl->channel.open(NETLINK_ROUTE);
-    if (!opened)
-        throw std::runtime_error(opened.error().message);
-    auto subscribed = _impl->channel.subscribe(monitored_groups);
-    if (!subscribed)
-        throw std::runtime_error(subscribed.error().message);
-    auto nonblocking = _impl->channel.set_nonblocking();
-    if (!nonblocking)
-        throw std::runtime_error(nonblocking.error().message);
-    _impl->poll.set_read_fd(_impl->channel.fd());
-    // dumped once subscribed: a link created in between is in the dump or in the events
-    _impl->names = dump_link_names();
+    auto impl = Impl::open();
+    if (!impl)
+        throw std::runtime_error(impl.error().message);
+    _impl = std::move(*impl);
 }
 
 NetMonitor::~NetMonitor() = default;

@@ -4,6 +4,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/sys/os.hpp>
@@ -22,11 +23,16 @@ namespace
 
 constexpr size_t max_pending_events = 4096;
 
-void throw_if_failed(unsigned long code, const std::string & notifications)
+Result<void> check_subscribed(unsigned long code, std::string_view notifications)
 {
     if (code != NO_ERROR)
-        throw std::runtime_error(
-            fmt::format("{} notifications: {}", notifications, sihd::sys::os::error_str(static_cast<int>(code))));
+    {
+        return std::unexpected(Error(ErrorCode::io_error,
+                                     "{} notifications: {}",
+                                     notifications,
+                                     sihd::sys::os::error_str(static_cast<int>(code))));
+    }
+    return {};
 }
 
 } // namespace
@@ -43,6 +49,8 @@ struct NetMonitor::Impl
         HANDLE route_notification = nullptr;
 
         ~Impl();
+
+        static Result<std::unique_ptr<Impl>> open();
 
         std::string interface_name(const NET_LUID & luid);
         void push(NetMonitorEventType type, MIB_NOTIFICATION_TYPE notification, const NET_LUID & luid, IpAddr address);
@@ -123,23 +131,36 @@ VOID WINAPI NetMonitor::Impl::on_route(PVOID context, PMIB_IPFORWARD_ROW2 row, M
         static_cast<Impl *>(context)->push(NetMonitorEventType::route, notification, row->InterfaceLuid, {});
 }
 
-NetMonitor::NetMonitor(): _impl(std::make_unique<Impl>())
+Result<std::unique_ptr<NetMonitor::Impl>> NetMonitor::Impl::open()
 {
     auto adapter_list = adapters::list(GAA_FLAG_SKIP_UNICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST
                                        | GAA_FLAG_SKIP_DNS_SERVER);
-    if (!adapter_list)
-        throw std::runtime_error(adapter_list.error().message);
+    SIHD_UNEXPECTED_RETURN(adapter_list);
+    auto impl = std::make_unique<Impl>();
     for (const IP_ADAPTER_ADDRESSES *adapter : adapters::named(*adapter_list))
-        _impl->aliases[adapter->Luid.Value] = adapters::friendly_name(*adapter);
+        impl->aliases[adapter->Luid.Value] = adapters::friendly_name(*adapter);
 
-    throw_if_failed(
-        NotifyIpInterfaceChange(AF_UNSPEC, &Impl::on_interface, _impl.get(), FALSE, &_impl->interface_notification),
+    auto interfaces = check_subscribed(
+        NotifyIpInterfaceChange(AF_UNSPEC, &on_interface, impl.get(), FALSE, &impl->interface_notification),
         "interface");
-    throw_if_failed(
-        NotifyUnicastIpAddressChange(AF_UNSPEC, &Impl::on_address, _impl.get(), FALSE, &_impl->address_notification),
+    SIHD_UNEXPECTED_RETURN(interfaces);
+    auto addresses = check_subscribed(
+        NotifyUnicastIpAddressChange(AF_UNSPEC, &on_address, impl.get(), FALSE, &impl->address_notification),
         "address");
-    throw_if_failed(NotifyRouteChange2(AF_UNSPEC, &Impl::on_route, _impl.get(), FALSE, &_impl->route_notification),
-                    "route");
+    SIHD_UNEXPECTED_RETURN(addresses);
+    auto routes = check_subscribed(
+        NotifyRouteChange2(AF_UNSPEC, &on_route, impl.get(), FALSE, &impl->route_notification),
+        "route");
+    SIHD_UNEXPECTED_RETURN(routes);
+    return impl;
+}
+
+NetMonitor::NetMonitor()
+{
+    auto impl = Impl::open();
+    if (!impl)
+        throw std::runtime_error(impl.error().message);
+    _impl = std::move(*impl);
 }
 
 NetMonitor::~NetMonitor() = default;

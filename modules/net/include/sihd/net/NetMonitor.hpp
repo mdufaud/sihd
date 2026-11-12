@@ -53,6 +53,7 @@ class NetMonitor: public sihd::util::Observable<NetMonitor>,
 
     private:
         struct Impl;
+
         std::unique_ptr<Impl> _impl;
         sihd::util::Duration _run_timeout = std::chrono::milliseconds(100);
         std::vector<NetMonitorEvent> _events;
