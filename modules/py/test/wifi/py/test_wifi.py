@@ -33,6 +33,7 @@ try:
 except sihd.Error as unmonitored:
     assert(unmonitored.code == unmanaged.code)
     assert(str(unmonitored) == str(unmanaged))
+assert(not monitor.is_open())
 assert(monitor.run() == False)
 
 try:

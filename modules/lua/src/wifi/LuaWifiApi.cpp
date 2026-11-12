@@ -50,54 +50,34 @@ Buffer buffer_of(const std::string & data)
     return std::make_shared<const std::string>(data);
 }
 
-Result<Duration> duration_of(const luabridge::LuaRef & timeout)
-{
-    if (timeout.isNumber())
-        return Duration(timeout.cast<int64_t>().value());
-    if (!timeout.isInstance<Duration>())
-        return std::unexpected(
-            Error(ErrorCode::invalid_argument, "a timeout is a number of nanoseconds or a Duration"));
-    return timeout.cast<Duration>().value();
-}
-
-// luabridge copies the values it returns: the copies must share one monitor
 class LuaWifiMonitor
 {
     public:
-        static Result<LuaWifiMonitor>
-            open(lua_State *state, const std::string & interface_name, luabridge::LuaRef run_timeout)
+        Result<void> open(lua_State *state, const std::string & interface_name)
         {
-            LuaWifiMonitor monitor;
-            monitor._monitor = std::make_shared<wifi::Monitor>();
-            if (!run_timeout.isNil())
-            {
-                Result<Duration> timeout = duration_of(run_timeout);
-                SIHD_UNEXPECTED_RETURN(timeout);
-                monitor._monitor->set_run_timeout(*timeout);
-            }
             LuaGilRelease release(state);
-            auto opened = monitor._monitor->open(interface_name);
-            SIHD_UNEXPECTED_RETURN(opened);
-            return monitor;
+            return _monitor.open(interface_name);
         }
 
-        static Result<void> set_run_timeout(LuaWifiMonitor monitor, luabridge::LuaRef timeout)
+        bool is_open() const { return _monitor.is_open(); }
+
+        Result<void> set_run_timeout(luabridge::LuaRef timeout)
         {
             Result<Duration> duration = duration_of(timeout);
             SIHD_UNEXPECTED_RETURN(duration);
-            monitor._monitor->set_run_timeout(*duration);
+            _monitor.set_run_timeout(*duration);
             return {};
         }
 
         bool run(lua_State *state)
         {
             LuaGilRelease release(state);
-            return _monitor->run();
+            return _monitor.run();
         }
-        std::vector<wifi::Monitor::Event> events() const { return _monitor->events(); }
+        std::vector<wifi::Monitor::Event> events() const { return _monitor.events(); }
 
     private:
-        std::shared_ptr<wifi::Monitor> _monitor;
+        wifi::Monitor _monitor;
 };
 
 Result<void> connect(lua_State *state,
@@ -839,8 +819,14 @@ void LuaWifiApi::load_base(Vm & vm)
         .addProperty("security", &wifi::KnownNetwork::security)
         .endClass()
         .beginClass<LuaWifiMonitor>("Monitor")
-        .addStaticFunction("open", checked<&LuaWifiMonitor::open>)
-        .addFunction("set_run_timeout", checked<&LuaWifiMonitor::set_run_timeout>)
+        .addConstructor<void (*)()>()
+        .addFunction("open", checked<+[](LuaWifiMonitor *self, lua_State *state, const std::string & interface_name) {
+                         return self->open(state, interface_name);
+                     }>)
+        .addFunction("is_open", &LuaWifiMonitor::is_open)
+        .addFunction("set_run_timeout", checked<+[](LuaWifiMonitor *self, luabridge::LuaRef timeout) {
+                         return self->set_run_timeout(timeout);
+                     }>)
         .addFunction("run", &LuaWifiMonitor::run)
         .addFunction("events", &LuaWifiMonitor::events)
         .endClass()

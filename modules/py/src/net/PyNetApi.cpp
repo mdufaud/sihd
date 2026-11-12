@@ -1,9 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
-#include <memory>
-#include <optional>
-
 #include <sihd/core/Device.hpp>
 #include <sihd/net/ClientFrame.hpp>
 #include <sihd/net/DevTcpClient.hpp>
@@ -33,26 +30,6 @@ using namespace sihd::net;
 using sihd::core::Device;
 
 SIHD_LOGGER;
-
-namespace
-{
-
-std::unique_ptr<NetMonitor> make_net_monitor(std::optional<Duration> run_timeout)
-{
-    try
-    {
-        auto monitor = std::make_unique<NetMonitor>();
-        if (run_timeout)
-            monitor->set_run_timeout(*run_timeout);
-        return monitor;
-    }
-    catch (const std::runtime_error & error)
-    {
-        raise_error(Error(ErrorCode::unknown, error.what()));
-    }
-}
-
-} // namespace
 
 void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
 {
@@ -152,15 +129,15 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
 
     pybind11::class_<ClientFrame> client_frame(m_net, "ClientFrame");
     client_frame.attr("header_size") = ClientFrame::header_size;
-    client_frame
+    client_frame.def(pybind11::init<>())
         .def(pybind11::init([](uint64_t client_id, const IArray & payload) {
                  return ClientFrame(client_id, ArrCharView(payload));
              }),
              pybind11::keep_alive<1, 3>())
-        .def_static(
+        .def(
             "decode",
-            [](const IArray & frame) { return ClientFrame::decode(ArrByteView(frame)); },
-            pybind11::keep_alive<0, 1>())
+            [](ClientFrame & self, const IArray & frame) { return self.decode(ArrByteView(frame)); },
+            pybind11::keep_alive<1, 2>())
         .def("encode", &ClientFrame::encode)
         .def("client_id", &ClientFrame::client_id)
         .def("payload", [](const ClientFrame & self) -> Result<ArrChar> {
@@ -184,7 +161,10 @@ void PyNetApi::add_net_api(PyApi::PyModule & pymodule)
         .def_readonly("address", &NetMonitorEvent::address)
         .def("type_str", &NetMonitorEvent::type_str);
     pybind11::class_<NetMonitor>(m_net, "NetMonitor")
-        .def(pybind11::init(&make_net_monitor), pybind11::arg("run_timeout") = pybind11::none())
+        .def(pybind11::init<>())
+        .def(pybind11::init<Duration>(), pybind11::arg("run_timeout"))
+        .def("open", &NetMonitor::open)
+        .def("is_open", &NetMonitor::is_open)
         .def("set_run_timeout", &NetMonitor::set_run_timeout)
         .def("run", &NetMonitor::run, pybind11::call_guard<pybind11::gil_scoped_release>())
         .def("events", &NetMonitor::events);

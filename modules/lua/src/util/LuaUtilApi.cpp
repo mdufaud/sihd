@@ -237,6 +237,16 @@ Duration to_duration(const luabridge::LuaRef & ref)
     return ref.cast<Duration>().value();
 }
 
+Result<Duration> duration_of(const luabridge::LuaRef & ref)
+{
+    if (ref.isNumber())
+        return Duration(ref.cast<int64_t>().value());
+    if (!ref.isInstance<Duration>())
+        return std::unexpected(
+            Error(ErrorCode::invalid_argument, "a timeout is a number of nanoseconds or a Duration"));
+    return ref.cast<Duration>().value();
+}
+
 Timestamp to_timestamp(const luabridge::LuaRef & ref)
 {
     if (ref.isNumber())
@@ -1013,6 +1023,13 @@ bool LuaUtilApi::LuaCoroutine::create()
         return false;
     Vm parent(_parent);
     return parent.new_thread(_vm);
+}
+
+LuaUtilApi::LuaCallback::LuaCallback(lua_State *state, luabridge::LuaRef function): _runner(function)
+{
+    _coroutine.set_state(state);
+    if (_coroutine.create())
+        _runner.new_lua_state(_coroutine.state());
 }
 
 LuaUtilApi::LuaScheduler::LuaScheduler(const std::string & name, Node *parent): Scheduler(name, parent) {}

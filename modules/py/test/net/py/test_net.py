@@ -14,7 +14,8 @@ assert(addr_noport.port() == 0)
 # ClientFrame: the client id then the payload
 frame = sihd.net.ClientFrame(42, sihd.util.ArrChar("hi")).encode()
 assert(frame.size() == sihd.net.ClientFrame.header_size + 2)
-decoded = sihd.net.ClientFrame.decode(frame)
+decoded = sihd.net.ClientFrame()
+decoded.decode(frame)
 assert(decoded.client_id() == 42)
 assert(decoded.payload().str() == "hi")
 
@@ -88,7 +89,19 @@ except sihd.Error as no_destination:
     assert(str(no_destination) == "route lookup needs a destination address")
 
 monitor = sihd.net.NetMonitor(sihd.util.time.ms(10))
+assert(not monitor.is_open())
+monitor.open()
+assert(monitor.is_open())
 assert(monitor.run())
+try:
+    monitor.open()
+    assert(False)
+except sihd.Error as reopened:
+    assert(reopened.code == sihd.ErrorCode.already_exists)
+    assert(str(reopened) == "net monitor already open")
+unopened = sihd.net.NetMonitor()
+assert(not unopened.is_open())
+assert(not unopened.run())
 event = sihd.net.NetMonitorEvent()
 assert(event.type == sihd.net.NetMonitorEventType.unknown)
 assert(not event.removed)

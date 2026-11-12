@@ -686,6 +686,7 @@ void PyWifiApi::add_wifi_api(PyApi::PyModule & pymodule)
     monitor.def(pybind11::init<>())
         .def(pybind11::init<Duration>(), pybind11::arg("run_timeout"))
         .def("open", &wifi::Monitor::open, release_gil)
+        .def("is_open", &wifi::Monitor::is_open)
         .def("set_run_timeout", &wifi::Monitor::set_run_timeout)
         .def("run", &wifi::Monitor::run, release_gil)
         .def("events", &wifi::Monitor::events);

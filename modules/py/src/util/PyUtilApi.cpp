@@ -620,6 +620,14 @@ PyUtilApi::PyTask::PyTask(const pybind11::function & task, const TaskOptions & o
 {
 }
 
+PyUtilApi::PyCallback::PyCallback(pybind11::function function):
+    _function(new pybind11::function(std::move(function)), [](pybind11::function *owned) {
+        pybind11::gil_scoped_acquire acquire;
+        delete owned;
+    })
+{
+}
+
 PyUtilApi::PyTask::~PyTask()
 {
     if (_fun.ptr() != nullptr && Py_IsInitialized())

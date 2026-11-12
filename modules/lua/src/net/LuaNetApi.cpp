@@ -34,46 +34,48 @@ SIHD_LOGGER;
 namespace
 {
 
-// luabridge copies the values it returns: the copies share one monitor
 class LuaNetMonitor
 {
     public:
-        static Result<LuaNetMonitor> open(luabridge::LuaRef run_timeout)
-        {
-            LuaNetMonitor monitor;
-            monitor._monitor = std::make_shared<NetMonitor>();
-            if (!run_timeout.isNil())
-                monitor._monitor->set_run_timeout(to_duration(run_timeout));
-            return monitor;
-        }
-
-        void set_run_timeout(luabridge::LuaRef timeout) { _monitor->set_run_timeout(to_duration(timeout)); }
+        Result<void> open() { return _monitor.open(); }
+        bool is_open() const { return _monitor.is_open(); }
+        void set_run_timeout(luabridge::LuaRef timeout) { _monitor.set_run_timeout(to_duration(timeout)); }
         bool run(lua_State *state)
         {
             LuaGilRelease release(state);
-            return _monitor->run();
+            return _monitor.run();
         }
-        std::vector<NetMonitorEvent> events() const { return _monitor->events(); }
+        std::vector<NetMonitorEvent> events() const { return _monitor.events(); }
 
     private:
-        std::shared_ptr<NetMonitor> _monitor;
+        NetMonitor _monitor;
 };
 
 // lua may collect the array a frame points into: the bound frame owns a copy of its payload
 class LuaClientFrame
 {
     public:
+        LuaClientFrame() = default;
+
         LuaClientFrame(uint64_t client_id, ArrCharView payload): _client_id(client_id)
         {
             if (!_payload.from(payload.data(), payload.size()))
                 throw std::runtime_error("ClientFrame: could not copy the payload");
         }
 
-        static Result<LuaClientFrame> decode(const IArray *frame)
+        Result<void> decode(const IArray *frame)
         {
-            auto decoded = ClientFrame::decode(ArrByteView(*frame));
-            SIHD_UNEXPECTED_RETURN(decoded);
-            return LuaClientFrame(decoded->client_id(), decoded->payload());
+            if (frame == nullptr)
+                return std::unexpected(Error(ErrorCode::invalid_argument, "decode: expected an array"));
+            ClientFrame decoded;
+            auto done = decoded.decode(ArrByteView(*frame));
+            SIHD_UNEXPECTED_RETURN(done);
+            ArrChar payload;
+            if (!payload.from(decoded.payload().data(), decoded.payload().size()))
+                return std::unexpected(Error(ErrorCode::out_of_memory, "ClientFrame: could not copy the payload"));
+            _client_id = decoded.client_id();
+            _payload = std::move(payload);
+            return {};
         }
 
         ArrByte encode() const { return ClientFrame(_client_id, _payload).encode(); }
@@ -81,7 +83,7 @@ class LuaClientFrame
         ArrChar payload() const { return _payload; }
 
     private:
-        uint64_t _client_id;
+        uint64_t _client_id = 0;
         ArrChar _payload;
 };
 
@@ -236,13 +238,16 @@ void LuaNetApi::load_base(Vm & vm)
                      }>)
         .endNamespace()
         .beginClass<LuaClientFrame>("ClientFrame")
+        .addConstructor<void (*)()>()
         .addStaticProperty(
             "header_size",
             +[] { return ClientFrame::header_size; })
         .addStaticFunction(
             "new",
             +[](uint64_t client_id, const IArray *payload) { return LuaClientFrame(client_id, ArrCharView(*payload)); })
-        .addStaticFunction("decode", checked<&LuaClientFrame::decode>)
+        .addFunction("decode", checked<+[](LuaClientFrame *self, const IArray *frame) {
+                         return self->decode(frame);
+                     }>)
         .addFunction("encode", &LuaClientFrame::encode)
         .addFunction("client_id", &LuaClientFrame::client_id)
         .addFunction("payload", &LuaClientFrame::payload)
@@ -263,7 +268,11 @@ void LuaNetApi::load_base(Vm & vm)
         .addFunction("type_str", &NetMonitorEvent::type_str)
         .endClass()
         .beginClass<LuaNetMonitor>("NetMonitor")
-        .addStaticFunction("open", checked<&LuaNetMonitor::open>)
+        .addConstructor<void (*)()>()
+        .addFunction("open", checked<+[](LuaNetMonitor *self) {
+                         return self->open();
+                     }>)
+        .addFunction("is_open", &LuaNetMonitor::is_open)
         .addFunction("set_run_timeout", &LuaNetMonitor::set_run_timeout)
         .addFunction("run", &LuaNetMonitor::run)
         .addFunction("events", &LuaNetMonitor::events)

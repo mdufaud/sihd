@@ -1,3 +1,5 @@
+import threading
+
 import sihd
 
 core = sihd.core.Core("core")
@@ -21,20 +23,25 @@ except sihd.Error as missing:
 waiter = sihd.core.ChannelWaiter(ch_beat)
 
 i = 0
+# the waiter may wake before this observer saw the same beats: it signals on its own count
+fifth_beat = threading.Event()
 def obs(ch):
     global i
     i = i + 1
     print("beat: " + ch.name())
+    if i == 5:
+        fifth_beat.set()
 
 ch_beat.set_observer(obs)
 
 ch_activate.write(0, True)
 ret = waiter.wait_for(sihd.util.time.ms(2000), 5)
+observed = fifth_beat.wait(2.0)
 ch_activate.write(0, False)
 ch_beat.set_observer(None)
 
 print("Total beat: %d" % i)
-assert(i >= 5)
+assert(observed)
 assert(ret)
 
 core.stop()

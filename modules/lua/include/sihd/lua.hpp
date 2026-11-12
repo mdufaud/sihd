@@ -35,6 +35,9 @@
 #if SIHD_LUA_WITH_WIFI
 # include <sihd/lua/wifi/LuaWifiApi.hpp>
 #endif
+#if SIHD_LUA_WITH_BT
+# include <sihd/lua/bt/LuaBtApi.hpp>
+#endif
 #if SIHD_LUA_WITH_HTTP
 # include <sihd/lua/http/LuaHttpApi.hpp>
 #endif

@@ -1,6 +1,12 @@
 #ifndef __SIHD_LUA_LUAUTILAPI_HPP__
 #define __SIHD_LUA_LUAUTILAPI_HPP__
 
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <vector>
+
 // clang-format off
 // Vm.hpp pulls the lua headers, which luabridge requires included first
 #include <sihd/lua/Vm.hpp>
@@ -33,6 +39,8 @@ namespace sihd::lua
 
 // A raw Lua number is a nanosecond count, anything else is cast from the userdata
 sihd::util::Duration to_duration(const luabridge::LuaRef & ref);
+// invalid_argument for anything but a number or a Duration
+sihd::util::Result<sihd::util::Duration> duration_of(const luabridge::LuaRef & ref);
 sihd::util::Timestamp to_timestamp(const luabridge::LuaRef & ref);
 
 template <typename T>
@@ -187,6 +195,14 @@ class LuaUtilApi
                     this->_exec_fun()(args...);
                 }
 
+                // the value the function returns, decoded under the GIL
+                template <typename R, typename... T>
+                luabridge::TypeResult<R> call_lua_method_return(T... args)
+                {
+                    LuaGilGuard guard(this->_guard_state());
+                    return this->_exec_fun().template call<R>(args...);
+                }
+
                 template <typename R, typename... T>
                 R call_lua_method(T... args)
                 {
@@ -221,6 +237,97 @@ class LuaUtilApi
             private:
                 lua_State *_parent = nullptr;
                 Vm _vm {nullptr};
+        };
+
+        // a script function a backend thread calls: its own coroutine, anchored as long as the callback lives
+        class LuaCallback
+        {
+            public:
+                LuaCallback(lua_State *state, luabridge::LuaRef function);
+
+                LuaCallback(const LuaCallback &) = delete;
+                LuaCallback & operator=(const LuaCallback &) = delete;
+
+                // nothing when the function raised or returned something else
+                template <typename R, typename... Args>
+                std::optional<R> call(Args... args)
+                {
+                    auto returned = _runner.call_lua_method_return<R>(args...);
+                    if (!returned)
+                        return std::nullopt;
+                    return std::move(*returned);
+                }
+
+                template <typename... Args>
+                void notify(Args... args)
+                {
+                    _runner.call_lua_method_noret<Args...>(args...);
+                }
+
+            private:
+                LuaThreadRunner _runner;
+                LuaCoroutine _coroutine;
+        };
+
+        // the script functions observing an Observable<T>, until remove_all
+        template <typename T>
+        class LuaObservers
+        {
+            public:
+                static sihd::util::Result<void> add(T *owner, luabridge::LuaRef function)
+                {
+                    if (!function.isFunction())
+                        return std::unexpected(sihd::util::Error(sihd::util::ErrorCode::invalid_argument,
+                                                                 "add_observer: expected a function"));
+                    auto handler = std::make_unique<Handler>(function.state(), function);
+                    Handler *added = handler.get();
+                    {
+                        std::lock_guard lock(mutex());
+                        handlers().emplace(owner, std::move(handler));
+                    }
+                    LuaGilRelease release(function.state());
+                    owner->add_observer(added);
+                    return {};
+                }
+
+                static void remove_all(T *owner, lua_State *state)
+                {
+                    std::vector<std::unique_ptr<Handler>> removed;
+                    {
+                        std::lock_guard lock(mutex());
+                        const auto [first, last] = handlers().equal_range(owner);
+                        for (auto it = first; it != last; ++it)
+                            removed.push_back(std::move(it->second));
+                        handlers().erase(first, last);
+                    }
+                    LuaGilRelease release(state);
+                    for (const auto & handler : removed)
+                        owner->remove_observer(handler.get());
+                }
+
+            private:
+                class Handler: public sihd::util::IHandler<T *>
+                {
+                    public:
+                        Handler(lua_State *state, luabridge::LuaRef function): _callback(state, function) {}
+
+                        void handle(T *owner) override { _callback.notify<T *>(owner); }
+
+                    private:
+                        LuaCallback _callback;
+                };
+
+                static std::mutex & mutex()
+                {
+                    static std::mutex instance;
+                    return instance;
+                }
+
+                static std::multimap<T *, std::unique_ptr<Handler>> & handlers()
+                {
+                    static std::multimap<T *, std::unique_ptr<Handler>> instance;
+                    return instance;
+                }
         };
 
         class LuaTask: public sihd::util::Task,

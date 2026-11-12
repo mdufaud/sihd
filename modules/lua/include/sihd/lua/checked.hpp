@@ -93,7 +93,7 @@ struct Checked<Function, Return (*)(Args...)>
                     return 0;
                 else
                 {
-                    auto pushed = luabridge::Stack<Value>::push(state, *result);
+                    auto pushed = luabridge::Stack<Value>::push(state, std::move(*result));
                     if (!pushed)
                         return push_error(state, sihd::util::Error(sihd::util::ErrorCode::unknown, pushed.message()));
                     return 1;

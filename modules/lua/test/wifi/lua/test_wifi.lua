@@ -19,9 +19,12 @@ if unheard.code == sihd.ErrorCode.not_found then
     assert(unheard.message == "no wifi interface named sihd-no-such-interface")
 end
 
-local unmonitored = must_raise(wifi.Monitor.open, "sihd-no-such-interface", timeout)
+local monitor = wifi.Monitor()
+monitor:set_run_timeout(timeout)
+local unmonitored = must_raise(monitor.open, monitor, "sihd-no-such-interface")
 assert(unmonitored.code == unmanaged.code)
 assert(unmonitored.message == unmanaged.message)
+assert(not monitor:is_open())
 
 local empty_ssid = must_raise(wifi.connect, "sihd-no-such-interface", "", timeout)
 assert(empty_ssid.code == sihd.ErrorCode.invalid_argument)
@@ -37,7 +40,7 @@ for _, wrong in ipairs({"soon", true}) do
     assert(bad_timeout.code == sihd.ErrorCode.invalid_argument)
     assert(bad_timeout.message == "a timeout is a number of nanoseconds or a Duration")
 end
-local bad_run_timeout = must_raise(wifi.Monitor.open, "sihd-no-such-interface", "soon")
+local bad_run_timeout = must_raise(monitor.set_run_timeout, monitor, "soon")
 assert(bad_run_timeout.code == sihd.ErrorCode.invalid_argument)
 
 local rsn_psk = string.char(0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00,
