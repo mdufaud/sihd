@@ -1,26 +1,17 @@
-#include <initguid.h>
-#include <windows.h>
+#include <winsock2.h>
 
-// mingw-w64 declares IReference<boolean> beside IReference<BYTE>, the same type in C++
-#define ____FIReference_1_boolean_INTERFACE_DEFINED__
+#include <bluetoothapis.h>
 
-#include <roapi.h>
-#include <robuffer.h>
-
-#include <atomic>
-#include <optional>
-#include <vector>
-#include <windows.devices.bluetooth.advertisement.h>
-#include <windows.storage.streams.h>
-
-#include <wrl/client.h>
-#include <wrl/wrappers/corewrappers.h>
+#include <algorithm>
+#include <thread>
 
 #include <sihd/bt/Scanner.hpp>
 #include <sihd/util/Logger.hpp>
-#include <sihd/util/Waitable.hpp>
 #include <sihd/util/str.hpp>
 #include <sihd/util/time.hpp>
+
+#include "../address.hpp"
+#include "winrt.hpp"
 
 namespace sihd::bt
 {
@@ -28,7 +19,7 @@ namespace sihd::bt
 using enum sihd::util::ErrorCode;
 using namespace sihd::util;
 using namespace ABI::Windows::Devices::Bluetooth::Advertisement;
-using Microsoft::WRL::ComPtr;
+using winrt::ComPtr;
 
 SIHD_LOGGER;
 
@@ -39,6 +30,8 @@ using ReceivedEventHandler = ABI::Windows::Foundation::ITypedEventHandler<Blueto
                                                                           BluetoothLEAdvertisementReceivedEventArgs *>;
 
 const Duration max_wait(time::milli(500));
+// classic inquiries of 2 x 1.28 seconds: a stop waits for the round in flight
+constexpr UCHAR inquiry_multiplier = 2;
 
 // pushes the received advertisements to the scan loop; a dispatch in flight holds a reference
 class ReceivedHandler: public ReceivedEventHandler
@@ -91,51 +84,6 @@ class ReceivedHandler: public ReceivedEventHandler
         std::atomic<ULONG> _references;
 };
 
-std::string format_address(UINT64 address)
-{
-    return fmt::format("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-                       (address >> 40) & 0xff,
-                       (address >> 32) & 0xff,
-                       (address >> 24) & 0xff,
-                       (address >> 16) & 0xff,
-                       (address >> 8) & 0xff,
-                       address & 0xff);
-}
-
-std::string format_uuid(const GUID & guid)
-{
-    return fmt::format("{:08x}-{:04x}-{:04x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}",
-                       guid.Data1,
-                       guid.Data2,
-                       guid.Data3,
-                       guid.Data4[0],
-                       guid.Data4[1],
-                       guid.Data4[2],
-                       guid.Data4[3],
-                       guid.Data4[4],
-                       guid.Data4[5],
-                       guid.Data4[6],
-                       guid.Data4[7]);
-}
-
-std::string to_utf8(HSTRING hstring)
-{
-    UINT32 length = 0;
-    const wchar_t *buffer = WindowsGetStringRawBuffer(hstring, &length);
-    return str::to_str(std::wstring_view(buffer, length));
-}
-
-std::vector<uint8_t> read_buffer(ABI::Windows::Storage::Streams::IBuffer *buffer)
-{
-    ComPtr<::Windows::Storage::Streams::IBufferByteAccess> byte_access;
-    UINT32 length = 0;
-    byte *data = nullptr;
-    if (FAILED(buffer->QueryInterface(IID_PPV_ARGS(&byte_access))) || FAILED(buffer->get_Length(&length))
-        || FAILED(byte_access->Buffer(&data)))
-        return {};
-    return std::vector<uint8_t>(data, data + length);
-}
-
 // little endian 16, 32 or 128 bits uuid in the bluez text form
 std::string service_uuid(const std::vector<uint8_t> & bytes, size_t uuid_size)
 {
@@ -169,7 +117,7 @@ void read_service_data(IBluetoothLEAdvertisement *advertisement, ScanResult & re
             continue;
 
         const size_t uuid_size = data_type == 0x16 ? 2 : data_type == 0x20 ? 4 : data_type == 0x21 ? 16 : 0;
-        std::vector<uint8_t> bytes = read_buffer(buffer.Get());
+        std::vector<uint8_t> bytes = winrt::read_buffer(buffer.Get());
         if (uuid_size == 0 || bytes.size() < uuid_size)
             continue;
         result.service_data.insert_or_assign(service_uuid(bytes, uuid_size),
@@ -183,7 +131,7 @@ void read_advertisement(IBluetoothLEAdvertisement *advertisement, ScanResult & r
 
     Microsoft::WRL::Wrappers::HString name;
     if (SUCCEEDED(advertisement->get_LocalName(name.GetAddressOf())))
-        result.identifier = to_utf8(name.Get());
+        result.identifier = winrt::to_utf8(name.Get());
 
     ComPtr<ABI::Windows::Foundation::Collections::IVector<GUID>> uuids;
     UINT32 uuid_count = 0;
@@ -193,7 +141,7 @@ void read_advertisement(IBluetoothLEAdvertisement *advertisement, ScanResult & r
         {
             GUID uuid {};
             if (SUCCEEDED(uuids->GetAt(i, &uuid)))
-                result.uuids.emplace_back(format_uuid(uuid));
+                result.uuids.emplace_back(winrt::format_uuid(uuid));
         }
     }
 
@@ -209,7 +157,7 @@ void read_advertisement(IBluetoothLEAdvertisement *advertisement, ScanResult & r
         UINT16 company_id = 0;
         if (SUCCEEDED(manufacturer_data->GetAt(i, &data)) && SUCCEEDED(data->get_CompanyId(&company_id))
             && SUCCEEDED(data->get_Data(&buffer)))
-            result.manufacturer_data.insert_or_assign(company_id, read_buffer(buffer.Get()));
+            result.manufacturer_data.insert_or_assign(company_id, winrt::read_buffer(buffer.Get()));
     }
 }
 
@@ -272,34 +220,76 @@ HRESULT STDMETHODCALLTYPE ReceivedHandler::Invoke(IBluetoothLEAdvertisementWatch
 
 Result<ComPtr<IBluetoothLEAdvertisementWatcher>> activate_watcher()
 {
-    Microsoft::WRL::Wrappers::HStringReference class_name(
+    auto watcher = winrt::activate<IBluetoothLEAdvertisementWatcher>(
         RuntimeClass_Windows_Devices_Bluetooth_Advertisement_BluetoothLEAdvertisementWatcher);
-    ComPtr<IInspectable> inspectable;
-    HRESULT hr = RoActivateInstance(class_name.Get(), &inspectable);
+    SIHD_UNEXPECTED_RETURN(watcher);
+    const HRESULT hr = (*watcher)->put_ScanningMode(BluetoothLEScanningMode_Active);
     if (FAILED(hr))
-        return std::unexpected(Error(io_error, "could not activate the BLE watcher: 0x{:08x}", static_cast<ULONG>(hr)));
-
-    ComPtr<IBluetoothLEAdvertisementWatcher> watcher;
-    hr = inspectable.As(&watcher);
-    if (FAILED(hr))
-        return std::unexpected(Error(io_error, "not a BLE watcher: 0x{:08x}", static_cast<ULONG>(hr)));
-    hr = watcher->put_ScanningMode(BluetoothLEScanningMode_Active);
-    if (FAILED(hr))
-        return std::unexpected(Error(io_error, "could not set active scanning: 0x{:08x}", static_cast<ULONG>(hr)));
+        return std::unexpected(winrt::error_of(hr, "BLE active scanning"));
     return watcher;
 }
 
+ULONGLONG ticks_of(const SYSTEMTIME & time)
+{
+    FILETIME file_time {};
+    SystemTimeToFileTime(&time, &file_time);
+    return (static_cast<ULONGLONG>(file_time.dwHighDateTime) << 32) | file_time.dwLowDateTime;
+}
+
+ScanResult classic_result(const BLUETOOTH_DEVICE_INFO & info)
+{
+    ScanResult result;
+    result.address = format_address(info.Address.ullLong);
+    result.address_type = AddressType::public_address;
+    result.identifier = str::to_str(std::wstring_view(info.szName));
+    result.class_of_device = info.ulClassofDevice;
+    return result;
+}
+
+// one classic inquiry: the devices it heard, remembered ones out of range keep an older last seen
+std::vector<ScanResult> inquire()
+{
+    SYSTEMTIME started {};
+    GetSystemTime(&started);
+    BLUETOOTH_DEVICE_SEARCH_PARAMS params {};
+    params.dwSize = sizeof(params);
+    params.fReturnAuthenticated = TRUE;
+    params.fReturnRemembered = TRUE;
+    params.fReturnUnknown = TRUE;
+    params.fReturnConnected = TRUE;
+    params.fIssueInquiry = TRUE;
+    params.cTimeoutMultiplier = inquiry_multiplier;
+
+    std::vector<ScanResult> heard;
+    BLUETOOTH_DEVICE_INFO info {};
+    info.dwSize = sizeof(info);
+    HBLUETOOTH_DEVICE_FIND find = BluetoothFindFirstDevice(&params, &info);
+    for (bool found = find != nullptr; found; found = BluetoothFindNextDevice(find, &info) != FALSE)
+    {
+        if (info.fConnected || ticks_of(info.stLastSeen) >= ticks_of(started))
+            heard.emplace_back(classic_result(info));
+        info.dwSize = sizeof(info);
+    }
+    if (find != nullptr)
+        BluetoothFindDeviceClose(find);
+    return heard;
+}
+
+// the filter windows cannot apply: its watcher requires every uuid, any one is enough here
+bool passes(const ScanFilter & filter, const ScanResult & result)
+{
+    if (filter.min_rssi.has_value() && result.rssi < *filter.min_rssi)
+        return false;
+    if (filter.uuids.empty())
+        return true;
+    return std::ranges::any_of(filter.uuids, [&result](const std::string & wanted) {
+        const std::string uuid = str::to_lower_copy(wanted);
+        return std::ranges::any_of(result.uuids, [&uuid](const std::string & advertised) { return advertised == uuid; })
+               || result.service_data.contains(uuid);
+    });
+}
+
 } // namespace
-
-Result<bool> bluetooth_enabled()
-{
-    return std::unexpected(Error(not_supported, "bluetooth_enabled is not implemented on windows"));
-}
-
-Result<std::vector<AdapterInfo>> list_adapters()
-{
-    return std::unexpected(Error(not_supported, "list_adapters is not implemented on windows"));
-}
 
 bool Scanner::_scan()
 {
@@ -308,20 +298,40 @@ bool Scanner::_scan()
         SIHD_LOG(error, "Scanner: windows scans with the default adapter only");
         return false;
     }
-    Microsoft::WRL::Wrappers::RoInitializeWrapper ro_initialized(RO_INIT_MULTITHREADED);
-    if (FAILED(ro_initialized) && static_cast<HRESULT>(ro_initialized) != RPC_E_CHANGED_MODE)
-    {
-        SIHD_LOG(error, "Scanner: could not initialize the windows runtime");
-        return false;
-    }
-    auto watcher = activate_watcher();
-    if (SIHD_UNEXPECTED_LOG(watcher))
+    winrt::Apartment apartment;
+    if (SIHD_UNEXPECTED_LOG(apartment.entered()))
         return false;
 
     std::vector<ScanResult> pending;
     ReceivedHandler handler(_waitable, pending);
+    ComPtr<IBluetoothLEAdvertisementWatcher> watcher;
     EventRegistrationToken token {};
-    const bool started = SUCCEEDED((*watcher)->add_Received(&handler, &token)) && SUCCEEDED((*watcher)->Start());
+    bool started = true;
+    if (_filter.transport != Transport::classic)
+    {
+        auto activated = activate_watcher();
+        started = !SIHD_UNEXPECTED_LOG(activated) && SUCCEEDED((*activated)->add_Received(&handler, &token))
+                  && SUCCEEDED((*activated)->Start());
+        if (activated)
+            watcher = *activated;
+    }
+
+    std::atomic<bool> inquiring = started && _filter.transport != Transport::le;
+    std::thread inquiries;
+    if (inquiring)
+    {
+        inquiries = std::thread([this, &inquiring, &pending] {
+            while (inquiring)
+            {
+                std::vector<ScanResult> heard = inquire();
+                {
+                    auto lock = _waitable.guard();
+                    std::ranges::move(heard, std::back_inserter(pending));
+                }
+                _waitable.notify_all();
+            }
+        });
+    }
     if (started)
         this->service_set_ready();
     else
@@ -329,6 +339,7 @@ bool Scanner::_scan()
 
     while (started)
     {
+        this->_forget_lost();
         auto wait = this->_next_wait(max_wait);
         if (!wait.has_value())
             break;
@@ -341,14 +352,23 @@ bool Scanner::_scan()
             received.swap(pending);
         }
         for (ScanResult & result : received)
-            this->_publish(std::move(result));
+        {
+            if (passes(_filter, result))
+                this->_publish(std::move(result));
+        }
         if (this->service_stop_requested())
             break;
     }
 
-    (*watcher)->remove_Received(token);
-    (*watcher)->Stop();
-    watcher->Reset();
+    inquiring = false;
+    if (inquiries.joinable())
+        inquiries.join();
+    if (watcher)
+    {
+        watcher->remove_Received(token);
+        watcher->Stop();
+        watcher.Reset();
+    }
     _waitable.wait([&handler] { return handler.released_by_others(); });
     return started;
 }

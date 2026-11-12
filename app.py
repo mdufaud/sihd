@@ -256,10 +256,13 @@ modules = {
         ],
     },
     "bt": {
-        "allow-platforms": ["linux", "windows"],
-        "depends": ['sys'],
-        # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString)
-        "windows-libs": ['runtimeobject'],
+        "allow-platforms": ["linux", "windows", "android"],
+        # RFCOMM and L2CAP channels go through net::Socket
+        "depends": ['sys', 'net'],
+        # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString), radios and inquiries, RFCOMM sockets
+        "windows-libs": ['runtimeobject', 'bthprops', 'ws2_32'],
+        # android.bluetooth callbacks are abstract classes: the shim ships into the APKs linking bt
+        "android-java-dirs": ['java'],
     },
     "wifi": {
         "allow-platforms": ["linux", "windows"],
@@ -334,7 +337,7 @@ conditional_modules = {
         "conditional-env": "lua",
         "extlibs": ['lua', 'luabridge3'],
         "depends": ['util'],
-        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'zlib', 'net', 'wifi', 'http'],
+        "conditional-depends": ['sys', 'core', 'json', 'csv', 'zip', 'zlib', 'net', 'wifi', 'bt', 'http'],
         "libs": ["lua"],
         "flags": ["-Wno-unused-parameter", "-Wno-unused-but-set-parameter"],
         "pkg-configs": ["lua-5.3", "lua53"],
@@ -350,7 +353,7 @@ conditional_modules = {
         "allow-platforms": ["linux"],
         "extlibs": ['pybind11', 'python3'],
         "depends": [],
-        "conditional-depends": ['sys', 'core', 'zlib', 'net', 'wifi', 'http'],
+        "conditional-depends": ['sys', 'core', 'zlib', 'net', 'wifi', 'bt', 'http'],
         "libs": ["python3.12"],
         "flags": ['-U_FORTIFY_SOURCE', '-Wno-cpp'], # pybind11 requires optimization: FORTIFY breaks -O0
         "clang-flags": ["-Wno-unused-command-line-argument"],

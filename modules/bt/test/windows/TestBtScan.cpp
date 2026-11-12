@@ -1,15 +1,12 @@
-#include <cstdlib>
 #include <thread>
 
 #include <gtest/gtest.h>
 
 #include <sihd/bt/Scanner.hpp>
-#include <sihd/sys/env.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Stopwatch.hpp>
 #include <sihd/util/Synchronizer.hpp>
-#include <sihd/util/build.hpp>
 #include <sihd/util/time.hpp>
 
 namespace test
@@ -17,7 +14,6 @@ namespace test
 SIHD_NEW_LOGGER("test");
 using namespace sihd::bt;
 using namespace sihd::util;
-using namespace sihd::sys;
 
 // its first scan is stopped once its loop ended, before start() returns: where a late stop() lands
 class LateStopScanner: public Scanner
@@ -63,25 +59,6 @@ class TestBtScan: public ::testing::Test
 
         static bool has_powered_adapter() { return bluetooth_enabled().value_or(false); }
 };
-
-TEST_F(TestBtScan, test_no_system_bus)
-{
-    if constexpr (!build::is_linux)
-        GTEST_SKIP() << "the dbus system bus is linux only";
-    // libdbus reads the bus address once per process: only a fresh process sees the unreachable one
-    GTEST_FLAG_SET(death_test_style, "threadsafe");
-
-    EXPECT_EXIT(
-        {
-            (void)env::set("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=/nonexistent/sihd_bt_test_socket");
-            Scanner scanner("scanner");
-            const bool unreachable = !bluetooth_enabled().has_value() && !list_adapters().has_value()
-                                     && !scanner.scan_for(Duration(time::milli(100))) && scanner.results().empty();
-            std::exit(unreachable ? EXIT_SUCCESS : EXIT_FAILURE);
-        },
-        testing::ExitedWithCode(EXIT_SUCCESS),
-        "");
-}
 
 TEST_F(TestBtScan, test_list_adapters)
 {

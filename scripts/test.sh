@@ -19,7 +19,7 @@ if [[ "${BUILD_STATIC:-0}" != "1" ]]; then
     imgui=",imgui"
 fi
 
-export m="json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,usb${imgui}"
+export m="json,util,sys,core,csv,zip,zlib,net,wifi,curl,http,usb,bt${imgui}"
 
 build_target "clang" compiler=clang
 # the terminal tests drive the scenes binary the clang build just made
