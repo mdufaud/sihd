@@ -15,7 +15,7 @@ It ships as independent libraries (`libsihd_<module>`): OS abstraction, networki
 | [`sys`](docs/modules/sys.md) | Files, processes, IPC, signals, clipboard, screenshot, input injection, desktop notifications, keyring, sleep inhibition, users |
 | [`core`](docs/modules/core.md) | Devices, Channels, recording/playback, sampling |
 | [`json`](docs/modules/json.md) · [`csv`](docs/modules/csv.md) · [`zip`](docs/modules/zip.md) · [`zlib`](docs/modules/zlib.md) | Data formats, archives and compression |
-| [`crypto`](docs/modules/crypto.md) | Keys, certificates, OCSP/CRL revocation, TLS context, ciphers, digests |
+| [`crypto`](docs/modules/crypto.md) | Keys, certificates, OCSP/CRL revocation, TLS context, ciphers, digests, password hashes |
 | [`net`](docs/modules/net.md) · [`pcap`](docs/modules/pcap.md) | Sockets, TCP/UDP/ICMP, TLS, DNS, connection detection (routes, VPN, monitoring), packet capture and injection |
 | [`curl`](docs/modules/curl.md) · [`http`](docs/modules/http.md) | HTTP/WebSocket server, HTTP client |
 | [`ssh`](docs/modules/ssh.md) | SSH client and server, SFTP |

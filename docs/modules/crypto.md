@@ -1,6 +1,6 @@
 # crypto
 
-OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revocation checks (OCSP and CRL), a TLS context, symmetric ciphers, message digests and signatures. OpenSSL types stay out of the public headers; keys, certificates and contexts are type-erased handles, and failures are reported as `sihd::util::Result` errors carrying the OpenSSL error queue.
+OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revocation checks (OCSP and CRL), a TLS context, symmetric ciphers, message digests, password hashes and signatures. OpenSSL types stay out of the public headers; keys, certificates and contexts are type-erased handles, and failures are reported as `sihd::util::Result` errors carrying the OpenSSL error queue.
 
 | | |
 |---|---|
@@ -8,7 +8,7 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revoca
 | External libraries | openssl |
 | Platforms | all |
 | Build | `make m=crypto` |
-| Header | `#include <sihd/crypto/PrivateKey.hpp>` (also `Certificate.hpp`, `OcspRequest.hpp`, `Crl.hpp`, `RevocationChecker.hpp`, `TlsContext.hpp`, `cipher.hpp`, `digest.hpp`, `utils.hpp`) |
+| Header | `#include <sihd/crypto/PrivateKey.hpp>` (also `Certificate.hpp`, `OcspRequest.hpp`, `Crl.hpp`, `RevocationChecker.hpp`, `TlsContext.hpp`, `PasswordHash.hpp`, `cipher.hpp`, `digest.hpp`, `utils.hpp`) |
 
 ## Capabilities
 
@@ -42,6 +42,14 @@ OpenSSL-backed cryptography: RSA and EC private keys, X.509 certificates, revoca
 
 - `cipher::encrypt(algorithm, key, iv, data)` and `cipher::decrypt(...)`: symmetric encryption by algorithm name (for example AES-256-CBC), with raw pointer or `ArrByteView` arguments. AEAD ciphers (GCM, CCM, OCB, ChaCha20-Poly1305) are refused with `not_supported`: their authentication tag is not handled.
 - `digest::compute(algorithm, data)`: hash by algorithm name (for example `SHA-256`), raw pointer or `ArrByteView` arguments.
+
+### Password hashes
+
+- `PasswordHash`: salted password hashes stored as PHC strings, `$<algorithm>$<params>$<salt>$<hash>` with base64 fields without padding, the format of libargon2, passlib and the RustCrypto crates.
+- `argon2id(password, Argon2Params)`, `scrypt(password, ScryptParams)`, `pbkdf2_sha256(password, Pbkdf2Params)`, `pbkdf2_sha512(password, Pbkdf2Params)`: hash with a random 16 bytes salt into a 32 bytes hash (pbkdf2: the digest size). The params default to the OWASP minimums: argon2id 19 MiB, 2 iterations, 1 lane; scrypt N = 2^17, r = 8, p = 1; pbkdf2 600000 iterations, the sha256 minimum, above the sha512 one. Zero costs, or argon2id under 8 KiB per lane, are `invalid_argument`.
+- `encode()` writes `$argon2id$v=19$m=19456,t=2,p=1$...`, `$scrypt$ln=17,r=8,p=1$...`, `$pbkdf2-sha256$i=600000$...`. `decode(phc)` reads them back, also the `l=` hash length RustCrypto adds to pbkdf2; an unknown algorithm or an argon2 version other than 19 is `not_supported`, a malformed or non-canonical string (leading zero, non-zero base64 padding bits), a salt under 8 bytes or a hash under 4 bytes `invalid_argument`. Costs are not capped: a decoded string is trusted data.
+- `verify(password)` derives again with the stored params and salt and compares in constant time: false on a mismatch, an error only when the derivation fails.
+- `algorithm()`, `params()` (a variant of the three params structs), `salt()`, `hash()`: inspection. argon2id needs OpenSSL 3.2 or later, `not_supported` below.
 
 ### Signatures
 
