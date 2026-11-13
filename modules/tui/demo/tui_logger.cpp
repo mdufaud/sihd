@@ -59,6 +59,7 @@ int main(int argc, char **argv)
     App app({
         .name = "tui_logger",
         .description = "TUI logger demo",
+        .default_logger = false,
     });
 
     app.root().on_run([&] {
