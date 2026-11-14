@@ -85,11 +85,12 @@ TEST_F(TestMonitor, test_network_manager_events)
     ASSERT_TRUE(_daemon.start({nm_service}));
     serve_network_manager(_daemon, true);
     _daemon.on(nm_wireless_interface, "RequestScan", [this](const dbus::Message & call) {
-        _daemon.reply(call, {});
         _daemon.emit(nm_device, nm_device_interface, "StateChanged", {uint32_t {40}, uint32_t {30}, uint32_t {0}});
         _daemon.emit(nm_device, nm_device_interface, "StateChanged", {uint32_t {50}, uint32_t {40}, uint32_t {0}});
         _daemon.emit(nm_device, nm_device_interface, "StateChanged", {uint32_t {100}, uint32_t {50}, uint32_t {0}});
         _daemon.emit_properties_changed(nm_device, nm_wireless_interface, {{"LastScan", uint32_t {1}}});
+        // the bus writes every signal to every subscriber before routing this reply, so scan returns after the monitor has them
+        _daemon.reply(call, {});
     });
     _daemon.serve();
     wifi::Monitor monitor(Duration(time::sec(1)));
@@ -116,12 +117,13 @@ TEST_F(TestMonitor, test_iwd_events)
     ASSERT_TRUE(_daemon.start({iwd_service}));
     serve_iwd_station(_daemon, "disconnected");
     _daemon.on(iwd_station_interface, "Scan", [this](const dbus::Message & call) {
-        _daemon.reply(call, {});
         _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"Scanning", true}});
         _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"State", "connecting"}});
         _daemon.emit_properties_changed(iwd_station,
                                         iwd_station_interface,
                                         {{"State", "connected"}, {"Scanning", false}});
+        // the bus writes every signal to every subscriber before routing this reply, so scan returns after the monitor has them
+        _daemon.reply(call, {});
     });
     _daemon.serve();
     wifi::Monitor monitor("wlan-test", Duration(time::sec(1)));
@@ -137,9 +139,10 @@ TEST_F(TestMonitor, test_wpa_supplicant_events_with_a_blocking_run)
     ASSERT_TRUE(_daemon.start({wpa_service}));
     serve_wpa_supplicant(_daemon);
     _daemon.on(wpa_interface_interface, "Scan", [this](const dbus::Message & call) {
-        _daemon.reply(call, {});
         _daemon.emit_properties_changed(wpa_interface, wpa_interface_interface, {{"State", "scanning"}});
         _daemon.emit(wpa_interface, wpa_interface_interface, "ScanDone", {true});
+        // the bus writes every signal to every subscriber before routing this reply, so scan returns after the monitor has them
+        _daemon.reply(call, {});
     });
     _daemon.serve();
     wifi::Monitor monitor(Duration(-1));

@@ -65,6 +65,8 @@ class PrivateDBus
 
         const std::string & address() const { return _address; }
 
+        std::string socket_path() const { return sihd::sys::fs::combine(_tmp_dir.path(), "bus"); }
+
     private:
         sihd::sys::TmpDir _tmp_dir;
         sihd::sys::Process _daemon;

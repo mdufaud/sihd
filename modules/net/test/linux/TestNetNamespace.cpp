@@ -61,6 +61,8 @@ constexpr int child_dbus_unavailable = 6;
 
 constexpr std::array<ns::Type, 2> network_and_mount_namespaces = {ns::Type::net, ns::Type::mount};
 
+constexpr const char *system_bus_socket = "/run/dbus/system_bus_socket";
+
 const std::map<int, std::string> skipped_child_codes = {
     {child_tun_unavailable, "/dev/net/tun unavailable"},
     {child_bridge_unavailable, "bridge module not loaded"},
@@ -84,6 +86,14 @@ bool bind_resolv_conf(const TmpDir & tmp, const std::string & content)
 {
     const std::string resolv_conf = tmp.path() + "/resolv.conf";
     return fs::write(resolv_conf, content) && run_command({"mount", "--bind", resolv_conf, "/etc/resolv.conf"});
+}
+
+// libdbus keeps the system bus address of its first connection, the parent's before the fork included
+bool bind_system_bus(const std::string & socket)
+{
+    if (fs::exists(system_bus_socket) && !run_command({"mount", "--bind", socket, system_bus_socket}))
+        return false;
+    return env::set("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=" + socket).has_value();
 }
 
 // a tun device lives while its descriptor is open: the callers keep the File in scope
@@ -333,10 +343,9 @@ int check_resolv_conf_servers()
 int check_resolved_stub_without_resolved()
 {
     TmpDir tmp;
-    if (!bind_resolv_conf(tmp, "nameserver 127.0.0.53\n"))
+    const std::string no_bus = tmp.path() + "/no_bus";
+    if (!bind_resolv_conf(tmp, "nameserver 127.0.0.53\n") || !fs::write(no_bus, "") || !bind_system_bus(no_bus))
         return child_mount_unavailable;
-    if (!env::set("DBUS_SYSTEM_BUS_ADDRESS", "unix:path=" + tmp.path() + "/no_bus"))
-        return child_failed;
 
     auto servers = dns::servers();
     if (!servers || servers->size() != 1)
@@ -378,12 +387,12 @@ int check_resolved_servers()
     if (!tun)
         return tun_failure(tun.error());
     TmpDir tmp;
-    if (!bind_resolv_conf(tmp, "nameserver 127.0.0.53\noptions edns0 trust-ad\n"))
+    if (!bind_resolv_conf(tmp, "nameserver 127.0.0.53\noptions edns0 trust-ad\n")
+        || !bind_system_bus(bus.socket_path()))
         return child_mount_unavailable;
 
     dbus::Connection server;
-    if (!env::set("DBUS_SYSTEM_BUS_ADDRESS", bus.address()) || !server.open(bus.address())
-        || !server.request_name("org.freedesktop.resolve1"))
+    if (!server.open(bus.address()) || !server.request_name("org.freedesktop.resolve1"))
         return child_failed;
 
     Result<std::vector<dns::DnsServer>> servers;
