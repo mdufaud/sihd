@@ -29,84 +29,14 @@ namespace dbus = sihd::sys::linux_::dbus;
 
 inline const sihd::util::Duration fake_timeout(sihd::util::time::sec(5));
 
-// a dbus value the fake answers with: append must write exactly its signature
-struct FakeValue
+inline std::vector<uint8_t> bytes(const std::string & value)
 {
-        std::string signature;
-        std::function<sihd::util::Result<void>(dbus::Appender &)> append;
-};
-
-using FakeEntries = std::vector<std::pair<std::string, FakeValue>>;
-
-inline FakeValue text(const std::string & value)
-{
-    return {"s", [value](dbus::Appender & to) { return to.add(value); }};
+    return std::vector<uint8_t>(value.begin(), value.end());
 }
 
-inline FakeValue object_path(const std::string & path)
+inline std::vector<dbus::ObjectPath> object_paths(const std::vector<std::string> & paths)
 {
-    return {"o", [path](dbus::Appender & to) { return to.add_object_path(path); }};
-}
-
-inline FakeValue boolean(bool value)
-{
-    return {"b", [value](dbus::Appender & to) { return to.add(value); }};
-}
-
-inline FakeValue u8(uint8_t value)
-{
-    return {"y", [value](dbus::Appender & to) { return to.add(value); }};
-}
-
-inline FakeValue u32(uint32_t value)
-{
-    return {"u", [value](dbus::Appender & to) { return to.add(value); }};
-}
-
-inline FakeValue bytes(const std::vector<uint8_t> & value)
-{
-    return {"ay", [value](dbus::Appender & to) { return to.add_array(value); }};
-}
-
-inline FakeValue bytes(const std::string & value)
-{
-    return bytes(std::vector<uint8_t>(value.begin(), value.end()));
-}
-
-inline FakeValue texts(const std::vector<std::string> & values)
-{
-    return {"as", [values](dbus::Appender & to) { return to.add_array(values); }};
-}
-
-inline FakeValue object_paths(const std::vector<std::string> & paths)
-{
-    return {"ao", [paths](dbus::Appender & to) -> sihd::util::Result<void> {
-                auto array = to.open_array("o");
-                SIHD_UNEXPECTED_RETURN(array);
-                for (const std::string & path : paths)
-                {
-                    auto added = array->add_object_path(path);
-                    SIHD_UNEXPECTED_RETURN(added);
-                }
-                return to.close(std::move(*array));
-            }};
-}
-
-inline sihd::util::Result<void> append_entries(dbus::Appender & to, const FakeEntries & entries)
-{
-    auto dict = to.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(dict);
-    for (const auto & [key, value] : entries)
-    {
-        auto appended = dict->add_entry(key, value.signature, value.append);
-        SIHD_UNEXPECTED_RETURN(appended);
-    }
-    return to.close(std::move(*dict));
-}
-
-inline FakeValue dict(const FakeEntries & entries)
-{
-    return {"a{sv}", [entries](dbus::Appender & to) { return append_entries(to, entries); }};
+    return std::vector<dbus::ObjectPath>(paths.begin(), paths.end());
 }
 
 // libdbus reads DBUS_SYSTEM_BUS_ADDRESS once per process: every fake must share this bus
@@ -153,7 +83,7 @@ class FakeDaemon
         void set_property(const std::string & path,
                           const std::string & interface,
                           const std::string & name,
-                          const FakeValue & value)
+                          const dbus::Value & value)
         {
             _objects[path][interface].insert_or_assign(name, value);
         }
@@ -189,15 +119,14 @@ class FakeDaemon
             });
         }
 
-        void reply(const dbus::Message & call, const std::vector<FakeValue> & values)
+        void reply(const dbus::Message & call, const std::vector<dbus::Value> & values)
         {
             auto answer = call.method_return();
             ASSERT_TRUE(answer.has_value()) << answer.error().message;
-            dbus::Appender body(*answer);
-            for (const FakeValue & value : values)
+            for (const dbus::Value & value : values)
             {
-                auto appended = value.append(body);
-                ASSERT_TRUE(appended.has_value()) << appended.error().message;
+                auto added = answer->add(value);
+                ASSERT_TRUE(added.has_value()) << added.error().message;
             }
             ASSERT_TRUE(answer->send(_server).has_value());
         }
@@ -212,34 +141,32 @@ class FakeDaemon
         void emit(const std::string & path,
                   const std::string & interface,
                   const std::string & member,
-                  const std::vector<FakeValue> & values)
+                  const std::vector<dbus::Value> & values)
         {
             dbus::Message signal;
             auto built = signal.signal(path, interface, member);
             ASSERT_TRUE(built.has_value()) << built.error().message;
-            dbus::Appender body(signal);
-            for (const FakeValue & value : values)
+            for (const dbus::Value & value : values)
             {
-                auto appended = value.append(body);
-                ASSERT_TRUE(appended.has_value()) << appended.error().message;
+                auto added = signal.add(value);
+                ASSERT_TRUE(added.has_value()) << added.error().message;
             }
             ASSERT_TRUE(signal.send(_server).has_value());
         }
 
-        void emit_properties_changed(const std::string & path,
-                                     const std::string & interface,
-                                     const FakeEntries & changed)
+        void
+            emit_properties_changed(const std::string & path, const std::string & interface, const dbus::Dict & changed)
         {
             this->emit(path,
                        "org.freedesktop.DBus.Properties",
                        "PropertiesChanged",
-                       {text(interface), dict(changed), texts({})});
+                       {interface, changed, std::vector<std::string> {}});
         }
 
         dbus::Connection & connection() { return _server; }
 
         // from a handler only: the serving thread owns the objects once serve() ran
-        void publish(const std::string & path, const std::string & interface, const FakeEntries & properties)
+        void publish(const std::string & path, const std::string & interface, const dbus::Dict & properties)
         {
             for (const auto & [name, value] : properties)
                 _objects[path][interface].insert_or_assign(name, value);
@@ -256,21 +183,21 @@ class FakeDaemon
         }
 
         // the current value, read once stop() joined the serving thread or from a handler
-        const FakeValue & property(const std::string & path, const std::string & interface, const std::string & name)
+        const dbus::Value & property(const std::string & path, const std::string & interface, const std::string & name)
         {
-            return _objects[path][interface][name];
+            return _objects[path][interface].at(name);
         }
 
     private:
         // a Set stores booleans, strings and unsigned integers: the fake reads them back
-        static std::optional<FakeValue> written_value(const std::string & signature, dbus::Iter & value)
+        static std::optional<dbus::Value> written_value(const std::string & signature, dbus::Iter & value)
         {
             if (signature == "b")
-                return boolean(value.get<bool>().value_or(false));
+                return dbus::Value(value.get<bool>().value_or(false));
             if (signature == "s")
-                return text(value.get<std::string>().value_or(""));
+                return dbus::Value(value.get<std::string>().value_or(""));
             if (signature == "u")
-                return u32(value.get<uint32_t>().value_or(0));
+                return dbus::Value(value.get<uint32_t>().value_or(0));
             return std::nullopt;
         }
 
@@ -281,12 +208,12 @@ class FakeDaemon
             {
                 members.push_back({
                     .name = name,
-                    .signature = value.signature,
+                    .signature = value.signature(),
                     .get = [this, path, interface, name](
-                               dbus::Appender & to) { return _objects[path][interface][name].append(to); },
+                               dbus::Appender & to) { return to.add(_objects[path][interface].at(name)); },
                     .set = [this, path, interface, name](dbus::Iter & value) -> sihd::util::Result<void> {
-                        FakeValue & stored = _objects[path][interface][name];
-                        auto written = written_value(stored.signature, value);
+                        dbus::Value & stored = _objects[path][interface].at(name);
+                        auto written = written_value(stored.signature(), value);
                         if (!written.has_value())
                             return std::unexpected(
                                 sihd::util::Error(sihd::util::ErrorCode::not_supported, "read only"));
@@ -338,7 +265,7 @@ class FakeDaemon
 
         dbus::Connection _server;
         dbus::ObjectServer _object_server {_server};
-        std::map<std::string, std::map<std::string, std::map<std::string, FakeValue>>> _objects;
+        std::map<std::string, std::map<std::string, std::map<std::string, dbus::Value>>> _objects;
         std::map<std::pair<std::string, std::string>, Handler> _handlers;
         std::vector<Call> _calls;
         std::jthread _thread;

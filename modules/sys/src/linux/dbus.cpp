@@ -145,18 +145,8 @@ Result<void> set_property(Connection & connection,
     Message request;
     auto built = request.method_call(destination, path, properties_interface, "Set");
     SIHD_UNEXPECTED_RETURN(built);
-    Appender body(request);
-    auto interface_added = body.add(interface);
-    SIHD_UNEXPECTED_RETURN(interface_added);
-    auto name_added = body.add(name);
-    SIHD_UNEXPECTED_RETURN(name_added);
-
-    auto variant = body.open_variant(std::string(1, dbus_type_of<T>()));
-    SIHD_UNEXPECTED_RETURN(variant);
-    auto value_added = variant->add(value);
-    SIHD_UNEXPECTED_RETURN(value_added);
-    auto variant_closed = body.close(std::move(*variant));
-    SIHD_UNEXPECTED_RETURN(variant_closed);
+    auto added = request.add(interface, name, Variant(value));
+    SIHD_UNEXPECTED_RETURN(added);
 
     auto reply = request.call(connection, timeout);
     SIHD_UNEXPECTED_RETURN(reply);

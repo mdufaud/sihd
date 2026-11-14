@@ -71,20 +71,8 @@ class TestDBusProperties: public ::testing::Test
             auto built = signal.signal(path, "org.freedesktop.DBus.Properties", "PropertiesChanged");
             SIHD_UNEXPECTED_RETURN(built);
 
-            Appender body(signal);
-            auto interface_added = body.add(interface);
-            SIHD_UNEXPECTED_RETURN(interface_added);
-            auto changed = body.open_array("{sv}");
-            SIHD_UNEXPECTED_RETURN(changed);
-            auto state_added = changed->add_entry("State", "s", [](Appender & value) {
-                return value.add("connected");
-            });
-            SIHD_UNEXPECTED_RETURN(state_added);
-            auto changed_closed = body.close(std::move(*changed));
-            SIHD_UNEXPECTED_RETURN(changed_closed);
-
-            auto invalidated = body.add_array(std::vector<std::string> {"Strength"});
-            SIHD_UNEXPECTED_RETURN(invalidated);
+            auto added = signal.add(interface, Dict {{"State", "connected"}}, std::vector<std::string> {"Strength"});
+            SIHD_UNEXPECTED_RETURN(added);
             return signal;
         }
 
@@ -102,11 +90,11 @@ TEST_F(TestDBusProperties, test_get_property)
 {
     std::vector<std::string> asked;
     auto server = this->answer_next("Get", [this, &asked](const Message & call) {
-        Iter arguments(call);
+        auto [interface_name, property_name] = Iter(call).read<std::string, std::string>().value_or(
+            std::tuple<std::string, std::string> {});
         asked.emplace_back(call.path());
-        asked.emplace_back(arguments.get<std::string>().value_or(""));
-        arguments.next();
-        asked.emplace_back(arguments.get<std::string>().value_or(""));
+        asked.emplace_back(interface_name);
+        asked.emplace_back(property_name);
         this->reply(call, [](Appender & body) -> Result<void> {
             auto variant = body.open_variant("u");
             SIHD_UNEXPECTED_RETURN(variant);
@@ -128,11 +116,7 @@ TEST_F(TestDBusProperties, test_get_array_property)
 {
     auto server = this->answer_next("Get", [this](const Message & call) {
         this->reply(call, [](Appender & body) -> Result<void> {
-            auto variant = body.open_variant("ay");
-            SIHD_UNEXPECTED_RETURN(variant);
-            auto added = variant->add_array(std::vector<uint8_t> {'h', 'o', 'm', 'e'});
-            SIHD_UNEXPECTED_RETURN(added);
-            return body.close(std::move(*variant));
+            return body.add(Variant(std::vector<uint8_t> {'h', 'o', 'm', 'e'}));
         });
     });
 
@@ -208,15 +192,7 @@ TEST_F(TestDBusProperties, test_get_all)
     auto server = this->answer_next("GetAll", [this, &asked](const Message & call) {
         asked = Iter(call).get<std::string>().value_or("");
         this->reply(call, [](Appender & body) -> Result<void> {
-            auto properties = body.open_array("{sv}");
-            SIHD_UNEXPECTED_RETURN(properties);
-            auto name_added = properties->add_entry("Name", "s", [](Appender & value) { return value.add("wlan0"); });
-            SIHD_UNEXPECTED_RETURN(name_added);
-            auto managed_added = properties->add_entry("Managed", "b", [](Appender & value) {
-                return value.add(true);
-            });
-            SIHD_UNEXPECTED_RETURN(managed_added);
-            return body.close(std::move(*properties));
+            return body.add(Dict {{"Name", "wlan0"}, {"Managed", true}});
         });
     });
 
@@ -228,12 +204,11 @@ TEST_F(TestDBusProperties, test_get_all)
 
     ASSERT_TRUE(reply.has_value()) << reply.error().message;
     EXPECT_EQ(asked, interface);
+    auto properties = Iter(*reply).entries<std::string>();
+    ASSERT_TRUE(properties.has_value()) << properties.error().message;
     std::map<std::string, char> types;
-    auto walked = Iter(*reply).for_each_entry<std::string>([&types](const std::string & name, Iter & value) {
+    for (auto & [name, value] : *properties)
         types.emplace(name, value.type());
-        return Result<void> {};
-    });
-    ASSERT_TRUE(walked.has_value()) << walked.error().message;
     EXPECT_EQ(types, (std::map<std::string, char> {{"Managed", 'b'}, {"Name", 's'}}));
 }
 
@@ -294,9 +269,9 @@ TEST_F(TestDBusProperties, test_add_array)
     ASSERT_TRUE(built.has_value()) << built.error().message;
     Appender body(message);
 
-    ASSERT_TRUE(body.add_array(std::vector<std::string> {"first", "second"}).has_value());
-    ASSERT_TRUE(body.add_array(std::vector<bool> {true, false}).has_value());
-    ASSERT_TRUE(body.add_array(std::vector<int32_t> {}).has_value());
+    ASSERT_TRUE(body.add(std::vector<std::string> {"first", "second"}).has_value());
+    ASSERT_TRUE(body.add(std::vector<bool> {true, false}).has_value());
+    ASSERT_TRUE(body.add(std::vector<int32_t> {}).has_value());
 
     Iter arguments(message);
     EXPECT_EQ(arguments.get_array<std::string>().value_or(std::vector<std::string> {}),
@@ -308,7 +283,7 @@ TEST_F(TestDBusProperties, test_add_array)
     EXPECT_EQ(arguments.get_array<int32_t>().value_or(std::vector<int32_t> {1}), std::vector<int32_t> {});
 }
 
-TEST_F(TestDBusProperties, test_for_each_entry_needs_a_dict)
+TEST_F(TestDBusProperties, test_entries_needs_a_dict)
 {
     Message message;
     auto built = message.method_call(service, path, interface, "Set");
@@ -321,16 +296,29 @@ TEST_F(TestDBusProperties, test_for_each_entry_needs_a_dict)
     ASSERT_TRUE(body.close(std::move(*record)).has_value());
 
     Iter arguments(message);
-    auto from_text = arguments.for_each_entry<std::string>([](const std::string &, Iter &) { return Result<void> {}; });
+    auto from_text = arguments.entries<std::string>();
     arguments.next();
-    auto from_struct = arguments.for_each_entry<std::string>(
-        [](const std::string &, Iter &) { return Result<void> {}; });
+    auto from_struct = arguments.entries<std::string>();
 
     ASSERT_FALSE(from_text.has_value());
     EXPECT_EQ(from_text.error().code, ErrorCode::invalid_argument);
     EXPECT_EQ(from_text.error().message, "dbus type 's' is not a dict");
     ASSERT_FALSE(from_struct.has_value());
     EXPECT_EQ(from_struct.error().message, "dbus type 'r' is not a dict");
+}
+
+TEST_F(TestDBusProperties, test_entries_checks_the_key_type)
+{
+    auto signal = properties_changed(interface);
+    ASSERT_TRUE(signal.has_value()) << signal.error().message;
+    Iter arguments(*signal);
+    arguments.next();
+
+    auto by_number = arguments.entries<uint32_t>();
+
+    ASSERT_FALSE(by_number.has_value());
+    EXPECT_EQ(by_number.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(by_number.error().message, "dbus type mismatch: expected 'u', got 's'");
 }
 
 } // namespace test

@@ -52,13 +52,15 @@ class TestBtSocket: public ::testing::Test
             arguments.next();
             _profile_uuid = arguments.get<std::string>().value_or("");
             arguments.next();
-            (void)arguments.for_each_entry<std::string>([this](const std::string & key, dbus::Iter & value) {
+            auto options = arguments.entries<std::string>();
+            ASSERT_TRUE(options.has_value()) << options.error().message;
+            for (auto & [key, value] : *options)
+            {
                 if (key == "Role")
                     _role = value.get<std::string>().value_or("");
                 else if (key == "Name")
                     _service_name = value.get<std::string>().value_or("");
-                return Result<void> {};
-            });
+            }
         }
 
         // bluez hands the connected socket to the profile: a connecting client answers before ConnectProfile ends
@@ -67,10 +69,9 @@ class TestBtSocket: public ::testing::Test
             dbus::Message request;
             auto built = request.method_call(_profile_sender, _profile_path, profile_interface, "NewConnection");
             ASSERT_TRUE(built.has_value()) << built.error().message;
-            dbus::Appender arguments(request);
-            ASSERT_TRUE(arguments.add_object_path(device_path).has_value());
-            ASSERT_TRUE(arguments.add_unix_fd(_peer.local()).has_value());
-            ASSERT_TRUE(append_entries(arguments, {}).has_value());
+            ASSERT_TRUE(request.add(dbus::ObjectPath(device_path)).has_value());
+            ASSERT_TRUE(request.add_unix_fd(_peer.local()).has_value());
+            ASSERT_TRUE(request.add(dbus::Dict {}).has_value());
             if (wait_answer)
                 ASSERT_TRUE(request.call(_daemon.connection(), fake_timeout).has_value());
             else

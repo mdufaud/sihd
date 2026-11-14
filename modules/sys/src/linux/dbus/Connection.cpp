@@ -90,10 +90,14 @@ Result<Credentials> Connection::credentials(ZStringView bus_name, Duration timeo
     auto reply = request.call(*this, timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
+    auto entries = Iter(*reply).entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
     Credentials credentials;
-    auto walked = Iter(*reply).for_each_entry<std::string>(
-        [&credentials](const std::string & key, Iter & value) { return read_credential(credentials, key, value); });
-    SIHD_UNEXPECTED_RETURN(walked);
+    for (auto & [key, value] : *entries)
+    {
+        auto read = read_credential(credentials, key, value);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
     return credentials;
 }
 

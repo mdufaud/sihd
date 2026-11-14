@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <functional>
 #include <map>
 #include <string>
 #include <vector>
@@ -101,7 +100,7 @@ std::vector<std::string> flags_of(uint8_t properties);
 // the error of a failed bluez call, its code following the org.bluez.Error name
 sihd::util::Error error_of(const sihd::util::Error & error);
 
-using Arguments = std::function<sihd::util::Result<void>(dbus::Appender &)>;
+using Arguments = std::vector<dbus::Value>;
 
 sihd::util::Result<dbus::Message> method_call(sihd::util::ZStringView path,
                                               sihd::util::ZStringView interface,

@@ -50,38 +50,10 @@ inline constexpr char cccd_uuid[] = "00002902-0000-1000-8000-00805f9b34fb";
 inline constexpr char alert_uuid[] = "00002a06-0000-1000-8000-00805f9b34fb";
 inline constexpr char serial_port_uuid[] = "00001101-0000-1000-8000-00805f9b34fb";
 
-inline FakeValue i16(int16_t value)
-{
-    return {"n", [value](dbus::Appender & to) { return to.add(value); }};
-}
-
-inline FakeValue u16(uint16_t value)
-{
-    return {"q", [value](dbus::Appender & to) { return to.add(value); }};
-}
-
-// libdbus sends a duplicate: the caller keeps its fd
-inline FakeValue unix_fd(int fd)
-{
-    return {"h", [fd](dbus::Appender & to) { return to.add_unix_fd(fd); }};
-}
-
 // the a{sa{sv}} of InterfacesAdded: one interface and its properties
-inline FakeValue interfaces(const std::string & interface, const FakeEntries & properties)
+inline dbus::Value interfaces(const std::string & interface, const dbus::Dict & properties)
 {
-    return {"a{sa{sv}}", [interface, properties](dbus::Appender & to) -> sihd::util::Result<void> {
-                auto array = to.open_array("{sa{sv}}");
-                SIHD_UNEXPECTED_RETURN(array);
-                auto entry = array->open_dict_entry();
-                SIHD_UNEXPECTED_RETURN(entry);
-                auto name_added = entry->add(interface);
-                SIHD_UNEXPECTED_RETURN(name_added);
-                auto appended = append_entries(*entry, properties);
-                SIHD_UNEXPECTED_RETURN(appended);
-                auto entry_closed = array->close(std::move(*entry));
-                SIHD_UNEXPECTED_RETURN(entry_closed);
-                return to.close(std::move(*array));
-            }};
+    return std::map<std::string, dbus::Dict> {{interface, properties}};
 }
 
 inline void answer(FakeDaemon & daemon, const std::string & interface, const std::vector<std::string> & members)
@@ -92,30 +64,30 @@ inline void answer(FakeDaemon & daemon, const std::string & interface, const std
 
 inline void serve_adapter(FakeDaemon & daemon, const std::string & path, bool powered)
 {
-    daemon.set_property(path, adapter_interface, "Address", text("00:11:22:33:44:55"));
-    daemon.set_property(path, adapter_interface, "Name", text("fake"));
-    daemon.set_property(path, adapter_interface, "Alias", text("fake alias"));
-    daemon.set_property(path, adapter_interface, "Powered", boolean(powered));
-    daemon.set_property(path, adapter_interface, "Discoverable", boolean(false));
-    daemon.set_property(path, adapter_interface, "Pairable", boolean(true));
-    daemon.set_property(path, adapter_interface, "Discovering", boolean(false));
+    daemon.set_property(path, adapter_interface, "Address", "00:11:22:33:44:55");
+    daemon.set_property(path, adapter_interface, "Name", "fake");
+    daemon.set_property(path, adapter_interface, "Alias", "fake alias");
+    daemon.set_property(path, adapter_interface, "Powered", powered);
+    daemon.set_property(path, adapter_interface, "Discoverable", false);
+    daemon.set_property(path, adapter_interface, "Pairable", true);
+    daemon.set_property(path, adapter_interface, "Discovering", false);
 }
 
 // a device of hci0 that advertised during the current discovery
-inline FakeEntries device_properties(const std::string & address, const std::string & name, int16_t rssi)
+inline dbus::Dict device_properties(const std::string & address, const std::string & name, int16_t rssi)
 {
     return {
-        {"Adapter", object_path(adapter_path)},
-        {"Address", text(address)},
-        {"AddressType", text("random")},
-        {"Name", text(name)},
-        {"Paired", boolean(false)},
-        {"Connected", boolean(false)},
-        {"Trusted", boolean(false)},
-        {"ServicesResolved", boolean(false)},
-        {"RSSI", i16(rssi)},
-        {"UUIDs", texts({battery_uuid})},
-        {"Appearance", u16(0x0300)},
+        {"Adapter", dbus::ObjectPath(adapter_path)},
+        {"Address", address},
+        {"AddressType", "random"},
+        {"Name", name},
+        {"Paired", false},
+        {"Connected", false},
+        {"Trusted", false},
+        {"ServicesResolved", false},
+        {"RSSI", rssi},
+        {"UUIDs", std::vector<std::string> {battery_uuid}},
+        {"Appearance", uint16_t {0x0300}},
     };
 }
 
@@ -127,25 +99,28 @@ inline void serve_device(FakeDaemon & daemon)
 
 inline void serve_gatt(FakeDaemon & daemon)
 {
-    daemon.set_property(service_path, gatt_service_interface, "UUID", text(battery_uuid));
-    daemon.set_property(service_path, gatt_service_interface, "Primary", boolean(true));
-    daemon.set_property(service_path, gatt_service_interface, "Device", object_path(device_path));
-    daemon.set_property(service_path, gatt_service_interface, "Handle", u16(0x000c));
+    daemon.set_property(service_path, gatt_service_interface, "UUID", battery_uuid);
+    daemon.set_property(service_path, gatt_service_interface, "Primary", true);
+    daemon.set_property(service_path, gatt_service_interface, "Device", dbus::ObjectPath(device_path));
+    daemon.set_property(service_path, gatt_service_interface, "Handle", uint16_t {0x000c});
 
-    daemon.set_property(level_path, gatt_characteristic_interface, "UUID", text(level_uuid));
-    daemon.set_property(level_path, gatt_characteristic_interface, "Service", object_path(service_path));
-    daemon.set_property(level_path, gatt_characteristic_interface, "Flags", texts({"read", "notify"}));
-    daemon.set_property(level_path, gatt_characteristic_interface, "Handle", u16(0x000d));
-    daemon.set_property(level_path, gatt_characteristic_interface, "MTU", u16(247));
+    daemon.set_property(level_path, gatt_characteristic_interface, "UUID", level_uuid);
+    daemon.set_property(level_path, gatt_characteristic_interface, "Service", dbus::ObjectPath(service_path));
+    daemon.set_property(level_path,
+                        gatt_characteristic_interface,
+                        "Flags",
+                        std::vector<std::string> {"read", "notify"});
+    daemon.set_property(level_path, gatt_characteristic_interface, "Handle", uint16_t {0x000d});
+    daemon.set_property(level_path, gatt_characteristic_interface, "MTU", uint16_t {247});
 
-    daemon.set_property(cccd_path, gatt_descriptor_interface, "UUID", text(cccd_uuid));
-    daemon.set_property(cccd_path, gatt_descriptor_interface, "Characteristic", object_path(level_path));
-    daemon.set_property(cccd_path, gatt_descriptor_interface, "Handle", u16(0x000f));
+    daemon.set_property(cccd_path, gatt_descriptor_interface, "UUID", cccd_uuid);
+    daemon.set_property(cccd_path, gatt_descriptor_interface, "Characteristic", dbus::ObjectPath(level_path));
+    daemon.set_property(cccd_path, gatt_descriptor_interface, "Handle", uint16_t {0x000f});
 
-    daemon.set_property(alert_path, gatt_characteristic_interface, "UUID", text(alert_uuid));
-    daemon.set_property(alert_path, gatt_characteristic_interface, "Service", object_path(service_path));
-    daemon.set_property(alert_path, gatt_characteristic_interface, "Flags", texts({"indicate"}));
-    daemon.set_property(alert_path, gatt_characteristic_interface, "Handle", u16(0x0010));
+    daemon.set_property(alert_path, gatt_characteristic_interface, "UUID", alert_uuid);
+    daemon.set_property(alert_path, gatt_characteristic_interface, "Service", dbus::ObjectPath(service_path));
+    daemon.set_property(alert_path, gatt_characteristic_interface, "Flags", std::vector<std::string> {"indicate"});
+    daemon.set_property(alert_path, gatt_characteristic_interface, "Handle", uint16_t {0x0010});
 }
 
 // both ends of a unix socket pair, closed with it
@@ -199,16 +174,18 @@ struct ReadProperties
 
 inline sihd::util::Result<void> read_properties(dbus::Iter & properties, ReadProperties & into)
 {
-    return properties.for_each_entry<std::string>(
-        [&into](const std::string & key, dbus::Iter & value) -> sihd::util::Result<void> {
-            if (auto text = value.get<std::string>())
-                into.texts.insert_or_assign(key, *text);
-            else if (auto flag = value.get<bool>())
-                into.booleans.insert_or_assign(key, *flag);
-            else if (auto array = value.get_array<std::string>())
-                into.arrays.insert_or_assign(key, *array);
-            return {};
-        });
+    auto entries = properties.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    for (auto & [key, value] : *entries)
+    {
+        if (auto text = value.get<std::string>())
+            into.texts.insert_or_assign(key, *text);
+        else if (auto flag = value.get<bool>())
+            into.booleans.insert_or_assign(key, *flag);
+        else if (auto array = value.get_array<std::string>())
+            into.arrays.insert_or_assign(key, *array);
+    }
+    return {};
 }
 
 } // namespace test

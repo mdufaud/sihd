@@ -32,8 +32,8 @@ class TestIwd: public ::testing::Test
             this->add_network(attic, "attic", "psk", "");
             this->add_network(corp, "corp", "8021x", "");
             this->add_network(cafe, "cafe", "open", "");
-            _daemon.set_property(known_home, known_interface, "Name", text("home"));
-            _daemon.set_property(known_home, known_interface, "Type", text("psk"));
+            _daemon.set_property(known_home, known_interface, "Name", "home");
+            _daemon.set_property(known_home, known_interface, "Type", "psk");
 
             _daemon.on(agent_manager_interface, "RegisterAgent", [this](const dbus::Message & call) {
                 _daemon.reply(call, {});
@@ -49,11 +49,11 @@ class TestIwd: public ::testing::Test
                          const std::string & type,
                          const std::string & known)
         {
-            _daemon.set_property(path, network_interface, "Name", text(name));
-            _daemon.set_property(path, network_interface, "Type", text(type));
-            _daemon.set_property(path, network_interface, "Device", object_path(iwd_station));
+            _daemon.set_property(path, network_interface, "Name", name);
+            _daemon.set_property(path, network_interface, "Type", type);
+            _daemon.set_property(path, network_interface, "Device", dbus::ObjectPath(iwd_station));
             if (!known.empty())
-                _daemon.set_property(path, network_interface, "KnownNetwork", object_path(known));
+                _daemon.set_property(path, network_interface, "KnownNetwork", dbus::ObjectPath(known));
         }
 
         Result<std::string> request_passphrase(dbus::Connection & sender, const dbus::Message & connect_call)
@@ -61,7 +61,7 @@ class TestIwd: public ::testing::Test
             dbus::Message request;
             auto built = request.method_call(connect_call.sender(), "/agent", agent_interface, "RequestPassphrase");
             SIHD_UNEXPECTED_RETURN(built);
-            auto added = request.add_object_path(connect_call.path());
+            auto added = request.add(dbus::ObjectPath(connect_call.path()));
             SIHD_UNEXPECTED_RETURN(added);
             auto answer = request.call(sender, fake_timeout);
             SIHD_UNEXPECTED_RETURN(answer);
@@ -97,7 +97,7 @@ TEST_F(TestIwd, test_backend_detection)
 
 TEST_F(TestIwd, test_state)
 {
-    _daemon.set_property(iwd_station, iwd_station_interface, "State", text("roaming"));
+    _daemon.set_property(iwd_station, iwd_station_interface, "State", "roaming");
     _daemon.serve();
 
     auto current = wifi::state("wlan-test");
@@ -113,11 +113,11 @@ TEST_F(TestIwd, test_scan_waits_for_scanning_end)
         if (scans++ == 0)
         {
             _daemon.reply(call, {});
-            _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"Scanning", boolean(true)}});
+            _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"Scanning", true}});
         }
         else
             _daemon.fail(call, "net.connman.iwd.Busy", "Operation already in progress");
-        _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"Scanning", boolean(false)}});
+        _daemon.emit_properties_changed(iwd_station, iwd_station_interface, {{"Scanning", false}});
     });
     _daemon.serve();
 

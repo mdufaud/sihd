@@ -33,18 +33,11 @@ constexpr const char *no_object = "/";
 std::map<std::string, std::string> read_attributes(const Iter & attributes)
 {
     std::map<std::string, std::string> values;
-    auto entries = attributes.recurse();
+    auto entries = attributes.entries<std::string>();
     if (!entries.has_value())
         return values;
-    for (; entries->type() != '\0'; entries->next())
-    {
-        auto entry = entries->recurse();
-        if (!entry.has_value())
-            return values;
-        const std::string key = entry->get<std::string>().value_or("unreadable");
-        entry->next();
-        values[key] = entry->get<std::string>().value_or("unreadable");
-    }
+    for (auto & [key, value] : *entries)
+        values[key] = value.get<std::string>().value_or("unreadable");
     return values;
 }
 
@@ -63,14 +56,15 @@ Result<CreateItem> read_create_item(const Message & call)
 {
     CreateItem item;
     Iter args(call);
-    auto read = args.for_each_entry<std::string>([&item](const std::string & key, Iter & value) -> Result<void> {
+    auto properties = args.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(properties);
+    for (auto & [key, value] : *properties)
+    {
         if (key == "org.freedesktop.Secret.Item.Label")
             item.label = value.get<std::string>().value_or("unreadable");
         else if (key == "org.freedesktop.Secret.Item.Attributes")
             item.attributes = read_attributes(value);
-        return {};
-    });
-    SIHD_UNEXPECTED_RETURN(read);
+    }
     args.next();
 
     auto secret = args.recurse();
@@ -146,22 +140,13 @@ class TestSecretService: public ::testing::Test
             EXPECT_EQ(call.signature(), "sv");
             EXPECT_EQ(Iter(call).get<std::string>().value_or("unreadable"), "plain");
             Message reply = this->new_reply(call);
-            Appender body(reply);
-            auto output = body.open_variant("s");
-            ASSERT_TRUE(output.has_value());
-            ASSERT_TRUE(output->add("").has_value());
-            ASSERT_TRUE(body.close(std::move(*output)).has_value());
-            ASSERT_TRUE(body.add_object_path(session_path).has_value());
+            ASSERT_TRUE(reply.add(Variant(""), ObjectPath(session_path)).has_value());
             this->send(reply);
         }
 
-        void add_paths(Appender & body, const std::vector<std::string> & paths)
+        static std::vector<ObjectPath> object_paths(const std::vector<std::string> & paths)
         {
-            auto array = body.open_array("o");
-            ASSERT_TRUE(array.has_value());
-            for (const std::string & path : paths)
-                ASSERT_TRUE(array->add_object_path(path).has_value());
-            ASSERT_TRUE(body.close(std::move(*array)).has_value());
+            return std::vector<ObjectPath>(paths.begin(), paths.end());
         }
 
         void answer_search(const std::vector<std::string> & unlocked, const std::vector<std::string> & locked)
@@ -170,9 +155,7 @@ class TestSecretService: public ::testing::Test
             EXPECT_EQ(read_attributes(Iter(call)),
                       (std::map<std::string, std::string> {{"service", "mail"}, {"username", "me@example.org"}}));
             Message reply = this->new_reply(call);
-            Appender body(reply);
-            this->add_paths(body, unlocked);
-            this->add_paths(body, locked);
+            ASSERT_TRUE(reply.add(object_paths(unlocked), object_paths(locked)).has_value());
             this->send(reply);
         }
 
@@ -181,9 +164,8 @@ class TestSecretService: public ::testing::Test
             Message call = this->expect_call("Unlock");
             EXPECT_EQ(Iter(call).get_array<std::string>().value_or(std::vector<std::string> {}), expected);
             Message reply = this->new_reply(call);
-            Appender body(reply);
-            this->add_paths(body, prompt == no_object ? expected : std::vector<std::string> {});
-            ASSERT_TRUE(body.add_object_path(prompt).has_value());
+            const std::vector<std::string> unlocked = prompt == no_object ? expected : std::vector<std::string> {};
+            ASSERT_TRUE(reply.add(object_paths(unlocked), ObjectPath(prompt)).has_value());
             this->send(reply);
         }
 
@@ -196,12 +178,7 @@ class TestSecretService: public ::testing::Test
 
             Message signal;
             ASSERT_TRUE(signal.signal(prompt_path, "org.freedesktop.Secret.Prompt", "Completed").has_value());
-            Appender body(signal);
-            ASSERT_TRUE(body.add(dismissed).has_value());
-            auto result = body.open_variant("s");
-            ASSERT_TRUE(result.has_value());
-            ASSERT_TRUE(result->add("").has_value());
-            ASSERT_TRUE(body.close(std::move(*result)).has_value());
+            ASSERT_TRUE(signal.add(dismissed, Variant("")).has_value());
             ASSERT_TRUE(signal.send(_server).has_value());
         }
 
@@ -211,14 +188,11 @@ class TestSecretService: public ::testing::Test
             EXPECT_EQ(call.path(), item_path);
             EXPECT_EQ(Iter(call).get<std::string>().value_or("unreadable"), session_path);
             Message reply = this->new_reply(call);
-            Appender body(reply);
-            auto value = body.open_struct();
-            ASSERT_TRUE(value.has_value());
-            ASSERT_TRUE(value->add_object_path(session_path).has_value());
-            ASSERT_TRUE(value->add_array(std::vector<uint8_t> {}).has_value());
-            ASSERT_TRUE(value->add_array(std::vector<uint8_t>(secret.begin(), secret.end())).has_value());
-            ASSERT_TRUE(value->add("text/plain").has_value());
-            ASSERT_TRUE(body.close(std::move(*value)).has_value());
+            const Struct value {ObjectPath(session_path),
+                                std::vector<uint8_t> {},
+                                std::vector<uint8_t>(secret.begin(), secret.end()),
+                                "text/plain"};
+            ASSERT_TRUE(reply.add(value).has_value());
             this->send(reply);
         }
 
@@ -227,15 +201,14 @@ class TestSecretService: public ::testing::Test
             Message call = this->expect_call("ReadAlias");
             EXPECT_EQ(Iter(call).get<std::string>().value_or("unreadable"), "default");
             Message reply = this->new_reply(call);
-            ASSERT_TRUE(reply.add_object_path(collection).has_value());
+            ASSERT_TRUE(reply.add(ObjectPath(collection)).has_value());
             this->send(reply);
         }
 
         void answer_two_paths(const Message & call, const std::string & first, const std::string & second)
         {
             Message reply = this->new_reply(call);
-            ASSERT_TRUE(reply.add_object_path(first).has_value());
-            ASSERT_TRUE(reply.add_object_path(second).has_value());
+            ASSERT_TRUE(reply.add(ObjectPath(first), ObjectPath(second)).has_value());
             this->send(reply);
         }
 
@@ -365,7 +338,7 @@ TEST_F(TestSecretService, test_remove)
     EXPECT_EQ(call.path(), item_path);
     EXPECT_EQ(call.interface(), "org.freedesktop.Secret.Item");
     Message reply = this->new_reply(call);
-    ASSERT_TRUE(reply.add_object_path(no_object).has_value());
+    ASSERT_TRUE(reply.add(ObjectPath(no_object)).has_value());
     this->send(reply);
 
     EXPECT_EQ(_client.next_line(), "ok");

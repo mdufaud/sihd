@@ -64,11 +64,6 @@ class TestDBusServer: public ::testing::Test
             return reply;
         }
 
-        static Result<void> add_string_entry(Appender & dict, const std::string & key, const std::string & value)
-        {
-            return dict.add_entry(key, "s", [&value](Appender & variant) { return variant.add(value); });
-        }
-
         PrivateDBus _bus;
         Connection _server;
         Connection _client;
@@ -202,8 +197,8 @@ TEST_F(TestDBusServer, test_object_path_argument)
     Message request;
     auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
     ASSERT_TRUE(built.has_value()) << built.error().message;
-    auto invalid = request.add_object_path("not a path");
-    ASSERT_TRUE(request.add_object_path("/org/sihd/Device/1").has_value());
+    auto invalid = request.add(ObjectPath("not a path"));
+    ASSERT_TRUE(request.add(ObjectPath("/org/sihd/Device/1")).has_value());
 
     ASSERT_TRUE(request.send(_client).has_value());
     auto call = receive_member(_server, "Ping");
@@ -223,8 +218,7 @@ TEST_F(TestDBusServer, test_received_call_metadata)
     Message request;
     auto built = request.method_call("org.sihd.Test", "/org/sihd/Test", "org.sihd.Test", "Ping");
     ASSERT_TRUE(built.has_value()) << built.error().message;
-    ASSERT_TRUE(request.add("hello").has_value());
-    ASSERT_TRUE(request.add_signature("s").has_value());
+    ASSERT_TRUE(request.add("hello", Signature("s")).has_value());
     ASSERT_TRUE(request.set_no_reply().has_value());
 
     ASSERT_TRUE(request.send(_client).has_value());
@@ -368,33 +362,18 @@ TEST_F(TestDBusServer, test_reply_dict_entries)
     auto reply = this->call_answered_by([this](const Message & call) {
         auto answer = call.method_return();
         ASSERT_TRUE(answer.has_value()) << answer.error().message;
-        Appender body(*answer);
-        auto properties = body.open_array("{sv}");
-        ASSERT_TRUE(properties.has_value()) << properties.error().message;
-        ASSERT_TRUE(add_string_entry(*properties, "Name", "wlan0").has_value());
-        ASSERT_TRUE(add_string_entry(*properties, "Mode", "station").has_value());
-        ASSERT_TRUE(body.close(std::move(*properties)).has_value());
+        ASSERT_TRUE(answer->add(Dict {{"Name", "wlan0"}, {"Mode", "station"}}).has_value());
         ASSERT_TRUE(answer->send(_server).has_value());
     });
     ASSERT_TRUE(reply.has_value()) << reply.error().message;
 
+    auto entries = Iter(*reply).entries<std::string>();
+    ASSERT_TRUE(entries.has_value()) << entries.error().message;
     std::map<std::string, std::string> properties;
-    auto walked = Iter(*reply).for_each_entry<std::string>(
-        [&properties](const std::string & key, Iter & value) -> Result<void> {
-            auto text = value.get<std::string>();
-            SIHD_UNEXPECTED_RETURN(text);
-            properties.emplace(key, std::move(*text));
-            return {};
-        });
-    auto stopped = Iter(*reply).for_each_entry<std::string>([](const std::string & key, Iter &) -> Result<void> {
-        return std::unexpected(Error(ErrorCode::not_found, "no handler for {}", key));
-    });
+    for (auto & [key, value] : *entries)
+        properties.emplace(key, value.get<std::string>().value_or("unreadable"));
 
-    ASSERT_TRUE(walked.has_value()) << walked.error().message;
     EXPECT_EQ(properties, (std::map<std::string, std::string> {{"Mode", "station"}, {"Name", "wlan0"}}));
-    ASSERT_FALSE(stopped.has_value());
-    EXPECT_EQ(stopped.error().code, ErrorCode::not_found);
-    EXPECT_EQ(stopped.error().message, "no handler for Name");
 }
 
 } // namespace test

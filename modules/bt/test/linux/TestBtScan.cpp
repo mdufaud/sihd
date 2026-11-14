@@ -77,8 +77,12 @@ class TestBtScan: public ::testing::Test
         void record_filter()
         {
             _daemon.on(adapter_interface, "SetDiscoveryFilter", [this](const dbus::Message & call) {
-                auto parsed = dbus::Iter(call).for_each_entry<std::string>(
-                    [this](const std::string & key, dbus::Iter & value) -> Result<void> {
+                auto filter = dbus::Iter(call).entries<std::string>();
+                EXPECT_TRUE(filter.has_value()) << filter.error().message;
+                if (filter.has_value())
+                {
+                    for (auto & [key, value] : *filter)
+                    {
                         if (key == "Transport")
                             _transport = value.get<std::string>().value_or("");
                         else if (key == "UUIDs")
@@ -87,10 +91,8 @@ class TestBtScan: public ::testing::Test
                             _rssi = value.get<int16_t>().value_or(0);
                         else if (key == "DuplicateData")
                             _duplicates = value.get<bool>().value_or(false);
-                        return {};
-                    });
-
-                EXPECT_TRUE(parsed.has_value()) << parsed.error().message;
+                    }
+                }
                 _daemon.reply(call, {});
             });
         }
@@ -150,12 +152,12 @@ TEST_F(TestBtScan, test_scan_follows_signals)
 {
     _daemon.on(adapter_interface, "StartDiscovery", [this](const dbus::Message & call) {
         _daemon.reply(call, {});
-        _daemon.emit(
-            "/",
-            object_manager_interface,
-            "InterfacesAdded",
-            {object_path(other_path), interfaces(device_interface, device_properties(other_address, "newcomer", -70))});
-        _daemon.emit_properties_changed(other_path, device_interface, {{"RSSI", i16(-40)}});
+        _daemon.emit("/",
+                     object_manager_interface,
+                     "InterfacesAdded",
+                     {dbus::ObjectPath(other_path),
+                      interfaces(device_interface, device_properties(other_address, "newcomer", -70))});
+        _daemon.emit_properties_changed(other_path, device_interface, {{"RSSI", int16_t {-40}}});
     });
 
     _daemon.serve();
@@ -195,11 +197,11 @@ TEST_F(TestBtScan, test_lost_device)
     this->record_filter();
     _daemon.on(adapter_interface, "StartDiscovery", [this](const dbus::Message & call) {
         _daemon.reply(call, {});
-        _daemon.emit(
-            "/",
-            object_manager_interface,
-            "InterfacesAdded",
-            {object_path(other_path), interfaces(device_interface, device_properties(other_address, "newcomer", -70))});
+        _daemon.emit("/",
+                     object_manager_interface,
+                     "InterfacesAdded",
+                     {dbus::ObjectPath(other_path),
+                      interfaces(device_interface, device_properties(other_address, "newcomer", -70))});
     });
 
     _daemon.serve();

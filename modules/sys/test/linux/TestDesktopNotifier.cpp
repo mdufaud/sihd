@@ -36,20 +36,16 @@ struct NotifyCall
         bool operator==(const NotifyCall &) const = default;
 };
 
-void read_hints(Iter & hints, NotifyCall & call)
+void read_hints(const Iter & hints, NotifyCall & call)
 {
-    for (; hints.type() != '\0'; hints.next())
+    auto entries = hints.entries<std::string>();
+    ASSERT_TRUE(entries.has_value()) << entries.error().message;
+    for (auto & [key, value] : *entries)
     {
-        auto entry = hints.recurse();
-        ASSERT_TRUE(entry.has_value()) << entry.error().message;
-        const std::string key = entry->get<std::string>().value_or("");
-        ASSERT_TRUE(entry->next());
-        auto value = entry->recurse();
-        ASSERT_TRUE(value.has_value()) << value.error().message;
         if (key == "urgency")
-            call.urgency = value->get<uint8_t>().value_or(99);
+            call.urgency = value.get<uint8_t>().value_or(99);
         else if (key == "desktop-entry")
-            call.desktop_entry = value->get<std::string>().value_or("");
+            call.desktop_entry = value.get<std::string>().value_or("");
     }
 }
 
@@ -70,9 +66,7 @@ NotifyCall read_notify(const Message & message)
     args.next();
     call.actions = args.get_array<std::string>().value_or(std::vector<std::string> {"unreadable"});
     args.next();
-    auto hints = args.recurse();
-    if (hints.has_value())
-        read_hints(*hints, call);
+    read_hints(args, call);
     args.next();
     call.timeout = args.get<int32_t>().value_or(99);
     return call;

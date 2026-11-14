@@ -62,7 +62,7 @@ TEST_F(TestBtAdapter, test_bluetooth_enabled)
 
 TEST_F(TestBtAdapter, test_bluetooth_disabled)
 {
-    _daemon.set_property(adapter_path, adapter_interface, "Powered", boolean(false));
+    _daemon.set_property(adapter_path, adapter_interface, "Powered", false);
     _daemon.serve();
 
     auto enabled = bluetooth_enabled();

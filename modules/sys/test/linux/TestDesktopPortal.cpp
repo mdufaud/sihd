@@ -60,16 +60,12 @@ class TestDesktopPortal: public ::testing::Test
         {
             auto reply = call.method_return();
             ASSERT_TRUE(reply.has_value());
-            ASSERT_TRUE(reply->add_object_path(portal_handle).has_value());
+            ASSERT_TRUE(reply->add(ObjectPath(portal_handle)).has_value());
             ASSERT_TRUE(reply->send(_server).has_value());
 
             Message signal;
             ASSERT_TRUE(signal.signal(portal_handle, "org.freedesktop.portal.Request", "Response").has_value());
-            Appender body(signal);
-            ASSERT_TRUE(body.add(response).has_value());
-            auto results = body.open_array("{sv}");
-            ASSERT_TRUE(results.has_value());
-            ASSERT_TRUE(body.close(std::move(*results)).has_value());
+            ASSERT_TRUE(signal.add(response, Dict {}).has_value());
             ASSERT_TRUE(signal.send(_server).has_value());
         }
 
@@ -137,10 +133,10 @@ TEST_F(TestDesktopPortal, test_open_uri)
     EXPECT_EQ(call->path(), "/org/freedesktop/portal/desktop");
     EXPECT_EQ(call->interface(), "org.freedesktop.portal.OpenURI");
     EXPECT_EQ(call->signature(), "ssa{sv}");
-    Iter args(*call);
-    EXPECT_EQ(args.get<std::string>().value_or("unreadable"), "");
-    args.next();
-    EXPECT_EQ(args.get<std::string>().value_or("unreadable"), "https://example.org/?a=b");
+    auto [parent_window, uri] = Iter(*call).read<std::string, std::string>().value_or(
+        std::tuple<std::string, std::string> {"unreadable", "unreadable"});
+    EXPECT_EQ(parent_window, "");
+    EXPECT_EQ(uri, "https://example.org/?a=b");
     this->answer_handle_then_response(*call, 0);
 
     EXPECT_EQ(client.next_line(), "ok");

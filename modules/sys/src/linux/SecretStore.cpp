@@ -2,7 +2,9 @@
 
 #if defined(__SIHD_LINUX__) && !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 # include <cstdint>
+# include <map>
 # include <optional>
+# include <string>
 # include <utility>
 # include <vector>
 
@@ -43,35 +45,9 @@ struct ItemSearch
 };
 
 // the attribute names python-keyring writes: secret-tool and keyring read the same secrets
-Result<void> append_attributes(dbus::Appender & parent, ZStringView service, ZStringView account)
+std::map<std::string, std::string> attributes_of(ZStringView service, ZStringView account)
 {
-    auto attributes = parent.open_array("{ss}");
-    SIHD_UNEXPECTED_RETURN(attributes);
-    for (const auto & [key, value] : {std::pair<ZStringView, ZStringView> {"service", service},
-                                      std::pair<ZStringView, ZStringView> {"username", account}})
-    {
-        auto entry = attributes->open_dict_entry();
-        SIHD_UNEXPECTED_RETURN(entry);
-        auto added = entry->add(key);
-        SIHD_UNEXPECTED_RETURN(added);
-        added = entry->add(value);
-        SIHD_UNEXPECTED_RETURN(added);
-        added = attributes->close(std::move(*entry));
-        SIHD_UNEXPECTED_RETURN(added);
-    }
-    return parent.close(std::move(*attributes));
-}
-
-Result<void> append_object_paths(dbus::Appender & parent, const std::vector<std::string> & paths)
-{
-    auto array = parent.open_array("o");
-    SIHD_UNEXPECTED_RETURN(array);
-    for (const std::string & path : paths)
-    {
-        auto added = array->add_object_path(path);
-        SIHD_UNEXPECTED_RETURN(added);
-    }
-    return parent.close(std::move(*array));
+    return {{"service", std::string(service.view())}, {"username", std::string(account.view())}};
 }
 
 } // namespace
@@ -104,14 +80,7 @@ struct SecretStore::Impl
             dbus::Message request;
             auto built = request.method_call(secrets_service, secrets_path, service_interface, "OpenSession");
             SIHD_UNEXPECTED_RETURN(built);
-            dbus::Appender body(request);
-            auto added = body.add(ZStringView("plain"));
-            SIHD_UNEXPECTED_RETURN(added);
-            auto input = body.open_variant("s");
-            SIHD_UNEXPECTED_RETURN(input);
-            added = input->add(ZStringView(""));
-            SIHD_UNEXPECTED_RETURN(added);
-            added = body.close(std::move(*input));
+            auto added = request.add("plain", dbus::Variant(""));
             SIHD_UNEXPECTED_RETURN(added);
 
             auto reply = this->call(request);
@@ -176,8 +145,7 @@ struct SecretStore::Impl
             dbus::Message request;
             auto built = request.method_call(secrets_service, secrets_path, service_interface, "Unlock");
             SIHD_UNEXPECTED_RETURN(built);
-            dbus::Appender body(request);
-            auto added = append_object_paths(body, paths);
+            auto added = request.add(std::vector<dbus::ObjectPath>(paths.begin(), paths.end()));
             SIHD_UNEXPECTED_RETURN(added);
             auto reply = this->call(request);
             SIHD_UNEXPECTED_RETURN(reply);
@@ -193,8 +161,7 @@ struct SecretStore::Impl
             dbus::Message request;
             auto built = request.method_call(secrets_service, secrets_path, service_interface, "SearchItems");
             SIHD_UNEXPECTED_RETURN(built);
-            dbus::Appender body(request);
-            auto added = append_attributes(body, service, account);
+            auto added = request.add(attributes_of(service, account));
             SIHD_UNEXPECTED_RETURN(added);
 
             auto reply = this->call(request);
@@ -239,19 +206,13 @@ struct SecretStore::Impl
             return path;
         }
 
-        Result<void> append_secret(dbus::Appender & parent, std::string_view secret) const
+        // (session, parameters, value, content type)
+        dbus::Value secret_of(std::string_view secret) const
         {
-            auto value = parent.open_struct();
-            SIHD_UNEXPECTED_RETURN(value);
-            auto added = value->add_object_path(session);
-            SIHD_UNEXPECTED_RETURN(added);
-            added = value->add_array(std::vector<uint8_t> {});
-            SIHD_UNEXPECTED_RETURN(added);
-            added = value->add_array(std::vector<uint8_t>(secret.begin(), secret.end()));
-            SIHD_UNEXPECTED_RETURN(added);
-            added = value->add(ZStringView("text/plain"));
-            SIHD_UNEXPECTED_RETURN(added);
-            return parent.close(std::move(*value));
+            return dbus::Struct {dbus::ObjectPath(session),
+                                 std::vector<uint8_t> {},
+                                 std::vector<uint8_t>(secret.begin(), secret.end()),
+                                 "text/plain"};
         }
 
         dbus::Connection connection;
@@ -276,26 +237,11 @@ Result<void> SecretStore::store(ZStringView service, ZStringView account, std::s
     auto built = request.method_call(secrets_service, *collection, collection_interface, "CreateItem");
     SIHD_UNEXPECTED_RETURN(built);
 
-    dbus::Appender body(request);
-    auto properties = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(properties);
-    auto added = properties->add_entry("org.freedesktop.Secret.Item.Label",
-                                       "s",
-                                       [&service, &account](dbus::Appender & value) {
-                                           return value.add(ZStringView(fmt::format("{}@{}", account, service)));
-                                       });
-    SIHD_UNEXPECTED_RETURN(added);
-    added = properties->add_entry(
-        "org.freedesktop.Secret.Item.Attributes",
-        "a{ss}",
-        [&service, &account](dbus::Appender & value) { return append_attributes(value, service, account); });
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.close(std::move(*properties));
-    SIHD_UNEXPECTED_RETURN(added);
-
-    added = _impl->append_secret(body, secret);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(true);
+    const dbus::Dict properties {
+        {"org.freedesktop.Secret.Item.Label", fmt::format("{}@{}", account, service)},
+        {"org.freedesktop.Secret.Item.Attributes", attributes_of(service, account)},
+    };
+    auto added = request.add(properties, _impl->secret_of(secret), true);
     SIHD_UNEXPECTED_RETURN(added);
 
     auto reply = _impl->call(request);
@@ -319,7 +265,7 @@ Result<std::string> SecretStore::lookup(ZStringView service, ZStringView account
     dbus::Message request;
     auto built = request.method_call(secrets_service, items->front(), item_interface, "GetSecret");
     SIHD_UNEXPECTED_RETURN(built);
-    auto added = request.add_object_path(_impl->session);
+    auto added = request.add(dbus::ObjectPath(_impl->session));
     SIHD_UNEXPECTED_RETURN(added);
     auto reply = _impl->call(request);
     SIHD_UNEXPECTED_RETURN(reply);

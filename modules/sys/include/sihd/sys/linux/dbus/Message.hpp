@@ -1,9 +1,9 @@
 #ifndef __SIHD_SYS_LINUX_DBUS_MESSAGE_HPP__
 #define __SIHD_SYS_LINUX_DBUS_MESSAGE_HPP__
 
-#include <concepts>
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <optional>
 #include <string>
@@ -11,21 +11,13 @@
 #include <vector>
 
 #include <sihd/sys/linux/dbus/Connection.hpp>
+#include <sihd/sys/linux/dbus/Value.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Result.hpp>
 #include <sihd/util/ZStringView.hpp>
 
 namespace sihd::sys::linux_::dbus
 {
-
-template <typename T>
-concept BasicType = std::same_as<T, bool> || std::same_as<T, uint8_t> || std::same_as<T, int16_t>
-                    || std::same_as<T, uint16_t> || std::same_as<T, int32_t> || std::same_as<T, uint32_t>
-                    || std::same_as<T, int64_t> || std::same_as<T, uint64_t> || std::same_as<T, double>
-                    || std::same_as<T, std::string>;
-
-template <typename T>
-concept FixedType = BasicType<T> && !std::same_as<T, std::string>;
 
 class Connection::Message
 {
@@ -89,11 +81,19 @@ class Connection::Message
         sihd::util::Result<std::optional<Iter>> changed_property(std::string_view interface,
                                                                  std::string_view name) const;
 
-        template <FixedType T>
-        sihd::util::Result<void> add(const T & value);
-        sihd::util::Result<void> add(sihd::util::ZStringView value);
-        sihd::util::Result<void> add_object_path(sihd::util::ZStringView path);
-        sihd::util::Result<void> add_signature(sihd::util::ZStringView signature);
+        sihd::util::Result<void> add(const Value & value);
+        template <typename... T>
+            requires(sizeof...(T) > 1)
+        sihd::util::Result<void> add(const T &...values)
+        {
+            for (const Value & value : {Value(values)...})
+            {
+                auto added = this->add(value);
+                if (!added.has_value())
+                    return added;
+            }
+            return {};
+        }
         sihd::util::Result<void> add_unix_fd(int fd);
 
         // an error reply fails like its to_error()

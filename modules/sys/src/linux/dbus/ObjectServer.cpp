@@ -354,6 +354,26 @@ Result<void> serve_peer(Call & call)
     return answered;
 }
 
+Result<void> write_value(Appender & parent, const Property & property)
+{
+    auto value = parent.open_variant(property.signature);
+    SIHD_UNEXPECTED_RETURN(value);
+    auto written = property.get(*value);
+    SIHD_UNEXPECTED_RETURN(written);
+    return parent.close(std::move(*value));
+}
+
+Result<void> write_property(Appender & properties, const Property & property)
+{
+    auto entry = properties.open_dict_entry();
+    SIHD_UNEXPECTED_RETURN(entry);
+    auto name_added = entry->add(property.name);
+    SIHD_UNEXPECTED_RETURN(name_added);
+    auto value_written = write_value(*entry, property);
+    SIHD_UNEXPECTED_RETURN(value_written);
+    return properties.close(std::move(*entry));
+}
+
 Result<void> write_properties(Appender & parent, const Interface & interface)
 {
     auto properties = parent.open_array("{sv}");
@@ -362,8 +382,8 @@ Result<void> write_properties(Appender & parent, const Interface & interface)
     {
         if (!property.get)
             continue;
-        auto added = properties->add_entry(property.name, property.signature, property.get);
-        SIHD_UNEXPECTED_RETURN(added);
+        auto written = write_property(*properties, property);
+        SIHD_UNEXPECTED_RETURN(written);
     }
     return parent.close(std::move(*properties));
 }
@@ -391,12 +411,8 @@ Result<Message> property_get_reply(const Call & call, const Property & property)
     auto reply = call.message().method_return();
     SIHD_UNEXPECTED_RETURN(reply);
     Appender body(*reply);
-    auto value = body.open_variant(property.signature);
-    SIHD_UNEXPECTED_RETURN(value);
-    auto written = property.get(*value);
+    auto written = write_value(body, property);
     SIHD_UNEXPECTED_RETURN(written);
-    auto closed = body.close(std::move(*value));
-    SIHD_UNEXPECTED_RETURN(closed);
     return reply;
 }
 
@@ -426,7 +442,7 @@ Result<Message> managed_objects_reply(const Call & call, const std::map<std::str
 
         auto entry = dict->open_dict_entry();
         SIHD_UNEXPECTED_RETURN(entry);
-        auto path_added = entry->add_object_path(path);
+        auto path_added = entry->add(ObjectPath(path));
         SIHD_UNEXPECTED_RETURN(path_added);
         auto interfaces_written = write_interfaces(*entry, interfaces);
         SIHD_UNEXPECTED_RETURN(interfaces_written);
@@ -542,6 +558,18 @@ ObjectServer::Property ObjectServer::Property::bound(const std::string & name, T
             value = std::move(*read);
             return {};
         },
+    };
+}
+
+ObjectServer::Property ObjectServer::Property::constant(const std::string & name, Value value)
+{
+    std::string signature = value.signature();
+    return Property {
+        .name = name,
+        .signature = std::move(signature),
+        .get = [value = std::move(value)](Appender & to) -> Result<void> { return to.add(value); },
+        .set = {},
+        .emits_changed = false,
     };
 }
 
@@ -672,13 +700,13 @@ Result<void> ObjectServer::emit_properties_changed(const std::string & path,
         const Property *property = find_property(*found_interface, name);
         if (property == nullptr || !property->get)
             return std::unexpected(Error(not_found, "no readable dbus property {} on {}", name, interface));
-        auto added = changed->add_entry(property->name, property->signature, property->get);
-        SIHD_UNEXPECTED_RETURN(added);
+        auto written = write_property(*changed, *property);
+        SIHD_UNEXPECTED_RETURN(written);
     }
     auto changed_closed = body.close(std::move(*changed));
     SIHD_UNEXPECTED_RETURN(changed_closed);
 
-    auto invalidated_added = body.add_array(std::vector<std::string> {});
+    auto invalidated_added = body.add(std::vector<std::string> {});
     SIHD_UNEXPECTED_RETURN(invalidated_added);
     return signal.send(_connection);
 }
@@ -848,7 +876,7 @@ Result<void> ObjectServer::_emit_interfaces_added(const std::string & path)
         auto built = signal.signal(manager, object_manager_interface, "InterfacesAdded");
         SIHD_UNEXPECTED_RETURN(built);
         Appender body(signal);
-        auto path_added = body.add_object_path(path);
+        auto path_added = body.add(ObjectPath(path));
         SIHD_UNEXPECTED_RETURN(path_added);
         auto interfaces_written = write_interfaces(body, _objects.at(path));
         SIHD_UNEXPECTED_RETURN(interfaces_written);
@@ -868,11 +896,8 @@ Result<void> ObjectServer::_emit_interfaces_removed(const std::string & path)
         Message signal;
         auto built = signal.signal(manager, object_manager_interface, "InterfacesRemoved");
         SIHD_UNEXPECTED_RETURN(built);
-        Appender body(signal);
-        auto path_added = body.add_object_path(path);
-        SIHD_UNEXPECTED_RETURN(path_added);
-        auto names_added = body.add_array(names);
-        SIHD_UNEXPECTED_RETURN(names_added);
+        auto added = signal.add(ObjectPath(path), names);
+        SIHD_UNEXPECTED_RETURN(added);
         auto sent = signal.send(_connection);
         SIHD_UNEXPECTED_RETURN(sent);
     }

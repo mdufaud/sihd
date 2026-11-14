@@ -63,17 +63,17 @@ State to_state(const std::string & station_state)
 
 Result<Strings> string_properties(dbus::Iter & properties)
 {
+    auto entries = properties.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
     Strings strings;
-    auto read = properties.for_each_entry<std::string>(
-        [&strings](const std::string & name, dbus::Iter & value) -> Result<void> {
-            if (value.type() != 's' && value.type() != 'o')
-                return {};
-            auto text = value.get<std::string>();
-            SIHD_UNEXPECTED_RETURN(text);
-            strings.insert_or_assign(name, std::move(*text));
-            return {};
-        });
-    SIHD_UNEXPECTED_RETURN(read);
+    for (auto & [name, value] : *entries)
+    {
+        if (value.type() != 's' && value.type() != 'o')
+            continue;
+        auto text = value.get<std::string>();
+        SIHD_UNEXPECTED_RETURN(text);
+        strings.insert_or_assign(name, std::move(*text));
+    }
     return strings;
 }
 
@@ -131,16 +131,21 @@ Result<Objects> managed_objects(dbus::Connection & connection)
     auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
+    auto managed = dbus::Iter(*reply).entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(managed);
     Objects objects;
     Strings device_names;
     std::set<std::string> stations;
-    auto parsed = dbus::Iter(*reply).for_each_entry<std::string>(
-        [&](const std::string & path, dbus::Iter & interfaces) {
-            return interfaces.for_each_entry<std::string>([&](const std::string & interface, dbus::Iter & properties) {
-                return read_interface(objects, device_names, stations, path, interface, properties);
-            });
-        });
-    SIHD_UNEXPECTED_RETURN(parsed);
+    for (auto & [path, interfaces] : *managed)
+    {
+        auto by_interface = interfaces.entries<std::string>();
+        SIHD_UNEXPECTED_RETURN(by_interface);
+        for (auto & [interface, properties] : *by_interface)
+        {
+            auto read = read_interface(objects, device_names, stations, path, interface, properties);
+            SIHD_UNEXPECTED_RETURN(read);
+        }
+    }
     for (const std::string & station : stations)
         objects.station_interface_names.insert_or_assign(station, value_of(device_names, station));
     return objects;
@@ -175,7 +180,7 @@ Result<dbus::Message> call_agent_manager(dbus::Connection & connection, ZStringV
     dbus::Message request;
     auto built = request.method_call(service, manager_path, agent_manager_interface, member);
     SIHD_UNEXPECTED_RETURN(built);
-    auto path_added = request.add_object_path(agent_path);
+    auto path_added = request.add(dbus::ObjectPath(std::string(agent_path)));
     SIHD_UNEXPECTED_RETURN(path_added);
     return request.call(connection, call_timeout);
 }

@@ -49,30 +49,19 @@ class TestBtAdvertiser: public ::testing::Test
             auto reply = request.call(_daemon.connection(), fake_timeout);
             ASSERT_TRUE(reply.has_value()) << reply.error().message;
 
-            auto parsed = dbus::Iter(*reply).for_each_entry<std::string>(
-                [this](const std::string & key, dbus::Iter & value) -> Result<void> {
-                    if (key == "ManufacturerData")
-                    {
-                        return value.for_each_entry<uint16_t>([this](uint16_t id, dbus::Iter & data) {
-                            _manufacturer_data[id] = data.get_array<uint8_t>().value_or(std::vector<uint8_t> {});
-                            return Result<void> {};
-                        });
-                    }
-                    if (key == "ServiceData")
-                    {
-                        return value.for_each_entry<std::string>([this](const std::string & uuid, dbus::Iter & data) {
-                            _service_data[uuid] = data.get_array<uint8_t>().value_or(std::vector<uint8_t> {});
-                            return Result<void> {};
-                        });
-                    }
-
-                    if (auto text = value.get<std::string>())
-                        _texts[key] = *text;
-                    else if (auto array = value.get_array<std::string>())
-                        _arrays[key] = *array;
-                    return {};
-                });
-            ASSERT_TRUE(parsed.has_value()) << parsed.error().message;
+            auto properties = dbus::Iter(*reply).entries<std::string>();
+            ASSERT_TRUE(properties.has_value()) << properties.error().message;
+            for (auto & [key, value] : *properties)
+            {
+                if (key == "ManufacturerData")
+                    _manufacturer_data = value.get_byte_map<uint16_t>().value_or(decltype(_manufacturer_data) {});
+                else if (key == "ServiceData")
+                    _service_data = value.get_byte_map<std::string>().value_or(decltype(_service_data) {});
+                else if (auto text = value.get<std::string>())
+                    _texts[key] = *text;
+                else if (auto array = value.get_array<std::string>())
+                    _arrays[key] = *array;
+            }
         }
 
         // bluez drops an advertisement it cannot keep and tells its owner

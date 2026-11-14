@@ -106,19 +106,10 @@ Result<std::vector<uint8_t>> read_value_reply(const dbus::Message & reply)
 
 bluez::Arguments write_arguments(ArrUByteView value, std::optional<WriteType> type)
 {
-    return [value, type](dbus::Appender & to) -> Result<void> {
-        auto bytes = to.add_array(std::vector<uint8_t>(value.begin(), value.end()));
-        SIHD_UNEXPECTED_RETURN(bytes);
-        auto options = to.open_array("{sv}");
-        SIHD_UNEXPECTED_RETURN(options);
-        if (type.has_value())
-        {
-            const std::string kind = *type == WriteType::with_response ? "request" : "command";
-            auto added = options->add_entry("type", "s", [&kind](dbus::Appender & entry) { return entry.add(kind); });
-            SIHD_UNEXPECTED_RETURN(added);
-        }
-        return to.close(std::move(*options));
-    };
+    dbus::Dict options;
+    if (type.has_value())
+        options.emplace_back("type", *type == WriteType::with_response ? "request" : "command");
+    return {std::vector<uint8_t>(value.begin(), value.end()), options};
 }
 
 Result<std::string> path_in(const std::map<uint16_t, std::string> & known, uint16_t handle)
@@ -280,17 +271,12 @@ dbus::ObjectServer::Interface agent_interface(const PairingAgent & agent)
 
 Result<void> register_agent(dbus::Connection & connection)
 {
-    auto registered = bluez::call(
-        connection,
-        bluez::manager_path,
-        bluez::agent_manager_interface,
-        "RegisterAgent",
-        [](dbus::Appender & to) -> Result<void> {
-            auto path = to.add_object_path(agent_path);
-            SIHD_UNEXPECTED_RETURN(path);
-            return to.add("KeyboardDisplay");
-        },
-        bluez::call_timeout);
+    auto registered = bluez::call(connection,
+                                  bluez::manager_path,
+                                  bluez::agent_manager_interface,
+                                  "RegisterAgent",
+                                  {dbus::ObjectPath(std::string(agent_path)), "KeyboardDisplay"},
+                                  bluez::call_timeout);
     SIHD_UNEXPECTED_RETURN(registered);
     return {};
 }
@@ -298,13 +284,12 @@ Result<void> register_agent(dbus::Connection & connection)
 void unregister_agent(dbus::Connection & connection)
 {
     // the connection leaving the bus unregisters it as well
-    (void)bluez::call(
-        connection,
-        bluez::manager_path,
-        bluez::agent_manager_interface,
-        "UnregisterAgent",
-        [](dbus::Appender & to) { return to.add_object_path(agent_path); },
-        bluez::call_timeout);
+    (void)bluez::call(connection,
+                      bluez::manager_path,
+                      bluez::agent_manager_interface,
+                      "UnregisterAgent",
+                      {dbus::ObjectPath(std::string(agent_path))},
+                      bluez::call_timeout);
 }
 
 } // namespace
@@ -544,13 +529,12 @@ Result<void> Device::unpair()
     auto adapter_path = bluez::adapter_path(*connection, _adapter_index);
     SIHD_UNEXPECTED_RETURN(adapter_path);
     const std::string device_path = bluez::device_path(*adapter_path, _address);
-    auto removed = bluez::call(
-        *connection,
-        *adapter_path,
-        bluez::adapter_interface,
-        "RemoveDevice",
-        [&device_path](dbus::Appender & to) { return to.add_object_path(device_path); },
-        bluez::call_timeout);
+    auto removed = bluez::call(*connection,
+                               *adapter_path,
+                               bluez::adapter_interface,
+                               "RemoveDevice",
+                               {dbus::ObjectPath(device_path)},
+                               bluez::call_timeout);
     SIHD_UNEXPECTED_RETURN(removed);
     return {};
 }
@@ -593,7 +577,7 @@ Result<std::vector<uint8_t>> Device::read_characteristic(const GattCharacteristi
                               *path,
                               bluez::gatt_characteristic_interface,
                               "ReadValue",
-                              &dbus::Appender::add_empty_vardict,
+                              {dbus::Dict {}},
                               bluez::connect_timeout);
     SIHD_UNEXPECTED_RETURN(called);
     return read_value_reply(*called);
@@ -623,7 +607,7 @@ Result<std::vector<uint8_t>> Device::read_descriptor(const GattDescriptor & desc
                               *path,
                               bluez::gatt_descriptor_interface,
                               "ReadValue",
-                              &dbus::Appender::add_empty_vardict,
+                              {dbus::Dict {}},
                               bluez::connect_timeout);
     SIHD_UNEXPECTED_RETURN(called);
     return read_value_reply(*called);
@@ -657,7 +641,7 @@ Result<void> Device::subscribe(const GattCharacteristic & characteristic)
                                   *path,
                                   bluez::gatt_characteristic_interface,
                                   "AcquireNotify",
-                                  &dbus::Appender::add_empty_vardict,
+                                  {dbus::Dict {}},
                                   bluez::call_timeout);
         SIHD_UNEXPECTED_RETURN(called);
         dbus::Iter body(*called);

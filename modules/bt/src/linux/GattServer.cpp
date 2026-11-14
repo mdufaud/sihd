@@ -31,11 +31,14 @@ const Duration max_wait(time::hours(1));
 uint16_t offset_of(dbus::Iter & options)
 {
     uint16_t offset = 0;
-    (void)options.for_each_entry<std::string>([&offset](const std::string & key, dbus::Iter & value) -> Result<void> {
+    auto entries = options.entries<std::string>();
+    if (!entries.has_value())
+        return offset;
+    for (auto & [key, value] : *entries)
+    {
         if (key == "offset")
             offset = value.get<uint16_t>().value_or(0);
-        return {};
-    });
+    }
     return offset;
 }
 
@@ -99,28 +102,15 @@ struct GattServer::Impl
                         dbus::ObjectServer::Property::read_only<std::string>(
                             "UUID",
                             [this, index] { return locals[index].characteristic.uuid; }),
-                        dbus::ObjectServer::Property {
-                            .name = "Service",
-                            .signature = "o",
-                            .get = [service_path](dbus::Appender & to) { return to.add_object_path(service_path); },
-                            .set = {},
-                            .emits_changed = false,
-                        },
-                        dbus::ObjectServer::Property {
-                            .name = "Flags",
-                            .signature = "as",
-                            .get =
-                                [properties](dbus::Appender & to) { return to.add_array(bluez::flags_of(properties)); },
-                            .set = {},
-                            .emits_changed = false,
-                        },
+                        dbus::ObjectServer::Property::constant("Service", dbus::ObjectPath(service_path)),
+                        dbus::ObjectServer::Property::constant("Flags", bluez::flags_of(properties)),
                         dbus::ObjectServer::Property {
                             .name = "Value",
                             .signature = "ay",
                             .get =
                                 [this, index](dbus::Appender & to) {
                                     std::lock_guard lock(mutex);
-                                    return to.add_array(locals[index].value);
+                                    return to.add(locals[index].value);
                                 },
                             .set = {},
                             .emits_changed = false,
@@ -153,8 +143,7 @@ struct GattServer::Impl
 
             auto reply = call.message().method_return();
             SIHD_UNEXPECTED_RETURN(reply);
-            dbus::Appender body(*reply);
-            auto added = body.add_array(std::vector<uint8_t>(value.begin() + offset, value.end()));
+            auto added = reply->add(std::vector<uint8_t>(value.begin() + offset, value.end()));
             SIHD_UNEXPECTED_RETURN(added);
             return call.send(*reply);
         }
@@ -279,11 +268,7 @@ bool GattServer::on_start()
     auto request = bluez::method_call(*adapter_path,
                                       bluez::gatt_manager_interface,
                                       "RegisterApplication",
-                                      [](dbus::Appender & to) -> Result<void> {
-                                          auto path = to.add_object_path(application_path);
-                                          SIHD_UNEXPECTED_RETURN(path);
-                                          return to.add_empty_vardict();
-                                      });
+                                      {dbus::ObjectPath(std::string(application_path)), dbus::Dict {}});
     if (SIHD_UNEXPECTED_LOG(request))
         return false;
     auto registered = server.call(*request, bluez::call_timeout);
@@ -342,13 +327,12 @@ bool GattServer::on_start()
         std::lock_guard lock(_impl->mutex);
         _impl->running = false;
     }
-    auto unregistered = bluez::call(
-        *connection,
-        *adapter_path,
-        bluez::gatt_manager_interface,
-        "UnregisterApplication",
-        [](dbus::Appender & to) { return to.add_object_path(application_path); },
-        bluez::call_timeout);
+    auto unregistered = bluez::call(*connection,
+                                    *adapter_path,
+                                    bluez::gatt_manager_interface,
+                                    "UnregisterApplication",
+                                    {dbus::ObjectPath(std::string(application_path))},
+                                    bluez::call_timeout);
     SIHD_UNEXPECTED_LOG(unregistered);
     return served;
 }

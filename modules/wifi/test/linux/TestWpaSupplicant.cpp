@@ -34,7 +34,7 @@ class TestWpaSupplicant: public ::testing::Test
             ASSERT_TRUE(_daemon.start({wpa_service}));
             serve_wpa_supplicant(_daemon);
 
-            _daemon.set_property(wpa_interface, wpa_interface_interface, "State", text("disconnected"));
+            _daemon.set_property(wpa_interface, wpa_interface_interface, "State", "disconnected");
             _daemon.set_property(wpa_interface,
                                  wpa_interface_interface,
                                  "Networks",
@@ -51,19 +51,23 @@ class TestWpaSupplicant: public ::testing::Test
             _daemon.set_property(home_network,
                                  network_interface,
                                  "Properties",
-                                 dict({{"ssid", text("\"home\"")}, {"key_mgmt", text("WPA-PSK")}}));
+                                 dbus::Dict {{"ssid", "\"home\""}, {"key_mgmt", "WPA-PSK"}});
             _daemon.set_property(attic_network,
                                  network_interface,
                                  "Properties",
-                                 dict({{"ssid", text("6174746963")}, {"key_mgmt", text("WPA-EAP")}}));
+                                 dbus::Dict {{"ssid", "6174746963"}, {"key_mgmt", "WPA-EAP"}});
 
             _daemon.on(wpa_interface_interface, "AddNetwork", [this](const dbus::Message & call) {
                 AddedNetwork added;
-                auto read = dbus::Iter(call).for_each_entry<std::string>(
-                    [&added](const std::string & key, dbus::Iter & value) { return record(added, key, value); });
-                EXPECT_TRUE(read.has_value());
+                auto entries = dbus::Iter(call).entries<std::string>();
+                EXPECT_TRUE(entries.has_value());
+                if (entries.has_value())
+                {
+                    for (auto & [key, value] : *entries)
+                        EXPECT_TRUE(record(added, key, value).has_value());
+                }
                 _added.emplace_back(std::move(added));
-                _daemon.reply(call, {object_path(added_network(_added.size()))});
+                _daemon.reply(call, {dbus::ObjectPath(added_network(_added.size()))});
             });
             _daemon.on(wpa_interface_interface, "RemoveNetwork", [this](const dbus::Message & call) {
                 _removed.push_back(dbus::Iter(call).get<std::string>().value_or(""));
@@ -74,8 +78,8 @@ class TestWpaSupplicant: public ::testing::Test
         void add_bss(const std::string & path, const std::string & ssid, const std::vector<uint8_t> & elements)
         {
             _daemon.set_property(path, bss_interface, "SSID", bytes(ssid));
-            _daemon.set_property(path, bss_interface, "IEs", bytes(elements));
-            _daemon.set_property(path, bss_interface, "Privacy", boolean(!elements.empty()));
+            _daemon.set_property(path, bss_interface, "IEs", elements);
+            _daemon.set_property(path, bss_interface, "Privacy", !elements.empty());
         }
 
         static Result<void> record(AddedNetwork & added, const std::string & key, dbus::Iter & value)
@@ -99,7 +103,7 @@ class TestWpaSupplicant: public ::testing::Test
                 _selected.push_back(dbus::Iter(call).get<std::string>().value_or(""));
                 _daemon.reply(call, {});
                 for (const std::string & state : states)
-                    _daemon.emit_properties_changed(wpa_interface, wpa_interface_interface, {{"State", text(state)}});
+                    _daemon.emit_properties_changed(wpa_interface, wpa_interface_interface, {{"State", state}});
             });
         }
 
@@ -132,7 +136,7 @@ class TestWpaSupplicant: public ::testing::Test
 
 TEST_F(TestWpaSupplicant, test_backend_and_state)
 {
-    _daemon.set_property(wpa_interface, wpa_interface_interface, "State", text("4way_handshake"));
+    _daemon.set_property(wpa_interface, wpa_interface_interface, "State", "4way_handshake");
     _daemon.serve();
 
     auto managing = wifi::backend("wlan-test");
@@ -149,7 +153,7 @@ TEST_F(TestWpaSupplicant, test_scan_waits_for_scan_done)
     int scans = 0;
     _daemon.on(wpa_interface_interface, "Scan", [this, &scans](const dbus::Message & call) {
         _daemon.reply(call, {});
-        _daemon.emit(wpa_interface, wpa_interface_interface, "ScanDone", {boolean(scans++ == 0)});
+        _daemon.emit(wpa_interface, wpa_interface_interface, "ScanDone", {scans++ == 0});
     });
     _daemon.serve();
 

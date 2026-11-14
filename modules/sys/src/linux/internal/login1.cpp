@@ -21,13 +21,7 @@ Result<dbus::UnixFd>
                                      "org.freedesktop.login1.Manager",
                                      "Inhibit");
     SIHD_UNEXPECTED_RETURN(built);
-    auto added = request.add(ZStringView("sleep"));
-    SIHD_UNEXPECTED_RETURN(added);
-    added = request.add(who);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = request.add(why);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = request.add(mode);
+    auto added = request.add("sleep", who, why, mode);
     SIHD_UNEXPECTED_RETURN(added);
     auto reply = request.call(connection, dbus_call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);

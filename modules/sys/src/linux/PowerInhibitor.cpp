@@ -37,17 +37,7 @@ Result<dbus::Message> portal_inhibit_request(ZStringView reason)
                                      "org.freedesktop.portal.Inhibit",
                                      "Inhibit");
     SIHD_UNEXPECTED_RETURN(built);
-    dbus::Appender body(request);
-    auto added = body.add(ZStringView(""));
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(portal_inhibit_idle);
-    SIHD_UNEXPECTED_RETURN(added);
-
-    auto options = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(options);
-    added = options->add_entry("reason", "s", [reason](dbus::Appender & value) { return value.add(reason); });
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.close(std::move(*options));
+    auto added = request.add("", portal_inhibit_idle, dbus::Dict {{"reason", reason}});
     SIHD_UNEXPECTED_RETURN(added);
     return request;
 }

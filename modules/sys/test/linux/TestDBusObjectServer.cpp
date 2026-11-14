@@ -140,10 +140,11 @@ std::string text_of(const Result<Message> & reply)
 std::map<std::string, std::string> signatures_of(const Message & reply)
 {
     std::map<std::string, std::string> signatures;
-    (void)Iter(reply).for_each_entry<std::string>([&signatures](const std::string & key, Iter & value) -> Result<void> {
+    auto entries = Iter(reply).entries<std::string>();
+    if (!entries.has_value())
+        return signatures;
+    for (auto & [key, value] : *entries)
         signatures.emplace(key, value.signature());
-        return {};
-    });
     return signatures;
 }
 
@@ -237,18 +238,8 @@ class TestDBusObjectServer: public ::testing::Test
             Message request;
             auto built = request.method_call(service, path, properties, "Set");
             SIHD_UNEXPECTED_RETURN(built);
-            Appender body(request);
-            auto interface_added = body.add(interface_name);
-            SIHD_UNEXPECTED_RETURN(interface_added);
-            auto name_added = body.add(name);
-            SIHD_UNEXPECTED_RETURN(name_added);
-
-            auto variant = body.open_variant("s");
-            SIHD_UNEXPECTED_RETURN(variant);
-            auto value_added = variant->add(value);
-            SIHD_UNEXPECTED_RETURN(value_added);
-            auto closed = body.close(std::move(*variant));
-            SIHD_UNEXPECTED_RETURN(closed);
+            auto added = request.add(interface_name, name, Variant(value));
+            SIHD_UNEXPECTED_RETURN(added);
             return this->exchange(request);
         }
 
@@ -563,7 +554,7 @@ TEST_F(TestDBusObjectServer, test_introspect_object)
                        ObjectServer::Property {
                            .name = "Quiet",
                            .signature = "as",
-                           .get = [](Appender & value) { return value.add_array(std::vector<std::string> {}); },
+                           .get = [](Appender & value) { return value.add(std::vector<std::string> {}); },
                            .set = [](Iter &) -> Result<void> { return {}; },
                            .emits_changed = false,
                        }},
@@ -741,6 +732,34 @@ TEST_F(TestDBusObjectServer, test_property_get_all)
     EXPECT_EQ(signatures_of(*reply), (std::map<std::string, std::string> {{"Name", "s"}, {"Version", "u"}}));
     EXPECT_EQ(error_of(unknown),
               "org.freedesktop.DBus.Error.UnknownInterface: no interface org.sihd.Nothing on /org/sihd/Test");
+}
+
+TEST_F(TestDBusObjectServer, test_constant_property)
+{
+    this->add_test_object({}, {ObjectServer::Property::constant("Modes", std::vector<std::string> {"ap", "station"})});
+
+    auto modes = this->call_get("Modes");
+    Message request;
+    auto built = request.properties_get_all(service, path, interface_name);
+    ASSERT_TRUE(built.has_value()) << built.error().message;
+    auto all = this->exchange(request);
+    auto introspected = this->call_member(path, introspectable, "Introspect");
+
+    ASSERT_TRUE(modes.has_value()) << modes.error().message;
+    auto modes_value = Iter(*modes).recurse();
+    ASSERT_TRUE(modes_value.has_value());
+    EXPECT_EQ(modes_value->get_array<std::string>().value_or(std::vector<std::string> {}),
+              (std::vector<std::string> {"ap", "station"}));
+    ASSERT_TRUE(all.has_value()) << all.error().message;
+    EXPECT_EQ(signatures_of(*all), (std::map<std::string, std::string> {{"Modes", "as"}}));
+    const std::string expected = std::string(standard_xml) + properties_xml + R"(  <interface name="org.sihd.Test.Echo">
+    <property name="Modes" type="as" access="read">
+      <annotation name="org.freedesktop.DBus.Property.EmitsChangedSignal" value="false"/>
+    </property>
+  </interface>
+</node>
+)";
+    EXPECT_EQ(text_of(introspected), expected);
 }
 
 TEST_F(TestDBusObjectServer, test_property_set_emits_changed)
@@ -960,18 +979,21 @@ TEST_F(TestDBusObjectServer, test_object_manager_objects)
     EXPECT_EQ(reply->signature(), "a{oa{sa{sv}}}");
 
     std::vector<std::string> found;
-    auto walked = Iter(*reply).for_each_entry<std::string>(
-        [&found](const std::string & object, Iter & interfaces) -> Result<void> {
-            return interfaces.for_each_entry<std::string>(
-                [&found, &object](const std::string & interface, Iter & values) -> Result<void> {
-                    return values.for_each_entry<std::string>(
-                        [&found, &object, &interface](const std::string & property, Iter &) -> Result<void> {
-                            found.emplace_back(object + " " + interface + " " + property);
-                            return {};
-                        });
-                });
-        });
-    ASSERT_TRUE(walked.has_value()) << walked.error().message;
+    auto objects = Iter(*reply).entries<std::string>();
+    ASSERT_TRUE(objects.has_value()) << objects.error().message;
+    for (auto & [object, interfaces] : *objects)
+    {
+        auto by_interface = interfaces.entries<std::string>();
+        ASSERT_TRUE(by_interface.has_value()) << by_interface.error().message;
+        for (auto & [interface, values] : *by_interface)
+        {
+            auto properties = values.entries<std::string>();
+            ASSERT_TRUE(properties.has_value()) << properties.error().message;
+            for (auto & [property, value] : *properties)
+                found.emplace_back(object + " " + interface + " " + property);
+        }
+    }
+
     EXPECT_EQ(found,
               (std::vector<std::string> {"/org/sihd/Test org.sihd.Test.Echo Name",
                                          "/org/sihd/Test org.sihd.Test.Echo Version"}));

@@ -79,19 +79,19 @@ Result<NetworkObject> read_network(const dbus::Message & reply, const std::strin
 
     NetworkObject network;
     network.path = path;
-    auto read = properties->for_each_entry<std::string>(
-        [&network](const std::string & name, dbus::Iter & value) -> Result<void> {
-            if (name != "ssid" && name != "key_mgmt")
-                return {};
-            auto text = value.get<std::string>();
-            SIHD_UNEXPECTED_RETURN(text);
-            if (name == "ssid")
-                network.ssid = config_ssid(*text);
-            else
-                network.key_mgmt = std::move(*text);
-            return {};
-        });
-    SIHD_UNEXPECTED_RETURN(read);
+    auto entries = properties->entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    for (auto & [name, value] : *entries)
+    {
+        if (name != "ssid" && name != "key_mgmt")
+            continue;
+        auto text = value.get<std::string>();
+        SIHD_UNEXPECTED_RETURN(text);
+        if (name == "ssid")
+            network.ssid = config_ssid(*text);
+        else
+            network.key_mgmt = std::move(*text);
+    }
     return network;
 }
 
@@ -178,10 +178,14 @@ Result<std::optional<Security>>
 
     for (const dbus::Message & reply : *replies)
     {
+        auto entries = dbus::Iter(reply).entries<std::string>();
+        SIHD_UNEXPECTED_RETURN(entries);
         BssObject bss;
-        auto read = dbus::Iter(reply).for_each_entry<std::string>(
-            [&bss](const std::string & name, dbus::Iter & value) { return read_bss_value(bss, name, value); });
-        SIHD_UNEXPECTED_RETURN(read);
+        for (auto & [name, value] : *entries)
+        {
+            auto read = read_bss_value(bss, name, value);
+            SIHD_UNEXPECTED_RETURN(read);
+        }
         if (bss.ssid == ssid)
             return security_of(ArrUByteView(bss.information_elements.data(), bss.information_elements.size()),
                                bss.privacy);
@@ -194,49 +198,31 @@ Result<void> call_with_path(dbus::Connection & connection, ZStringView interface
     dbus::Message request;
     auto built = request.method_call(service, interface, interface_interface, member);
     SIHD_UNEXPECTED_RETURN(built);
-    auto path_added = request.add_object_path(path);
+    auto path_added = request.add(dbus::ObjectPath(std::string(path)));
     SIHD_UNEXPECTED_RETURN(path_added);
     auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return {};
 }
 
-Result<void> add_text_entry(dbus::Appender & dict, ZStringView key, ZStringView value)
-{
-    return dict.add_entry(key, "s", [&value](dbus::Appender & variant) { return variant.add(value); });
-}
-
-Result<void> add_frame_protection(dbus::Appender & dict, uint32_t frame_protection)
-{
-    return dict.add_entry("ieee80211w", "u", [frame_protection](dbus::Appender & variant) {
-        return variant.add(frame_protection);
-    });
-}
-
 // wpa_supplicant always quotes string values: the ssid must go raw as bytes
-Result<void> fill_network(dbus::Appender & dict,
-                          const std::string & ssid,
-                          Security security,
-                          const std::optional<std::string> & passphrase)
+dbus::Dict network_of(const std::string & ssid, Security security, const std::optional<std::string> & passphrase)
 {
-    auto ssid_added = dict.add_entry("ssid", "ay", [&ssid](dbus::Appender & variant) {
-        return variant.add_array(std::vector<uint8_t>(ssid.begin(), ssid.end()));
-    });
-    SIHD_UNEXPECTED_RETURN(ssid_added);
+    dbus::Dict network {{"ssid", std::vector<uint8_t>(ssid.begin(), ssid.end())}};
     if (security == Security::owe)
     {
-        auto key_mgmt_added = add_text_entry(dict, "key_mgmt", "OWE");
-        SIHD_UNEXPECTED_RETURN(key_mgmt_added);
-        return add_frame_protection(dict, required_frame_protection);
+        network.emplace_back("key_mgmt", "OWE");
+        network.emplace_back("ieee80211w", required_frame_protection);
     }
-    if (!passphrase.has_value())
-        return add_text_entry(dict, "key_mgmt", "NONE");
-
-    auto psk_added = add_text_entry(dict, "psk", *passphrase);
-    SIHD_UNEXPECTED_RETURN(psk_added);
-    auto key_mgmt_added = add_text_entry(dict, "key_mgmt", personal_key_mgmt);
-    SIHD_UNEXPECTED_RETURN(key_mgmt_added);
-    return add_frame_protection(dict, optional_frame_protection);
+    else if (!passphrase.has_value())
+        network.emplace_back("key_mgmt", "NONE");
+    else
+    {
+        network.emplace_back("psk", *passphrase);
+        network.emplace_back("key_mgmt", personal_key_mgmt);
+        network.emplace_back("ieee80211w", optional_frame_protection);
+    }
+    return network;
 }
 
 Result<std::string> add_network(dbus::Connection & connection,
@@ -248,13 +234,8 @@ Result<std::string> add_network(dbus::Connection & connection,
     dbus::Message request;
     auto built = request.method_call(service, interface, interface_interface, "AddNetwork");
     SIHD_UNEXPECTED_RETURN(built);
-    dbus::Appender body(request);
-    auto dict = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(dict);
-    auto filled = fill_network(*dict, ssid, security, passphrase);
-    SIHD_UNEXPECTED_RETURN(filled);
-    auto dict_closed = body.close(std::move(*dict));
-    SIHD_UNEXPECTED_RETURN(dict_closed);
+    auto added = request.add(network_of(ssid, security, passphrase));
+    SIHD_UNEXPECTED_RETURN(added);
     auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return dbus::Iter(*reply).get<std::string>();
@@ -345,13 +326,8 @@ Result<void> scan(dbus::Connection & connection, const std::string & interface, 
     dbus::Message request;
     auto built = request.method_call(service, interface, interface_interface, "Scan");
     SIHD_UNEXPECTED_RETURN(built);
-    dbus::Appender body(request);
-    auto options = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(options);
-    auto type_added = add_text_entry(*options, "Type", "active");
-    SIHD_UNEXPECTED_RETURN(type_added);
-    auto options_closed = body.close(std::move(*options));
-    SIHD_UNEXPECTED_RETURN(options_closed);
+    auto options_added = request.add(dbus::Dict {{"Type", "active"}});
+    SIHD_UNEXPECTED_RETURN(options_added);
     auto requested = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(requested);
 

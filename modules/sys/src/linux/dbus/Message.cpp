@@ -472,19 +472,9 @@ Message & Message::operator=(Message && other) noexcept = default;
 
 Message::~Message() = default;
 
-Result<void> Message::add(ZStringView value)
+Result<void> Message::add(const Value & value)
 {
     return Appender(*this).add(value);
-}
-
-Result<void> Message::add_object_path(ZStringView path)
-{
-    return Appender(*this).add_object_path(path);
-}
-
-Result<void> Message::add_signature(ZStringView signature)
-{
-    return Appender(*this).add_signature(signature);
 }
 
 Result<void> Message::add_unix_fd(int fd)
@@ -492,21 +482,13 @@ Result<void> Message::add_unix_fd(int fd)
     return Appender(*this).add_unix_fd(fd);
 }
 
-template <FixedType T>
-Result<void> Message::add(const T & value)
-{
-    return Appender(*this).add(value);
-}
-
 Result<void> Message::properties_get(ZStringView destination, ZStringView path, ZStringView interface, ZStringView name)
 {
     Message request;
     auto built = request.method_call(destination, path, properties_interface, "Get");
     SIHD_UNEXPECTED_RETURN(built);
-    auto interface_added = request.add(interface);
-    SIHD_UNEXPECTED_RETURN(interface_added);
-    auto name_added = request.add(name);
-    SIHD_UNEXPECTED_RETURN(name_added);
+    auto added = request.add(interface, name);
+    SIHD_UNEXPECTED_RETURN(added);
     *this = std::move(request);
     return {};
 }
@@ -536,15 +518,14 @@ Result<std::optional<Iter>> Message::changed_property(std::string_view interface
         return std::nullopt;
     body.next();
 
-    std::optional<Iter> changed;
-    auto walked = body.for_each_entry<std::string>(
-        [&changed, &name](const std::string & key, Iter & value) -> Result<void> {
-            if (key == name)
-                changed.emplace(std::move(value));
-            return {};
-        });
-    SIHD_UNEXPECTED_RETURN(walked);
-    return changed;
+    auto changed = body.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(changed);
+    for (auto & [key, value] : *changed)
+    {
+        if (key == name)
+            return std::optional<Iter>(std::move(value));
+    }
+    return std::nullopt;
 }
 
 Result<Message> receive_matching(Connection & connection,
@@ -584,10 +565,6 @@ Result<void> Message::receive_until(Connection & connection,
     *this = std::move(*received);
     return {};
 }
-
-# define SIHD_DBUS_INSTANTIATE(T) template Result<void> Message::add<T>(const T &);
-SIHD_DBUS_FOR_EACH_FIXED_TYPE(SIHD_DBUS_INSTANTIATE)
-# undef SIHD_DBUS_INSTANTIATE
 
 } // namespace sihd::sys::linux_::dbus
 

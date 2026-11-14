@@ -86,7 +86,7 @@ Result<void> open_by_fd(ZStringView member, ZStringView path)
     SIHD_UNEXPECTED_RETURN(added);
     added = body.add_unix_fd(file.fd());
     SIHD_UNEXPECTED_RETURN(added);
-    added = body.add_empty_vardict();
+    added = body.add(dbus::Dict {});
     SIHD_UNEXPECTED_RETURN(added);
     return call_and_wait_response(request);
 }
@@ -96,9 +96,7 @@ Result<dbus::Message> read_setting(dbus::Connection & connection, ZStringView me
     dbus::Message request;
     auto built = request.method_call(internal::portal_service, internal::portal_path, settings_interface, member);
     SIHD_UNEXPECTED_RETURN(built);
-    auto added = request.add(appearance_namespace);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = request.add(color_scheme_key);
+    auto added = request.add(appearance_namespace, color_scheme_key);
     SIHD_UNEXPECTED_RETURN(added);
     return request.call(connection, internal::dbus_call_timeout);
 }
@@ -126,12 +124,7 @@ Result<void> desktop_open_uri(ZStringView uri)
     dbus::Message request;
     auto built = request.method_call(internal::portal_service, internal::portal_path, open_uri_interface, "OpenURI");
     SIHD_UNEXPECTED_RETURN(built);
-    dbus::Appender body(request);
-    auto added = body.add(ZStringView(""));
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(uri);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add_empty_vardict();
+    auto added = request.add("", uri, dbus::Dict {});
     SIHD_UNEXPECTED_RETURN(added);
     return call_and_wait_response(request);
 }

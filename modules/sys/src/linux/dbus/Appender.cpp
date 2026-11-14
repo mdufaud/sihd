@@ -50,6 +50,8 @@ struct Appender::Impl
         // a struct takes at least one field
         bool is_struct = false;
         bool has_values = false;
+        // set on the root only: the message outlives its appenders
+        bool *message_abandoned = nullptr;
 
         ~Impl()
         {
@@ -65,7 +67,11 @@ struct Appender::Impl
                 child->abandon();
             dbus_message_iter_abandon_container_if_open(&parent->iter, &iter);
             for (Impl *ancestor = parent; ancestor != nullptr; ancestor = ancestor->parent)
+            {
                 ancestor->abandoned = true;
+                if (ancestor->message_abandoned != nullptr)
+                    *ancestor->message_abandoned = true;
+            }
             parent->child = nullptr;
             parent = nullptr;
         }
@@ -151,38 +157,99 @@ Appender::Appender(Message & message)
     if (message._impl != nullptr)
     {
         _impl = std::make_unique<Impl>();
+        _impl->abandoned = message._impl->abandoned;
+        _impl->message_abandoned = &message._impl->abandoned;
         dbus_message_iter_init_append(message._impl->message, &_impl->iter);
     }
 }
 
-Result<void> Appender::add(ZStringView value)
+struct Appender::Writer
 {
-    if (_impl == nullptr)
-        return std::unexpected(empty_message());
-    if (!dbus_validate_utf8(value.c_str(), nullptr))
-        return std::unexpected(Error(invalid_argument, "dbus string is not valid utf-8"));
-    const char *str = value.c_str();
-    return _impl->append(DBUS_TYPE_STRING, &str);
-}
+        Appender & to;
 
-Result<void> Appender::add_object_path(ZStringView path)
-{
-    if (_impl == nullptr)
-        return std::unexpected(empty_message());
-    if (!dbus_validate_path(path.c_str(), nullptr))
-        return std::unexpected(Error(invalid_argument, "invalid dbus path: {}", path));
-    const char *str = path.c_str();
-    return _impl->append(DBUS_TYPE_OBJECT_PATH, &str);
-}
+        template <FixedType T>
+        Result<void> operator()(const T & value) const
+        {
+            if constexpr (std::is_same_v<T, bool>)
+            {
+                const dbus_bool_t dbus_value = value ? TRUE : FALSE;
+                return to._impl->append(DBUS_TYPE_BOOLEAN, &dbus_value);
+            }
+            else
+                return to._impl->append(dbus_type_of<T>(), &value);
+        }
 
-Result<void> Appender::add_signature(ZStringView signature)
+        Result<void> operator()(const std::string & value) const
+        {
+            if (!dbus_validate_utf8(value.c_str(), nullptr))
+                return std::unexpected(Error(invalid_argument, "dbus string is not valid utf-8"));
+            const char *str = value.c_str();
+            return to._impl->append(DBUS_TYPE_STRING, &str);
+        }
+
+        Result<void> operator()(const Value::ObjectPath & path) const
+        {
+            if (!dbus_validate_path(path.str().c_str(), nullptr))
+                return std::unexpected(Error(invalid_argument, "invalid dbus path: {}", path.str()));
+            const char *str = path.str().c_str();
+            return to._impl->append(DBUS_TYPE_OBJECT_PATH, &str);
+        }
+
+        Result<void> operator()(const Value::Signature & signature) const
+        {
+            if (!dbus_signature_validate(signature.str().c_str(), nullptr))
+                return std::unexpected(Error(invalid_argument, "invalid dbus signature: {}", signature.str()));
+            const char *str = signature.str().c_str();
+            return to._impl->append(DBUS_TYPE_SIGNATURE, &str);
+        }
+
+        Result<void> operator()(const Value::Array & array) const
+        {
+            return this->fill(to.open_array(array.element_signature()), array.items());
+        }
+
+        Result<void> operator()(const Value::Struct & value) const
+        {
+            return this->fill(to.open_struct(), value.fields());
+        }
+
+        Result<void> operator()(const Value::DictEntry & entry) const
+        {
+            auto opened = to.open_dict_entry();
+            SIHD_UNEXPECTED_RETURN(opened);
+            auto added = opened->add(entry.key());
+            SIHD_UNEXPECTED_RETURN(added);
+            added = opened->add(entry.value());
+            SIHD_UNEXPECTED_RETURN(added);
+            return to.close(std::move(*opened));
+        }
+
+        Result<void> operator()(const Value::Variant & variant) const
+        {
+            auto opened = to.open_variant(variant.value().signature());
+            SIHD_UNEXPECTED_RETURN(opened);
+            auto added = opened->add(variant.value());
+            SIHD_UNEXPECTED_RETURN(added);
+            return to.close(std::move(*opened));
+        }
+
+        Result<void> fill(Result<Appender> container, const std::vector<Value> & items) const
+        {
+            SIHD_UNEXPECTED_RETURN(container);
+            for (const Value & item : items)
+            {
+                auto added = container->add(item);
+                SIHD_UNEXPECTED_RETURN(added);
+            }
+            return to.close(std::move(*container));
+        }
+};
+
+Result<void> Appender::add(const Value & value)
 {
     if (_impl == nullptr)
         return std::unexpected(empty_message());
-    if (!dbus_signature_validate(signature.c_str(), nullptr))
-        return std::unexpected(Error(invalid_argument, "invalid dbus signature: {}", signature));
-    const char *str = signature.c_str();
-    return _impl->append(DBUS_TYPE_SIGNATURE, &str);
+    return std::visit(Writer {*this}, value.data());
 }
 
 Result<void> Appender::add_unix_fd(int fd)
@@ -192,33 +259,6 @@ Result<void> Appender::add_unix_fd(int fd)
     auto type = os::fd_type(fd);
     SIHD_UNEXPECTED_RETURN(type);
     return _impl->append(DBUS_TYPE_UNIX_FD, &fd);
-}
-
-template <BasicType T>
-Result<void> Appender::add_array(const std::vector<T> & values)
-{
-    auto array = this->open_array(std::string(1, static_cast<char>(dbus_type_of<T>())));
-    SIHD_UNEXPECTED_RETURN(array);
-    for (const T & value : values)
-    {
-        auto added = array->add(value);
-        SIHD_UNEXPECTED_RETURN(added);
-    }
-    return this->close(std::move(*array));
-}
-
-template <FixedType T>
-Result<void> Appender::add(const T & value)
-{
-    if (_impl == nullptr)
-        return std::unexpected(empty_message());
-    if constexpr (std::is_same_v<T, bool>)
-    {
-        const dbus_bool_t dbus_value = value ? TRUE : FALSE;
-        return _impl->append(DBUS_TYPE_BOOLEAN, &dbus_value);
-    }
-    else
-        return _impl->append(dbus_type_of<T>(), &value);
 }
 
 Result<Appender> Appender::open_array(const std::string & element_signature)
@@ -315,34 +355,12 @@ struct Appender::Impl
 
 Appender::Appender(Message &) {}
 
-Result<void> Appender::add(ZStringView)
-{
-    return unsupported_platform();
-}
-
-Result<void> Appender::add_object_path(ZStringView)
-{
-    return unsupported_platform();
-}
-
-Result<void> Appender::add_signature(ZStringView)
+Result<void> Appender::add(const Value &)
 {
     return unsupported_platform();
 }
 
 Result<void> Appender::add_unix_fd(int)
-{
-    return unsupported_platform();
-}
-
-template <FixedType T>
-Result<void> Appender::add(const T &)
-{
-    return unsupported_platform();
-}
-
-template <BasicType T>
-Result<void> Appender::add_array(const std::vector<T> &)
 {
     return unsupported_platform();
 }
@@ -381,64 +399,6 @@ Appender::Appender(Appender && other) = default;
 Appender & Appender::operator=(Appender && other) = default;
 
 Appender::~Appender() = default;
-
-Result<void> Appender::add_entry(ZStringView key,
-                                 const std::string & signature,
-                                 const std::function<Result<void>(Appender &)> & fill)
-{
-    auto entry = this->open_dict_entry();
-    SIHD_UNEXPECTED_RETURN(entry);
-    auto key_added = entry->add(key);
-    SIHD_UNEXPECTED_RETURN(key_added);
-    auto variant = entry->open_variant(signature);
-    SIHD_UNEXPECTED_RETURN(variant);
-    auto filled = fill(*variant);
-    SIHD_UNEXPECTED_RETURN(filled);
-    auto variant_closed = entry->close(std::move(*variant));
-    SIHD_UNEXPECTED_RETURN(variant_closed);
-    return this->close(std::move(*entry));
-}
-
-template <BasicType Key>
-Result<void> Appender::add_byte_map(const std::map<Key, std::vector<uint8_t>> & map)
-{
-    auto array = this->open_array(std::string("{") + dbus_type_of<Key>() + "v}");
-    SIHD_UNEXPECTED_RETURN(array);
-    for (const auto & [key, bytes] : map)
-    {
-        auto entry = array->open_dict_entry();
-        SIHD_UNEXPECTED_RETURN(entry);
-        auto key_added = entry->add(key);
-        SIHD_UNEXPECTED_RETURN(key_added);
-
-        auto variant = entry->open_variant("ay");
-        SIHD_UNEXPECTED_RETURN(variant);
-        auto bytes_added = variant->add_array(bytes);
-        SIHD_UNEXPECTED_RETURN(bytes_added);
-        auto variant_closed = entry->close(std::move(*variant));
-        SIHD_UNEXPECTED_RETURN(variant_closed);
-        auto entry_closed = array->close(std::move(*entry));
-        SIHD_UNEXPECTED_RETURN(entry_closed);
-    }
-    return this->close(std::move(*array));
-}
-
-Result<void> Appender::add_empty_vardict()
-{
-    auto options = this->open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(options);
-    return this->close(std::move(*options));
-}
-
-# define SIHD_DBUS_INSTANTIATE_FIXED(T) template Result<void> Appender::add<T>(const T &);
-SIHD_DBUS_FOR_EACH_FIXED_TYPE(SIHD_DBUS_INSTANTIATE_FIXED)
-# undef SIHD_DBUS_INSTANTIATE_FIXED
-
-# define SIHD_DBUS_INSTANTIATE_BASIC(T)                                                                                \
-     template Result<void> Appender::add_array<T>(const std::vector<T> &);                                             \
-     template Result<void> Appender::add_byte_map<T>(const std::map<T, std::vector<uint8_t>> &);
-SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE_BASIC)
-# undef SIHD_DBUS_INSTANTIATE_BASIC
 
 } // namespace sihd::sys::linux_::dbus
 

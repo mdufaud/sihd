@@ -179,8 +179,8 @@ inline std::optional<sihd::sys::linux_::dbus::Message> receive_member(sihd::sys:
 inline std::vector<std::string> read_strings(const sihd::sys::linux_::dbus::Message & message)
 {
     std::vector<std::string> strings;
-    for (sihd::sys::linux_::dbus::Iter args(message); args.type() != '\0'; args.next())
-        strings.push_back(args.get<std::string>().value_or("unreadable"));
+    for (sihd::sys::linux_::dbus::Iter & arg : sihd::sys::linux_::dbus::Iter(message))
+        strings.push_back(arg.get<std::string>().value_or("unreadable"));
     return strings;
 }
 
@@ -229,11 +229,7 @@ inline void answer_u32_variant(sihd::sys::linux_::dbus::Connection & server,
 {
     auto reply = call.method_return();
     ASSERT_TRUE(reply.has_value());
-    sihd::sys::linux_::dbus::Appender body(*reply);
-    auto variant = body.open_variant("u");
-    ASSERT_TRUE(variant.has_value());
-    ASSERT_TRUE(variant->add(value).has_value());
-    ASSERT_TRUE(body.close(std::move(*variant)).has_value());
+    ASSERT_TRUE(reply->add(sihd::sys::linux_::dbus::Variant(value)).has_value());
     ASSERT_TRUE(reply->send(server).has_value());
 }
 

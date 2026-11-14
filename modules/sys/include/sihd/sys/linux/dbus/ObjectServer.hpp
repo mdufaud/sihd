@@ -12,6 +12,7 @@
 #include <sihd/sys/linux/dbus/Connection.hpp>
 #include <sihd/sys/linux/dbus/Iter.hpp>
 #include <sihd/sys/linux/dbus/Message.hpp>
+#include <sihd/sys/linux/dbus/Value.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Result.hpp>
 
@@ -98,6 +99,8 @@ class ObjectServer
                 // reads and writes value, which outlives the object
                 template <BasicType T>
                 static Property bound(const std::string & name, T & value);
+                // never changes nor signals a change: the signature follows value
+                static Property constant(const std::string & name, Value value);
         };
 
         struct Interface

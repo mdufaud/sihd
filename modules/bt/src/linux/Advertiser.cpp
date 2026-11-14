@@ -19,49 +19,22 @@ namespace
 constexpr ZStringView advertisement_path = "/org/sihd/bt/advertisement";
 const Duration max_wait(time::hours(1));
 
-dbus::ObjectServer::Property
-    constant(const std::string & name, const std::string & signature, std::function<Result<void>(dbus::Appender &)> get)
-{
-    return dbus::ObjectServer::Property {
-        .name = name,
-        .signature = signature,
-        .get = std::move(get),
-        .set = {},
-        .emits_changed = false,
-    };
-}
-
 dbus::ObjectServer::Interface advertisement_interface(const Advertisement & advertisement, bool & released)
 {
-    std::vector<dbus::ObjectServer::Property> properties;
-    const std::string type = advertisement.connectable ? "peripheral" : "broadcast";
-    properties.push_back(constant("Type", "s", [type](dbus::Appender & to) { return to.add(type); }));
+    using Property = dbus::ObjectServer::Property;
+    std::vector<Property> properties;
+    properties.push_back(Property::constant("Type", advertisement.connectable ? "peripheral" : "broadcast"));
     if (!advertisement.local_name.empty())
-    {
-        properties.push_back(constant("LocalName", "s", [name = advertisement.local_name](dbus::Appender & to) {
-            return to.add(name);
-        }));
-    }
+        properties.push_back(Property::constant("LocalName", advertisement.local_name));
     if (!advertisement.service_uuids.empty())
-    {
-        properties.push_back(constant("ServiceUUIDs", "as", [uuids = advertisement.service_uuids](dbus::Appender & to) {
-            return to.add_array(uuids);
-        }));
-    }
-
+        properties.push_back(Property::constant("ServiceUUIDs", advertisement.service_uuids));
     if (!advertisement.manufacturer_data.empty())
     {
         properties.push_back(
-            constant("ManufacturerData", "a{qv}", [data = advertisement.manufacturer_data](dbus::Appender & to) {
-                return to.add_byte_map(data);
-            }));
+            Property::constant("ManufacturerData", dbus::Value::variant_dict(advertisement.manufacturer_data)));
     }
     if (!advertisement.service_data.empty())
-    {
-        properties.push_back(constant("ServiceData", "a{sv}", [data = advertisement.service_data](dbus::Appender & to) {
-            return to.add_byte_map(data);
-        }));
-    }
+        properties.push_back(Property::constant("ServiceData", dbus::Value::variant_dict(advertisement.service_data)));
 
     return dbus::ObjectServer::Interface {
         .name = std::string(bluez::advertisement_interface),
@@ -120,11 +93,7 @@ bool Advertiser::on_start()
     auto request = bluez::method_call(*adapter_path,
                                       bluez::advertising_manager_interface,
                                       "RegisterAdvertisement",
-                                      [](dbus::Appender & to) -> Result<void> {
-                                          auto path = to.add_object_path(advertisement_path);
-                                          SIHD_UNEXPECTED_RETURN(path);
-                                          return to.add_empty_vardict();
-                                      });
+                                      {dbus::ObjectPath(std::string(advertisement_path)), dbus::Dict {}});
     if (SIHD_UNEXPECTED_LOG(request))
         return false;
     auto registered = server.call(*request, bluez::call_timeout);
@@ -168,13 +137,12 @@ bool Advertiser::on_start()
         SIHD_LOG(warning, "Advertiser: bluez released the advertisement");
         return false;
     }
-    auto unregistered = bluez::call(
-        *connection,
-        *adapter_path,
-        bluez::advertising_manager_interface,
-        "UnregisterAdvertisement",
-        [](dbus::Appender & to) { return to.add_object_path(advertisement_path); },
-        bluez::call_timeout);
+    auto unregistered = bluez::call(*connection,
+                                    *adapter_path,
+                                    bluez::advertising_manager_interface,
+                                    "UnregisterAdvertisement",
+                                    {dbus::ObjectPath(std::string(advertisement_path))},
+                                    bluez::call_timeout);
     SIHD_UNEXPECTED_LOG(unregistered);
     return advertised;
 }

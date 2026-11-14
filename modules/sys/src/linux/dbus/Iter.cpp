@@ -129,6 +129,30 @@ Result<UnixFd> Iter::get_unix_fd() const
     return UnixFd(fd);
 }
 
+// libdbus reading iterators copy by value
+Result<Iter> Iter::duplicate() const
+{
+    if (_impl == nullptr)
+        return Iter(std::unique_ptr<Impl>());
+    return Iter(std::make_unique<Impl>(*_impl));
+}
+
+template <BasicType Key>
+Result<Iter::Entries<Key>> Iter::entries() const
+{
+    const std::string signature = this->signature();
+    if (this->type() != DBUS_TYPE_ARRAY || !signature.starts_with("a{"))
+        return std::unexpected(Error(invalid_argument, "dbus type '{}' is not a dict", this->type()));
+    const int key = signature[2];
+    const bool key_matches = std::is_same_v<Key, std::string> ? is_string_type(key) : key == dbus_type_of<Key>();
+    if (!key_matches)
+        return std::unexpected(type_mismatch(dbus_type_of<Key>(), key));
+
+    auto items = this->recurse();
+    SIHD_UNEXPECTED_RETURN(items);
+    return Entries<Key>(std::move(*items));
+}
+
 # else
 
 struct Iter::Impl
@@ -168,6 +192,17 @@ Result<UnixFd> Iter::get_unix_fd() const
     return unsupported_platform();
 }
 
+Result<Iter> Iter::duplicate() const
+{
+    return unsupported_platform();
+}
+
+template <BasicType Key>
+Result<Iter::Entries<Key>> Iter::entries() const
+{
+    return unsupported_platform();
+}
+
 # endif
 
 Iter::Iter(std::unique_ptr<Impl> impl): _impl(std::move(impl)) {}
@@ -178,6 +213,89 @@ Iter & Iter::operator=(Iter && other) = default;
 
 Iter::~Iter() = default;
 
+Iter::Cursor Iter::begin()
+{
+    return Cursor(*this);
+}
+
+std::default_sentinel_t Iter::end() const
+{
+    return std::default_sentinel;
+}
+
+Iter::Cursor::Cursor(Iter & iter): _iter(&iter) {}
+
+Iter & Iter::Cursor::operator*() const
+{
+    return *_iter;
+}
+
+Iter::Cursor & Iter::Cursor::operator++()
+{
+    _iter->next();
+    return *this;
+}
+
+bool Iter::Cursor::operator==(std::default_sentinel_t) const
+{
+    return _iter->type() == '\0';
+}
+
+template <BasicType Key>
+Iter::Entries<Key>::Entries(Iter items): _items(std::move(items)), _current(Key {}, Iter(std::unique_ptr<Impl>()))
+{
+}
+
+template <BasicType Key>
+typename Iter::Entries<Key>::Cursor Iter::Entries<Key>::begin()
+{
+    Cursor cursor(*this);
+    if (cursor != std::default_sentinel)
+        this->decode();
+    return cursor;
+}
+
+template <BasicType Key>
+std::default_sentinel_t Iter::Entries<Key>::end() const
+{
+    return std::default_sentinel;
+}
+
+template <BasicType Key>
+void Iter::Entries<Key>::decode()
+{
+    // entries() checked the a{K...} signature: every step below succeeds
+    auto entry = _items.recurse();
+    _current.first = *entry->get<Key>();
+    entry->next();
+    _current.second = entry->type() == 'v' ? std::move(*entry->recurse()) : std::move(*entry);
+}
+
+template <BasicType Key>
+Iter::Entries<Key>::Cursor::Cursor(Entries & entries): _entries(&entries)
+{
+}
+
+template <BasicType Key>
+std::pair<Key, Iter> & Iter::Entries<Key>::Cursor::operator*() const
+{
+    return _entries->_current;
+}
+
+template <BasicType Key>
+typename Iter::Entries<Key>::Cursor & Iter::Entries<Key>::Cursor::operator++()
+{
+    if (_entries->_items.next())
+        _entries->decode();
+    return *this;
+}
+
+template <BasicType Key>
+bool Iter::Entries<Key>::Cursor::operator==(std::default_sentinel_t) const
+{
+    return _entries->_items.type() == '\0';
+}
+
 template <BasicType T>
 Result<std::vector<T>> Iter::get_array() const
 {
@@ -187,9 +305,9 @@ Result<std::vector<T>> Iter::get_array() const
         return std::unexpected(Error(invalid_argument, "dbus type '{}' is not an array", this->type()));
 
     std::vector<T> values;
-    for (; items->type() != '\0'; items->next())
+    for (Iter & item : *items)
     {
-        auto value = items->get<T>();
+        auto value = item.get<T>();
         SIHD_UNEXPECTED_RETURN(value);
         values.emplace_back(std::move(*value));
     }
@@ -197,40 +315,17 @@ Result<std::vector<T>> Iter::get_array() const
 }
 
 template <BasicType Key>
-Result<void> Iter::for_each_entry(const std::function<Result<void>(const Key &, Iter &)> & callback) const
-{
-    if (this->type() != 'a')
-        return std::unexpected(Error(invalid_argument, "dbus type '{}' is not a dict", this->type()));
-    auto entries = this->recurse();
-    SIHD_UNEXPECTED_RETURN(entries);
-
-    for (; entries->type() != '\0'; entries->next())
-    {
-        auto entry = entries->recurse();
-        SIHD_UNEXPECTED_RETURN(entry);
-        auto key = entry->get<Key>();
-        SIHD_UNEXPECTED_RETURN(key);
-        entry->next();
-
-        auto value = entry->type() == 'v' ? entry->recurse() : Result<Iter>(std::move(*entry));
-        SIHD_UNEXPECTED_RETURN(value);
-        auto done = callback(*key, *value);
-        SIHD_UNEXPECTED_RETURN(done);
-    }
-    return {};
-}
-
-template <BasicType Key>
 Result<std::map<Key, std::vector<uint8_t>>> Iter::get_byte_map() const
 {
+    auto dict = this->entries<Key>();
+    SIHD_UNEXPECTED_RETURN(dict);
     std::map<Key, std::vector<uint8_t>> byte_map;
-    auto walked = this->for_each_entry<Key>([&byte_map](const Key & key, Iter & value) -> Result<void> {
-        auto bytes = value.get_array<uint8_t>();
+    for (auto & [key, value] : *dict)
+    {
+        auto bytes = value.template get_array<uint8_t>();
         SIHD_UNEXPECTED_RETURN(bytes);
         byte_map.insert_or_assign(key, std::move(*bytes));
-        return {};
-    });
-    SIHD_UNEXPECTED_RETURN(walked);
+    }
     return byte_map;
 }
 
@@ -238,7 +333,8 @@ Result<std::map<Key, std::vector<uint8_t>>> Iter::get_byte_map() const
      template Result<T> Iter::get<T>() const;                                                                          \
      template Result<std::vector<T>> Iter::get_array<T>() const;                                                       \
      template Result<std::map<T, std::vector<uint8_t>>> Iter::get_byte_map<T>() const;                                 \
-     template Result<void> Iter::for_each_entry<T>(const std::function<Result<void>(const T &, Iter &)> &) const;
+     template class Iter::Entries<T>;                                                                                  \
+     template Result<Iter::Entries<T>> Iter::entries<T>() const;
 SIHD_DBUS_FOR_EACH_BASIC_TYPE(SIHD_DBUS_INSTANTIATE)
 # undef SIHD_DBUS_INSTANTIATE
 

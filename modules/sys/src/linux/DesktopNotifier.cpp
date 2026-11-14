@@ -8,6 +8,7 @@
 # include <algorithm>
 # include <cstdint>
 # include <optional>
+# include <vector>
 
 # include <sihd/sys/linux/dbus.hpp>
 # include <sihd/util/str.hpp>
@@ -55,49 +56,23 @@ int32_t expire_timeout(const std::optional<Duration> & timeout)
     return std::max<int32_t>(timeout->milliseconds_int(), 1);
 }
 
-Result<void> append_hint_array(dbus::Appender & body, const std::string & app_id, DesktopNotifier::Urgency urgency)
-{
-    auto hints = body.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(hints);
-    auto urgency_added = hints->add_entry("urgency", "y", [urgency](dbus::Appender & value) {
-        return value.add(urgency_level(urgency));
-    });
-    SIHD_UNEXPECTED_RETURN(urgency_added);
-    if (!app_id.empty())
-    {
-        auto entry_added = hints->add_entry("desktop-entry", "s", [&app_id](dbus::Appender & value) {
-            return value.add(app_id);
-        });
-        SIHD_UNEXPECTED_RETURN(entry_added);
-    }
-    return body.close(std::move(*hints));
-}
-
 Result<void> append_notification(dbus::Message & request,
                                  const std::string & app_name,
                                  const std::string & app_id,
                                  const DesktopNotifier::Notification & notification,
                                  bool body_markup)
 {
-    dbus::Appender body(request);
-    auto added = body.add(app_name);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(uint32_t {0});
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(notification.icon);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(notification.summary);
-    SIHD_UNEXPECTED_RETURN(added);
-    added = body.add(body_markup ? str::escape_xml(notification.body) : notification.body);
-    SIHD_UNEXPECTED_RETURN(added);
-
-    auto actions = body.open_array("s");
-    SIHD_UNEXPECTED_RETURN(actions);
-    added = body.close(std::move(*actions));
-    SIHD_UNEXPECTED_RETURN(added);
-    added = append_hint_array(body, app_id, notification.urgency);
-    SIHD_UNEXPECTED_RETURN(added);
-    return body.add(expire_timeout(notification.timeout));
+    dbus::Dict hints {{"urgency", urgency_level(notification.urgency)}};
+    if (!app_id.empty())
+        hints.emplace_back("desktop-entry", app_id);
+    return request.add(app_name,
+                       uint32_t {0},
+                       notification.icon,
+                       notification.summary,
+                       body_markup ? str::escape_xml(notification.body) : notification.body,
+                       std::vector<std::string> {},
+                       hints,
+                       expire_timeout(notification.timeout));
 }
 
 } // namespace

@@ -58,12 +58,11 @@ class TestBtDevice: public ::testing::Test
         // from a handler
         void set_connected(bool connected)
         {
-            _daemon.set_property(device_path, device_interface, "Connected", boolean(connected));
-            _daemon.set_property(device_path, device_interface, "ServicesResolved", boolean(connected));
-            _daemon.emit_properties_changed(
-                device_path,
-                device_interface,
-                {{"Connected", boolean(connected)}, {"ServicesResolved", boolean(connected)}});
+            _daemon.set_property(device_path, device_interface, "Connected", connected);
+            _daemon.set_property(device_path, device_interface, "ServicesResolved", connected);
+            _daemon.emit_properties_changed(device_path,
+                                            device_interface,
+                                            {{"Connected", connected}, {"ServicesResolved", connected}});
         }
 
         void connect()
@@ -111,8 +110,7 @@ class TestBtDevice: public ::testing::Test
                 dbus::Message request;
                 auto built = request.method_call(_agent_sender, _agent_path, agent_interface, "RequestConfirmation");
                 ASSERT_TRUE(built.has_value()) << built.error().message;
-                ASSERT_TRUE(request.add_object_path(device_path).has_value());
-                ASSERT_TRUE(request.add(uint32_t {123456}).has_value());
+                ASSERT_TRUE(request.add(dbus::ObjectPath(device_path), uint32_t {123456}).has_value());
                 if (!request.call(_daemon.connection(), fake_timeout))
                     return _daemon.fail(call, "org.bluez.Error.AuthenticationRejected", "Authentication Rejected");
                 _daemon.reply(call, {});
@@ -288,18 +286,23 @@ TEST_F(TestBtDevice, test_read_write_characteristic)
     std::vector<uint8_t> written;
     std::string write_type;
     _daemon.on(gatt_characteristic_interface, "ReadValue", [this](const dbus::Message & call) {
-        _daemon.reply(call, {bytes(std::vector<uint8_t> {0x63})});
+        _daemon.reply(call, {std::vector<uint8_t> {0x63}});
     });
 
     _daemon.on(gatt_characteristic_interface, "WriteValue", [&](const dbus::Message & call) {
         dbus::Iter arguments(call);
         written = arguments.get_array<uint8_t>().value_or(std::vector<uint8_t> {});
         arguments.next();
-        (void)arguments.for_each_entry<std::string>([&write_type](const std::string & key, dbus::Iter & value) {
-            if (key == "type")
-                write_type = value.get<std::string>().value_or("");
-            return Result<void> {};
-        });
+        auto options = arguments.entries<std::string>();
+        EXPECT_TRUE(options.has_value()) << options.error().message;
+        if (options.has_value())
+        {
+            for (auto & [key, value] : *options)
+            {
+                if (key == "type")
+                    write_type = value.get<std::string>().value_or("");
+            }
+        }
         _daemon.reply(call, {});
     });
 
@@ -323,7 +326,7 @@ TEST_F(TestBtDevice, test_read_write_descriptor)
 {
     std::vector<uint8_t> written;
     _daemon.on(gatt_descriptor_interface, "ReadValue", [this](const dbus::Message & call) {
-        _daemon.reply(call, {bytes(std::vector<uint8_t> {0x00, 0x00})});
+        _daemon.reply(call, {std::vector<uint8_t> {0x00, 0x00}});
     });
     _daemon.on(gatt_descriptor_interface, "WriteValue", [&](const dbus::Message & call) {
         written = dbus::Iter(call).get_array<uint8_t>().value_or(std::vector<uint8_t> {});
@@ -350,7 +353,12 @@ TEST_F(TestBtDevice, test_subscribe_acquires_notifications)
     // bluez hands a non-blocking socket, one datagram per notification
     SocketPair notifications(SOCK_SEQPACKET | SOCK_NONBLOCK);
     _daemon.on(gatt_characteristic_interface, "AcquireNotify", [this, &notifications](const dbus::Message & call) {
-        _daemon.reply(call, {unix_fd(notifications.local()), u16(23)});
+        // libdbus sends a duplicate: the test keeps its fd
+        auto answer = call.method_return();
+        ASSERT_TRUE(answer.has_value()) << answer.error().message;
+        ASSERT_TRUE(answer->add_unix_fd(notifications.local()).has_value());
+        ASSERT_TRUE(answer->add(uint16_t {23}).has_value());
+        ASSERT_TRUE(answer->send(_daemon.connection()).has_value());
         EXPECT_TRUE(notifications.write_remote("\x51"));
     });
     _daemon.serve();
@@ -384,7 +392,7 @@ TEST_F(TestBtDevice, test_subscribe_indications)
         _daemon.reply(call, {});
         _daemon.emit_properties_changed(alert_path,
                                         gatt_characteristic_interface,
-                                        {{"Value", bytes(std::vector<uint8_t> {0x02})}});
+                                        {{"Value", std::vector<uint8_t> {0x02}}});
     });
     answer(_daemon, gatt_characteristic_interface, {"StopNotify"});
     _daemon.serve();

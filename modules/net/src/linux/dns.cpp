@@ -91,17 +91,17 @@ Result<std::vector<DnsServer>> resolved_servers(Duration timeout)
     SIHD_UNEXPECTED_RETURN(entries);
 
     std::vector<DnsServer> servers;
-    for (; entries->type() != '\0'; entries->next())
+    for (dbus::Iter & entry : *entries)
     {
-        auto entry = entries->recurse();
-        SIHD_UNEXPECTED_RETURN(entry);
-        auto index = entry->get<int32_t>();
+        auto fields = entry.recurse();
+        SIHD_UNEXPECTED_RETURN(fields);
+        auto index = fields->get<int32_t>();
         SIHD_UNEXPECTED_RETURN(index);
-        entry->next();
-        auto family = entry->get<int32_t>();
+        fields->next();
+        auto family = fields->get<int32_t>();
         SIHD_UNEXPECTED_RETURN(family);
-        entry->next();
-        auto bytes = entry->get_array<uint8_t>();
+        fields->next();
+        auto bytes = fields->get_array<uint8_t>();
         SIHD_UNEXPECTED_RETURN(bytes);
 
         IpAddr addr = IpAddr::from_bytes(*family, *bytes);

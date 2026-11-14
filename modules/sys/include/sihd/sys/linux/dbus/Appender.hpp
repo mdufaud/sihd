@@ -1,16 +1,13 @@
 #ifndef __SIHD_SYS_LINUX_DBUS_APPENDER_HPP__
 #define __SIHD_SYS_LINUX_DBUS_APPENDER_HPP__
 
-#include <cstdint>
-#include <functional>
-#include <map>
+#include <initializer_list>
 #include <memory>
 #include <string>
-#include <vector>
 
 #include <sihd/sys/linux/dbus/Message.hpp>
+#include <sihd/sys/linux/dbus/Value.hpp>
 #include <sihd/util/Result.hpp>
-#include <sihd/util/ZStringView.hpp>
 
 namespace sihd::sys::linux_::dbus
 {
@@ -27,24 +24,22 @@ class Connection::Message::Appender
         Appender(const Appender &) = delete;
         Appender & operator=(const Appender &) = delete;
 
-        template <FixedType T>
-        sihd::util::Result<void> add(const T & value);
-        sihd::util::Result<void> add(sihd::util::ZStringView value);
-        sihd::util::Result<void> add_object_path(sihd::util::ZStringView path);
-        sihd::util::Result<void> add_signature(sihd::util::ZStringView signature);
+        // a value whose container content fails leaves the message abandoned
+        sihd::util::Result<void> add(const Value & value);
+        template <typename... T>
+            requires(sizeof...(T) > 1)
+        sihd::util::Result<void> add(const T &...values)
+        {
+            for (const Value & value : {Value(values)...})
+            {
+                auto added = this->add(value);
+                if (!added.has_value())
+                    return added;
+            }
+            return {};
+        }
         // the message keeps its own duplicate, fd stays the caller's
         sihd::util::Result<void> add_unix_fd(int fd);
-        template <BasicType T>
-        sihd::util::Result<void> add_array(const std::vector<T> & values);
-        // a{Kv} holding an ay in every variant
-        template <BasicType Key>
-        sihd::util::Result<void> add_byte_map(const std::map<Key, std::vector<uint8_t>> & map);
-        // the a{sv} of no option
-        sihd::util::Result<void> add_empty_vardict();
-        // one {sv} entry of an a{sv} array: fill writes the value, of that signature
-        sihd::util::Result<void> add_entry(sihd::util::ZStringView key,
-                                           const std::string & signature,
-                                           const std::function<sihd::util::Result<void>(Appender &)> & fill);
 
         sihd::util::Result<Appender> open_array(const std::string & element_signature);
         sihd::util::Result<Appender> open_variant(const std::string & value_signature);
@@ -55,6 +50,7 @@ class Connection::Message::Appender
 
     private:
         struct Impl;
+        struct Writer;
 
         explicit Appender(std::unique_ptr<Impl> impl);
 

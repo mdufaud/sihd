@@ -130,18 +130,19 @@ TEST_F(TestPowerInhibitor, test_display_held_until_release)
     EXPECT_EQ(args.get<uint32_t>().value_or(0), 8u);
     args.next();
 
+    auto options = args.entries<std::string>();
+    ASSERT_TRUE(options.has_value()) << options.error().message;
     std::string reason;
-    auto read = args.for_each_entry<std::string>([&reason](const std::string & key, Iter & value) -> Result<void> {
+    for (auto & [key, value] : *options)
+    {
         if (key == "reason")
             reason = value.get<std::string>().value_or("unreadable");
-        return {};
-    });
-    ASSERT_TRUE(read.has_value()) << read.error().message;
+    }
     EXPECT_EQ(reason, "Slideshow");
 
     auto reply = inhibit->method_return();
     ASSERT_TRUE(reply.has_value());
-    ASSERT_TRUE(reply->add_object_path(portal_handle).has_value());
+    ASSERT_TRUE(reply->add(ObjectPath(portal_handle)).has_value());
     ASSERT_TRUE(reply->send(_server).has_value());
     EXPECT_EQ(_client.next_line(), "held");
 

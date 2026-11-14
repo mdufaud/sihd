@@ -350,29 +350,6 @@ int check_resolved_stub_without_resolved()
     return child_result();
 }
 
-Result<void>
-    append_dns_entry(dbus::Appender & entries, int32_t index, int32_t family, const std::vector<uint8_t> & bytes)
-{
-    auto entry = entries.open_struct();
-    SIHD_UNEXPECTED_RETURN(entry);
-    auto index_added = entry->add<int32_t>(index);
-    SIHD_UNEXPECTED_RETURN(index_added);
-    auto family_added = entry->add<int32_t>(family);
-    SIHD_UNEXPECTED_RETURN(family_added);
-
-    auto address = entry->open_array("y");
-    SIHD_UNEXPECTED_RETURN(address);
-    for (const uint8_t byte : bytes)
-    {
-        auto byte_added = address->add<uint8_t>(byte);
-        SIHD_UNEXPECTED_RETURN(byte_added);
-    }
-
-    auto address_closed = entry->close(std::move(*address));
-    SIHD_UNEXPECTED_RETURN(address_closed);
-    return entries.close(std::move(*entry));
-}
-
 Result<void> answer_resolved_dns(dbus::Connection & server, int32_t link_index)
 {
     auto call = receive_member(server, "Get");
@@ -381,22 +358,14 @@ Result<void> answer_resolved_dns(dbus::Connection & server, int32_t link_index)
     auto reply = call->method_return();
     SIHD_UNEXPECTED_RETURN(reply);
 
-    dbus::Appender body(*reply);
-    auto variant = body.open_variant("a(iiay)");
-    SIHD_UNEXPECTED_RETURN(variant);
-    auto entries = variant->open_array("(iiay)");
-    SIHD_UNEXPECTED_RETURN(entries);
-    auto global_entry = append_dns_entry(*entries, 0, AF_INET, {9, 9, 9, 9});
-    SIHD_UNEXPECTED_RETURN(global_entry);
-    auto link_entry = append_dns_entry(*entries,
-                                       link_index,
-                                       AF_INET6,
-                                       {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2});
-    SIHD_UNEXPECTED_RETURN(link_entry);
-    auto entries_closed = variant->close(std::move(*entries));
-    SIHD_UNEXPECTED_RETURN(entries_closed);
-    auto variant_closed = body.close(std::move(*variant));
-    SIHD_UNEXPECTED_RETURN(variant_closed);
+    // (ifindex, family, address): 9.9.9.9 global, fe80::2 on the link
+    auto added = reply->add(dbus::Variant({
+        dbus::Struct {0, AF_INET, std::vector<uint8_t> {9, 9, 9, 9}},
+        dbus::Struct {link_index,
+                      AF_INET6,
+                      std::vector<uint8_t> {0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}},
+    }));
+    SIHD_UNEXPECTED_RETURN(added);
     return reply->send(server);
 }
 

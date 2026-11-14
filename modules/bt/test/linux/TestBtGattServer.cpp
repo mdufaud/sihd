@@ -91,23 +91,23 @@ class TestBtGattServer: public ::testing::Test
         // from a handler: a method of the application, as a remote device reaches it through bluez
         Result<dbus::Message> call_application(const std::string & path,
                                                const std::string & member,
-                                               const std::function<Result<void>(dbus::Appender &)> & arguments)
+                                               const std::vector<dbus::Value> & arguments)
         {
             dbus::Message request;
             auto built = request.method_call(_application_sender, path, gatt_characteristic_interface, member);
             SIHD_UNEXPECTED_RETURN(built);
-            dbus::Appender body(request);
-            auto filled = arguments(body);
-            SIHD_UNEXPECTED_RETURN(filled);
+            for (const dbus::Value & argument : arguments)
+            {
+                auto added = request.add(argument);
+                SIHD_UNEXPECTED_RETURN(added);
+            }
             return request.call(_daemon.connection(), fake_timeout);
         }
 
         // ReadValue's answer, or the name of the error refusing it
         std::string remote_read(const std::string & path, uint16_t offset)
         {
-            auto reply = this->call_application(path, "ReadValue", [offset](dbus::Appender & to) {
-                return append_entries(to, {{"offset", u16(offset)}});
-            });
+            auto reply = this->call_application(path, "ReadValue", {dbus::Dict {{"offset", offset}}});
             if (!reply)
                 return reply.error().message;
             auto value = dbus::Iter(*reply).get_array<uint8_t>();
@@ -116,11 +116,7 @@ class TestBtGattServer: public ::testing::Test
 
         std::string remote_write(const std::string & path, const std::string & value)
         {
-            auto called = this->call_application(path, "WriteValue", [&value](dbus::Appender & to) -> Result<void> {
-                auto added = to.add_array(std::vector<uint8_t>(value.begin(), value.end()));
-                SIHD_UNEXPECTED_RETURN(added);
-                return append_entries(to, {});
-            });
+            auto called = this->call_application(path, "WriteValue", {bytes(value), dbus::Dict {}});
             return called ? "written" : called.error().message;
         }
 
@@ -145,14 +141,18 @@ TEST_F(TestBtGattServer, test_publishes_application)
         ASSERT_TRUE(built.has_value()) << built.error().message;
         auto reply = request.call(_daemon.connection(), fake_timeout);
         ASSERT_TRUE(reply.has_value()) << reply.error().message;
-        auto parsed = dbus::Iter(*reply).for_each_entry<std::string>(
-            [&objects](const std::string & path, dbus::Iter & interfaces) {
-                return interfaces.for_each_entry<std::string>(
-                    [&objects, &path](const std::string & interface, dbus::Iter & properties) {
-                        return read_properties(properties, objects[path][interface]);
-                    });
-            });
-        ASSERT_TRUE(parsed.has_value()) << parsed.error().message;
+        auto managed = dbus::Iter(*reply).entries<std::string>();
+        ASSERT_TRUE(managed.has_value()) << managed.error().message;
+        for (auto & [path, interfaces] : *managed)
+        {
+            auto by_interface = interfaces.entries<std::string>();
+            ASSERT_TRUE(by_interface.has_value()) << by_interface.error().message;
+            for (auto & [interface, properties] : *by_interface)
+            {
+                auto read = read_properties(properties, objects[path][interface]);
+                ASSERT_TRUE(read.has_value()) << read.error().message;
+            }
+        }
     };
     _daemon.serve();
 

@@ -1,4 +1,6 @@
+#include <map>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <fmt/format.h>
@@ -233,6 +235,107 @@ TEST_F(TestDBusMessage, test_append_after_dropped_container)
     EXPECT_EQ(added.error().message, "dbus message has an abandoned container");
 }
 
+TEST_F(TestDBusMessage, test_add_dict)
+{
+    auto added = _message.add(Dict {{"reason", "idle"}, {"timeout", uint32_t {30}}});
+
+    ASSERT_TRUE(added.has_value()) << added.error().message;
+    EXPECT_EQ(_message.signature(), "a{sv}");
+    auto entries = Iter(_message).entries<std::string>();
+    ASSERT_TRUE(entries.has_value()) << entries.error().message;
+    std::vector<std::string> keys;
+    std::string reason_read;
+    uint32_t timeout_read = 0;
+    for (auto & [key, value] : *entries)
+    {
+        keys.emplace_back(key);
+        if (key == "reason")
+            reason_read = value.get<std::string>().value_or("unreadable");
+        else if (key == "timeout")
+            timeout_read = value.get<uint32_t>().value_or(0);
+    }
+
+    EXPECT_EQ(keys, (std::vector<std::string> {"reason", "timeout"}));
+    EXPECT_EQ(reason_read, "idle");
+    EXPECT_EQ(timeout_read, 30u);
+}
+
+TEST_F(TestDBusMessage, test_add_dict_of_dicts)
+{
+    const std::map<std::string, Dict> settings {
+        {"802-11-wireless", {{"ssid", std::vector<uint8_t> {'h', 'o', 'm', 'e'}}}},
+        {"connection", {{"id", "home"}, {"autoconnect", false}}},
+    };
+
+    auto added = _message.add(settings);
+
+    ASSERT_TRUE(added.has_value()) << added.error().message;
+    EXPECT_EQ(_message.signature(), "a{sa{sv}}");
+    auto groups = Iter(_message).entries<std::string>();
+    ASSERT_TRUE(groups.has_value()) << groups.error().message;
+    std::vector<std::string> read_settings;
+    for (auto & [group, group_settings] : *groups)
+    {
+        auto keys = group_settings.entries<std::string>();
+        ASSERT_TRUE(keys.has_value()) << keys.error().message;
+        for (auto & [key, value] : *keys)
+            read_settings.emplace_back(fmt::format("{}.{}:{}", group, key, value.signature()));
+    }
+    EXPECT_EQ(read_settings,
+              (std::vector<std::string> {"802-11-wireless.ssid:ay", "connection.id:s", "connection.autoconnect:b"}));
+}
+
+TEST_F(TestDBusMessage, test_add_struct_and_variant)
+{
+    auto added = _message.add(Struct {uint32_t {7}, "seven"}, Variant(std::vector<std::string> {"one"}));
+
+    ASSERT_TRUE(added.has_value()) << added.error().message;
+    EXPECT_EQ(_message.signature(), "(us)v");
+    Iter body(_message);
+    auto fields = body.recurse();
+    ASSERT_TRUE(fields.has_value()) << fields.error().message;
+    EXPECT_EQ((fields->read<uint32_t, std::string>().value_or(std::tuple<uint32_t, std::string> {})),
+              (std::tuple<uint32_t, std::string> {7, "seven"}));
+    ASSERT_TRUE(body.next());
+    auto value = body.recurse();
+    ASSERT_TRUE(value.has_value()) << value.error().message;
+    EXPECT_EQ(value->get_array<std::string>().value_or(std::vector<std::string> {}),
+              (std::vector<std::string> {"one"}));
+}
+
+TEST_F(TestDBusMessage, test_add_several_values)
+{
+    auto added = _message.add(ObjectPath("/org/sihd/Test"), "text", uint32_t {7});
+
+    ASSERT_TRUE(added.has_value()) << added.error().message;
+    EXPECT_EQ(_message.signature(), "osu");
+    EXPECT_EQ((Iter(_message).read<std::string, std::string, uint32_t>().value_or(
+                  std::tuple<std::string, std::string, uint32_t> {})),
+              (std::tuple<std::string, std::string, uint32_t> {"/org/sihd/Test", "text", 7}));
+}
+
+TEST_F(TestDBusMessage, test_add_stops_at_the_first_failure)
+{
+    auto added = _message.add("ok", ObjectPath("bad"), 1);
+
+    ASSERT_FALSE(added.has_value());
+    EXPECT_EQ(added.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(added.error().message, "invalid dbus path: bad");
+    EXPECT_EQ(_message.signature(), "s");
+}
+
+TEST_F(TestDBusMessage, test_add_mixed_array_abandons_the_message)
+{
+    auto added = _message.add({uint32_t {1}, "two"});
+    auto added_after = _message.add(true);
+
+    ASSERT_FALSE(added.has_value());
+    EXPECT_EQ(added.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(added.error().message, "dbus type mismatch: expected 'u', got 's'");
+    ASSERT_FALSE(added_after.has_value());
+    EXPECT_EQ(added_after.error().message, "dbus message has an abandoned container");
+}
+
 TEST_F(TestDBusMessage, test_empty_message)
 {
     Message kept = std::move(_message);
@@ -275,8 +378,8 @@ TEST_F(TestDBusMessage, test_empty_message_refuses_writes)
     auto no_reply_set = empty.set_no_reply();
     auto added = empty.add(true);
     auto text_added = empty.add("text");
-    auto path_added = empty.add_object_path("/org/sihd/Test");
-    auto signature_added = empty.add_signature("s");
+    auto path_added = empty.add(ObjectPath("/org/sihd/Test"));
+    auto signature_added = empty.add(Signature("s"));
     auto fd_added = empty.add_unix_fd(0);
 
     for (const auto & refused : {no_reply_set, added, text_added, path_added, signature_added, fd_added})
@@ -329,6 +432,7 @@ TEST_F(TestDBusMessage, test_iter_on_an_empty_message_reads_nothing)
     auto array = iter.get_array<uint8_t>();
     auto fd = iter.get_unix_fd();
     auto child = iter.recurse();
+    auto values = iter.read<bool>();
 
     EXPECT_EQ(iter.type(), '\0');
     EXPECT_EQ(iter.signature(), "");
@@ -341,6 +445,8 @@ TEST_F(TestDBusMessage, test_iter_on_an_empty_message_reads_nothing)
     ASSERT_FALSE(fd.has_value());
     ASSERT_FALSE(child.has_value());
     EXPECT_EQ(child.error().message, fmt::format("dbus type '{}' is not a container", '\0'));
+    ASSERT_FALSE(values.has_value());
+    EXPECT_EQ(values.error().message, "dbus message has 0 arguments, expected 1");
 }
 
 TEST_F(TestDBusMessage, test_failed_builder_keeps_the_message)
@@ -426,7 +532,7 @@ TEST_F(TestDBusMessage, test_wide_types)
     ASSERT_TRUE(_message.add(int64_t {-5000000000}).has_value());
     ASSERT_TRUE(_message.add(uint64_t {18000000000000000000u}).has_value());
     ASSERT_TRUE(_message.add(2.5).has_value());
-    ASSERT_TRUE(Appender(_message).add_array(std::vector<double> {1.5, -0.25}).has_value());
+    ASSERT_TRUE(_message.add(std::vector<double> {1.5, -0.25}).has_value());
 
     Iter body(_message);
 
@@ -442,8 +548,8 @@ TEST_F(TestDBusMessage, test_wide_types)
 
 TEST_F(TestDBusMessage, test_signature_argument)
 {
-    auto invalid = _message.add_signature("a");
-    ASSERT_TRUE(_message.add_signature("a{sv}").has_value());
+    auto invalid = _message.add(Signature("a"));
+    ASSERT_TRUE(_message.add(Signature("a{sv}")).has_value());
 
     Iter body(_message);
 
@@ -454,20 +560,15 @@ TEST_F(TestDBusMessage, test_signature_argument)
     EXPECT_EQ(body.get<std::string>().value_or(""), "a{sv}");
 }
 
-TEST_F(TestDBusMessage, test_byte_maps_and_empty_vardict)
+TEST_F(TestDBusMessage, test_variant_dicts_and_empty_dict)
 {
     // 0x004c: Apple company id, 0x02 0x15: iBeacon type and length, 180f: battery service, 0x64: 100%
     const std::map<uint16_t, std::vector<uint8_t>> manufacturer_data {{0x004c, {0x02, 0x15}}};
     const std::map<std::string, std::vector<uint8_t>> service_data {{"180f", {0x64}}};
-    Appender body(_message);
 
-    auto manufacturer_added = body.add_byte_map(manufacturer_data);
-    auto service_added = body.add_byte_map(service_data);
-    auto options_added = body.add_empty_vardict();
+    auto added = _message.add(Value::variant_dict(manufacturer_data), Value::variant_dict(service_data), Dict {});
 
-    ASSERT_TRUE(manufacturer_added.has_value()) << manufacturer_added.error().message;
-    ASSERT_TRUE(service_added.has_value()) << service_added.error().message;
-    ASSERT_TRUE(options_added.has_value()) << options_added.error().message;
+    ASSERT_TRUE(added.has_value()) << added.error().message;
     EXPECT_EQ(_message.signature(), "a{qv}a{sv}a{sv}");
     Iter reader(_message);
     EXPECT_EQ(reader.get_byte_map<uint16_t>().value_or(std::map<uint16_t, std::vector<uint8_t>> {}), manufacturer_data);
@@ -482,11 +583,7 @@ TEST_F(TestDBusMessage, test_byte_maps_and_empty_vardict)
 
 TEST_F(TestDBusMessage, test_iter_signature)
 {
-    Appender body(_message);
-    auto variant = body.open_variant("as");
-    ASSERT_TRUE(variant.has_value()) << variant.error().message;
-    ASSERT_TRUE(variant->add_array(std::vector<std::string> {"one"}).has_value());
-    ASSERT_TRUE(body.close(std::move(*variant)).has_value());
+    ASSERT_TRUE(_message.add(Variant(std::vector<std::string> {"one"})).has_value());
 
     Iter reader(_message);
     auto value = reader.recurse();
@@ -496,6 +593,105 @@ TEST_F(TestDBusMessage, test_iter_signature)
     EXPECT_EQ(value->signature(), "as");
     EXPECT_FALSE(reader.next());
     EXPECT_EQ(reader.signature(), "");
+}
+
+TEST_F(TestDBusMessage, test_iter_ranges_over_the_body)
+{
+    ASSERT_TRUE(_message.add("text").has_value());
+    ASSERT_TRUE(_message.add(uint32_t {7}).has_value());
+    ASSERT_TRUE(_message.add(true).has_value());
+
+    std::string types;
+    for (Iter & argument : Iter(_message))
+        types += argument.type();
+
+    EXPECT_EQ(types, "sub");
+}
+
+TEST_F(TestDBusMessage, test_iter_ranges_over_an_array_of_structs)
+{
+    Appender body(_message);
+    auto pairs = body.open_array("(ss)");
+    ASSERT_TRUE(pairs.has_value()) << pairs.error().message;
+    for (const std::string name : {"first", "second"})
+    {
+        auto pair = pairs->open_struct();
+        ASSERT_TRUE(pair.has_value()) << pair.error().message;
+        ASSERT_TRUE(pair->add(name).has_value());
+        ASSERT_TRUE(pair->add(name + "-value").has_value());
+        ASSERT_TRUE(pairs->close(std::move(*pair)).has_value());
+    }
+    ASSERT_TRUE(body.close(std::move(*pairs)).has_value());
+
+    auto items = Iter(_message).recurse();
+    ASSERT_TRUE(items.has_value()) << items.error().message;
+    std::vector<std::string> read_pairs;
+    for (Iter & item : *items)
+    {
+        auto fields = item.recurse();
+        ASSERT_TRUE(fields.has_value()) << fields.error().message;
+        auto [name, value] = fields->read<std::string, std::string>().value_or(std::tuple<std::string, std::string> {});
+        read_pairs.emplace_back(name + "=" + value);
+    }
+
+    EXPECT_EQ(read_pairs, (std::vector<std::string> {"first=first-value", "second=second-value"}));
+    EXPECT_EQ(items->type(), '\0');
+}
+
+TEST_F(TestDBusMessage, test_iter_ranges_over_empty_containers)
+{
+    ASSERT_TRUE(_message.add(std::vector<int32_t> {}, Dict {}).has_value());
+    Iter reader(_message);
+
+    auto items = reader.recurse();
+    ASSERT_TRUE(reader.next());
+    auto options = reader.entries<std::string>();
+
+    ASSERT_TRUE(items.has_value()) << items.error().message;
+    ASSERT_TRUE(options.has_value()) << options.error().message;
+    size_t visited = 0;
+    for ([[maybe_unused]] Iter & item : *items)
+        ++visited;
+    for ([[maybe_unused]] auto & option : *options)
+        ++visited;
+    EXPECT_EQ(visited, 0u);
+}
+
+TEST_F(TestDBusMessage, test_iter_read)
+{
+    ASSERT_TRUE(_message.add(uint32_t {7}).has_value());
+    ASSERT_TRUE(_message.add("text").has_value());
+    ASSERT_TRUE(_message.add(true).has_value());
+    Iter body(_message);
+
+    auto values = body.read<uint32_t, std::string, bool>();
+    auto mismatch = body.read<uint32_t, uint32_t>();
+    auto too_many = body.read<uint32_t, std::string, bool, bool>();
+
+    ASSERT_TRUE(values.has_value()) << values.error().message;
+    EXPECT_EQ(*values, (std::tuple<uint32_t, std::string, bool> {7, "text", true}));
+    ASSERT_FALSE(mismatch.has_value());
+    EXPECT_EQ(mismatch.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(mismatch.error().message, "dbus type mismatch: expected 'u', got 's': argument 1");
+    ASSERT_FALSE(too_many.has_value());
+    EXPECT_EQ(too_many.error().code, ErrorCode::invalid_argument);
+    EXPECT_EQ(too_many.error().message, "dbus message has 3 arguments, expected 4");
+    EXPECT_EQ(body.get<uint32_t>().value_or(0), 7u);
+}
+
+TEST_F(TestDBusMessage, test_iter_read_starts_at_the_current_element)
+{
+    ASSERT_TRUE(_message.add(uint32_t {7}).has_value());
+    ASSERT_TRUE(_message.add("text").has_value());
+    ASSERT_TRUE(_message.add(true).has_value());
+    Iter body(_message);
+    ASSERT_TRUE(body.next());
+
+    auto rest = body.read<std::string, bool>();
+
+    ASSERT_TRUE(rest.has_value()) << rest.error().message;
+    EXPECT_EQ(*rest, (std::tuple<std::string, bool> {"text", true}));
+    EXPECT_EQ(body.type(), 's');
 }
 
 TEST_F(TestDBusMessage, test_call_metadata)

@@ -40,37 +40,17 @@ std::string transport_of(Transport transport)
     }
 }
 
-Result<void> add_filter(dbus::Appender & to, const ScanFilter & filter, bool duplicates)
+dbus::Dict filter_of(const ScanFilter & filter, bool duplicates)
 {
-    auto entries = to.open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(entries);
-    auto transport = entries->add_entry("Transport", "s", [&filter](dbus::Appender & value) {
-        return value.add(transport_of(filter.transport));
-    });
-    SIHD_UNEXPECTED_RETURN(transport);
+    dbus::Dict entries {{"Transport", transport_of(filter.transport)}};
     if (!filter.uuids.empty())
-    {
-        auto uuids = entries->add_entry("UUIDs", "as", [&filter](dbus::Appender & value) {
-            return value.add_array(filter.uuids);
-        });
-        SIHD_UNEXPECTED_RETURN(uuids);
-    }
+        entries.emplace_back("UUIDs", filter.uuids);
     if (filter.min_rssi.has_value())
-    {
-        auto rssi = entries->add_entry("RSSI", "n", [&filter](dbus::Appender & value) {
-            return value.add(*filter.min_rssi);
-        });
-        SIHD_UNEXPECTED_RETURN(rssi);
-    }
+        entries.emplace_back("RSSI", *filter.min_rssi);
+    // bluez repeats an unchanged manufacturer or service data only then
     if (duplicates)
-    {
-        // bluez repeats an unchanged manufacturer or service data only then
-        auto duplicated = entries->add_entry("DuplicateData", "b", [](dbus::Appender & value) {
-            return value.add(true);
-        });
-        SIHD_UNEXPECTED_RETURN(duplicated);
-    }
-    return to.close(std::move(*entries));
+        entries.emplace_back("DuplicateData", true);
+    return entries;
 }
 
 // InterfacesAdded (o, a{sa{sv}}) or a Device1 PropertiesChanged (s, a{sv}, as): the device path it changed
@@ -136,9 +116,10 @@ bool Scanner::_scan()
         return false;
     const std::string adapter_path = *found_path;
 
-    auto filtered = call_adapter(connection, adapter_path, "SetDiscoveryFilter", [this](dbus::Appender & to) {
-        return add_filter(to, _filter, _lost_timeout > Duration(0));
-    });
+    auto filtered = call_adapter(connection,
+                                 adapter_path,
+                                 "SetDiscoveryFilter",
+                                 {filter_of(_filter, _lost_timeout > Duration(0))});
     if (SIHD_UNEXPECTED_LOG(filtered))
         return false;
     auto discovering = call_adapter(connection, adapter_path, "StartDiscovery");

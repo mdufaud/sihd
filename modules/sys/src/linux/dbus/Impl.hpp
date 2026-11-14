@@ -7,7 +7,6 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 
 #include <sihd/sys/linux/dbus.hpp>
@@ -40,32 +39,6 @@ sihd::util::Result<Message> receive_matching(Connection & connection,
                                              std::string_view what,
                                              const std::function<sihd::util::Result<bool>(Message &)> & matches);
 
-// the dbus wire type codes, libdbus not being there on every platform
-template <typename T>
-constexpr char dbus_type_of()
-{
-    if constexpr (std::is_same_v<T, bool>)
-        return 'b';
-    else if constexpr (std::is_same_v<T, uint8_t>)
-        return 'y';
-    else if constexpr (std::is_same_v<T, int16_t>)
-        return 'n';
-    else if constexpr (std::is_same_v<T, uint16_t>)
-        return 'q';
-    else if constexpr (std::is_same_v<T, int32_t>)
-        return 'i';
-    else if constexpr (std::is_same_v<T, uint32_t>)
-        return 'u';
-    else if constexpr (std::is_same_v<T, int64_t>)
-        return 'x';
-    else if constexpr (std::is_same_v<T, uint64_t>)
-        return 't';
-    else if constexpr (std::is_same_v<T, std::string>)
-        return 's';
-    else
-        return 'd';
-}
-
 #if !defined(__SIHD_ANDROID__) && !defined(__SIHD_EMSCRIPTEN__)
 
 sihd::util::Error dbus_error_take(::DBusError & dbus_error);
@@ -91,6 +64,8 @@ struct Message::Impl
 {
         // never null
         ::DBusMessage *message;
+        // a container abandoned by any of its appenders leaves the whole body unusable
+        bool abandoned = false;
 
         explicit Impl(::DBusMessage *adopted);
         ~Impl();

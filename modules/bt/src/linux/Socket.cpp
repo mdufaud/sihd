@@ -141,38 +141,15 @@ Result<void> register_profile(dbus::Connection & connection,
                               const std::string & role,
                               const std::string & name)
 {
-    auto registered = bluez::call(
-        connection,
-        bluez::manager_path,
-        bluez::profile_manager_interface,
-        "RegisterProfile",
-        [&](dbus::Appender & to) -> Result<void> {
-            auto path = to.add_object_path(profile_path);
-            SIHD_UNEXPECTED_RETURN(path);
-            auto uuid_added = to.add(uuid);
-            SIHD_UNEXPECTED_RETURN(uuid_added);
-
-            auto options = to.open_array("{sv}");
-            SIHD_UNEXPECTED_RETURN(options);
-            auto role_added = options->add_entry("Role", "s", [&role](dbus::Appender & value) {
-                return value.add(role);
-            });
-            SIHD_UNEXPECTED_RETURN(role_added);
-            auto auto_connect = options->add_entry("AutoConnect", "b", [](dbus::Appender & value) {
-                return value.add(false);
-            });
-            SIHD_UNEXPECTED_RETURN(auto_connect);
-
-            if (!name.empty())
-            {
-                auto name_added = options->add_entry("Name", "s", [&name](dbus::Appender & value) {
-                    return value.add(name);
-                });
-                SIHD_UNEXPECTED_RETURN(name_added);
-            }
-            return to.close(std::move(*options));
-        },
-        bluez::call_timeout);
+    dbus::Dict options {{"Role", role}, {"AutoConnect", false}};
+    if (!name.empty())
+        options.emplace_back("Name", name);
+    auto registered = bluez::call(connection,
+                                  bluez::manager_path,
+                                  bluez::profile_manager_interface,
+                                  "RegisterProfile",
+                                  {dbus::ObjectPath(std::string(profile_path)), uuid, options},
+                                  bluez::call_timeout);
     SIHD_UNEXPECTED_RETURN(registered);
     return {};
 }
@@ -226,10 +203,7 @@ Result<void> Socket::connect_rfcomm(const std::string & address, const std::stri
     SIHD_UNEXPECTED_RETURN(objects);
     auto device_path = find_device_path(*objects, address);
     SIHD_UNEXPECTED_RETURN(device_path);
-    auto request = bluez::method_call(*device_path,
-                                      bluez::device_interface,
-                                      "ConnectProfile",
-                                      [&uuid](dbus::Appender & to) { return to.add(uuid); });
+    auto request = bluez::method_call(*device_path, bluez::device_interface, "ConnectProfile", {uuid});
     SIHD_UNEXPECTED_RETURN(request);
 
     // bluez resolves the uuid through SDP, connects, then hands the socket to the client profile
@@ -242,13 +216,12 @@ Result<void> Socket::connect_rfcomm(const std::string & address, const std::stri
 
     auto connected = server.call(*request, bluez::connect_timeout);
     // the connection leaving the bus unregisters it as well
-    (void)bluez::call(
-        connection,
-        bluez::manager_path,
-        bluez::profile_manager_interface,
-        "UnregisterProfile",
-        [](dbus::Appender & to) { return to.add_object_path(profile_path); },
-        bluez::call_timeout);
+    (void)bluez::call(connection,
+                      bluez::manager_path,
+                      bluez::profile_manager_interface,
+                      "UnregisterProfile",
+                      {dbus::ObjectPath(std::string(profile_path))},
+                      bluez::call_timeout);
     if (!connected)
         return std::unexpected(bluez::error_of(connected.error()));
     if (accepted.empty())

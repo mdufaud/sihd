@@ -29,7 +29,7 @@ class TestNetworkManager: public ::testing::Test
             ASSERT_TRUE(_daemon.start({nm_service}));
             serve_network_manager(_daemon, true);
 
-            _daemon.set_property(nm_device, nm_device_interface, "State", u32(30));
+            _daemon.set_property(nm_device, nm_device_interface, "State", uint32_t {30});
             this->add_access_point(home_strong, "home", 70, rsn_psk);
             this->add_access_point(home_weak, "home", 20, rsn_psk);
             this->add_access_point(loft, "loft", 50, rsn_psk);
@@ -44,12 +44,11 @@ class TestNetworkManager: public ::testing::Test
             });
             _daemon.on(profile_interface, "GetSettings", [this](const dbus::Message & call) {
                 if (call.path() == wired_profile)
-                    return _daemon.reply(call,
-                                         {profile_settings({{"connection", {{"type", text("802-3-ethernet")}}}})});
+                    return _daemon.reply(call, {ProfileSettings {{"connection", {{"type", "802-3-ethernet"}}}}});
                 _daemon.reply(call,
-                              {profile_settings({{"connection", {{"type", text("802-11-wireless")}}},
-                                                 {"802-11-wireless", {{"ssid", bytes("home")}}},
-                                                 {"802-11-wireless-security", {{"key-mgmt", text("wpa-psk")}}}})});
+                              {ProfileSettings {{"connection", {{"type", "802-11-wireless"}}},
+                                                {"802-11-wireless", {{"ssid", bytes("home")}}},
+                                                {"802-11-wireless-security", {{"key-mgmt", "wpa-psk"}}}}});
             });
             _daemon.on(profile_interface, "Delete", [this](const dbus::Message & call) {
                 _deleted.emplace_back(call.path());
@@ -60,36 +59,50 @@ class TestNetworkManager: public ::testing::Test
         void add_access_point(const std::string & path, const std::string & ssid, uint8_t strength, uint32_t rsn_flags)
         {
             _daemon.set_property(path, access_point_interface, "Ssid", bytes(ssid));
-            _daemon.set_property(path, access_point_interface, "Strength", u8(strength));
-            _daemon.set_property(path, access_point_interface, "Flags", u32(rsn_flags != 0 ? 1 : 0));
-            _daemon.set_property(path, access_point_interface, "WpaFlags", u32(0));
-            _daemon.set_property(path, access_point_interface, "RsnFlags", u32(rsn_flags));
+            _daemon.set_property(path, access_point_interface, "Strength", strength);
+            _daemon.set_property(path, access_point_interface, "Flags", uint32_t {rsn_flags != 0 ? 1u : 0u});
+            _daemon.set_property(path, access_point_interface, "WpaFlags", uint32_t {0});
+            _daemon.set_property(path, access_point_interface, "RsnFlags", rsn_flags);
         }
 
         void emit_states(uint32_t final_state, uint32_t reason)
         {
-            _daemon.emit(nm_device, nm_device_interface, "StateChanged", {u32(40), u32(30), u32(0)});
-            _daemon.emit(nm_device, nm_device_interface, "StateChanged", {u32(final_state), u32(40), u32(reason)});
+            _daemon.emit(nm_device, nm_device_interface, "StateChanged", {uint32_t {40}, uint32_t {30}, uint32_t {0}});
+            _daemon.emit(nm_device, nm_device_interface, "StateChanged", {final_state, uint32_t {40}, reason});
+        }
+
+        // one value of the a{sa{sv}} settings a call carries
+        static std::optional<dbus::Iter>
+            setting_value(const dbus::Message & call, const std::string & group, const std::string & key)
+        {
+            auto groups = dbus::Iter(call).entries<std::string>();
+            EXPECT_TRUE(groups.has_value());
+            if (!groups.has_value())
+                return std::nullopt;
+            for (auto & [name, values] : *groups)
+            {
+                auto keys = values.entries<std::string>();
+                EXPECT_TRUE(keys.has_value());
+                if (name != group || !keys.has_value())
+                    continue;
+                for (auto & [found, value] : *keys)
+                {
+                    if (found == key)
+                        return std::move(value);
+                }
+            }
+            return std::nullopt;
         }
 
         // the created profile is named after the ssid it was asked for
         static std::string created_profile(const dbus::Message & call)
         {
-            std::string ssid;
-            auto groups = dbus::Iter(call).for_each_entry<std::string>(
-                [&ssid](const std::string & group, dbus::Iter & values) {
-                    return values.for_each_entry<std::string>(
-                        [&](const std::string & key, dbus::Iter & value) -> Result<void> {
-                            if (group != "802-11-wireless" || key != "ssid")
-                                return {};
-                            auto raw = value.get_array<uint8_t>();
-                            SIHD_UNEXPECTED_RETURN(raw);
-                            ssid.assign(raw->begin(), raw->end());
-                            return {};
-                        });
-                });
-            EXPECT_TRUE(groups.has_value());
-            return "/org/freedesktop/NetworkManager/Settings/" + ssid;
+            auto ssid = setting_value(call, "802-11-wireless", "ssid");
+            EXPECT_TRUE(ssid.has_value());
+            const std::vector<uint8_t> raw = ssid.has_value()
+                                                 ? ssid->get_array<uint8_t>().value_or(std::vector<uint8_t> {})
+                                                 : std::vector<uint8_t> {};
+            return "/org/freedesktop/NetworkManager/Settings/" + std::string(raw.begin(), raw.end());
         }
 
         static constexpr char home_strong[] = "/org/freedesktop/NetworkManager/AccessPoint/1";
@@ -126,7 +139,7 @@ TEST_F(TestNetworkManager, test_backend_detection)
 
 TEST_F(TestNetworkManager, test_unmanaged_device_is_not_found)
 {
-    _daemon.set_property(nm_device, nm_device_interface, "Managed", boolean(false));
+    _daemon.set_property(nm_device, nm_device_interface, "Managed", false);
     _daemon.serve();
 
     auto unmanaged = wifi::backend("wlan-test");
@@ -138,7 +151,7 @@ TEST_F(TestNetworkManager, test_unmanaged_device_is_not_found)
 
 TEST_F(TestNetworkManager, test_state)
 {
-    _daemon.set_property(nm_device, nm_device_interface, "State", u32(70));
+    _daemon.set_property(nm_device, nm_device_interface, "State", uint32_t {70});
     _daemon.serve();
 
     auto current = wifi::state("wlan-test");
@@ -152,8 +165,10 @@ TEST_F(TestNetworkManager, test_scan_waits_for_last_scan)
     // the real LastScan is an int64, its value is never read
     _daemon.on(nm_wireless_interface, "RequestScan", [this](const dbus::Message & call) {
         _daemon.reply(call, {});
-        _daemon.emit_properties_changed(nm_device, nm_wireless_interface, {{"ActiveAccessPoint", object_path("/")}});
-        _daemon.emit_properties_changed(nm_device, nm_wireless_interface, {{"LastScan", u32(1234)}});
+        _daemon.emit_properties_changed(nm_device,
+                                        nm_wireless_interface,
+                                        {{"ActiveAccessPoint", dbus::ObjectPath("/")}});
+        _daemon.emit_properties_changed(nm_device, nm_wireless_interface, {{"LastScan", uint32_t {1234}}});
     });
     _daemon.serve();
 
@@ -169,12 +184,11 @@ TEST_F(TestNetworkManager, test_connect_known_network)
     std::string activated_profile;
     std::string chosen_access_point;
     _daemon.on(nm_service, "ActivateConnection", [&](const dbus::Message & call) {
-        dbus::Iter arguments(call);
-        activated_profile = arguments.get<std::string>().value_or("");
-        arguments.next();
-        arguments.next();
-        chosen_access_point = arguments.get<std::string>().value_or("");
-        _daemon.reply(call, {object_path(active_connection)});
+        auto [profile, device, access_point] = dbus::Iter(call).read<std::string, std::string, std::string>().value_or(
+            std::tuple<std::string, std::string, std::string> {});
+        activated_profile = profile;
+        chosen_access_point = access_point;
+        _daemon.reply(call, {dbus::ObjectPath(active_connection)});
         this->emit_states(100, 0);
     });
     _daemon.serve();
@@ -192,15 +206,10 @@ TEST_F(TestNetworkManager, test_connect_new_network)
 {
     std::string sent_passphrase;
     _daemon.on(nm_service, "AddAndActivateConnection", [&](const dbus::Message & call) {
-        auto groups = dbus::Iter(call).for_each_entry<std::string>([&](const std::string & group, dbus::Iter & values) {
-            return values.for_each_entry<std::string>([&](const std::string & key, dbus::Iter & value) -> Result<void> {
-                if (group == "802-11-wireless-security" && key == "psk")
-                    sent_passphrase = value.get<std::string>().value_or("");
-                return {};
-            });
-        });
-        EXPECT_TRUE(groups.has_value());
-        _daemon.reply(call, {object_path(created_profile(call)), object_path(active_connection)});
+        auto psk = setting_value(call, "802-11-wireless-security", "psk");
+        if (psk.has_value())
+            sent_passphrase = psk->get<std::string>().value_or("");
+        _daemon.reply(call, {dbus::ObjectPath(created_profile(call)), dbus::ObjectPath(active_connection)});
         this->emit_states(100, 0);
     });
     _daemon.serve();
@@ -217,7 +226,7 @@ TEST_F(TestNetworkManager, test_failed_connect_leaves_no_profile)
 {
     _daemon.on(nm_service, "AddAndActivateConnection", [this](const dbus::Message & call) {
         const std::string profile = created_profile(call);
-        _daemon.reply(call, {object_path(profile), object_path(active_connection)});
+        _daemon.reply(call, {dbus::ObjectPath(profile), dbus::ObjectPath(active_connection)});
         if (profile.ends_with("loft"))
             this->emit_states(120, 7);
     });

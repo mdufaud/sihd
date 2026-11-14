@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <map>
 
 #include <sihd/util/Error.hpp>
 
@@ -147,14 +148,18 @@ Result<std::vector<Profile>> wifi_profiles(dbus::Connection & connection)
     {
         Profile profile;
         profile.path = (*paths)[index];
-        auto parsed = dbus::Iter((*settings)[index])
-                          .for_each_entry<std::string>([&profile](const std::string & setting, dbus::Iter & values) {
-                              return values.for_each_entry<std::string>(
-                                  [&profile, &setting](const std::string & key, dbus::Iter & value) {
-                                      return read_profile_value(profile, setting, key, value);
-                                  });
-                          });
-        SIHD_UNEXPECTED_RETURN(parsed);
+        auto by_setting = dbus::Iter((*settings)[index]).entries<std::string>();
+        SIHD_UNEXPECTED_RETURN(by_setting);
+        for (auto & [setting, values] : *by_setting)
+        {
+            auto by_key = values.entries<std::string>();
+            SIHD_UNEXPECTED_RETURN(by_key);
+            for (auto & [key, value] : *by_key)
+            {
+                auto read = read_profile_value(profile, setting, key, value);
+                SIHD_UNEXPECTED_RETURN(read);
+            }
+        }
         if (profile.wifi)
             profiles.emplace_back(std::move(profile));
     }
@@ -227,57 +232,27 @@ Result<std::optional<AccessPointObject>>
     {
         AccessPointObject access_point;
         access_point.path = (*paths)[index];
-        auto read = dbus::Iter((*properties)[index])
-                        .for_each_entry<std::string>([&access_point](const std::string & name, dbus::Iter & value) {
-                            return read_access_point_value(access_point, name, value);
-                        });
-        SIHD_UNEXPECTED_RETURN(read);
+        auto values = dbus::Iter((*properties)[index]).entries<std::string>();
+        SIHD_UNEXPECTED_RETURN(values);
+        for (auto & [name, value] : *values)
+        {
+            auto read = read_access_point_value(access_point, name, value);
+            SIHD_UNEXPECTED_RETURN(read);
+        }
         if (access_point.ssid == ssid && (!strongest.has_value() || access_point.strength > strongest->strength))
             strongest = std::move(access_point);
     }
     return strongest;
 }
 
-Result<void>
-    add_setting(dbus::Appender & settings, ZStringView name, const std::function<Result<void>(dbus::Appender &)> & fill)
-{
-    auto entry = settings.open_dict_entry();
-    SIHD_UNEXPECTED_RETURN(entry);
-    auto name_added = entry->add(name);
-    SIHD_UNEXPECTED_RETURN(name_added);
-    auto values = entry->open_array("{sv}");
-    SIHD_UNEXPECTED_RETURN(values);
-    auto filled = fill(*values);
-    SIHD_UNEXPECTED_RETURN(filled);
-    auto values_closed = entry->close(std::move(*values));
-    SIHD_UNEXPECTED_RETURN(values_closed);
-    return settings.close(std::move(*entry));
-}
-
 // never sets key-mgmt: networkmanager completes the profile from the access point
-Result<void>
-    add_profile(dbus::Message & request, const std::string & ssid, const std::optional<std::string> & passphrase)
+std::map<std::string, dbus::Dict> profile_of(const std::string & ssid, const std::optional<std::string> & passphrase)
 {
-    dbus::Appender body(request);
-    auto settings = body.open_array("{sa{sv}}");
-    SIHD_UNEXPECTED_RETURN(settings);
-    auto wireless = add_setting(*settings, wireless_setting, [&ssid](dbus::Appender & values) {
-        return values.add_entry("ssid", "ay", [&ssid](dbus::Appender & value) {
-            return value.add_array(std::vector<uint8_t>(ssid.begin(), ssid.end()));
-        });
-    });
-    SIHD_UNEXPECTED_RETURN(wireless);
-
+    std::map<std::string, dbus::Dict> settings {
+        {std::string(wireless_setting), {{"ssid", std::vector<uint8_t>(ssid.begin(), ssid.end())}}}};
     if (passphrase.has_value())
-    {
-        auto security = add_setting(*settings, security_setting, [&passphrase](dbus::Appender & values) {
-            return values.add_entry("psk", "s", [&passphrase](dbus::Appender & value) {
-                return value.add(*passphrase);
-            });
-        });
-        SIHD_UNEXPECTED_RETURN(security);
-    }
-    return body.close(std::move(*settings));
+        settings.emplace(std::string(security_setting), dbus::Dict {{"psk", *passphrase}});
+    return settings;
 }
 
 Result<void> activate_profile(dbus::Connection & connection,
@@ -288,12 +263,8 @@ Result<void> activate_profile(dbus::Connection & connection,
     dbus::Message request;
     auto built = request.method_call(service, root_path, root_interface, "ActivateConnection");
     SIHD_UNEXPECTED_RETURN(built);
-    auto profile_added = request.add_object_path(profile);
-    SIHD_UNEXPECTED_RETURN(profile_added);
-    auto device_added = request.add_object_path(device);
-    SIHD_UNEXPECTED_RETURN(device_added);
-    auto access_point_added = request.add_object_path(access_point);
-    SIHD_UNEXPECTED_RETURN(access_point_added);
+    auto added = request.add(dbus::ObjectPath(profile), dbus::ObjectPath(device), dbus::ObjectPath(access_point));
+    SIHD_UNEXPECTED_RETURN(added);
     auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return {};
@@ -309,12 +280,8 @@ Result<std::string> add_and_activate(dbus::Connection & connection,
     dbus::Message request;
     auto built = request.method_call(service, root_path, root_interface, "AddAndActivateConnection");
     SIHD_UNEXPECTED_RETURN(built);
-    auto described = add_profile(request, ssid, passphrase);
-    SIHD_UNEXPECTED_RETURN(described);
-    auto device_added = request.add_object_path(device);
-    SIHD_UNEXPECTED_RETURN(device_added);
-    auto access_point_added = request.add_object_path(access_point);
-    SIHD_UNEXPECTED_RETURN(access_point_added);
+    auto added = request.add(profile_of(ssid, passphrase), dbus::ObjectPath(device), dbus::ObjectPath(access_point));
+    SIHD_UNEXPECTED_RETURN(added);
     auto reply = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
     return dbus::Iter(*reply).get<std::string>();
@@ -333,16 +300,12 @@ Result<void> wait_activated(dbus::Connection & connection,
             if (message.type() != dbus::Message::Type::signal || message.path() != device
                 || message.interface() != device_interface || message.member() != "StateChanged")
                 return false;
-            dbus::Iter body(message);
-            auto new_state = body.get<uint32_t>();
-            SIHD_UNEXPECTED_RETURN(new_state);
-            body.next();
-            body.next();
-            auto reason = body.get<uint32_t>();
-            SIHD_UNEXPECTED_RETURN(reason);
-            if (*new_state == state_failed)
-                return std::unexpected(Error(ErrorCode::io_error, "networkmanager failed: reason {}", *reason));
-            return *new_state == state_activated;
+            auto states = dbus::Iter(message).read<uint32_t, uint32_t, uint32_t>();
+            SIHD_UNEXPECTED_RETURN(states);
+            const auto & [new_state, old_state, reason] = *states;
+            if (new_state == state_failed)
+                return std::unexpected(Error(ErrorCode::io_error, "networkmanager failed: reason {}", reason));
+            return new_state == state_activated;
         });
     SIHD_UNEXPECTED_RETURN_CTX(activated, "connecting to {}", ssid);
     return {};
@@ -402,8 +365,7 @@ Result<void> scan(dbus::Connection & connection, const std::string & device, Dur
     dbus::Message request;
     auto built = request.method_call(service, device, wireless_interface, "RequestScan");
     SIHD_UNEXPECTED_RETURN(built);
-    dbus::Appender body(request);
-    auto options_added = body.add_empty_vardict();
+    auto options_added = request.add(dbus::Dict {});
     SIHD_UNEXPECTED_RETURN(options_added);
     auto requested = request.call(connection, call_timeout);
     SIHD_UNEXPECTED_RETURN(requested);

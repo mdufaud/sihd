@@ -196,40 +196,64 @@ bool is_gatt_interface(const std::string & interface)
            || interface == gatt_descriptor_interface;
 }
 
+Result<void> read_adapter_object(ManagedObjects & objects, const std::string & path, dbus::Iter & properties)
+{
+    auto entries = properties.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    AdapterObject & adapter = objects.adapters.emplace_back();
+    adapter.path = path;
+    adapter.info.identifier = path.substr(path.find_last_of('/') + 1);
+    for (auto & [key, value] : *entries)
+    {
+        auto read = read_adapter_property(adapter.info, key, value);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
+    return {};
+}
+
+Result<void> read_gatt_object(GattObject & object, const std::string & interface, dbus::Iter & properties)
+{
+    auto entries = properties.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    object.interface = interface;
+    for (auto & [key, value] : *entries)
+    {
+        auto read = read_gatt_property(object, key, value);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
+    return {};
+}
+
 } // namespace
 
 Result<void> read_device_properties(DeviceObject & device, dbus::Iter & properties)
 {
-    return properties.for_each_entry<std::string>(
-        [&device](const std::string & key, dbus::Iter & value) { return read_device_property(device, key, value); });
+    auto entries = properties.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    for (auto & [key, value] : *entries)
+    {
+        auto read = read_device_property(device, key, value);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
+    return {};
 }
 
 Result<void> read_object(ManagedObjects & objects, const std::string & path, dbus::Iter & interfaces)
 {
-    return interfaces.for_each_entry<std::string>(
-        [&](const std::string & interface, dbus::Iter & properties) -> Result<void> {
-            if (interface == adapter_interface)
-            {
-                AdapterObject & adapter = objects.adapters.emplace_back();
-                adapter.path = path;
-                adapter.info.identifier = path.substr(path.find_last_of('/') + 1);
-                return properties.for_each_entry<std::string>([&adapter](const std::string & key, dbus::Iter & value) {
-                    return read_adapter_property(adapter.info, key, value);
-                });
-            }
-
-            if (interface == device_interface)
-                return read_device_properties(objects.devices[path], properties);
-            if (is_gatt_interface(interface))
-            {
-                GattObject & object = objects.gatt[path];
-                object.interface = interface;
-                return properties.for_each_entry<std::string>([&object](const std::string & key, dbus::Iter & value) {
-                    return read_gatt_property(object, key, value);
-                });
-            }
-            return {};
-        });
+    auto entries = interfaces.entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
+    for (auto & [interface, properties] : *entries)
+    {
+        Result<void> read;
+        if (interface == adapter_interface)
+            read = read_adapter_object(objects, path, properties);
+        else if (interface == device_interface)
+            read = read_device_properties(objects.devices[path], properties);
+        else if (is_gatt_interface(interface))
+            read = read_gatt_object(objects.gatt[path], interface, properties);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
+    return {};
 }
 
 Result<dbus::Connection> open_system_bus()
@@ -245,12 +269,14 @@ Result<ManagedObjects> managed_objects(dbus::Connection & connection)
     auto reply = call(connection, "/", object_manager_interface, "GetManagedObjects", {}, call_timeout);
     SIHD_UNEXPECTED_RETURN(reply);
 
+    auto entries = dbus::Iter(*reply).entries<std::string>();
+    SIHD_UNEXPECTED_RETURN(entries);
     ManagedObjects objects;
-    auto parsed = dbus::Iter(*reply).for_each_entry<std::string>(
-        [&objects](const std::string & path, dbus::Iter & interfaces) {
-            return read_object(objects, path, interfaces);
-        });
-    SIHD_UNEXPECTED_RETURN(parsed);
+    for (auto & [path, interfaces] : *entries)
+    {
+        auto read = read_object(objects, path, interfaces);
+        SIHD_UNEXPECTED_RETURN(read);
+    }
     std::ranges::sort(objects.adapters, {}, &AdapterObject::path);
     return objects;
 }
@@ -336,11 +362,10 @@ Result<dbus::Message>
     dbus::Message request;
     auto built = request.method_call(service, path, interface, member);
     SIHD_UNEXPECTED_RETURN(built);
-    if (arguments)
+    for (const dbus::Value & argument : arguments)
     {
-        dbus::Appender body(request);
-        auto filled = arguments(body);
-        SIHD_UNEXPECTED_RETURN(filled);
+        auto added = request.add(argument);
+        SIHD_UNEXPECTED_RETURN(added);
     }
     return request;
 }
