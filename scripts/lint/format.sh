@@ -4,13 +4,13 @@
 # (build/, extlib/, .vcpkg/, .git/) and the site_scons/sbt submodule are never touched.
 #
 # Usage:
-#   scripts/format.sh            # format in place
-#   scripts/format.sh --check    # report files that would change, no write
-#   scripts/format.sh --help     # this message
+#   scripts/lint/format.sh            # format in place
+#   scripts/lint/format.sh --check    # report files that would change, no write
+#   scripts/lint/format.sh --help     # this message
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$HERE/.." && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
 
 CLANG_FORMAT="${CLANG_FORMAT:-clang-format}"
 ROOTS=("modules" "site_scons")

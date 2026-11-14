@@ -2,9 +2,8 @@
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# asan on the x86 targets of all three steps: dep, compile and test share one
-# build dir, so the flag must not flip between them.
-export asan=1
+export BUILD_SHARED=0
+export BUILD_STATIC=1
 
 started_at=$(date +%s)
 failed_steps=()
@@ -15,7 +14,7 @@ dependencies_ended_at=$(date +%s)
 bash "$HERE/compile.sh" || failed_steps+=("compile")
 compile_ended_at=$(date +%s)
 
-bash "$HERE/test.sh" || failed_steps+=("test")
+bash "$HERE/../test/test.sh" || failed_steps+=("test")
 test_ended_at=$(date +%s)
 
 echo

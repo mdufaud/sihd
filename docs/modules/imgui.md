@@ -94,7 +94,7 @@ SIHD_IMGUI_GOLDEN_UPDATE=1 build/last/test/bin/sihd_imgui --gtest_filter='DemoWi
 
 The comparison is skipped under `--gtest_repeat` (`make itest repeat=N`): the demo animates from statics that outlive the ImGui context, so only a first run starts fresh. It is skipped too on a libc other than glibc: the golden files hold glibc's character widths, and musl gives some of them another width.
 
-Terminal tests drive `sihd_imgui_ncurses_scenes` (built with `test=1`) in a pty and read the screen through the pyte VT emulator, so they cover the ncurses input decoding, the idle frame rate and the output, on `xterm-256color` (with and without `COLORTERM`), `screen-256color`, `linux`, `xterm-direct` and `vt100` and in an ASCII locale. `COLORTERM` from the calling shell is not passed to the scene. They need the `pytest` and `pyte` Python packages; `scripts/test.sh` runs them after the native clang build when `python3` has both, and skips them otherwise:
+Terminal tests drive `sihd_imgui_ncurses_scenes` (built with `test=1`) in a pty and read the screen through the pyte VT emulator, so they cover the ncurses input decoding, the idle frame rate and the output, on `xterm-256color` (with and without `COLORTERM`), `screen-256color`, `linux`, `xterm-direct` and `vt100` and in an ASCII locale. `COLORTERM` from the calling shell is not passed to the scene. They need the `pytest` and `pyte` Python packages; `scripts/test/test.sh` runs them after the native clang build when `python3` has both, and skips them otherwise:
 
 ```bash
 python3 -m pytest -q -p no:cacheprovider modules/imgui/test/tui

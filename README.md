@@ -114,6 +114,8 @@ make machine=aarch64         # also riscv64, arm32
 make libc=musl
 ```
 
+Toolchains and test runners to install for each target, with or without root: [docs/toolchains.md](docs/toolchains.md).
+
 Build system reference (SCons Build Tools): [site_scons/sbt/docs](site_scons/sbt/docs/).
 
 ## Tests

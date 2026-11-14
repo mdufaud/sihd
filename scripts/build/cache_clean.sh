@@ -2,9 +2,9 @@
 # cache_clean.sh — Diagnostic and safe cleanup of stale vcpkg/build artifacts.
 #
 # Usage:
-#   scripts/cache_clean.sh            # diagnostic only (no changes)
-#   scripts/cache_clean.sh --clean    # interactive cleanup after confirmation
-#   scripts/cache_clean.sh --help     # this message
+#   scripts/build/cache_clean.sh            # diagnostic only (no changes)
+#   scripts/build/cache_clean.sh --clean    # interactive cleanup after confirmation
+#   scripts/build/cache_clean.sh --help     # this message
 #
 # What this script considers "stale":
 #   1. build/<arch>/<compiler-X>/ dirs where another version of the same compiler
@@ -20,7 +20,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # vcpkg root resolution — same rule as sbt (site_scons/sbt/core/builder.py):
 # VCPKG_ROOT env var if set, else <repo>/.vcpkg

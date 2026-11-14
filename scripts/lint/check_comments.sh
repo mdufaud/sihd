@@ -6,7 +6,7 @@
 # alone does not; banners, commented-out code, doxygen blocks and multi-line comments are always reported.
 #
 # Usage:
-#   git diff -U0 | scripts/check_comments.sh
+#   git diff -U0 | scripts/lint/check_comments.sh
 
 awk '
 function report(rule) {

@@ -5,15 +5,15 @@
 # Prints the hit count per rule; --all lists every hit under its rule.
 #
 # Usage:
-#   scripts/check_style.sh                       # changes since HEAD, count per rule
-#   scripts/check_style.sh <ref>                 # changes since <ref>
-#   scripts/check_style.sh --all [<ref>]         # every hit, grouped by rule
-#   scripts/check_style.sh --tree [<dir>]        # every .cpp/.hpp under <dir> (default modules), not only the diff
-#   scripts/check_style.sh --complexity [<ref>]  # also scores the changed functions (clang-tidy, slow)
+#   scripts/lint/check_style.sh                       # changes since HEAD, count per rule
+#   scripts/lint/check_style.sh <ref>                 # changes since <ref>
+#   scripts/lint/check_style.sh --all [<ref>]         # every hit, grouped by rule
+#   scripts/lint/check_style.sh --tree [<dir>]        # every .cpp/.hpp under <dir> (default modules), not only the diff
+#   scripts/lint/check_style.sh --complexity [<ref>]  # also scores the changed functions (clang-tidy, slow)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ALL=0
 COMPLEXITY=0
 TREE=0

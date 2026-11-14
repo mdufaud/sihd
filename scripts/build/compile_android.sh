@@ -15,7 +15,7 @@
 #   NDK 28.0.13004108, SDK platform android-36, OpenJDK 17, Gradle 9.8.1,
 #   Android Gradle Plugin 9.1.0 (pinned in site_scons/sbt/android/gradle/libs.versions.toml)
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$HERE/lib.sh"
+source "$HERE/../lib.sh"
 
 COMPILE_SDK="$(sed -n 's/^[[:space:]]*compileSdk[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "$REPO_ROOT/site_scons/sbt/android/app/build.gradle")"
 

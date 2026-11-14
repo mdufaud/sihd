@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$HERE/lib.sh"
+source "$HERE/../lib.sh"
 
 echo "Compiling dependencies..."
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$HERE/lib.sh"
+source "$HERE/../lib.sh"
 
 # every test binary runs under the memory guard: the executor wraps native runs
 # in $DEBUGGER, cross builds keep their own emulator (wine/qemu) untouched
