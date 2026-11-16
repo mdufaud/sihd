@@ -141,7 +141,9 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
                                          size_t len)
 {
     int rc = 0;
-    HttpSession *session = (HttpSession *)user;
+    // lws also calls the first protocol for a websocket connection, whose session memory is not an HttpSession
+    const bool http_session = user != nullptr && lws_get_protocol(wsi)->callback == &Impl::_global_http_lws_callback;
+    HttpSession *session = http_session ? (HttpSession *)user : nullptr;
     if (reason == LWS_CALLBACK_HTTP_BIND_PROTOCOL && session != nullptr)
         this->session_init(session);
     if (session != nullptr)
@@ -339,7 +341,7 @@ int HttpServer::Impl::_lws_http_callback(struct lws *wsi,
         }
         case LWS_CALLBACK_EVENT_WAIT_CANCELLED:
         {
-            this->check_all_protocols();
+            this->check_all_protocols(lws_get_context(wsi));
             break;
         }
         default:
@@ -505,12 +507,12 @@ bool HttpServer::Impl::serve_bodyless(HttpSession *session, WebService *webservi
     return this->serve_webservice(session, webservice, request);
 }
 
-void HttpServer::Impl::populate_request(HttpSession *session, HttpRequest & request)
+void HttpServer::Impl::populate_request(struct lws *wsi, HttpRequest & request)
 {
-    request.set_client_ip(this->get_client_ip(session->wsi));
+    request.set_client_ip(this->get_client_ip(wsi));
     request.set_query_params(parse_query_params(request.uri_args()));
 
-    auto cookie_hdr = this->get_header(session->wsi, WSI_TOKEN_HTTP_COOKIE);
+    auto cookie_hdr = this->get_header(wsi, WSI_TOKEN_HTTP_COOKIE);
     if (cookie_hdr.has_value() && cookie_hdr->empty() == false)
     {
         for (auto & part : str::split(*cookie_hdr, ';'))
@@ -567,7 +569,7 @@ bool HttpServer::Impl::check_webservices(HttpSession *session, const std::string
     {
         HttpRequest request(path, this->get_uri_args(session->wsi), session->request_type);
         this->apply_request_headers(session->wsi, request);
-        this->populate_request(session, request);
+        this->populate_request(session->wsi, request);
         return this->serve_bodyless(session, webservice, request);
     }
 
@@ -575,7 +577,7 @@ bool HttpServer::Impl::check_webservices(HttpSession *session, const std::string
     session->request = std::make_unique<HttpRequest>(path, this->get_uri_args(session->wsi), session->request_type);
     HttpRequest & request = *session->request;
     this->apply_request_headers(session->wsi, request);
-    this->populate_request(session, request);
+    this->populate_request(session->wsi, request);
 
     const std::optional<size_t> content_length = this->resolve_body_length(session, request, webservice_name);
     if (content_length.has_value() == false)

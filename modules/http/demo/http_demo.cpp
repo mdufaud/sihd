@@ -1,9 +1,9 @@
 #include <thread>
 
+#include <sihd/http/AWebsocketHandler.hpp>
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/WebService.hpp>
-#include <sihd/http/WebsocketHandler.hpp>
 #include <sihd/json/Json.hpp>
 #include <sihd/sys/App.hpp>
 #include <sihd/sys/File.hpp>
@@ -28,13 +28,34 @@ using namespace sihd::http;
 
 SIHD_NEW_LOGGER("demo");
 
-class SimpleHttpServer: public sihd::http::HttpServer,
-                        public sihd::http::IWebsocketHandler
+class HelloWebsocket: public AWebsocketHandler
+{
+    public:
+        using AWebsocketHandler::AWebsocketHandler;
+
+        void on_open() override { SIHD_LOG(debug, "Opened websocket of protocol: {}", this->protocol_name()); }
+
+        void on_text(std::string_view text) override
+        {
+            SIHD_LOG(debug, "Read from client websocket: {}", text);
+            if (this->send("hello world"))
+                SIHD_LOG(debug, "Wrote back to client websocket: hello world");
+        }
+
+        void on_peer_close(uint16_t code, std::string_view reason) override
+        {
+            SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
+        }
+
+        void on_close() override { SIHD_LOG(debug, "Closed websocket"); }
+};
+
+class SimpleHttpServer: public sihd::http::HttpServer
 {
     public:
         SimpleHttpServer(): HttpServer("simple-http-server")
         {
-            this->add_websocket("websocket-protocol", this);
+            this->add_websocket<HelloWebsocket>("websocket-protocol");
             _webservice = this->add_child<WebService>("webservice");
             this->setup_webservice_entry_points();
         }
@@ -88,42 +109,6 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 HttpRequest::Put);
         }
 
-        void on_open(std::string_view protocol_name)
-        {
-            SIHD_LOG(debug, "Opened websocket of protocol: {}", protocol_name);
-        };
-
-        bool on_read(const ArrChar & array)
-        {
-            SIHD_LOG(debug, "Read from client websocket: {}", array.str());
-            _client_wrote = true;
-            return true;
-        };
-
-        bool on_write(ArrChar & array, WriteProtocol & protocol)
-        {
-            if (_client_wrote)
-            {
-                _client_wrote = false;
-
-                std::string hw("hello world");
-                array.from(hw);
-
-                protocol = WriteProtocol::Text;
-                SIHD_LOG(debug, "Wrote back to client websocket: {}", hw);
-            }
-            return true;
-        }
-
-        void on_close() { SIHD_LOG(debug, "Closed websocket"); }
-
-        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason)
-        {
-            SIHD_LOG(debug, "Peer closed websocket: code={} reason={}", code, reason);
-        }
-
-        bool _client_wrote = false;
-        WebsocketHandler _websocket_handler;
         WebService *_webservice;
 };
 

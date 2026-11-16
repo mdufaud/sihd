@@ -1,5 +1,6 @@
+#include <utility>
+
 #include <sihd/http/HttpServer.hpp>
-#include <sihd/http/WriteProtocol.hpp>
 #include <sihd/sys/fs.hpp>
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Logger.hpp>
@@ -18,8 +19,6 @@ SIHD_NEW_LOGGER("sihd::http");
 
 using namespace sihd::util;
 using namespace sihd::sys;
-
-int write_protocol_to_lws(WriteProtocol protocol);
 
 void HttpServer::Impl::HttpSession::new_request()
 {
@@ -46,21 +45,11 @@ void HttpServer::Impl::HttpSession::new_request()
     close_after_stream = false;
 }
 
-HttpServer::Impl::LwsPollingScheduler::LwsPollingScheduler(HttpServer *srv): server(srv) {}
-
-bool HttpServer::Impl::LwsPollingScheduler::run()
-{
-    // lws is not thread safe: the service thread marks the protocols writable on LWS_CALLBACK_EVENT_WAIT_CANCELLED
-    lws_cancel_service(server->_impl->lws_context_ptr);
-    return true;
-}
-
 HttpServer::HttpServer(const std::string & name, Node *parent): Node(name, parent), _impl(std::make_unique<Impl>(this))
 {
     this->add_conf("encoding", &HttpServer::set_encoding);
     this->add_conf("port", &HttpServer::set_port);
     this->add_conf("root_dir", &HttpServer::set_root_dir);
-    this->add_conf("poll_frequency", &HttpServer::set_poll_frequency);
     this->add_conf("ssl_cert_path", &HttpServer::set_ssl_cert_path);
     this->add_conf("ssl_cert_key", &HttpServer::set_ssl_cert_key);
     this->add_conf("404_path", &HttpServer::set_404_path);
@@ -69,6 +58,7 @@ HttpServer::HttpServer(const std::string & name, Node *parent): Node(name, paren
     this->add_conf("interface", &HttpServer::set_interface);
     this->add_conf("max_request_size", &HttpServer::set_max_request_size);
     this->add_conf("max_message_size", &HttpServer::set_max_message_size);
+    this->add_conf("websocket_max_pending", &HttpServer::set_websocket_max_pending);
     this->add_conf("resource_path", &HttpServer::add_resource_path);
     this->add_conf("websocket_origin", &HttpServer::add_websocket_origin);
     this->add_conf("service_thread_count", &HttpServer::set_service_thread_count);
@@ -105,11 +95,6 @@ bool HttpServer::set_root_dir(const std::string & root_dir)
     else
         SIHD_LOG(error, "HttpServer: root dir does not exists: {}", root_dir);
     return ret;
-}
-
-bool HttpServer::set_poll_frequency(double freq)
-{
-    return _impl->stepworker.set_frequency(freq);
 }
 
 bool HttpServer::set_ssl_cert_path(const std::string & path)
@@ -182,6 +167,12 @@ bool HttpServer::set_max_message_size(size_t size)
     return true;
 }
 
+bool HttpServer::set_websocket_max_pending(size_t count)
+{
+    _impl->websocket_max_pending = count;
+    return true;
+}
+
 void HttpServer::set_http_filter(IHttpFilter *filter)
 {
     _impl->http_filter = filter;
@@ -201,6 +192,9 @@ bool HttpServer::set_service_thread_count(size_t count)
 void HttpServer::request_stop()
 {
     _impl->stop = true;
+    std::lock_guard lock(_impl->mutex);
+    if (_impl->lws_context_ptr != nullptr)
+        lws_cancel_service(_impl->lws_context_ptr);
 }
 
 bool HttpServer::on_stop()
@@ -252,22 +246,18 @@ bool HttpServer::on_start()
     }
 
     Defer defer_context([this] {
-        std::lock_guard lock(_impl->mutex);
-        if (_impl->lws_context_ptr != nullptr)
+        struct lws_context *context;
         {
-            lws_context_destroy(_impl->lws_context_ptr);
-            _impl->lws_context_ptr = nullptr;
+            std::lock_guard lock(_impl->mutex);
+            context = std::exchange(_impl->lws_context_ptr, nullptr);
         }
+        // the destroy runs the handlers' on_close, which may call request_stop and take the mutex
+        if (context != nullptr)
+            lws_context_destroy(context);
     });
 
     _impl->port = lws_info.port;
     _impl->listen_port = lws_get_vhost_listen_port(lws_get_vhost_by_name(_impl->lws_context_ptr, "default"));
-
-    if (_impl->stepworker.start_sync_worker(this->name() + "-callback") == false)
-    {
-        SIHD_LOG(error, "HttpServer: could not start the callback worker");
-        return false;
-    }
 
     // a stock libwebsockets defaults to LWS_MAX_SMP=1 and clamps: a tsi over its count is out of bounds
     const int effective_thread_count = lws_get_count_threads(_impl->lws_context_ptr);
@@ -287,7 +277,6 @@ bool HttpServer::on_start()
     for (std::thread & t : _impl->service_threads)
         t.join();
     _impl->service_threads.clear();
-    _impl->stepworker.stop_worker();
     return true;
 }
 
@@ -329,16 +318,13 @@ bool HttpServer::add_websocket_origin(std::string_view origin)
     return true;
 }
 
-bool HttpServer::add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size)
+bool HttpServer::_add_websocket(const char *name, const WebsocketFactory & factory)
 {
-    bool ret = _impl->add_protocol(name,
-                                   Impl::_global_websocket_lws_callback,
-                                   sizeof(Impl::WebsocketSession),
-                                   tx_packet_size);
+    bool ret = _impl->add_protocol(name, Impl::_global_websocket_lws_callback, sizeof(Impl::WebsocketSession *), 0);
     if (ret)
     {
-        _impl->websocket_handler_lst.resize(_impl->protocols_count);
-        _impl->websocket_handler_lst[_impl->protocols_count - 1] = handler;
+        _impl->websocket_factories.resize(_impl->protocols_count);
+        _impl->websocket_factories[_impl->protocols_count - 1] = factory;
     }
     return ret;
 }

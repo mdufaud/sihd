@@ -16,12 +16,8 @@ HttpServer::Impl::Impl(HttpServer *server):
     protocols_count(0),
     lws_protocols_ptr(nullptr),
     http_filter(nullptr),
-    http_authenticator(nullptr),
-    polling_scheduler(server)
+    http_authenticator(nullptr)
 {
-    stepworker.set_runnable(&polling_scheduler);
-    stepworker.set_frequency(10);
-
     default_server_name = server->name();
     encoding = "utf-8";
 
@@ -78,12 +74,12 @@ bool HttpServer::Impl::add_protocol(const char *name,
     return lws_protocols_ptr != nullptr;
 }
 
-bool HttpServer::Impl::check_all_protocols()
+bool HttpServer::Impl::check_all_protocols(struct lws_context *context)
 {
     size_t i = 1;
     while (i < protocols_count)
     {
-        lws_callback_on_writable_all_protocol(lws_context_ptr, &lws_protocols_ptr[i]);
+        lws_callback_on_writable_all_protocol(context, &lws_protocols_ptr[i]);
         ++i;
     }
     return i > 1;

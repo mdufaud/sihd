@@ -1,4 +1,4 @@
-#include <sihd/http/WriteProtocol.hpp>
+#include "WriteProtocol.hpp"
 
 #include "lws.hpp"
 

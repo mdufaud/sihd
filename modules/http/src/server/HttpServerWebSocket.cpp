@@ -1,13 +1,18 @@
 #include <array>
+#include <exception>
+#include <memory>
+#include <optional>
 
-#include <sihd/http/IWebsocketHandler.hpp>
-#include <sihd/http/WriteProtocol.hpp>
+#include <sihd/http/AWebsocketHandler.hpp>
 #include <sihd/net/ip.hpp>
 #include <sihd/util/Array.hpp>
+#include <sihd/util/ArrayView.hpp>
 #include <sihd/util/Logger.hpp>
 #include <sihd/util/Url.hpp>
 
+#include "../WriteProtocol.hpp"
 #include "HttpServerImpl.hpp"
+#include "WebsocketConnection.hpp"
 
 namespace sihd::http
 {
@@ -16,8 +21,6 @@ SIHD_LOGGER;
 
 using namespace sihd::util;
 
-int write_protocol_to_lws(WriteProtocol protocol);
-
 int HttpServer::Impl::_global_websocket_lws_callback(struct lws *wsi,
                                                      enum lws_callback_reasons reason,
                                                      void *user,
@@ -25,7 +28,16 @@ int HttpServer::Impl::_global_websocket_lws_callback(struct lws *wsi,
                                                      size_t len)
 {
     HttpServer *srv = (HttpServer *)lws_context_user(lws_get_context(wsi));
-    return srv->_impl->_lws_websocket_callback(wsi, reason, user, in, len);
+    // the handler hooks run in the lws callback frame: an exception would terminate
+    try
+    {
+        return srv->_impl->_lws_websocket_callback(wsi, reason, user, in, len);
+    }
+    catch (const std::exception & error)
+    {
+        SIHD_LOG(error, "HttpServer: websocket handler threw: {}", error.what());
+        return -1;
+    }
 }
 
 int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
@@ -34,74 +46,43 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
                                               void *in,
                                               size_t len)
 {
+    WebsocketSession **slot = (WebsocketSession **)user;
+    WebsocketSession *session = slot != nullptr ? *slot : nullptr;
     int rc = 0;
-    IWebsocketHandler *handler = nullptr;
-    WebsocketSession *session = (WebsocketSession *)user;
-    if (session != nullptr)
-    {
-        session->protocol = lws_get_protocol(wsi);
-        session->wsi = wsi;
-        session->in = in;
-        session->len = len;
-        handler = websocket_handler_lst[session->protocol->id];
-    }
     switch (reason)
     {
         case LWS_CALLBACK_FILTER_PROTOCOL_CONNECTION:
         {
-            rc = this->allow_websocket_upgrade(wsi) ? 0 : 1;
+            rc = (slot != nullptr && this->open_websocket_session(wsi, slot)) ? 0 : 1;
             break;
         }
         case LWS_CALLBACK_ESTABLISHED:
         {
-            if (handler != nullptr && session != nullptr)
-                handler->on_open(session->protocol->name);
+            if (session != nullptr)
+            {
+                session->opened = true;
+                session->handler->on_open();
+                // a message queued before the switch found no writable connection to wake
+                if (session->connection->has_pending() || session->connection->close_requested())
+                    lws_callback_on_writable(wsi);
+            }
             break;
         }
         case LWS_CALLBACK_SERVER_WRITEABLE:
         {
-            if (handler != nullptr && session != nullptr)
-                rc = this->on_websocket_write(handler, session);
+            if (session != nullptr && session->opened)
+                rc = this->on_websocket_write(wsi, *session->connection);
             break;
         }
         case LWS_CALLBACK_RECEIVE:
         {
-            if (handler != nullptr && session != nullptr)
-            {
-                std::string message;
-                const MessagePiece piece = this->gather_websocket_message(wsi,
-                                                                          (const char *)session->in,
-                                                                          session->len,
-                                                                          message);
-                if (piece == MessagePiece::too_large)
-                {
-                    lws_close_reason(wsi, LWS_CLOSE_STATUS_MESSAGE_TOO_LARGE, nullptr, 0);
-                    rc = -1;
-                }
-                else if (piece == MessagePiece::complete)
-                {
-                    ArrChar arr;
-                    arr.assign_bytes((uint8_t *)message.data(), message.size());
-                    rc = handler->on_read(arr) ? 0 : -1;
-                    if (rc == 0)
-                        lws_callback_on_writable(session->wsi);
-                }
-            }
-            break;
-        }
-        case LWS_CALLBACK_CLOSED:
-        {
-            {
-                std::lock_guard lock(websocket_messages_mutex);
-                websocket_messages.erase(wsi);
-            }
-            if (handler != nullptr)
-                handler->on_close();
+            if (session != nullptr && session->opened)
+                rc = this->receive_websocket_message(wsi, *session, (const char *)in, len);
             break;
         }
         case LWS_CALLBACK_WS_PEER_INITIATED_CLOSE:
         {
-            if (handler != nullptr)
+            if (session != nullptr && session->opened)
             {
                 uint16_t close_code = 0;
                 std::string_view close_reason;
@@ -111,8 +92,21 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
                     if (len > 2)
                         close_reason = std::string_view((const char *)in + 2, len - 2);
                 }
-                handler->on_peer_close(close_code, close_reason);
+                session->handler->on_peer_close(close_code, close_reason);
             }
+            break;
+        }
+        case LWS_CALLBACK_WS_SERVER_DROP_PROTOCOL:
+        {
+            // the last callback where lws still owns the session memory: CLOSED comes after it
+            if (slot != nullptr)
+                this->close_websocket_session(slot);
+            break;
+        }
+        case LWS_CALLBACK_CLOSED:
+        {
+            std::lock_guard lock(websocket_messages_mutex);
+            websocket_messages.erase(wsi);
             break;
         }
         case LWS_CALLBACK_CLIENT_CONNECTION_ERROR:
@@ -133,21 +127,80 @@ int HttpServer::Impl::_lws_websocket_callback(struct lws *wsi,
     return rc;
 }
 
-bool HttpServer::Impl::allow_websocket_upgrade(struct lws *wsi)
+bool HttpServer::Impl::open_websocket_session(struct lws *wsi, WebsocketSession **slot)
+{
+    std::optional<HttpRequest> request = this->make_upgrade_request(wsi);
+    if (request.has_value() == false || this->allow_websocket_upgrade(wsi, *request) == false)
+        return false;
+
+    const lws_protocols *protocol = lws_get_protocol(wsi);
+    auto session = std::make_unique<WebsocketSession>();
+    session->connection = std::make_unique<WebsocketConnection>(lws_get_context(wsi),
+                                                                protocol->name,
+                                                                websocket_max_pending,
+                                                                std::move(*request));
+    session->handler = websocket_factories[protocol->id](*session->connection);
+    if (session->handler->on_auth(session->connection->request()) == false)
+    {
+        SIHD_LOG(warning,
+                 "HttpServer: websocket upgrade of '{}' refused by its handler",
+                 session->connection->request().url());
+        return false;
+    }
+    *slot = session.release();
+    return true;
+}
+
+void HttpServer::Impl::close_websocket_session(WebsocketSession **slot)
+{
+    std::unique_ptr<WebsocketSession> session(*slot);
+    *slot = nullptr;
+    if (session == nullptr)
+        return;
+    session->connection->disconnect();
+    if (session->opened)
+        session->handler->on_close();
+}
+
+int HttpServer::Impl::receive_websocket_message(struct lws *wsi, WebsocketSession & session, const char *in, size_t len)
+{
+    std::string message;
+    const MessagePiece piece = this->gather_websocket_message(wsi, in, len, message);
+    if (piece == MessagePiece::too_large)
+    {
+        lws_close_reason(wsi, LWS_CLOSE_STATUS_MESSAGE_TOO_LARGE, nullptr, 0);
+        return -1;
+    }
+    if (piece == MessagePiece::complete)
+    {
+        if (lws_frame_is_binary(wsi))
+            session.handler->on_binary(ArrByteView(message.data(), message.size()));
+        else
+            session.handler->on_text(message);
+    }
+    return 0;
+}
+
+std::optional<HttpRequest> HttpServer::Impl::make_upgrade_request(struct lws *wsi)
 {
     std::array<char, SIHD_HTTP_URI_BUFSIZE + 1> uri;
     const int uri_len = lws_hdr_copy(wsi, uri.data(), SIHD_HTTP_URI_BUFSIZE, WSI_TOKEN_GET_URI);
     if (uri_len < 0)
     {
         SIHD_LOG(warning, "HttpServer: websocket upgrade refused, uri too long");
-        return false;
+        return std::nullopt;
     }
+    HttpRequest request(std::string(uri.data(), uri_len), this->get_uri_args(wsi), HttpRequest::Get);
+    this->apply_request_headers(wsi, request);
+    this->populate_request(wsi, request);
+    return request;
+}
 
-    if (this->pass_http_filter(wsi, std::string_view(uri.data(), uri_len)) == false)
+bool HttpServer::Impl::allow_websocket_upgrade(struct lws *wsi, HttpRequest & request)
+{
+    if (this->pass_http_filter(wsi, request.url()) == false)
     {
-        SIHD_LOG(warning,
-                 "HttpServer: websocket upgrade of '{}' refused by the filter",
-                 std::string_view(uri.data(), uri_len));
+        SIHD_LOG(warning, "HttpServer: websocket upgrade of '{}' refused by the filter", request.url());
         return false;
     }
 
@@ -160,13 +213,18 @@ bool HttpServer::Impl::allow_websocket_upgrade(struct lws *wsi)
     if (http_authenticator != nullptr)
     {
         const std::optional<std::string> authorization = this->get_header(wsi, WSI_TOKEN_HTTP_AUTHORIZATION);
-
-        if (authorization.has_value() == false
-            || this->parse_authorization(*authorization, http_authenticator).authorized == false)
+        AuthResult auth;
+        if (authorization.has_value())
+            auth = this->parse_authorization(*authorization, http_authenticator);
+        if (auth.authorized == false)
         {
             SIHD_LOG(warning, "HttpServer: websocket upgrade refused, not authorized");
             return false;
         }
+        if (auth.user.empty() == false)
+            request.set_auth_user(auth.user);
+        if (auth.token.empty() == false)
+            request.set_auth_token(auth.token);
     }
 
     return true;
@@ -212,24 +270,34 @@ HttpServer::Impl::MessagePiece
     return MessagePiece::complete;
 }
 
-int HttpServer::Impl::on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session)
+int HttpServer::Impl::on_websocket_write(struct lws *wsi, WebsocketConnection & connection)
 {
-    ArrChar arr_to_write;
-    WriteProtocol lws_proto = WriteProtocol::Text;
-    bool ret = handler->on_write(arr_to_write, lws_proto);
-    if (ret && arr_to_write.size() > 0)
+    if (std::optional<WebsocketConnection::Message> message = connection.pop())
     {
-        ArrByte buffer;
-        buffer.resize(arr_to_write.size() + LWS_PRE);
-        memcpy(buffer.data() + LWS_PRE, arr_to_write.data(), arr_to_write.size());
-        int wrote = lws_write(session->wsi,
-                              (u_char *)(buffer.data() + LWS_PRE),
-                              arr_to_write.size(),
-                              (enum lws_write_protocol)write_protocol_to_lws(lws_proto));
-        if (wrote < (int)arr_to_write.size())
-            ret = false;
+        if (this->write_websocket_frame(wsi, message->data, message->protocol) == false)
+            return -1;
+        if (connection.has_pending() || connection.close_requested())
+            lws_callback_on_writable(wsi);
+        return 0;
     }
-    return ret ? 0 : -1;
+    if (connection.close_requested())
+    {
+        lws_close_reason(wsi, LWS_CLOSE_STATUS_NORMAL, nullptr, 0);
+        return -1;
+    }
+    return 0;
+}
+
+bool HttpServer::Impl::write_websocket_frame(struct lws *wsi, std::string_view data, WriteProtocol protocol)
+{
+    ArrByte buffer;
+    buffer.resize(data.size() + LWS_PRE);
+    memcpy(buffer.data() + LWS_PRE, data.data(), data.size());
+    const int wrote = lws_write(wsi,
+                                (u_char *)(buffer.data() + LWS_PRE),
+                                data.size(),
+                                (enum lws_write_protocol)write_protocol_to_lws(protocol));
+    return wrote >= (int)data.size();
 }
 
 } // namespace sihd::http

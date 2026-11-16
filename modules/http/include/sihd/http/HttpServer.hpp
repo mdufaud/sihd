@@ -1,14 +1,16 @@
 #ifndef __SIHD_HTTP_HTTPSERVER_HPP__
 #define __SIHD_HTTP_HTTPSERVER_HPP__
 
+#include <functional>
 #include <memory>
 #include <set>
 
+#include <sihd/http/AWebsocketHandler.hpp>
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/IHttpFilter.hpp>
-#include <sihd/http/IWebsocketHandler.hpp>
+#include <sihd/http/IWebsocketConnection.hpp>
 #include <sihd/http/MimeTypes.hpp>
 #include <sihd/http/WebService.hpp>
 #include <sihd/sys/platform.hpp>
@@ -31,7 +33,6 @@ class HttpServer: public sihd::util::Node,
         bool set_encoding(std::string_view encoding);
         bool set_port(int port);
         bool set_root_dir(const std::string & root_dir);
-        bool set_poll_frequency(double freq);
         bool set_ssl_cert_path(const std::string & path);
         bool set_ssl_cert_key(const std::string & path);
         bool set_404_path(std::string_view path);
@@ -43,6 +44,8 @@ class HttpServer: public sihd::util::Node,
         bool set_max_request_size(size_t size);
         // a websocket message past it closes its connection, 0 means no limit
         bool set_max_message_size(size_t size);
+        // messages a websocket connection queues before refusing writes, 0 means no limit
+        bool set_websocket_max_pending(size_t count);
 
         void set_http_filter(IHttpFilter *filter);
         void set_authenticator(IHttpAuthenticator *authenticator);
@@ -57,7 +60,14 @@ class HttpServer: public sihd::util::Node,
 
         virtual sihd::util::Result<std::string> get_resource_path(std::string_view path);
 
-        bool add_websocket(const char *name, IWebsocketHandler *handler, size_t tx_packet_size = 0);
+        // each connection gets its own T(IWebsocketConnection &, args...): args must outlive the server
+        template <typename T, typename... Args>
+        bool add_websocket(const char *name, Args &...args)
+        {
+            return this->_add_websocket(name, [&args...](IWebsocketConnection & connection) {
+                return std::make_unique<T>(connection, args...);
+            });
+        }
         // "*" allows any; unlisted origins pass only as the literal host the server was reached at
         bool add_websocket_origin(std::string_view origin);
 
@@ -66,6 +76,10 @@ class HttpServer: public sihd::util::Node,
         bool on_stop() override;
 
     private:
+        using WebsocketFactory = std::function<std::unique_ptr<AWebsocketHandler>(IWebsocketConnection &)>;
+
+        bool _add_websocket(const char *name, const WebsocketFactory & factory);
+
         struct Impl;
         std::unique_ptr<Impl> _impl;
 };

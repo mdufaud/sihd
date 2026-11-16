@@ -4,14 +4,16 @@
 namespace sihd::http
 {
 
+class AWebsocketHandler;
 class HttpHeader;
 class HttpRequest;
 class HttpResponse;
 class HttpServer;
 class IHttpAuthenticator;
 class IHttpFilter;
-class IWebsocketHandler;
+class IWebsocketConnection;
 class IBodyStream;
+class LoggerWebsocket;
 class BodyStreamFunc;
 class BodyStreamFile;
 class MimeTypes;
@@ -24,7 +26,6 @@ class RobotsTxt;
 class Route;
 class RouteTable;
 class WebService;
-class WebsocketHandler;
 
 } // namespace sihd::http
 

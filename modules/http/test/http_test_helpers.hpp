@@ -19,16 +19,15 @@
 
 #include <gtest/gtest.h>
 
+#include <sihd/http/AWebsocketHandler.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/IHttpFilter.hpp>
-#include <sihd/http/IWebsocketHandler.hpp>
 #include <sihd/http/Multipart.hpp>
 #include <sihd/http/Navigator.hpp>
 #include <sihd/http/WebService.hpp>
-#include <sihd/http/WriteProtocol.hpp>
 #include <sihd/http/request.hpp>
 #include <sihd/json/Json.hpp>
 #include <sihd/net/IpAddr.hpp>
@@ -290,15 +289,28 @@ struct EchoServerScope: ServerScope
         EchoServerScope() { setup_echo_webservice(server._webservice); }
 };
 
-// Test websocket + webservice server: counts every ws event, replies "hello world"
-// to each client message and serves the /web entry points.
-class SimpleHttpServer: public sihd::http::HttpServer,
-                        public sihd::http::IWebsocketHandler
+class SimpleHttpServer;
+
+class CountingWebsocket: public sihd::http::AWebsocketHandler
+{
+    public:
+        CountingWebsocket(sihd::http::IWebsocketConnection & connection, SimpleHttpServer & server);
+
+        void on_open() override;
+        void on_text(std::string_view text) override;
+        void on_close() override;
+
+    private:
+        SimpleHttpServer & _server;
+};
+
+// Test websocket + webservice server: serves CountingWebsocket and the /web entry points.
+class SimpleHttpServer: public sihd::http::HttpServer
 {
     public:
         SimpleHttpServer(): HttpServer("http-server-test")
         {
-            this->add_websocket("proto-two", this);
+            this->add_websocket<CountingWebsocket>("proto-two", *this);
             _webservice = this->add_child<sihd::http::WebService>("web");
             this->setup_webservice_entry_points();
         }
@@ -351,52 +363,6 @@ class SimpleHttpServer: public sihd::http::HttpServer,
                 sihd::http::HttpRequest::Put);
         }
 
-        void on_open([[maybe_unused]] std::string_view protocol) override
-        {
-            {
-                auto lock = _ws_waitable.guard();
-                ++_nopen;
-            }
-            _ws_waitable.notify_all();
-        }
-
-        bool on_read([[maybe_unused]] const sihd::util::ArrChar & arr) override
-        {
-            {
-                auto lock = _ws_waitable.guard();
-                _client_wrote = true;
-                ++_nread;
-                _last_read.assign(arr.data(), arr.size());
-            }
-            _ws_waitable.notify_all();
-            return true;
-        }
-
-        bool on_write(sihd::util::ArrChar & arr, sihd::http::WriteProtocol & protocol) override
-        {
-            auto lock = _ws_waitable.guard();
-            if (_client_wrote)
-            {
-                ++_nwrite;
-                _client_wrote = false;
-                const char reply[] = "hello world";
-                arr.from(reply);
-                protocol = sihd::http::WriteProtocol::Text;
-            }
-            return true;
-        }
-
-        void on_close() override
-        {
-            {
-                auto lock = _ws_waitable.guard();
-                ++_nclosed;
-            }
-            _ws_waitable.notify_all();
-        }
-
-        void on_peer_close([[maybe_unused]] uint16_t code, [[maybe_unused]] std::string_view reason) override {}
-
         bool wait_for_open(sihd::util::Duration timeout = sihd::util::Duration(sihd::util::time::sec(2)))
         {
             return _ws_waitable.wait_for(timeout, [this] { return _nopen > 0; });
@@ -413,7 +379,6 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         std::string _last_read;
         int _nwrite = 0;
         int _nclosed = 0;
-        bool _client_wrote = false;
         int _npost = 0;
         int _nput = 0;
         int _ndelete = 0;
@@ -422,6 +387,42 @@ class SimpleHttpServer: public sihd::http::HttpServer,
         std::string _post_content;
         std::string _put_content;
 };
+
+inline CountingWebsocket::CountingWebsocket(sihd::http::IWebsocketConnection & connection, SimpleHttpServer & server):
+    AWebsocketHandler(connection),
+    _server(server)
+{
+}
+
+inline void CountingWebsocket::on_open()
+{
+    {
+        auto lock = _server._ws_waitable.guard();
+        ++_server._nopen;
+    }
+    _server._ws_waitable.notify_all();
+}
+
+inline void CountingWebsocket::on_text(std::string_view text)
+{
+    {
+        auto lock = _server._ws_waitable.guard();
+        ++_server._nread;
+        _server._last_read = text;
+        if (this->send("hello world"))
+            ++_server._nwrite;
+    }
+    _server._ws_waitable.notify_all();
+}
+
+inline void CountingWebsocket::on_close()
+{
+    {
+        auto lock = _server._ws_waitable.guard();
+        ++_server._nclosed;
+    }
+    _server._ws_waitable.notify_all();
+}
 
 struct SimpleServerScope: BasicServerScope<SimpleHttpServer>
 {
@@ -840,14 +841,42 @@ class SimpleWsClient
             return _client.send_all(sihd::util::ArrCharView((const char *)frame.data(), frame.size())).has_value();
         }
 
-        std::optional<std::string> recv_text()
+        // opcode 0x01 text frame
+        std::optional<std::string> recv_text() { return this->_recv_payload(0x01); }
+
+        // opcode 0x02 binary frame
+        std::optional<std::string> recv_binary() { return this->_recv_payload(0x02); }
+
+        // the status code of the close frame the server sent, nullopt for any other frame
+        std::optional<uint16_t> recv_close_code()
+        {
+            std::array<uint8_t, 2> header;
+            if (_recv_exact(header.data(), header.size()) == false || (header[0] & 0x0F) != 0x08)
+                return {};
+            const size_t len = header[1] & 0x7F;
+            std::string payload(len, '\0');
+            if (len < 2 || _recv_exact((uint8_t *)payload.data(), len) == false)
+                return {};
+            return (uint16_t)(((uint8_t)payload[0] << 8) | (uint8_t)payload[1]);
+        }
+
+        void send_close()
+        {
+            // FIN + close opcode, MASK + 2 bytes, zero mask key, status 1000 (0x03e8)
+            constexpr std::array<uint8_t, 8> close_frame {0x88, 0x82, 0x00, 0x00, 0x00, 0x00, 0x03, 0xE8};
+            (void)_client.send_all(sihd::util::ArrCharView((const char *)close_frame.data(), close_frame.size()));
+        }
+
+    private:
+        // the payload of the next frame, nullopt when its opcode is another one
+        std::optional<std::string> _recv_payload(uint8_t expected_opcode)
         {
             std::array<uint8_t, 2> header;
             if (_recv_exact(header.data(), header.size()) == false)
                 return {};
 
             uint8_t opcode = header[0] & 0x0F;
-            if (opcode != 0x01) // not a text frame
+            if (opcode != expected_opcode)
                 return {};
 
             size_t len = header[1] & 0x7F;
@@ -865,26 +894,6 @@ class SimpleWsClient
             return payload;
         }
 
-        // the status code of the close frame the server sent, nullopt for any other frame
-        std::optional<uint16_t> recv_close_code()
-        {
-            std::array<uint8_t, 2> header;
-            if (_recv_exact(header.data(), header.size()) == false || (header[0] & 0x0F) != 0x08)
-                return {};
-            const size_t len = header[1] & 0x7F;
-            std::string payload(len, '\0');
-            if (len < 2 || _recv_exact((uint8_t *)payload.data(), len) == false)
-                return {};
-            return (uint16_t)(((uint8_t)payload[0] << 8) | (uint8_t)payload[1]);
-        }
-
-        void send_close()
-        {
-            constexpr std::array<uint8_t, 6> close_frame {0x88, 0x80, 0x00, 0x00, 0x00, 0x00};
-            (void)_client.send_all(sihd::util::ArrCharView((const char *)close_frame.data(), close_frame.size()));
-        }
-
-    private:
         bool _recv_exact(uint8_t *buf, size_t count)
         {
             size_t received = 0;

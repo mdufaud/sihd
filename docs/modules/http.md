@@ -14,9 +14,9 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 
 ### Server
 
-- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_max_message_size` (a WebSocket message past it closes its connection with status 1009; 1 MiB by default, 0 for no limit), `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop. `get_port` returns the bound port once ready, the system-picked one when the port is 0.
+- `HttpServer`: Node and blocking service that serves HTTP and WebSocket. Configure with `set_port`, `set_interface` (loopback by default, empty for all interfaces), `set_root_dir`, `add_resource_path`, `set_ssl_cert_path`, `set_ssl_cert_key`, `set_cors_origin`, `set_404_path`, `set_server_name`, `set_max_request_size`, `set_max_message_size` (a WebSocket message past it closes its connection with status 1009; 1 MiB by default, 0 for no limit), `set_websocket_max_pending` (messages a WebSocket connection queues before `send` refuses; 1024 by default, 0 for no limit), `set_service_thread_count`, `set_encoding`. Start and stop through the service lifecycle; `request_stop()` ends the loop. `get_port` returns the bound port once ready, the system-picked one when the port is 0.
 - `HttpServer::set_http_filter`, `set_authenticator`: install one connection filter and one authenticator.
-- `HttpServer::add_websocket`, `add_websocket_origin`: register a WebSocket protocol handler and the origins allowed to open it.
+- `HttpServer::add_websocket<T>(protocol, args...)`: serve a WebSocket protocol, which the client picks with its `Sec-WebSocket-Protocol` name (the path is ignored, an upgrade naming no served protocol is refused). Each connection gets its own `T(IWebsocketConnection &, args...)`; the args are taken by reference and must outlive the server. `add_websocket_origin`: the origins allowed to open them.
 - `HttpServer::get_resource_path`: virtual hook that resolves a request path to a file.
 - `WebService`: named container of entry points, attached to a server as a child node. `set_entry_point` takes a callable or a member function, with an optional `HttpRequest::RequestType`. `call`, `allowed_methods`, `set_authenticator`, `set_body_stream`.
 - `Route`: one path pattern with `{name}` parameter segments and a `{name...}` catch-all segment. `match`, `specificity`, `has_catch_all`.
@@ -25,7 +25,15 @@ HTTP and WebSocket server built on libwebsockets, and HTTP client functions and 
 - `IHttpFilter`, `HttpFilterInfo`: connection-level accept or reject, decided from URI, client IP and headers.
 - `RateLimitFilter`: `IHttpFilter` limiting events per client over a window. `set_max_entries`, `set_clock`.
 - `IHttpAuthenticator`: override `on_basic_auth` and `on_token_auth` to validate credentials.
-- `IWebsocketHandler`, `WebsocketHandler`: WebSocket callbacks (`on_open`, `on_read`, `on_write`, `on_close`, `on_peer_close`). `on_read` gets each message whole, whatever its fragments and the receive buffer. `WebsocketHandler` exposes them as `std::function` members. `WriteProtocol` selects the frame type on write.
+- `AWebsocketHandler`: one WebSocket connection, built by the server when the upgrade arrives and destroyed when the connection ends. Its hooks run on the server's service thread, in this order:
+  - `on_auth(HttpRequest &)`, before the switch to WebSocket: false refuses the upgrade. The request carries the handshake headers, cookies, query parameters, client IP and the user the server's authenticator accepted; `set_auth_user` there is kept for `request()`.
+  - `on_open`.
+  - `on_text` (pure) and `on_binary`, each message whole, whatever its fragments and the receive buffer.
+  - `on_peer_close(code, reason)` when the client closes, then `on_close`.
+
+  `send` and `send_binary` queue a message from any thread and wake the service at once. They return a `Result`: `would_block` when the queue holds `set_websocket_max_pending` messages (`dropped` counts them), `closed` once closed or closing. `close` sends the queued messages, then closes with status 1000. `is_connected`, `protocol_name`, `request`. A hook that throws closes the connection. The destructor runs on the service thread: another thread keeping a handler pointer removes it there, under the lock it holds while sending.
+- `IWebsocketConnection`: the connection the server gives to the handler constructor; `AWebsocketHandler` forwards to it.
+- `LoggerWebsocket`: sink pushing one `set_pattern` line (conf key `pattern`, `LogFormatter` syntax, an empty one keeps the default) per record to every connection of the protocol that `serve(server, protocol)` registers, before the server starts. A connection receives the records logged once its upgrade is accepted; inbound messages are ignored. A connection whose queue is full drops the line, and its first drop prints one `LoggerManager::sink_warning` line. `connection_count`. The logger must outlive the server. Built in code next to its `HttpServer`: no factory name, a `CliApp` conf reload would delete it under the server.
 
 ### Messages
 
@@ -90,6 +98,26 @@ server.start();
 ```
 
 `start()` blocks until the service is stopped.
+
+A WebSocket echo, adapted from `modules/http/test/TestWebsocketHandler.cpp`. A browser opens it with `new WebSocket("ws://localhost:3000/", "echo")`.
+
+```cpp
+#include <sihd/http/AWebsocketHandler.hpp>
+#include <sihd/http/HttpServer.hpp>
+
+using namespace sihd::http;
+
+class Echo: public AWebsocketHandler
+{
+    public:
+        using AWebsocketHandler::AWebsocketHandler;
+
+        void on_text(std::string_view text) override { this->send(text); }
+};
+
+HttpServer server("echo-server");
+server.add_websocket<Echo>("echo");
+```
 
 ## Scripting
 

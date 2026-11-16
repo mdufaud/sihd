@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <set>
@@ -12,21 +13,21 @@
 #include <unordered_set>
 #include <vector>
 
+#include <sihd/http/AWebsocketHandler.hpp>
 #include <sihd/http/HttpRequest.hpp>
 #include <sihd/http/HttpResponse.hpp>
 #include <sihd/http/HttpServer.hpp>
 #include <sihd/http/HttpStatus.hpp>
 #include <sihd/http/IHttpAuthenticator.hpp>
 #include <sihd/http/IHttpFilter.hpp>
-#include <sihd/http/IWebsocketHandler.hpp>
 #include <sihd/http/MimeTypes.hpp>
 #include <sihd/http/WebService.hpp>
-#include <sihd/http/WriteProtocol.hpp>
 #include <sihd/util/Array.hpp>
-#include <sihd/util/StepWorker.hpp>
 #include <sihd/util/str.hpp>
 
+#include "../WriteProtocol.hpp"
 #include "../lws.hpp"
+#include "WebsocketConnection.hpp"
 
 #ifndef SIHD_HTTP_URI_BUFSIZE
 # define SIHD_HTTP_URI_BUFSIZE 512
@@ -42,8 +43,6 @@
 
 namespace sihd::http
 {
-
-int write_protocol_to_lws(WriteProtocol protocol);
 
 struct HttpServer::Impl
 {
@@ -78,22 +77,12 @@ struct HttpServer::Impl
                 static constexpr size_t max_retained_body_capacity = 64 * 1024;
         };
 
+        // lws keeps a pointer to it in its zeroed session memory, from the upgrade checks until the close
         struct WebsocketSession
         {
-                const lws_protocols *protocol;
-                struct lws *wsi;
-                void *in;
-                size_t len;
-        };
-
-        struct LwsPollingScheduler: public sihd::util::IRunnable
-        {
-                LwsPollingScheduler(HttpServer *srv);
-                ~LwsPollingScheduler() = default;
-
-                bool run();
-
-                HttpServer *server;
+                std::unique_ptr<WebsocketConnection> connection;
+                std::unique_ptr<AWebsocketHandler> handler;
+                bool opened = false;
         };
 
         Impl(HttpServer *server);
@@ -136,7 +125,7 @@ struct HttpServer::Impl
         bool serve_bodyless(HttpSession *session, WebService *webservice, HttpRequest & request);
         int serve_body(HttpSession *session);
         // fills the request fields the stream providers and handlers may read while the body streams in
-        void populate_request(HttpSession *session, HttpRequest & request);
+        void populate_request(struct lws *wsi, HttpRequest & request);
         // answers a request no route matched, from either the bodyless or the body path
         bool serve_not_found(HttpSession *session, std::string_view path);
 
@@ -177,7 +166,12 @@ struct HttpServer::Impl
                                     void *user,
                                     void *in,
                                     size_t len);
-        int on_websocket_write(IWebsocketHandler *handler, WebsocketSession *session);
+        // false refuses the upgrade, true leaves the session in the slot
+        bool open_websocket_session(struct lws *wsi, WebsocketSession **slot);
+        void close_websocket_session(WebsocketSession **slot);
+        int receive_websocket_message(struct lws *wsi, WebsocketSession & session, const char *in, size_t len);
+        int on_websocket_write(struct lws *wsi, WebsocketConnection & connection);
+        bool write_websocket_frame(struct lws *wsi, std::string_view data, WriteProtocol protocol);
 
         enum class MessagePiece
         {
@@ -187,13 +181,14 @@ struct HttpServer::Impl
         };
         // lws hands a message over in rx buffer sized pieces and per fragment: the handler reads it whole
         MessagePiece gather_websocket_message(struct lws *wsi, const char *in, size_t len, std::string & message);
+        std::optional<HttpRequest> make_upgrade_request(struct lws *wsi);
         // an upgrade skips the http callbacks: the checks of a plain request are redone here
-        bool allow_websocket_upgrade(struct lws *wsi);
+        bool allow_websocket_upgrade(struct lws *wsi, HttpRequest & request);
         bool is_websocket_origin_allowed(struct lws *wsi);
         bool pass_http_filter(struct lws *wsi, std::string_view uri);
 
         bool add_protocol(const char *name, lws_callback_function *callback, size_t struct_size, size_t tx_packet_size);
-        bool check_all_protocols();
+        bool check_all_protocols(struct lws_context *context);
 
         HttpServer *server;
 
@@ -211,7 +206,7 @@ struct HttpServer::Impl
         size_t protocols_count;
         lws_protocols *lws_protocols_ptr;
 
-        std::vector<IWebsocketHandler *> websocket_handler_lst;
+        std::vector<WebsocketFactory> websocket_factories;
         std::set<std::string> websocket_origins;
         IHttpFilter *http_filter;
         IHttpAuthenticator *http_authenticator;
@@ -224,14 +219,13 @@ struct HttpServer::Impl
 
         size_t max_request_size = 0;
         size_t max_message_size = 1024 * 1024;
+        size_t websocket_max_pending = 1024;
         std::mutex websocket_messages_mutex;
         std::map<struct lws *, std::string> websocket_messages;
         // a buffered body is read fully in memory: streaming is the path for bigger payloads
         size_t max_buffered_request_size = 16 * 1024 * 1024;
 
         MimeTypes mime;
-        LwsPollingScheduler polling_scheduler;
-        sihd::util::StepWorker stepworker;
 
         size_t service_thread_count = 1;
         std::vector<std::thread> service_threads;
