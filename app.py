@@ -261,6 +261,7 @@ modules = {
         "depends": ['sys', 'net'],
         # winrt activation (RoInitialize, RoActivateInstance, WindowsCreateString), radios and inquiries, RFCOMM sockets
         "windows-libs": ['runtimeobject', 'bthprops', 'ws2_32'],
+        "export-all-libs": True,
         # android.bluetooth callbacks are abstract classes: the shim ships into the APKs linking bt
         "android-java-dirs": ['java'],
     },
