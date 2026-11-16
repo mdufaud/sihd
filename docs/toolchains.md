@@ -28,18 +28,19 @@ scripts/setup/toolchains.sh                                   # every target
 scripts/setup/toolchains.sh --prefix ~/apt/toolchains aarch64 qemu android
 ```
 
-The default prefix is `$SIHD_TOOLCHAINS`, or `~/.local/share/sihd-toolchains` when it is unset. Targets are `aarch64 arm32 riscv64 riscv32 windows web qemu android`. Downloads are kept in `<prefix>/downloads`, so a second run only fetches what is missing.
+The default prefix is `$SIHD_TOOLCHAINS`, or `~/.local/share/sihd-toolchains` when it is unset. Targets are `aarch64 arm32 riscv64 riscv32 musl windows web qemu android`. Downloads are kept in `<prefix>/downloads`, so a second run only fetches what is missing.
 
 | Target | Source | Version |
 |--------|--------|---------|
 | aarch64, arm32 | [Arm GNU Toolchain](https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads) | gcc 15.2 |
 | riscv64, riscv32 | [riscv-collab/riscv-gnu-toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain/releases) glibc builds | gcc 16.1 |
+| musl | [Bootlin](https://toolchains.bootlin.com/) `x86-64--musl--stable-2026.08-1` | buildroot stable 2026.08 |
 | windows | Arch `mingw-w64-gcc` package, extracted | gcc 16.2 |
 | qemu | Arch `qemu-user-static` package, extracted | 11.1 |
 | web | [emsdk](https://github.com/emscripten-core/emsdk) | emscripten 6.0.13, with node |
 | android | Temurin JDK 17, Gradle 9.8.1, Android command line tools | NDK r28 |
 
-The toolchains ship under their own prefixes (`aarch64-none-linux-gnu-`, `riscv64-unknown-linux-gnu-`); `<prefix>/bin` links them under the names sbt looks for.
+The toolchains ship under their own prefixes (`aarch64-none-linux-gnu-`, `riscv64-unknown-linux-gnu-`, `x86_64-buildroot-linux-musl-`); `<prefix>/bin` links them under the names sbt looks for.
 
 The `windows` and `qemu` targets extract Arch packages and need `pacman`. On other distributions install the packages below.
 
@@ -50,18 +51,32 @@ The `windows` and `qemu` targets extract Arch packages and need `pacman`. On oth
 | aarch64 | `aarch64-linux-gnu-gcc` | `g++-aarch64-linux-gnu` |
 | arm32 | AUR `arm-none-linux-gnueabihf-toolchain-bin` | `g++-arm-linux-gnueabihf` |
 | riscv64 | `riscv64-linux-gnu-gcc` | `g++-riscv64-linux-gnu` |
-| musl | [musl.cc](https://musl.cc/x86_64-linux-musl-cross.tgz), `bin/` on `PATH` | same |
+| musl | `scripts/setup/toolchains.sh musl` | same |
 | Windows | `mingw-w64-gcc` | `g++-mingw-w64-x86-64-posix`, then `update-alternatives --config x86_64-w64-mingw32-g++` for the posix one |
 | WebAssembly | `emscripten` | `emscripten`, or emsdk |
 | Runners | `qemu-user-static`, `wine` | `qemu-user-static`, `wine` |
 
 The static arm32 build needs Arm's `arm-none-linux-gnueabihf` toolchain: it ships the static libraries the distribution one lacks.
 
+No distribution packages a musl C++ cross compiler, and musl.cc stops at gcc 11, which has no `std::expected`.
+
+The musl builds, shared and static, also need the musl loader `/lib/ld-musl-x86_64.so.1` on the host: the meson ports of `make dep` run a test program through it, and so do the shared test binaries. Without it `make dep` stops on `Could not invoke sanity check executable`. Install the `musl` package: `sudo pacman -S musl` or `sudo apt install musl`.
+
 ## Running the tests of a foreign target
 
 `make itest machine=aarch64` (or `platform=win`, `platform=web`) runs every test through its runner. Static binaries need nothing more; dynamic ones get `QEMU_LD_PREFIX` from `gcc -print-sysroot`.
 
-Tests that start a child process need `binfmt_misc` to know qemu, or the kernel cannot run the foreign child. `qemu-user-static-binfmt` (Arch) or `qemu-user-static` (Debian) registers it; a qemu outside `/usr/bin` needs its own `/etc/binfmt.d` entry with the `F` flag. See [sbt cross-compilation](../site_scons/sbt/docs/cross-compilation.md).
+Tests that start a child process need `binfmt_misc` to know qemu, or the kernel cannot run the foreign child: they fail with `Exec format error` (`TestTestWatchdog`, `TestBtScan.test_no_system_bus`, `TestMessageQueue.test_message_queue_process`, `TestSharedMemory`). Registering needs root, so `scripts/setup/toolchains.sh qemu` does not do it. Once per host:
+
+```shell
+sudo pacman -S qemu-user-static qemu-user-static-binfmt   # Arch
+sudo apt install qemu-user-static                         # Debian / Ubuntu, registers on install
+ls /proc/sys/fs/binfmt_misc                               # qemu-aarch64, qemu-arm, qemu-riscv64 ...
+```
+
+A qemu outside `/usr/bin` needs its own `/etc/binfmt.d` entry with the `F` flag. Without root, register inside a user namespace for one run, see [sbt cross-compilation](../site_scons/sbt/docs/cross-compilation.md).
+
+wine 11.22 refuses a shared `LockFileEx` on a write-only handle with `Access denied`, so `TestFileMutex.test_filemutex_shared` fails under it; wine 10.0 passes the same binary.
 
 ## Android
 

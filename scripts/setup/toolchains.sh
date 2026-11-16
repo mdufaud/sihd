@@ -4,13 +4,15 @@
 #
 # Usage:
 #   scripts/setup/toolchains.sh [--prefix <dir>] [<target>...]
-#   targets: aarch64 arm32 riscv64 riscv32 windows web qemu android (default: all)
+#   targets: aarch64 arm32 riscv64 riscv32 musl windows web qemu android (default: all)
 #   prefix:  $SIHD_TOOLCHAINS, else ~/.local/share/sihd-toolchains
 set -euo pipefail
 
 ARM_VER="15.2.rel1"
 ARM_URL="https://developer.arm.com/-/media/Files/downloads/gnu/$ARM_VER/binrel"
 RISCV_URL="https://github.com/riscv-collab/riscv-gnu-toolchain/releases/download/2026.10.29"
+MUSL_NAME="x86-64--musl--stable-2026.08-1"
+MUSL_URL="https://toolchains.bootlin.com/downloads/releases/toolchains/x86-64/tarballs/$MUSL_NAME.tar.xz"
 EMSDK_VER="6.0.13"
 JDK_URL="https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse"
 GRADLE_VER="9.8.1"
@@ -18,7 +20,7 @@ CMDLINE_TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-lin
 NDK_VER="28.0.13004108"
 ANDROID_PACKAGES=("platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;$NDK_VER" "emulator"
     "system-images;android-35;google_apis;x86_64")
-ALL_TARGETS=(aarch64 arm32 riscv64 riscv32 windows web qemu android)
+ALL_TARGETS=(aarch64 arm32 riscv64 riscv32 musl windows web qemu android)
 
 PREFIX="${SIHD_TOOLCHAINS:-$HOME/.local/share/sihd-toolchains}"
 targets=()
@@ -32,7 +34,7 @@ while (($# > 0)); do
             sed '/^set -euo pipefail$/,$d' "$0"
             exit 0
             ;;
-        aarch64 | arm32 | riscv64 | riscv32 | windows | web | qemu | android)
+        aarch64 | arm32 | riscv64 | riscv32 | musl | windows | web | qemu | android)
             targets+=("$1")
             shift
             ;;
@@ -127,6 +129,23 @@ setup_riscv()
     link_prefix "$PREFIX/riscv$bits-unknown-linux-gnu/bin" "riscv$bits-unknown-linux-gnu-" "riscv$bits-linux-gnu-"
 }
 
+# musl.cc stops at gcc 11, without std::expected: Bootlin's buildroot toolchain is recent
+setup_musl()
+{
+    extract_to "$(fetch "$MUSL_URL")" "$PREFIX/$MUSL_NAME"
+    "$PREFIX/$MUSL_NAME/relocate-sdk.sh" >/dev/null
+    link_prefix "$PREFIX/$MUSL_NAME/bin" x86_64-buildroot-linux-musl- x86_64-linux-musl-
+    local real dst
+    # the buildroot wrapper derives its sysroot and .br_real from the path it is called by: exec it by its own path
+    for real in "$PREFIX/$MUSL_NAME/bin/"x86_64-buildroot-linux-musl-*.br_real; do
+        real="${real%.br_real}"
+        dst="$BIN/x86_64-linux-musl-${real##*/x86_64-buildroot-linux-musl-}"
+        rm -f -- "$dst" "$dst.br_real"
+        printf '#!/bin/sh\nexec %q "$@"\n' "$real" > "$dst"
+        chmod +x -- "$dst"
+    done
+}
+
 # Arch mingw-w64-gcc is built with posix threads, which std::thread needs
 setup_windows()
 {
@@ -176,6 +195,7 @@ for target in "${targets[@]}"; do
         arm32) setup_arm32 ;;
         riscv64) setup_riscv 64 ;;
         riscv32) setup_riscv 32 ;;
+        musl) setup_musl ;;
         windows) setup_windows ;;
         web) setup_web ;;
         qemu) setup_qemu ;;
