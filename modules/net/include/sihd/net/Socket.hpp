@@ -50,6 +50,7 @@ class Socket
         static sihd::util::Result<void> set_socket_tcp_nodelay(int socket, bool active);
         static sihd::util::Result<void> set_socket_blocking(int socket, bool active);
         static sihd::util::Result<void> set_socket_recv_timeout(int socket, int milliseconds);
+        static sihd::util::Result<void> set_socket_send_timeout(int socket, int milliseconds);
         static sihd::util::Result<void> set_socket_reuseaddr(int socket, bool active);
         static sihd::util::Result<void> set_socket_broadcast(int socket, bool active);
         static sihd::util::Result<void> bind_socket_to_device(int socket, std::string_view name);
@@ -75,6 +76,7 @@ class Socket
         sihd::util::Result<void> set_tcp_nodelay(bool active) const;
         sihd::util::Result<void> set_blocking(bool active) const;
         sihd::util::Result<void> set_recv_timeout(int milliseconds) const;
+        sihd::util::Result<void> set_send_timeout(int milliseconds) const;
         sihd::util::Result<void> set_reuseaddr(bool active) const;
         sihd::util::Result<void> set_broadcast(bool active) const;
         sihd::util::Result<void> bind_to_device(std::string_view name) const;

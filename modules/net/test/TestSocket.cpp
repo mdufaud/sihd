@@ -691,6 +691,34 @@ TEST_F(TestSocket, test_socket_recv_timeout_expires)
     EXPECT_LT(elapsed.count(), 2000);
 }
 
+TEST_F(TestSocket, test_socket_send_timeout_expires)
+{
+    Socket server;
+    ASSERT_TRUE(server.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(server.set_reuseaddr(true).has_value());
+    ASSERT_TRUE(server.bind(IpAddr("127.0.0.1", 0)).has_value());
+    const int port = server.local_port().value();
+    ASSERT_GT(port, 0);
+    ASSERT_TRUE(server.listen(1).has_value());
+
+    Socket client;
+    ASSERT_TRUE(client.open(AF_INET, SOCK_STREAM, IPPROTO_TCP).has_value());
+    ASSERT_TRUE(client.connect(IpAddr("127.0.0.1", port)).has_value());
+
+    Socket accepted(server.accept().value_or(-1));
+    ASSERT_TRUE(accepted.is_open());
+
+    ASSERT_TRUE(client.set_sndbuf(2048).has_value());
+    ASSERT_TRUE(client.set_send_timeout(50).has_value());
+
+    const auto start = std::chrono::steady_clock::now();
+    const bool failed = send_until_failure(client);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    ASSERT_TRUE(failed);
+    EXPECT_LT(elapsed, std::chrono::seconds(5));
+}
+
 TEST_F(TestSocket, test_socket_send_all_non_blocking_would_block)
 {
     Socket server;

@@ -23,6 +23,7 @@ TcpClient::TcpClient(const std::string & name, Node *parent): Named(name, parent
     _poll.set_service_wait_stop(true);
     this->add_conf("poll_timeout", &TcpClient::set_poll_timeout);
     this->add_conf("recv_timeout", &TcpClient::set_recv_timeout);
+    this->add_conf("send_timeout", &TcpClient::set_send_timeout);
 }
 
 TcpClient::~TcpClient()
@@ -59,6 +60,25 @@ bool TcpClient::set_recv_timeout(int milliseconds)
     return true;
 }
 
+bool TcpClient::set_send_timeout(int milliseconds)
+{
+    if (milliseconds < 0)
+    {
+        SIHD_LOG(error, "TcpClient: send timeout cannot be negative: {}", milliseconds);
+        return false;
+    }
+    _send_timeout = milliseconds;
+    if (_socket.is_open())
+        return !SIHD_UNEXPECTED_LOG(_socket.set_send_timeout(_send_timeout));
+    return true;
+}
+
+void TcpClient::_apply_timeouts()
+{
+    SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
+    SIHD_UNEXPECTED_LOG(_socket.set_send_timeout(_send_timeout));
+}
+
 Result<void> TcpClient::open_socket_unix()
 {
     if (_socket.is_open())
@@ -85,7 +105,7 @@ Result<void> TcpClient::connect(const IpAddr & addr, int timeout_ms)
     if (_connected)
     {
         _client_addr = addr;
-        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
+        this->_apply_timeouts();
     }
     return res;
 }
@@ -95,7 +115,7 @@ Result<void> TcpClient::connect(std::string_view path)
     auto res = _socket.connect_unix(path);
     _connected = res.has_value();
     if (_connected)
-        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
+        this->_apply_timeouts();
     return res;
 }
 
@@ -104,7 +124,7 @@ Result<void> TcpClient::reconnect(int timeout_ms)
     auto res = _socket.reconnect(timeout_ms);
     _connected = res.has_value();
     if (_connected)
-        SIHD_UNEXPECTED_LOG(_socket.set_recv_timeout(_recv_timeout));
+        this->_apply_timeouts();
     return res;
 }
 

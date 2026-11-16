@@ -525,6 +525,11 @@ Result<void> Socket::set_recv_timeout(int milliseconds) const
     return Socket::set_socket_recv_timeout(_socket, milliseconds);
 }
 
+Result<void> Socket::set_send_timeout(int milliseconds) const
+{
+    return Socket::set_socket_send_timeout(_socket, milliseconds);
+}
+
 Result<void> Socket::set_reuseaddr(bool active) const
 {
     return Socket::set_socket_reuseaddr(_socket, active);

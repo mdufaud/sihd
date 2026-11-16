@@ -47,6 +47,7 @@ class TcpClient: public INetReceiver,
         bool set_poll_timeout(int milliseconds);
         // bounds each blocking receive (0 = unbounded): a poll-driven drain must never park on a quiet socket
         bool set_recv_timeout(int milliseconds);
+        bool set_send_timeout(int milliseconds);
         bool poll(int milliseconds);
         bool poll();
 
@@ -77,6 +78,7 @@ class TcpClient: public INetReceiver,
 
     private:
         void _setup_poll();
+        void _apply_timeouts();
 
         TlsSocket _socket;
         IpAddr _client_addr;
@@ -84,6 +86,7 @@ class TcpClient: public INetReceiver,
         std::mutex _poll_mutex;
         sihd::sys::Poll _poll;
         int _recv_timeout = 0;
+        int _send_timeout = 0;
 };
 
 } // namespace sihd::net

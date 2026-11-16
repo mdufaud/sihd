@@ -618,6 +618,33 @@ TEST_F(TestTcp, test_tcp_client_recv_timeout_never_parks)
     (void)listener.close();
 }
 
+TEST_F(TestTcp, test_tcp_client_send_timeout_bounds_a_stalled_peer)
+{
+    Socket listener;
+    make_listener(listener, IpAddr::localhost(0));
+    const int port = listener.local_port().value();
+    ASSERT_GT(port, 0);
+
+    TcpClient client("tcp-client");
+    EXPECT_FALSE(client.set_send_timeout(-1));
+    ASSERT_TRUE(client.set_conf("send_timeout", 50).has_value());
+    ASSERT_TRUE(client.open_and_connect(IpAddr::localhost(port), connect_timeout_ms).has_value());
+    Socket accepted(listener.accept(connect_timeout_ms).value_or(-1));
+    ASSERT_TRUE(accepted.is_open());
+    ASSERT_TRUE(client.socket().set_sndbuf(2048).has_value());
+
+    const auto start = std::chrono::steady_clock::now();
+    const bool failed = send_until_failure(client);
+    const auto elapsed = std::chrono::steady_clock::now() - start;
+
+    ASSERT_TRUE(failed);
+    EXPECT_LT(elapsed, std::chrono::seconds(5));
+
+    (void)client.close();
+    (void)accepted.close();
+    (void)listener.close();
+}
+
 TEST_F(TestTcp, test_tcp_unix_roundtrip)
 {
     if (sihd::sys::os::is_run_by_wine())

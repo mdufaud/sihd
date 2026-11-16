@@ -4,6 +4,7 @@
 namespace sihd::net
 {
 
+class ALoggerWriter;
 class BasicServerHandler;
 class ClientFrame;
 class DevTcpClient;
@@ -16,6 +17,12 @@ class INetServer;
 class INetServerHandler;
 class IcmpSender;
 class IpAddr;
+class LoggerEndpoint;
+class LoggerReaderTcp;
+class LoggerReaderUdp;
+class LoggerRecord;
+class LoggerWriterTcp;
+class LoggerWriterUdp;
 class NetInterface;
 class NetMonitor;
 class OuiRegistry;

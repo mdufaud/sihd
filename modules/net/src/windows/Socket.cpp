@@ -69,4 +69,14 @@ Result<void> Socket::set_socket_recv_timeout(int socket, int milliseconds)
     return {};
 }
 
+Result<void> Socket::set_socket_send_timeout(int socket, int milliseconds)
+{
+    if (socket < 0)
+        return std::unexpected(Error(ErrorCode::closed, "cannot set send timeout on a closed socket"));
+    DWORD ms = static_cast<DWORD>(milliseconds);
+    auto res = sihd::sys::os::setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, &ms, sizeof(ms));
+    SIHD_UNEXPECTED_RETURN_CTX(res, "could not set send timeout");
+    return {};
+}
+
 } // namespace sihd::net

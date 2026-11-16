@@ -1,6 +1,7 @@
 #ifndef __SIHD_NET_HPP__
 #define __SIHD_NET_HPP__
 
+#include <sihd/net/ALoggerWriter.hpp>
 #include <sihd/net/BasicServerHandler.hpp>
 #include <sihd/net/ClientFrame.hpp>
 #include <sihd/net/DevTcpClient.hpp>
@@ -13,6 +14,12 @@
 #include <sihd/net/INetServerHandler.hpp>
 #include <sihd/net/IcmpSender.hpp>
 #include <sihd/net/IpAddr.hpp>
+#include <sihd/net/LoggerEndpoint.hpp>
+#include <sihd/net/LoggerReaderTcp.hpp>
+#include <sihd/net/LoggerReaderUdp.hpp>
+#include <sihd/net/LoggerRecord.hpp>
+#include <sihd/net/LoggerWriterTcp.hpp>
+#include <sihd/net/LoggerWriterUdp.hpp>
 #include <sihd/net/NetInterface.hpp>
 #include <sihd/net/NetMonitor.hpp>
 #include <sihd/net/OuiRegistry.hpp>
