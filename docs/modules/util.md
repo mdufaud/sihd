@@ -17,10 +17,10 @@
 - `Logger`: named logger created with `SIHD_NEW_LOGGER("name")` and used through `SIHD_LOGGER`; `log`, `emergency` to `debug`, with `fmt`-style formatting.
 - `SIHD_LOG(level, ...)`, `SIHD_LOG_FORMAT`, `SIHD_LOG_LVL`: log macros on the module logger. `SIHD_TRACE*` macros are compiled out when `SIHD_TRACE_OFF` is set. `SIHD_COUT`, `SIHD_CERR`, `SIHD_COUTV`: formatted output helpers.
 - `LogInfo`, `LogLevel`: per-message metadata (source, level, timestamp, thread) and the level enum with `level_str` and `level_from_str`.
-- `LoggerManager`: process-wide registry of sinks and filters. Static `stream`, `console`, `thrower`, `async` install sinks; `add`, `rm`, `filter`, `rm_filter`, `set_level`, `should_log`, `clear_loggers`, `clear_filters`.
+- `LoggerManager`: process-wide registry of sinks and filters. Static `stream`, `console`, `thrower`, `async` install sinks; `add`, `rm`, `filter`, `rm_filter`, `set_level`, `should_log`, `clear_loggers`, `clear_filters`. `sink_warning` prints one `sink: message` line on stderr: the channel of a sink in trouble, which cannot log from `log`.
 - `TmpLoggerAdder`, `TmpLoggerFilterAdder`: RAII helpers that register a logger or filter for the duration of a scope.
 - `ALogger`: base class for sinks; subclasses implement `log(const LogInfo &, std::string_view)`.
-- `LoggerConsole`, `LoggerStream` (formatted by `set_pattern`), `LoggerThrow` (throws on each logged message), `LoggerAsync` (queues messages to a target sink; `dropped()` counts refused messages).
+- `LoggerConsole`, `LoggerStream` (formatted by `set_pattern`), `LoggerThrow` (throws on each logged message), `LoggerAsync` (queues messages to a target sink and carries its name; `dropped()` counts refused messages).
 - `ALogFilterer`, `ILoggerFilter`, `LoggerFilter` (`Options`: message, source and thread regexes, thread id and level comparisons): message filtering.
 - `LogFormatter`: pattern-driven message formatting (`set_pattern`, `format`).
 - `log_unexpected`, `log_unexpected_error`: log the error of a failed `Result`.
@@ -64,7 +64,7 @@
 
 ### Command line
 
-- `CliApp`: application framework with `Options` (name, description, version, logging setup), `run(argc, argv)`, `loop`, `wait_for_termination`, `stop`, `reload`, `set_conf_loader`, and overridable `on_boot`, `on_configure`, `on_run`, `on_terminate`, `on_halt`, `on_fail` hooks. A refused `reload` restores the bound values, the log level and the log sinks; what an `apply_sihd_conf` override sets is that override's to restore.
+- `CliApp`: application framework with `Options` (name, description, version, logging setup), `run(argc, argv)`, `loop`, `wait_for_termination`, `stop`, `reload`, `set_conf_loader`, and overridable `on_boot`, `on_configure`, `on_run`, `on_terminate`, `on_halt`, `on_fail` hooks. A `logging.sinks` entry with `"async": true` wraps its sink in a `LoggerAsync`: the other keys configure the sink, the filters apply to the wrapper. A refused `reload` restores the bound values, the log level and the log sinks; what an `apply_sihd_conf` override sets is that override's to restore.
 - `CliInterpreter`: command tree evaluator (`evaluate` on argument lists or raw lines), with generated help and `bash_completion`.
 - `Command`: a node of the command tree (`add_command`, `path`, `command_names`, `bind`, `bind_positional`, `on_run`) that binds C++ variables to options.
 - `TokenPattern`: compiles a `{token}` template (`compile`) and renders it from a provider (`render`).

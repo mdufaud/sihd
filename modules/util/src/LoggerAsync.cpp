@@ -36,7 +36,7 @@ void LoggerAsync::Item::_reseat()
 }
 
 LoggerAsync::LoggerAsync(ALogger *target, size_t max_queue_size, std::string source):
-    ALogger("async"),
+    ALogger(target->name()),
     _source(std::move(source)),
     _target(target),
     _max_queue_size(max_queue_size)

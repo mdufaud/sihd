@@ -79,6 +79,9 @@ class LoggerManager: public ALogFilterer
                           std::optional<LoggerFilter::Options> options = std::nullopt,
                           std::string source = "sihd::util::logger_async");
 
+        // a sink cannot log from log(): it reports its own trouble on stderr, one "sink: message" line
+        static void sink_warning(std::string_view sink, std::string_view message);
+
         static bool add(ALogger *logger);
         static bool rm(ALogger *logger);
         static bool filter(ILoggerFilter *filter);

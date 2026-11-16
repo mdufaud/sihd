@@ -9,6 +9,7 @@
 #include <sihd/util/CliApp.hpp>
 #include <sihd/util/LogInfo.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerAsync.hpp>
 #include <sihd/util/LoggerConsole.hpp>
 #include <sihd/util/LoggerFilter.hpp>
 #include <sihd/util/LoggerManager.hpp>
@@ -62,15 +63,16 @@ bool print_completion_tip(const std::vector<std::string> & args, const char *pro
     return false;
 }
 
-constexpr std::array<std::string_view, 9> sink_entry_keys = {"logger",
-                                                             "plugin",
-                                                             "name",
-                                                             "source_regex",
-                                                             "thread_regex",
-                                                             "message_regex",
-                                                             "level_lower",
-                                                             "level_higher",
-                                                             "level_eq"};
+constexpr std::array<std::string_view, 10> sink_entry_keys = {"logger",
+                                                              "plugin",
+                                                              "name",
+                                                              "async",
+                                                              "source_regex",
+                                                              "thread_regex",
+                                                              "message_regex",
+                                                              "level_lower",
+                                                              "level_higher",
+                                                              "level_eq"};
 
 constexpr uint64_t key(CliApp::State state, CliApp::Event evt)
 {
@@ -460,6 +462,15 @@ bool CliApp::_check_sinks_conf(const sihd::json::Json & sinks)
                 == std::end(sink_entry_keys))
                 continue;
 
+            if (entry_key == "async")
+            {
+                if (entry_it.value().is_bool() == false)
+                {
+                    SIHD_LOG(error, "CliApp: conf 'logging.sinks.async' must be a boolean");
+                    return false;
+                }
+                continue;
+            }
             if (entry_it.value().is_string() == false)
             {
                 SIHD_LOG(error, "CliApp: conf 'logging.sinks.{}' must be a string", entry_key);
@@ -612,6 +623,13 @@ bool CliApp::_install_sinks()
                 (void)this->sinks().remove_child(sink);
                 return false;
             }
+        }
+        if (entry["async"].get_or<bool>(false))
+        {
+            this->sinks().set_child_ownership(sink, false);
+            (void)this->sinks().remove_child(sink);
+            sink = new LoggerAsync(sink);
+            (void)this->sinks().add_child(name, sink);
         }
         if (this->apply_sink_filters(sink) == false)
         {

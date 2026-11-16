@@ -18,6 +18,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Handler.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerAsync.hpp>
 #include <sihd/util/LoggerConsole.hpp>
 #include <sihd/util/LoggerManager.hpp>
 #include <sihd/util/LoggerStream.hpp>
@@ -1064,6 +1065,27 @@ TEST_F(TestCliApp, test_log_sinks_conf)
     EXPECT_FALSE(quiet->should_filter(LogInfo(any_source, LogLevel::info)));
 }
 
+TEST_F(TestCliApp, test_log_sinks_async_conf)
+{
+    TestLogApp app({.name = "async-sinks", .setup_logging = true});
+    app.set_conf_loader([] {
+        return std::string(
+            R"({"sihd": {"logging": {"sinks": [)"
+            R"({"logger": "console", "name": "errors", "async": true, "colors": false, "level_lower": "error"})"
+            R"(]}}})");
+    });
+    app.root().add_command("emit", "emit").on_run([] {});
+
+    ASSERT_EQ(run_app(app, {"emit"}), 0);
+
+    LoggerAsync *errors = dynamic_cast<LoggerAsync *>(app.sinks().get_child("errors"));
+    ASSERT_NE(errors, nullptr);
+    EXPECT_EQ(errors->name(), "errors");
+    EXPECT_TRUE(LoggerManager::get()->has_logger(errors));
+    EXPECT_TRUE(errors->should_filter(LogInfo("any::src", LogLevel::info)));
+    EXPECT_FALSE(errors->should_filter(LogInfo("any::src", LogLevel::error)));
+}
+
 TEST_F(TestCliApp, test_log_conf_refused)
 {
     const std::vector<std::string> bad_confs = {
@@ -1075,6 +1097,7 @@ TEST_F(TestCliApp, test_log_conf_refused)
         R"({"sihd": {"logging": {"sinks": [{"logger": "console", "level_lower": "error"}]}}})",
         R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "level_lower": 3}]}}})",
         R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "level_lower": "errro"}]}}})",
+        R"({"sihd": {"logging": {"sinks": [{"logger": "console", "name": "c", "async": "yes"}]}}})",
     };
     for (const std::string & conf : bad_confs)
     {

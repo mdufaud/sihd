@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <csignal>
 #include <cstdlib>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -18,6 +19,7 @@
 #include <sihd/util/Defer.hpp>
 #include <sihd/util/Duration.hpp>
 #include <sihd/util/Logger.hpp>
+#include <sihd/util/LoggerAsync.hpp>
 #include <sihd/util/NamedFactory.hpp>
 #include <sihd/util/build.hpp>
 #include <sihd/util/str.hpp>
@@ -109,7 +111,37 @@ class LogCheckApp: public sihd::sys::App
         using App::App;
 
         using CliApp::logger;
+        using CliApp::sinks;
 };
+
+std::string log_through_file_sink(const std::string & log_path,
+                                  const std::string & conf_path,
+                                  const std::string & sink_keys,
+                                  const std::function<void(LogCheckApp &)> & on_emit)
+{
+    (void)fs::remove_file(log_path);
+    EXPECT_TRUE(fs::write(conf_path,
+                          R"({"sihd": {"logging": {"sinks": [{"logger": "LoggerFile", "name": "app_log", )" + sink_keys
+                              + R"("path": ")" + log_path + R"(", "source_regex": "^dropped::.*$"}]}}})")
+                    .has_value());
+
+    // the file logger flushes on destruction
+    {
+        LogCheckApp app({.name = "sinks", .default_logger = false});
+        app.root().add_command("emit", "emit").on_run([&] {
+            if (on_emit)
+                on_emit(app);
+            LoggerManager::log(LogInfo("kept::src", LogLevel::info), "KEPTMSG");
+            LoggerManager::log(LogInfo("dropped::src", LogLevel::info), "DROPPEDMSG");
+        });
+        EXPECT_EQ(run_app(app, {"--conf", conf_path, "emit"}), 0);
+    }
+
+    std::string content = fs::read_all(log_path).value_or("");
+    (void)fs::remove_file(log_path);
+    (void)fs::remove_file(conf_path);
+    return content;
+}
 
 TEST_F(TestApp, test_conf_file)
 {
@@ -156,32 +188,27 @@ TEST_F(TestApp, test_log_sinks_file_conf)
 {
     if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
         GTEST_SKIP() << "no factory resolution in this build";
-    const std::string log_path = tmp_path("sinks.log");
-    const std::string conf_path = tmp_path("sinks.json");
-    (void)fs::remove_file(log_path);
-    ASSERT_TRUE(fs::write(conf_path,
-                          R"({"sihd": {"logging": {"sinks": [{"logger": "LoggerFile", "name": "app_log", "path": ")"
-                              + log_path + R"(", "source_regex": "^dropped::.*$"}]}}})")
-                    .has_value());
 
-    const std::string kept_source = "kept::src";
-    const std::string dropped_source = "dropped::src";
-    // the file logger flushes on destruction
-    {
-        LogCheckApp app({.name = "sinks", .default_logger = false});
-        app.root().add_command("emit", "emit").on_run([&] {
-            LoggerManager::log(LogInfo(kept_source, LogLevel::info), "KEPTMSG");
-            LoggerManager::log(LogInfo(dropped_source, LogLevel::info), "DROPPEDMSG");
-        });
-        ASSERT_EQ(run_app(app, {"--conf", conf_path, "emit"}), 0);
-    }
+    const std::string content = log_through_file_sink(tmp_path("sinks.log"), tmp_path("sinks.json"), "", {});
 
-    const auto content = fs::read_all(log_path);
-    ASSERT_TRUE(content.has_value());
-    EXPECT_NE(content->find("KEPTMSG"), std::string::npos);
-    EXPECT_EQ(content->find("DROPPEDMSG"), std::string::npos);
-    (void)fs::remove_file(log_path);
-    (void)fs::remove_file(conf_path);
+    EXPECT_NE(content.find("KEPTMSG"), std::string::npos);
+    EXPECT_EQ(content.find("DROPPEDMSG"), std::string::npos);
+}
+
+TEST_F(TestApp, test_log_sinks_async_file_conf)
+{
+    if constexpr (build::is_statically_linked && !SIHD_FACTORY_TABLE)
+        GTEST_SKIP() << "no factory resolution in this build";
+    bool wrapped = false;
+
+    const std::string content = log_through_file_sink(
+        tmp_path("async_sinks.log"),
+        tmp_path("async_sinks.json"),
+        R"("async": true, "pattern": "{level} {source} {msg}\n", )",
+        [&](LogCheckApp & app) { wrapped = dynamic_cast<LoggerAsync *>(app.sinks().get_child("app_log")) != nullptr; });
+
+    EXPECT_TRUE(wrapped);
+    EXPECT_EQ(content, "INFO kept::src KEPTMSG\n");
 }
 
 #if defined(SIGHUP) && defined(SIGUSR1) && defined(SIGPIPE)

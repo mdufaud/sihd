@@ -719,6 +719,16 @@ TEST_F(TestLogger, test_logger_reentrant_dropped)
     ASSERT_EQ(log_counter->info, 1);
 }
 
+TEST_F(TestLogger, test_logger_sink_warning)
+{
+    testing::internal::CaptureStderr();
+    LoggerManager::sink_warning("writer", "collector unreachable");
+    const std::string warned = testing::internal::GetCapturedStderr();
+
+    EXPECT_EQ(warned, "writer: collector unreachable\n");
+    EXPECT_EQ(log_counter->warning, 0);
+}
+
 TEST_F(TestLogger, test_logger_set_level)
 {
     LoggerManager::set_level(LogLevel::warning);

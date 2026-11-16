@@ -156,6 +156,11 @@ void LoggerManager::_filter_and_log(const LogInfo & info, std::string_view msg)
     }
 }
 
+void LoggerManager::sink_warning(std::string_view sink, std::string_view message)
+{
+    fprintf(stderr, "%.*s: %.*s\n", (int)sink.size(), sink.data(), (int)message.size(), message.data());
+}
+
 void LoggerManager::_warn_no_sink(const LogInfo & info)
 {
     if (_warned_no_sink == false)
